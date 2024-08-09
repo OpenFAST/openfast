@@ -1762,7 +1762,7 @@ void gen_var_routines(std::ostream &w, const Module &mod)
         // Vars packing routine
         //--------------------------------
 
-        std::string routine_name = mod.nickname + "_Pack" + short_type + "Ary";
+        std::string routine_name = mod.nickname + "_VarsPack" + short_type;
         std::string indent("\n");
         w << indent << "subroutine " << routine_name << "(Vars, " << abbr << ", ValAry)";
         indent += "   ";
@@ -1771,8 +1771,22 @@ void gen_var_routines(std::ostream &w, const Module &mod)
         w << indent << "real(R8Ki), intent(inout)              :: ValAry(:)";
         w << indent << "integer(IntKi)                         :: i";
         w << indent << "do i = 1, size(Vars%" << abbr << ")";
+        w << indent << "   call " << mod.nickname + "_VarPack" + short_type + "(Vars%" << abbr << "(i), " << abbr << ", ValAry)";
+        w << indent << "end do";
+        indent.erase(indent.size() - 3);
+        w << indent << "end subroutine";
+        w << indent;
+
+        //--------------------------------
+        // Var packing routine
+        //--------------------------------
+
+        w << indent << "subroutine " << mod.nickname + "_VarPack" + short_type + "(V, " << abbr << ", ValAry)";
         indent += "   ";
-        w << indent << "associate (V => Vars%" << abbr << "(i), DL => Vars%" << abbr << "(i)%DL)";
+        w << indent << "type(ModVarType), intent(in)            :: V";
+        w << indent << std::setw(40) << "type(" + ddt.type_fortran + "), intent(in) " << ":: " << abbr;
+        w << indent << "real(R8Ki), intent(inout)               :: ValAry(:)";
+        w << indent << "associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))";
         indent += "   ";
         w << indent << "select case (DL%Num)";
         for (const auto &field : fields)
@@ -1793,46 +1807,47 @@ void gen_var_routines(std::ostream &w, const Module &mod)
             {
                 // This is a hack to convert BeamDyn's WM orientations to quaternions
                 w << indent << "   if (V%Field == FieldOrientation) then";
-                w << indent << "      ValAry(V%iLoc(1):V%iLoc(2)) = wm_to_quat(wm_inv(x%q(4:6, V%jAry)))  ! Convert WM parameters to quaternions";
+                w << indent << "      VarVals = wm_to_quat(wm_inv(x%q(4:6, V%j)))  ! Convert WM parameters to quaternions";
                 w << indent << "   else";
-                w << indent << std::setw(71) << "      call MV_Pack(V, " + field_path + "(V%iAry(1):V%iAry(2),V%jAry), ValAry)  " << "! " + comment;
+                w << indent << std::setw(71) << "      VarVals = " + field_path + "(V%iLB:V%iUB,V%j)" << "! " + comment;
                 w << indent << "   end if";
             }
             else if (field.data_type->tag == DataType::Tag::Derived)
             {
-                w << indent << std::setw(71) << "   call MV_Pack(V, " + field_path + ", ValAry)" << "! Mesh";
+                w << indent << std::setw(71) <<"   call MV_PackMesh(V, " + field_path + ", ValAry)" << " ! Mesh";
             }
             else
             {
-                std::string tmp{"   call MV_Pack(V, " + field_path};
+                std::string tmp;
                 switch (field.rank)
                 {
+                case 0:
+                    tmp = "VarVals(1) = " + field_path;
+                    break;
                 case 1:
-                    tmp += "(V%iAry(1):V%iAry(2))";
+                    tmp = "VarVals = " + field_path + "(V%iLB:V%iUB)";
                     break;
                 case 2:
-                    tmp += "(V%iAry(1):V%iAry(2),V%jAry)";
+                    tmp = "VarVals = " + field_path + "(V%iLB:V%iUB,V%j)";
                     break;
                 case 3:
-                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry)";
+                    tmp = "VarVals = " + field_path + "(V%iLB:V%iUB, V%j, V%k)";
                     break;
                 case 4:
-                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry)";
+                    tmp = "VarVals = " + field_path + "(V%iLB:V%iUB, V%j, V%k, V%m)";
                     break;
                 case 5:
-                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry, V%nAry)";
+                    tmp = "VarVals = " + field_path + "(V%iLB:V%iUB, V%j, V%k, V%m, V%n)";
                     break;
                 }
-                w << indent << std::setw(71) << tmp + ", ValAry) " << "! " + comment;
+                w << indent << std::setw(71) << "   " + tmp << " ! " + comment;
             }
         }
         w << indent << "case default";
-        w << indent << "   ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki";
+        w << indent << "   VarVals = 0.0_R8Ki";
         w << indent << "end select";
         indent.erase(indent.size() - 3);
         w << indent << "end associate";
-        indent.erase(indent.size() - 3);
-        w << indent << "end do";
         indent.erase(indent.size() - 3);
         w << indent << "end subroutine";
         w << indent;
@@ -1849,7 +1864,7 @@ void gen_var_routines(std::ostream &w, const Module &mod)
         //--------------------------------
 
         indent = "\n";
-        routine_name = mod.nickname + "_Unpack" + short_type + "Ary";
+        routine_name = mod.nickname + "_VarsUnpack" + short_type;
         w << indent << "subroutine " << routine_name << "(Vars, ValAry, " << abbr << ")";
         indent += "   ";
         w << indent << "type(ModVarsType), intent(in)          :: Vars";
@@ -1857,8 +1872,22 @@ void gen_var_routines(std::ostream &w, const Module &mod)
         w << indent << std::setw(40) << "type(" + ddt.type_fortran + "), intent(inout) " << ":: " + abbr;
         w << indent << "integer(IntKi)                         :: i";
         w << indent << "do i = 1, size(Vars%" << abbr << ")";
+        w << indent << "   call " << mod.nickname + "_VarUnpack" + short_type + "(Vars%" << abbr << "(i), ValAry, " << abbr << ")";
+        w << indent << "end do";
+        indent.erase(indent.size() - 3);
+        w << indent << "end subroutine";
+        w << indent;
+
+        //--------------------------------
+        // Var unpacking routine
+        //--------------------------------
+
+        w << indent << "subroutine " << mod.nickname + "_VarUnpack" + short_type + "(V, ValAry, " << abbr << ")";
         indent += "   ";
-        w << indent << "associate (V => Vars%" << abbr << "(i), DL => Vars%" << abbr << "(i)%DL)";
+        w << indent << "type(ModVarType), intent(in)            :: V";
+        w << indent << "real(R8Ki), intent(in)                  :: ValAry(:)";
+        w << indent << std::setw(40) << "type(" + ddt.type_fortran + "), intent(inout) " << ":: " << abbr;
+        w << indent << "associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))";
         indent += "   ";
         w << indent << "select case (DL%Num)";
         for (const auto &field : fields)
@@ -1874,44 +1903,45 @@ void gen_var_routines(std::ostream &w, const Module &mod)
             {
                 // This is a hack to convert BeamDyn's WM orientations to quaternions
                 w << indent << "   if (V%Field == FieldOrientation) then";
-                w << indent << "      x%q(4:6, V%jAry) = wm_inv(quat_to_wm(ValAry(V%iLoc(1):V%iLoc(2))))  ! Convert quaternion to WM parameters";
+                w << indent << "      x%q(4:6, V%j) = wm_inv(quat_to_wm(VarVals))  ! Convert quaternion to WM parameters";
                 w << indent << "   else";
-                w << indent << std::setw(71) << "      call MV_Unpack(V, ValAry, " + field_path + "(V%iAry(1):V%iAry(2),V%jAry))  " << "! Rank 2 Array";
+                w << indent << std::setw(71) << "      " + field_path + "(V%iLB:V%iUB, V%j) = VarVals" << " ! Rank 2 Array";
                 w << indent << "   end if";
             }
             else if (field.data_type->tag == DataType::Tag::Derived)
             {
-                w << indent << std::setw(71) << "   call MV_Unpack(V, ValAry, " + field_path + ") " << "! Mesh";
+                w << indent << std::setw(71) <<"   call MV_UnpackMesh(V, ValAry, " + field_path + ")" << " ! Mesh";
             }
             else
             {
-                std::string tmp{"   call MV_Unpack(V, ValAry, " + field_path};
+                std::string tmp;
                 switch (field.rank)
                 {
+                case 0:
+                    tmp = field_path + " = VarVals(1)";
+                    break;
                 case 1:
-                    tmp += "(V%iAry(1):V%iAry(2))";
+                    tmp = field_path + "(V%iLB:V%iUB) = VarVals";
                     break;
                 case 2:
-                    tmp += "(V%iAry(1):V%iAry(2),V%jAry)";
+                    tmp = field_path + "(V%iLB:V%iUB, V%j) = VarVals";
                     break;
                 case 3:
-                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry)";
+                    tmp = field_path + "(V%iLB:V%iUB, V%j, V%k) = VarVals";
                     break;
                 case 4:
-                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry)";
+                    tmp = field_path + "(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals";
                     break;
                 case 5:
-                    tmp += "(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry, V%nAry)";
+                    tmp = field_path + "(V%iLB:V%iUB, V%j, V%k, V%m, V%n) = VarVals";
                     break;
                 }
-                w << indent << std::setw(71) << tmp + ") " << "! " + comment;
+                w << indent << std::setw(71) << "   " + tmp << " ! " + comment;
             }
         }
         w << indent << "end select";
         indent.erase(indent.size() - 3);
         w << indent << "end associate";
-        indent.erase(indent.size() - 3);
-        w << indent << "end do";
         indent.erase(indent.size() - 3);
         w << indent << "end subroutine";
         w << indent;

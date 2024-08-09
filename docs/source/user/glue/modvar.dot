@@ -25,11 +25,12 @@ digraph UML_Class_diagram {
         <tr><td align="left">DerivOrder</td><td>IntKi</td></tr>
         <tr><td align="left">iLoc(2)</td><td>IntKi</td></tr>
         <tr><td align="left">iGlu(2)</td><td>IntKi</td></tr>
-        <tr><td align="left">iAry(2)</td><td>IntKi</td></tr>
-        <tr><td align="left">jAry</td><td>IntKi</td></tr>
-        <tr><td align="left">kAry</td><td>IntKi</td></tr>
-        <tr><td align="left">mAry</td><td>IntKi</td></tr>
-        <tr><td align="left">MeshID</td><td>IntKi</td></tr>
+        <tr><td align="left">iLB</td><td>IntKi</td></tr>
+        <tr><td align="left">iUB</td><td>IntKi</td></tr>
+        <tr><td align="left">j</td><td>IntKi</td></tr>
+        <tr><td align="left">k</td><td>IntKi</td></tr>
+        <tr><td align="left">m</td><td>IntKi</td></tr>
+        <tr><td align="left">n</td><td>IntKi</td></tr>
         <tr><td align="left">Perturb</td><td>R8Ki</td></tr>
         </table>>]
     

@@ -37,24 +37,24 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_MotionMesh                   = 2      ! Motion mesh mapping type [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_Variable                     = 3      ! Individual variable mapping type [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_Custom                       = 4      ! Custom mapping not used for linearization [-]
-! =========  ModMapType  =======
-  TYPE, PUBLIC :: ModMapType
+! =========  VarMapType  =======
+  TYPE, PUBLIC :: VarMapType
     INTEGER(IntKi)  :: iMapping = 0      !< Mapping index [-]
-    INTEGER(IntKi)  :: iModSrc = 0      !< Source module index [-]
-    INTEGER(IntKi)  :: iModDst = 0      !< Destination module index [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: iVarSrc = 0      !< Source variable indices [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: iVarSrcDisp = 0      !< Source variable indices [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: iVarDst = 0      !< Destination variable indices [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: iVarDstDisp = 0      !< Destination variable indices [-]
-  END TYPE ModMapType
+    INTEGER(IntKi)  :: iModSrc = 0      !< Source module index in module array [-]
+    INTEGER(IntKi)  :: iModDst = 0      !< Destination module index in module array [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: iVarSrc = 0      !< Source variable indices (Vars%y) [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: iVarSrcDisp = 0      !< Source variable indices (Vars%u) [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: iVarDst = 0      !< Destination variable indices (Vars%u) [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: iVarDstDisp = 0      !< Destination variable indices (Vars%y) [-]
+  END TYPE VarMapType
 ! =======================
 ! =========  ModGlueType  =======
   TYPE, PUBLIC :: ModGlueType
     character(ChanLen)  :: Name      !< Glue name [-]
-    TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: ModDataAry      !< Array of module info [-]
+    TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: ModData      !< Array of module info [-]
     TYPE(ModVarsType)  :: Vars      !< Combined module variables [-]
     TYPE(ModLinType)  :: Lin      !< Glue linearization data [-]
-    TYPE(ModMapType) , DIMENSION(:), ALLOCATABLE  :: ModMaps      !< Var mapping [-]
+    TYPE(VarMapType) , DIMENSION(:), ALLOCATABLE  :: VarMaps      !< Var mapping [-]
   END TYPE ModGlueType
 ! =======================
 ! =========  MappingType  =======
@@ -66,10 +66,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: DstModID = 0      !< Destination module ID [-]
     INTEGER(IntKi)  :: SrcIns = 0      !< Source module Instance [-]
     INTEGER(IntKi)  :: DstIns = 0      !< Destination module Instance [-]
-    INTEGER(IntKi)  :: SrcMeshID = 0      !< Source mesh identifier [-]
-    INTEGER(IntKi)  :: DstMeshID = 0      !< Destination mesh identifier [-]
-    INTEGER(IntKi)  :: SrcDispMeshID = 0      !< Source displacement mesh identifier [-]
-    INTEGER(IntKi)  :: DstDispMeshID = 0      !< Destination displacement mesh identifier [-]
     TYPE(DatLoc)  :: SrcDL      !< Source mesh locator (number and indices) [-]
     TYPE(DatLoc)  :: DstDL      !< Destination mesh locator (number and indices) [-]
     TYPE(DatLoc)  :: SrcDispDL      !< Source displacement mesh locator (number and indices) [-]
@@ -80,6 +76,9 @@ IMPLICIT NONE
     LOGICAL  :: Ready = .false.      !< Flag indicating source data is ready to be transferred [-]
     LOGICAL  :: DstUsesSibling = .false.      !< Flag indicating the destination displacement mesh is a sibling of the source destination load mesh [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: TmpMatrix      !< Temporary matrix for performing transfer for destination load meshes without sibling motion meshes [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: VarData      !< Data array for variable mapping [-]
+    TYPE(ModVarType)  :: SrcVar      !< Source variable for variable mapping [-]
+    TYPE(ModVarType)  :: DstVar      !< Destination variable for variable mapping [-]
     TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from Source variable to Destination variable [-]
     TYPE(MeshMapType)  :: MeshMapAux      !< Auxiliary mesh mapping for destination load meshes without sibling motion mesh [-]
     TYPE(MeshType)  :: TmpLoadMesh      !< Temporary load mesh for intermediate transfers [-]
@@ -94,41 +93,46 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iMod      !< ModData index order for linearization [-]
   END TYPE Glue_LinParam
 ! =======================
-! =========  Glue_ParameterType  =======
-  TYPE, PUBLIC :: Glue_ParameterType
-    TYPE(Glue_LinParam)  :: Lin      !< Linearization parameters [-]
-    REAL(R8Ki)  :: DT = 0.0_R8Ki      !< solution time step [-]
+! =========  Glue_TCParam  =======
+  TYPE, PUBLIC :: Glue_TCParam
+    REAL(R8Ki)  :: h = 0.0_R8Ki      !< solution time step [-]
     REAL(R8Ki)  :: ConvTol = 0.0_R8Ki      !< Solution convergence tolerance [-]
     INTEGER(IntKi)  :: NumCrctn = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: MaxConvIter = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: NIter_UJac = 0_IntKi      !< Number of solution iterations between updating the Jacobian [-]
     INTEGER(IntKi)  :: NStep_UJac = 0_IntKi      !< Number of global time steps between updating the Jacobian [-]
     REAL(R8Ki)  :: Scale_UJac = 0.0_R8Ki      !<  [-]
-    REAL(R8Ki)  :: AccBlend = 1      !<  [-]
     REAL(R8Ki)  :: RhoInf = 0.0_R8Ki      !< Rho infinity used for calculating Generalized-alpha coefficients [-]
     REAL(R8Ki)  :: AlphaM = 0.0_R8Ki      !< Generalized-alpha alpha_m coefficient [-]
     REAL(R8Ki)  :: AlphaF = 0.0_R8Ki      !< Generalized-alpha alpha_f coefficient [-]
     REAL(R8Ki)  :: Beta = 0.0_R8Ki      !< Generalized-alpha beta coefficient [-]
     REAL(R8Ki)  :: Gamma = 0.0_R8Ki      !< Generalized-alpha gamma coefficient [-]
-    REAL(R8Ki) , DIMENSION(1:7)  :: C = 0.0_R8Ki      !< Generalized-alpha coefficient array [-]
+    REAL(R8Ki)  :: BetaPrime = 0.0_R8Ki      !< Generalized-alpha beta prime [-]
+    REAL(R8Ki)  :: GammaPrime = 0.0_R8Ki      !< Generalized-alpha gamma prime [-]
+    INTEGER(IntKi)  :: NumJ = 0_IntKi      !< Number of values in Jacobian [-]
+    INTEGER(IntKi)  :: NumQ = 0_IntKi      !< Number of values in state arrays [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iX1 = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iX2 = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iUT = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iU1 = 0_IntKi      !<  [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iUL = 0_IntKi      !< Input load indices [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iyT = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iy1 = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iJX = 0_IntKi      !< Indices of Jacobian q variables [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iJU = 0_IntKi      !< Indices of Jacobian input variables [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iJUT = 0_IntKi      !< Indices of Jacobian input variables from tight coupling [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iJL      !< Indices of Jacobian load variables [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ixqd      !<  [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iJL = 0_IntKi      !< Indices of Jacobian load variables [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModInit      !< ModData index order for step 0 initialization [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModTC      !< ModData index order for tight coupling modules [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModBD      !< ModData index order for BD modules [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOpt1      !< ModData index order for option 1 modules [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOpt1US      !< ModData index order for option 1 modules to update states [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOpt2      !< ModData index order for option 2 modules [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModPost      !< ModData index order for post option 1 modules [-]
+  END TYPE Glue_TCParam
+! =======================
+! =========  Glue_ParameterType  =======
+  TYPE, PUBLIC :: Glue_ParameterType
+    TYPE(Glue_LinParam)  :: Lin      !< Linearization parameters [-]
+    TYPE(Glue_TCParam)  :: TC      !< Tight Coupling solver parameters [-]
   END TYPE Glue_ParameterType
 ! =======================
 ! =========  Glue_LinSave  =======
@@ -173,6 +177,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  Glue_AeroMap  =======
   TYPE, PUBLIC :: Glue_AeroMap
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOrder      !< Module indices in global ModDataAry [-]
     TYPE(ModGlueType)  :: Mod      !< Module combining all active modules [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac11      !< Components of Jacobian matrix [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac12      !< Components of Jacobian matrix [-]
@@ -190,6 +195,32 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: LinFileNum = 1      !< Linearization file number [-]
   END TYPE Glue_AeroMap
 ! =======================
+! =========  TC_State  =======
+  TYPE, PUBLIC :: TC_State
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: q_prev      !< Generalized alpha previous step displacement [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x      !< Generalized alpha change in displacement [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: q      !< Generalized alpha predicted displacement [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: v      !< Generalized alpha velocities [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: vd      !< Generalized alpha acceleration [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: a      !< Generalized alpha algorithmic acceleration [-]
+  END TYPE TC_State
+! =======================
+! =========  Glue_TCMisc  =======
+  TYPE, PUBLIC :: Glue_TCMisc
+    TYPE(ModGlueType)  :: Mod      !< Glue module combining tight coupling modules [-]
+    TYPE(TC_State)  :: State      !< Tight Coupling state [-]
+    TYPE(TC_State)  :: StatePrev      !< Tight Coupling previous state for correction iterations [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: UCalc      !<  [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: UOrig      !<  [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T      !< Tangent matrix [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: XB      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IPIV      !<  [-]
+    INTEGER(IntKi)  :: IterTotal = 0      !<  [-]
+    INTEGER(IntKi)  :: IterUntilUJac = 0      !< Number of convergence iterations until Jacobian update [-]
+    INTEGER(IntKi)  :: StepsUntilUJac = 0      !< Number of time steps until Jacobian update [-]
+    LOGICAL  :: ConvWarn = .false.      !< Flag to warn about convergence failure [-]
+  END TYPE Glue_TCMisc
+! =======================
 ! =========  Glue_LinMisc  =======
   TYPE, PUBLIC :: Glue_LinMisc
     INTEGER(IntKi)  :: TimeIndex = 0_IntKi      !<  [-]
@@ -199,76 +230,49 @@ IMPLICIT NONE
 ! =======================
 ! =========  Glue_MiscVarType  =======
   TYPE, PUBLIC :: Glue_MiscVarType
-    TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: ModDataAry      !< Module variable and value data [-]
+    TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: ModData      !< Module variable and value data [-]
     TYPE(MappingType) , DIMENSION(:), ALLOCATABLE  :: Mappings      !< Module mapping [-]
     TYPE(ModGlueType)  :: ModGlue      !< Glue code module [-]
     TYPE(Glue_LinMisc)  :: Lin      !< Linearization misc vars [-]
     TYPE(Glue_CalcSteady)  :: CS      !< CalcSteady calculation data [-]
     TYPE(Glue_AeroMap)  :: AM      !< AeroMap data [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: q      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: qn      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: xn      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dxdt      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: u      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: un      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: u_tmp      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: y      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dYdx      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dYdu      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dXdx      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dXdu      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dUdu      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dUdy      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dUdyHat      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: XB      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: G      !< Used to merge state matrices [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac      !<  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IPIV      !<  [-]
-    INTEGER(IntKi)  :: IterTotal = 0      !<  [-]
-    INTEGER(IntKi)  :: IterUntilUJac = 0      !< Number of convergence iterations until Jacobian update [-]
-    INTEGER(IntKi)  :: StepsUntilUJac = 0      !< Number of time steps until Jacobian update [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dq      !< Change in q [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< Change in x [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: UDiff      !<  [-]
-    LOGICAL  :: ConvWarn = .false.      !< Flag to warn about convergence failure [-]
+    TYPE(Glue_TCMisc)  :: TC      !< Tight Coupling Miscellaneous data [-]
   END TYPE Glue_MiscVarType
 ! =======================
 
 contains
 
-subroutine Glue_CopyModMapType(SrcModMapTypeData, DstModMapTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(ModMapType), intent(in) :: SrcModMapTypeData
-   type(ModMapType), intent(inout) :: DstModMapTypeData
+subroutine Glue_CopyVarMapType(SrcVarMapTypeData, DstVarMapTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(VarMapType), intent(in) :: SrcVarMapTypeData
+   type(VarMapType), intent(inout) :: DstVarMapTypeData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'Glue_CopyModMapType'
+   character(*), parameter        :: RoutineName = 'Glue_CopyVarMapType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstModMapTypeData%iMapping = SrcModMapTypeData%iMapping
-   DstModMapTypeData%iModSrc = SrcModMapTypeData%iModSrc
-   DstModMapTypeData%iModDst = SrcModMapTypeData%iModDst
-   DstModMapTypeData%iVarSrc = SrcModMapTypeData%iVarSrc
-   DstModMapTypeData%iVarSrcDisp = SrcModMapTypeData%iVarSrcDisp
-   DstModMapTypeData%iVarDst = SrcModMapTypeData%iVarDst
-   DstModMapTypeData%iVarDstDisp = SrcModMapTypeData%iVarDstDisp
+   DstVarMapTypeData%iMapping = SrcVarMapTypeData%iMapping
+   DstVarMapTypeData%iModSrc = SrcVarMapTypeData%iModSrc
+   DstVarMapTypeData%iModDst = SrcVarMapTypeData%iModDst
+   DstVarMapTypeData%iVarSrc = SrcVarMapTypeData%iVarSrc
+   DstVarMapTypeData%iVarSrcDisp = SrcVarMapTypeData%iVarSrcDisp
+   DstVarMapTypeData%iVarDst = SrcVarMapTypeData%iVarDst
+   DstVarMapTypeData%iVarDstDisp = SrcVarMapTypeData%iVarDstDisp
 end subroutine
 
-subroutine Glue_DestroyModMapType(ModMapTypeData, ErrStat, ErrMsg)
-   type(ModMapType), intent(inout) :: ModMapTypeData
+subroutine Glue_DestroyVarMapType(VarMapTypeData, ErrStat, ErrMsg)
+   type(VarMapType), intent(inout) :: VarMapTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'Glue_DestroyModMapType'
+   character(*), parameter        :: RoutineName = 'Glue_DestroyVarMapType'
    ErrStat = ErrID_None
    ErrMsg  = ''
 end subroutine
 
-subroutine Glue_PackModMapType(RF, Indata)
+subroutine Glue_PackVarMapType(RF, Indata)
    type(RegFile), intent(inout) :: RF
-   type(ModMapType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'Glue_PackModMapType'
+   type(VarMapType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Glue_PackVarMapType'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%iMapping)
    call RegPack(RF, InData%iModSrc)
@@ -280,10 +284,10 @@ subroutine Glue_PackModMapType(RF, Indata)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Glue_UnPackModMapType(RF, OutData)
+subroutine Glue_UnPackVarMapType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
-   type(ModMapType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'Glue_UnPackModMapType'
+   type(VarMapType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Glue_UnPackVarMapType'
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%iMapping); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iModSrc); if (RegCheckErr(RF, RoutineName)) return
@@ -308,18 +312,18 @@ subroutine Glue_CopyModGlueType(SrcModGlueTypeData, DstModGlueTypeData, CtrlCode
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstModGlueTypeData%Name = SrcModGlueTypeData%Name
-   if (allocated(SrcModGlueTypeData%ModDataAry)) then
-      LB(1:1) = lbound(SrcModGlueTypeData%ModDataAry, kind=B8Ki)
-      UB(1:1) = ubound(SrcModGlueTypeData%ModDataAry, kind=B8Ki)
-      if (.not. allocated(DstModGlueTypeData%ModDataAry)) then
-         allocate(DstModGlueTypeData%ModDataAry(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModGlueTypeData%ModData)) then
+      LB(1:1) = lbound(SrcModGlueTypeData%ModData, kind=B8Ki)
+      UB(1:1) = ubound(SrcModGlueTypeData%ModData, kind=B8Ki)
+      if (.not. allocated(DstModGlueTypeData%ModData)) then
+         allocate(DstModGlueTypeData%ModData(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModGlueTypeData%ModDataAry.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModGlueTypeData%ModData.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyModDataType(SrcModGlueTypeData%ModDataAry(i1), DstModGlueTypeData%ModDataAry(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call NWTC_Library_CopyModDataType(SrcModGlueTypeData%ModData(i1), DstModGlueTypeData%ModData(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
@@ -330,18 +334,18 @@ subroutine Glue_CopyModGlueType(SrcModGlueTypeData, DstModGlueTypeData, CtrlCode
    call NWTC_Library_CopyModLinType(SrcModGlueTypeData%Lin, DstModGlueTypeData%Lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModGlueTypeData%ModMaps)) then
-      LB(1:1) = lbound(SrcModGlueTypeData%ModMaps, kind=B8Ki)
-      UB(1:1) = ubound(SrcModGlueTypeData%ModMaps, kind=B8Ki)
-      if (.not. allocated(DstModGlueTypeData%ModMaps)) then
-         allocate(DstModGlueTypeData%ModMaps(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcModGlueTypeData%VarMaps)) then
+      LB(1:1) = lbound(SrcModGlueTypeData%VarMaps, kind=B8Ki)
+      UB(1:1) = ubound(SrcModGlueTypeData%VarMaps, kind=B8Ki)
+      if (.not. allocated(DstModGlueTypeData%VarMaps)) then
+         allocate(DstModGlueTypeData%VarMaps(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModGlueTypeData%ModMaps.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModGlueTypeData%VarMaps.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
       do i1 = LB(1), UB(1)
-         call Glue_CopyModMapType(SrcModGlueTypeData%ModMaps(i1), DstModGlueTypeData%ModMaps(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call Glue_CopyVarMapType(SrcModGlueTypeData%VarMaps(i1), DstModGlueTypeData%VarMaps(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
@@ -359,27 +363,27 @@ subroutine Glue_DestroyModGlueType(ModGlueTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_DestroyModGlueType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ModGlueTypeData%ModDataAry)) then
-      LB(1:1) = lbound(ModGlueTypeData%ModDataAry, kind=B8Ki)
-      UB(1:1) = ubound(ModGlueTypeData%ModDataAry, kind=B8Ki)
+   if (allocated(ModGlueTypeData%ModData)) then
+      LB(1:1) = lbound(ModGlueTypeData%ModData, kind=B8Ki)
+      UB(1:1) = ubound(ModGlueTypeData%ModData, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyModDataType(ModGlueTypeData%ModDataAry(i1), ErrStat2, ErrMsg2)
+         call NWTC_Library_DestroyModDataType(ModGlueTypeData%ModData(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
-      deallocate(ModGlueTypeData%ModDataAry)
+      deallocate(ModGlueTypeData%ModData)
    end if
    call NWTC_Library_DestroyModVarsType(ModGlueTypeData%Vars, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyModLinType(ModGlueTypeData%Lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModGlueTypeData%ModMaps)) then
-      LB(1:1) = lbound(ModGlueTypeData%ModMaps, kind=B8Ki)
-      UB(1:1) = ubound(ModGlueTypeData%ModMaps, kind=B8Ki)
+   if (allocated(ModGlueTypeData%VarMaps)) then
+      LB(1:1) = lbound(ModGlueTypeData%VarMaps, kind=B8Ki)
+      UB(1:1) = ubound(ModGlueTypeData%VarMaps, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call Glue_DestroyModMapType(ModGlueTypeData%ModMaps(i1), ErrStat2, ErrMsg2)
+         call Glue_DestroyVarMapType(ModGlueTypeData%VarMaps(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
-      deallocate(ModGlueTypeData%ModMaps)
+      deallocate(ModGlueTypeData%VarMaps)
    end if
 end subroutine
 
@@ -391,24 +395,24 @@ subroutine Glue_PackModGlueType(RF, Indata)
    integer(B8Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Name)
-   call RegPack(RF, allocated(InData%ModDataAry))
-   if (allocated(InData%ModDataAry)) then
-      call RegPackBounds(RF, 1, lbound(InData%ModDataAry, kind=B8Ki), ubound(InData%ModDataAry, kind=B8Ki))
-      LB(1:1) = lbound(InData%ModDataAry, kind=B8Ki)
-      UB(1:1) = ubound(InData%ModDataAry, kind=B8Ki)
+   call RegPack(RF, allocated(InData%ModData))
+   if (allocated(InData%ModData)) then
+      call RegPackBounds(RF, 1, lbound(InData%ModData, kind=B8Ki), ubound(InData%ModData, kind=B8Ki))
+      LB(1:1) = lbound(InData%ModData, kind=B8Ki)
+      UB(1:1) = ubound(InData%ModData, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_PackModDataType(RF, InData%ModDataAry(i1)) 
+         call NWTC_Library_PackModDataType(RF, InData%ModData(i1)) 
       end do
    end if
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    call NWTC_Library_PackModLinType(RF, InData%Lin) 
-   call RegPack(RF, allocated(InData%ModMaps))
-   if (allocated(InData%ModMaps)) then
-      call RegPackBounds(RF, 1, lbound(InData%ModMaps, kind=B8Ki), ubound(InData%ModMaps, kind=B8Ki))
-      LB(1:1) = lbound(InData%ModMaps, kind=B8Ki)
-      UB(1:1) = ubound(InData%ModMaps, kind=B8Ki)
+   call RegPack(RF, allocated(InData%VarMaps))
+   if (allocated(InData%VarMaps)) then
+      call RegPackBounds(RF, 1, lbound(InData%VarMaps, kind=B8Ki), ubound(InData%VarMaps, kind=B8Ki))
+      LB(1:1) = lbound(InData%VarMaps, kind=B8Ki)
+      UB(1:1) = ubound(InData%VarMaps, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call Glue_PackModMapType(RF, InData%ModMaps(i1)) 
+         call Glue_PackVarMapType(RF, InData%VarMaps(i1)) 
       end do
    end if
    if (RegCheckErr(RF, RoutineName)) return
@@ -424,32 +428,32 @@ subroutine Glue_UnPackModGlueType(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Name); if (RegCheckErr(RF, RoutineName)) return
-   if (allocated(OutData%ModDataAry)) deallocate(OutData%ModDataAry)
+   if (allocated(OutData%ModData)) deallocate(OutData%ModData)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ModDataAry(LB(1):UB(1)),stat=stat)
+      allocate(OutData%ModData(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ModDataAry.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ModData.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackModDataType(RF, OutData%ModDataAry(i1)) ! ModDataAry 
+         call NWTC_Library_UnpackModDataType(RF, OutData%ModData(i1)) ! ModData 
       end do
    end if
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call NWTC_Library_UnpackModLinType(RF, OutData%Lin) ! Lin 
-   if (allocated(OutData%ModMaps)) deallocate(OutData%ModMaps)
+   if (allocated(OutData%VarMaps)) deallocate(OutData%VarMaps)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ModMaps(LB(1):UB(1)),stat=stat)
+      allocate(OutData%VarMaps(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ModMaps.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%VarMaps.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call Glue_UnpackModMapType(RF, OutData%ModMaps(i1)) ! ModMaps 
+         call Glue_UnpackVarMapType(RF, OutData%VarMaps(i1)) ! VarMaps 
       end do
    end if
 end subroutine
@@ -473,10 +477,6 @@ subroutine Glue_CopyMappingType(SrcMappingTypeData, DstMappingTypeData, CtrlCode
    DstMappingTypeData%DstModID = SrcMappingTypeData%DstModID
    DstMappingTypeData%SrcIns = SrcMappingTypeData%SrcIns
    DstMappingTypeData%DstIns = SrcMappingTypeData%DstIns
-   DstMappingTypeData%SrcMeshID = SrcMappingTypeData%SrcMeshID
-   DstMappingTypeData%DstMeshID = SrcMappingTypeData%DstMeshID
-   DstMappingTypeData%SrcDispMeshID = SrcMappingTypeData%SrcDispMeshID
-   DstMappingTypeData%DstDispMeshID = SrcMappingTypeData%DstDispMeshID
    call NWTC_Library_CopyDatLoc(SrcMappingTypeData%SrcDL, DstMappingTypeData%SrcDL, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -506,6 +506,24 @@ subroutine Glue_CopyMappingType(SrcMappingTypeData, DstMappingTypeData, CtrlCode
       end if
       DstMappingTypeData%TmpMatrix = SrcMappingTypeData%TmpMatrix
    end if
+   if (allocated(SrcMappingTypeData%VarData)) then
+      LB(1:1) = lbound(SrcMappingTypeData%VarData, kind=B8Ki)
+      UB(1:1) = ubound(SrcMappingTypeData%VarData, kind=B8Ki)
+      if (.not. allocated(DstMappingTypeData%VarData)) then
+         allocate(DstMappingTypeData%VarData(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMappingTypeData%VarData.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMappingTypeData%VarData = SrcMappingTypeData%VarData
+   end if
+   call NWTC_Library_CopyModVarType(SrcMappingTypeData%SrcVar, DstMappingTypeData%SrcVar, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyModVarType(SrcMappingTypeData%DstVar, DstMappingTypeData%DstVar, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    call NWTC_Library_CopyMeshMapType(SrcMappingTypeData%MeshMap, DstMappingTypeData%MeshMap, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -540,6 +558,13 @@ subroutine Glue_DestroyMappingType(MappingTypeData, ErrStat, ErrMsg)
    if (allocated(MappingTypeData%TmpMatrix)) then
       deallocate(MappingTypeData%TmpMatrix)
    end if
+   if (allocated(MappingTypeData%VarData)) then
+      deallocate(MappingTypeData%VarData)
+   end if
+   call NWTC_Library_DestroyModVarType(MappingTypeData%SrcVar, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModVarType(MappingTypeData%DstVar, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyMeshMapType(MappingTypeData%MeshMap, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyMeshMapType(MappingTypeData%MeshMapAux, ErrStat2, ErrMsg2)
@@ -562,10 +587,6 @@ subroutine Glue_PackMappingType(RF, Indata)
    call RegPack(RF, InData%DstModID)
    call RegPack(RF, InData%SrcIns)
    call RegPack(RF, InData%DstIns)
-   call RegPack(RF, InData%SrcMeshID)
-   call RegPack(RF, InData%DstMeshID)
-   call RegPack(RF, InData%SrcDispMeshID)
-   call RegPack(RF, InData%DstDispMeshID)
    call NWTC_Library_PackDatLoc(RF, InData%SrcDL) 
    call NWTC_Library_PackDatLoc(RF, InData%DstDL) 
    call NWTC_Library_PackDatLoc(RF, InData%SrcDispDL) 
@@ -576,6 +597,9 @@ subroutine Glue_PackMappingType(RF, Indata)
    call RegPack(RF, InData%Ready)
    call RegPack(RF, InData%DstUsesSibling)
    call RegPackAlloc(RF, InData%TmpMatrix)
+   call RegPackAlloc(RF, InData%VarData)
+   call NWTC_Library_PackModVarType(RF, InData%SrcVar) 
+   call NWTC_Library_PackModVarType(RF, InData%DstVar) 
    call NWTC_Library_PackMeshMapType(RF, InData%MeshMap) 
    call NWTC_Library_PackMeshMapType(RF, InData%MeshMapAux) 
    call MeshPack(RF, InData%TmpLoadMesh) 
@@ -598,10 +622,6 @@ subroutine Glue_UnPackMappingType(RF, OutData)
    call RegUnpack(RF, OutData%DstModID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SrcIns); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DstIns); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SrcMeshID); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%DstMeshID); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SrcDispMeshID); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%DstDispMeshID); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackDatLoc(RF, OutData%SrcDL) ! SrcDL 
    call NWTC_Library_UnpackDatLoc(RF, OutData%DstDL) ! DstDL 
    call NWTC_Library_UnpackDatLoc(RF, OutData%SrcDispDL) ! SrcDispDL 
@@ -612,6 +632,9 @@ subroutine Glue_UnPackMappingType(RF, OutData)
    call RegUnpack(RF, OutData%Ready); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DstUsesSibling); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TmpMatrix); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VarData); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModVarType(RF, OutData%SrcVar) ! SrcVar 
+   call NWTC_Library_UnpackModVarType(RF, OutData%DstVar) ! DstVar 
    call NWTC_Library_UnpackMeshMapType(RF, OutData%MeshMap) ! MeshMap 
    call NWTC_Library_UnpackMeshMapType(RF, OutData%MeshMapAux) ! MeshMapAux 
    call MeshUnpack(RF, OutData%TmpLoadMesh) ! TmpLoadMesh 
@@ -684,13 +707,218 @@ subroutine Glue_UnPackLinParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%iMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine Glue_CopyTCParam(SrcTCParamData, DstTCParamData, CtrlCode, ErrStat, ErrMsg)
+   type(Glue_TCParam), intent(in) :: SrcTCParamData
+   type(Glue_TCParam), intent(inout) :: DstTCParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Glue_CopyTCParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstTCParamData%h = SrcTCParamData%h
+   DstTCParamData%ConvTol = SrcTCParamData%ConvTol
+   DstTCParamData%NumCrctn = SrcTCParamData%NumCrctn
+   DstTCParamData%MaxConvIter = SrcTCParamData%MaxConvIter
+   DstTCParamData%NIter_UJac = SrcTCParamData%NIter_UJac
+   DstTCParamData%NStep_UJac = SrcTCParamData%NStep_UJac
+   DstTCParamData%Scale_UJac = SrcTCParamData%Scale_UJac
+   DstTCParamData%RhoInf = SrcTCParamData%RhoInf
+   DstTCParamData%AlphaM = SrcTCParamData%AlphaM
+   DstTCParamData%AlphaF = SrcTCParamData%AlphaF
+   DstTCParamData%Beta = SrcTCParamData%Beta
+   DstTCParamData%Gamma = SrcTCParamData%Gamma
+   DstTCParamData%BetaPrime = SrcTCParamData%BetaPrime
+   DstTCParamData%GammaPrime = SrcTCParamData%GammaPrime
+   DstTCParamData%NumJ = SrcTCParamData%NumJ
+   DstTCParamData%NumQ = SrcTCParamData%NumQ
+   DstTCParamData%iX1 = SrcTCParamData%iX1
+   DstTCParamData%iX2 = SrcTCParamData%iX2
+   DstTCParamData%iUT = SrcTCParamData%iUT
+   DstTCParamData%iU1 = SrcTCParamData%iU1
+   DstTCParamData%iUL = SrcTCParamData%iUL
+   DstTCParamData%iyT = SrcTCParamData%iyT
+   DstTCParamData%iy1 = SrcTCParamData%iy1
+   DstTCParamData%iJX = SrcTCParamData%iJX
+   DstTCParamData%iJU = SrcTCParamData%iJU
+   DstTCParamData%iJUT = SrcTCParamData%iJUT
+   DstTCParamData%iJL = SrcTCParamData%iJL
+   if (allocated(SrcTCParamData%iModInit)) then
+      LB(1:1) = lbound(SrcTCParamData%iModInit, kind=B8Ki)
+      UB(1:1) = ubound(SrcTCParamData%iModInit, kind=B8Ki)
+      if (.not. allocated(DstTCParamData%iModInit)) then
+         allocate(DstTCParamData%iModInit(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCParamData%iModInit.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCParamData%iModInit = SrcTCParamData%iModInit
+   end if
+   if (allocated(SrcTCParamData%iModTC)) then
+      LB(1:1) = lbound(SrcTCParamData%iModTC, kind=B8Ki)
+      UB(1:1) = ubound(SrcTCParamData%iModTC, kind=B8Ki)
+      if (.not. allocated(DstTCParamData%iModTC)) then
+         allocate(DstTCParamData%iModTC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCParamData%iModTC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCParamData%iModTC = SrcTCParamData%iModTC
+   end if
+   if (allocated(SrcTCParamData%iModOpt1)) then
+      LB(1:1) = lbound(SrcTCParamData%iModOpt1, kind=B8Ki)
+      UB(1:1) = ubound(SrcTCParamData%iModOpt1, kind=B8Ki)
+      if (.not. allocated(DstTCParamData%iModOpt1)) then
+         allocate(DstTCParamData%iModOpt1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCParamData%iModOpt1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCParamData%iModOpt1 = SrcTCParamData%iModOpt1
+   end if
+   if (allocated(SrcTCParamData%iModOpt2)) then
+      LB(1:1) = lbound(SrcTCParamData%iModOpt2, kind=B8Ki)
+      UB(1:1) = ubound(SrcTCParamData%iModOpt2, kind=B8Ki)
+      if (.not. allocated(DstTCParamData%iModOpt2)) then
+         allocate(DstTCParamData%iModOpt2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCParamData%iModOpt2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCParamData%iModOpt2 = SrcTCParamData%iModOpt2
+   end if
+   if (allocated(SrcTCParamData%iModPost)) then
+      LB(1:1) = lbound(SrcTCParamData%iModPost, kind=B8Ki)
+      UB(1:1) = ubound(SrcTCParamData%iModPost, kind=B8Ki)
+      if (.not. allocated(DstTCParamData%iModPost)) then
+         allocate(DstTCParamData%iModPost(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCParamData%iModPost.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCParamData%iModPost = SrcTCParamData%iModPost
+   end if
+end subroutine
+
+subroutine Glue_DestroyTCParam(TCParamData, ErrStat, ErrMsg)
+   type(Glue_TCParam), intent(inout) :: TCParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Glue_DestroyTCParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(TCParamData%iModInit)) then
+      deallocate(TCParamData%iModInit)
+   end if
+   if (allocated(TCParamData%iModTC)) then
+      deallocate(TCParamData%iModTC)
+   end if
+   if (allocated(TCParamData%iModOpt1)) then
+      deallocate(TCParamData%iModOpt1)
+   end if
+   if (allocated(TCParamData%iModOpt2)) then
+      deallocate(TCParamData%iModOpt2)
+   end if
+   if (allocated(TCParamData%iModPost)) then
+      deallocate(TCParamData%iModPost)
+   end if
+end subroutine
+
+subroutine Glue_PackTCParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Glue_TCParam), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Glue_PackTCParam'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%h)
+   call RegPack(RF, InData%ConvTol)
+   call RegPack(RF, InData%NumCrctn)
+   call RegPack(RF, InData%MaxConvIter)
+   call RegPack(RF, InData%NIter_UJac)
+   call RegPack(RF, InData%NStep_UJac)
+   call RegPack(RF, InData%Scale_UJac)
+   call RegPack(RF, InData%RhoInf)
+   call RegPack(RF, InData%AlphaM)
+   call RegPack(RF, InData%AlphaF)
+   call RegPack(RF, InData%Beta)
+   call RegPack(RF, InData%Gamma)
+   call RegPack(RF, InData%BetaPrime)
+   call RegPack(RF, InData%GammaPrime)
+   call RegPack(RF, InData%NumJ)
+   call RegPack(RF, InData%NumQ)
+   call RegPack(RF, InData%iX1)
+   call RegPack(RF, InData%iX2)
+   call RegPack(RF, InData%iUT)
+   call RegPack(RF, InData%iU1)
+   call RegPack(RF, InData%iUL)
+   call RegPack(RF, InData%iyT)
+   call RegPack(RF, InData%iy1)
+   call RegPack(RF, InData%iJX)
+   call RegPack(RF, InData%iJU)
+   call RegPack(RF, InData%iJUT)
+   call RegPack(RF, InData%iJL)
+   call RegPackAlloc(RF, InData%iModInit)
+   call RegPackAlloc(RF, InData%iModTC)
+   call RegPackAlloc(RF, InData%iModOpt1)
+   call RegPackAlloc(RF, InData%iModOpt2)
+   call RegPackAlloc(RF, InData%iModPost)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_UnPackTCParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Glue_TCParam), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Glue_UnPackTCParam'
+   integer(B8Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%h); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ConvTol); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumCrctn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MaxConvIter); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NIter_UJac); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NStep_UJac); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Scale_UJac); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RhoInf); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AlphaM); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AlphaF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Beta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Gamma); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BetaPrime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GammaPrime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumJ); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumQ); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iX1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iX2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iUT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iU1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iUL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iyT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iy1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iJX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iJU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iJUT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iJL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iModInit); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iModTC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iModOpt1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iModOpt2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%iModPost); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine Glue_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(Glue_ParameterType), intent(in) :: SrcParamData
    type(Glue_ParameterType), intent(inout) :: DstParamData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_CopyParam'
@@ -699,137 +927,9 @@ subroutine Glue_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    call Glue_CopyLinParam(SrcParamData%Lin, DstParamData%Lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstParamData%DT = SrcParamData%DT
-   DstParamData%ConvTol = SrcParamData%ConvTol
-   DstParamData%NumCrctn = SrcParamData%NumCrctn
-   DstParamData%MaxConvIter = SrcParamData%MaxConvIter
-   DstParamData%NIter_UJac = SrcParamData%NIter_UJac
-   DstParamData%NStep_UJac = SrcParamData%NStep_UJac
-   DstParamData%Scale_UJac = SrcParamData%Scale_UJac
-   DstParamData%AccBlend = SrcParamData%AccBlend
-   DstParamData%RhoInf = SrcParamData%RhoInf
-   DstParamData%AlphaM = SrcParamData%AlphaM
-   DstParamData%AlphaF = SrcParamData%AlphaF
-   DstParamData%Beta = SrcParamData%Beta
-   DstParamData%Gamma = SrcParamData%Gamma
-   DstParamData%C = SrcParamData%C
-   DstParamData%iX1 = SrcParamData%iX1
-   DstParamData%iX2 = SrcParamData%iX2
-   DstParamData%iUT = SrcParamData%iUT
-   DstParamData%iU1 = SrcParamData%iU1
-   DstParamData%iyT = SrcParamData%iyT
-   DstParamData%iy1 = SrcParamData%iy1
-   DstParamData%iJX = SrcParamData%iJX
-   DstParamData%iJU = SrcParamData%iJU
-   DstParamData%iJUT = SrcParamData%iJUT
-   if (allocated(SrcParamData%iJL)) then
-      LB(1:1) = lbound(SrcParamData%iJL, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iJL, kind=B8Ki)
-      if (.not. allocated(DstParamData%iJL)) then
-         allocate(DstParamData%iJL(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iJL.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iJL = SrcParamData%iJL
-   end if
-   if (allocated(SrcParamData%ixqd)) then
-      LB(1:2) = lbound(SrcParamData%ixqd, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%ixqd, kind=B8Ki)
-      if (.not. allocated(DstParamData%ixqd)) then
-         allocate(DstParamData%ixqd(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ixqd.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%ixqd = SrcParamData%ixqd
-   end if
-   if (allocated(SrcParamData%iModInit)) then
-      LB(1:1) = lbound(SrcParamData%iModInit, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iModInit, kind=B8Ki)
-      if (.not. allocated(DstParamData%iModInit)) then
-         allocate(DstParamData%iModInit(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iModInit.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iModInit = SrcParamData%iModInit
-   end if
-   if (allocated(SrcParamData%iModTC)) then
-      LB(1:1) = lbound(SrcParamData%iModTC, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iModTC, kind=B8Ki)
-      if (.not. allocated(DstParamData%iModTC)) then
-         allocate(DstParamData%iModTC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iModTC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iModTC = SrcParamData%iModTC
-   end if
-   if (allocated(SrcParamData%iModBD)) then
-      LB(1:1) = lbound(SrcParamData%iModBD, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iModBD, kind=B8Ki)
-      if (.not. allocated(DstParamData%iModBD)) then
-         allocate(DstParamData%iModBD(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iModBD.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iModBD = SrcParamData%iModBD
-   end if
-   if (allocated(SrcParamData%iModOpt1)) then
-      LB(1:1) = lbound(SrcParamData%iModOpt1, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iModOpt1, kind=B8Ki)
-      if (.not. allocated(DstParamData%iModOpt1)) then
-         allocate(DstParamData%iModOpt1(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iModOpt1.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iModOpt1 = SrcParamData%iModOpt1
-   end if
-   if (allocated(SrcParamData%iModOpt1US)) then
-      LB(1:1) = lbound(SrcParamData%iModOpt1US, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iModOpt1US, kind=B8Ki)
-      if (.not. allocated(DstParamData%iModOpt1US)) then
-         allocate(DstParamData%iModOpt1US(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iModOpt1US.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iModOpt1US = SrcParamData%iModOpt1US
-   end if
-   if (allocated(SrcParamData%iModOpt2)) then
-      LB(1:1) = lbound(SrcParamData%iModOpt2, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iModOpt2, kind=B8Ki)
-      if (.not. allocated(DstParamData%iModOpt2)) then
-         allocate(DstParamData%iModOpt2(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iModOpt2.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iModOpt2 = SrcParamData%iModOpt2
-   end if
-   if (allocated(SrcParamData%iModPost)) then
-      LB(1:1) = lbound(SrcParamData%iModPost, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%iModPost, kind=B8Ki)
-      if (.not. allocated(DstParamData%iModPost)) then
-         allocate(DstParamData%iModPost(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%iModPost.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%iModPost = SrcParamData%iModPost
-   end if
+   call Glue_CopyTCParam(SrcParamData%TC, DstParamData%TC, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine Glue_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -843,33 +943,8 @@ subroutine Glue_DestroyParam(ParamData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call Glue_DestroyLinParam(ParamData%Lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ParamData%iJL)) then
-      deallocate(ParamData%iJL)
-   end if
-   if (allocated(ParamData%ixqd)) then
-      deallocate(ParamData%ixqd)
-   end if
-   if (allocated(ParamData%iModInit)) then
-      deallocate(ParamData%iModInit)
-   end if
-   if (allocated(ParamData%iModTC)) then
-      deallocate(ParamData%iModTC)
-   end if
-   if (allocated(ParamData%iModBD)) then
-      deallocate(ParamData%iModBD)
-   end if
-   if (allocated(ParamData%iModOpt1)) then
-      deallocate(ParamData%iModOpt1)
-   end if
-   if (allocated(ParamData%iModOpt1US)) then
-      deallocate(ParamData%iModOpt1US)
-   end if
-   if (allocated(ParamData%iModOpt2)) then
-      deallocate(ParamData%iModOpt2)
-   end if
-   if (allocated(ParamData%iModPost)) then
-      deallocate(ParamData%iModPost)
-   end if
+   call Glue_DestroyTCParam(ParamData%TC, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Glue_PackParam(RF, Indata)
@@ -878,38 +953,7 @@ subroutine Glue_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'Glue_PackParam'
    if (RF%ErrStat >= AbortErrLev) return
    call Glue_PackLinParam(RF, InData%Lin) 
-   call RegPack(RF, InData%DT)
-   call RegPack(RF, InData%ConvTol)
-   call RegPack(RF, InData%NumCrctn)
-   call RegPack(RF, InData%MaxConvIter)
-   call RegPack(RF, InData%NIter_UJac)
-   call RegPack(RF, InData%NStep_UJac)
-   call RegPack(RF, InData%Scale_UJac)
-   call RegPack(RF, InData%AccBlend)
-   call RegPack(RF, InData%RhoInf)
-   call RegPack(RF, InData%AlphaM)
-   call RegPack(RF, InData%AlphaF)
-   call RegPack(RF, InData%Beta)
-   call RegPack(RF, InData%Gamma)
-   call RegPack(RF, InData%C)
-   call RegPack(RF, InData%iX1)
-   call RegPack(RF, InData%iX2)
-   call RegPack(RF, InData%iUT)
-   call RegPack(RF, InData%iU1)
-   call RegPack(RF, InData%iyT)
-   call RegPack(RF, InData%iy1)
-   call RegPack(RF, InData%iJX)
-   call RegPack(RF, InData%iJU)
-   call RegPack(RF, InData%iJUT)
-   call RegPackAlloc(RF, InData%iJL)
-   call RegPackAlloc(RF, InData%ixqd)
-   call RegPackAlloc(RF, InData%iModInit)
-   call RegPackAlloc(RF, InData%iModTC)
-   call RegPackAlloc(RF, InData%iModBD)
-   call RegPackAlloc(RF, InData%iModOpt1)
-   call RegPackAlloc(RF, InData%iModOpt1US)
-   call RegPackAlloc(RF, InData%iModOpt2)
-   call RegPackAlloc(RF, InData%iModPost)
+   call Glue_PackTCParam(RF, InData%TC) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -917,43 +961,9 @@ subroutine Glue_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Glue_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackParam'
-   integer(B8Ki)   :: LB(2), UB(2)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call Glue_UnpackLinParam(RF, OutData%Lin) ! Lin 
-   call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%ConvTol); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumCrctn); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%MaxConvIter); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NIter_UJac); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NStep_UJac); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Scale_UJac); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AccBlend); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%RhoInf); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AlphaM); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AlphaF); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Beta); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Gamma); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%C); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iX1); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iX2); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iUT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iU1); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iyT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iy1); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iJX); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iJU); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iJUT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iJL); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%ixqd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iModInit); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iModTC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iModBD); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iModOpt1); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iModOpt1US); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iModOpt2); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iModPost); if (RegCheckErr(RF, RoutineName)) return
+   call Glue_UnpackTCParam(RF, OutData%TC) ! TC 
 end subroutine
 
 subroutine Glue_CopyLinSave(SrcLinSaveData, DstLinSaveData, CtrlCode, ErrStat, ErrMsg)
@@ -1381,6 +1391,18 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
    character(*), parameter        :: RoutineName = 'Glue_CopyAeroMap'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(SrcAeroMapData%iModOrder)) then
+      LB(1:1) = lbound(SrcAeroMapData%iModOrder, kind=B8Ki)
+      UB(1:1) = ubound(SrcAeroMapData%iModOrder, kind=B8Ki)
+      if (.not. allocated(DstAeroMapData%iModOrder)) then
+         allocate(DstAeroMapData%iModOrder(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroMapData%iModOrder.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstAeroMapData%iModOrder = SrcAeroMapData%iModOrder
+   end if
    call Glue_CopyModGlueType(SrcAeroMapData%Mod, DstAeroMapData%Mod, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -1536,6 +1558,9 @@ subroutine Glue_DestroyAeroMap(AeroMapData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Glue_DestroyAeroMap'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(AeroMapData%iModOrder)) then
+      deallocate(AeroMapData%iModOrder)
+   end if
    call Glue_DestroyModGlueType(AeroMapData%Mod, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(AeroMapData%Jac11)) then
@@ -1586,6 +1611,7 @@ subroutine Glue_PackAeroMap(RF, Indata)
    integer(B8Ki)   :: i1, i2, i3
    integer(B8Ki)   :: LB(3), UB(3)
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%iModOrder)
    call Glue_PackModGlueType(RF, InData%Mod) 
    call RegPackAlloc(RF, InData%Jac11)
    call RegPackAlloc(RF, InData%Jac12)
@@ -1621,6 +1647,7 @@ subroutine Glue_UnPackAeroMap(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%iModOrder); if (RegCheckErr(RF, RoutineName)) return
    call Glue_UnpackModGlueType(RF, OutData%Mod) ! Mod 
    call RegUnpackAlloc(RF, OutData%Jac11); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Jac12); if (RegCheckErr(RF, RoutineName)) return
@@ -1648,6 +1675,309 @@ subroutine Glue_UnPackAeroMap(RF, OutData)
       end do
    end if
    call RegUnpack(RF, OutData%LinFileNum); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_CopyTC_State(SrcTC_StateData, DstTC_StateData, CtrlCode, ErrStat, ErrMsg)
+   type(TC_State), intent(in) :: SrcTC_StateData
+   type(TC_State), intent(inout) :: DstTC_StateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Glue_CopyTC_State'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcTC_StateData%q_prev)) then
+      LB(1:1) = lbound(SrcTC_StateData%q_prev, kind=B8Ki)
+      UB(1:1) = ubound(SrcTC_StateData%q_prev, kind=B8Ki)
+      if (.not. allocated(DstTC_StateData%q_prev)) then
+         allocate(DstTC_StateData%q_prev(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_StateData%q_prev.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_StateData%q_prev = SrcTC_StateData%q_prev
+   end if
+   if (allocated(SrcTC_StateData%x)) then
+      LB(1:1) = lbound(SrcTC_StateData%x, kind=B8Ki)
+      UB(1:1) = ubound(SrcTC_StateData%x, kind=B8Ki)
+      if (.not. allocated(DstTC_StateData%x)) then
+         allocate(DstTC_StateData%x(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_StateData%x.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_StateData%x = SrcTC_StateData%x
+   end if
+   if (allocated(SrcTC_StateData%q)) then
+      LB(1:1) = lbound(SrcTC_StateData%q, kind=B8Ki)
+      UB(1:1) = ubound(SrcTC_StateData%q, kind=B8Ki)
+      if (.not. allocated(DstTC_StateData%q)) then
+         allocate(DstTC_StateData%q(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_StateData%q.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_StateData%q = SrcTC_StateData%q
+   end if
+   if (allocated(SrcTC_StateData%v)) then
+      LB(1:1) = lbound(SrcTC_StateData%v, kind=B8Ki)
+      UB(1:1) = ubound(SrcTC_StateData%v, kind=B8Ki)
+      if (.not. allocated(DstTC_StateData%v)) then
+         allocate(DstTC_StateData%v(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_StateData%v.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_StateData%v = SrcTC_StateData%v
+   end if
+   if (allocated(SrcTC_StateData%vd)) then
+      LB(1:1) = lbound(SrcTC_StateData%vd, kind=B8Ki)
+      UB(1:1) = ubound(SrcTC_StateData%vd, kind=B8Ki)
+      if (.not. allocated(DstTC_StateData%vd)) then
+         allocate(DstTC_StateData%vd(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_StateData%vd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_StateData%vd = SrcTC_StateData%vd
+   end if
+   if (allocated(SrcTC_StateData%a)) then
+      LB(1:1) = lbound(SrcTC_StateData%a, kind=B8Ki)
+      UB(1:1) = ubound(SrcTC_StateData%a, kind=B8Ki)
+      if (.not. allocated(DstTC_StateData%a)) then
+         allocate(DstTC_StateData%a(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_StateData%a.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_StateData%a = SrcTC_StateData%a
+   end if
+end subroutine
+
+subroutine Glue_DestroyTC_State(TC_StateData, ErrStat, ErrMsg)
+   type(TC_State), intent(inout) :: TC_StateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Glue_DestroyTC_State'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(TC_StateData%q_prev)) then
+      deallocate(TC_StateData%q_prev)
+   end if
+   if (allocated(TC_StateData%x)) then
+      deallocate(TC_StateData%x)
+   end if
+   if (allocated(TC_StateData%q)) then
+      deallocate(TC_StateData%q)
+   end if
+   if (allocated(TC_StateData%v)) then
+      deallocate(TC_StateData%v)
+   end if
+   if (allocated(TC_StateData%vd)) then
+      deallocate(TC_StateData%vd)
+   end if
+   if (allocated(TC_StateData%a)) then
+      deallocate(TC_StateData%a)
+   end if
+end subroutine
+
+subroutine Glue_PackTC_State(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(TC_State), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Glue_PackTC_State'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%q_prev)
+   call RegPackAlloc(RF, InData%x)
+   call RegPackAlloc(RF, InData%q)
+   call RegPackAlloc(RF, InData%v)
+   call RegPackAlloc(RF, InData%vd)
+   call RegPackAlloc(RF, InData%a)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_UnPackTC_State(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(TC_State), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Glue_UnPackTC_State'
+   integer(B8Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%q_prev); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%x); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%q); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%v); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%vd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%a); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(Glue_TCMisc), intent(in) :: SrcTCMiscData
+   type(Glue_TCMisc), intent(inout) :: DstTCMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Glue_CopyTCMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call Glue_CopyModGlueType(SrcTCMiscData%Mod, DstTCMiscData%Mod, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Glue_CopyTC_State(SrcTCMiscData%State, DstTCMiscData%State, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Glue_CopyTC_State(SrcTCMiscData%StatePrev, DstTCMiscData%StatePrev, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcTCMiscData%UCalc)) then
+      LB(1:1) = lbound(SrcTCMiscData%UCalc, kind=B8Ki)
+      UB(1:1) = ubound(SrcTCMiscData%UCalc, kind=B8Ki)
+      if (.not. allocated(DstTCMiscData%UCalc)) then
+         allocate(DstTCMiscData%UCalc(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%UCalc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%UCalc = SrcTCMiscData%UCalc
+   end if
+   if (allocated(SrcTCMiscData%UOrig)) then
+      LB(1:1) = lbound(SrcTCMiscData%UOrig, kind=B8Ki)
+      UB(1:1) = ubound(SrcTCMiscData%UOrig, kind=B8Ki)
+      if (.not. allocated(DstTCMiscData%UOrig)) then
+         allocate(DstTCMiscData%UOrig(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%UOrig.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%UOrig = SrcTCMiscData%UOrig
+   end if
+   if (allocated(SrcTCMiscData%T)) then
+      LB(1:2) = lbound(SrcTCMiscData%T, kind=B8Ki)
+      UB(1:2) = ubound(SrcTCMiscData%T, kind=B8Ki)
+      if (.not. allocated(DstTCMiscData%T)) then
+         allocate(DstTCMiscData%T(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%T.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%T = SrcTCMiscData%T
+   end if
+   if (allocated(SrcTCMiscData%XB)) then
+      LB(1:2) = lbound(SrcTCMiscData%XB, kind=B8Ki)
+      UB(1:2) = ubound(SrcTCMiscData%XB, kind=B8Ki)
+      if (.not. allocated(DstTCMiscData%XB)) then
+         allocate(DstTCMiscData%XB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%XB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%XB = SrcTCMiscData%XB
+   end if
+   if (allocated(SrcTCMiscData%IPIV)) then
+      LB(1:1) = lbound(SrcTCMiscData%IPIV, kind=B8Ki)
+      UB(1:1) = ubound(SrcTCMiscData%IPIV, kind=B8Ki)
+      if (.not. allocated(DstTCMiscData%IPIV)) then
+         allocate(DstTCMiscData%IPIV(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%IPIV.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%IPIV = SrcTCMiscData%IPIV
+   end if
+   DstTCMiscData%IterTotal = SrcTCMiscData%IterTotal
+   DstTCMiscData%IterUntilUJac = SrcTCMiscData%IterUntilUJac
+   DstTCMiscData%StepsUntilUJac = SrcTCMiscData%StepsUntilUJac
+   DstTCMiscData%ConvWarn = SrcTCMiscData%ConvWarn
+end subroutine
+
+subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
+   type(Glue_TCMisc), intent(inout) :: TCMiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Glue_DestroyTCMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call Glue_DestroyModGlueType(TCMiscData%Mod, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Glue_DestroyTC_State(TCMiscData%State, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Glue_DestroyTC_State(TCMiscData%StatePrev, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(TCMiscData%UCalc)) then
+      deallocate(TCMiscData%UCalc)
+   end if
+   if (allocated(TCMiscData%UOrig)) then
+      deallocate(TCMiscData%UOrig)
+   end if
+   if (allocated(TCMiscData%T)) then
+      deallocate(TCMiscData%T)
+   end if
+   if (allocated(TCMiscData%XB)) then
+      deallocate(TCMiscData%XB)
+   end if
+   if (allocated(TCMiscData%IPIV)) then
+      deallocate(TCMiscData%IPIV)
+   end if
+end subroutine
+
+subroutine Glue_PackTCMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Glue_TCMisc), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Glue_PackTCMisc'
+   if (RF%ErrStat >= AbortErrLev) return
+   call Glue_PackModGlueType(RF, InData%Mod) 
+   call Glue_PackTC_State(RF, InData%State) 
+   call Glue_PackTC_State(RF, InData%StatePrev) 
+   call RegPackAlloc(RF, InData%UCalc)
+   call RegPackAlloc(RF, InData%UOrig)
+   call RegPackAlloc(RF, InData%T)
+   call RegPackAlloc(RF, InData%XB)
+   call RegPackAlloc(RF, InData%IPIV)
+   call RegPack(RF, InData%IterTotal)
+   call RegPack(RF, InData%IterUntilUJac)
+   call RegPack(RF, InData%StepsUntilUJac)
+   call RegPack(RF, InData%ConvWarn)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_UnPackTCMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Glue_TCMisc), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Glue_UnPackTCMisc'
+   integer(B8Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call Glue_UnpackModGlueType(RF, OutData%Mod) ! Mod 
+   call Glue_UnpackTC_State(RF, OutData%State) ! State 
+   call Glue_UnpackTC_State(RF, OutData%StatePrev) ! StatePrev 
+   call RegUnpackAlloc(RF, OutData%UCalc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%UOrig); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%T); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%XB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IPIV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IterTotal); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IterUntilUJac); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%StepsUntilUJac); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ConvWarn); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Glue_CopyLinMisc(SrcLinMiscData, DstLinMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -1700,25 +2030,25 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcMiscData%ModDataAry)) then
-      LB(1:1) = lbound(SrcMiscData%ModDataAry, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%ModDataAry, kind=B8Ki)
-      if (.not. allocated(DstMiscData%ModDataAry)) then
-         allocate(DstMiscData%ModDataAry(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcMiscData%ModData)) then
+      LB(1:1) = lbound(SrcMiscData%ModData, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%ModData, kind=B8Ki)
+      if (.not. allocated(DstMiscData%ModData)) then
+         allocate(DstMiscData%ModData(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ModDataAry.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ModData.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyModDataType(SrcMiscData%ModDataAry(i1), DstMiscData%ModDataAry(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call NWTC_Library_CopyModDataType(SrcMiscData%ModData(i1), DstMiscData%ModData(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
@@ -1751,319 +2081,30 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call Glue_CopyAeroMap(SrcMiscData%AM, DstMiscData%AM, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcMiscData%q)) then
-      LB(1:2) = lbound(SrcMiscData%q, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%q, kind=B8Ki)
-      if (.not. allocated(DstMiscData%q)) then
-         allocate(DstMiscData%q(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%q.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%q = SrcMiscData%q
-   end if
-   if (allocated(SrcMiscData%qn)) then
-      LB(1:2) = lbound(SrcMiscData%qn, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%qn, kind=B8Ki)
-      if (.not. allocated(DstMiscData%qn)) then
-         allocate(DstMiscData%qn(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%qn.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%qn = SrcMiscData%qn
-   end if
-   if (allocated(SrcMiscData%x)) then
-      LB(1:1) = lbound(SrcMiscData%x, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%x, kind=B8Ki)
-      if (.not. allocated(DstMiscData%x)) then
-         allocate(DstMiscData%x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%x = SrcMiscData%x
-   end if
-   if (allocated(SrcMiscData%xn)) then
-      LB(1:1) = lbound(SrcMiscData%xn, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%xn, kind=B8Ki)
-      if (.not. allocated(DstMiscData%xn)) then
-         allocate(DstMiscData%xn(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%xn.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%xn = SrcMiscData%xn
-   end if
-   if (allocated(SrcMiscData%dxdt)) then
-      LB(1:1) = lbound(SrcMiscData%dxdt, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%dxdt, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dxdt)) then
-         allocate(DstMiscData%dxdt(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dxdt.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dxdt = SrcMiscData%dxdt
-   end if
-   if (allocated(SrcMiscData%u)) then
-      LB(1:1) = lbound(SrcMiscData%u, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%u, kind=B8Ki)
-      if (.not. allocated(DstMiscData%u)) then
-         allocate(DstMiscData%u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%u = SrcMiscData%u
-   end if
-   if (allocated(SrcMiscData%un)) then
-      LB(1:1) = lbound(SrcMiscData%un, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%un, kind=B8Ki)
-      if (.not. allocated(DstMiscData%un)) then
-         allocate(DstMiscData%un(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%un.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%un = SrcMiscData%un
-   end if
-   if (allocated(SrcMiscData%u_tmp)) then
-      LB(1:1) = lbound(SrcMiscData%u_tmp, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%u_tmp, kind=B8Ki)
-      if (.not. allocated(DstMiscData%u_tmp)) then
-         allocate(DstMiscData%u_tmp(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_tmp.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%u_tmp = SrcMiscData%u_tmp
-   end if
-   if (allocated(SrcMiscData%y)) then
-      LB(1:1) = lbound(SrcMiscData%y, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%y, kind=B8Ki)
-      if (.not. allocated(DstMiscData%y)) then
-         allocate(DstMiscData%y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%y = SrcMiscData%y
-   end if
-   if (allocated(SrcMiscData%dYdx)) then
-      LB(1:2) = lbound(SrcMiscData%dYdx, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%dYdx, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dYdx)) then
-         allocate(DstMiscData%dYdx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dYdx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dYdx = SrcMiscData%dYdx
-   end if
-   if (allocated(SrcMiscData%dYdu)) then
-      LB(1:2) = lbound(SrcMiscData%dYdu, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%dYdu, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dYdu)) then
-         allocate(DstMiscData%dYdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dYdu.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dYdu = SrcMiscData%dYdu
-   end if
-   if (allocated(SrcMiscData%dXdx)) then
-      LB(1:2) = lbound(SrcMiscData%dXdx, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%dXdx, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dXdx)) then
-         allocate(DstMiscData%dXdx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dXdx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dXdx = SrcMiscData%dXdx
-   end if
-   if (allocated(SrcMiscData%dXdu)) then
-      LB(1:2) = lbound(SrcMiscData%dXdu, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%dXdu, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dXdu)) then
-         allocate(DstMiscData%dXdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dXdu.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dXdu = SrcMiscData%dXdu
-   end if
-   if (allocated(SrcMiscData%dUdu)) then
-      LB(1:2) = lbound(SrcMiscData%dUdu, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%dUdu, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dUdu)) then
-         allocate(DstMiscData%dUdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dUdu.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dUdu = SrcMiscData%dUdu
-   end if
-   if (allocated(SrcMiscData%dUdy)) then
-      LB(1:2) = lbound(SrcMiscData%dUdy, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%dUdy, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dUdy)) then
-         allocate(DstMiscData%dUdy(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dUdy.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dUdy = SrcMiscData%dUdy
-   end if
-   if (allocated(SrcMiscData%dUdyHat)) then
-      LB(1:2) = lbound(SrcMiscData%dUdyHat, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%dUdyHat, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dUdyHat)) then
-         allocate(DstMiscData%dUdyHat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dUdyHat.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dUdyHat = SrcMiscData%dUdyHat
-   end if
-   if (allocated(SrcMiscData%XB)) then
-      LB(1:2) = lbound(SrcMiscData%XB, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%XB, kind=B8Ki)
-      if (.not. allocated(DstMiscData%XB)) then
-         allocate(DstMiscData%XB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%XB.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%XB = SrcMiscData%XB
-   end if
-   if (allocated(SrcMiscData%G)) then
-      LB(1:2) = lbound(SrcMiscData%G, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%G, kind=B8Ki)
-      if (.not. allocated(DstMiscData%G)) then
-         allocate(DstMiscData%G(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%G.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%G = SrcMiscData%G
-   end if
-   if (allocated(SrcMiscData%Jac)) then
-      LB(1:2) = lbound(SrcMiscData%Jac, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%Jac, kind=B8Ki)
-      if (.not. allocated(DstMiscData%Jac)) then
-         allocate(DstMiscData%Jac(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Jac.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%Jac = SrcMiscData%Jac
-   end if
-   if (allocated(SrcMiscData%IPIV)) then
-      LB(1:1) = lbound(SrcMiscData%IPIV, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%IPIV, kind=B8Ki)
-      if (.not. allocated(DstMiscData%IPIV)) then
-         allocate(DstMiscData%IPIV(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%IPIV.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%IPIV = SrcMiscData%IPIV
-   end if
-   DstMiscData%IterTotal = SrcMiscData%IterTotal
-   DstMiscData%IterUntilUJac = SrcMiscData%IterUntilUJac
-   DstMiscData%StepsUntilUJac = SrcMiscData%StepsUntilUJac
-   if (allocated(SrcMiscData%dq)) then
-      LB(1:2) = lbound(SrcMiscData%dq, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%dq, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dq)) then
-         allocate(DstMiscData%dq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dq.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dq = SrcMiscData%dq
-   end if
-   if (allocated(SrcMiscData%dx)) then
-      LB(1:1) = lbound(SrcMiscData%dx, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%dx, kind=B8Ki)
-      if (.not. allocated(DstMiscData%dx)) then
-         allocate(DstMiscData%dx(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%dx = SrcMiscData%dx
-   end if
-   if (allocated(SrcMiscData%du)) then
-      LB(1:1) = lbound(SrcMiscData%du, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%du, kind=B8Ki)
-      if (.not. allocated(DstMiscData%du)) then
-         allocate(DstMiscData%du(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%du.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%du = SrcMiscData%du
-   end if
-   if (allocated(SrcMiscData%UDiff)) then
-      LB(1:1) = lbound(SrcMiscData%UDiff, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%UDiff, kind=B8Ki)
-      if (.not. allocated(DstMiscData%UDiff)) then
-         allocate(DstMiscData%UDiff(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%UDiff.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%UDiff = SrcMiscData%UDiff
-   end if
-   DstMiscData%ConvWarn = SrcMiscData%ConvWarn
+   call Glue_CopyTCMisc(SrcMiscData%TC, DstMiscData%TC, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine Glue_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(MiscData%ModDataAry)) then
-      LB(1:1) = lbound(MiscData%ModDataAry, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%ModDataAry, kind=B8Ki)
+   if (allocated(MiscData%ModData)) then
+      LB(1:1) = lbound(MiscData%ModData, kind=B8Ki)
+      UB(1:1) = ubound(MiscData%ModData, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyModDataType(MiscData%ModDataAry(i1), ErrStat2, ErrMsg2)
+         call NWTC_Library_DestroyModDataType(MiscData%ModData(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
-      deallocate(MiscData%ModDataAry)
+      deallocate(MiscData%ModData)
    end if
    if (allocated(MiscData%Mappings)) then
       LB(1:1) = lbound(MiscData%Mappings, kind=B8Ki)
@@ -2082,94 +2123,24 @@ subroutine Glue_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Glue_DestroyAeroMap(MiscData%AM, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(MiscData%q)) then
-      deallocate(MiscData%q)
-   end if
-   if (allocated(MiscData%qn)) then
-      deallocate(MiscData%qn)
-   end if
-   if (allocated(MiscData%x)) then
-      deallocate(MiscData%x)
-   end if
-   if (allocated(MiscData%xn)) then
-      deallocate(MiscData%xn)
-   end if
-   if (allocated(MiscData%dxdt)) then
-      deallocate(MiscData%dxdt)
-   end if
-   if (allocated(MiscData%u)) then
-      deallocate(MiscData%u)
-   end if
-   if (allocated(MiscData%un)) then
-      deallocate(MiscData%un)
-   end if
-   if (allocated(MiscData%u_tmp)) then
-      deallocate(MiscData%u_tmp)
-   end if
-   if (allocated(MiscData%y)) then
-      deallocate(MiscData%y)
-   end if
-   if (allocated(MiscData%dYdx)) then
-      deallocate(MiscData%dYdx)
-   end if
-   if (allocated(MiscData%dYdu)) then
-      deallocate(MiscData%dYdu)
-   end if
-   if (allocated(MiscData%dXdx)) then
-      deallocate(MiscData%dXdx)
-   end if
-   if (allocated(MiscData%dXdu)) then
-      deallocate(MiscData%dXdu)
-   end if
-   if (allocated(MiscData%dUdu)) then
-      deallocate(MiscData%dUdu)
-   end if
-   if (allocated(MiscData%dUdy)) then
-      deallocate(MiscData%dUdy)
-   end if
-   if (allocated(MiscData%dUdyHat)) then
-      deallocate(MiscData%dUdyHat)
-   end if
-   if (allocated(MiscData%XB)) then
-      deallocate(MiscData%XB)
-   end if
-   if (allocated(MiscData%G)) then
-      deallocate(MiscData%G)
-   end if
-   if (allocated(MiscData%Jac)) then
-      deallocate(MiscData%Jac)
-   end if
-   if (allocated(MiscData%IPIV)) then
-      deallocate(MiscData%IPIV)
-   end if
-   if (allocated(MiscData%dq)) then
-      deallocate(MiscData%dq)
-   end if
-   if (allocated(MiscData%dx)) then
-      deallocate(MiscData%dx)
-   end if
-   if (allocated(MiscData%du)) then
-      deallocate(MiscData%du)
-   end if
-   if (allocated(MiscData%UDiff)) then
-      deallocate(MiscData%UDiff)
-   end if
+   call Glue_DestroyTCMisc(MiscData%TC, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Glue_PackMisc(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(Glue_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Glue_PackMisc'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, allocated(InData%ModDataAry))
-   if (allocated(InData%ModDataAry)) then
-      call RegPackBounds(RF, 1, lbound(InData%ModDataAry, kind=B8Ki), ubound(InData%ModDataAry, kind=B8Ki))
-      LB(1:1) = lbound(InData%ModDataAry, kind=B8Ki)
-      UB(1:1) = ubound(InData%ModDataAry, kind=B8Ki)
+   call RegPack(RF, allocated(InData%ModData))
+   if (allocated(InData%ModData)) then
+      call RegPackBounds(RF, 1, lbound(InData%ModData, kind=B8Ki), ubound(InData%ModData, kind=B8Ki))
+      LB(1:1) = lbound(InData%ModData, kind=B8Ki)
+      UB(1:1) = ubound(InData%ModData, kind=B8Ki)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_PackModDataType(RF, InData%ModDataAry(i1)) 
+         call NWTC_Library_PackModDataType(RF, InData%ModData(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%Mappings))
@@ -2185,34 +2156,7 @@ subroutine Glue_PackMisc(RF, Indata)
    call Glue_PackLinMisc(RF, InData%Lin) 
    call Glue_PackCalcSteady(RF, InData%CS) 
    call Glue_PackAeroMap(RF, InData%AM) 
-   call RegPackAlloc(RF, InData%q)
-   call RegPackAlloc(RF, InData%qn)
-   call RegPackAlloc(RF, InData%x)
-   call RegPackAlloc(RF, InData%xn)
-   call RegPackAlloc(RF, InData%dxdt)
-   call RegPackAlloc(RF, InData%u)
-   call RegPackAlloc(RF, InData%un)
-   call RegPackAlloc(RF, InData%u_tmp)
-   call RegPackAlloc(RF, InData%y)
-   call RegPackAlloc(RF, InData%dYdx)
-   call RegPackAlloc(RF, InData%dYdu)
-   call RegPackAlloc(RF, InData%dXdx)
-   call RegPackAlloc(RF, InData%dXdu)
-   call RegPackAlloc(RF, InData%dUdu)
-   call RegPackAlloc(RF, InData%dUdy)
-   call RegPackAlloc(RF, InData%dUdyHat)
-   call RegPackAlloc(RF, InData%XB)
-   call RegPackAlloc(RF, InData%G)
-   call RegPackAlloc(RF, InData%Jac)
-   call RegPackAlloc(RF, InData%IPIV)
-   call RegPack(RF, InData%IterTotal)
-   call RegPack(RF, InData%IterUntilUJac)
-   call RegPack(RF, InData%StepsUntilUJac)
-   call RegPackAlloc(RF, InData%dq)
-   call RegPackAlloc(RF, InData%dx)
-   call RegPackAlloc(RF, InData%du)
-   call RegPackAlloc(RF, InData%UDiff)
-   call RegPack(RF, InData%ConvWarn)
+   call Glue_PackTCMisc(RF, InData%TC) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2220,22 +2164,22 @@ subroutine Glue_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Glue_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackMisc'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B8Ki)   :: i1
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   if (allocated(OutData%ModDataAry)) deallocate(OutData%ModDataAry)
+   if (allocated(OutData%ModData)) deallocate(OutData%ModData)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ModDataAry(LB(1):UB(1)),stat=stat)
+      allocate(OutData%ModData(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ModDataAry.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ModData.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackModDataType(RF, OutData%ModDataAry(i1)) ! ModDataAry 
+         call NWTC_Library_UnpackModDataType(RF, OutData%ModData(i1)) ! ModData 
       end do
    end if
    if (allocated(OutData%Mappings)) deallocate(OutData%Mappings)
@@ -2255,34 +2199,7 @@ subroutine Glue_UnPackMisc(RF, OutData)
    call Glue_UnpackLinMisc(RF, OutData%Lin) ! Lin 
    call Glue_UnpackCalcSteady(RF, OutData%CS) ! CS 
    call Glue_UnpackAeroMap(RF, OutData%AM) ! AM 
-   call RegUnpackAlloc(RF, OutData%q); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%qn); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%xn); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dxdt); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%un); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%u_tmp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dYdx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dYdu); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dXdx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dXdu); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dUdu); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dUdy); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dUdyHat); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%XB); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%G); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IPIV); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%IterTotal); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%IterUntilUJac); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%StepsUntilUJac); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dq); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%UDiff); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%ConvWarn); if (RegCheckErr(RF, RoutineName)) return
+   call Glue_UnpackTCMisc(RF, OutData%TC) ! TC 
 end subroutine
 
 END MODULE Glue_Types

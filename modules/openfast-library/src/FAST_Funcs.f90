@@ -2,7 +2,7 @@
 ! FAST_Funcs provides the glue code a uniform interface to module functions.
 !...............................................................................
 ! LICENSING
-! Copyright (C) 2013-2016  National Renewable Energy Laboratory
+! Copyright (C) 2024  National Renewable Energy Laboratory
 !
 !    This file is part of FAST.
 !
@@ -27,6 +27,8 @@ use NWTC_LAPACK
 use AeroDyn
 use BeamDyn
 use ElastoDyn
+use ExtPtfm_MCKF
+use FEAMooring
 use HydroDyn
 use InflowWind
 use MAP
@@ -34,6 +36,9 @@ use MoorDyn
 use SeaState
 use ServoDyn
 use SubDyn
+use IceDyn
+use IceFloe
+use OrcaFlexInterface
 
 implicit none
 
@@ -60,77 +65,83 @@ subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
    select case (ModData%ID)
 
    case (Module_AD)
-
-      call AD_Input_ExtrapInterp(T%AD%Input, T%AD%InputTimes, T%AD%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
-      do j = T%p_FAST%InterpOrder, 1, -1
+      if (ModData%Ins /= 1) return ! Perform extrap interp for first instance only, this advances all rotors
+      call AD_Input_ExtrapInterp(T%AD%Input(1:), T%AD%InputTimes, T%AD%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
          call AD_CopyInput(T%AD%Input(j), T%AD%Input(j + 1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-         T%AD%InputTimes(j + 1) = T%AD%InputTimes(j)
       end do
-      call AD_CopyInput(T%AD%u, T%AD%Input(1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-      T%AD%InputTimes(1) = t_global_next
+      call ShiftInputTimes(T%AD%InputTimes)
 
    case (Module_BD)
-
-      call BD_Input_ExtrapInterp(T%BD%Input(:, ModData%Ins), T%BD%InputTimes(:, ModData%Ins), T%BD%u(ModData%Ins), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
-      do j = T%p_FAST%InterpOrder, 1, -1
+      call BD_Input_ExtrapInterp(T%BD%Input(1:, ModData%Ins), T%BD%InputTimes(:, ModData%Ins), T%BD%Input(0, ModData%Ins), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
          call BD_CopyInput(T%BD%Input(j, ModData%Ins), T%BD%Input(j + 1, ModData%Ins), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-         T%BD%InputTimes(j + 1, ModData%Ins) = T%BD%InputTimes(j, ModData%Ins)
       end do
-      call BD_CopyInput(T%BD%u(ModData%Ins), T%BD%Input(1, ModData%Ins), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-      T%BD%InputTimes(1, ModData%Ins) = t_global_next
+      call ShiftInputTimes(T%BD%InputTimes(:, ModData%Ins))
 
    case (Module_ED)
-
-      call ED_Input_ExtrapInterp(T%ED%Input, T%ED%InputTimes, T%ED%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
-      do j = T%p_FAST%InterpOrder, 1, -1
+      call ED_Input_ExtrapInterp(T%ED%Input(1:), T%ED%InputTimes, T%ED%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
          call ED_CopyInput(T%ED%Input(j), T%ED%Input(j + 1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-         T%ED%InputTimes(j + 1) = T%ED%InputTimes(j)
       end do
-      call ED_CopyInput(T%ED%u, T%ED%Input(1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-      T%ED%InputTimes(1) = t_global_next
+      call ShiftInputTimes(T%ED%InputTimes)
 
-!  case (Module_ExtPtfm)
-!  case (Module_FEAM)
+   case (Module_ExtPtfm)
+      call ExtPtfm_Input_ExtrapInterp(T%ExtPtfm%Input(1:), T%ExtPtfm%InputTimes, T%ExtPtfm%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
+         call ExtPtfm_CopyInput(T%ExtPtfm%Input(j), T%ExtPtfm%Input(j + 1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
+      end do
+      call ShiftInputTimes(T%ExtPtfm%InputTimes)
+
+   case (Module_FEAM)
+      call FEAM_Input_ExtrapInterp(T%FEAM%Input(1:), T%FEAM%InputTimes, T%FEAM%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
+         call FEAM_CopyInput(T%FEAM%Input(j), T%FEAM%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      end do
+      call ShiftInputTimes(T%FEAM%InputTimes)
+
    case (Module_HD)
-
-      ! TODO: Fix inconsistent function name (HydroDyn_CopyInput)
-      call HydroDyn_Input_ExtrapInterp(T%HD%Input, T%HD%InputTimes, T%HD%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
-      do j = T%p_FAST%InterpOrder, 1, -1
+      call HydroDyn_Input_ExtrapInterp(T%HD%Input(1:), T%HD%InputTimes, T%HD%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
          call HydroDyn_CopyInput(T%HD%Input(j), T%HD%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-         T%HD%InputTimes(j + 1) = T%HD%InputTimes(j)
       end do
-      call HydroDyn_CopyInput(T%HD%u, T%HD%Input(1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-      T%HD%InputTimes(1) = t_global_next
+      call ShiftInputTimes(T%HD%InputTimes)
 
 !  case (Module_IceD)
 !  case (Module_IceF)
    case (Module_IfW)
-
-      call InflowWind_Input_ExtrapInterp(T%IfW%Input, T%IfW%InputTimes, T%IfW%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
-      do j = T%p_FAST%InterpOrder, 1, -1
+      call InflowWind_Input_ExtrapInterp(T%IfW%Input(1:), T%IfW%InputTimes, T%IfW%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
          call InflowWind_CopyInput(T%IfW%Input(j), T%IfW%Input(j + 1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-         T%IfW%InputTimes(j + 1) = T%IfW%InputTimes(j)
       end do
-      call InflowWind_CopyInput(T%IfW%u, T%IfW%Input(1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-      T%IfW%InputTimes(1) = t_global_next
+      call ShiftInputTimes(T%IfW%InputTimes)
 
-!  case (Module_MAP)
-!  case (Module_MD)
+   case (Module_MAP)
+      call MAP_Input_ExtrapInterp(T%MAP%Input(1:), T%MAP%InputTimes, T%MAP%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
+         call MAP_CopyInput(T%MAP%Input(j), T%MAP%Input(j + 1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
+      end do
+      call ShiftInputTimes(T%MAP%InputTimes)
+
+   case (Module_MD)
+      call MD_Input_ExtrapInterp(T%MD%Input(1:), T%MD%InputTimes, T%MD%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
+         call MD_CopyInput(T%MD%Input(j), T%MD%Input(j + 1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
+      end do
+      call ShiftInputTimes(T%MD%InputTimes)
+
 !  case (Module_OpFM)
 !  case (Module_Orca)
    case (Module_SD)
-
-      call SD_Input_ExtrapInterp(T%SD%Input, T%SD%InputTimes, T%SD%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
-      do j = T%p_FAST%InterpOrder, 1, -1
+      call SD_Input_ExtrapInterp(T%SD%Input(1:), T%SD%InputTimes, T%SD%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
          call SD_CopyInput(T%SD%Input(j), T%SD%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-         T%SD%InputTimes(j + 1) = T%SD%InputTimes(j)
       end do
-      call SD_CopyInput(T%SD%u, T%SD%Input(1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-      T%SD%InputTimes(1) = t_global_next
+      call ShiftInputTimes(T%SD%InputTimes)
 
    case (Module_SeaSt)
 
-      ! call SeaSt_Input_ExtrapInterp(T%SeaSt%Input, T%SeaSt%InputTimes, T%SeaSt%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      ! call SeaSt_Input_ExtrapInterp(T%SeaSt%Input(1:), T%SeaSt%InputTimes, T%SeaSt%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
       ! do j = T%p_FAST%InterpOrder, 1, -1
       !    call SeaSt_CopyInput(T%SeaSt%Input(j), T%SeaSt%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
       !    T%SeaSt%InputTimes(j + 1) = T%SeaSt%InputTimes(j)
@@ -140,29 +151,35 @@ subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
 
    case (Module_SrvD)
 
-      call SrvD_Input_ExtrapInterp(T%SrvD%Input, T%SrvD%InputTimes, T%SrvD%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
-      do j = T%p_FAST%InterpOrder, 1, -1
+      call SrvD_Input_ExtrapInterp(T%SrvD%Input(1:), T%SrvD%InputTimes, T%SrvD%Input(0), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
          call SrvD_CopyInput(T%SrvD%Input(j), T%SrvD%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-         T%SrvD%InputTimes(j + 1) = T%SrvD%InputTimes(j)
       end do
-      call SrvD_CopyInput(T%SrvD%u, T%SrvD%Input(1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-      T%SrvD%InputTimes(1) = t_global_next
+      call ShiftInputTimes(T%SrvD%InputTimes)
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
       return
    end select
 
 contains
+   subroutine ShiftInputTimes(InputTimes)
+      real(R8Ki)     :: InputTimes(:)
+      integer(IntKi) :: k
+      do j = T%p_FAST%InterpOrder, 1, -1
+         InputTimes(j + 1) = InputTimes(j)
+      end do
+      InputTimes(1) = t_global_next
+   end subroutine
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
    end function
 end subroutine
 
-subroutine FAST_InitIO(Mods, ThisTime, DT, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)           :: Mods(:)     !< Module data
-   real(DbKi), intent(in)                  :: ThisTime   !< Initial simulation time (almost always 0)
+subroutine FAST_InitIO(ModAry, ThisTime, DT, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)           :: ModAry(:)   !< Module data
+   real(DbKi), intent(in)                  :: ThisTime    !< Initial simulation time (almost always 0)
    real(DbKi), intent(in)                  :: DT          !< Glue code time step size
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
@@ -171,92 +188,74 @@ subroutine FAST_InitIO(Mods, ThisTime, DT, T, ErrStat, ErrMsg)
    character(*), parameter    :: RoutineName = 'FAST_InitIO'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   real(DbKi)                 :: t_global_next       ! Simulation time for computing outputs
+   real(DbKi)                 :: t_global_next    ! Simulation time for computing outputs
+   real(DbKi), allocatable    :: InputTimes(:)    ! Input times array
    integer(IntKi)             :: i, j, k
 
    ErrStat = ErrID_None
    ErrMsg = ''
 
+   ! Calculate input times array
+   InputTimes = ThisTime - DT*[(k, k=0, T%p_FAST%InterpOrder)]
+
    ! Loop through modules
-   do i = 1, size(Mods)
+   do i = 1, size(ModAry)
+      associate (ModData => ModAry(i))
 
-      ! Copy state from current to predicted and initialze meshes
-      call FAST_CopyStates(Mods(i), T, STATE_CURR, STATE_PRED, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
-
-      ! Select based on module ID
-      select case (Mods(i)%ID)
-
-      case (Module_AD)
-
-         T%AD%InputTimes = ThisTime - DT*[(k, k=0, T%p_FAST%InterpOrder)]
-         do k = 2, T%p_FAST%InterpOrder + 1
-            call AD_CopyInput(T%AD%Input(1), T%AD%Input(k), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
+         ! Copy state from current (1) to predicted (2), saved current (3), and saved predicted (4)
+         do k = 2, 4
+            call FAST_CopyStates(ModData, T, STATE_CURR, k, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            if (Failed()) return
          end do
-         call AD_CopyInput(T%AD%Input(1), T%AD%u, MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
 
-      case (Module_BD)
-
-         T%BD%InputTimes(:, Mods(i)%Ins) = ThisTime - DT*[(k, k=0, T%p_FAST%InterpOrder)]
+         ! Copy input from current to interpolation locations
          do k = 2, T%p_FAST%InterpOrder + 1
-            call BD_CopyInput(T%BD%Input(1, Mods(i)%Ins), T%BD%Input(k, Mods(i)%Ins), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
+            call FAST_CopyInput(ModData, T, INPUT_CURR, k, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            if (Failed()) return
          end do
-         call BD_CopyInput(T%BD%Input(1, Mods(i)%Ins), T%BD%u(Mods(i)%Ins), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
 
-      case (Module_ED)
+         ! Copy input from current to temporary location
+         call FAST_CopyInput(ModData, T, INPUT_CURR, INPUT_TEMP, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         if (Failed()) return
 
-         T%ED%InputTimes = ThisTime - DT*[(k, k=0, T%p_FAST%InterpOrder)]
-         do k = 2, T%p_FAST%InterpOrder + 1
-            call ED_CopyInput(T%ED%Input(1), T%ED%Input(k), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-         end do
-         call ED_CopyInput(T%ED%Input(1), T%ED%u, MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-
-!  case (Module_ExtPtfm)
-!  case (Module_FEAM)
-      case (Module_HD)
-
-         T%HD%InputTimes(:) = ThisTime - DT*[(k, k=0, T%p_FAST%InterpOrder)]
-         do k = 2, T%p_FAST%InterpOrder + 1
-            call HydroDyn_CopyInput(T%HD%Input(1), T%HD%Input(k), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-         end do
-         call HydroDyn_CopyInput(T%HD%Input(1), T%HD%u, MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-
-!  case (Module_IceD)
-!  case (Module_IceF)
-
-      case (Module_IfW)
-
-         ! TODO: Fix inconsistent function name
-         T%IfW%InputTimes = ThisTime - DT*[(k, k=0, T%p_FAST%InterpOrder)]
-         do k = 2, T%p_FAST%InterpOrder + 1
-            call InflowWind_CopyInput(T%IfW%Input(1), T%IfW%Input(k), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-         end do
-         call InflowWind_CopyInput(T%IfW%Input(1), T%IfW%u, MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-
-!  case (Module_MAP)
-!  case (Module_MD)
-!  case (Module_OpFM)
-!  case (Module_Orca)
-      case (Module_SD)
-
-         T%SD%InputTimes = ThisTime - DT*[(k, k=0, T%p_FAST%InterpOrder)]
-         do k = 2, T%p_FAST%InterpOrder + 1
-            call SD_CopyInput(T%SD%Input(1), T%SD%Input(k), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-         end do
-         call SD_CopyInput(T%SD%Input(1), T%SD%u, MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-
-!  case (Module_SeaSt)
-      case (Module_SrvD)
-
-         T%SrvD%InputTimes = ThisTime - DT*[(k, k=0, T%p_FAST%InterpOrder)]
-         do k = 2, T%p_FAST%InterpOrder + 1
-            call SrvD_CopyInput(T%SrvD%Input(1), T%SrvD%Input(k), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-         end do
-         call SrvD_CopyInput(T%SrvD%Input(1), T%SrvD%u, MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
-
-      case default
-         call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mods(i)%ID)), ErrStat, ErrMsg, RoutineName)
-         return
-      end select
+         ! Select based on module ID
+         select case (ModData%ID)
+         case (Module_AD)
+            T%AD%InputTimes = InputTimes
+         case (Module_BD)
+            T%BD%InputTimes(:, ModData%Ins) = InputTimes
+         case (Module_ED)
+            T%ED%InputTimes = InputTimes
+         case (Module_ExtPtfm)
+            T%ExtPtfm%InputTimes = InputTimes
+         case (Module_FEAM)
+         case (Module_HD)
+            T%HD%InputTimes = InputTimes
+         case (Module_IceD)
+            T%IceD%InputTimes(:, ModData%Ins) = InputTimes
+         case (Module_IceF)
+            T%IceF%InputTimes = InputTimes
+         case (Module_IfW)
+            T%IfW%InputTimes = InputTimes
+         case (Module_MAP)
+            T%MAP%InputTimes = InputTimes
+         case (Module_MD)
+            T%MD%InputTimes = InputTimes
+!        case (Module_ExtInfw)
+!           T%ExtInfw%InputTimes = InputTimes
+         case (Module_Orca)
+            T%Orca%InputTimes = InputTimes
+         case (Module_SD)
+            T%SD%InputTimes = InputTimes
+         case (Module_SeaSt)
+            T%SeaSt%InputTimes = InputTimes
+         case (Module_SrvD)
+            T%SrvD%InputTimes = InputTimes
+         case default
+            call SetErrStat(ErrID_Fatal, "Unknown module "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
+            return
+         end select
+      end associate
    end do
 
 contains
@@ -266,12 +265,10 @@ contains
    end function
 end subroutine
 
-subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrStat, ErrMsg)
+subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)           :: ModData     !< Module data
    real(DbKi), intent(in)                  :: t_initial   !< Initial simulation time (almost always 0)
    integer(IntKi), intent(in)              :: n_t_global  !< Integer time step
-   real(R8Ki), intent(inout)               :: x_TC(:)     !< Tight coupling state array
-   real(R8Ki), intent(inout)               :: q_TC(:, :)  !< Tight coupling state matrix
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -287,18 +284,17 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
    ErrStat = ErrID_None
    ErrMsg = ''
 
-   ! Copy from current to predicted state (MESH_UPDATECOPY)
-   call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-
    ! Select based on module ID
    select case (ModData%ID)
 
    case (Module_AD)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
 
       do j_ss = 1, ModData%SubSteps
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
-         call AD_UpdateStates(t_module, n_t_module, T%AD%Input, T%AD%InputTimes, &
+         call AD_UpdateStates(t_module, n_t_module, T%AD%Input(1:), T%AD%InputTimes, &
                               T%AD%p, T%AD%x(STATE_PRED), T%AD%xd(STATE_PRED), &
                               T%AD%z(STATE_PRED), T%AD%OtherSt(STATE_PRED), &
                               T%AD%m, ErrStat2, ErrMsg2)
@@ -306,121 +302,169 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
       end do
 
    case (Module_BD)
-
-      associate (p_BD => T%BD%p(ModData%Ins), &
-                 m_BD => T%BD%m(ModData%Ins), &
-                 u_BD => T%BD%Input(1, ModData%Ins), &
-                 x_BD => T%BD%x(ModData%Ins, STATE_PRED), &
-                 os_BD => T%BD%OtherSt(ModData%Ins, STATE_PRED))
-
-         ! Transfer tight coupling states to module
-         ! call BD_PackContStateQuatOP(p_BD, x_BD, m_BD%Jac%x)
-         ! call XferGblToLoc1D(ModData%ixs, x_TC, m_BD%Jac%x)
-         ! call BD_UnpackContStateQuatOP(p_BD, m_BD%Jac%x, x_BD)
-
-         ! TODO: Fix state reset
-         ! Set BD accelerations and algorithmic accelerations from q matrix
-         ! do j = 1, size(p_BD%Vars%x)
-         !    select case (p_BD%Vars%x(j)%Field)
-         !    case (FieldTransDisp)
-         !       os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 3)
-         !       os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 4)
-         !    case (FieldOrientation)
-         !       os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 3)
-         !       os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 4)
-         !    end select
-         ! end do
-
-         ! Update the global reference
-         ! call BD_UpdateGlobalRef(u_BD, p_BD, x_BD, os_BD, ErrStat, ErrMsg)
-         ! if (Failed()) return
-
-         ! Update q matrix accelerations and algorithmic accelerations from BD
-         ! do j = 1, size(p_BD%Vars%x)
-         !    select case (p_BD%Vars%x(j)%Field)
-         !    case (FieldTransDisp)
-         !       q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1))
-         !       q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1))
-         !    case (FieldOrientation)
-         !       q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1))
-         !       q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1))
-         !    end select
-         ! end do
-
-         ! Transfer updated states to solver
-         ! call BD_PackContStateQuatOP(p_BD, x_BD, m_BD%Jac%x)
-         ! call XferLocToGbl1D(ModData%ixs, m_BD%Jac%x, x_TC)
-      end associate
+      ! State update is handled by solver as part of tight coupling
 
    case (Module_ED)
+      ! State update is handled by solver as part of tight coupling
 
-      associate (p_ED => T%ED%p, m_ED => T%ED%m, &
-                 u_ED => T%ED%Input(1), x_ED => T%ED%x(STATE_PRED))
+      ! associate (p_ED => T%ED%p, m_ED => T%ED%m, &
+      !            u_ED => T%ED%Input(1), x_ED => T%ED%x(STATE_PRED))
 
-         ! Transfer tight coupling states to module
-         ! call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
-         ! call ED_UnpackContStateOP(p_ED, m_ED%Jac%x, x_ED)
+      !    Transfer tight coupling states to module
+      !    call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
+      !    call ED_UnpackContStateOP(p_ED, m_ED%Jac%x, x_ED)
 
-         ! Update the azimuth angle
-         ! call ED_UpdateAzimuth(p_ED, x_ED, T%p_FAST%DT)
+      ! Update the azimuth angle
+      call ED_UpdateAzimuth(T%ED%p, T%ED%x(STATE_PRED), ModData%DT)
 
-         ! Transfer updated states to solver
-         ! call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
+      !    Transfer updated states to solver
+      !    call ED_PackContStateOP(p_ED, x_ED, m_ED%Jac%x)
 
-      end associate
+      ! end associate
 
-!  case (Module_ExtPtfm)
-!  case (Module_FEAM)
-   case (Module_HD)
+   case (Module_ExtPtfm)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
 
       do j_ss = 1, ModData%SubSteps
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
-         call HydroDyn_UpdateStates(t_module, n_t_module, T%HD%Input, T%HD%InputTimes, T%HD%p, &
+         call ExtPtfm_UpdateStates(t_module, n_t_module, T%ExtPtfm%Input(1:), T%ExtPtfm%InputTimes, &
+                                   T%ExtPtfm%p, T%ExtPtfm%x(STATE_PRED), T%ExtPtfm%xd(STATE_PRED), &
+                                   T%ExtPtfm%z(STATE_PRED), T%ExtPtfm%OtherSt(STATE_PRED), &
+                                   T%ExtPtfm%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+   case (Module_FEAM)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call FEAM_UpdateStates(t_module, n_t_module, T%FEAM%Input(1:), T%FEAM%InputTimes, T%FEAM%p, &
+                                T%FEAM%x(STATE_PRED), T%FEAM%xd(STATE_PRED), &
+                                T%FEAM%z(STATE_PRED), T%FEAM%OtherSt(STATE_PRED), &
+                                T%FEAM%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+   case (Module_HD)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call HydroDyn_UpdateStates(t_module, n_t_module, T%HD%Input(1:), T%HD%InputTimes, T%HD%p, &
                                     T%HD%x(STATE_PRED), T%HD%xd(STATE_PRED), &
                                     T%HD%z(STATE_PRED), T%HD%OtherSt(STATE_PRED), &
                                     T%HD%m, ErrStat2, ErrMsg2)
          if (Failed()) return
       end do
 
-!  case (Module_IceD)
-!  case (Module_IceF)
-   case (Module_IfW)
-
-      ! do j_ss = 1, ModData%SubSteps
-      !    n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
-      !    t_module = n_t_module*ModData%DT + t_initial
-      !    call InflowWind_UpdateStates(t_module, n_t_module, T%IfW%Input, T%IfW%InputTimes, T%IfW%p, &
-      !                                 T%IfW%x(STATE_PRED), T%IfW%xd(STATE_PRED), &
-      !                                 T%IfW%z(STATE_PRED), T%IfW%OtherSt(STATE_PRED), &
-      !                                 T%IfW%m, ErrStat2, ErrMsg2)
-      !    if (Failed()) return
-      ! end do
-
-!  case (Module_MAP)
-!  case (Module_MD)
-!  case (Module_OpFM)
-!  case (Module_Orca)
-   case (Module_SD)
-
-      associate (p_SD => T%SD%p, m_SD => T%SD%m, &
-                 u_SD => T%SD%Input(1), x_SD => T%SD%x(STATE_PRED))
-
-         ! TODO: Add Lin struct to SubDyn
-         ! Transfer tight coupling states to module
-         ! call SD_PackStateValues(p_SD, x_SD, m_SD%Lin%x)
-         ! call XferGblToLoc1D(ModData%ixs, x_TC, m_SD%Lin%x)
-         ! call SD_UnpackStateValues(p_SD, m_SD%Lin%x, x_SD)
-
-      end associate
-
-!  case (Module_SeaSt)
-   case (Module_SrvD)
+   case (Module_IceD)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
 
       do j_ss = 1, ModData%SubSteps
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
-         call SrvD_UpdateStates(t_module, n_t_module, T%SrvD%Input, T%SrvD%InputTimes, T%SrvD%p, &
+         call IceD_UpdateStates(t_module, n_t_module, T%IceD%Input(1:, ModData%Ins), &
+                                T%IceD%InputTimes(1:, ModData%Ins), T%IceD%p(ModData%Ins), &
+                                T%IceD%x(ModData%Ins, STATE_PRED), T%IceD%xd(ModData%Ins, STATE_PRED), &
+                                T%IceD%z(ModData%Ins, STATE_PRED), T%IceD%OtherSt(ModData%Ins, STATE_PRED), &
+                                T%IceD%m(ModData%Ins), ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+   case (Module_IceF)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call IceFloe_UpdateStates(t_module, n_t_module, T%IceF%Input(1:), T%IceF%InputTimes, T%IceF%p, &
+                                   T%IceF%x(STATE_PRED), T%IceF%xd(STATE_PRED), &
+                                   T%IceF%z(STATE_PRED), T%IceF%OtherSt(STATE_PRED), &
+                                   T%IceF%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+   case (Module_IfW)
+      ! InflowWind does not have states
+
+   case (Module_MAP)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call MD_UpdateStates(t_module, n_t_module, T%MD%Input(1:), T%MD%InputTimes, T%MD%p, &
+                              T%MD%x(STATE_PRED), T%MD%xd(STATE_PRED), &
+                              T%MD%z(STATE_PRED), T%MD%OtherSt(STATE_PRED), &
+                              T%MD%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+   case (Module_MD)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call MD_UpdateStates(t_module, n_t_module, T%MD%Input(1:), T%MD%InputTimes, T%MD%p, &
+                              T%MD%x(STATE_PRED), T%MD%xd(STATE_PRED), &
+                              T%MD%z(STATE_PRED), T%MD%OtherSt(STATE_PRED), &
+                              T%MD%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+!  case (Module_OpFM)
+
+   case (Module_Orca)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call Orca_UpdateStates(t_module, n_t_module, T%Orca%Input(1:), T%Orca%InputTimes, T%Orca%p, &
+                                T%Orca%x(STATE_PRED), T%Orca%xd(STATE_PRED), &
+                                T%Orca%z(STATE_PRED), T%Orca%OtherSt(STATE_PRED), &
+                                T%Orca%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+   case (Module_SD)
+      ! State update is handled by solver as part of tight coupling
+
+   case (Module_SeaSt)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call SeaSt_UpdateStates(t_module, n_t_module, T%SeaSt%Input(1:), T%SeaSt%InputTimes, T%SeaSt%p, &
+                                 T%SeaSt%x(STATE_PRED), T%SeaSt%xd(STATE_PRED), &
+                                 T%SeaSt%z(STATE_PRED), T%SeaSt%OtherSt(STATE_PRED), &
+                                 T%SeaSt%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+   case (Module_SrvD)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call SrvD_UpdateStates(t_module, n_t_module, T%SrvD%Input(1:), T%SrvD%InputTimes, T%SrvD%p, &
                                 T%SrvD%x(STATE_PRED), T%SrvD%xd(STATE_PRED), &
                                 T%SrvD%z(STATE_PRED), T%SrvD%OtherSt(STATE_PRED), &
                                 T%SrvD%m, ErrStat2, ErrMsg2)
@@ -428,7 +472,7 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
       end do
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
       return
    end select
 
@@ -439,12 +483,12 @@ contains
    end function
 end subroutine
 
-subroutine FAST_CalcOutput(ModData, Maps, ThisTime, InputIndex, StateIndex, T, ErrStat, ErrMsg, CalcWriteOutput)
+subroutine FAST_CalcOutput(ModData, Mappings, ThisTime, iInput, iState, T, ErrStat, ErrMsg, CalcWriteOutput)
    type(ModDataType), intent(in)           :: ModData          !< Module data
-   type(MappingType), intent(inout)        :: Maps(:)          !< Output->Input mappings
+   type(MappingType), intent(inout)        :: Mappings(:)      !< Output->Input mappings
    real(DbKi), intent(in)                  :: ThisTime         !< Time
-   integer(IntKi), intent(in)              :: InputIndex       !< Input index
-   integer(IntKi), intent(in)              :: StateIndex       !< State index
+   integer(IntKi), intent(in)              :: iInput       !< Input index
+   integer(IntKi), intent(in)              :: iState       !< State index
    type(FAST_TurbineType), intent(inout)   :: T                !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -469,44 +513,67 @@ subroutine FAST_CalcOutput(ModData, Maps, ThisTime, InputIndex, StateIndex, T, E
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_CalcOutput(ThisTime, T%AD%Input(InputIndex), T%AD%p, T%AD%x(StateIndex), T%AD%xd(StateIndex), T%AD%z(StateIndex), &
-                         T%AD%OtherSt(StateIndex), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, CalcWriteOutput)
+      call AD_CalcOutput(ThisTime, T%AD%Input(iInput), T%AD%p, &
+                         T%AD%x(iState), T%AD%xd(iState), T%AD%z(iState), T%AD%OtherSt(iState), &
+                         T%AD%y, T%AD%m, ErrStat2, ErrMsg2, CalcWriteOutput)
 
    case (Module_BD)
-      call BD_CalcOutput(ThisTime, T%BD%Input(InputIndex, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, StateIndex), &
-                         T%BD%xd(ModData%Ins, StateIndex), T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
+      call BD_CalcOutput(ThisTime, T%BD%Input(iInput, ModData%Ins), T%BD%p(ModData%Ins), &
+                         T%BD%x(ModData%Ins, iState), T%BD%xd(ModData%Ins, iState), &
+                         T%BD%z(ModData%Ins, iState), T%BD%OtherSt(ModData%Ins, iState), &
                          T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, CalcWriteOutput)
 
    case (Module_ED)
-      call ED_CalcOutput(ThisTime, T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), T%ED%xd(StateIndex), &
-                         T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), T%ED%y, T%ED%m, ErrStat2, ErrMsg2)
-!  case (Module_ExtPtfm)
-!  case (Module_FEAM)
+      call ED_CalcOutput(ThisTime, T%ED%Input(iInput), T%ED%p, &
+                         T%ED%x(iState), T%ED%xd(iState), T%ED%z(iState), T%ED%OtherSt(iState), &
+                         T%ED%y, T%ED%m, ErrStat2, ErrMsg2)
+
+   case (Module_ExtPtfm)
+      call ExtPtfm_CalcOutput(ThisTime, T%ExtPtfm%Input(iInput), T%ExtPtfm%p, &
+                              T%ExtPtfm%x(iState), T%ExtPtfm%xd(iState), T%ExtPtfm%z(iState), T%ExtPtfm%OtherSt(iState), &
+                              T%ExtPtfm%y, T%ExtPtfm%m, ErrStat2, ErrMsg2)
+
+   case (Module_FEAM)
+      call FEAM_CalcOutput(ThisTime, T%FEAM%Input(iInput), T%FEAM%p, &
+                           T%FEAM%x(iState), T%FEAM%xd(iState), T%FEAM%z(iState), T%FEAM%OtherSt(iState), &
+                           T%FEAM%y, T%FEAM%m, ErrStat2, ErrMsg2)
+
    case (Module_HD)
-      call HydroDyn_CalcOutput(ThisTime, T%HD%Input(InputIndex), T%HD%p, T%HD%x(StateIndex), T%HD%xd(StateIndex), &
-                               T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), T%HD%y, T%HD%m, ErrStat2, ErrMsg2)
+      call HydroDyn_CalcOutput(ThisTime, T%HD%Input(iInput), T%HD%p, &
+                               T%HD%x(iState), T%HD%xd(iState), T%HD%z(iState), T%HD%OtherSt(iState), &
+                               T%HD%y, T%HD%m, ErrStat2, ErrMsg2)
 
 !  case (Module_IceD)
 !  case (Module_IceF)
    case (Module_IfW)
-      call InflowWind_CalcOutput(ThisTime, T%IfW%Input(InputIndex), T%IfW%p, T%IfW%x(StateIndex), T%IfW%xd(StateIndex), T%IfW%z(StateIndex), &
-                                 T%IfW%OtherSt(StateIndex), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2)
+      call InflowWind_CalcOutput(ThisTime, T%IfW%Input(iInput), T%IfW%p, &
+                                 T%IfW%x(iState), T%IfW%xd(iState), T%IfW%z(iState), T%IfW%OtherSt(iState), &
+                                 T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2)
 
-!  case (Module_MAP)
-!  case (Module_MD)
+   case (Module_MAP)
+      call MAP_CalcOutput(ThisTime, T%MAP%Input(iInput), T%MAP%p, &
+                          T%MAP%x(iState), T%MAP%xd(iState), T%MAP%z(iState), T%MAP%OtherSt, &
+                          T%MAP%y, ErrStat2, ErrMsg2)
+
+   case (Module_MD)
+      call MD_CalcOutput(ThisTime, T%MD%Input(iInput), T%MD%p, &
+                         T%MD%x(iState), T%MD%xd(iState), T%MD%z(iState), T%MD%OtherSt(iState), &
+                         T%MD%y, T%MD%m, ErrStat2, ErrMsg2)
 !  case (Module_OpFM)
 !  case (Module_Orca)
    case (Module_SD)
-      call SD_CalcOutput(ThisTime, T%SD%Input(InputIndex), T%SD%p, T%SD%x(StateIndex), T%SD%xd(StateIndex), T%SD%z(StateIndex), &
-                         T%SD%OtherSt(StateIndex), T%SD%y, T%SD%m, ErrStat2, ErrMsg2)
+      call SD_CalcOutput(ThisTime, T%SD%Input(iInput), T%SD%p, &
+                         T%SD%x(iState), T%SD%xd(iState), T%SD%z(iState), T%SD%OtherSt(iState), &
+                         T%SD%y, T%SD%m, ErrStat2, ErrMsg2)
 
 !  case (Module_SeaSt)
    case (Module_SrvD)
-      call SrvD_CalcOutput(ThisTime, T%SrvD%Input(InputIndex), T%SrvD%p, T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), T%SrvD%z(StateIndex), &
-                           T%SrvD%OtherSt(StateIndex), T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2)
+      call SrvD_CalcOutput(ThisTime, T%SrvD%Input(iInput), T%SrvD%p, &
+                           T%SrvD%x(iState), T%SrvD%xd(iState), T%SrvD%z(iState), T%SrvD%OtherSt(iState), &
+                           T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2)
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
       return
    end select
 
@@ -514,18 +581,20 @@ subroutine FAST_CalcOutput(ModData, Maps, ThisTime, InputIndex, StateIndex, T, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   ! Set updated flag in mappings where this module is the source
-   Maps(ModData%iSrcMaps)%Ready = .true.
+   ! Set ready flag in mappings where this module is the source
+   do i = 1, size(Mappings)
+      if (Mappings(i)%iModSrc == ModData%iMod) Mappings(i)%Ready = .true.
+   end do
 
 end subroutine
 
-subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
+subroutine FAST_GetOP(ModData, ThisTime, iIndex, iState, T, ErrStat, ErrMsg, &
                       u_op, y_op, x_op, dx_op, z_op, u_glue, y_glue, x_glue, dx_glue, z_glue)
    use AeroDyn, only: AD_CalcWind_Rotor
    type(ModDataType), intent(in)                      :: ModData     !< Module information
    real(DbKi), intent(in)                             :: ThisTime    !< Time
-   integer(IntKi), intent(in)                         :: InputIndex  !< Input index
-   integer(IntKi), intent(in)                         :: StateIndex  !< State index
+   integer(IntKi), intent(in)                         :: iIndex  !< Input index
+   integer(IntKi), intent(in)                         :: iState  !< State index
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
@@ -559,42 +628,42 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
-         call AD_PackInputAry(ModData%Vars, T%AD%Input(InputIndex)%rotors(ModData%Ins), u_op)
-         call AD_PackExtInputAry(ModData%Vars, ThisTime, T%AD%p, u_op)
+         call AD_VarsPackInput(ModData%Vars, T%AD%Input(iIndex)%rotors(ModData%Ins), u_op)
+         call AD_VarsPackExtInput(ModData%Vars, ThisTime, T%AD%p, u_op)
       case (Module_BD)
-         call BD_PackInputAry(ModData%Vars, T%BD%Input(InputIndex, ModData%Ins), u_op)
+         call BD_VarsPackInput(ModData%Vars, T%BD%Input(iIndex, ModData%Ins), u_op)
       case (Module_ED)
-         call ED_PackInputAry(ModData%Vars, T%ED%Input(InputIndex), u_op)
-         call ED_PackExtInputAry(ModData%Vars, T%ED%Input(InputIndex), u_op, ErrStat2, ErrMsg2); if (Failed()) return
+         call ED_VarsPackInput(ModData%Vars, T%ED%Input(iIndex), u_op)
+         call ED_PackExtInputAry(ModData%Vars, T%ED%Input(iIndex), u_op, ErrStat2, ErrMsg2); if (Failed()) return
       case (Module_ExtPtfm)
-         call ExtPtfm_PackInputAry(ModData%Vars, T%ExtPtfm%Input(InputIndex), u_op)
+         call ExtPtfm_VarsPackInput(ModData%Vars, T%ExtPtfm%Input(iIndex), u_op)
       case (Module_FEAM)
-         call FEAM_PackInputAry(ModData%Vars, T%FEAM%Input(InputIndex), u_op)
+         call FEAM_VarsPackInput(ModData%Vars, T%FEAM%Input(iIndex), u_op)
       case (Module_HD)
-         call HydroDyn_PackInputAry(ModData%Vars, T%HD%Input(InputIndex), u_op)
-         call HD_PackExtInputAry(ModData%Vars, T%HD%Input(InputIndex), u_op)
+         call HydroDyn_VarsPackInput(ModData%Vars, T%HD%Input(iIndex), u_op)
+         call HD_PackExtInputAry(ModData%Vars, T%HD%Input(iIndex), u_op)
       case (Module_IceD)
-         call IceD_PackInputAry(ModData%Vars, T%IceD%Input(InputIndex, ModData%Ins), u_op)
+         call IceD_VarsPackInput(ModData%Vars, T%IceD%Input(iIndex, ModData%Ins), u_op)
       case (Module_IceF)
-         call IceFloe_PackInputAry(ModData%Vars, T%IceF%Input(InputIndex), u_op)
+         call IceFloe_VarsPackInput(ModData%Vars, T%IceF%Input(iIndex), u_op)
       case (Module_IfW)
-         call InflowWind_PackInputAry(ModData%Vars, T%IfW%Input(InputIndex), u_op)
+         call InflowWind_VarsPackInput(ModData%Vars, T%IfW%Input(iIndex), u_op)
          call InflowWind_PackExtInputAry(ModData%Vars, ThisTime, T%IfW%p, u_op)
       case (Module_MAP)
-         call MAP_PackInputAry(ModData%Vars, T%MAP%Input(InputIndex), u_op)
+         call MAP_VarsPackInput(ModData%Vars, T%MAP%Input(iIndex), u_op)
       case (Module_MD)
-         call MD_PackInputAry(ModData%Vars, T%MD%Input(InputIndex), u_op)
+         call MD_VarsPackInput(ModData%Vars, T%MD%Input(iIndex), u_op)
       case (Module_ExtInfw)
-         ! call ExtInfw_PackInputAry(ModData%Vars, T%ExtInfw%Input(InputIndex), u_op)
+         ! call ExtInfw_VarsPackInput(ModData%Vars, T%ExtInfw%Input(iIndex), u_op)
       case (Module_Orca)
-         call Orca_PackInputAry(ModData%Vars, T%Orca%Input(InputIndex), u_op)
+         call Orca_VarsPackInput(ModData%Vars, T%Orca%Input(iIndex), u_op)
       case (Module_SD)
-         call SD_PackInputAry(ModData%Vars, T%SD%Input(InputIndex), u_op)
+         call SD_VarsPackInput(ModData%Vars, T%SD%Input(iIndex), u_op)
       case (Module_SeaSt)
-         call SeaSt_PackInputAry(ModData%Vars, T%SeaSt%Input(InputIndex), u_op)
-         call SeaSt_PackExtInputAry(ModData%Vars, T%SeaSt%Input(InputIndex), u_op)
+         call SeaSt_VarsPackInput(ModData%Vars, T%SeaSt%Input(iIndex), u_op)
+         call SeaSt_PackExtInputAry(ModData%Vars, T%SeaSt%Input(iIndex), u_op)
       case (Module_SrvD)
-         call SrvD_PackInputAry(ModData%Vars, T%SrvD%Input(InputIndex), u_op)
+         call SrvD_VarsPackInput(ModData%Vars, T%SrvD%Input(iIndex), u_op)
       case default
          call SetErrStat(ErrID_Fatal, "Input unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -615,39 +684,39 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
-         call AD_PackOutputAry(ModData%Vars, T%AD%y%rotors(ModData%Ins), y_op)
+         call AD_VarsPackOutput(ModData%Vars, T%AD%y%rotors(ModData%Ins), y_op)
       case (Module_BD)
-         call BD_PackOutputAry(ModData%Vars, T%BD%y(ModData%Ins), y_op)
+         call BD_VarsPackOutput(ModData%Vars, T%BD%y(ModData%Ins), y_op)
       case (Module_ED)
-         call ED_PackOutputAry(ModData%Vars, T%ED%y, y_op)
+         call ED_VarsPackOutput(ModData%Vars, T%ED%y, y_op)
       case (Module_ExtPtfm)
-         call ExtPtfm_PackOutputAry(ModData%Vars, T%ExtPtfm%y, y_op)
+         call ExtPtfm_VarsPackOutput(ModData%Vars, T%ExtPtfm%y, y_op)
       case (Module_FEAM)
-         call FEAM_PackOutputAry(ModData%Vars, T%FEAM%y, y_op)
+         call FEAM_VarsPackOutput(ModData%Vars, T%FEAM%y, y_op)
       case (Module_HD)
-         call HydroDyn_PackOutputAry(ModData%Vars, T%HD%y, y_op)
+         call HydroDyn_VarsPackOutput(ModData%Vars, T%HD%y, y_op)
       case (Module_IceD)
-         call IceD_PackOutputAry(ModData%Vars, T%IceD%y(ModData%Ins), y_op)
+         call IceD_VarsPackOutput(ModData%Vars, T%IceD%y(ModData%Ins), y_op)
       case (Module_IceF)
-         call IceFloe_PackOutputAry(ModData%Vars, T%IceF%y, y_op)
+         call IceFloe_VarsPackOutput(ModData%Vars, T%IceF%y, y_op)
       case (Module_IfW)
-         call InflowWind_PackOutputAry(ModData%Vars, T%IfW%y, y_op)
+         call InflowWind_VarsPackOutput(ModData%Vars, T%IfW%y, y_op)
          call InflowWind_PackExtOutputAry(ModData%Vars, ThisTime, T%IfW%p, y_op)
       case (Module_MAP)
-         call MAP_PackOutputAry(ModData%Vars, T%MAP%y, y_op)
+         call MAP_VarsPackOutput(ModData%Vars, T%MAP%y, y_op)
       case (Module_MD)
-         call MD_PackOutputAry(ModData%Vars, T%MD%y, y_op)
+         call MD_VarsPackOutput(ModData%Vars, T%MD%y, y_op)
       case (Module_ExtInfw)
-         call ExtInfw_PackOutputAry(ModData%Vars, T%ExtInfw%y, y_op)
+         call ExtInfw_VarsPackOutput(ModData%Vars, T%ExtInfw%y, y_op)
       case (Module_Orca)
-         call Orca_PackOutputAry(ModData%Vars, T%Orca%y, y_op)
+         call Orca_VarsPackOutput(ModData%Vars, T%Orca%y, y_op)
       case (Module_SD)
-         call SD_PackOutputAry(ModData%Vars, T%SD%y, y_op)
+         call SD_VarsPackOutput(ModData%Vars, T%SD%y, y_op)
       case (Module_SeaSt)
          call SeaSt_PackExtOutputAry(ModData%Vars, T%SeaSt%y, y_op)
-         call SeaSt_PackOutputAry(ModData%Vars, T%SeaSt%y, y_op)
+         call SeaSt_VarsPackOutput(ModData%Vars, T%SeaSt%y, y_op)
       case (Module_SrvD)
-         call SrvD_PackOutputAry(ModData%Vars, T%SrvD%y, y_op)
+         call SrvD_VarsPackOutput(ModData%Vars, T%SrvD%y, y_op)
       case default
          call SetErrStat(ErrID_Fatal, "Output unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -668,37 +737,37 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
-         call AD_PackContStateAry(ModData%Vars, T%AD%x(StateIndex)%rotors(ModData%Ins), x_op)
+         call AD_VarsPackContState(ModData%Vars, T%AD%x(iState)%rotors(ModData%Ins), x_op)
       case (Module_BD)
-         call BD_PackContStateAry(ModData%Vars, T%BD%x(ModData%Ins, StateIndex), x_op)
+         call BD_VarsPackContState(ModData%Vars, T%BD%x(ModData%Ins, iState), x_op)
       case (Module_ED)
-         call ED_PackContStateAry(ModData%Vars, T%ED%x(StateIndex), x_op)
+         call ED_VarsPackContState(ModData%Vars, T%ED%x(iState), x_op)
       case (Module_ExtPtfm)
-         call ExtPtfm_PackContStateAry(ModData%Vars, T%ExtPtfm%x(StateIndex), x_op)
+         call ExtPtfm_VarsPackContState(ModData%Vars, T%ExtPtfm%x(iState), x_op)
       case (Module_FEAM)
-         call FEAM_PackContStateAry(ModData%Vars, T%FEAM%x(StateIndex), x_op)
+         call FEAM_VarsPackContState(ModData%Vars, T%FEAM%x(iState), x_op)
       case (Module_HD)
-         call HydroDyn_PackContStateAry(ModData%Vars, T%HD%x(StateIndex), x_op)
+         call HydroDyn_VarsPackContState(ModData%Vars, T%HD%x(iState), x_op)
       case (Module_IceD)
-         call IceD_PackContStateAry(ModData%Vars, T%IceD%x(ModData%Ins, StateIndex), x_op)
+         call IceD_VarsPackContState(ModData%Vars, T%IceD%x(ModData%Ins, iState), x_op)
       case (Module_IceF)
-         call IceFloe_PackContStateAry(ModData%Vars, T%IceF%x(StateIndex), x_op)
+         call IceFloe_VarsPackContState(ModData%Vars, T%IceF%x(iState), x_op)
       case (Module_IfW)
-         call InflowWind_PackContStateAry(ModData%Vars, T%IfW%x(StateIndex), x_op)
+         call InflowWind_VarsPackContState(ModData%Vars, T%IfW%x(iState), x_op)
       case (Module_MAP)
-         call MAP_PackContStateAry(ModData%Vars, T%MAP%x(StateIndex), x_op)
+         call MAP_VarsPackContState(ModData%Vars, T%MAP%x(iState), x_op)
       case (Module_MD)
-         call MD_PackContStateAry(ModData%Vars, T%MD%x(StateIndex), x_op)
+         call MD_VarsPackContState(ModData%Vars, T%MD%x(iState), x_op)
       case (Module_ExtInfw)
-         ! call ExtInfw_PackContStateAry(ModData%Vars, T%ExtInfw%x(StateIndex), x_op)
+         ! call ExtInfw_VarsPackContState(ModData%Vars, T%ExtInfw%x(StateIndex), x_op)
       case (Module_Orca)
-         call Orca_PackContStateAry(ModData%Vars, T%Orca%x(StateIndex), x_op)
+         call Orca_VarsPackContState(ModData%Vars, T%Orca%x(iState), x_op)
       case (Module_SD)
-         call SD_PackContStateAry(ModData%Vars, T%SD%x(StateIndex), x_op)
+         call SD_VarsPackContState(ModData%Vars, T%SD%x(iState), x_op)
       case (Module_SeaSt)
-         call SeaSt_PackContStateAry(ModData%Vars, T%SeaSt%x(StateIndex), x_op)
+         call SeaSt_VarsPackContState(ModData%Vars, T%SeaSt%x(iState), x_op)
       case (Module_SrvD)
-         call SrvD_PackContStateAry(ModData%Vars, T%SrvD%x(StateIndex), x_op)
+         call SrvD_VarsPackContState(ModData%Vars, T%SrvD%x(iState), x_op)
       case default
          call SetErrStat(ErrID_Fatal, "Continuous State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -720,107 +789,107 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       select case (ModData%ID)
       case (Module_AD)
          i = 1
-         call AD_CalcWind_Rotor(ThisTime, T%AD%Input(InputIndex)%rotors(ModData%Ins), &
+         call AD_CalcWind_Rotor(ThisTime, T%AD%Input(iIndex)%rotors(ModData%Ins), &
                                 T%AD%p%FlowField, T%AD%p%rotors(ModData%Ins), &
-                                T%AD%m%Inflow(InputIndex)%RotInflow(ModData%Ins), &
+                                T%AD%m%Inflow(iIndex)%RotInflow(ModData%Ins), &
                                 i, ErrStat2, ErrMsg2)
          if (Failed()) return
-         call RotCalcContStateDeriv(ThisTime, T%AD%Input(InputIndex)%rotors(ModData%Ins), &
-                                    T%AD%m%Inflow(InputIndex)%RotInflow(ModData%Ins), &
+         call RotCalcContStateDeriv(ThisTime, T%AD%Input(iIndex)%rotors(ModData%Ins), &
+                                    T%AD%m%Inflow(iIndex)%RotInflow(ModData%Ins), &
                                     T%AD%p%rotors(ModData%Ins), T%AD%p, &
-                                    T%AD%x(StateIndex)%rotors(ModData%Ins), &
-                                    T%AD%xd(StateIndex)%rotors(ModData%Ins), &
-                                    T%AD%z(StateIndex)%rotors(ModData%Ins), &
-                                    T%AD%OtherSt(StateIndex)%rotors(ModData%Ins), &
+                                    T%AD%x(iState)%rotors(ModData%Ins), &
+                                    T%AD%xd(iState)%rotors(ModData%Ins), &
+                                    T%AD%z(iState)%rotors(ModData%Ins), &
+                                    T%AD%OtherSt(iState)%rotors(ModData%Ins), &
                                     T%AD%m%rotors(ModData%Ins), &
                                     T%AD%m%rotors(ModData%Ins)%dxdt_lin, &
                                     ErrStat2, ErrMsg2)
          if (Failed()) return
-         call AD_PackContStateDerivAry(ModData%Vars, T%AD%m%rotors(ModData%Ins)%dxdt_lin, dx_op)
+         call AD_VarsPackContStateDeriv(ModData%Vars, T%AD%m%rotors(ModData%Ins)%dxdt_lin, dx_op)
 
       case (Module_BD)
-         call BD_CalcContStateDeriv(ThisTime, T%BD%Input(InputIndex, ModData%Ins), &
+         call BD_CalcContStateDeriv(ThisTime, T%BD%Input(iIndex, ModData%Ins), &
                                     T%BD%p(ModData%Ins), &
-                                    T%BD%x(ModData%Ins, StateIndex), &
-                                    T%BD%xd(ModData%Ins, StateIndex), &
-                                    T%BD%z(ModData%Ins, StateIndex), &
-                                    T%BD%OtherSt(ModData%Ins, StateIndex), &
+                                    T%BD%x(ModData%Ins, iState), &
+                                    T%BD%xd(ModData%Ins, iState), &
+                                    T%BD%z(ModData%Ins, iState), &
+                                    T%BD%OtherSt(ModData%Ins, iState), &
                                     T%BD%m(ModData%Ins), &
                                     T%BD%m(ModData%Ins)%dxdt_lin, &
                                     ErrStat2, ErrMsg2)
          if (Failed()) return
-         call BD_PackContStateDerivAry(ModData%Vars, T%BD%m(ModData%Ins)%dxdt_lin, dx_op)
+         call BD_VarsPackContStateDeriv(ModData%Vars, T%BD%m(ModData%Ins)%dxdt_lin, dx_op)
 
       case (Module_ED)
-         call ED_CalcContStateDeriv(ThisTime, T%ED%Input(InputIndex), T%ED%p, T%ED%x(StateIndex), &
-                                    T%ED%xd(StateIndex), T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), &
+         call ED_CalcContStateDeriv(ThisTime, T%ED%Input(iIndex), T%ED%p, T%ED%x(iState), &
+                                    T%ED%xd(iState), T%ED%z(iState), T%ED%OtherSt(iState), &
                                     T%ED%m, T%ED%m%dxdt_lin, ErrStat2, ErrMsg2)
          if (Failed()) return
-         call ED_PackContStateDerivAry(ModData%Vars, T%ED%m%dxdt_lin, dx_op)
+         call ED_VarsPackContStateDeriv(ModData%Vars, T%ED%m%dxdt_lin, dx_op)
 
-!     case (Module_ExtPtfm)
-!        call ExtPtfm_CalcContStatExtPtfmeriv(ThisTime, T%ExtPtfm%Input(InputIndex), &
-!                                             T%ExtPtfm%p, T%ExtPtfm%x(StateIndex), &
-!                                             T%ExtPtfm%xd(StateIndex), T%ExtPtfm%z(StateIndex), &
-!                                             T%ExtPtfm%OtherSt(StateIndex), &
-!                                             T%ExtPtfm%m, T%ExtPtfm%m%dxdt_lin, &
-!                                             ErrStat2, ErrMsg2); if (Failed()) return
-!        call ExtPtfm_PackContStateAry(ModData%Vars, T%ExtPtfm%m%dxdt_lin, dx_op)
+      case (Module_ExtPtfm)
+         call ExtPtfm_CalcContStateDeriv(ThisTime, T%ExtPtfm%Input(iIndex), &
+                                         T%ExtPtfm%p, T%ExtPtfm%x(iState), &
+                                         T%ExtPtfm%xd(iState), T%ExtPtfm%z(iState), &
+                                         T%ExtPtfm%OtherSt(iState), &
+                                         T%ExtPtfm%m, T%ExtPtfm%m%dxdt_lin, &
+                                         ErrStat2, ErrMsg2); if (Failed()) return
+         call ExtPtfm_VarsPackContState(ModData%Vars, T%ExtPtfm%m%dxdt_lin, dx_op)
 
 !     case (Module_FEAM)
-!        call FEAM_PackContStateAry(ModData%Vars, T%FEAM%x(StateIndex), dx_op)
+!        call FEAM_VarsPackContState(ModData%Vars, T%FEAM%x(StateIndex), dx_op)
 
       case (Module_HD)
-         call HydroDyn_CalcContStateDeriv(ThisTime, T%HD%Input(InputIndex), T%HD%p, T%HD%x(StateIndex), &
-                                          T%HD%xd(StateIndex), T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), &
+         call HydroDyn_CalcContStateDeriv(ThisTime, T%HD%Input(iIndex), T%HD%p, T%HD%x(iState), &
+                                          T%HD%xd(iState), T%HD%z(iState), T%HD%OtherSt(iState), &
                                           T%HD%m, T%HD%m%dxdt_lin, ErrStat2, ErrMsg2)
          if (Failed()) return
-         call HydroDyn_PackContStateDerivAry(ModData%Vars, T%HD%m%dxdt_lin, dx_op)
+         call HydroDyn_VarsPackContStateDeriv(ModData%Vars, T%HD%m%dxdt_lin, dx_op)
 
 !     case (Module_IceD)
 !        call IceD_CalcContStateDeriv(ThisTime, T%IceD%Input(InputIndex), T%IceD%p, T%IceD%x(StateIndex), &
 !                                     T%IceD%xd(StateIndex), T%IceD%z(StateIndex), T%IceD%OtherSt(StateIndex), &
 !                                     T%IceD%m, T%IceD%m%dxdt_lin, ErrStat2, ErrMsg2)
 !        if (Failed()) return
-!        call IceD_PackContStateDerivAry(ModData%Vars, T%IceD%m%dxdt_lin, dx_op)
+!        call IceD_VarsPackContStateDeriv(ModData%Vars, T%IceD%m%dxdt_lin, dx_op)
 
 !     case (Module_IceF)
-!        call IceFloe_PackContStateDerivAry(ModData%Vars, T%IceF%x(StateIndex), dx_op)
+!        call IceFloe_VarsPackContStateDeriv(ModData%Vars, T%IceF%x(StateIndex), dx_op)
 
 !     case (Module_IfW)
-!        call InflowWind_PackContStateDerivAry(ModData%Vars, T%IfW%x(StateIndex), dx_op)
+!        call InflowWind_VarsPackContStateDeriv(ModData%Vars, T%IfW%x(StateIndex), dx_op)
 
 !     case (Module_MAP)
-!        call MAP_PackContStateDerivAry(ModData%Vars, T%MAP%x(StateIndex), dx_op)
+!        call MAP_VarsPackContStateDeriv(ModData%Vars, T%MAP%x(StateIndex), dx_op)
 
       case (Module_MD)
-         call MD_CalcContStateDeriv(ThisTime, T%MD%Input(InputIndex), T%MD%p, T%MD%x(StateIndex), &
-                                    T%MD%xd(StateIndex), T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), &
+         call MD_CalcContStateDeriv(ThisTime, T%MD%Input(iIndex), T%MD%p, T%MD%x(iState), &
+                                    T%MD%xd(iState), T%MD%z(iState), T%MD%OtherSt(iState), &
                                     T%MD%m, T%MD%m%dxdt_lin, ErrStat2, ErrMsg2)
          if (Failed()) return
-         call MD_PackContStateDerivAry(ModData%Vars, T%MD%m%dxdt_lin, dx_op)
+         call MD_VarsPackContStateDeriv(ModData%Vars, T%MD%m%dxdt_lin, dx_op)
 
 !     case (Module_ExtInfw)
-!        call ExtInfw_PackContStateDerivAry(ModData%Vars, T%ExtInfw%x(StateIndex), dx_op)
+!        call ExtInfw_VarsPackContStateDeriv(ModData%Vars, T%ExtInfw%x(StateIndex), dx_op)
 
 !     case (Module_Orca)
-!        call Orca_PackContStateDerivAry(ModData%Vars, T%Orca%x(StateIndex), dx_op)
+!        call Orca_VarsPackContStateDeriv(ModData%Vars, T%Orca%x(StateIndex), dx_op)
 
       case (Module_SD)
-         call SD_CalcContStateDeriv(ThisTime, T%SD%Input(InputIndex), T%SD%p, T%SD%x(StateIndex), &
-                                    T%SD%xd(StateIndex), T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), &
+         call SD_CalcContStateDeriv(ThisTime, T%SD%Input(iIndex), T%SD%p, T%SD%x(iState), &
+                                    T%SD%xd(iState), T%SD%z(iState), T%SD%OtherSt(iState), &
                                     T%SD%m, T%SD%m%dxdt_lin, ErrStat2, ErrMsg2)
          if (Failed()) return
-         call SD_PackContStateDerivAry(ModData%Vars, T%SD%m%dxdt_lin, dx_op)
+         call SD_VarsPackContStateDeriv(ModData%Vars, T%SD%m%dxdt_lin, dx_op)
 
 !     case (Module_SeaSt)
-!        call SeaSt_PackContStateDerivAry(ModData%Vars, T%SeaSt%x(StateIndex), dx_op)
+!        call SeaSt_VarsPackContStateDeriv(ModData%Vars, T%SeaSt%x(StateIndex), dx_op)
 
       case (Module_SrvD)
-         call SrvD_CalcContStateDeriv(ThisTime, T%SrvD%Input(InputIndex), T%SrvD%p, T%SrvD%x(StateIndex), &
-                                      T%SrvD%xd(StateIndex), T%SrvD%z(StateIndex), T%SrvD%OtherSt(StateIndex), &
+         call SrvD_CalcContStateDeriv(ThisTime, T%SrvD%Input(iIndex), T%SrvD%p, T%SrvD%x(iState), &
+                                      T%SrvD%xd(iState), T%SrvD%z(iState), T%SrvD%OtherSt(iState), &
                                       T%SrvD%m, T%SrvD%m%dxdt_lin, ErrStat2, ErrMsg2)
-         call SrvD_PackContStateDerivAry(ModData%Vars, T%SrvD%m%dxdt_lin, dx_op)
+         call SrvD_VarsPackContStateDeriv(ModData%Vars, T%SrvD%m%dxdt_lin, dx_op)
 
       case default
          call SetErrStat(ErrID_Fatal, "Continuous State Derivatives unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
@@ -842,37 +911,37 @@ subroutine FAST_GetOP(ModData, ThisTime, InputIndex, StateIndex, T, ErrStat, Err
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
-         call AD_PackContStateAry(ModData%Vars, T%AD%x(StateIndex)%rotors(ModData%Ins), z_op)
+         call AD_VarsPackContState(ModData%Vars, T%AD%x(iState)%rotors(ModData%Ins), z_op)
       case (Module_BD)
-         call BD_PackContStateAry(ModData%Vars, T%BD%x(ModData%Ins, StateIndex), z_op)
+         call BD_VarsPackContState(ModData%Vars, T%BD%x(ModData%Ins, iState), z_op)
       case (Module_ED)
-         call ED_PackContStateAry(ModData%Vars, T%ED%x(StateIndex), z_op)
+         call ED_VarsPackContState(ModData%Vars, T%ED%x(iState), z_op)
       case (Module_ExtPtfm)
-         call ExtPtfm_PackContStateAry(ModData%Vars, T%ExtPtfm%x(StateIndex), z_op)
+         call ExtPtfm_VarsPackContState(ModData%Vars, T%ExtPtfm%x(iState), z_op)
       case (Module_FEAM)
-         call FEAM_PackContStateAry(ModData%Vars, T%FEAM%x(StateIndex), z_op)
+         call FEAM_VarsPackContState(ModData%Vars, T%FEAM%x(iState), z_op)
       case (Module_HD)
-         call HydroDyn_PackContStateAry(ModData%Vars, T%HD%x(StateIndex), z_op)
+         call HydroDyn_VarsPackContState(ModData%Vars, T%HD%x(iState), z_op)
       case (Module_IceD)
-         call IceD_PackContStateAry(ModData%Vars, T%IceD%x(ModData%Ins, StateIndex), z_op)
+         call IceD_VarsPackContState(ModData%Vars, T%IceD%x(ModData%Ins, iState), z_op)
       case (Module_IceF)
-         call IceFloe_PackContStateAry(ModData%Vars, T%IceF%x(StateIndex), z_op)
+         call IceFloe_VarsPackContState(ModData%Vars, T%IceF%x(iState), z_op)
       case (Module_IfW)
-         call InflowWind_PackContStateAry(ModData%Vars, T%IfW%x(StateIndex), z_op)
+         call InflowWind_VarsPackContState(ModData%Vars, T%IfW%x(iState), z_op)
       case (Module_MAP)
-         call MAP_PackContStateAry(ModData%Vars, T%MAP%x(StateIndex), z_op)
+         call MAP_VarsPackContState(ModData%Vars, T%MAP%x(iState), z_op)
       case (Module_MD)
-         call MD_PackContStateAry(ModData%Vars, T%MD%x(StateIndex), z_op)
+         call MD_VarsPackContState(ModData%Vars, T%MD%x(iState), z_op)
       case (Module_ExtInfw)
-         ! call ExtInfw_PackContStateAry(ModData%Vars, T%ExtInfw%x(StateIndex), z_op)
+         ! call ExtInfw_VarsPackContState(ModData%Vars, T%ExtInfw%x(StateIndex), z_op)
       case (Module_Orca)
-         call Orca_PackContStateAry(ModData%Vars, T%Orca%x(StateIndex), z_op)
+         call Orca_VarsPackContState(ModData%Vars, T%Orca%x(iState), z_op)
       case (Module_SD)
-         call SD_PackContStateAry(ModData%Vars, T%SD%x(StateIndex), z_op)
+         call SD_VarsPackContState(ModData%Vars, T%SD%x(iState), z_op)
       case (Module_SeaSt)
-         call SeaSt_PackContStateAry(ModData%Vars, T%SeaSt%x(StateIndex), z_op)
+         call SeaSt_VarsPackContState(ModData%Vars, T%SeaSt%x(iState), z_op)
       case (Module_SrvD)
-         call SrvD_PackContStateAry(ModData%Vars, T%SrvD%x(StateIndex), z_op)
+         call SrvD_VarsPackContState(ModData%Vars, T%SrvD%x(iState), z_op)
       case default
          call SetErrStat(ErrID_Fatal, "Constraint State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -889,11 +958,11 @@ contains
    end function
 end subroutine
 
-subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
+subroutine FAST_SetOP(ModData, iInput, iState, T, ErrStat, ErrMsg, &
                       u_op, x_op, z_op, u_glue, x_glue, z_glue)
    type(ModDataType), intent(in)                      :: ModData     !< Module information
-   integer(IntKi), intent(in)                         :: InputIndex  !< Input index
-   integer(IntKi), intent(in)                         :: StateIndex  !< State index
+   integer(IntKi), intent(in)                         :: iInput  !< Input index
+   integer(IntKi), intent(in)                         :: iState  !< State index
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
@@ -918,37 +987,37 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
-         call AD_UnpackInputAry(ModData%Vars, u_op, T%AD%Input(InputIndex)%rotors(ModData%Ins))
+         call AD_VarsUnpackInput(ModData%Vars, u_op, T%AD%Input(iInput)%rotors(ModData%Ins))
       case (Module_BD)
-         call BD_UnpackInputAry(ModData%Vars, u_op, T%BD%Input(InputIndex, ModData%Ins))
+         call BD_VarsUnpackInput(ModData%Vars, u_op, T%BD%Input(iInput, ModData%Ins))
       case (Module_ED)
-         call ED_UnpackInputAry(ModData%Vars, u_op, T%ED%Input(InputIndex))
+         call ED_VarsUnpackInput(ModData%Vars, u_op, T%ED%Input(iInput))
       case (Module_ExtPtfm)
-         call ExtPtfm_UnpackInputAry(ModData%Vars, u_op, T%ExtPtfm%Input(InputIndex))
+         call ExtPtfm_VarsUnpackInput(ModData%Vars, u_op, T%ExtPtfm%Input(iInput))
       case (Module_FEAM)
-         call FEAM_UnpackInputAry(ModData%Vars, u_op, T%FEAM%Input(InputIndex))
+         call FEAM_VarsUnpackInput(ModData%Vars, u_op, T%FEAM%Input(iInput))
       case (Module_HD)
-         call HydroDyn_UnpackInputAry(ModData%Vars, u_op, T%HD%Input(InputIndex))
+         call HydroDyn_VarsUnpackInput(ModData%Vars, u_op, T%HD%Input(iInput))
       case (Module_IceD)
-         call IceD_UnpackInputAry(ModData%Vars, u_op, T%IceD%Input(InputIndex, ModData%Ins))
+         call IceD_VarsUnpackInput(ModData%Vars, u_op, T%IceD%Input(iInput, ModData%Ins))
       case (Module_IceF)
-         call IceFloe_UnpackInputAry(ModData%Vars, u_op, T%IceF%Input(InputIndex))
+         call IceFloe_VarsUnpackInput(ModData%Vars, u_op, T%IceF%Input(iInput))
       case (Module_IfW)
-         call InflowWind_UnpackInputAry(ModData%Vars, u_op, T%IfW%Input(InputIndex))
+         call InflowWind_VarsUnpackInput(ModData%Vars, u_op, T%IfW%Input(iInput))
       case (Module_MAP)
-         call MAP_UnpackInputAry(ModData%Vars, u_op, T%MAP%Input(InputIndex))
+         call MAP_VarsUnpackInput(ModData%Vars, u_op, T%MAP%Input(iInput))
       case (Module_MD)
-         call MD_UnpackInputAry(ModData%Vars, u_op, T%MD%Input(InputIndex))
+         call MD_VarsUnpackInput(ModData%Vars, u_op, T%MD%Input(iInput))
       case (Module_ExtInfw)
-         ! call ExtInfw_UnpackInputAry(ModData%Vu_op, ars, T%ExtInfw%Input(InputIndex))
+         ! call ExtInfw_VarsUnpackInput(ModData%Vu_op, ars, T%ExtInfw%Input(InputIndex))
       case (Module_Orca)
-         call Orca_UnpackInputAry(ModData%Vars, u_op, T%Orca%Input(InputIndex))
+         call Orca_VarsUnpackInput(ModData%Vars, u_op, T%Orca%Input(iInput))
       case (Module_SD)
-         call SD_UnpackInputAry(ModData%Vars, u_op, T%SD%Input(InputIndex))
+         call SD_VarsUnpackInput(ModData%Vars, u_op, T%SD%Input(iInput))
       case (Module_SeaSt)
-         call SeaSt_UnpackInputAry(ModData%Vars, u_op, T%SeaSt%Input(InputIndex))
+         call SeaSt_VarsUnpackInput(ModData%Vars, u_op, T%SeaSt%Input(iInput))
       case (Module_SrvD)
-         call SrvD_UnpackInputAry(ModData%Vars, u_op, T%SrvD%Input(InputIndex))
+         call SrvD_VarsUnpackInput(ModData%Vars, u_op, T%SrvD%Input(iInput))
       case default
          call SetErrStat(ErrID_Fatal, "Input unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -965,37 +1034,37 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
-         call AD_UnpackContStateAry(ModData%Vars, x_op, T%AD%x(StateIndex)%rotors(ModData%Ins))
+         call AD_VarsUnpackContState(ModData%Vars, x_op, T%AD%x(iState)%rotors(ModData%Ins))
       case (Module_BD)
-         call BD_UnpackContStateAry(ModData%Vars, x_op, T%BD%x(ModData%Ins, StateIndex))
+         call BD_VarsUnpackContState(ModData%Vars, x_op, T%BD%x(ModData%Ins, iState))
       case (Module_ED)
-         call ED_UnpackContStateAry(ModData%Vars, x_op, T%ED%x(StateIndex))
+         call ED_VarsUnpackContState(ModData%Vars, x_op, T%ED%x(iState))
       case (Module_ExtPtfm)
-         call ExtPtfm_UnpackContStateAry(ModData%Vars, x_op, T%ExtPtfm%x(StateIndex))
+         call ExtPtfm_VarsUnpackContState(ModData%Vars, x_op, T%ExtPtfm%x(iState))
       case (Module_FEAM)
-         call FEAM_UnpackContStateAry(ModData%Vars, x_op, T%FEAM%x(StateIndex))
+         call FEAM_VarsUnpackContState(ModData%Vars, x_op, T%FEAM%x(iState))
       case (Module_HD)
-         call HydroDyn_UnpackContStateAry(ModData%Vars, x_op, T%HD%x(StateIndex))
+         call HydroDyn_VarsUnpackContState(ModData%Vars, x_op, T%HD%x(iState))
       case (Module_IceD)
-         call IceD_UnpackContStateAry(ModData%Vars, x_op, T%IceD%x(ModData%Ins, StateIndex))
+         call IceD_VarsUnpackContState(ModData%Vars, x_op, T%IceD%x(ModData%Ins, iState))
       case (Module_IceF)
-         call IceFloe_UnpackContStateAry(ModData%Vars, x_op, T%IceF%x(StateIndex))
+         call IceFloe_VarsUnpackContState(ModData%Vars, x_op, T%IceF%x(iState))
       case (Module_IfW)
-         call InflowWind_UnpackContStateAry(ModData%Vars, x_op, T%IfW%x(StateIndex))
+         call InflowWind_VarsUnpackContState(ModData%Vars, x_op, T%IfW%x(iState))
       case (Module_MAP)
-         call MAP_UnpackContStateAry(ModData%Vars, x_op, T%MAP%x(StateIndex))
+         call MAP_VarsUnpackContState(ModData%Vars, x_op, T%MAP%x(iState))
       case (Module_MD)
-         call MD_UnpackContStateAry(ModData%Vars, x_op, T%MD%x(StateIndex))
+         call MD_VarsUnpackContState(ModData%Vars, x_op, T%MD%x(iState))
       case (Module_ExtInfw)
-         ! call ExtInfw_UnpackContStateAry(ModData%Varsx_op,, T%ExtInfw%x(StateIndex))
+         ! call ExtInfw_VarsUnpackContState(ModData%Varsx_op,, T%ExtInfw%x(StateIndex))
       case (Module_Orca)
-         call Orca_UnpackContStateAry(ModData%Vars, x_op, T%Orca%x(StateIndex))
+         call Orca_VarsUnpackContState(ModData%Vars, x_op, T%Orca%x(iState))
       case (Module_SD)
-         call SD_UnpackContStateAry(ModData%Vars, x_op, T%SD%x(StateIndex))
+         call SD_VarsUnpackContState(ModData%Vars, x_op, T%SD%x(iState))
       case (Module_SeaSt)
-         call SeaSt_UnpackContStateAry(ModData%Vars, x_op, T%SeaSt%x(StateIndex))
+         call SeaSt_VarsUnpackContState(ModData%Vars, x_op, T%SeaSt%x(iState))
       case (Module_SrvD)
-         call SrvD_UnpackContStateAry(ModData%Vars, x_op, T%SrvD%x(StateIndex))
+         call SrvD_VarsUnpackContState(ModData%Vars, x_op, T%SrvD%x(iState))
       case default
          call SetErrStat(ErrID_Fatal, "Continuous State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -1012,37 +1081,37 @@ subroutine FAST_SetOP(ModData, InputIndex, StateIndex, T, ErrStat, ErrMsg, &
       ! Select based on module ID
       select case (ModData%ID)
       case (Module_AD)
-         call AD_UnpackContStateAry(ModData%Vars, z_op, T%AD%x(StateIndex)%rotors(ModData%Ins))
+         call AD_VarsUnpackContState(ModData%Vars, z_op, T%AD%x(iState)%rotors(ModData%Ins))
       case (Module_BD)
-         call BD_UnpackContStateAry(ModData%Vars, z_op, T%BD%x(ModData%Ins, StateIndex))
+         call BD_VarsUnpackContState(ModData%Vars, z_op, T%BD%x(ModData%Ins, iState))
       case (Module_ED)
-         call ED_UnpackContStateAry(ModData%Vars, z_op, T%ED%x(StateIndex))
+         call ED_VarsUnpackContState(ModData%Vars, z_op, T%ED%x(iState))
       case (Module_ExtPtfm)
-         call ExtPtfm_UnpackContStateAry(ModData%Vars, z_op, T%ExtPtfm%x(StateIndex))
+         call ExtPtfm_VarsUnpackContState(ModData%Vars, z_op, T%ExtPtfm%x(iState))
       case (Module_FEAM)
-         call FEAM_UnpackContStateAry(ModData%Vars, z_op, T%FEAM%x(StateIndex))
+         call FEAM_VarsUnpackContState(ModData%Vars, z_op, T%FEAM%x(iState))
       case (Module_HD)
-         call HydroDyn_UnpackContStateAry(ModData%Vars, z_op, T%HD%x(StateIndex))
+         call HydroDyn_VarsUnpackContState(ModData%Vars, z_op, T%HD%x(iState))
       case (Module_IceD)
-         call IceD_UnpackContStateAry(ModData%Vars, z_op, T%IceD%x(ModData%Ins, StateIndex))
+         call IceD_VarsUnpackContState(ModData%Vars, z_op, T%IceD%x(ModData%Ins, iState))
       case (Module_IceF)
-         call IceFloe_UnpackContStateAry(ModData%Vars, z_op, T%IceF%x(StateIndex))
+         call IceFloe_VarsUnpackContState(ModData%Vars, z_op, T%IceF%x(iState))
       case (Module_IfW)
-         call InflowWind_UnpackContStateAry(ModData%Vars, z_op, T%IfW%x(StateIndex))
+         call InflowWind_VarsUnpackContState(ModData%Vars, z_op, T%IfW%x(iState))
       case (Module_MAP)
-         call MAP_UnpackContStateAry(ModData%Vars, z_op, T%MAP%x(StateIndex))
+         call MAP_VarsUnpackContState(ModData%Vars, z_op, T%MAP%x(iState))
       case (Module_MD)
-         call MD_UnpackContStateAry(ModData%Vars, z_op, T%MD%x(StateIndex))
+         call MD_VarsUnpackContState(ModData%Vars, z_op, T%MD%x(iState))
       case (Module_ExtInfw)
-         ! call ExtInfw_UnpackContStateAry(ModData%z_op,Vars, T%ExtInfw%x(StateIndex))
+         ! call ExtInfw_VarsUnpackContState(ModData%z_op,Vars, T%ExtInfw%x(StateIndex))
       case (Module_Orca)
-         call Orca_UnpackContStateAry(ModData%Vars, z_op, T%Orca%x(StateIndex))
+         call Orca_VarsUnpackContState(ModData%Vars, z_op, T%Orca%x(iState))
       case (Module_SD)
-         call SD_UnpackContStateAry(ModData%Vars, z_op, T%SD%x(StateIndex))
+         call SD_VarsUnpackContState(ModData%Vars, z_op, T%SD%x(iState))
       case (Module_SeaSt)
-         call SeaSt_UnpackContStateAry(ModData%Vars, z_op, T%SeaSt%x(StateIndex))
+         call SeaSt_VarsUnpackContState(ModData%Vars, z_op, T%SeaSt%x(iState))
       case (Module_SrvD)
-         call SrvD_UnpackContStateAry(ModData%Vars, z_op, T%SrvD%x(StateIndex))
+         call SrvD_VarsUnpackContState(ModData%Vars, z_op, T%SrvD%x(iState))
       case default
          call SetErrStat(ErrID_Fatal, "Constraint State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -1057,15 +1126,18 @@ contains
    end function
 end subroutine
 
-subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdu, dXdu, dYdu_glue, dXdu_glue)
+subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, dYdu, dXdu, dYdu_glue, dXdu_glue)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
-   integer(IntKi), intent(in)                         :: StateIndex  !< State
+   integer(IntKi), intent(in)                         :: iInput      !< Input index
+   integer(IntKi), intent(in)                         :: iState      !< State index
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :), dYdu_glue(:, :)
-   real(R8Ki), allocatable, optional, intent(inout)   :: dXdu(:, :), dXdu_glue(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dXdu(:, :)
+   real(R8Ki), optional, intent(inout)                :: dYdu_glue(:, :)
+   real(R8Ki), optional, intent(inout)                :: dXdu_glue(:, :)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPInput'
    integer(IntKi)             :: ErrStat2
@@ -1078,57 +1150,60 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_JacobianPInput(ModData%Vars, ModData%Ins, ThisTime, T%AD%Input(1), T%AD%p, T%AD%x(StateIndex), T%AD%xd(StateIndex), &
-                             T%AD%z(StateIndex), T%AD%OtherSt(StateIndex), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
+      call AD_JacobianPInput(ModData%Vars, ModData%Ins, ThisTime, T%AD%Input(iInput), T%AD%p, T%AD%x(iState), T%AD%xd(iState), &
+                             T%AD%z(iState), T%AD%OtherSt(iState), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
    case (Module_BD)
-      call BD_JacobianPInput(ModData%Vars, ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
-                             T%BD%x(ModData%Ins, StateIndex), T%BD%xd(ModData%Ins, StateIndex), &
-                             T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
+      call BD_JacobianPInput(ModData%Vars, ThisTime, T%BD%Input(iInput, ModData%Ins), T%BD%p(ModData%Ins), &
+                             T%BD%x(ModData%Ins, iState), T%BD%xd(ModData%Ins, iState), &
+                             T%BD%z(ModData%Ins, iState), T%BD%OtherSt(ModData%Ins, iState), &
                              T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
    case (Module_ED)
-      call ED_JacobianPInput(ModData%Vars, ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(StateIndex), T%ED%xd(StateIndex), &
-                             T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
+      call ED_JacobianPInput(ModData%Vars, ThisTime, T%ED%Input(iInput), T%ED%p, T%ED%x(iState), T%ED%xd(iState), &
+                             T%ED%z(iState), T%ED%OtherSt(iState), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
-!  case (Module_ExtPtfm)
+   case (Module_ExtPtfm)
+      call ExtPtfm_JacobianPInput(ModData%Vars, ThisTime, T%ExtPtfm%Input(iInput), T%ExtPtfm%p, T%ExtPtfm%x(iState), T%ExtPtfm%xd(iState), &
+                                  T%ExtPtfm%z(iState), T%ExtPtfm%OtherSt(iState), T%ExtPtfm%y, T%ExtPtfm%m, ErrStat2, ErrMsg2, &
+                                  dYdu=dYdu, dXdu=dXdu)
 
    case (Module_HD)
-      call HD_JacobianPInput(ModData%Vars, ThisTime, T%HD%Input(1), T%HD%p, T%HD%x(StateIndex), T%HD%xd(StateIndex), &
-                             T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
+      call HD_JacobianPInput(ModData%Vars, ThisTime, T%HD%Input(iInput), T%HD%p, T%HD%x(iState), T%HD%xd(iState), &
+                             T%HD%z(iState), T%HD%OtherSt(iState), T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
    case (Module_IfW)
-      call InflowWind_JacobianPInput(ModData%Vars, ThisTime, T%IfW%Input(1), T%IfW%p, T%IfW%x(StateIndex), T%IfW%xd(StateIndex), &
-                                     T%IfW%z(StateIndex), T%IfW%OtherSt(StateIndex), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
+      call InflowWind_JacobianPInput(ModData%Vars, ThisTime, T%IfW%Input(iInput), T%IfW%p, T%IfW%x(iState), T%IfW%xd(iState), &
+                                     T%IfW%z(iState), T%IfW%OtherSt(iState), T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
                                      dYdu=dYdu, dXdu=dXdu)
 
    case (Module_MAP)
-      call MAP_JacobianPInput(ModData%Vars, ThisTime, T%MAP%Input(1), T%MAP%p, T%MAP%x(StateIndex), T%MAP%xd(StateIndex), &
-                              T%MAP%z(StateIndex), T%MAP%OtherSt, T%MAP%y, T%MAP%m, ErrStat2, ErrMsg2, &
+      call MAP_JacobianPInput(ModData%Vars, ThisTime, T%MAP%Input(iInput), T%MAP%p, T%MAP%x(iState), T%MAP%xd(iState), &
+                              T%MAP%z(iState), T%MAP%OtherSt, T%MAP%y, T%MAP%m, ErrStat2, ErrMsg2, &
                               dYdu=dYdu, dXdu=dXdu)
 
    case (Module_MD)
-      call MD_JacobianPInput(ModData%Vars, ThisTime, T%MD%Input(1), T%MD%p, T%MD%x(StateIndex), T%MD%xd(StateIndex), &
-                             T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
+      call MD_JacobianPInput(ModData%Vars, ThisTime, T%MD%Input(iInput), T%MD%p, T%MD%x(iState), T%MD%xd(iState), &
+                             T%MD%z(iState), T%MD%OtherSt(iState), T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SD)
-      call SD_JacobianPInput(ModData%Vars, ThisTime, T%SD%Input(1), T%SD%p, T%SD%x(StateIndex), T%SD%xd(StateIndex), &
-                             T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
+      call SD_JacobianPInput(ModData%Vars, ThisTime, T%SD%Input(iInput), T%SD%p, T%SD%x(iState), T%SD%xd(iState), &
+                             T%SD%z(iState), T%SD%OtherSt(iState), T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SeaSt)
-      call SeaSt_JacobianPInput(ModData%Vars, ThisTime, T%SeaSt%Input(1), T%SeaSt%p, T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), &
-                                T%SeaSt%z(StateIndex), T%SeaSt%OtherSt(StateIndex), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
+      call SeaSt_JacobianPInput(ModData%Vars, ThisTime, T%SeaSt%Input(iInput), T%SeaSt%p, T%SeaSt%x(iState), T%SeaSt%xd(iState), &
+                                T%SeaSt%z(iState), T%SeaSt%OtherSt(iState), T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
                                 dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SrvD)
-      call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), &
-                               T%SrvD%z(StateIndex), T%SrvD%OtherSt(StateIndex), T%SrvD%y, T%SrvD%m, &
+      call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(iInput), T%SrvD%p, T%SrvD%x(iState), T%SrvD%xd(iState), &
+                               T%SrvD%z(iState), T%SrvD%OtherSt(iState), T%SrvD%y, T%SrvD%m, &
                                ErrStat2, ErrMsg2, dYdu=dYdu, dXdu=dXdu)
 
    case default
@@ -1147,15 +1222,18 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg
 
 end subroutine
 
-subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, ErrMsg, dYdx, dXdx, dYdx_glue, dXdx_glue)
+subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, dYdx, dXdx, dYdx_glue, dXdx_glue)
    type(ModDataType), intent(inout)                   :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
-   integer(IntKi), intent(in)                         :: StateIndex  !< State
+   integer(IntKi), intent(in)                         :: iInput      !< Input index
+   integer(IntKi), intent(in)                         :: iState      !< State index
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :), dYdx_glue(:, :)
-   real(R8Ki), allocatable, optional, intent(inout)   :: dXdx(:, :), dXdx_glue(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dXdx(:, :)
+   real(R8Ki), optional, intent(inout)                :: dYdx_glue(:, :)
+   real(R8Ki), optional, intent(inout)                :: dXdx_glue(:, :)
 
    character(*), parameter    :: RoutineName = 'FAST_JacobianPContState'
    integer(IntKi)             :: ErrStat2
@@ -1168,39 +1246,44 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, Er
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_JacobianPContState(ModData%Vars, ModData%Ins, ThisTime, T%AD%Input(1), T%AD%p, &
-                                 T%AD%x(StateIndex), T%AD%xd(StateIndex), &
-                                 T%AD%z(StateIndex), T%AD%OtherSt(StateIndex), &
+      call AD_JacobianPContState(ModData%Vars, ModData%Ins, ThisTime, T%AD%Input(iInput), T%AD%p, &
+                                 T%AD%x(iState), T%AD%xd(iState), &
+                                 T%AD%z(iState), T%AD%OtherSt(iState), &
                                  T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx)
 
    case (Module_BD)
-      call BD_JacobianPContState(ModData%Vars, ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
-                                 T%BD%x(ModData%Ins, StateIndex), T%BD%xd(ModData%Ins, StateIndex), &
-                                 T%BD%z(ModData%Ins, StateIndex), T%BD%OtherSt(ModData%Ins, StateIndex), &
+      call BD_JacobianPContState(ModData%Vars, ThisTime, T%BD%Input(iInput, ModData%Ins), T%BD%p(ModData%Ins), &
+                                 T%BD%x(ModData%Ins, iState), T%BD%xd(ModData%Ins, iState), &
+                                 T%BD%z(ModData%Ins, iState), T%BD%OtherSt(ModData%Ins, iState), &
                                  T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx, StateRotation=ModData%Lin%StateRotation)
 
    case (Module_ED)
-      call ED_JacobianPContState(ModData%Vars, ThisTime, T%ED%Input(1), T%ED%p, &
-                                 T%ED%x(StateIndex), T%ED%xd(StateIndex), &
-                                 T%ED%z(StateIndex), T%ED%OtherSt(StateIndex), &
+      call ED_JacobianPContState(ModData%Vars, ThisTime, T%ED%Input(iInput), T%ED%p, &
+                                 T%ED%x(iState), T%ED%xd(iState), &
+                                 T%ED%z(iState), T%ED%OtherSt(iState), &
                                  T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx)
 
-!  case (Module_ExtPtfm)
+   case (Module_ExtPtfm)
+      call ExtPtfm_JacobianPContState(ThisTime, T%ExtPtfm%Input(iInput), T%ExtPtfm%p, &
+                                      T%ExtPtfm%x(iState), T%ExtPtfm%xd(iState), &
+                                      T%ExtPtfm%z(iState), T%ExtPtfm%OtherSt(iState), &
+                                      T%ExtPtfm%y, T%ExtPtfm%m, ErrStat2, ErrMsg2, &
+                                      dYdx=dYdx, dXdx=dXdx)
 
    case (Module_HD)
-      call HD_JacobianPContState(ModData%Vars, ThisTime, T%HD%Input(1), T%HD%p, &
-                                 T%HD%x(StateIndex), T%HD%xd(StateIndex), &
-                                 T%HD%z(StateIndex), T%HD%OtherSt(StateIndex), &
+      call HD_JacobianPContState(ModData%Vars, ThisTime, T%HD%Input(iInput), T%HD%p, &
+                                 T%HD%x(iState), T%HD%xd(iState), &
+                                 T%HD%z(iState), T%HD%OtherSt(iState), &
                                  T%HD%y, T%HD%m, ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx)
 
    case (Module_IfW)
-      call InflowWind_JacobianPContState(ModData%Vars, ThisTime, T%IfW%Input(1), T%IfW%p, &
-                                         T%IfW%x(StateIndex), T%IfW%xd(StateIndex), &
-                                         T%IfW%z(StateIndex), T%IfW%OtherSt(StateIndex), &
+      call InflowWind_JacobianPContState(ModData%Vars, ThisTime, T%IfW%Input(iInput), T%IfW%p, &
+                                         T%IfW%x(iState), T%IfW%xd(iState), &
+                                         T%IfW%z(iState), T%IfW%OtherSt(iState), &
                                          T%IfW%y, T%IfW%m, ErrStat2, ErrMsg2, &
                                          dYdx=dYdx, dXdx=dXdx)
 
@@ -1210,30 +1293,30 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, StateIndex, T, ErrStat, Er
       ErrMsg2 = ''
 
    case (Module_MD)
-      call MD_JacobianPContState(ModData%Vars, ThisTime, T%MD%Input(1), T%MD%p, &
-                                 T%MD%x(StateIndex), T%MD%xd(StateIndex), &
-                                 T%MD%z(StateIndex), T%MD%OtherSt(StateIndex), &
+      call MD_JacobianPContState(ModData%Vars, ThisTime, T%MD%Input(iInput), T%MD%p, &
+                                 T%MD%x(iState), T%MD%xd(iState), &
+                                 T%MD%z(iState), T%MD%OtherSt(iState), &
                                  T%MD%y, T%MD%m, ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SD)
-      call SD_JacobianPContState(ModData%Vars, ThisTime, T%SD%Input(1), T%SD%p, &
-                                 T%SD%x(StateIndex), T%SD%xd(StateIndex), &
-                                 T%SD%z(StateIndex), T%SD%OtherSt(StateIndex), &
+      call SD_JacobianPContState(ModData%Vars, ThisTime, T%SD%Input(iInput), T%SD%p, &
+                                 T%SD%x(iState), T%SD%xd(iState), &
+                                 T%SD%z(iState), T%SD%OtherSt(iState), &
                                  T%SD%y, T%SD%m, ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SeaSt)
-      call SeaSt_JacobianPContState(ModData%Vars, ThisTime, T%SeaSt%Input(1), T%SeaSt%p, &
-                                    T%SeaSt%x(StateIndex), T%SeaSt%xd(StateIndex), &
-                                    T%SeaSt%z(StateIndex), T%SeaSt%OtherSt(StateIndex), &
+      call SeaSt_JacobianPContState(ModData%Vars, ThisTime, T%SeaSt%Input(iInput), T%SeaSt%p, &
+                                    T%SeaSt%x(iState), T%SeaSt%xd(iState), &
+                                    T%SeaSt%z(iState), T%SeaSt%OtherSt(iState), &
                                     T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2, &
                                     dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SrvD)
-      call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(1), T%SrvD%p, &
-                                   T%SrvD%x(StateIndex), T%SrvD%xd(StateIndex), &
-                                   T%SrvD%z(StateIndex), T%SrvD%OtherSt(StateIndex), &
+      call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(iInput), T%SrvD%p, &
+                                   T%SrvD%x(iState), T%SrvD%xd(iState), &
+                                   T%SrvD%z(iState), T%SrvD%OtherSt(iState), &
                                    T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2, &
                                    dYdx=dYdx, dXdx=dXdx)
 
@@ -1263,10 +1346,10 @@ subroutine FAST_SaveStates(ModData, T, ErrStat, ErrMsg)
    call FAST_CopyStates(ModData, T, STATE_PRED, STATE_CURR, MESH_UPDATECOPY, ErrStat, ErrMsg)
 end subroutine
 
-subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
+subroutine FAST_CopyStates(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
-   integer(IntKi), intent(in)                         :: Src, Dst    !< State indices
+   integer(IntKi), intent(in)                         :: iSrc, iDst    !< State indices
    integer(IntKi), intent(in)                         :: CtrlCode    !< Mesh copy code
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
@@ -1288,24 +1371,24 @@ subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
 
    case (Module_AD)
 
-      call AD_CopyContState(T%AD%x(Src), T%AD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call AD_CopyDiscState(T%AD%xd(Src), T%AD%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call AD_CopyConstrState(T%AD%z(Src), T%AD%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call AD_CopyOtherState(T%AD%OtherSt(Src), T%AD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call AD_CopyContState(T%AD%x(iSrc), T%AD%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call AD_CopyDiscState(T%AD%xd(iSrc), T%AD%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call AD_CopyConstrState(T%AD%z(iSrc), T%AD%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call AD_CopyOtherState(T%AD%OtherSt(iSrc), T%AD%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_BD)
 
-      call BD_CopyContState(T%BD%x(ModData%Ins, Src), T%BD%x(ModData%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call BD_CopyDiscState(T%BD%xd(ModData%Ins, Src), T%BD%xd(ModData%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call BD_CopyConstrState(T%BD%z(ModData%Ins, Src), T%BD%z(ModData%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call BD_CopyOtherState(T%BD%OtherSt(ModData%Ins, Src), T%BD%OtherSt(ModData%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call BD_CopyContState(T%BD%x(ModData%Ins, iSrc), T%BD%x(ModData%Ins, iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call BD_CopyDiscState(T%BD%xd(ModData%Ins, iSrc), T%BD%xd(ModData%Ins, iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call BD_CopyConstrState(T%BD%z(ModData%Ins, iSrc), T%BD%z(ModData%Ins, iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call BD_CopyOtherState(T%BD%OtherSt(ModData%Ins, iSrc), T%BD%OtherSt(ModData%Ins, iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_ED)
 
-      call ED_CopyContState(T%ED%x(Src), T%ED%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call ED_CopyDiscState(T%ED%xd(Src), T%ED%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call ED_CopyConstrState(T%ED%z(Src), T%ED%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call ED_CopyOtherState(T%ED%OtherSt(Src), T%ED%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ED_CopyContState(T%ED%x(iSrc), T%ED%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ED_CopyDiscState(T%ED%xd(iSrc), T%ED%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ED_CopyConstrState(T%ED%z(iSrc), T%ED%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ED_CopyOtherState(T%ED%OtherSt(iSrc), T%ED%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_ExtInfw)
 
@@ -1316,45 +1399,45 @@ subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
 
    case (Module_ExtLd)
 
-      call ExtLd_CopyContState(T%ExtLd%x(Src), T%ExtLd%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call ExtLd_CopyDiscState(T%ExtLd%xd(Src), T%ExtLd%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call ExtLd_CopyConstrState(T%ExtLd%z(Src), T%ExtLd%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call ExtLd_CopyOtherState(T%ExtLd%OtherSt(Src), T%ExtLd%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtLd_CopyContState(T%ExtLd%x(iSrc), T%ExtLd%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtLd_CopyDiscState(T%ExtLd%xd(iSrc), T%ExtLd%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtLd_CopyConstrState(T%ExtLd%z(iSrc), T%ExtLd%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtLd_CopyOtherState(T%ExtLd%OtherSt(iSrc), T%ExtLd%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_ExtPtfm)
 
-      call ExtPtfm_CopyContState(T%ExtPtfm%x(Src), T%ExtPtfm%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call ExtPtfm_CopyDiscState(T%ExtPtfm%xd(Src), T%ExtPtfm%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call ExtPtfm_CopyConstrState(T%ExtPtfm%z(Src), T%ExtPtfm%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call ExtPtfm_CopyOtherState(T%ExtPtfm%OtherSt(Src), T%ExtPtfm%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtPtfm_CopyContState(T%ExtPtfm%x(iSrc), T%ExtPtfm%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtPtfm_CopyDiscState(T%ExtPtfm%xd(iSrc), T%ExtPtfm%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtPtfm_CopyConstrState(T%ExtPtfm%z(iSrc), T%ExtPtfm%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ExtPtfm_CopyOtherState(T%ExtPtfm%OtherSt(iSrc), T%ExtPtfm%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_FEAM)
 
-      call FEAM_CopyContState(T%FEAM%x(Src), T%FEAM%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call FEAM_CopyDiscState(T%FEAM%xd(Src), T%FEAM%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call FEAM_CopyConstrState(T%FEAM%z(Src), T%FEAM%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call FEAM_CopyOtherState(T%FEAM%OtherSt(Src), T%FEAM%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call FEAM_CopyContState(T%FEAM%x(iSrc), T%FEAM%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call FEAM_CopyDiscState(T%FEAM%xd(iSrc), T%FEAM%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call FEAM_CopyConstrState(T%FEAM%z(iSrc), T%FEAM%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call FEAM_CopyOtherState(T%FEAM%OtherSt(iSrc), T%FEAM%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_HD)
 
-      call HydroDyn_CopyContState(T%HD%x(Src), T%HD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      ! call HydroDyn_CopyDiscState(T%HD%xd(Src), T%HD%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      ! call HydroDyn_CopyConstrState(T%HD%z(Src), T%HD%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      ! call HydroDyn_CopyOtherState(T%HD%OtherSt(Src), T%HD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call HydroDyn_CopyContState(T%HD%x(iSrc), T%HD%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call HydroDyn_CopyDiscState(T%HD%xd(iSrc), T%HD%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call HydroDyn_CopyConstrState(T%HD%z(iSrc), T%HD%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call HydroDyn_CopyOtherState(T%HD%OtherSt(iSrc), T%HD%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_IceD)
 
-      call IceD_CopyContState(T%IceD%x(Src, ModData%Ins), T%IceD%x(Dst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call IceD_CopyDiscState(T%IceD%xd(Src, ModData%Ins), T%IceD%xd(Dst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call IceD_CopyConstrState(T%IceD%z(Src, ModData%Ins), T%IceD%z(Dst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call IceD_CopyOtherState(T%IceD%OtherSt(Src, ModData%Ins), T%IceD%OtherSt(Dst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceD_CopyContState(T%IceD%x(iSrc, ModData%Ins), T%IceD%x(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceD_CopyDiscState(T%IceD%xd(iSrc, ModData%Ins), T%IceD%xd(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceD_CopyConstrState(T%IceD%z(iSrc, ModData%Ins), T%IceD%z(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceD_CopyOtherState(T%IceD%OtherSt(iSrc, ModData%Ins), T%IceD%OtherSt(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_IceF)
 
-      call IceFloe_CopyContState(T%IceF%x(Src), T%IceF%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call IceFloe_CopyDiscState(T%IceF%xd(Src), T%IceF%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call IceFloe_CopyConstrState(T%IceF%z(Src), T%IceF%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call IceFloe_CopyOtherState(T%IceF%OtherSt(Src), T%IceF%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceFloe_CopyContState(T%IceF%x(iSrc), T%IceF%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceFloe_CopyDiscState(T%IceF%xd(iSrc), T%IceF%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceFloe_CopyConstrState(T%IceF%z(iSrc), T%IceF%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call IceFloe_CopyOtherState(T%IceF%OtherSt(iSrc), T%IceF%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_IfW)
 
@@ -1365,45 +1448,45 @@ subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
 
    case (Module_MAP)
 
-      call MAP_CopyContState(T%MAP%x(Src), T%MAP%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call MAP_CopyDiscState(T%MAP%xd(Src), T%MAP%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call MAP_CopyConstrState(T%MAP%z(Src), T%MAP%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MAP_CopyContState(T%MAP%x(iSrc), T%MAP%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MAP_CopyDiscState(T%MAP%xd(iSrc), T%MAP%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MAP_CopyConstrState(T%MAP%z(iSrc), T%MAP%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       ! call MAP_CopyOtherState(T%MAP%OtherSt(Src), T%MAP%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_MD)
 
-      call MD_CopyContState(T%MD%x(Src), T%MD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call MD_CopyDiscState(T%MD%xd(Src), T%MD%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call MD_CopyConstrState(T%MD%z(Src), T%MD%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call MD_CopyOtherState(T%MD%OtherSt(Src), T%MD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MD_CopyContState(T%MD%x(iSrc), T%MD%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MD_CopyDiscState(T%MD%xd(iSrc), T%MD%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MD_CopyConstrState(T%MD%z(iSrc), T%MD%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call MD_CopyOtherState(T%MD%OtherSt(iSrc), T%MD%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_Orca)
 
-      call Orca_CopyContState(T%Orca%x(Src), T%Orca%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call Orca_CopyDiscState(T%Orca%xd(Src), T%Orca%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call Orca_CopyConstrState(T%Orca%z(Src), T%Orca%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call Orca_CopyOtherState(T%Orca%OtherSt(Src), T%Orca%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call Orca_CopyContState(T%Orca%x(iSrc), T%Orca%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call Orca_CopyDiscState(T%Orca%xd(iSrc), T%Orca%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call Orca_CopyConstrState(T%Orca%z(iSrc), T%Orca%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call Orca_CopyOtherState(T%Orca%OtherSt(iSrc), T%Orca%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_SD)
 
-      call SD_CopyContState(T%SD%x(Src), T%SD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call SD_CopyDiscState(T%SD%xd(Src), T%SD%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call SD_CopyConstrState(T%SD%z(Src), T%SD%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call SD_CopyOtherState(T%SD%OtherSt(Src), T%SD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SD_CopyContState(T%SD%x(iSrc), T%SD%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SD_CopyDiscState(T%SD%xd(iSrc), T%SD%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SD_CopyConstrState(T%SD%z(iSrc), T%SD%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SD_CopyOtherState(T%SD%OtherSt(iSrc), T%SD%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_SeaSt)
 
-      call SeaSt_CopyContState(T%SeaSt%x(Src), T%SeaSt%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call SeaSt_CopyDiscState(T%SeaSt%xd(Src), T%SeaSt%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call SeaSt_CopyConstrState(T%SeaSt%z(Src), T%SeaSt%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call SeaSt_CopyOtherState(T%SeaSt%OtherSt(Src), T%SeaSt%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SeaSt_CopyContState(T%SeaSt%x(iSrc), T%SeaSt%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SeaSt_CopyDiscState(T%SeaSt%xd(iSrc), T%SeaSt%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SeaSt_CopyConstrState(T%SeaSt%z(iSrc), T%SeaSt%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SeaSt_CopyOtherState(T%SeaSt%OtherSt(iSrc), T%SeaSt%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_SrvD)
 
-      call SrvD_CopyContState(T%SrvD%x(Src), T%SrvD%x(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call SrvD_CopyDiscState(T%SrvD%xd(Src), T%SrvD%xd(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call SrvD_CopyConstrState(T%SrvD%z(Src), T%SrvD%z(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call SrvD_CopyOtherState(T%SrvD%OtherSt(Src), T%SrvD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SrvD_CopyContState(T%SrvD%x(iSrc), T%SrvD%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SrvD_CopyDiscState(T%SrvD%xd(iSrc), T%SrvD%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SrvD_CopyConstrState(T%SrvD%z(iSrc), T%SrvD%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SrvD_CopyOtherState(T%SrvD%OtherSt(iSrc), T%SrvD%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case default
       call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(ModData%Abbr), ErrStat, ErrMsg, RoutineName)
@@ -1450,25 +1533,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call AD_CopyInput(T%AD%Input_Saved(-iSrc), T%AD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call AD_CopyInput(T%AD%Input_Saved(-iSrc), T%AD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call AD_CopyInput(T%AD%Input_Saved(-iSrc), T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call AD_CopyInput(T%AD%u, T%AD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call AD_CopyInput(T%AD%u, T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call AD_CopyInput(T%AD%Input(iSrc), T%AD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1480,25 +1552,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call BD_CopyInput(T%BD%Input_Saved(-iSrc, ModData%Ins), T%BD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call BD_CopyInput(T%BD%Input_Saved(-iSrc, ModData%Ins), T%BD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call BD_CopyInput(T%BD%Input_Saved(-iSrc, ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call BD_CopyInput(T%BD%u(ModData%Ins), T%BD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call BD_CopyInput(T%BD%u(ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1510,25 +1571,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call ED_CopyInput(T%ED%Input_Saved(-iSrc), T%ED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call ED_CopyInput(T%ED%Input_Saved(-iSrc), T%ED%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call ED_CopyInput(T%ED%Input_Saved(-iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call ED_CopyInput(T%ED%u, T%ED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call ED_CopyInput(T%ED%u, T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call ED_CopyInput(T%ED%Input(iSrc), T%ED%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1540,25 +1590,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call ExtPtfm_CopyInput(T%ExtPtfm%Input_Saved(-iSrc), T%ExtPtfm%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call ExtPtfm_CopyInput(T%ExtPtfm%Input_Saved(-iSrc), T%ExtPtfm%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call ExtPtfm_CopyInput(T%ExtPtfm%Input_Saved(-iSrc), T%ExtPtfm%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call ExtPtfm_CopyInput(T%ExtPtfm%u, T%ExtPtfm%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call ExtPtfm_CopyInput(T%ExtPtfm%u, T%ExtPtfm%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call ExtPtfm_CopyInput(T%ExtPtfm%Input(iSrc), T%ExtPtfm%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call ExtPtfm_CopyInput(T%ExtPtfm%Input(iSrc), T%ExtPtfm%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call ExtPtfm_CopyInput(T%ExtPtfm%Input(iSrc), T%ExtPtfm%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1570,25 +1609,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call FEAM_CopyInput(T%FEAM%Input_Saved(-iSrc), T%FEAM%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call FEAM_CopyInput(T%FEAM%Input_Saved(-iSrc), T%FEAM%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call FEAM_CopyInput(T%FEAM%Input_Saved(-iSrc), T%FEAM%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call FEAM_CopyInput(T%FEAM%u, T%FEAM%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call FEAM_CopyInput(T%FEAM%u, T%FEAM%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call FEAM_CopyInput(T%FEAM%Input(iSrc), T%FEAM%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call FEAM_CopyInput(T%FEAM%Input(iSrc), T%FEAM%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call FEAM_CopyInput(T%FEAM%Input(iSrc), T%FEAM%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1600,25 +1628,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call HydroDyn_CopyInput(T%HD%Input_Saved(-iSrc), T%HD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call HydroDyn_CopyInput(T%HD%Input_Saved(-iSrc), T%HD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call HydroDyn_CopyInput(T%HD%Input_Saved(-iSrc), T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call HydroDyn_CopyInput(T%HD%u, T%HD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call HydroDyn_CopyInput(T%HD%u, T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1630,25 +1647,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call IceD_CopyInput(T%IceD%Input_Saved(-iSrc, ModData%Ins), T%IceD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call IceD_CopyInput(T%IceD%Input_Saved(-iSrc, ModData%Ins), T%IceD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call IceD_CopyInput(T%IceD%Input_Saved(-iSrc, ModData%Ins), T%IceD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call IceD_CopyInput(T%IceD%u(ModData%Ins), T%IceD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call IceD_CopyInput(T%IceD%u(ModData%Ins), T%IceD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call IceD_CopyInput(T%IceD%Input(iSrc, ModData%Ins), T%IceD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call IceD_CopyInput(T%IceD%Input(iSrc, ModData%Ins), T%IceD%u(ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call IceD_CopyInput(T%IceD%Input(iSrc, ModData%Ins), T%IceD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1660,25 +1666,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call IceFloe_CopyInput(T%IceF%Input_Saved(-iSrc), T%IceF%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call IceFloe_CopyInput(T%IceF%Input_Saved(-iSrc), T%IceF%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call IceFloe_CopyInput(T%IceF%Input_Saved(-iSrc), T%IceF%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call IceFloe_CopyInput(T%IceF%u, T%IceF%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call IceFloe_CopyInput(T%IceF%u, T%IceF%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call IceFloe_CopyInput(T%IceF%Input(iSrc), T%IceF%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call IceFloe_CopyInput(T%IceF%Input(iSrc), T%IceF%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call IceFloe_CopyInput(T%IceF%Input(iSrc), T%IceF%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1690,25 +1685,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call InflowWind_CopyInput(T%IfW%Input_Saved(-iSrc), T%IfW%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call InflowWind_CopyInput(T%IfW%Input_Saved(-iSrc), T%IfW%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call InflowWind_CopyInput(T%IfW%Input_Saved(-iSrc), T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call InflowWind_CopyInput(T%IfW%u, T%IfW%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call InflowWind_CopyInput(T%IfW%u, T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1720,25 +1704,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call MAP_CopyInput(T%MAP%Input_Saved(-iSrc), T%MAP%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call MAP_CopyInput(T%MAP%Input_Saved(-iSrc), T%MAP%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call MAP_CopyInput(T%MAP%Input_Saved(-iSrc), T%MAP%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call MAP_CopyInput(T%MAP%u, T%MAP%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call MAP_CopyInput(T%MAP%u, T%MAP%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call MAP_CopyInput(T%MAP%Input(iSrc), T%MAP%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call MAP_CopyInput(T%MAP%Input(iSrc), T%MAP%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call MAP_CopyInput(T%MAP%Input(iSrc), T%MAP%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1750,25 +1723,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call MD_CopyInput(T%MD%Input_Saved(-iSrc), T%MD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call MD_CopyInput(T%MD%Input_Saved(-iSrc), T%MD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call MD_CopyInput(T%MD%Input_Saved(-iSrc), T%MD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call MD_CopyInput(T%MD%u, T%MD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call MD_CopyInput(T%MD%u, T%MD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call MD_CopyInput(T%MD%Input(iSrc), T%MD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call MD_CopyInput(T%MD%Input(iSrc), T%MD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call MD_CopyInput(T%MD%Input(iSrc), T%MD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1782,25 +1744,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call Orca_CopyInput(T%Orca%Input_Saved(-iSrc), T%Orca%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call Orca_CopyInput(T%Orca%Input_Saved(-iSrc), T%Orca%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call Orca_CopyInput(T%Orca%Input_Saved(-iSrc), T%Orca%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call Orca_CopyInput(T%Orca%u, T%Orca%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call Orca_CopyInput(T%Orca%u, T%Orca%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call Orca_CopyInput(T%Orca%Input(iSrc), T%Orca%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call Orca_CopyInput(T%Orca%Input(iSrc), T%Orca%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call Orca_CopyInput(T%Orca%Input(iSrc), T%Orca%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1812,25 +1763,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call SD_CopyInput(T%SD%Input_Saved(-iSrc), T%SD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call SD_CopyInput(T%SD%Input_Saved(-iSrc), T%SD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call SD_CopyInput(T%SD%Input_Saved(-iSrc), T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call SD_CopyInput(T%SD%u, T%SD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call SD_CopyInput(T%SD%u, T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call SD_CopyInput(T%SD%Input(iSrc), T%SD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call SD_CopyInput(T%SD%Input(iSrc), T%SD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call SD_CopyInput(T%SD%Input(iSrc), T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1842,25 +1782,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call SeaSt_CopyInput(T%SeaSt%Input_Saved(-iSrc), T%SeaSt%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call SeaSt_CopyInput(T%SeaSt%Input_Saved(-iSrc), T%SeaSt%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call SeaSt_CopyInput(T%SeaSt%Input_Saved(-iSrc), T%SeaSt%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call SeaSt_CopyInput(T%SeaSt%u, T%SeaSt%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call SeaSt_CopyInput(T%SeaSt%u, T%SeaSt%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
@@ -1872,25 +1801,14 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          select case (iDst)
          case (:-1)
             call SrvD_CopyInput(T%SrvD%Input_Saved(-iSrc), T%SrvD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call SrvD_CopyInput(T%SrvD%Input_Saved(-iSrc), T%SrvD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call SrvD_CopyInput(T%SrvD%Input_Saved(-iSrc), T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
-      case (0)
-         select case (iDst)
-         case (:-1)
-            call SrvD_CopyInput(T%SrvD%u, T%SrvD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
-            call SrvD_CopyInput(T%SrvD%u, T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (1:)
+      case (0:)
          select case (iDst)
          case (:-1)
             call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0)
-            call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%u, CtrlCode, Errstat2, ErrMsg2)
-         case (1:)
+         case (0:)
             call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select

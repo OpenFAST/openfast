@@ -1736,36 +1736,50 @@ function ExtLd_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-subroutine ExtLd_PackContStateAry(Vars, x, ValAry)
+subroutine ExtLd_VarsPackContState(Vars, x, ValAry)
    type(ExtLd_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_x_blah)
-            call MV_Pack(V, x%blah, ValAry)                                     ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ExtLd_VarPackContState(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine ExtLd_UnpackContStateAry(Vars, ValAry, x)
+subroutine ExtLd_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtLd_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLd_x_blah)
+         VarVals(1) = x%blah                                                  ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtLd_VarsUnpackContState(Vars, ValAry, x)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(ExtLd_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_x_blah)
-            call MV_Unpack(V, ValAry, x%blah)                                   ! Scalar
-         end select
-      end associate
+      call ExtLd_VarUnpackContState(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+subroutine ExtLd_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtLd_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLd_x_blah)
+         x%blah = VarVals(1)                                                  ! Scalar
+      end select
+   end associate
 end subroutine
 
 function ExtLd_ContinuousStateFieldName(DL) result(Name)
@@ -1779,53 +1793,74 @@ function ExtLd_ContinuousStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine ExtLd_PackContStateDerivAry(Vars, x, ValAry)
+subroutine ExtLd_VarsPackContStateDeriv(Vars, x, ValAry)
    type(ExtLd_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_x_blah)
-            call MV_Pack(V, x%blah, ValAry)                                     ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ExtLd_VarPackContStateDeriv(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine ExtLd_PackConstrStateAry(Vars, z, ValAry)
+subroutine ExtLd_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtLd_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLd_x_blah)
+         VarVals(1) = x%blah                                                  ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtLd_VarsPackConstrState(Vars, z, ValAry)
    type(ExtLd_ConstraintStateType), intent(in) :: z
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_z_blah)
-            call MV_Pack(V, z%blah, ValAry)                                     ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ExtLd_VarPackConstrState(Vars%z(i), z, ValAry)
    end do
 end subroutine
 
-subroutine ExtLd_UnpackConstrStateAry(Vars, ValAry, z)
+subroutine ExtLd_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtLd_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLd_z_blah)
+         VarVals(1) = z%blah                                                  ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtLd_VarsUnpackConstrState(Vars, ValAry, z)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(ExtLd_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_z_blah)
-            call MV_Unpack(V, ValAry, z%blah)                                   ! Scalar
-         end select
-      end associate
+      call ExtLd_VarUnpackConstrState(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+subroutine ExtLd_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtLd_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLd_z_blah)
+         z%blah = VarVals(1)                                                  ! Scalar
+      end select
+   end associate
 end subroutine
 
 function ExtLd_ConstraintStateFieldName(DL) result(Name)
@@ -1839,80 +1874,94 @@ function ExtLd_ConstraintStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine ExtLd_PackInputAry(Vars, u, ValAry)
+subroutine ExtLd_VarsPackInput(Vars, u, ValAry)
    type(ExtLd_InputType), intent(in)       :: u
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_u_DX_u_twrDef)
-            call MV_Pack(V, u%DX_u%twrDef(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
-         case (ExtLd_u_DX_u_bldDef)
-            call MV_Pack(V, u%DX_u%bldDef(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
-         case (ExtLd_u_DX_u_hubDef)
-            call MV_Pack(V, u%DX_u%hubDef(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
-         case (ExtLd_u_DX_u_nacDef)
-            call MV_Pack(V, u%DX_u%nacDef(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
-         case (ExtLd_u_DX_u_bldRootDef)
-            call MV_Pack(V, u%DX_u%bldRootDef(V%iAry(1):V%iAry(2)), ValAry)     ! Rank 1 Array
-         case (ExtLd_u_DX_u_bldPitch)
-            call MV_Pack(V, u%DX_u%bldPitch(V%iAry(1):V%iAry(2)), ValAry)       ! Rank 1 Array
-         case (ExtLd_u_az)
-            call MV_Pack(V, u%az, ValAry)                                       ! Scalar
-         case (ExtLd_u_TowerMotion)
-            call MV_Pack(V, u%TowerMotion, ValAry)                              ! Mesh
-         case (ExtLd_u_HubMotion)
-            call MV_Pack(V, u%HubMotion, ValAry)                                ! Mesh
-         case (ExtLd_u_NacelleMotion)
-            call MV_Pack(V, u%NacelleMotion, ValAry)                            ! Mesh
-         case (ExtLd_u_BladeRootMotion)
-            call MV_Pack(V, u%BladeRootMotion(DL%i1), ValAry)                   ! Mesh
-         case (ExtLd_u_BladeMotion)
-            call MV_Pack(V, u%BladeMotion(DL%i1), ValAry)                       ! Mesh
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ExtLd_VarPackInput(Vars%u(i), u, ValAry)
    end do
 end subroutine
 
-subroutine ExtLd_UnpackInputAry(Vars, ValAry, u)
+subroutine ExtLd_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtLd_InputType), intent(in)       :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLd_u_DX_u_twrDef)
+         VarVals = u%DX_u%twrDef(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (ExtLd_u_DX_u_bldDef)
+         VarVals = u%DX_u%bldDef(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (ExtLd_u_DX_u_hubDef)
+         VarVals = u%DX_u%hubDef(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (ExtLd_u_DX_u_nacDef)
+         VarVals = u%DX_u%nacDef(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (ExtLd_u_DX_u_bldRootDef)
+         VarVals = u%DX_u%bldRootDef(V%iLB:V%iUB)                             ! Rank 1 Array
+      case (ExtLd_u_DX_u_bldPitch)
+         VarVals = u%DX_u%bldPitch(V%iLB:V%iUB)                               ! Rank 1 Array
+      case (ExtLd_u_az)
+         VarVals(1) = u%az                                                    ! Scalar
+      case (ExtLd_u_TowerMotion)
+         call MV_PackMesh(V, u%TowerMotion, ValAry)                           ! Mesh
+      case (ExtLd_u_HubMotion)
+         call MV_PackMesh(V, u%HubMotion, ValAry)                             ! Mesh
+      case (ExtLd_u_NacelleMotion)
+         call MV_PackMesh(V, u%NacelleMotion, ValAry)                         ! Mesh
+      case (ExtLd_u_BladeRootMotion)
+         call MV_PackMesh(V, u%BladeRootMotion(DL%i1), ValAry)                ! Mesh
+      case (ExtLd_u_BladeMotion)
+         call MV_PackMesh(V, u%BladeMotion(DL%i1), ValAry)                    ! Mesh
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtLd_VarsUnpackInput(Vars, ValAry, u)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(ExtLd_InputType), intent(inout)    :: u
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_u_DX_u_twrDef)
-            call MV_Unpack(V, ValAry, u%DX_u%twrDef(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
-         case (ExtLd_u_DX_u_bldDef)
-            call MV_Unpack(V, ValAry, u%DX_u%bldDef(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
-         case (ExtLd_u_DX_u_hubDef)
-            call MV_Unpack(V, ValAry, u%DX_u%hubDef(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
-         case (ExtLd_u_DX_u_nacDef)
-            call MV_Unpack(V, ValAry, u%DX_u%nacDef(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
-         case (ExtLd_u_DX_u_bldRootDef)
-            call MV_Unpack(V, ValAry, u%DX_u%bldRootDef(V%iAry(1):V%iAry(2)))   ! Rank 1 Array
-         case (ExtLd_u_DX_u_bldPitch)
-            call MV_Unpack(V, ValAry, u%DX_u%bldPitch(V%iAry(1):V%iAry(2)))     ! Rank 1 Array
-         case (ExtLd_u_az)
-            call MV_Unpack(V, ValAry, u%az)                                     ! Scalar
-         case (ExtLd_u_TowerMotion)
-            call MV_Unpack(V, ValAry, u%TowerMotion)                            ! Mesh
-         case (ExtLd_u_HubMotion)
-            call MV_Unpack(V, ValAry, u%HubMotion)                              ! Mesh
-         case (ExtLd_u_NacelleMotion)
-            call MV_Unpack(V, ValAry, u%NacelleMotion)                          ! Mesh
-         case (ExtLd_u_BladeRootMotion)
-            call MV_Unpack(V, ValAry, u%BladeRootMotion(DL%i1))                 ! Mesh
-         case (ExtLd_u_BladeMotion)
-            call MV_Unpack(V, ValAry, u%BladeMotion(DL%i1))                     ! Mesh
-         end select
-      end associate
+      call ExtLd_VarUnpackInput(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+subroutine ExtLd_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtLd_InputType), intent(inout)    :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLd_u_DX_u_twrDef)
+         u%DX_u%twrDef(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (ExtLd_u_DX_u_bldDef)
+         u%DX_u%bldDef(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (ExtLd_u_DX_u_hubDef)
+         u%DX_u%hubDef(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (ExtLd_u_DX_u_nacDef)
+         u%DX_u%nacDef(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (ExtLd_u_DX_u_bldRootDef)
+         u%DX_u%bldRootDef(V%iLB:V%iUB) = VarVals                             ! Rank 1 Array
+      case (ExtLd_u_DX_u_bldPitch)
+         u%DX_u%bldPitch(V%iLB:V%iUB) = VarVals                               ! Rank 1 Array
+      case (ExtLd_u_az)
+         u%az = VarVals(1)                                                    ! Scalar
+      case (ExtLd_u_TowerMotion)
+         call MV_UnpackMesh(V, ValAry, u%TowerMotion)                         ! Mesh
+      case (ExtLd_u_HubMotion)
+         call MV_UnpackMesh(V, ValAry, u%HubMotion)                           ! Mesh
+      case (ExtLd_u_NacelleMotion)
+         call MV_UnpackMesh(V, ValAry, u%NacelleMotion)                       ! Mesh
+      case (ExtLd_u_BladeRootMotion)
+         call MV_UnpackMesh(V, ValAry, u%BladeRootMotion(DL%i1))              ! Mesh
+      case (ExtLd_u_BladeMotion)
+         call MV_UnpackMesh(V, ValAry, u%BladeMotion(DL%i1))                  ! Mesh
+      end select
+   end associate
 end subroutine
 
 function ExtLd_InputFieldName(DL) result(Name)
@@ -1948,56 +1997,70 @@ function ExtLd_InputFieldName(DL) result(Name)
    end select
 end function
 
-subroutine ExtLd_PackOutputAry(Vars, y, ValAry)
+subroutine ExtLd_VarsPackOutput(Vars, y, ValAry)
    type(ExtLd_OutputType), intent(in)      :: y
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_y_DX_y_twrLd)
-            call MV_Pack(V, y%DX_y%twrLd(V%iAry(1):V%iAry(2)), ValAry)          ! Rank 1 Array
-         case (ExtLd_y_DX_y_bldLd)
-            call MV_Pack(V, y%DX_y%bldLd(V%iAry(1):V%iAry(2)), ValAry)          ! Rank 1 Array
-         case (ExtLd_y_TowerLoad)
-            call MV_Pack(V, y%TowerLoad, ValAry)                                ! Mesh
-         case (ExtLd_y_BladeLoad)
-            call MV_Pack(V, y%BladeLoad(DL%i1), ValAry)                         ! Mesh
-         case (ExtLd_y_TowerLoadAD)
-            call MV_Pack(V, y%TowerLoadAD, ValAry)                              ! Mesh
-         case (ExtLd_y_BladeLoadAD)
-            call MV_Pack(V, y%BladeLoadAD(DL%i1), ValAry)                       ! Mesh
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ExtLd_VarPackOutput(Vars%y(i), y, ValAry)
    end do
 end subroutine
 
-subroutine ExtLd_UnpackOutputAry(Vars, ValAry, y)
+subroutine ExtLd_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtLd_OutputType), intent(in)      :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLd_y_DX_y_twrLd)
+         VarVals = y%DX_y%twrLd(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case (ExtLd_y_DX_y_bldLd)
+         VarVals = y%DX_y%bldLd(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case (ExtLd_y_TowerLoad)
+         call MV_PackMesh(V, y%TowerLoad, ValAry)                             ! Mesh
+      case (ExtLd_y_BladeLoad)
+         call MV_PackMesh(V, y%BladeLoad(DL%i1), ValAry)                      ! Mesh
+      case (ExtLd_y_TowerLoadAD)
+         call MV_PackMesh(V, y%TowerLoadAD, ValAry)                           ! Mesh
+      case (ExtLd_y_BladeLoadAD)
+         call MV_PackMesh(V, y%BladeLoadAD(DL%i1), ValAry)                    ! Mesh
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtLd_VarsUnpackOutput(Vars, ValAry, y)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(ExtLd_OutputType), intent(inout)   :: y
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (ExtLd_y_DX_y_twrLd)
-            call MV_Unpack(V, ValAry, y%DX_y%twrLd(V%iAry(1):V%iAry(2)))        ! Rank 1 Array
-         case (ExtLd_y_DX_y_bldLd)
-            call MV_Unpack(V, ValAry, y%DX_y%bldLd(V%iAry(1):V%iAry(2)))        ! Rank 1 Array
-         case (ExtLd_y_TowerLoad)
-            call MV_Unpack(V, ValAry, y%TowerLoad)                              ! Mesh
-         case (ExtLd_y_BladeLoad)
-            call MV_Unpack(V, ValAry, y%BladeLoad(DL%i1))                       ! Mesh
-         case (ExtLd_y_TowerLoadAD)
-            call MV_Unpack(V, ValAry, y%TowerLoadAD)                            ! Mesh
-         case (ExtLd_y_BladeLoadAD)
-            call MV_Unpack(V, ValAry, y%BladeLoadAD(DL%i1))                     ! Mesh
-         end select
-      end associate
+      call ExtLd_VarUnpackOutput(Vars%y(i), ValAry, y)
    end do
+end subroutine
+
+subroutine ExtLd_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtLd_OutputType), intent(inout)   :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLd_y_DX_y_twrLd)
+         y%DX_y%twrLd(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      case (ExtLd_y_DX_y_bldLd)
+         y%DX_y%bldLd(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      case (ExtLd_y_TowerLoad)
+         call MV_UnpackMesh(V, ValAry, y%TowerLoad)                           ! Mesh
+      case (ExtLd_y_BladeLoad)
+         call MV_UnpackMesh(V, ValAry, y%BladeLoad(DL%i1))                    ! Mesh
+      case (ExtLd_y_TowerLoadAD)
+         call MV_UnpackMesh(V, ValAry, y%TowerLoadAD)                         ! Mesh
+      case (ExtLd_y_BladeLoadAD)
+         call MV_UnpackMesh(V, ValAry, y%BladeLoadAD(DL%i1))                  ! Mesh
+      end select
+   end associate
 end subroutine
 
 function ExtLd_OutputFieldName(DL) result(Name)

@@ -54,8 +54,8 @@ typedef   ^                   ^          LOGICAL               RotFrame_y      {
 typedef   ^                   ^          LOGICAL               RotFrame_x      {:} - - "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
 typedef   ^                   ^          LOGICAL               RotFrame_u      {:} - - "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 typedef   ^                   ^          LOGICAL               IsLoad_u        {:} - - "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
-typedef   ^                   ^          IntKi                 DerivOrder_x    {:} - -  "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
-
+typedef   ^                   ^          IntKi                 DerivOrder_x    {:} - - "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
+typedef   ^                   ^          ModVarsType           Vars             -  - - "Module variables"
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -72,18 +72,6 @@ typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "R
 typedef   ^               OtherStateType    ExtPtfm_ContinuousStateType  xdot  {:} -  -  "Previous state derivs for m-step time integrator"
 typedef   ^                     ^               IntKi                    n      -  -  -  "Tracks time step for which OtherState was updated last"
 #typedef   ^               OtherStateType      IntKi    DummyOtherState - - - "Remove this variable if you have other states" -
-
-
-# ..... Misc/Optimization variables.................................................................................................
-# Define any data that are used only for efficiency purposes (these variables are not associated with time):
-#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef    ^              MiscVarType          ReKi     xFlat    {:} - - "Flattened vector of states"
-typedef    ^              MiscVarType          ReKi     uFlat   {18} - - "Flattened vector of inputs"
-typedef    ^              MiscVarType          ReKi     F_at_t   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
-typedef    ^              MiscVarType          IntKi    Indx       - - - "Index into times, to speed up interpolation" -
-typedef    ^              MiscVarType          LOGICAL  EquilStart - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
-typedef    ^                  ^                ReKi     AllOuts  {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
-typedef    ^                  ^     ExtPtfm_ContinuousStateType dxdt_lin   - - - "continuous state derivatives" -
 
 
 # ..... Parameters ................................................................................................................
@@ -129,3 +117,17 @@ typedef  ^               InputType             MeshType PtfmMesh             -  
 typedef   ^               OutputType          MeshType PtfmMesh     -  - -   "Loads at the platform reference point" -
 typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Example of data to be written to an output file" "s,-"
 
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef    ^              MiscVarType          ReKi     xFlat    {:} - - "Flattened vector of states"
+typedef    ^              MiscVarType          ReKi     uFlat   {18} - - "Flattened vector of inputs"
+typedef    ^              MiscVarType          ReKi     F_at_t   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
+typedef    ^              MiscVarType          IntKi    Indx       - - - "Index into times, to speed up interpolation" -
+typedef    ^              MiscVarType          LOGICAL  EquilStart - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
+typedef    ^                  ^                ReKi     AllOuts  {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
+typedef    ^                  ^              ModJacType Jac       - - - "Data structure for calculating module Jacobians" -
+typedef    ^                  ^     ExtPtfm_ContinuousStateType x_perturb - - -	""	-
+typedef    ^                  ^     ExtPtfm_ContinuousStateType dxdt_lin - - -	"continuous state derivatives"	-
+typedef    ^                  ^     ExtPtfm_InputType   u_perturb - - - "" -
+typedef    ^                  ^     ExtPtfm_OutputType  y_lin     - - - "" -

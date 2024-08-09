@@ -67,7 +67,7 @@ param       ^       -           IntKi           VF_SmallAngle       -   32  -   
 param       ^       -           IntKi           VF_2PI              -   64  -   "Variable is an angle with range [0,2pi]"  -
 param       ^       -           IntKi           VF_WM_Rot           -  128  -   "Variable is a Wiener-Milenkovic rotation"  -
 param       ^       -           IntKi           VF_WriteOut         -  256  -   "Variable for write output"  -
-param       ^       -           IntKi           VF_Solve            -  512  -   "Variable for solver"  -
+param       ^       -           IntKi           VF_Solve            -  512  -   "Variable for tight coupling solver"  -
 param       ^       -           IntKi           VF_AeroMap          - 1024  -   "Variable for aeromap"  -
 param       ^       -           IntKi           VF_DerivOrder1      - 2048  -   "Variable is derivative order 1 in linearization file"  -
 param       ^       -           IntKi           VF_DerivOrder2      - 4096  -   "Variable is derivative order 2 in linearization file"  -
@@ -92,12 +92,13 @@ typedef     ^       ^           IntKi           Flags               -   0   -   
 typedef     ^       ^           IntKi           DerivOrder          -   0   -   ""  -
 typedef     ^       ^           IntKi           iLoc                2   0   -   "indices in module arrays"  -
 typedef     ^       ^           IntKi           iGlu                2   0   -   "indices in module arrays"  -
-typedef     ^       ^           IntKi           iAry                2   0   -   "first user defined index for variable"  -
-typedef     ^       ^           IntKi           jAry                -   0   -   "second user defined index for variable"  -
-typedef     ^       ^           IntKi           kAry                -   0   -   "third user defined index for variable"  -
-typedef     ^       ^           IntKi           mAry                -   0   -   "fourth user defined index for variable"  -
-typedef     ^       ^           IntKi           nAry                -   0   -   "fifth user defined index for variable"  -
-typedef     ^       ^           IntKi           MeshID              -   0   -   "Mesh identification number"  -
+typedef     ^       ^           IntKi           iq                  2   0   -   "solver state row indices"  -
+typedef     ^       ^           IntKi           iLB                 -   0   -   "first user defined index lower bound for variable"  -
+typedef     ^       ^           IntKi           iUB                 -   0   -   "first user defined index upper bound for variable"  -
+typedef     ^       ^           IntKi           j                   -   0   -   "second user defined index for variable"  -
+typedef     ^       ^           IntKi           k                   -   0   -   "third user defined index for variable"  -
+typedef     ^       ^           IntKi           m                   -   0   -   "fourth user defined index for variable"  -
+typedef     ^       ^           IntKi           n                   -   0   -   "fifth user defined index for variable"  -
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation amount for linearization"  -
 typedef     ^       ^           DatLoc          DL                  -   -   -   "data location"  -
 typedef     ^       ^           character(VarNameLen)   Name        -   -   -   ""  -
@@ -145,13 +146,11 @@ typedef     ^       ^           R8Ki            dUdy                ::  -   -   
 typedef     ^       ^           R8Ki            StateRotation       :: -  -     ""  -
 
 typedef     ^       ModDataType character(ChanLen) Abbr             -   -   -   "Module name abbreviation"  -
-typedef     ^       ^           IntKi           ID                  -   0   -   "Module identification number"  -
 typedef     ^       ^           IntKi           iMod                -   0   -   "Module index in array of modules"  -
+typedef     ^       ^           IntKi           ID                  -   0   -   "Module identification number"  -
 typedef     ^       ^           IntKi           Ins                 -   0   -   "Module instance number"  -
 typedef     ^       ^           IntKi           SubSteps            -   0   -   "Module number of substeps per solver time step"  -
 typedef     ^       ^           R8Ki            DT                  -   0   -   "Module time step"  -
-typedef     ^       ^           IntKi           iSrcMaps            :   -   -   "Indices of mappings where module is the source"
-typedef     ^       ^           IntKi           iDstMaps            :   -   -   "Indices of mappings where module is the destination"
 typedef     ^       ^           ModVarsType     Vars                -   -   -   "Module variables type"  -
 typedef     ^       ^           ModLinType      Lin                 -   -   -   "Module linearization arrays and matrices"
 

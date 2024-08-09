@@ -345,7 +345,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Module Variables
       !............................................................................................
 
-   CALL ED_InitVars(u, p, x, y, m, InitOut%Vars, InputFileData, InitInp%Linearize, ErrStat2, ErrMsg2)
+   CALL ED_InitVars(u, p, x, y, m, InitOut%Vars, InputFileData, .true., ErrStat2, ErrMsg2)
       CALL CheckError( ErrStat2, ErrMsg2 )
 
       !............................................................................................
@@ -10301,7 +10301,7 @@ SUBROUTINE ED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
    ! Update copy of the inputs to perturb
    call ED_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call ED_PackInputAry(Vars, u, m%Jac%u)
+   call ED_VarsPackInput(Vars, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
@@ -10325,15 +10325,15 @@ SUBROUTINE ED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call ED_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ED_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call ED_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call ED_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ED_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call ED_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call ED_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Get partial derivative via central difference and store in full linearization array
             call MV_ComputeCentralDiff(Vars%y, Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,iCol))
@@ -10374,15 +10374,15 @@ SUBROUTINE ED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call ED_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ED_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call ED_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_pos)
+            call ED_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call ED_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call ED_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call ED_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_neg)
+            call ED_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
 
             ! Get partial derivative via central difference and store in full linearization array
             dXdu(:,iCol) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
@@ -10459,7 +10459,7 @@ SUBROUTINE ED_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
 
    ! Copy state values
    call ED_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call ED_PackContStateAry(Vars, x, m%Jac%x)
+   call ED_VarsPackContState(Vars, x, m%Jac%x)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
@@ -10480,15 +10480,15 @@ SUBROUTINE ED_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ED_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call ED_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ED_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call ED_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Get partial derivative via central difference and store in full linearization array
             call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,iCol))
@@ -10516,15 +10516,15 @@ SUBROUTINE ED_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ED_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_pos)
+            call ED_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call ED_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call ED_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call ED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call ED_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_neg)
+            call ED_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
 
             ! Get partial derivative via central difference and store in full linearization array
             dXdx(:,iCol) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
@@ -10889,7 +10889,7 @@ subroutine ED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, E
          
          ! Add variable (only active variables are in x)
          call MV_AddVar(Vars%x, Vars%x(i)%Name, Field, &
-                        DatLoc(ED_x_QDT), iAry=Vars%x(i)%iAry(1), &
+                        DatLoc(ED_x_QDT), iAry=Vars%x(i)%iLB, &
                         Flags=Vars%x(i)%Flags, &
                         Perturb=Vars%x(i)%Perturb, &
                         LinNames=['First time derivative of '//trim(Vars%x(i)%LinNames(1))//'/s'])

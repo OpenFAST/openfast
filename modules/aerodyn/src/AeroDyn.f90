@@ -60,7 +60,7 @@ module AeroDyn
    PUBLIC :: AD_JacobianPConstrState           ! Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
                                                !   (Xd), and constraint - state(Z) functions all with respect to the constraint
                                                !   states(z)
-   PUBLIC :: AD_PackExtInputAry                !< Routine pack extended inputs
+   PUBLIC :: AD_VarsPackExtInput                !< Routine pack extended inputs
    public :: AD_CalcWind_Rotor                 !< Routine to calculate rotor wind inputs
   
 contains    
@@ -5960,7 +5960,7 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
    
    ! Copy inputs and pack them for perturbation
    call AD_CopyRotInputType(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call AD_PackInputAry(Vars, u, m%Jac%u)
+   call AD_VarsPackInput(Vars, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
@@ -5983,27 +5983,27 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
             call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call AD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, 1, FF_ptr)
             StartNode = 1
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(t, p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call AD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
          
             ! Calculate negative perturbation
             call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call AD_CopyRotOtherStateType(m%OtherState_init, m%OtherState_jac, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call AD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, -1, FF_ptr)
             StartNode = 1
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(t, p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call AD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Calculate column index
             col = Vars%u(i)%iLoc(1) + j - 1
@@ -6031,21 +6031,21 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call AD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, 1, FF_ptr)
             StartNode = 1
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
-            call AD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_pos)
+            call AD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call AD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, -1, FF_ptr)
             StartNode = 1
             call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
-            call AD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_neg)
+            call AD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = Vars%u(i)%iLoc(1) + j - 1
@@ -6201,7 +6201,7 @@ SUBROUTINE RotJacobianPContState(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, 
 
    ! Copy and pack states for perturbation
    call AD_CopyRotContinuousStateType(m%x_init, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call AD_PackContStateAry(Vars, m%x_init, m%Jac%x)
+   call AD_VarsPackContState(Vars, m%x_init, m%Jac%x)
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
@@ -6219,15 +6219,15 @@ SUBROUTINE RotJacobianPContState(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, 
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call AD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call AD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call RotCalcOutput(t, u, RotInflow, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m%y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2) ; if (Failed()) return
-            call AD_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call AD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call AD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call AD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call RotCalcOutput(t, u, RotInflow, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m%y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2) ; if (Failed()) return
-            call AD_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call AD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Calculate column index
             col = Vars%x(i)%iLoc(1) + j - 1
@@ -6255,15 +6255,15 @@ SUBROUTINE RotJacobianPContState(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, 
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call AD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call AD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call RotCalcContStateDeriv(t, u, RotInflow, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_pos)
+            call AD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call AD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call AD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call RotCalcContStateDeriv(t, u, RotInflow, p, p_AD, m%x_perturb, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call AD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_neg)
+            call AD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = Vars%x(i)%iLoc(1) + j - 1
@@ -6570,7 +6570,7 @@ contains
 
 END SUBROUTINE RotJacobianPConstrState
 
-subroutine AD_PackExtInputAry(Vars, t, p, ValAry)
+subroutine AD_VarsPackExtInput(Vars, t, p, ValAry)
    use IfW_FlowField_Types, only : UniformField_Interp
    use IfW_FlowField, only : UniformField_InterpCubic, UniformField_InterpLinear
    type(ModVarsType), intent(in)          :: Vars
@@ -6586,13 +6586,13 @@ subroutine AD_PackExtInputAry(Vars, t, p, ValAry)
          select case(Var%DL%Num)
          case (AD_u_HWindSpeed)
             call CalcExtOP()
-            call MV_Pack(Var, op%VelH, ValAry)
+            ValAry(Var%iLoc(1)) = op%VelH
          case (AD_u_PLExp)
             call CalcExtOP()
-            call MV_Pack(Var, op%ShrV, ValAry)
+            ValAry(Var%iLoc(1)) = op%ShrV
          case (AD_u_PropagationDir)
             call CalcExtOP()
-            call MV_Pack(Var, op%AngleH + p%FlowField%PropagationDir, ValAry)
+            ValAry(Var%iLoc(1)) = op%AngleH + p%FlowField%PropagationDir
          end select
       end associate
    end do

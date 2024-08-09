@@ -645,36 +645,50 @@ function WAMIT2_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-subroutine WAMIT2_PackOutputAry(Vars, y, ValAry)
+subroutine WAMIT2_VarsPackOutput(Vars, y, ValAry)
    type(WAMIT2_OutputType), intent(in)     :: y
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (WAMIT2_y_Mesh)
-            call MV_Pack(V, y%Mesh, ValAry)                                     ! Mesh
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call WAMIT2_VarPackOutput(Vars%y(i), y, ValAry)
    end do
 end subroutine
 
-subroutine WAMIT2_UnpackOutputAry(Vars, ValAry, y)
+subroutine WAMIT2_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(WAMIT2_OutputType), intent(in)     :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (WAMIT2_y_Mesh)
+         call MV_PackMesh(V, y%Mesh, ValAry)                                  ! Mesh
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine WAMIT2_VarsUnpackOutput(Vars, ValAry, y)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(WAMIT2_OutputType), intent(inout)  :: y
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (WAMIT2_y_Mesh)
-            call MV_Unpack(V, ValAry, y%Mesh)                                   ! Mesh
-         end select
-      end associate
+      call WAMIT2_VarUnpackOutput(Vars%y(i), ValAry, y)
    end do
+end subroutine
+
+subroutine WAMIT2_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(WAMIT2_OutputType), intent(inout)  :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (WAMIT2_y_Mesh)
+         call MV_UnpackMesh(V, ValAry, y%Mesh)                                ! Mesh
+      end select
+   end associate
 end subroutine
 
 function WAMIT2_OutputFieldName(DL) result(Name)

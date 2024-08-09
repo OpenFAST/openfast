@@ -1332,36 +1332,50 @@ function SeaSt_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-subroutine SeaSt_PackContStateAry(Vars, x, ValAry)
+subroutine SeaSt_VarsPackContState(Vars, x, ValAry)
    type(SeaSt_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_x_UnusedStates)
-            call MV_Pack(V, x%UnusedStates, ValAry)                             ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call SeaSt_VarPackContState(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine SeaSt_UnpackContStateAry(Vars, ValAry, x)
+subroutine SeaSt_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SeaSt_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_x_UnusedStates)
+         VarVals(1) = x%UnusedStates                                          ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SeaSt_VarsUnpackContState(Vars, ValAry, x)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(SeaSt_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_x_UnusedStates)
-            call MV_Unpack(V, ValAry, x%UnusedStates)                           ! Scalar
-         end select
-      end associate
+      call SeaSt_VarUnpackContState(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+subroutine SeaSt_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SeaSt_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_x_UnusedStates)
+         x%UnusedStates = VarVals(1)                                          ! Scalar
+      end select
+   end associate
 end subroutine
 
 function SeaSt_ContinuousStateFieldName(DL) result(Name)
@@ -1375,53 +1389,74 @@ function SeaSt_ContinuousStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine SeaSt_PackContStateDerivAry(Vars, x, ValAry)
+subroutine SeaSt_VarsPackContStateDeriv(Vars, x, ValAry)
    type(SeaSt_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_x_UnusedStates)
-            call MV_Pack(V, x%UnusedStates, ValAry)                             ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call SeaSt_VarPackContStateDeriv(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine SeaSt_PackConstrStateAry(Vars, z, ValAry)
+subroutine SeaSt_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SeaSt_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_x_UnusedStates)
+         VarVals(1) = x%UnusedStates                                          ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SeaSt_VarsPackConstrState(Vars, z, ValAry)
    type(SeaSt_ConstraintStateType), intent(in) :: z
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_z_UnusedStates)
-            call MV_Pack(V, z%UnusedStates, ValAry)                             ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call SeaSt_VarPackConstrState(Vars%z(i), z, ValAry)
    end do
 end subroutine
 
-subroutine SeaSt_UnpackConstrStateAry(Vars, ValAry, z)
+subroutine SeaSt_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SeaSt_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_z_UnusedStates)
+         VarVals(1) = z%UnusedStates                                          ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SeaSt_VarsUnpackConstrState(Vars, ValAry, z)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(SeaSt_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_z_UnusedStates)
-            call MV_Unpack(V, ValAry, z%UnusedStates)                           ! Scalar
-         end select
-      end associate
+      call SeaSt_VarUnpackConstrState(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+subroutine SeaSt_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SeaSt_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_z_UnusedStates)
+         z%UnusedStates = VarVals(1)                                          ! Scalar
+      end select
+   end associate
 end subroutine
 
 function SeaSt_ConstraintStateFieldName(DL) result(Name)
@@ -1435,36 +1470,50 @@ function SeaSt_ConstraintStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine SeaSt_PackInputAry(Vars, u, ValAry)
+subroutine SeaSt_VarsPackInput(Vars, u, ValAry)
    type(SeaSt_InputType), intent(in)       :: u
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_u_DummyInput)
-            call MV_Pack(V, u%DummyInput, ValAry)                               ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call SeaSt_VarPackInput(Vars%u(i), u, ValAry)
    end do
 end subroutine
 
-subroutine SeaSt_UnpackInputAry(Vars, ValAry, u)
+subroutine SeaSt_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SeaSt_InputType), intent(in)       :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_u_DummyInput)
+         VarVals(1) = u%DummyInput                                            ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SeaSt_VarsUnpackInput(Vars, ValAry, u)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(SeaSt_InputType), intent(inout)    :: u
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_u_DummyInput)
-            call MV_Unpack(V, ValAry, u%DummyInput)                             ! Scalar
-         end select
-      end associate
+      call SeaSt_VarUnpackInput(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+subroutine SeaSt_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SeaSt_InputType), intent(inout)    :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_u_DummyInput)
+         u%DummyInput = VarVals(1)                                            ! Scalar
+      end select
+   end associate
 end subroutine
 
 function SeaSt_InputFieldName(DL) result(Name)
@@ -1478,36 +1527,50 @@ function SeaSt_InputFieldName(DL) result(Name)
    end select
 end function
 
-subroutine SeaSt_PackOutputAry(Vars, y, ValAry)
+subroutine SeaSt_VarsPackOutput(Vars, y, ValAry)
    type(SeaSt_OutputType), intent(in)      :: y
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_y_WriteOutput)
-            call MV_Pack(V, y%WriteOutput(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call SeaSt_VarPackOutput(Vars%y(i), y, ValAry)
    end do
 end subroutine
 
-subroutine SeaSt_UnpackOutputAry(Vars, ValAry, y)
+subroutine SeaSt_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SeaSt_OutputType), intent(in)      :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SeaSt_VarsUnpackOutput(Vars, ValAry, y)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(SeaSt_OutputType), intent(inout)   :: y
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (SeaSt_y_WriteOutput)
-            call MV_Unpack(V, ValAry, y%WriteOutput(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
-         end select
-      end associate
+      call SeaSt_VarUnpackOutput(Vars%y(i), ValAry, y)
    end do
+end subroutine
+
+subroutine SeaSt_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SeaSt_OutputType), intent(inout)   :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 function SeaSt_OutputFieldName(DL) result(Name)

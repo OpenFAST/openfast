@@ -2627,36 +2627,50 @@ function AWAE_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-subroutine AWAE_PackContStateAry(Vars, x, ValAry)
+subroutine AWAE_VarsPackContState(Vars, x, ValAry)
    type(AWAE_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (AWAE_x_IfW_DummyContState)
-            call MV_Pack(V, x%IfW(DL%i1)%DummyContState, ValAry)                ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call AWAE_VarPackContState(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine AWAE_UnpackContStateAry(Vars, ValAry, x)
+subroutine AWAE_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AWAE_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_x_IfW_DummyContState)
+         VarVals(1) = x%IfW(DL%i1)%DummyContState                             ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AWAE_VarsUnpackContState(Vars, ValAry, x)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(AWAE_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (AWAE_x_IfW_DummyContState)
-            call MV_Unpack(V, ValAry, x%IfW(DL%i1)%DummyContState)              ! Scalar
-         end select
-      end associate
+      call AWAE_VarUnpackContState(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+subroutine AWAE_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AWAE_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_x_IfW_DummyContState)
+         x%IfW(DL%i1)%DummyContState = VarVals(1)                             ! Scalar
+      end select
+   end associate
 end subroutine
 
 function AWAE_ContinuousStateFieldName(DL) result(Name)
@@ -2670,53 +2684,74 @@ function AWAE_ContinuousStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine AWAE_PackContStateDerivAry(Vars, x, ValAry)
+subroutine AWAE_VarsPackContStateDeriv(Vars, x, ValAry)
    type(AWAE_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (AWAE_x_IfW_DummyContState)
-            call MV_Pack(V, x%IfW(DL%i1)%DummyContState, ValAry)                ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call AWAE_VarPackContStateDeriv(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine AWAE_PackConstrStateAry(Vars, z, ValAry)
+subroutine AWAE_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AWAE_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_x_IfW_DummyContState)
+         VarVals(1) = x%IfW(DL%i1)%DummyContState                             ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AWAE_VarsPackConstrState(Vars, z, ValAry)
    type(AWAE_ConstraintStateType), intent(in) :: z
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (AWAE_z_IfW_DummyConstrState)
-            call MV_Pack(V, z%IfW(DL%i1)%DummyConstrState, ValAry)              ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call AWAE_VarPackConstrState(Vars%z(i), z, ValAry)
    end do
 end subroutine
 
-subroutine AWAE_UnpackConstrStateAry(Vars, ValAry, z)
+subroutine AWAE_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AWAE_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_z_IfW_DummyConstrState)
+         VarVals(1) = z%IfW(DL%i1)%DummyConstrState                           ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AWAE_VarsUnpackConstrState(Vars, ValAry, z)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(AWAE_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (AWAE_z_IfW_DummyConstrState)
-            call MV_Unpack(V, ValAry, z%IfW(DL%i1)%DummyConstrState)            ! Scalar
-         end select
-      end associate
+      call AWAE_VarUnpackConstrState(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+subroutine AWAE_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AWAE_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_z_IfW_DummyConstrState)
+         z%IfW(DL%i1)%DummyConstrState = VarVals(1)                           ! Scalar
+      end select
+   end associate
 end subroutine
 
 function AWAE_ConstraintStateFieldName(DL) result(Name)
@@ -2730,60 +2765,74 @@ function AWAE_ConstraintStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine AWAE_PackInputAry(Vars, u, ValAry)
+subroutine AWAE_VarsPackInput(Vars, u, ValAry)
    type(AWAE_InputType), intent(in)        :: u
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (AWAE_u_xhat_plane)
-            call MV_Pack(V, u%xhat_plane(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (AWAE_u_p_plane)
-            call MV_Pack(V, u%p_plane(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (AWAE_u_Vx_wake)
-            call MV_Pack(V, u%Vx_wake(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry), ValAry) ! Rank 4 Array
-         case (AWAE_u_Vy_wake)
-            call MV_Pack(V, u%Vy_wake(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry), ValAry) ! Rank 4 Array
-         case (AWAE_u_Vz_wake)
-            call MV_Pack(V, u%Vz_wake(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry), ValAry) ! Rank 4 Array
-         case (AWAE_u_D_wake)
-            call MV_Pack(V, u%D_wake(V%iAry(1):V%iAry(2),V%jAry), ValAry)       ! Rank 2 Array
-         case (AWAE_u_WAT_k)
-            call MV_Pack(V, u%WAT_k(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry), ValAry) ! Rank 4 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call AWAE_VarPackInput(Vars%u(i), u, ValAry)
    end do
 end subroutine
 
-subroutine AWAE_UnpackInputAry(Vars, ValAry, u)
+subroutine AWAE_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AWAE_InputType), intent(in)        :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_u_xhat_plane)
+         VarVals = u%xhat_plane(V%iLB:V%iUB, V%j, V%k)                        ! Rank 3 Array
+      case (AWAE_u_p_plane)
+         VarVals = u%p_plane(V%iLB:V%iUB, V%j, V%k)                           ! Rank 3 Array
+      case (AWAE_u_Vx_wake)
+         VarVals = u%Vx_wake(V%iLB:V%iUB, V%j, V%k, V%m)                      ! Rank 4 Array
+      case (AWAE_u_Vy_wake)
+         VarVals = u%Vy_wake(V%iLB:V%iUB, V%j, V%k, V%m)                      ! Rank 4 Array
+      case (AWAE_u_Vz_wake)
+         VarVals = u%Vz_wake(V%iLB:V%iUB, V%j, V%k, V%m)                      ! Rank 4 Array
+      case (AWAE_u_D_wake)
+         VarVals = u%D_wake(V%iLB:V%iUB,V%j)                                  ! Rank 2 Array
+      case (AWAE_u_WAT_k)
+         VarVals = u%WAT_k(V%iLB:V%iUB, V%j, V%k, V%m)                        ! Rank 4 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AWAE_VarsUnpackInput(Vars, ValAry, u)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(AWAE_InputType), intent(inout)     :: u
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (AWAE_u_xhat_plane)
-            call MV_Unpack(V, ValAry, u%xhat_plane(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (AWAE_u_p_plane)
-            call MV_Unpack(V, ValAry, u%p_plane(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (AWAE_u_Vx_wake)
-            call MV_Unpack(V, ValAry, u%Vx_wake(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry)) ! Rank 4 Array
-         case (AWAE_u_Vy_wake)
-            call MV_Unpack(V, ValAry, u%Vy_wake(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry)) ! Rank 4 Array
-         case (AWAE_u_Vz_wake)
-            call MV_Unpack(V, ValAry, u%Vz_wake(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry)) ! Rank 4 Array
-         case (AWAE_u_D_wake)
-            call MV_Unpack(V, ValAry, u%D_wake(V%iAry(1):V%iAry(2),V%jAry))     ! Rank 2 Array
-         case (AWAE_u_WAT_k)
-            call MV_Unpack(V, ValAry, u%WAT_k(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry)) ! Rank 4 Array
-         end select
-      end associate
+      call AWAE_VarUnpackInput(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+subroutine AWAE_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AWAE_InputType), intent(inout)     :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_u_xhat_plane)
+         u%xhat_plane(V%iLB:V%iUB, V%j, V%k) = VarVals                        ! Rank 3 Array
+      case (AWAE_u_p_plane)
+         u%p_plane(V%iLB:V%iUB, V%j, V%k) = VarVals                           ! Rank 3 Array
+      case (AWAE_u_Vx_wake)
+         u%Vx_wake(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals                      ! Rank 4 Array
+      case (AWAE_u_Vy_wake)
+         u%Vy_wake(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals                      ! Rank 4 Array
+      case (AWAE_u_Vz_wake)
+         u%Vz_wake(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals                      ! Rank 4 Array
+      case (AWAE_u_D_wake)
+         u%D_wake(V%iLB:V%iUB, V%j) = VarVals                                 ! Rank 2 Array
+      case (AWAE_u_WAT_k)
+         u%WAT_k(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals                        ! Rank 4 Array
+      end select
+   end associate
 end subroutine
 
 function AWAE_InputFieldName(DL) result(Name)
@@ -2809,48 +2858,62 @@ function AWAE_InputFieldName(DL) result(Name)
    end select
 end function
 
-subroutine AWAE_PackOutputAry(Vars, y, ValAry)
+subroutine AWAE_VarsPackOutput(Vars, y, ValAry)
    type(AWAE_OutputType), intent(in)       :: y
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (AWAE_y_Vdist_High_data)
-            call MV_Pack(V, y%Vdist_High(DL%i1)%data(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry, V%nAry), ValAry) ! Rank 5 Array
-         case (AWAE_y_V_plane)
-            call MV_Pack(V, y%V_plane(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (AWAE_y_TI_amb)
-            call MV_Pack(V, y%TI_amb(V%iAry(1):V%iAry(2)), ValAry)              ! Rank 1 Array
-         case (AWAE_y_Vx_wind_disk)
-            call MV_Pack(V, y%Vx_wind_disk(V%iAry(1):V%iAry(2)), ValAry)        ! Rank 1 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call AWAE_VarPackOutput(Vars%y(i), y, ValAry)
    end do
 end subroutine
 
-subroutine AWAE_UnpackOutputAry(Vars, ValAry, y)
+subroutine AWAE_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AWAE_OutputType), intent(in)       :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_y_Vdist_High_data)
+         VarVals = y%Vdist_High(DL%i1)%data(V%iLB:V%iUB, V%j, V%k, V%m, V%n)  ! Rank 5 Array
+      case (AWAE_y_V_plane)
+         VarVals = y%V_plane(V%iLB:V%iUB, V%j, V%k)                           ! Rank 3 Array
+      case (AWAE_y_TI_amb)
+         VarVals = y%TI_amb(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (AWAE_y_Vx_wind_disk)
+         VarVals = y%Vx_wind_disk(V%iLB:V%iUB)                                ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AWAE_VarsUnpackOutput(Vars, ValAry, y)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(AWAE_OutputType), intent(inout)    :: y
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (AWAE_y_Vdist_High_data)
-            call MV_Unpack(V, ValAry, y%Vdist_High(DL%i1)%data(V%iAry(1):V%iAry(2), V%jAry, V%kAry, V%mAry, V%nAry)) ! Rank 5 Array
-         case (AWAE_y_V_plane)
-            call MV_Unpack(V, ValAry, y%V_plane(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (AWAE_y_TI_amb)
-            call MV_Unpack(V, ValAry, y%TI_amb(V%iAry(1):V%iAry(2)))            ! Rank 1 Array
-         case (AWAE_y_Vx_wind_disk)
-            call MV_Unpack(V, ValAry, y%Vx_wind_disk(V%iAry(1):V%iAry(2)))      ! Rank 1 Array
-         end select
-      end associate
+      call AWAE_VarUnpackOutput(Vars%y(i), ValAry, y)
    end do
+end subroutine
+
+subroutine AWAE_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AWAE_OutputType), intent(inout)    :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_y_Vdist_High_data)
+         y%Vdist_High(DL%i1)%data(V%iLB:V%iUB, V%j, V%k, V%m, V%n) = VarVals  ! Rank 5 Array
+      case (AWAE_y_V_plane)
+         y%V_plane(V%iLB:V%iUB, V%j, V%k) = VarVals                           ! Rank 3 Array
+      case (AWAE_y_TI_amb)
+         y%TI_amb(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (AWAE_y_Vx_wind_disk)
+         y%Vx_wind_disk(V%iLB:V%iUB) = VarVals                                ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 function AWAE_OutputFieldName(DL) result(Name)

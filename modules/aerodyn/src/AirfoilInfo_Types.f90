@@ -1479,44 +1479,58 @@ function AFI_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-subroutine AFI_PackInputAry(Vars, u, ValAry)
+subroutine AFI_VarsPackInput(Vars, u, ValAry)
    type(AFI_InputType), intent(in)         :: u
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (AFI_u_AoA)
-            call MV_Pack(V, u%AoA, ValAry)                                      ! Scalar
-         case (AFI_u_UserProp)
-            call MV_Pack(V, u%UserProp, ValAry)                                 ! Scalar
-         case (AFI_u_Re)
-            call MV_Pack(V, u%Re, ValAry)                                       ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call AFI_VarPackInput(Vars%u(i), u, ValAry)
    end do
 end subroutine
 
-subroutine AFI_UnpackInputAry(Vars, ValAry, u)
+subroutine AFI_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AFI_InputType), intent(in)         :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AFI_u_AoA)
+         VarVals(1) = u%AoA                                                   ! Scalar
+      case (AFI_u_UserProp)
+         VarVals(1) = u%UserProp                                              ! Scalar
+      case (AFI_u_Re)
+         VarVals(1) = u%Re                                                    ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AFI_VarsUnpackInput(Vars, ValAry, u)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(AFI_InputType), intent(inout)      :: u
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (AFI_u_AoA)
-            call MV_Unpack(V, ValAry, u%AoA)                                    ! Scalar
-         case (AFI_u_UserProp)
-            call MV_Unpack(V, ValAry, u%UserProp)                               ! Scalar
-         case (AFI_u_Re)
-            call MV_Unpack(V, ValAry, u%Re)                                     ! Scalar
-         end select
-      end associate
+      call AFI_VarUnpackInput(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+subroutine AFI_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AFI_InputType), intent(inout)      :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AFI_u_AoA)
+         u%AoA = VarVals(1)                                                   ! Scalar
+      case (AFI_u_UserProp)
+         u%UserProp = VarVals(1)                                              ! Scalar
+      case (AFI_u_Re)
+         u%Re = VarVals(1)                                                    ! Scalar
+      end select
+   end associate
 end subroutine
 
 function AFI_InputFieldName(DL) result(Name)
@@ -1534,68 +1548,82 @@ function AFI_InputFieldName(DL) result(Name)
    end select
 end function
 
-subroutine AFI_PackOutputAry(Vars, y, ValAry)
+subroutine AFI_VarsPackOutput(Vars, y, ValAry)
    type(AFI_OutputType), intent(in)        :: y
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (AFI_y_Cl)
-            call MV_Pack(V, y%Cl, ValAry)                                       ! Scalar
-         case (AFI_y_Cd)
-            call MV_Pack(V, y%Cd, ValAry)                                       ! Scalar
-         case (AFI_y_Cm)
-            call MV_Pack(V, y%Cm, ValAry)                                       ! Scalar
-         case (AFI_y_Cpmin)
-            call MV_Pack(V, y%Cpmin, ValAry)                                    ! Scalar
-         case (AFI_y_Cd0)
-            call MV_Pack(V, y%Cd0, ValAry)                                      ! Scalar
-         case (AFI_y_Cm0)
-            call MV_Pack(V, y%Cm0, ValAry)                                      ! Scalar
-         case (AFI_y_f_st)
-            call MV_Pack(V, y%f_st, ValAry)                                     ! Scalar
-         case (AFI_y_FullySeparate)
-            call MV_Pack(V, y%FullySeparate, ValAry)                            ! Scalar
-         case (AFI_y_FullyAttached)
-            call MV_Pack(V, y%FullyAttached, ValAry)                            ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call AFI_VarPackOutput(Vars%y(i), y, ValAry)
    end do
 end subroutine
 
-subroutine AFI_UnpackOutputAry(Vars, ValAry, y)
+subroutine AFI_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AFI_OutputType), intent(in)        :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AFI_y_Cl)
+         VarVals(1) = y%Cl                                                    ! Scalar
+      case (AFI_y_Cd)
+         VarVals(1) = y%Cd                                                    ! Scalar
+      case (AFI_y_Cm)
+         VarVals(1) = y%Cm                                                    ! Scalar
+      case (AFI_y_Cpmin)
+         VarVals(1) = y%Cpmin                                                 ! Scalar
+      case (AFI_y_Cd0)
+         VarVals(1) = y%Cd0                                                   ! Scalar
+      case (AFI_y_Cm0)
+         VarVals(1) = y%Cm0                                                   ! Scalar
+      case (AFI_y_f_st)
+         VarVals(1) = y%f_st                                                  ! Scalar
+      case (AFI_y_FullySeparate)
+         VarVals(1) = y%FullySeparate                                         ! Scalar
+      case (AFI_y_FullyAttached)
+         VarVals(1) = y%FullyAttached                                         ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AFI_VarsUnpackOutput(Vars, ValAry, y)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(AFI_OutputType), intent(inout)     :: y
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (AFI_y_Cl)
-            call MV_Unpack(V, ValAry, y%Cl)                                     ! Scalar
-         case (AFI_y_Cd)
-            call MV_Unpack(V, ValAry, y%Cd)                                     ! Scalar
-         case (AFI_y_Cm)
-            call MV_Unpack(V, ValAry, y%Cm)                                     ! Scalar
-         case (AFI_y_Cpmin)
-            call MV_Unpack(V, ValAry, y%Cpmin)                                  ! Scalar
-         case (AFI_y_Cd0)
-            call MV_Unpack(V, ValAry, y%Cd0)                                    ! Scalar
-         case (AFI_y_Cm0)
-            call MV_Unpack(V, ValAry, y%Cm0)                                    ! Scalar
-         case (AFI_y_f_st)
-            call MV_Unpack(V, ValAry, y%f_st)                                   ! Scalar
-         case (AFI_y_FullySeparate)
-            call MV_Unpack(V, ValAry, y%FullySeparate)                          ! Scalar
-         case (AFI_y_FullyAttached)
-            call MV_Unpack(V, ValAry, y%FullyAttached)                          ! Scalar
-         end select
-      end associate
+      call AFI_VarUnpackOutput(Vars%y(i), ValAry, y)
    end do
+end subroutine
+
+subroutine AFI_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AFI_OutputType), intent(inout)     :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AFI_y_Cl)
+         y%Cl = VarVals(1)                                                    ! Scalar
+      case (AFI_y_Cd)
+         y%Cd = VarVals(1)                                                    ! Scalar
+      case (AFI_y_Cm)
+         y%Cm = VarVals(1)                                                    ! Scalar
+      case (AFI_y_Cpmin)
+         y%Cpmin = VarVals(1)                                                 ! Scalar
+      case (AFI_y_Cd0)
+         y%Cd0 = VarVals(1)                                                   ! Scalar
+      case (AFI_y_Cm0)
+         y%Cm0 = VarVals(1)                                                   ! Scalar
+      case (AFI_y_f_st)
+         y%f_st = VarVals(1)                                                  ! Scalar
+      case (AFI_y_FullySeparate)
+         y%FullySeparate = VarVals(1)                                         ! Scalar
+      case (AFI_y_FullyAttached)
+         y%FullyAttached = VarVals(1)                                         ! Scalar
+      end select
+   end associate
 end subroutine
 
 function AFI_OutputFieldName(DL) result(Name)

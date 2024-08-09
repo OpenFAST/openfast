@@ -1832,80 +1832,94 @@ function ADI_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-subroutine ADI_PackContStateAry(Vars, x, ValAry)
+subroutine ADI_VarsPackContState(Vars, x, ValAry)
    type(ADI_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (ADI_x_AD_rotors_BEMT_UA_element_x)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%BEMT%UA%element(DL%i2, DL%i3)%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind_1)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind_1(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_V_w)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%BEMT%V_w(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_x_AD_rotors_AA_DummyContState)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%AA%DummyContState, ValAry)       ! Scalar
-         case (ADI_x_AD_FVW_W_Gamma_NW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%Gamma_NW(V%iAry(1):V%iAry(2),V%jAry), ValAry) ! Rank 2 Array
-         case (ADI_x_AD_FVW_W_Gamma_FW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%Gamma_FW(V%iAry(1):V%iAry(2),V%jAry), ValAry) ! Rank 2 Array
-         case (ADI_x_AD_FVW_W_Eps_NW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%Eps_NW(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_Eps_FW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%Eps_FW(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_r_NW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%r_NW(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_r_FW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%r_FW(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (ADI_x_AD_FVW_UA_element_x)
-            call MV_Pack(V, x%AD%FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ADI_VarPackContState(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine ADI_UnpackContStateAry(Vars, ValAry, x)
+subroutine ADI_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ADI_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ADI_x_AD_rotors_BEMT_UA_element_x)
+         VarVals = x%AD%rotors(DL%i1)%BEMT%UA%element(DL%i2, DL%i3)%x(V%iLB:V%iUB) ! Rank 1 Array
+      case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind)
+         VarVals = x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind(V%iLB:V%iUB) ! Rank 1 Array
+      case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind_1)
+         VarVals = x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind_1(V%iLB:V%iUB) ! Rank 1 Array
+      case (ADI_x_AD_rotors_BEMT_V_w)
+         VarVals = x%AD%rotors(DL%i1)%BEMT%V_w(V%iLB:V%iUB)                   ! Rank 1 Array
+      case (ADI_x_AD_rotors_AA_DummyContState)
+         VarVals(1) = x%AD%rotors(DL%i1)%AA%DummyContState                    ! Scalar
+      case (ADI_x_AD_FVW_W_Gamma_NW)
+         VarVals = x%AD%FVW%W(DL%i1)%Gamma_NW(V%iLB:V%iUB,V%j)                ! Rank 2 Array
+      case (ADI_x_AD_FVW_W_Gamma_FW)
+         VarVals = x%AD%FVW%W(DL%i1)%Gamma_FW(V%iLB:V%iUB,V%j)                ! Rank 2 Array
+      case (ADI_x_AD_FVW_W_Eps_NW)
+         VarVals = x%AD%FVW%W(DL%i1)%Eps_NW(V%iLB:V%iUB, V%j, V%k)            ! Rank 3 Array
+      case (ADI_x_AD_FVW_W_Eps_FW)
+         VarVals = x%AD%FVW%W(DL%i1)%Eps_FW(V%iLB:V%iUB, V%j, V%k)            ! Rank 3 Array
+      case (ADI_x_AD_FVW_W_r_NW)
+         VarVals = x%AD%FVW%W(DL%i1)%r_NW(V%iLB:V%iUB, V%j, V%k)              ! Rank 3 Array
+      case (ADI_x_AD_FVW_W_r_FW)
+         VarVals = x%AD%FVW%W(DL%i1)%r_FW(V%iLB:V%iUB, V%j, V%k)              ! Rank 3 Array
+      case (ADI_x_AD_FVW_UA_element_x)
+         VarVals = x%AD%FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iLB:V%iUB)    ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ADI_VarsUnpackContState(Vars, ValAry, x)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(ADI_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (ADI_x_AD_rotors_BEMT_UA_element_x)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%BEMT%UA%element(DL%i2, DL%i3)%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind_1)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind_1(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_V_w)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%BEMT%V_w(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_x_AD_rotors_AA_DummyContState)
-            call MV_Unpack(V, ValAry, x%AD%rotors(DL%i1)%AA%DummyContState)     ! Scalar
-         case (ADI_x_AD_FVW_W_Gamma_NW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%Gamma_NW(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (ADI_x_AD_FVW_W_Gamma_FW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%Gamma_FW(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (ADI_x_AD_FVW_W_Eps_NW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%Eps_NW(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_Eps_FW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%Eps_FW(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_r_NW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%r_NW(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_r_FW)
-            call MV_Unpack(V, ValAry, x%AD%FVW%W(DL%i1)%r_FW(V%iAry(1):V%iAry(2), V%jAry, V%kAry)) ! Rank 3 Array
-         case (ADI_x_AD_FVW_UA_element_x)
-            call MV_Unpack(V, ValAry, x%AD%FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         end select
-      end associate
+      call ADI_VarUnpackContState(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+subroutine ADI_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ADI_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ADI_x_AD_rotors_BEMT_UA_element_x)
+         x%AD%rotors(DL%i1)%BEMT%UA%element(DL%i2, DL%i3)%x(V%iLB:V%iUB) = VarVals ! Rank 1 Array
+      case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind)
+         x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind(V%iLB:V%iUB) = VarVals ! Rank 1 Array
+      case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind_1)
+         x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind_1(V%iLB:V%iUB) = VarVals ! Rank 1 Array
+      case (ADI_x_AD_rotors_BEMT_V_w)
+         x%AD%rotors(DL%i1)%BEMT%V_w(V%iLB:V%iUB) = VarVals                   ! Rank 1 Array
+      case (ADI_x_AD_rotors_AA_DummyContState)
+         x%AD%rotors(DL%i1)%AA%DummyContState = VarVals(1)                    ! Scalar
+      case (ADI_x_AD_FVW_W_Gamma_NW)
+         x%AD%FVW%W(DL%i1)%Gamma_NW(V%iLB:V%iUB, V%j) = VarVals               ! Rank 2 Array
+      case (ADI_x_AD_FVW_W_Gamma_FW)
+         x%AD%FVW%W(DL%i1)%Gamma_FW(V%iLB:V%iUB, V%j) = VarVals               ! Rank 2 Array
+      case (ADI_x_AD_FVW_W_Eps_NW)
+         x%AD%FVW%W(DL%i1)%Eps_NW(V%iLB:V%iUB, V%j, V%k) = VarVals            ! Rank 3 Array
+      case (ADI_x_AD_FVW_W_Eps_FW)
+         x%AD%FVW%W(DL%i1)%Eps_FW(V%iLB:V%iUB, V%j, V%k) = VarVals            ! Rank 3 Array
+      case (ADI_x_AD_FVW_W_r_NW)
+         x%AD%FVW%W(DL%i1)%r_NW(V%iLB:V%iUB, V%j, V%k) = VarVals              ! Rank 3 Array
+      case (ADI_x_AD_FVW_W_r_FW)
+         x%AD%FVW%W(DL%i1)%r_FW(V%iLB:V%iUB, V%j, V%k) = VarVals              ! Rank 3 Array
+      case (ADI_x_AD_FVW_UA_element_x)
+         x%AD%FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iLB:V%iUB) = VarVals    ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 function ADI_ContinuousStateFieldName(DL) result(Name)
@@ -1941,87 +1955,108 @@ function ADI_ContinuousStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine ADI_PackContStateDerivAry(Vars, x, ValAry)
+subroutine ADI_VarsPackContStateDeriv(Vars, x, ValAry)
    type(ADI_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (ADI_x_AD_rotors_BEMT_UA_element_x)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%BEMT%UA%element(DL%i2, DL%i3)%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind_1)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind_1(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_x_AD_rotors_BEMT_V_w)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%BEMT%V_w(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_x_AD_rotors_AA_DummyContState)
-            call MV_Pack(V, x%AD%rotors(DL%i1)%AA%DummyContState, ValAry)       ! Scalar
-         case (ADI_x_AD_FVW_W_Gamma_NW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%Gamma_NW(V%iAry(1):V%iAry(2),V%jAry), ValAry) ! Rank 2 Array
-         case (ADI_x_AD_FVW_W_Gamma_FW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%Gamma_FW(V%iAry(1):V%iAry(2),V%jAry), ValAry) ! Rank 2 Array
-         case (ADI_x_AD_FVW_W_Eps_NW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%Eps_NW(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_Eps_FW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%Eps_FW(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_r_NW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%r_NW(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (ADI_x_AD_FVW_W_r_FW)
-            call MV_Pack(V, x%AD%FVW%W(DL%i1)%r_FW(V%iAry(1):V%iAry(2), V%jAry, V%kAry), ValAry) ! Rank 3 Array
-         case (ADI_x_AD_FVW_UA_element_x)
-            call MV_Pack(V, x%AD%FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ADI_VarPackContStateDeriv(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine ADI_PackConstrStateAry(Vars, z, ValAry)
+subroutine ADI_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ADI_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ADI_x_AD_rotors_BEMT_UA_element_x)
+         VarVals = x%AD%rotors(DL%i1)%BEMT%UA%element(DL%i2, DL%i3)%x(V%iLB:V%iUB) ! Rank 1 Array
+      case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind)
+         VarVals = x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind(V%iLB:V%iUB) ! Rank 1 Array
+      case (ADI_x_AD_rotors_BEMT_DBEMT_element_vind_1)
+         VarVals = x%AD%rotors(DL%i1)%BEMT%DBEMT%element(DL%i2, DL%i3)%vind_1(V%iLB:V%iUB) ! Rank 1 Array
+      case (ADI_x_AD_rotors_BEMT_V_w)
+         VarVals = x%AD%rotors(DL%i1)%BEMT%V_w(V%iLB:V%iUB)                   ! Rank 1 Array
+      case (ADI_x_AD_rotors_AA_DummyContState)
+         VarVals(1) = x%AD%rotors(DL%i1)%AA%DummyContState                    ! Scalar
+      case (ADI_x_AD_FVW_W_Gamma_NW)
+         VarVals = x%AD%FVW%W(DL%i1)%Gamma_NW(V%iLB:V%iUB,V%j)                ! Rank 2 Array
+      case (ADI_x_AD_FVW_W_Gamma_FW)
+         VarVals = x%AD%FVW%W(DL%i1)%Gamma_FW(V%iLB:V%iUB,V%j)                ! Rank 2 Array
+      case (ADI_x_AD_FVW_W_Eps_NW)
+         VarVals = x%AD%FVW%W(DL%i1)%Eps_NW(V%iLB:V%iUB, V%j, V%k)            ! Rank 3 Array
+      case (ADI_x_AD_FVW_W_Eps_FW)
+         VarVals = x%AD%FVW%W(DL%i1)%Eps_FW(V%iLB:V%iUB, V%j, V%k)            ! Rank 3 Array
+      case (ADI_x_AD_FVW_W_r_NW)
+         VarVals = x%AD%FVW%W(DL%i1)%r_NW(V%iLB:V%iUB, V%j, V%k)              ! Rank 3 Array
+      case (ADI_x_AD_FVW_W_r_FW)
+         VarVals = x%AD%FVW%W(DL%i1)%r_FW(V%iLB:V%iUB, V%j, V%k)              ! Rank 3 Array
+      case (ADI_x_AD_FVW_UA_element_x)
+         VarVals = x%AD%FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iLB:V%iUB)    ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ADI_VarsPackConstrState(Vars, z, ValAry)
    type(ADI_ConstraintStateType), intent(in) :: z
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (ADI_z_AD_rotors_BEMT_phi)
-            call MV_Pack(V, z%AD%rotors(DL%i1)%BEMT%phi(V%iAry(1):V%iAry(2),V%jAry), ValAry) ! Rank 2 Array
-         case (ADI_z_AD_rotors_AA_DummyConstrState)
-            call MV_Pack(V, z%AD%rotors(DL%i1)%AA%DummyConstrState, ValAry)     ! Scalar
-         case (ADI_z_AD_FVW_W_Gamma_LL)
-            call MV_Pack(V, z%AD%FVW%W(DL%i1)%Gamma_LL(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_z_AD_FVW_residual)
-            call MV_Pack(V, z%AD%FVW%residual, ValAry)                          ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ADI_VarPackConstrState(Vars%z(i), z, ValAry)
    end do
 end subroutine
 
-subroutine ADI_UnpackConstrStateAry(Vars, ValAry, z)
+subroutine ADI_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ADI_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ADI_z_AD_rotors_BEMT_phi)
+         VarVals = z%AD%rotors(DL%i1)%BEMT%phi(V%iLB:V%iUB,V%j)               ! Rank 2 Array
+      case (ADI_z_AD_rotors_AA_DummyConstrState)
+         VarVals(1) = z%AD%rotors(DL%i1)%AA%DummyConstrState                  ! Scalar
+      case (ADI_z_AD_FVW_W_Gamma_LL)
+         VarVals = z%AD%FVW%W(DL%i1)%Gamma_LL(V%iLB:V%iUB)                    ! Rank 1 Array
+      case (ADI_z_AD_FVW_residual)
+         VarVals(1) = z%AD%FVW%residual                                       ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ADI_VarsUnpackConstrState(Vars, ValAry, z)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(ADI_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (ADI_z_AD_rotors_BEMT_phi)
-            call MV_Unpack(V, ValAry, z%AD%rotors(DL%i1)%BEMT%phi(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (ADI_z_AD_rotors_AA_DummyConstrState)
-            call MV_Unpack(V, ValAry, z%AD%rotors(DL%i1)%AA%DummyConstrState)   ! Scalar
-         case (ADI_z_AD_FVW_W_Gamma_LL)
-            call MV_Unpack(V, ValAry, z%AD%FVW%W(DL%i1)%Gamma_LL(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_z_AD_FVW_residual)
-            call MV_Unpack(V, ValAry, z%AD%FVW%residual)                        ! Scalar
-         end select
-      end associate
+      call ADI_VarUnpackConstrState(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+subroutine ADI_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ADI_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ADI_z_AD_rotors_BEMT_phi)
+         z%AD%rotors(DL%i1)%BEMT%phi(V%iLB:V%iUB, V%j) = VarVals              ! Rank 2 Array
+      case (ADI_z_AD_rotors_AA_DummyConstrState)
+         z%AD%rotors(DL%i1)%AA%DummyConstrState = VarVals(1)                  ! Scalar
+      case (ADI_z_AD_FVW_W_Gamma_LL)
+         z%AD%FVW%W(DL%i1)%Gamma_LL(V%iLB:V%iUB) = VarVals                    ! Rank 1 Array
+      case (ADI_z_AD_FVW_residual)
+         z%AD%FVW%residual = VarVals(1)                                       ! Scalar
+      end select
+   end associate
 end subroutine
 
 function ADI_ConstraintStateFieldName(DL) result(Name)
@@ -2041,60 +2076,74 @@ function ADI_ConstraintStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine ADI_PackInputAry(Vars, u, ValAry)
+subroutine ADI_VarsPackInput(Vars, u, ValAry)
    type(ADI_InputType), intent(in)         :: u
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (ADI_u_AD_rotors_NacelleMotion)
-            call MV_Pack(V, u%AD%rotors(DL%i1)%NacelleMotion, ValAry)           ! Mesh
-         case (ADI_u_AD_rotors_TowerMotion)
-            call MV_Pack(V, u%AD%rotors(DL%i1)%TowerMotion, ValAry)             ! Mesh
-         case (ADI_u_AD_rotors_HubMotion)
-            call MV_Pack(V, u%AD%rotors(DL%i1)%HubMotion, ValAry)               ! Mesh
-         case (ADI_u_AD_rotors_BladeRootMotion)
-            call MV_Pack(V, u%AD%rotors(DL%i1)%BladeRootMotion(DL%i2), ValAry)  ! Mesh
-         case (ADI_u_AD_rotors_BladeMotion)
-            call MV_Pack(V, u%AD%rotors(DL%i1)%BladeMotion(DL%i2), ValAry)      ! Mesh
-         case (ADI_u_AD_rotors_TFinMotion)
-            call MV_Pack(V, u%AD%rotors(DL%i1)%TFinMotion, ValAry)              ! Mesh
-         case (ADI_u_AD_rotors_UserProp)
-            call MV_Pack(V, u%AD%rotors(DL%i1)%UserProp(V%iAry(1):V%iAry(2),V%jAry), ValAry) ! Rank 2 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ADI_VarPackInput(Vars%u(i), u, ValAry)
    end do
 end subroutine
 
-subroutine ADI_UnpackInputAry(Vars, ValAry, u)
+subroutine ADI_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ADI_InputType), intent(in)         :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ADI_u_AD_rotors_NacelleMotion)
+         call MV_PackMesh(V, u%AD%rotors(DL%i1)%NacelleMotion, ValAry)        ! Mesh
+      case (ADI_u_AD_rotors_TowerMotion)
+         call MV_PackMesh(V, u%AD%rotors(DL%i1)%TowerMotion, ValAry)          ! Mesh
+      case (ADI_u_AD_rotors_HubMotion)
+         call MV_PackMesh(V, u%AD%rotors(DL%i1)%HubMotion, ValAry)            ! Mesh
+      case (ADI_u_AD_rotors_BladeRootMotion)
+         call MV_PackMesh(V, u%AD%rotors(DL%i1)%BladeRootMotion(DL%i2), ValAry) ! Mesh
+      case (ADI_u_AD_rotors_BladeMotion)
+         call MV_PackMesh(V, u%AD%rotors(DL%i1)%BladeMotion(DL%i2), ValAry)   ! Mesh
+      case (ADI_u_AD_rotors_TFinMotion)
+         call MV_PackMesh(V, u%AD%rotors(DL%i1)%TFinMotion, ValAry)           ! Mesh
+      case (ADI_u_AD_rotors_UserProp)
+         VarVals = u%AD%rotors(DL%i1)%UserProp(V%iLB:V%iUB,V%j)               ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ADI_VarsUnpackInput(Vars, ValAry, u)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(ADI_InputType), intent(inout)      :: u
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (ADI_u_AD_rotors_NacelleMotion)
-            call MV_Unpack(V, ValAry, u%AD%rotors(DL%i1)%NacelleMotion)         ! Mesh
-         case (ADI_u_AD_rotors_TowerMotion)
-            call MV_Unpack(V, ValAry, u%AD%rotors(DL%i1)%TowerMotion)           ! Mesh
-         case (ADI_u_AD_rotors_HubMotion)
-            call MV_Unpack(V, ValAry, u%AD%rotors(DL%i1)%HubMotion)             ! Mesh
-         case (ADI_u_AD_rotors_BladeRootMotion)
-            call MV_Unpack(V, ValAry, u%AD%rotors(DL%i1)%BladeRootMotion(DL%i2)) ! Mesh
-         case (ADI_u_AD_rotors_BladeMotion)
-            call MV_Unpack(V, ValAry, u%AD%rotors(DL%i1)%BladeMotion(DL%i2))    ! Mesh
-         case (ADI_u_AD_rotors_TFinMotion)
-            call MV_Unpack(V, ValAry, u%AD%rotors(DL%i1)%TFinMotion)            ! Mesh
-         case (ADI_u_AD_rotors_UserProp)
-            call MV_Unpack(V, ValAry, u%AD%rotors(DL%i1)%UserProp(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         end select
-      end associate
+      call ADI_VarUnpackInput(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+subroutine ADI_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ADI_InputType), intent(inout)      :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ADI_u_AD_rotors_NacelleMotion)
+         call MV_UnpackMesh(V, ValAry, u%AD%rotors(DL%i1)%NacelleMotion)      ! Mesh
+      case (ADI_u_AD_rotors_TowerMotion)
+         call MV_UnpackMesh(V, ValAry, u%AD%rotors(DL%i1)%TowerMotion)        ! Mesh
+      case (ADI_u_AD_rotors_HubMotion)
+         call MV_UnpackMesh(V, ValAry, u%AD%rotors(DL%i1)%HubMotion)          ! Mesh
+      case (ADI_u_AD_rotors_BladeRootMotion)
+         call MV_UnpackMesh(V, ValAry, u%AD%rotors(DL%i1)%BladeRootMotion(DL%i2)) ! Mesh
+      case (ADI_u_AD_rotors_BladeMotion)
+         call MV_UnpackMesh(V, ValAry, u%AD%rotors(DL%i1)%BladeMotion(DL%i2)) ! Mesh
+      case (ADI_u_AD_rotors_TFinMotion)
+         call MV_UnpackMesh(V, ValAry, u%AD%rotors(DL%i1)%TFinMotion)         ! Mesh
+      case (ADI_u_AD_rotors_UserProp)
+         u%AD%rotors(DL%i1)%UserProp(V%iLB:V%iUB, V%j) = VarVals              ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 function ADI_InputFieldName(DL) result(Name)
@@ -2120,72 +2169,86 @@ function ADI_InputFieldName(DL) result(Name)
    end select
 end function
 
-subroutine ADI_PackOutputAry(Vars, y, ValAry)
+subroutine ADI_VarsPackOutput(Vars, y, ValAry)
    type(ADI_OutputType), intent(in)        :: y
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (ADI_y_AD_rotors_NacelleLoad)
-            call MV_Pack(V, y%AD%rotors(DL%i1)%NacelleLoad, ValAry)             ! Mesh
-         case (ADI_y_AD_rotors_HubLoad)
-            call MV_Pack(V, y%AD%rotors(DL%i1)%HubLoad, ValAry)                 ! Mesh
-         case (ADI_y_AD_rotors_TowerLoad)
-            call MV_Pack(V, y%AD%rotors(DL%i1)%TowerLoad, ValAry)               ! Mesh
-         case (ADI_y_AD_rotors_BladeLoad)
-            call MV_Pack(V, y%AD%rotors(DL%i1)%BladeLoad(DL%i2), ValAry)        ! Mesh
-         case (ADI_y_AD_rotors_TFinLoad)
-            call MV_Pack(V, y%AD%rotors(DL%i1)%TFinLoad, ValAry)                ! Mesh
-         case (ADI_y_AD_rotors_WriteOutput)
-            call MV_Pack(V, y%AD%rotors(DL%i1)%WriteOutput(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (ADI_y_HHVel)
-            call MV_Pack(V, y%HHVel(V%iAry(1):V%iAry(2),V%jAry), ValAry)        ! Rank 2 Array
-         case (ADI_y_PLExp)
-            call MV_Pack(V, y%PLExp, ValAry)                                    ! Scalar
-         case (ADI_y_IW_WriteOutput)
-            call MV_Pack(V, y%IW_WriteOutput(V%iAry(1):V%iAry(2)), ValAry)      ! Rank 1 Array
-         case (ADI_y_WriteOutput)
-            call MV_Pack(V, y%WriteOutput(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call ADI_VarPackOutput(Vars%y(i), y, ValAry)
    end do
 end subroutine
 
-subroutine ADI_UnpackOutputAry(Vars, ValAry, y)
+subroutine ADI_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ADI_OutputType), intent(in)        :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ADI_y_AD_rotors_NacelleLoad)
+         call MV_PackMesh(V, y%AD%rotors(DL%i1)%NacelleLoad, ValAry)          ! Mesh
+      case (ADI_y_AD_rotors_HubLoad)
+         call MV_PackMesh(V, y%AD%rotors(DL%i1)%HubLoad, ValAry)              ! Mesh
+      case (ADI_y_AD_rotors_TowerLoad)
+         call MV_PackMesh(V, y%AD%rotors(DL%i1)%TowerLoad, ValAry)            ! Mesh
+      case (ADI_y_AD_rotors_BladeLoad)
+         call MV_PackMesh(V, y%AD%rotors(DL%i1)%BladeLoad(DL%i2), ValAry)     ! Mesh
+      case (ADI_y_AD_rotors_TFinLoad)
+         call MV_PackMesh(V, y%AD%rotors(DL%i1)%TFinLoad, ValAry)             ! Mesh
+      case (ADI_y_AD_rotors_WriteOutput)
+         VarVals = y%AD%rotors(DL%i1)%WriteOutput(V%iLB:V%iUB)                ! Rank 1 Array
+      case (ADI_y_HHVel)
+         VarVals = y%HHVel(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case (ADI_y_PLExp)
+         VarVals(1) = y%PLExp                                                 ! Scalar
+      case (ADI_y_IW_WriteOutput)
+         VarVals = y%IW_WriteOutput(V%iLB:V%iUB)                              ! Rank 1 Array
+      case (ADI_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ADI_VarsUnpackOutput(Vars, ValAry, y)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(ADI_OutputType), intent(inout)     :: y
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (ADI_y_AD_rotors_NacelleLoad)
-            call MV_Unpack(V, ValAry, y%AD%rotors(DL%i1)%NacelleLoad)           ! Mesh
-         case (ADI_y_AD_rotors_HubLoad)
-            call MV_Unpack(V, ValAry, y%AD%rotors(DL%i1)%HubLoad)               ! Mesh
-         case (ADI_y_AD_rotors_TowerLoad)
-            call MV_Unpack(V, ValAry, y%AD%rotors(DL%i1)%TowerLoad)             ! Mesh
-         case (ADI_y_AD_rotors_BladeLoad)
-            call MV_Unpack(V, ValAry, y%AD%rotors(DL%i1)%BladeLoad(DL%i2))      ! Mesh
-         case (ADI_y_AD_rotors_TFinLoad)
-            call MV_Unpack(V, ValAry, y%AD%rotors(DL%i1)%TFinLoad)              ! Mesh
-         case (ADI_y_AD_rotors_WriteOutput)
-            call MV_Unpack(V, ValAry, y%AD%rotors(DL%i1)%WriteOutput(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (ADI_y_HHVel)
-            call MV_Unpack(V, ValAry, y%HHVel(V%iAry(1):V%iAry(2),V%jAry))      ! Rank 2 Array
-         case (ADI_y_PLExp)
-            call MV_Unpack(V, ValAry, y%PLExp)                                  ! Scalar
-         case (ADI_y_IW_WriteOutput)
-            call MV_Unpack(V, ValAry, y%IW_WriteOutput(V%iAry(1):V%iAry(2)))    ! Rank 1 Array
-         case (ADI_y_WriteOutput)
-            call MV_Unpack(V, ValAry, y%WriteOutput(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
-         end select
-      end associate
+      call ADI_VarUnpackOutput(Vars%y(i), ValAry, y)
    end do
+end subroutine
+
+subroutine ADI_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ADI_OutputType), intent(inout)     :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ADI_y_AD_rotors_NacelleLoad)
+         call MV_UnpackMesh(V, ValAry, y%AD%rotors(DL%i1)%NacelleLoad)        ! Mesh
+      case (ADI_y_AD_rotors_HubLoad)
+         call MV_UnpackMesh(V, ValAry, y%AD%rotors(DL%i1)%HubLoad)            ! Mesh
+      case (ADI_y_AD_rotors_TowerLoad)
+         call MV_UnpackMesh(V, ValAry, y%AD%rotors(DL%i1)%TowerLoad)          ! Mesh
+      case (ADI_y_AD_rotors_BladeLoad)
+         call MV_UnpackMesh(V, ValAry, y%AD%rotors(DL%i1)%BladeLoad(DL%i2))   ! Mesh
+      case (ADI_y_AD_rotors_TFinLoad)
+         call MV_UnpackMesh(V, ValAry, y%AD%rotors(DL%i1)%TFinLoad)           ! Mesh
+      case (ADI_y_AD_rotors_WriteOutput)
+         y%AD%rotors(DL%i1)%WriteOutput(V%iLB:V%iUB) = VarVals                ! Rank 1 Array
+      case (ADI_y_HHVel)
+         y%HHVel(V%iLB:V%iUB, V%j) = VarVals                                  ! Rank 2 Array
+      case (ADI_y_PLExp)
+         y%PLExp = VarVals(1)                                                 ! Scalar
+      case (ADI_y_IW_WriteOutput)
+         y%IW_WriteOutput(V%iLB:V%iUB) = VarVals                              ! Rank 1 Array
+      case (ADI_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 function ADI_OutputFieldName(DL) result(Name)

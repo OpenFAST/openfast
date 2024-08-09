@@ -34,6 +34,8 @@ real(DbKi), parameter      :: SS_t_global = 0.0_DbKi
 real(DbKi), parameter      :: UJacSclFact_x = 1.0d3
 
 logical, parameter         :: output_debugging = .false.
+integer(IntKi), parameter  :: iModStruct = 1
+integer(IntKi), parameter  :: iModAero = 2
 
 contains
 
@@ -118,7 +120,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    if (Failed()) return
 
    ! Initialize module data transfer mappings
-   call FAST_InitMappings(m%Mappings, m%ModDataAry, T, ErrStat2, ErrMsg2)
+   call FAST_InitMappings(m%Mappings, m%ModData, T, ErrStat2, ErrMsg2)
    if (Failed()) return
 
    ! Initialize steady flow field in AeroDyn
@@ -129,14 +131,17 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
                                  ErrStat=ErrStat2, ErrMsg=ErrMsg2)
    if (Failed()) return
 
+   ! Set number of driver outputs
+   T%y_FAST%DriverWriteOutputNum = 6
+
    !----------------------------------------------------------------------------
    ! Module Order
    !----------------------------------------------------------------------------
 
    ! Get indices of modules that are used by Aero Mapping (first instance only)
    iModED = 0; iModBD = 0; iModAD = 0
-   do i = 1, size(m%ModDataAry)
-      associate (ModData => m%ModDataAry(i))
+   do i = 1, size(m%ModData)
+      associate (ModData => m%ModData(i))
          if (ModData%Ins == 1) then
             select case (ModData%ID)
             case (Module_ED)
@@ -162,12 +167,12 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Generate index for variables with AeroMap flag
-   call Glue_CombineModules(AM%Mod, m%ModDataAry, m%Mappings, iModOrder, VF_AeroMap, .true., ErrStat2, ErrMsg2)
+   call Glue_CombineModules(AM%Mod, m%ModData, m%Mappings, iModOrder, VF_AeroMap, .true., ErrStat2, ErrMsg2)
    if (Failed()) return
 
    ! Loop through modules in AM module
-   do i = 1, size(AM%Mod%ModDataAry)
-      associate (ModData => AM%Mod%ModDataAry(i))
+   do i = 1, size(AM%Mod%ModData)
+      associate (ModData => AM%Mod%ModData(i))
 
          ! Copy current state to predicted state
          call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -390,8 +395,8 @@ subroutine SS_Solve(AM, m, Mappings, caseData, p_FAST, y_FAST, m_FAST, T, ErrSta
    call SS_SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, T%ED, T%BD, T%AD)
 
    ! Copy inputs from current to previous index
-   do i = 1, size(AM%Mod%ModDataAry)
-      call FAST_CopyInput(AM%Mod%ModDataAry(i), T, INPUT_CURR, INPUT_PREV, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+   do i = 1, size(AM%Mod%ModData)
+      call FAST_CopyInput(AM%Mod%ModData(i), T, INPUT_CURR, INPUT_PREV, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end do
 
@@ -420,7 +425,7 @@ subroutine SS_Solve(AM, m, Mappings, caseData, p_FAST, y_FAST, m_FAST, T, ErrSta
       ! Calculate ElastoDyn / BeamDyn output
       !-----------------------------------------
 
-      call FAST_CalcOutput(AM%Mod%ModDataAry(1), Mappings, SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)
+      call FAST_CalcOutput(AM%Mod%ModData(1), Mappings, SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       !-----------------------------------------
@@ -450,7 +455,7 @@ subroutine SS_Solve(AM, m, Mappings, caseData, p_FAST, y_FAST, m_FAST, T, ErrSta
       ! Calculate AeroDyn Output
       !-----------------------------------------
 
-      call FAST_CalcOutput(AM%Mod%ModDataAry(2), Mappings, SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)
+      call FAST_CalcOutput(AM%Mod%ModData(2), Mappings, SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call ResetInputsAndStates()
@@ -621,8 +626,8 @@ subroutine SS_UpdateInputsStates(AM, delta, T, ErrStat, ErrMsg)
    call MV_AddDelta(AM%Mod%Vars%x, delta(:AM%Mod%Vars%Nx), AM%Mod%Lin%x)
 
    ! Update states and inputs in module
-   do i = 1, size(AM%Mod%ModDataAry)
-      associate (ModData => AM%Mod%ModDataAry(i))
+   do i = 1, size(AM%Mod%ModData)
+      associate (ModData => AM%Mod%ModData(i))
 
          ! Populate input and state values in module
          call FAST_SetOP(ModData, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
@@ -725,17 +730,17 @@ subroutine SS_BuildJacobian(AM, caseData, Mappings, p_FAST, y_FAST, m_FAST, T, E
    !----------------------------------------------------------------------------
 
    ! Loop through modules
-   do i = 1, size(AM%Mod%ModDataAry)
-      associate (ModData => AM%Mod%ModDataAry(i))
+   do i = 1, size(AM%Mod%ModData)
+      associate (ModData => AM%Mod%ModData(i))
 
          ! Calculate dYdu and dXdu
-         call FAST_JacobianPInput(ModData, SS_t_global, STATE_CURR, T, ErrStat2, ErrMsg2, &
+         call FAST_JacobianPInput(ModData, SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
                                   dYdu=ModData%Lin%dYdu, dYdu_glue=AM%Mod%Lin%dYdu, &
                                   dXdu=ModData%Lin%dXdu, dXdu_glue=AM%Mod%Lin%dXdu)
          if (Failed()) return
 
          ! Calculate dYdx and dXdx
-         call FAST_JacobianPContState(ModData, SS_t_global, STATE_CURR, T, ErrStat2, ErrMsg2, &
+         call FAST_JacobianPContState(ModData, SS_t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
                                       dYdx=ModData%Lin%dYdx, dYdx_glue=AM%Mod%Lin%dYdx, &
                                       dXdx=ModData%Lin%dXdx, dXdx_glue=AM%Mod%Lin%dXdx)
          if (Failed()) return
@@ -917,7 +922,7 @@ subroutine SS_BuildResidual(AM, caseData, Mappings, T, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! Note that we don't need to calculate the inputs on more than p_FAST%NumBl_Lin blades because we are only using them to compute the SS_GetInputs
-      call SS_GetCalculatedInputs(AM, AM%u2, Mappings, INPUT_PREV, T, ErrStat2, ErrMsg2) ! calculate new inputs and store in InputIndex=2
+      call SS_GetCalculatedInputs(AM, AM%u2, Mappings, T, ErrStat2, ErrMsg2) ! calculate new inputs and store in InputIndex=2
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! call PreconditionInputResidual(AM%u1, AM%JacScale)
@@ -993,7 +998,7 @@ subroutine SS_AD_InputSolve(AM, Mappings, InputIndex, T, ErrStat, ErrMsg)
    ErrMsg = ""
 
    ! Get blade motion inputs
-   call FAST_InputSolve(AM%Mod%ModDataAry(2), AM%Mod%ModDataAry, Mappings, InputIndex, T, ErrStat2, ErrMsg2)
+   call FAST_InputSolve(iModAero, AM%Mod%ModData, Mappings, InputIndex, T, ErrStat2, ErrMsg2, AM%Mod%VarMaps)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ! Set prescribed values for first blade
@@ -1041,12 +1046,12 @@ subroutine SS_CalcContStateDeriv(AM, caseData, InputIndex, dxAry, T, ErrStat, Er
    ErrMsg = ""
 
    ! Get the structural continuous state derivative
-   call FAST_GetOP(AM%Mod%ModDataAry(1), SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, &
-                   dx_op=AM%Mod%ModDataAry(1)%Lin%dx, dx_glue=dxAry)
+   call FAST_GetOP(AM%Mod%ModData(iModStruct), SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, &
+                   dx_op=AM%Mod%ModData(iModStruct)%Lin%dx, dx_glue=dxAry)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ! Select based on which module is simulating the blades
-   select case (AM%Mod%ModDataAry(1)%ID)
+   select case (AM%Mod%ModData(iModStruct)%ID)
 
    case (Module_ED) ! ElastoDyn
 
@@ -1097,8 +1102,8 @@ subroutine SS_GetStates(AM, xAry, StateIndex, T, ErrStat, ErrMsg)
    ErrMsg = ''
 
    ! Loop through modules and get AeroMap states
-   do i = 1, size(AM%Mod%ModDataAry)
-      associate (ModData => AM%Mod%ModDataAry(i))
+   do i = 1, size(AM%Mod%ModData)
+      associate (ModData => AM%Mod%ModData(i))
          call FAST_GetOP(ModData, SS_t_global, INPUT_CURR, StateIndex, T, ErrStat2, ErrMsg2, x_op=ModData%Lin%x, x_glue=xAry)
          if (Failed()) return
       end associate
@@ -1126,8 +1131,8 @@ subroutine SS_GetInputs(AM, uAry, InputIndex, T, ErrStat, ErrMsg)
    integer(IntKi)                         :: i
 
    ! Loop through modules and get inputs
-   do i = 1, size(AM%Mod%ModDataAry)
-      associate (ModData => AM%Mod%ModDataAry(i))
+   do i = 1, size(AM%Mod%ModData)
+      associate (ModData => AM%Mod%ModData(i))
          call FAST_GetOP(ModData, SS_t_global, InputIndex, STATE_CURR, T, ErrStat2, ErrMsg2, u_op=ModData%Lin%u, u_glue=uAry)
          if (Failed()) return
       end associate
@@ -1140,11 +1145,10 @@ contains
    end function
 end subroutine
 
-subroutine SS_GetCalculatedInputs(AM, uAry, Mappings, InputIndex, T, ErrStat, ErrMsg)
+subroutine SS_GetCalculatedInputs(AM, uAry, Mappings, T, ErrStat, ErrMsg)
    type(Glue_AeroMap), intent(inout)      :: AM          !< AeroMap module
    real(R8Ki), intent(inout)              :: uAry(:)     !< Inputs
    type(MappingType), intent(inout)       :: Mappings(:) !< Transfer mapping data
-   integer(IntKi), intent(in)             :: InputIndex  !< Index into input array
    type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat     !< Error status
    character(*), intent(out)              :: ErrMsg      !< Error message
@@ -1157,15 +1161,15 @@ subroutine SS_GetCalculatedInputs(AM, uAry, Mappings, InputIndex, T, ErrStat, Er
    ErrMsg = ""
 
    ! Transfer motions to AeroDyn first
-   call SS_AD_InputSolve(AM, Mappings, InputIndex, T, ErrStat2, ErrMsg2)
+   call SS_AD_InputSolve(AM, Mappings, INPUT_PREV, T, ErrStat2, ErrMsg2)
    if (Failed()) return
 
    ! Transfer loads to structural solver next
-   call FAST_InputSolve(AM%Mod%ModDataAry(1), AM%Mod%ModDataAry, Mappings, InputIndex, T, ErrStat2, ErrMsg2)
+   call FAST_InputSolve(iModStruct, AM%Mod%ModData, Mappings, INPUT_PREV, T, ErrStat2, ErrMsg2, AM%Mod%VarMaps)
    if (Failed()) return
 
    ! Pack the transferred inputs into the vector
-   call SS_GetInputs(AM, uAry, InputIndex, T, ErrStat2, ErrMsg2)
+   call SS_GetInputs(AM, uAry, INPUT_PREV, T, ErrStat2, ErrMsg2)
    if (Failed()) return
 
 contains

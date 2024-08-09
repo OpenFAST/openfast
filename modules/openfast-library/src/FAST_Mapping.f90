@@ -49,12 +49,12 @@ character(24), parameter   :: Custom_ED_to_ExtLd = 'ED -> ExtLd', &
 
 contains
 
-subroutine FAST_InputMeshPointer(ModData, Turbine, MeshLoc, Mesh, InputIndex, ErrStat, ErrMsg)
+subroutine FAST_InputMeshPointer(ModData, Turbine, MeshLoc, Mesh, iInput, ErrStat, ErrMsg)
    type(ModDataType), intent(in)                :: ModData
-   type(DatLoc), intent(in)                :: MeshLoc
+   type(DatLoc), intent(in)                     :: MeshLoc
    type(FAST_TurbineType), target, intent(in)   :: Turbine
    type(MeshType), pointer, intent(out)         :: Mesh
-   integer(IntKi), intent(in)                   :: InputIndex
+   integer(IntKi), intent(in)                   :: iInput
    integer(IntKi), intent(out)                  :: ErrStat
    character(*), intent(out)                    :: ErrMsg
 
@@ -65,143 +65,38 @@ subroutine FAST_InputMeshPointer(ModData, Turbine, MeshLoc, Mesh, InputIndex, Er
 
    select case (ModData%ID)
    case (Module_AD)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => AD_InputMeshPointer(Turbine%AD%Input_Saved(-InputIndex)%rotors(ModData%Ins), MeshLoc)
-      case (0)
-         Mesh => AD_InputMeshPointer(Turbine%AD%u%rotors(ModData%Ins), MeshLoc)
-      case (1:)
-         Mesh => AD_InputMeshPointer(Turbine%AD%Input(InputIndex)%rotors(ModData%Ins), MeshLoc)
-      end select
+      Mesh => AD_InputMeshPointer(Turbine%AD%Input(iInput)%rotors(ModData%Ins), MeshLoc)
    case (Module_BD)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => BD_InputMeshPointer(Turbine%BD%Input_Saved(-InputIndex, ModData%Ins), MeshLoc)
-      case (0)
-         Mesh => BD_InputMeshPointer(Turbine%BD%u(ModData%Ins), MeshLoc)
-      case (1:)
-         Mesh => BD_InputMeshPointer(Turbine%BD%Input(InputIndex, ModData%Ins), MeshLoc)
-      end select
+      Mesh => BD_InputMeshPointer(Turbine%BD%Input(iInput, ModData%Ins), MeshLoc)
    case (Module_ED)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => ED_InputMeshPointer(Turbine%ED%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => ED_InputMeshPointer(Turbine%ED%u, MeshLoc)
-      case (1:)
-         Mesh => ED_InputMeshPointer(Turbine%ED%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => ED_InputMeshPointer(Turbine%ED%Input(iInput), MeshLoc)
    case (Module_ExtInfw)
-      ! ExtInfw doesn't have the typical input structure, using u for both
+      ! ExtInfw doesn't have the typical input structure, using u
       Mesh => ExtInfw_InputMeshPointer(Turbine%ExtInfw%u, MeshLoc)
    case (Module_ExtPtfm)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => ExtPtfm_InputMeshPointer(Turbine%ExtPtfm%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => ExtPtfm_InputMeshPointer(Turbine%ExtPtfm%u, MeshLoc)
-      case (1:)
-         Mesh => ExtPtfm_InputMeshPointer(Turbine%ExtPtfm%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => ExtPtfm_InputMeshPointer(Turbine%ExtPtfm%Input(iInput), MeshLoc)
    case (Module_FEAM)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => FEAM_InputMeshPointer(Turbine%FEAM%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => FEAM_InputMeshPointer(Turbine%FEAM%u, MeshLoc)
-      case (1:)
-         Mesh => FEAM_InputMeshPointer(Turbine%FEAM%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => FEAM_InputMeshPointer(Turbine%FEAM%Input(iInput), MeshLoc)
    case (Module_HD)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => HydroDyn_InputMeshPointer(Turbine%HD%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => HydroDyn_InputMeshPointer(Turbine%HD%u, MeshLoc)
-      case (1:)
-         Mesh => HydroDyn_InputMeshPointer(Turbine%HD%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => HydroDyn_InputMeshPointer(Turbine%HD%Input(iInput), MeshLoc)
    case (Module_IceD)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => IceD_InputMeshPointer(Turbine%IceD%Input_Saved(-InputIndex, ModData%Ins), MeshLoc)
-      case (0)
-         Mesh => IceD_InputMeshPointer(Turbine%IceD%u(ModData%Ins), MeshLoc)
-      case (1:)
-         Mesh => IceD_InputMeshPointer(Turbine%IceD%Input(InputIndex, ModData%Ins), MeshLoc)
-      end select
+      Mesh => IceD_InputMeshPointer(Turbine%IceD%Input(iInput, ModData%Ins), MeshLoc)
    case (Module_IceF)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => IceFloe_InputMeshPointer(Turbine%IceF%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => IceFloe_InputMeshPointer(Turbine%IceF%u, MeshLoc)
-      case (1:)
-         Mesh => IceFloe_InputMeshPointer(Turbine%IceF%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => IceFloe_InputMeshPointer(Turbine%IceF%Input(iInput), MeshLoc)
    case (Module_IfW)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => InflowWind_InputMeshPointer(Turbine%IfW%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => InflowWind_InputMeshPointer(Turbine%IfW%u, MeshLoc)
-      case (1:)
-         Mesh => InflowWind_InputMeshPointer(Turbine%IfW%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => InflowWind_InputMeshPointer(Turbine%IfW%Input(iInput), MeshLoc)
    case (Module_MAP)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => MAP_InputMeshPointer(Turbine%MAP%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => MAP_InputMeshPointer(Turbine%MAP%u, MeshLoc)
-      case (1:)
-         Mesh => MAP_InputMeshPointer(Turbine%MAP%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => MAP_InputMeshPointer(Turbine%MAP%Input(iInput), MeshLoc)
    case (Module_MD)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => MD_InputMeshPointer(Turbine%MD%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => MD_InputMeshPointer(Turbine%MD%u, MeshLoc)
-      case (1:)
-         Mesh => MD_InputMeshPointer(Turbine%MD%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => MD_InputMeshPointer(Turbine%MD%Input(iInput), MeshLoc)
    case (Module_Orca)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => Orca_InputMeshPointer(Turbine%Orca%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => Orca_InputMeshPointer(Turbine%Orca%u, MeshLoc)
-      case (1:)
-         Mesh => Orca_InputMeshPointer(Turbine%Orca%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => Orca_InputMeshPointer(Turbine%Orca%Input(iInput), MeshLoc)
    case (Module_SD)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => SD_InputMeshPointer(Turbine%SD%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => SD_InputMeshPointer(Turbine%SD%u, MeshLoc)
-      case (1:)
-         Mesh => SD_InputMeshPointer(Turbine%SD%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => SD_InputMeshPointer(Turbine%SD%Input(iInput), MeshLoc)
    case (Module_SeaSt)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => SeaSt_InputMeshPointer(Turbine%SeaSt%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => SeaSt_InputMeshPointer(Turbine%SeaSt%u, MeshLoc)
-      case (1:)
-         Mesh => SeaSt_InputMeshPointer(Turbine%SeaSt%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => SeaSt_InputMeshPointer(Turbine%SeaSt%Input(iInput), MeshLoc)
    case (Module_SrvD)
-      select case (InputIndex)
-      case (:-1)
-         Mesh => SrvD_InputMeshPointer(Turbine%SrvD%Input_Saved(-InputIndex), MeshLoc)
-      case (0)
-         Mesh => SrvD_InputMeshPointer(Turbine%SrvD%u, MeshLoc)
-      case (1:)
-         Mesh => SrvD_InputMeshPointer(Turbine%SrvD%Input(InputIndex), MeshLoc)
-      end select
+      Mesh => SrvD_InputMeshPointer(Turbine%SrvD%Input(iInput), MeshLoc)
    case default
       ErrStat = ErrID_Fatal
       ErrMsg = "Unsupported module: "//ModData%Abbr
@@ -220,12 +115,12 @@ subroutine FAST_InputMeshPointer(ModData, Turbine, MeshLoc, Mesh, InputIndex, Er
 end subroutine
 
 subroutine FAST_OutputMeshPointer(ModData, Turbine, MeshLoc, Mesh, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)                :: ModData
-   type(DatLoc), intent(in)                :: MeshLoc
-   type(FAST_TurbineType), target, intent(in)   :: Turbine
-   type(MeshType), pointer, intent(out)         :: Mesh
-   integer(IntKi), intent(out)                  :: ErrStat
-   character(*), intent(out)                    :: ErrMsg
+   type(ModDataType), intent(in)                   :: ModData
+   type(DatLoc), intent(in)                        :: MeshLoc
+   type(FAST_TurbineType), target, intent(inout)   :: Turbine
+   type(MeshType), pointer, intent(out)            :: Mesh
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -285,13 +180,13 @@ end subroutine
 function FAST_InputFieldName(ModData, DL) result(Name)
    type(ModDataType), intent(in) :: ModData
    type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name, tmp
+   character(42)                 :: Name, tmp
    select case (ModData%ID)
    case (Module_AD)
       Name = trim(ModData%Abbr)//"%u%rotors("//trim(Num2LStr(ModData%Ins))//")"
       select case (DL%Num)
       case (1:)
-         tmp = AD_OutputFieldName(DL)
+         tmp = AD_InputFieldName(DL)
          Name = trim(Name)//tmp(2:)
       case (AD_u_HWindSpeed)
          Name = 'AD%u%HWindSpeed (Ext)'
@@ -368,7 +263,7 @@ end function
 function FAST_OutputFieldName(ModData, DL) result(Name)
    type(ModDataType), intent(in)    :: ModData
    type(DatLoc), intent(in)         :: DL
-   character(32)                    :: Name, tmp
+   character(42)                    :: Name, tmp
    select case (ModData%ID)
    case (Module_AD)
       tmp = AD_OutputFieldName(DL)
@@ -502,24 +397,13 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
    ! Reorder the mappings so that motion maps come before the load maps
    Mappings = [pack(Mappings, Mappings%MapType == Map_MotionMesh), &
                pack(Mappings, Mappings%MapType == Map_LoadMesh), &
-               pack(Mappings, Mappings%MapType == Map_Variable)]
+               pack(Mappings, Mappings%MapType == Map_Variable), &
+               pack(Mappings, Mappings%MapType == Map_Custom)]
 
    ! Loop through mappings
    do iMap = 1, size(Mappings)
       associate (SrcMod => Mods(Mappings(iMap)%iModSrc), &
                  DstMod => Mods(Mappings(iMap)%iModDst))
-
-         ! Add mapping index to sorce and destination module mapping arrays
-         if (allocated(SrcMod%iSrcMaps)) then
-            SrcMod%iSrcMaps = [SrcMod%iSrcMaps, iMap]
-         else
-            SrcMod%iSrcMaps = [iMap]
-         end if
-         if (allocated(DstMod%iDstMaps)) then
-            DstMod%iDstMaps = [DstMod%iDstMaps, iMap]
-         else
-            DstMod%iDstMaps = [iMap]
-         end if
 
          write (*, *) "Mapping: ", Mappings(iMap)%Desc
 
@@ -535,7 +419,7 @@ end subroutine
 
 subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable         :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -557,9 +441,9 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
    case (Module_BD)
 
-      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcDL=DatLoc(BD_y_BldMotion), &                                    ! BD%y(SrcMod%Ins)%BldMotion
-                         DstDL=DatLoc(AD_u_BladeMotion, SrcMod%Ins), &   ! AD%u%rotors(DstMod%Ins)%BladeMotion(SrcMod%Ins)
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(BD_y_BldMotion), &                                    ! BD%y(SrcMod%Ins)%BldMotion
+                         DstMod=DstMod, DstDL=DatLoc(AD_u_BladeMotion, SrcMod%Ins), &   ! AD%u%rotors(DstMod%Ins)%BladeMotion(SrcMod%Ins)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                          Active=NotCompAeroMaps .or. (SrcMod%Ins == 1))
       if (Failed()) return
@@ -568,48 +452,48 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       if (Turbine%p_FAST%CompElast == Module_ED) then
          do i = 1, size(Turbine%ED%y%BladeLn2Mesh)
-            call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                               SrcDL=DatLoc(ED_y_BladeLn2Mesh, i), &                     ! ED%y%BladeLn2Mesh(i)
-                               DstDL=DatLoc(AD_u_BladeMotion, i), &   ! AD%u%rotors(DstMod%Ins)%BladeMotion(i)
+            call MapMotionMesh(Turbine, Mappings, &
+                               SrcMod=SrcMod, SrcDL=DatLoc(ED_y_BladeLn2Mesh, i), &                     ! ED%y%BladeLn2Mesh(i)
+                               DstMod=DstMod, DstDL=DatLoc(AD_u_BladeMotion, i), &   ! AD%u%rotors(DstMod%Ins)%BladeMotion(i)
                                ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                                Active=NotCompAeroMaps .or. (i == 1))
             if (Failed()) return
          end do
       end if
 
-      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcDL=DatLoc(ED_y_TowerLn2Mesh), &                 ! ED%y%TowerLn2Mesh
-                         DstDL=DatLoc(AD_u_TowerMotion), &                  ! AD%u%rotors(DstMod%Ins)%TowerMotion
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(ED_y_TowerLn2Mesh), &                 ! ED%y%TowerLn2Mesh
+                         DstMod=DstMod, DstDL=DatLoc(AD_u_TowerMotion), &                  ! AD%u%rotors(DstMod%Ins)%TowerMotion
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                          Active=NotCompAeroMaps)
       if (Failed()) return
 
       do i = 1, size(Turbine%ED%y%BladeRootMotion)
-         call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                            SrcDL=DatLoc(ED_y_BladeRootMotion, i), &        ! ED%y%BladeRootMotion(i)
-                            DstDL=DatLoc(AD_u_BladeRootMotion, i), &        ! AD%u%rotors(DstMod%Ins)%BladeRootMotion(i)
+         call MapMotionMesh(Turbine, Mappings, &
+                            SrcMod=SrcMod, SrcDL=DatLoc(ED_y_BladeRootMotion, i), &        ! ED%y%BladeRootMotion(i)
+                            DstMod=DstMod, DstDL=DatLoc(AD_u_BladeRootMotion, i), &        ! AD%u%rotors(DstMod%Ins)%BladeRootMotion(i)
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                             Active=NotCompAeroMaps)
          if (Failed()) return
       end do
 
-      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcDL=DatLoc(ED_y_HubPtMotion), &                  ! ED%y%HubPtMotion
-                         DstDL=DatLoc(AD_u_HubMotion), &                    ! AD%u%rotors(DstMod%Ins)%HubMotion
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(ED_y_HubPtMotion), &                  ! ED%y%HubPtMotion
+                         DstMod=DstMod, DstDL=DatLoc(AD_u_HubMotion), &                    ! AD%u%rotors(DstMod%Ins)%HubMotion
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                          Active=NotCompAeroMaps)
       if (Failed()) return
 
-      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcDL=DatLoc(ED_y_NacelleMotion), &                ! ED%y%NacelleMotion
-                         DstDL=DatLoc(AD_u_NacelleMotion), &                ! AD%u%rotors(DstMod%Ins)%NacelleMotion
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(ED_y_NacelleMotion), &                ! ED%y%NacelleMotion
+                         DstMod=DstMod, DstDL=DatLoc(AD_u_NacelleMotion), &                ! AD%u%rotors(DstMod%Ins)%NacelleMotion
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                          Active=NotCompAeroMaps)
       if (Failed()) return
 
-      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcDL=DatLoc(ED_y_TFinCMMotion), &                 ! ED%y%TFinCMMotion
-                         DstDL=DatLoc(AD_u_TFinMotion), &                   ! AD%u%rotors(DstMod%Ins)%TFinMotion
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(ED_y_TFinCMMotion), &                 ! ED%y%TFinCMMotion
+                         DstMod=DstMod, DstDL=DatLoc(AD_u_TFinMotion), &                   ! AD%u%rotors(DstMod%Ins)%TFinMotion
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                          Active=NotCompAeroMaps)
       if (Failed()) return
@@ -617,24 +501,24 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    case (Module_IfW)
 
       call MapVariable(Mappings, &
-                       SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(InflowWind_y_HWindSpeed), &
-                       DstDL=DatLoc(AD_u_HWindSpeed), &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+                       SrcMod=SrcMod, SrcDL=DatLoc(InflowWind_y_HWindSpeed), &
+                       DstMod=DstMod, DstDL=DatLoc(AD_u_HWindSpeed), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
+                       Active=Turbine%p_FAST%Linearize)
       if (Failed()) return
 
       call MapVariable(Mappings, &
-                       SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(InflowWind_y_PLExp), &
-                       DstDL=DatLoc(AD_u_PLExp), &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+                       SrcMod=SrcMod, SrcDL=DatLoc(InflowWind_y_PLExp), &
+                       DstMod=DstMod, DstDL=DatLoc(AD_u_PLExp), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
+                       Active=Turbine%p_FAST%Linearize)
       if (Failed()) return
 
       call MapVariable(Mappings, &
-                       SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(InflowWind_y_PropagationDir), &
-                       DstDL=DatLoc(AD_u_PropagationDir), &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+                       SrcMod=SrcMod, SrcDL=DatLoc(InflowWind_y_PropagationDir), &
+                       DstMod=DstMod, DstDL=DatLoc(AD_u_PropagationDir), &
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
+                       Active=Turbine%p_FAST%Linearize)
       if (Failed()) return
 
    case (Module_SrvD)
@@ -652,7 +536,7 @@ end subroutine
 
 subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -728,7 +612,7 @@ end subroutine
 
 subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1003,7 +887,7 @@ end subroutine
 
 subroutine InitMappings_ExtLd(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1077,7 +961,7 @@ end subroutine
 
 subroutine InitMappings_ExtPtfm(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1094,18 +978,10 @@ subroutine InitMappings_ExtPtfm(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
 
    case (Module_ED)
 
-      if (Turbine%p_FAST%CompSub /= Module_SD) then
-         call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                            SrcDL=DatLoc(ED_y_PlatformPtMesh), &       ! ED%y%PlatformPtMesh
-                            DstDL=DatLoc(ExtPtfm_u_PtfmMesh), &        ! ExtPtfm%u%PtfmMesh
-                            ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
-      end if
-
-   case (Module_SD)
-
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcDL=DatLoc(ED_y_PlatformPtMesh), &           ! ED%y%PlatformPtMesh
-                         DstDL=DatLoc(SD_u_TPMesh), &                   ! SD%u%TPMesh
+                         SrcDL=DatLoc(ED_y_PlatformPtMesh), &                    ! ED%y%PlatformPtMesh
+                         DstDL=DatLoc(ExtPtfm_u_PtfmMesh), &                     ! ExtPtfm%u%PtfmMesh
+                         Active=Turbine%p_FAST%CompSub /= Module_SD, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    end select
@@ -1119,7 +995,7 @@ end subroutine
 
 subroutine InitMappings_FEAM(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1173,7 +1049,7 @@ end subroutine
 
 subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1236,7 +1112,7 @@ end subroutine
 
 subroutine InitMappings_IceD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1275,7 +1151,7 @@ end subroutine
 
 subroutine InitMappings_IceF(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1314,7 +1190,7 @@ end subroutine
 
 subroutine InitMappings_IfW(Mappings, SrcMod, DstMod, T, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1342,7 +1218,7 @@ end subroutine
 
 subroutine InitMappings_MAP(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1381,7 +1257,7 @@ end subroutine
 
 subroutine InitMappings_MD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable         :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1425,7 +1301,7 @@ end subroutine
 
 subroutine InitMappings_Orca(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1456,7 +1332,7 @@ end subroutine
 
 subroutine InitMappings_SD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1564,7 +1440,7 @@ end subroutine
 
 subroutine InitMappings_SeaSt(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1592,7 +1468,7 @@ end subroutine
 
 subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1604,8 +1480,6 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
    ErrStat = ErrID_None
    ErrMsg = ''
-
-   ! MeshMapCreate( PlatformMotion, SrvD%u%PtfmMotionMesh, MeshMapData%ED_P_2_SrvD_P_P, ErrStat2, ErrMsg2 )
 
    select case (SrcMod%ID)
 
@@ -1702,8 +1576,8 @@ end subroutine
 subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
                        DstMod, DstDL, DstDispDL, ErrStat, ErrMsg, Active)
    type(FAST_TurbineType), target         :: Turbine
-   type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
+   type(MappingType), allocatable         :: Mappings(:)
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
    type(DatLoc), intent(in)          :: SrcDL, DstDL
    type(DatLoc), intent(in)          :: SrcDispDL, DstDispDL
    integer(IntKi), intent(out)            :: ErrStat
@@ -1783,15 +1657,15 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    ! Create a copy of destination mesh in mapping for load summation
    call MeshCopy(DstMesh, Mapping%TmpLoadMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
-   ! Get mapping indices for linearized mesh mapping
-   ! call InitMeshVarLocs(Mapping, SrcMod, DstMod, SrcMesh, DstMesh, SrcDispMesh, DstDispMesh)
+   ! Set VF_Mapping on variables in this mapping
+   call SetMapVarFlags(Mapping, SrcMod, DstMod)
 
    ! If the destination displacement mesh is not a sibling of the load mesh
    Mapping%DstUsesSibling = IsSiblingMesh(DstMesh, DstDispMesh)
    if (.not. Mapping%DstUsesSibling) then
 
-      ! Print warning
-      call WrScr('Warning: load mesh transfer "'//trim(Mapping%Desc)//'" does not use sibling mesh')
+      ! Indicate non-sibling destination displacement mesh in description
+      Mapping%Desc = trim(Mapping%Desc)//'*'
 
       ! Create temporary motion mesh as cousin of load mesh, this will be used for an intermediate transfer
       ! of the destination motion to the destination load locations
@@ -1849,9 +1723,9 @@ end subroutine
 
 subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
    type(FAST_TurbineType), target         :: Turbine
-   type(MappingType), allocatable      :: Mappings(:)
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
-   type(DatLoc), intent(in)          :: SrcDL, DstDL
+   type(MappingType), allocatable         :: Mappings(:)
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
+   type(DatLoc), intent(in)               :: SrcDL, DstDL
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
    logical, optional, intent(in)          :: Active
@@ -1859,7 +1733,7 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrSta
    character(*), parameter                :: RoutineName = 'MapMotionMesh'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
-   type(MappingType)                   :: Mapping
+   type(MappingType)                      :: Mapping
    type(MeshType), pointer                :: SrcMesh, DstMesh
 
    ErrStat = ErrID_None
@@ -1904,11 +1778,11 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrSta
    Mapping%DstDL = DstDL
    Mapping%XfrType = MeshTransferType(SrcMesh, DstMesh)
 
+   ! Set VF_Mapping on variables in this mapping
+   call SetMapVarFlags(Mapping, SrcMod, DstMod)
+
    ! Create mesh mapping
    call MeshMapCreate(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Get mapping indices for linearized mesh mapping
-   ! call InitMeshVarLocs(Mapping, SrcMod, DstMod, SrcMesh, DstMesh)
 
    ! Add mapping to array of mappings
    Mappings = [Mappings, Mapping]
@@ -1922,7 +1796,7 @@ end subroutine
 
 subroutine MapVariable(Maps, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
    type(MappingType), allocatable      :: Maps(:)
-   type(ModDataType), intent(in)       :: SrcMod, DstMod
+   type(ModDataType), intent(inout)    :: SrcMod, DstMod
    type(DatLoc), intent(in)            :: SrcDL, DstDL
    integer(IntKi), intent(out)         :: ErrStat
    character(*), intent(out)           :: ErrMsg
@@ -1976,17 +1850,29 @@ subroutine MapVariable(Maps, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Acti
    Mapping%SrcDL = SrcDL
    Mapping%DstDL = DstDL
 
+   ! Set VF_Mapping on variables in this mapping
+   call SetMapVarFlags(Mapping, SrcMod, DstMod)
+
+   ! Copy source and destination variables and modify for packing/unpacking
+   Mapping%SrcVar = SrcMod%Vars%y(iVarSrc)
+   Mapping%DstVar = DstMod%Vars%u(iVarDst)
+   Mapping%SrcVar%iLoc = [1, Mapping%SrcVar%Num]
+   Mapping%DstVar%iLoc = [1, Mapping%DstVar%Num]
+
+   ! Allocate variable data storage
+   call AllocAry(Mapping%VarData, max(Mapping%SrcVar%Num, Mapping%DstVar%Num), "VarData", ErrStat, ErrMsg)
+
    Maps = [Maps, Mapping]
 end subroutine
 
 !> MapCustom creates a custom mapping that is not included in linearization.
 !! Each custom mapping needs an entry in FAST_InputSolve to actually perform the transfer.
 subroutine MapCustom(Maps, Desc, SrcMod, DstMod, Active)
-   type(MappingType), allocatable      :: Maps(:)
-   character(*), intent(in)               :: Desc
-   type(ModDataType), intent(in)          :: SrcMod, DstMod
-   logical, optional, intent(in)          :: Active
-   type(MappingType)                   :: Mapping
+   type(MappingType), allocatable   :: Maps(:)
+   character(*), intent(in)         :: Desc
+   type(ModDataType), intent(inout) :: SrcMod, DstMod
+   logical, optional, intent(in)    :: Active
+   type(MappingType)                :: Mapping
 
    if (present(Active)) then
       if (.not. Active) return
@@ -2005,9 +1891,58 @@ subroutine MapCustom(Maps, Desc, SrcMod, DstMod, Active)
    Maps = [Maps, Mapping]
 end subroutine
 
+subroutine SetMapVarFlags(Mapping, SrcMod, DstMod)
+   type(MappingType), intent(in)          :: Mapping
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
+   integer(IntKi)                         :: i
+
+   ! Set mapping flag on source variables
+   do i = 1, size(SrcMod%Vars%y)
+      associate (Var => SrcMod%Vars%y(i))
+         if (MV_EqualDL(Mapping%SrcDL, Var%DL)) call MV_SetFlags(Var, VF_Mapping)
+      end associate
+   end do
+
+   ! Set mapping flag on destination variables
+   do i = 1, size(DstMod%Vars%u)
+      associate (Var => DstMod%Vars%u(i))
+         if (MV_EqualDL(Mapping%DstDL, Var%DL)) call MV_SetFlags(Var, VF_Mapping)
+      end associate
+   end do
+
+   ! If this a load mesh mapping
+   if (Mapping%MapType == Map_LoadMesh) then
+
+      ! Set mapping flag on source displacement mesh variables
+      do i = 1, size(SrcMod%Vars%u)
+         associate (Var => SrcMod%Vars%u(i))
+            if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) then
+               select case (Var%Field)
+               case (FieldTransDisp)
+                  call MV_SetFlags(Var, VF_Mapping)
+               end select
+            end if
+         end associate
+      end do
+
+      ! Set mapping flag on destination displacement mesh variables
+      do i = 1, size(DstMod%Vars%y)
+         associate (Var => DstMod%Vars%y(i))
+            if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) then
+               select case (Var%Field)
+               case (FieldTransDisp, FieldOrientation)
+                  call MV_SetFlags(Var, VF_Mapping)
+               end select
+            end if
+         end associate
+      end do
+   end if
+
+end subroutine
+
 ! subroutine InitMeshVarLocs(Mapping, SrcMod, DstMod, SrcMesh, DstMesh, SrcDispMesh, DstDispMesh)
 !    type(MappingType), intent(inout)    :: Mapping
-!    type(ModDataType), intent(in)          :: SrcMod, DstMod
+!    type(ModDataType), intent(inout)       :: SrcMod, DstMod
 !    type(MeshType), intent(in)             :: SrcMesh, DstMesh
 !    type(MeshType), optional, intent(in)   :: SrcDispMesh, DstDispMesh
 
@@ -2103,12 +2038,12 @@ subroutine FAST_LinearizeMappings(ModGlue, Mappings, Turbine, ErrStat, ErrMsg)
    call Eye2D(ModGlue%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Loop through variable maps
-   do i = 1, size(ModGlue%ModMaps)
+   do i = 1, size(ModGlue%VarMaps)
 
-      associate (ModMap => ModGlue%ModMaps(i), &
-                 Mapping => Mappings(ModGlue%ModMaps(i)%iMapping), &
-                 ModSrc => ModGlue%ModDataAry(ModGlue%ModMaps(i)%iModSrc), &
-                 ModDst => ModGlue%ModDataAry(ModGlue%ModMaps(i)%iModDst))
+      associate (ModMap => ModGlue%VarMaps(i), &
+                 Mapping => Mappings(ModGlue%VarMaps(i)%iMapping), &
+                 ModSrc => ModGlue%ModData(ModGlue%VarMaps(i)%iModSrc), &
+                 ModDst => ModGlue%ModData(ModGlue%VarMaps(i)%iModDst))
 
          ! Select based on type of mapping
          select case (Mapping%MapType)
@@ -2172,7 +2107,7 @@ subroutine FAST_LinearizeMappings(ModGlue, Mappings, Turbine, ErrStat, ErrMsg)
             else
 
                ! Transfer destination displacement mesh to temporary motion mesh (cousin of destination load mesh)
-               call TransferMesh(Mapping%XfrTypeAux, DstDispMesh, Mapping%TmpMotionMesh, Mapping%MeshMapAux); if (Failed()) return
+               call TransferMesh(Mapping%XfrTypeAux, DstDispMesh, Mapping%TmpMotionMesh, Mapping%MeshMapAux, ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
                ! Linearize the motion mesh transfer
                call LinearizeMeshTransfer(Mapping%XfrTypeAux, DstDispMesh, Mapping%TmpMotionMesh, Mapping%MeshMapAux); if (Failed()) return
@@ -2218,32 +2153,9 @@ contains
       end select
    end subroutine
 
-   ! MeshTransfer calls the specific transfer function based on
-   ! transfer type (Point_to_Point, Point_to_Line2, etc.)
-   subroutine TransferMesh(Typ, Src, Dst, MeshMap, SrcDisp, DstDisp)
-      integer(IntKi), intent(in)             :: Typ
-      type(MeshType), intent(in)             :: Src
-      type(MeshType), intent(inout)          :: Dst
-      type(MeshMapType), intent(inout)       :: MeshMap
-      type(MeshType), optional, intent(in)   :: SrcDisp, DstDisp
-      select case (Typ)
-      case (Xfr_Point_to_Point)
-         call Transfer_Point_to_Point(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
-      case (Xfr_Point_to_Line2)
-         call Transfer_Point_to_Line2(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
-      case (Xfr_Line2_to_Point)
-         call Transfer_Line2_to_Point(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
-      case (Xfr_Line2_to_Line2)
-         call Transfer_Line2_to_Line2(Src, Dst, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DstDisp)
-      case default
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2 = "TransferMeshTransfer: unknown transfer type: "//Num2LStr(Typ)
-      end select
-   end subroutine
-
    subroutine Assemble_dUdu(Mapping, ModMap, VarsSrc, VarsDst, dUdu)
       type(MappingType), intent(in) :: Mapping
-      type(ModMapType), intent(in)  :: ModMap
+      type(VarMapType), intent(in)  :: ModMap
       type(ModVarsType), intent(in) :: VarsSrc, VarsDst
       real(R8Ki), intent(inout)     :: dUdu(:, :)
 
@@ -2271,7 +2183,7 @@ contains
    !!      | M_fm   M_li |        | M^S |
    subroutine Assemble_dUdy_Loads(Mapping, ModMap, VarsSrc, VarsDst, dUdy)
       type(MappingType), intent(inout) :: Mapping
-      type(ModMapType), intent(in)     :: ModMap
+      type(VarMapType), intent(in)     :: ModMap
       type(ModVarsType), intent(in)    :: VarsSrc, VarsDst
       real(R8Ki), intent(inout)        :: dUdy(:, :)
 
@@ -2315,7 +2227,7 @@ contains
    !! u^S, theta^S, v^S, omega^S, a^S, alpha^S
    subroutine Assemble_dUdy_Motions(Mapping, ModMap, VarsSrc, VarsDst, dUdy)
       type(MappingType), intent(in) :: Mapping
-      type(ModMapType), intent(in)  :: ModMap
+      type(VarMapType), intent(in)  :: ModMap
       type(ModVarsType), intent(in) :: VarsSrc, VarsDst
       real(R8Ki), intent(inout)     :: dUdy(:, :)
 
@@ -2378,152 +2290,313 @@ contains
    end function
 end subroutine
 
-subroutine FAST_InputSolve(ModData, Mods, Mappings, InputIndex, Turbine, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)          :: ModData     !< Module data
-   type(ModDataType), intent(in)          :: Mods(:)     !< Module data
-   type(MappingType), intent(inout)       :: Mappings(:) !< Mesh and variable mappings
-   integer(IntKi), intent(in)             :: InputIndex  !< Input index to store data
-   type(FAST_TurbineType), intent(inout)  :: Turbine     !< Turbine type
+subroutine VarUnpackInput(ModData, Var, ValAry, T, iInput, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)          :: ModData
+   type(ModVarType), intent(in)           :: Var
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FAST_TurbineType), intent(inout)  :: T           !< Turbine data
+   integer(IntKi), intent(in)             :: iInput
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
+   ErrStat = ErrID_None
+   ErrMsg = ''
+   select case (ModData%ID)
+   case (Module_AD)
+      call AD_VarUnpackInput(Var, ValAry, T%AD%Input(iInput)%rotors(ModData%Ins))
+   case (Module_BD)
+      call BD_VarUnpackInput(Var, ValAry, T%BD%Input(iInput, ModData%Ins))
+   case (Module_ED)
+      call ED_VarUnpackInput(Var, ValAry, T%ED%Input(iInput))
+   case (Module_ExtPtfm)
+      call ExtPtfm_VarUnpackInput(Var, ValAry, T%ExtPtfm%Input(iInput))
+   case (Module_FEAM)
+      call FEAM_VarUnpackInput(Var, ValAry, T%FEAM%Input(iInput))
+   case (Module_HD)
+      call HydroDyn_VarUnpackInput(Var, ValAry, T%HD%Input(iInput))
+   case (Module_IceD)
+      call IceD_VarUnpackInput(Var, ValAry, T%IceD%Input(iInput, ModData%Ins))
+   case (Module_IceF)
+      call IceFloe_VarUnpackInput(Var, ValAry, T%IceF%Input(iInput))
+   case (Module_IfW)
+      call InflowWind_VarUnpackInput(Var, ValAry, T%IfW%Input(iInput))
+   case (Module_MAP)
+      call MAP_VarUnpackInput(Var, ValAry, T%MAP%Input(iInput))
+   case (Module_MD)
+      call MD_VarUnpackInput(Var, ValAry, T%MD%Input(iInput))
+   case (Module_ExtInfw)
+      call ExtInfw_VarUnpackInput(Var, ValAry, T%ExtInfw%u)
+   case (Module_Orca)
+      call Orca_VarUnpackInput(Var, ValAry, T%Orca%Input(iInput))
+   case (Module_SD)
+      call SD_VarUnpackInput(Var, ValAry, T%SD%Input(iInput))
+   case (Module_SeaSt)
+      call SeaSt_VarUnpackInput(Var, ValAry, T%SeaSt%Input(iInput))
+   case (Module_SrvD)
+      call SrvD_VarUnpackInput(Var, ValAry, T%SrvD%Input(iInput))
+   case default
+      call SetErrStat(ErrID_Fatal, "Unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, "VarPackInput")
+   end select
+end subroutine
 
-   character(*), parameter       :: RoutineName = 'FAST_InputSolve'
-   integer(IntKi)                :: ErrStat2
-   character(ErrMsgLen)          :: ErrMsg2
-   type(MeshType), pointer       :: SrcMesh, DstMesh
-   type(MeshType), pointer       :: SrcDispMesh, DstDispMesh
-   integer(IntKi)                :: i, j, k
+subroutine VarPackOutput(ModData, Var, ValAry, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)       :: ModData
+   type(ModVarType), intent(in)        :: Var
+   real(R8Ki), intent(inout)           :: ValAry(:)
+   type(FAST_TurbineType), intent(in)  :: T           !< Turbine data
+   integer(IntKi), intent(out)         :: ErrStat
+   character(*), intent(out)           :: ErrMsg
+   ErrStat = ErrID_None
+   ErrMsg = ''
+   select case (ModData%ID)
+   case (Module_AD)
+      call AD_VarPackOutput(Var, T%AD%y%rotors(ModData%Ins), ValAry)
+   case (Module_BD)
+      call BD_VarPackOutput(Var, T%BD%y(ModData%Ins), ValAry)
+   case (Module_ED)
+      call ED_VarPackOutput(Var, T%ED%y, ValAry)
+   case (Module_ExtPtfm)
+      call ExtPtfm_VarPackOutput(Var, T%ExtPtfm%y, ValAry)
+   case (Module_FEAM)
+      call FEAM_VarPackOutput(Var, T%FEAM%y, ValAry)
+   case (Module_HD)
+      call HydroDyn_VarPackOutput(Var, T%HD%y, ValAry)
+   case (Module_IceD)
+      call IceD_VarPackOutput(Var, T%IceD%y(ModData%Ins), ValAry)
+   case (Module_IceF)
+      call IceFloe_VarPackOutput(Var, T%IceF%y, ValAry)
+   case (Module_IfW)
+      call InflowWind_VarPackOutput(Var, T%IfW%y, ValAry)
+   case (Module_MAP)
+      call MAP_VarPackOutput(Var, T%MAP%y, ValAry)
+   case (Module_MD)
+      call MD_VarPackOutput(Var, T%MD%y, ValAry)
+   case (Module_ExtInfw)
+      call ExtInfw_VarPackOutput(Var, T%ExtInfw%y, ValAry)
+   case (Module_Orca)
+      call Orca_VarPackOutput(Var, T%Orca%y, ValAry)
+   case (Module_SD)
+      call SD_VarPackOutput(Var, T%SD%y, ValAry)
+   case (Module_SeaSt)
+      call SeaSt_VarPackOutput(Var, T%SeaSt%y, ValAry)
+   case (Module_SrvD)
+      call SrvD_VarPackOutput(Var, T%SrvD%y, ValAry)
+   case default
+      call SetErrStat(ErrID_Fatal, "Unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, "VarPackOutput")
+   end select
+end subroutine
+
+subroutine FAST_InputSolve(iModDst, ModAry, MapAry, iInput, Turbine, ErrStat, ErrMsg, VarMapAry)
+   integer(IntKi), intent(in)                      :: iModDst     !< Destination module index in module data array
+   type(ModDataType), intent(in)                   :: ModAry(:)   !< Module data
+   type(MappingType), intent(inout)                :: MapAry(:)   !< Mesh and variable mappings
+   integer(IntKi), intent(in)                      :: iInput      !< Input index to store data
+   type(FAST_TurbineType), target, intent(inout)   :: Turbine     !< Turbine type
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+   type(VarMapType), optional, intent(in)          :: VarMapAry(:)
+
+   character(*), parameter                         :: RoutineName = 'FAST_InputSolve'
+   integer(IntKi)                                  :: ErrStat2
+   character(ErrMsgLen)                            :: ErrMsg2
+
+   integer(IntKi)                                  :: i
 
    ErrStat = ErrID_None
    ErrMsg = ''
 
-   ! Loop through mappings where the ModData module is the destination
-   do i = 1, size(ModData%iDstMaps)
-      associate (Mapping => Mappings(ModData%iDstMaps(i)))
+   if (present(VarMapAry)) then
 
-         ! Select based on type of mapping
-         select case (Mapping%MapType)
+      ! Loop through mappings
+      do i = 1, size(VarMapAry)
 
-         case (Map_Custom)
+         ! Skip mappings where this isn't the destination module
+         if (iModDst /= VarMapAry(i)%iModDst) cycle
+         call InputSolveMapping(MapAry(VarMapAry(i)%iMapping), ModAry(VarMapAry(i)%iModSrc), ModAry(VarMapAry(i)%iModDst))
+      end do
+   
+   else
 
-            call Custom_InputSolve(Turbine, Mapping, InputIndex, ErrStat2, ErrMsg2)
-            if (Failed()) return
+      ! Loop through mappings
+      do i = 1, size(MapAry)
 
-         case (Map_Variable)
+         ! Skip mappings where this isn't the destination module
+         if (iModDst /= MapAry(i)%iModDst) cycle
+         
+         ! If this is a load mesh mapping, clear the loads
+         if (MapAry(i)%MapType == Map_LoadMesh) call ZeroDstLoadMesh(MapAry(i), ModAry(MapAry(i)%iModDst))
+      end do
 
-         case (Map_MotionMesh)
+      do i = 1, size(MapAry)
 
-            ! Get source and destination meshes
-            call FAST_OutputMeshPointer(Mods(Mapping%iModSrc), Turbine, Mapping%SrcDL, SrcMesh, ErrStat2, ErrMsg2); if (Failed()) return
-            call FAST_InputMeshPointer(Mods(Mapping%iModDst), Turbine, Mapping%DstDL, DstMesh, InputIndex, ErrStat2, ErrMsg2); if (Failed()) return
+         ! Skip mappings where this isn't the destination module
+         if (iModDst /= MapAry(i)%iModDst) cycle
 
-            ! Perform transfer based on type
-            select case (Mapping%XfrType)
-            case (Xfr_Point_to_Point)
-               call Transfer_Point_to_Point(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
-            case (Xfr_Point_to_Line2)
-               call Transfer_Point_to_Line2(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
-            case (Xfr_Line2_to_Point)
-               call Transfer_Line2_to_Point(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
-            case (Xfr_Line2_to_Line2)
-               call Transfer_Line2_to_Line2(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
-            end select
-            if (Failed()) return
-
-         case (Map_LoadMesh)
-
-            ! Get source and destination meshes
-            call FAST_OutputMeshPointer(Mods(Mapping%iModSrc), Turbine, Mapping%SrcDL, SrcMesh, ErrStat2, ErrMsg2); if (Failed()) return
-            call FAST_InputMeshPointer(Mods(Mapping%iModDst), Turbine, Mapping%DstDL, DstMesh, InputIndex, ErrStat2, ErrMsg2); if (Failed()) return
-
-            ! Get source and destination displacement meshes
-            call FAST_InputMeshPointer(Mods(Mapping%iModSrc), Turbine, Mapping%SrcDispDL, SrcDispMesh, InputIndex, ErrStat2, ErrMsg2); if (Failed()) return
-            call FAST_OutputMeshPointer(Mods(Mapping%iModDst), Turbine, Mapping%DstDispDL, DstDispMesh, ErrStat2, ErrMsg2); if (Failed()) return
-
-            ! Perform transfer based on type
-            select case (Mapping%XfrType)
-            case (Xfr_Point_to_Point)
-               call Transfer_Point_to_Point(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2, SrcDispMesh, DstDispMesh)
-            case (Xfr_Point_to_Line2)
-               call Transfer_Point_to_Line2(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2, SrcDispMesh, DstDispMesh)
-            case (Xfr_Line2_to_Point)
-               call Transfer_Line2_to_Point(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2, SrcDispMesh, DstDispMesh)
-            case (Xfr_Line2_to_Line2)
-               call Transfer_Line2_to_Line2(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2, SrcDispMesh, DstDispMesh)
-            end select
-            if (Failed()) return
-
-         end select
-
-      end associate
-   end do
+         call InputSolveMapping(MapAry(i), ModAry(MapAry(i)%iModSrc), ModAry(MapAry(i)%iModDst))
+      end do
+   end if
 
 contains
+
+   subroutine ZeroDstLoadMesh(Mapping, ModDst)
+      type(MappingType), intent(inout) :: Mapping
+      type(ModDataType), intent(in)    :: ModDst
+      type(MeshType), pointer          :: DstMesh
+
+      ! Get pointer to destination load mesh
+      call FAST_InputMeshPointer(ModDst, Turbine, Mapping%DstDL, DstMesh, iInput, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      ! If mesh has force, set it to zero
+      if (DstMesh%fieldmask(MASKID_FORCE)) DstMesh%Force = 0.0_ReKi
+
+      ! If mesh has moment, set it to zero
+      if (DstMesh%fieldmask(MASKID_MOMENT)) DstMesh%Moment = 0.0_ReKi
+
+   end subroutine
+
+   subroutine InputSolveMapping(Mapping, ModSrc, ModDst)
+      type(MappingType), intent(inout) :: Mapping
+      type(ModDataType), intent(in)    :: ModSrc, ModDst
+      type(MeshType), pointer          :: SrcMesh, DstMesh
+      type(MeshType), pointer          :: SrcDispMesh, DstDispMesh
+
+      ! Return if mapping is not ready
+      if (.not. Mapping%Ready) return
+
+      ! Select based on type of mapping
+      select case (Mapping%MapType)
+
+      case (Map_Custom)
+
+         call Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+      case (Map_Variable)
+
+         ! Pack module output value into array
+         call VarPackOutput(ModSrc, Mapping%SrcVar, Mapping%VarData, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+         ! If fewer source values than destination values, copy first value to all values
+         if (Mapping%SrcVar%Num < Mapping%DstVar%Num) then
+            Mapping%VarData = Mapping%VarData(1)
+         end if
+
+         ! Unpack array into module input
+         call VarUnpackInput(ModDst, Mapping%DstVar, Mapping%VarData, Turbine, iInput, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+      case (Map_MotionMesh)
+
+         ! Get source and destination meshes
+         call FAST_OutputMeshPointer(ModSrc, Turbine, Mapping%SrcDL, SrcMesh, ErrStat2, ErrMsg2)
+         if (Failed()) return
+         call FAST_InputMeshPointer(ModDst, Turbine, Mapping%DstDL, DstMesh, iInput, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+         ! Perform transfer based on type
+         call TransferMesh(Mapping%XfrType, SrcMesh, DstMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+         if (Failed()) return
+
+      case (Map_LoadMesh)
+
+         ! Get source and destination meshes
+         call FAST_OutputMeshPointer(ModSrc, Turbine, Mapping%SrcDL, SrcMesh, ErrStat2, ErrMsg2)
+         if (Failed()) return
+         call FAST_InputMeshPointer(ModDst, Turbine, Mapping%DstDL, DstMesh, iInput, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+         ! Get source and destination displacement meshes
+         ! Note: source displacement mesh always references current input index
+         call FAST_InputMeshPointer(ModSrc, Turbine, Mapping%SrcDispDL, SrcDispMesh, INPUT_CURR, ErrStat2, ErrMsg2)
+         if (Failed()) return
+         call FAST_OutputMeshPointer(ModDst, Turbine, Mapping%DstDispDL, DstDispMesh, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+         ! If DstDispMesh is a sibling of DstMesh
+         if (Mapping%DstUsesSibling) then
+
+            ! Transfer the load mesh
+            ! call TransferMesh(Mapping%XfrType, SrcMesh, DstMesh, Mapping%MeshMap, SrcDispMesh, DstDispMesh, ErrStat2, ErrMsg2)
+            ! if (Failed()) return
+
+            ! Transfer the load mesh to the temporary mesh
+            call TransferMesh(Mapping%XfrType, SrcMesh, Mapping%TmpLoadMesh, Mapping%MeshMap, SrcDispMesh, DstDispMesh, ErrStat2, ErrMsg2)
+            if (Failed()) return
+
+         else
+
+            ! Transfer destination displacement mesh to temporary motion mesh (cousin of destination load mesh)
+            call TransferMesh(Mapping%XfrTypeAux, DstDispMesh, Mapping%TmpMotionMesh, Mapping%MeshMapAux, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+            if (Failed()) return
+
+            ! Transfer the load mesh using the temporary motion mesh as the destination displacement mesh
+            ! call TransferMesh(Mapping%XfrType, SrcMesh, DstMesh, Mapping%MeshMap, SrcDispMesh, Mapping%TmpMotionMesh, ErrStat2, ErrMsg2)
+            ! if (Failed()) return
+            
+            ! Transfer to temporary load mesh using the temporary motion mesh as the destination displacement mesh
+            call TransferMesh(Mapping%XfrType, SrcMesh, Mapping%TmpLoadMesh, Mapping%MeshMap, SrcDispMesh, Mapping%TmpMotionMesh, ErrStat2, ErrMsg2)
+            if (Failed()) return
+
+         end if
+
+         ! Add loads from temporary mesh to destination mesh
+         if (DstMesh%fieldmask(MASKID_FORCE)) DstMesh%Force = DstMesh%Force + Mapping%TmpLoadMesh%Force
+         if (DstMesh%fieldmask(MASKID_MOMENT)) DstMesh%Moment = DstMesh%Moment + Mapping%TmpLoadMesh%Moment
+
+      end select
+
+   end subroutine
+
    logical function Failed()
       Failed = ErrStat2 /= ErrID_None
       if (Failed) call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, &
-                                  RoutineName//':Module='//trim(ModData%Abbr)//', Instance='//Num2LStr(ModData%Ins))
+                                  RoutineName//':Module='//trim(ModAry(iModDst)%Abbr)// &
+                                  ', Instance='//Num2LStr(ModAry(iModDst)%Ins))
    end function
 end subroutine
 
-subroutine Custom_InputSolve(T, Mapping, InputIndex, ErrStat, ErrMsg)
-   type(FAST_TurbineType), target, intent(inout)   :: T     !< Turbine type
-   type(MappingType), intent(in)                   :: Mapping
-   integer(IntKi), intent(in)                      :: InputIndex
-   integer(IntKi), intent(out)                     :: ErrStat
-   character(*), intent(out)                       :: ErrMsg
+! TransferMesh calls the specific transfer function based on
+! transfer type (Point_to_Point, Point_to_Line2, etc.)
+subroutine TransferMesh(Typ, Src, Dst, MeshMap, SrcDisp, DstDisp, ErrStat, ErrMsg)
+   integer(IntKi), intent(in)             :: Typ
+   type(MeshType), intent(in)             :: Src
+   type(MeshType), intent(inout)          :: Dst
+   type(MeshMapType), intent(inout)       :: MeshMap
+   type(MeshType), optional, intent(in)   :: SrcDisp, DstDisp
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+   select case (Typ)
+   case (Xfr_Point_to_Point)
+      call Transfer_Point_to_Point(Src, Dst, MeshMap, ErrStat, ErrMsg, SrcDisp, DstDisp)
+   case (Xfr_Point_to_Line2)
+      call Transfer_Point_to_Line2(Src, Dst, MeshMap, ErrStat, ErrMsg, SrcDisp, DstDisp)
+   case (Xfr_Line2_to_Point)
+      call Transfer_Line2_to_Point(Src, Dst, MeshMap, ErrStat, ErrMsg, SrcDisp, DstDisp)
+   case (Xfr_Line2_to_Line2)
+      call Transfer_Line2_to_Line2(Src, Dst, MeshMap, ErrStat, ErrMsg, SrcDisp, DstDisp)
+   case default
+      ErrStat = ErrID_Fatal
+      ErrMsg = "TransferMesh: unknown transfer type: "//Num2LStr(Typ)
+   end select
+end subroutine
+
+subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg)
+   type(MappingType), intent(in)          :: Mapping
+   type(ModDataType), intent(in)          :: ModSrc, ModDst
+   integer(IntKi), intent(in)             :: iInput
+   type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
 
    character(*), parameter                :: RoutineName = 'Custom_InputSolve'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    integer(IntKi)                         :: i, j, k
    real(ReKi)                             :: z, u, v, mean_vel
-   type(AD_InputType), pointer            :: u_AD
-   type(ED_InputType), pointer            :: u_ED
-   type(ExtLd_InputType), pointer         :: u_ExtLd
-   type(InflowWind_InputType), pointer    :: u_IfW
-   type(MD_InputType), pointer            :: u_MD
-   type(SD_InputType), pointer            :: u_SD
-   type(SrvD_InputType), pointer          :: u_SrvD
 
    ErrStat = ErrID_None
    ErrMsg = ''
-
-   select case (Mapping%DstModID)
-
-   case (Module_AD)
-      if (InputIndex > 0) then
-         u_AD => T%AD%Input(InputIndex)
-      else
-         u_AD => T%AD%u
-      end if
-   case (Module_ED)
-      if (InputIndex > 0) then
-         u_ED => T%ED%Input(InputIndex)
-      else
-         u_ED => T%ED%u
-      end if
-   case (Module_ExtLd)
-      u_ExtLd => T%ExtLd%u
-   case (Module_IfW)
-      if (InputIndex > 0) then
-         u_IfW => T%IfW%Input(InputIndex)
-      else
-         u_IfW => T%IfW%u
-      end if
-   case (Module_SD)
-      if (InputIndex > 0) then
-         u_SD => T%SD%Input(InputIndex)
-      else
-         u_SD => T%SD%u
-      end if
-   case (Module_SrvD)
-      if (InputIndex > 0) then
-         u_SrvD => T%SrvD%Input(InputIndex)
-      else
-         u_SrvD => T%SrvD%u
-      end if
-   end select
 
    ! Select based on mapping description
    select case (Mapping%Desc)
@@ -2541,8 +2614,8 @@ subroutine Custom_InputSolve(T, Mapping, InputIndex, ErrStat, ErrMsg)
       ! This is passed to AD15 to be interpolated with the airfoil table userprop column
       ! (might be used for airfoil flap angles for example)
       ! Must be same units as given in airfoil (no unit conversions handled in code)ß
-      do i = 1, size(T%AD%u%rotors(1)%UserProp, dim=2)   ! Blade
-         u_AD%rotors(1)%UserProp(:, i) = T%SrvD%y%BlAirfoilCom(i)
+      do i = 1, size(T%AD%Input(iInput)%rotors(ModDst%Ins)%UserProp, dim=2)   ! Blade
+         T%AD%Input(iInput)%rotors(ModDst%Ins)%UserProp(:, i) = T%SrvD%y%BlAirfoilCom(i)
       end do
 
 !-------------------------------------------------------------------------------
@@ -2551,8 +2624,8 @@ subroutine Custom_InputSolve(T, Mapping, InputIndex, ErrStat, ErrMsg)
 
    case (Custom_ED_to_ExtLd)
 
-      u_ExtLd%az = T%ED%y%LSSTipPxa
-      u_ExtLd%DX_u%bldPitch(:) = T%ED%y%BlPitch
+      T%ExtLd%u%az = T%ED%y%LSSTipPxa
+      T%ExtLd%u%DX_u%bldPitch(:) = T%ED%y%BlPitch
 
 !-------------------------------------------------------------------------------
 ! InflowWind Inputs
@@ -2561,19 +2634,19 @@ subroutine Custom_InputSolve(T, Mapping, InputIndex, ErrStat, ErrMsg)
    case (Custom_ED_to_IfW)
 
       ! This section should be refactored so that IfW uses a hub point mesh
-      u_IfW%HubPosition = T%ED%y%HubPtMotion%Position(:, 1) + &
-                          T%ED%y%HubPtMotion%TranslationDisp(:, 1)
-      u_IfW%HubOrientation = T%ED%y%HubPtMotion%Orientation(:, :, 1)
+      T%IfW%Input(iInput)%HubPosition = T%ED%y%HubPtMotion%Position(:, 1) + &
+                                        T%ED%y%HubPtMotion%TranslationDisp(:, 1)
+      T%IfW%Input(iInput)%HubOrientation = T%ED%y%HubPtMotion%Orientation(:, :, 1)
 
       ! Set Lidar position directly from hub motion mesh
-      u_IfW%lidar%HubDisplacementX = T%ED%y%HubPtMotion%TranslationDisp(1, 1)
-      u_IfW%lidar%HubDisplacementY = T%ED%y%HubPtMotion%TranslationDisp(2, 1)
-      u_IfW%lidar%HubDisplacementZ = T%ED%y%HubPtMotion%TranslationDisp(3, 1)
+      T%IfW%Input(iInput)%lidar%HubDisplacementX = T%ED%y%HubPtMotion%TranslationDisp(1, 1)
+      T%IfW%Input(iInput)%lidar%HubDisplacementY = T%ED%y%HubPtMotion%TranslationDisp(2, 1)
+      T%IfW%Input(iInput)%lidar%HubDisplacementZ = T%ED%y%HubPtMotion%TranslationDisp(3, 1)
 
    case (Custom_SrvD_to_IfW)
 
       ! Set hub position so ServoDyn can get hub wind speed
-      u_IfW%PositionXYZ(:, 1) = T%ED%y%HubPtMotion%Position(:, 1)
+      T%IfW%Input(iInput)%PositionXYZ(:, 1) = T%ED%y%HubPtMotion%Position(:, 1)
 
 !-------------------------------------------------------------------------------
 ! MoorDyn Inputs
@@ -2581,12 +2654,12 @@ subroutine Custom_InputSolve(T, Mapping, InputIndex, ErrStat, ErrMsg)
 
    case (Custom_SrvD_to_MD)
 
-      if (allocated(u_MD%DeltaL) .and. allocated(T%SrvD%y%CableDeltaL)) then
-         u_MD%DeltaL = T%SrvD%y%CableDeltaL      ! these should be sized identically during init
+      if (allocated(T%MD%Input(iInput)%DeltaL) .and. allocated(T%SrvD%y%CableDeltaL)) then
+         T%MD%Input(iInput)%DeltaL = T%SrvD%y%CableDeltaL      ! these should be sized identically during init
       end if
 
-      if (allocated(u_MD%DeltaLdot) .and. allocated(T%SrvD%y%CableDeltaLdot)) then
-         u_MD%DeltaLdot = T%SrvD%y%CableDeltaLdot   ! these should be sized identically during init
+      if (allocated(T%MD%Input(iInput)%DeltaLdot) .and. allocated(T%SrvD%y%CableDeltaLdot)) then
+         T%MD%Input(iInput)%DeltaLdot = T%SrvD%y%CableDeltaLdot   ! these should be sized identically during init
       end if
 
 !-------------------------------------------------------------------------------
@@ -2595,8 +2668,8 @@ subroutine Custom_InputSolve(T, Mapping, InputIndex, ErrStat, ErrMsg)
 
    case (Custom_SrvD_to_SD)
 
-      if (allocated(u_SD%CableDeltaL) .and. allocated(T%SrvD%y%CableDeltaL)) then
-         u_SD%CableDeltaL = T%SrvD%y%CableDeltaL   ! these should be sized identically during init
+      if (allocated(T%SD%Input(iInput)%CableDeltaL) .and. allocated(T%SrvD%y%CableDeltaL)) then
+         T%SD%Input(iInput)%CableDeltaL = T%SrvD%y%CableDeltaL   ! these should be sized identically during init
       end if
 
 !-------------------------------------------------------------------------------
@@ -2605,70 +2678,67 @@ subroutine Custom_InputSolve(T, Mapping, InputIndex, ErrStat, ErrMsg)
 
    case (Custom_BD_to_SrvD)
 
-      u_SrvD%RootMxc(Mapping%SrcIns) = T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y%BlPitch(Mapping%SrcIns)) + &
-                                       T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y%BlPitch(Mapping%SrcIns))
-      u_SrvD%RootMyc(Mapping%SrcIns) = -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y%BlPitch(Mapping%SrcIns)) + &
-                                       T%BD%y(Mapping%SrcIns)%RootMyr*cos(T%ED%y%BlPitch(Mapping%SrcIns))
+      T%SrvD%Input(iInput)%RootMxc(Mapping%SrcIns) = T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y%BlPitch(Mapping%SrcIns)) + &
+                                                     T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y%BlPitch(Mapping%SrcIns))
+      T%SrvD%Input(iInput)%RootMyc(Mapping%SrcIns) = -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y%BlPitch(Mapping%SrcIns)) + &
+                                                     T%BD%y(Mapping%SrcIns)%RootMyr*cos(T%ED%y%BlPitch(Mapping%SrcIns))
 
    case (Custom_ED_to_SrvD)
 
       ! Blade root moment if not using BeamDyn
       if (T%p_FAST%CompElast /= Module_BD) then
-         u_SrvD%RootMxc = T%ED%y%RootMxc ! fixed-size arrays: always size 3
-         u_SrvD%RootMyc = T%ED%y%RootMyc ! fixed-size arrays: always size 3
+         T%SrvD%Input(iInput)%RootMxc = T%ED%y%RootMxc ! fixed-size arrays: always size 3
+         T%SrvD%Input(iInput)%RootMyc = T%ED%y%RootMyc ! fixed-size arrays: always size 3
       end if
 
-      u_SrvD%YawAngle = T%ED%y%YawAngle ! nacelle yaw plus platform yaw
-      u_SrvD%YawErr = u_SrvD%WindDir - u_SrvD%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
+      T%SrvD%Input(iInput)%YawAngle = T%ED%y%YawAngle ! nacelle yaw plus platform yaw
+      T%SrvD%Input(iInput)%YawErr = T%SrvD%Input(iInput)%WindDir - T%SrvD%Input(iInput)%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
 
-      u_SrvD%Yaw = T%ED%y%Yaw  ! nacelle yaw
-      u_SrvD%YawRate = T%ED%y%YawRate
-      u_SrvD%BlPitch = T%ED%y%BlPitch
-      u_SrvD%LSS_Spd = T%ED%y%LSS_Spd
-      u_SrvD%HSS_Spd = T%ED%y%HSS_Spd
-      u_SrvD%RotSpeed = T%ED%y%RotSpeed
+      T%SrvD%Input(iInput)%BlPitch = T%ED%y%BlPitch
+      T%SrvD%Input(iInput)%LSS_Spd = T%ED%y%LSS_Spd
+      T%SrvD%Input(iInput)%RotSpeed = T%ED%y%RotSpeed
 
-      u_SrvD%YawBrTAxp = T%ED%y%YawBrTAxp
-      u_SrvD%YawBrTAyp = T%ED%y%YawBrTAyp
-      u_SrvD%LSSTipPxa = T%ED%y%LSSTipPxa
+      T%SrvD%Input(iInput)%YawBrTAxp = T%ED%y%YawBrTAxp
+      T%SrvD%Input(iInput)%YawBrTAyp = T%ED%y%YawBrTAyp
+      T%SrvD%Input(iInput)%LSSTipPxa = T%ED%y%LSSTipPxa
 
-      u_SrvD%LSSTipMxa = T%ED%y%LSSTipMxa
-      u_SrvD%LSSTipMya = T%ED%y%LSSTipMya
-      u_SrvD%LSSTipMza = T%ED%y%LSSTipMza
-      u_SrvD%LSSTipMys = T%ED%y%LSSTipMys
-      u_SrvD%LSSTipMzs = T%ED%y%LSSTipMzs
+      T%SrvD%Input(iInput)%LSSTipMxa = T%ED%y%LSSTipMxa
+      T%SrvD%Input(iInput)%LSSTipMya = T%ED%y%LSSTipMya
+      T%SrvD%Input(iInput)%LSSTipMza = T%ED%y%LSSTipMza
+      T%SrvD%Input(iInput)%LSSTipMys = T%ED%y%LSSTipMys
+      T%SrvD%Input(iInput)%LSSTipMzs = T%ED%y%LSSTipMzs
 
-      u_SrvD%YawBrMyn = T%ED%y%YawBrMyn
-      u_SrvD%YawBrMzn = T%ED%y%YawBrMzn
-      u_SrvD%NcIMURAxs = T%ED%y%NcIMURAxs
-      u_SrvD%NcIMURAys = T%ED%y%NcIMURAys
-      u_SrvD%NcIMURAzs = T%ED%y%NcIMURAzs
+      T%SrvD%Input(iInput)%YawBrMyn = T%ED%y%YawBrMyn
+      T%SrvD%Input(iInput)%YawBrMzn = T%ED%y%YawBrMzn
+      T%SrvD%Input(iInput)%NcIMURAxs = T%ED%y%NcIMURAxs
+      T%SrvD%Input(iInput)%NcIMURAys = T%ED%y%NcIMURAys
+      T%SrvD%Input(iInput)%NcIMURAzs = T%ED%y%NcIMURAzs
 
-      u_SrvD%RotPwr = T%ED%y%RotPwr
+      T%SrvD%Input(iInput)%RotPwr = T%ED%y%RotPwr
 
-      u_SrvD%LSShftFxa = T%ED%y%LSShftFxa
-      u_SrvD%LSShftFys = T%ED%y%LSShftFys
-      u_SrvD%LSShftFzs = T%ED%y%LSShftFzs
+      T%SrvD%Input(iInput)%LSShftFxa = T%ED%y%LSShftFxa
+      T%SrvD%Input(iInput)%LSShftFys = T%ED%y%LSShftFys
+      T%SrvD%Input(iInput)%LSShftFzs = T%ED%y%LSShftFzs
 
    case (Custom_IfW_to_SrvD)
 
-      u_SrvD%WindDir = atan2(T%IfW%y%VelocityUVW(2, 1), T%IfW%y%VelocityUVW(1, 1))
-      u_SrvD%HorWindV = sqrt(T%IfW%y%VelocityUVW(1, 1)**2 + T%IfW%y%VelocityUVW(2, 1)**2)
-      if (allocated(T%IfW%y%lidar%LidSpeed)) u_SrvD%LidSpeed = T%IfW%y%lidar%LidSpeed
-      if (allocated(T%IfW%y%lidar%MsrPositionsX)) u_SrvD%MsrPositionsX = T%IfW%y%lidar%MsrPositionsX
-      if (allocated(T%IfW%y%lidar%MsrPositionsY)) u_SrvD%MsrPositionsY = T%IfW%y%lidar%MsrPositionsY
-      if (allocated(T%IfW%y%lidar%MsrPositionsZ)) u_SrvD%MsrPositionsZ = T%IfW%y%lidar%MsrPositionsZ
-      u_SrvD%YawErr = u_SrvD%WindDir - u_SrvD%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
+      T%SrvD%Input(iInput)%WindDir = atan2(T%IfW%y%VelocityUVW(2, 1), T%IfW%y%VelocityUVW(1, 1))
+      T%SrvD%Input(iInput)%HorWindV = sqrt(T%IfW%y%VelocityUVW(1, 1)**2 + T%IfW%y%VelocityUVW(2, 1)**2)
+      if (allocated(T%IfW%y%lidar%LidSpeed)) T%SrvD%Input(iInput)%LidSpeed = T%IfW%y%lidar%LidSpeed
+      if (allocated(T%IfW%y%lidar%MsrPositionsX)) T%SrvD%Input(iInput)%MsrPositionsX = T%IfW%y%lidar%MsrPositionsX
+      if (allocated(T%IfW%y%lidar%MsrPositionsY)) T%SrvD%Input(iInput)%MsrPositionsY = T%IfW%y%lidar%MsrPositionsY
+      if (allocated(T%IfW%y%lidar%MsrPositionsZ)) T%SrvD%Input(iInput)%MsrPositionsZ = T%IfW%y%lidar%MsrPositionsZ
+      T%SrvD%Input(iInput)%YawErr = T%SrvD%Input(iInput)%WindDir - T%SrvD%Input(iInput)%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
 
    case (Custom_ExtInfw_to_SrvD)
 
-      u_SrvD%WindDir = ATAN2(T%ExtInfw%y%v(1), T%ExtInfw%y%u(1))
-      u_SrvD%HorWindV = SQRT(T%ExtInfw%y%u(1)**2 + T%ExtInfw%y%v(1)**2)
-      if (allocated(u_SrvD%LidSpeed)) u_SrvD%LidSpeed = 0.0
-      if (allocated(u_SrvD%MsrPositionsX)) u_SrvD%MsrPositionsX = 0.0
-      if (allocated(u_SrvD%MsrPositionsY)) u_SrvD%MsrPositionsY = 0.0
-      if (allocated(u_SrvD%MsrPositionsz)) u_SrvD%MsrPositionsz = 0.0
-      u_SrvD%YawErr = u_SrvD%WindDir - u_SrvD%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
+      T%SrvD%Input(iInput)%WindDir = ATAN2(T%ExtInfw%y%v(1), T%ExtInfw%y%u(1))
+      T%SrvD%Input(iInput)%HorWindV = SQRT(T%ExtInfw%y%u(1)**2 + T%ExtInfw%y%v(1)**2)
+      if (allocated(T%SrvD%Input(iInput)%LidSpeed)) T%SrvD%Input(iInput)%LidSpeed = 0.0
+      if (allocated(T%SrvD%Input(iInput)%MsrPositionsX)) T%SrvD%Input(iInput)%MsrPositionsX = 0.0
+      if (allocated(T%SrvD%Input(iInput)%MsrPositionsY)) T%SrvD%Input(iInput)%MsrPositionsY = 0.0
+      if (allocated(T%SrvD%Input(iInput)%MsrPositionsz)) T%SrvD%Input(iInput)%MsrPositionsz = 0.0
+      T%SrvD%Input(iInput)%YawErr = T%SrvD%Input(iInput)%WindDir - T%SrvD%Input(iInput)%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
 
    case (Custom_ExtLd_to_SrvD)
 
@@ -2677,13 +2747,13 @@ subroutine Custom_InputSolve(T, Mapping, InputIndex, ErrStat, ErrMsg)
       mean_vel = T%ExtLd%p%vel_mean*((z/T%ExtLd%p%z_ref)**T%ExtLd%p%shear_exp)
       u = -mean_vel*sin(T%ExtLd%p%wind_dir*pi/180.0)
       v = -mean_vel*cos(T%ExtLd%p%wind_dir*pi/180.0)
-      u_SrvD%HorWindV = mean_vel
-      u_SrvD%WindDir = atan2(v, u)
-      if (allocated(u_SrvD%LidSpeed)) u_SrvD%LidSpeed = 0.0
-      if (allocated(u_SrvD%MsrPositionsX)) u_SrvD%MsrPositionsX = 0.0
-      if (allocated(u_SrvD%MsrPositionsY)) u_SrvD%MsrPositionsY = 0.0
-      if (allocated(u_SrvD%MsrPositionsz)) u_SrvD%MsrPositionsz = 0.0
-      u_SrvD%YawErr = u_SrvD%WindDir - u_SrvD%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
+      T%SrvD%Input(iInput)%HorWindV = mean_vel
+      T%SrvD%Input(iInput)%WindDir = atan2(v, u)
+      if (allocated(T%SrvD%Input(iInput)%LidSpeed)) T%SrvD%Input(iInput)%LidSpeed = 0.0
+      if (allocated(T%SrvD%Input(iInput)%MsrPositionsX)) T%SrvD%Input(iInput)%MsrPositionsX = 0.0
+      if (allocated(T%SrvD%Input(iInput)%MsrPositionsY)) T%SrvD%Input(iInput)%MsrPositionsY = 0.0
+      if (allocated(T%SrvD%Input(iInput)%MsrPositionsz)) T%SrvD%Input(iInput)%MsrPositionsz = 0.0
+      T%SrvD%Input(iInput)%YawErr = T%SrvD%Input(iInput)%WindDir - T%SrvD%Input(iInput)%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
 
 !-------------------------------------------------------------------------------
 ! Unknown Mapping

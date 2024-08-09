@@ -248,7 +248,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       ! Module Variables
       !............................................................................................
 
-   call BD_InitVars(u, p, x, y, MiscVar, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2)
+   ! call BD_InitVars(u, p, x, y, MiscVar, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2)
+   call BD_InitVars(u, p, x, y, MiscVar, InitOut, .true., ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       !............................................................................................
@@ -6038,7 +6039,7 @@ SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
    
    ! Make a copy of the inputs to perturb
    call BD_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call BD_PackInputAry(Vars, u, m%Jac%u)
+   call BD_VarsPackInput(Vars, u, m%Jac%u)
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
@@ -6068,15 +6069,15 @@ SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call BD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call BD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput); if (Failed()) return
-            call BD_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call BD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call BD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call BD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput); if (Failed()) return
-            call BD_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call BD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Get partial derivative via central difference and store in full linearization array
             call MV_ComputeCentralDiff(Vars%y, Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,col))
@@ -6104,15 +6105,15 @@ SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call BD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call BD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_pos)
+            call BD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call BD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call BD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call BD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_neg)
+            call BD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
 
             ! Get partial derivative via central difference and store in full linearization array
             dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
@@ -6189,7 +6190,7 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
 
    ! Copy state values
    call BD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call BD_PackContStateAry(Vars, x, m%Jac%x)
+   call BD_VarsPackContState(Vars, x, m%Jac%x)
    
    ! If rotate states is enabled
    if (p%RotStates) then
@@ -6239,15 +6240,15 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call BD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput); if (Failed()) return
-            call BD_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call BD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call BD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2, NeedWriteOutput); if (Failed()) return
-            call BD_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call BD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Get partial derivative via central difference and store in full linearization array
             call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
@@ -6284,15 +6285,15 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call BD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackContStateDerivAry(Vars, m%dxdt_lin, m%Jac%x_pos)
+            call BD_VarsPackContStateDeriv(Vars, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call BD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call BD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call BD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call BD_PackContStateDerivAry(Vars, m%dxdt_lin, m%Jac%x_neg)
+            call BD_VarsPackContStateDeriv(Vars, m%dxdt_lin, m%Jac%x_neg)
 
             ! Get partial derivative via central difference and store in full linearization array
             dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)

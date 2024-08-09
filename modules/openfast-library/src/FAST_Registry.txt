@@ -394,9 +394,10 @@ typedef	^	FAST_OutputFileType	IntKi	VTK_LastWaveIndx	-	-	-	"last index into wave
 typedef	^	FAST_OutputFileType	FAST_LinFileType	Lin	-	-	-	"linearization data for output"
 typedef	^	FAST_OutputFileType	IntKi	ActualChanLen	-	-	-	"width of the column headers output in the text and/or binary file"	-
 typedef   ^   FAST_OutputFileType   FAST_LinStateSave   op   -   -   -   "operating points of states and inputs for VTK output of mode shapes"
+typedef	^	FAST_OutputFileType	IntKi	DriverWriteOutputNum	-	0	-	"Number of values in driver write output"
 typedef	^	FAST_OutputFileType	ReKi	DriverWriteOutput	{6}	-	-	"pitch and tsr for current aero map case, plus error, number of iterations, wind speed, rotor speed"
-#typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputHdr	{:}	-	-	"headers of data output from the driver"
-#typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputUnit	{:}	-	-	"units of data output from the driver"
+typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputHdr	{:}	-	-	"headers of data output from the driver"
+typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputUnt	{:}	-	-	"units of data output from the driver"
 
 
 # ..... IceDyn data .......................................................................................................

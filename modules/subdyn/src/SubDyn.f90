@@ -445,7 +445,7 @@ subroutine SD_InitVars(Vars, Init, u, p, x, y, m, InitOut, Linearize, ErrStat, E
 
    call MV_AddVar(Vars%x, "Modes", FieldScalar, DatLoc(SD_x_qmdot), &
                   Num=p%nDOFM, &
-                  DerivOrder=0, &
+                  DerivOrder=1, &
                   Perturb=2.0_ReKi*D2R_D, &
                   LinNames=[('First time derivative of Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -/s', i=1, p%nDOFM)])
 
@@ -2070,7 +2070,7 @@ SUBROUTINE SD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
    ! Make a copy of the inputs to perturb
    call SD_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if(Failed()) return
-   call SD_PackInputAry(Vars, u, m%Jac%u)
+   call SD_VarsPackInput(Vars, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
@@ -2087,15 +2087,15 @@ SUBROUTINE SD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
                        
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call SD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call SD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call SD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call SD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call SD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call SD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call SD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call SD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Calculate column index
             col = Vars%u(i)%iLoc(1) + j - 1
@@ -2121,15 +2121,15 @@ SUBROUTINE SD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
                        
             ! Calculate positive perturbation and resulting continuous state derivatives
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call SD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call SD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call SD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_pos)
+            call SD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
 
             ! Calculate negative perturbation and resulting continuous state derivatives
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call SD_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call SD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call SD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_neg)
+            call SD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
 
             ! Calculate column index
             col = Vars%u(i)%iLoc(1) + j - 1
@@ -2189,7 +2189,7 @@ SUBROUTINE SD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
    
    ! make a copy of the continuous states to perturb NOTE: MESH_NEWCOPY
    call SD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if(Failed()) return
-   call SD_PackContStateAry(Vars, x, m%Jac%x)
+   call SD_VarsPackContState(Vars, x, m%Jac%x)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
@@ -2207,15 +2207,15 @@ SUBROUTINE SD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
                         
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call SD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call SD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call SD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call SD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call SD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call SD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call SD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call SD_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call SD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Calculate column index
             col = Vars%x(i)%iLoc(1) + j - 1
@@ -2251,15 +2251,15 @@ SUBROUTINE SD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
 
                ! Calculate positive perturbation
                call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-               call SD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+               call SD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
                call SD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-               call SD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_pos)
+               call SD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
 
                ! Calculate negative perturbation
                call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-               call SD_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+               call SD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
                call SD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
-               call SD_PackContStateAry(Vars, m%dxdt_lin, m%Jac%x_neg)
+               call SD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
 
                ! Calculate column index
                col = Vars%x(i)%iLoc(1) + j - 1

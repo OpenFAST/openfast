@@ -2334,36 +2334,50 @@ function StC_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-subroutine StC_PackContStateAry(Vars, x, ValAry)
+subroutine StC_VarsPackContState(Vars, x, ValAry)
    type(StC_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (StC_x_StC_x)
-            call MV_Pack(V, x%StC_x(V%iAry(1):V%iAry(2),V%jAry), ValAry)        ! Rank 2 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call StC_VarPackContState(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine StC_UnpackContStateAry(Vars, ValAry, x)
+subroutine StC_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_x_StC_x)
+         VarVals = x%StC_x(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackContState(Vars, ValAry, x)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(StC_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (StC_x_StC_x)
-            call MV_Unpack(V, ValAry, x%StC_x(V%iAry(1):V%iAry(2),V%jAry))      ! Rank 2 Array
-         end select
-      end associate
+      call StC_VarUnpackContState(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+subroutine StC_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_x_StC_x)
+         x%StC_x(V%iLB:V%iUB, V%j) = VarVals                                  ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 function StC_ContinuousStateFieldName(DL) result(Name)
@@ -2377,53 +2391,74 @@ function StC_ContinuousStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine StC_PackContStateDerivAry(Vars, x, ValAry)
+subroutine StC_VarsPackContStateDeriv(Vars, x, ValAry)
    type(StC_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (StC_x_StC_x)
-            call MV_Pack(V, x%StC_x(V%iAry(1):V%iAry(2),V%jAry), ValAry)        ! Rank 2 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call StC_VarPackContStateDeriv(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine StC_PackConstrStateAry(Vars, z, ValAry)
+subroutine StC_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_x_StC_x)
+         VarVals = x%StC_x(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsPackConstrState(Vars, z, ValAry)
    type(StC_ConstraintStateType), intent(in) :: z
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (StC_z_DummyConstrState)
-            call MV_Pack(V, z%DummyConstrState, ValAry)                         ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call StC_VarPackConstrState(Vars%z(i), z, ValAry)
    end do
 end subroutine
 
-subroutine StC_UnpackConstrStateAry(Vars, ValAry, z)
+subroutine StC_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_z_DummyConstrState)
+         VarVals(1) = z%DummyConstrState                                      ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackConstrState(Vars, ValAry, z)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(StC_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (StC_z_DummyConstrState)
-            call MV_Unpack(V, ValAry, z%DummyConstrState)                       ! Scalar
-         end select
-      end associate
+      call StC_VarUnpackConstrState(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+subroutine StC_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_z_DummyConstrState)
+         z%DummyConstrState = VarVals(1)                                      ! Scalar
+      end select
+   end associate
 end subroutine
 
 function StC_ConstraintStateFieldName(DL) result(Name)
@@ -2437,52 +2472,66 @@ function StC_ConstraintStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine StC_PackInputAry(Vars, u, ValAry)
+subroutine StC_VarsPackInput(Vars, u, ValAry)
    type(StC_InputType), intent(in)         :: u
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (StC_u_Mesh)
-            call MV_Pack(V, u%Mesh(DL%i1), ValAry)                              ! Mesh
-         case (StC_u_CmdStiff)
-            call MV_Pack(V, u%CmdStiff(V%iAry(1):V%iAry(2),V%jAry), ValAry)     ! Rank 2 Array
-         case (StC_u_CmdDamp)
-            call MV_Pack(V, u%CmdDamp(V%iAry(1):V%iAry(2),V%jAry), ValAry)      ! Rank 2 Array
-         case (StC_u_CmdBrake)
-            call MV_Pack(V, u%CmdBrake(V%iAry(1):V%iAry(2),V%jAry), ValAry)     ! Rank 2 Array
-         case (StC_u_CmdForce)
-            call MV_Pack(V, u%CmdForce(V%iAry(1):V%iAry(2),V%jAry), ValAry)     ! Rank 2 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call StC_VarPackInput(Vars%u(i), u, ValAry)
    end do
 end subroutine
 
-subroutine StC_UnpackInputAry(Vars, ValAry, u)
+subroutine StC_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_InputType), intent(in)         :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_u_Mesh)
+         call MV_PackMesh(V, u%Mesh(DL%i1), ValAry)                           ! Mesh
+      case (StC_u_CmdStiff)
+         VarVals = u%CmdStiff(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_u_CmdDamp)
+         VarVals = u%CmdDamp(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case (StC_u_CmdBrake)
+         VarVals = u%CmdBrake(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_u_CmdForce)
+         VarVals = u%CmdForce(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackInput(Vars, ValAry, u)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(StC_InputType), intent(inout)      :: u
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (StC_u_Mesh)
-            call MV_Unpack(V, ValAry, u%Mesh(DL%i1))                            ! Mesh
-         case (StC_u_CmdStiff)
-            call MV_Unpack(V, ValAry, u%CmdStiff(V%iAry(1):V%iAry(2),V%jAry))   ! Rank 2 Array
-         case (StC_u_CmdDamp)
-            call MV_Unpack(V, ValAry, u%CmdDamp(V%iAry(1):V%iAry(2),V%jAry))    ! Rank 2 Array
-         case (StC_u_CmdBrake)
-            call MV_Unpack(V, ValAry, u%CmdBrake(V%iAry(1):V%iAry(2),V%jAry))   ! Rank 2 Array
-         case (StC_u_CmdForce)
-            call MV_Unpack(V, ValAry, u%CmdForce(V%iAry(1):V%iAry(2),V%jAry))   ! Rank 2 Array
-         end select
-      end associate
+      call StC_VarUnpackInput(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+subroutine StC_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_InputType), intent(inout)      :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_u_Mesh)
+         call MV_UnpackMesh(V, ValAry, u%Mesh(DL%i1))                         ! Mesh
+      case (StC_u_CmdStiff)
+         u%CmdStiff(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_u_CmdDamp)
+         u%CmdDamp(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      case (StC_u_CmdBrake)
+         u%CmdBrake(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_u_CmdForce)
+         u%CmdForce(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 function StC_InputFieldName(DL) result(Name)
@@ -2504,44 +2553,58 @@ function StC_InputFieldName(DL) result(Name)
    end select
 end function
 
-subroutine StC_PackOutputAry(Vars, y, ValAry)
+subroutine StC_VarsPackOutput(Vars, y, ValAry)
    type(StC_OutputType), intent(in)        :: y
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (StC_y_Mesh)
-            call MV_Pack(V, y%Mesh(DL%i1), ValAry)                              ! Mesh
-         case (StC_y_MeasDisp)
-            call MV_Pack(V, y%MeasDisp(V%iAry(1):V%iAry(2),V%jAry), ValAry)     ! Rank 2 Array
-         case (StC_y_MeasVel)
-            call MV_Pack(V, y%MeasVel(V%iAry(1):V%iAry(2),V%jAry), ValAry)      ! Rank 2 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call StC_VarPackOutput(Vars%y(i), y, ValAry)
    end do
 end subroutine
 
-subroutine StC_UnpackOutputAry(Vars, ValAry, y)
+subroutine StC_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_OutputType), intent(in)        :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_y_Mesh)
+         call MV_PackMesh(V, y%Mesh(DL%i1), ValAry)                           ! Mesh
+      case (StC_y_MeasDisp)
+         VarVals = y%MeasDisp(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_y_MeasVel)
+         VarVals = y%MeasVel(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackOutput(Vars, ValAry, y)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(StC_OutputType), intent(inout)     :: y
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (StC_y_Mesh)
-            call MV_Unpack(V, ValAry, y%Mesh(DL%i1))                            ! Mesh
-         case (StC_y_MeasDisp)
-            call MV_Unpack(V, ValAry, y%MeasDisp(V%iAry(1):V%iAry(2),V%jAry))   ! Rank 2 Array
-         case (StC_y_MeasVel)
-            call MV_Unpack(V, ValAry, y%MeasVel(V%iAry(1):V%iAry(2),V%jAry))    ! Rank 2 Array
-         end select
-      end associate
+      call StC_VarUnpackOutput(Vars%y(i), ValAry, y)
    end do
+end subroutine
+
+subroutine StC_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_OutputType), intent(inout)     :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_y_Mesh)
+         call MV_UnpackMesh(V, ValAry, y%Mesh(DL%i1))                         ! Mesh
+      case (StC_y_MeasDisp)
+         y%MeasDisp(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_y_MeasVel)
+         y%MeasVel(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 function StC_OutputFieldName(DL) result(Name)

@@ -1197,7 +1197,7 @@ SUBROUTINE MAP_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat
    
    ! Make a copy of the inputs to perturb
    call MAP_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
-   call MAP_PackInputAry(Vars, u, m%Jac%u)
+   call MAP_VarsPackInput(Vars, u, m%Jac%u)
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
@@ -1215,7 +1215,7 @@ SUBROUTINE MAP_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call MAP_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call MAP_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call MAP_CopyConstrState(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             
             ! Calculate absolute position of each node
@@ -1240,11 +1240,11 @@ SUBROUTINE MAP_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat
             ! compute y at u_op + delta u
             ! MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
             call map_CalcOutput(t, m%u_perturb, p, x, xd, m%z_lin, OtherState, y, ErrStat2, ErrMsg2); if (Failed()) return
-            call MAP_PackOutputAry(Vars, y, m%Jac%y_pos)
+            call MAP_VarsPackOutput(Vars, y, m%Jac%y_pos)
             
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call MAP_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call MAP_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call MAP_CopyConstrState(z, m%z_lin, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
             
             ! Calculate absolute position of each node
@@ -1269,7 +1269,7 @@ SUBROUTINE MAP_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat
             ! compute y at u_op - delta u
             ! MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
             call map_CalcOutput(t, m%u_perturb, p, x, xd, m%z_lin, OtherState, y, ErrStat2, ErrMsg2 ); if (Failed()) return
-            call MAP_PackOutputAry(Vars, y, m%Jac%y_neg)
+            call MAP_VarsPackOutput(Vars, y, m%Jac%y_neg)
             
             ! Calculate column index
             col = Vars%u(i)%iLoc(1) + j - 1

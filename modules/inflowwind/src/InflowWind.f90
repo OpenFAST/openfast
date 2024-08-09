@@ -1062,13 +1062,13 @@ subroutine InflowWind_PackExtInputAry(Vars, t, p, ValAry)
          select case(Var%DL%Num)
          case (InflowWind_u_HWindSpeed)
             call CalcExtOP()
-            call MV_Pack(Var, op%VelH, ValAry)
+            ValAry(Var%iLoc(1)) = op%VelH
          case (InflowWind_u_PLExp)
             call CalcExtOP()
-            call MV_Pack(Var, op%ShrV, ValAry)
+            ValAry(Var%iLoc(1)) = op%ShrV
          case (InflowWind_u_PropagationDir)
             call CalcExtOP()
-            call MV_Pack(Var, op%AngleH + p%FlowField%PropagationDir, ValAry)
+            ValAry(Var%iLoc(1)) = op%AngleH + p%FlowField%PropagationDir
          end select
       end associate
    end do
@@ -1104,13 +1104,13 @@ subroutine InflowWind_PackExtOutputAry(Vars, t, p, ValAry)
          select case(Var%DL%Num)
          case (InflowWind_y_HWindSpeed)
             call CalcExtOP()
-            call MV_Pack(Var, op%VelH, ValAry)
+            ValAry(Var%iLoc(1)) = op%VelH
          case (InflowWind_y_PLExp)
             call CalcExtOP()
-            call MV_Pack(Var, op%ShrV, ValAry)
+            ValAry(Var%iLoc(1)) = op%ShrV
          case (InflowWind_y_PropagationDir)
             call CalcExtOP()
-            call MV_Pack(Var, op%AngleH + p%FlowField%PropagationDir, ValAry)
+            ValAry(Var%iLoc(1)) = op%AngleH + p%FlowField%PropagationDir
          end select
       end associate
    end do

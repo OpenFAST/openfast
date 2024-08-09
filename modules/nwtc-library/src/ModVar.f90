@@ -31,70 +31,27 @@ use ModMesh
 implicit none
 
 private
-public :: MV_InitVarsJac, MV_Pack, MV_Unpack
+public :: MV_InitVarsJac
 public :: MV_AddVar, MV_AddMeshVar
 public :: MV_Perturb, MV_ComputeCentralDiff, MV_ComputeDiff, MV_ExtrapInterp, MV_AddDelta
 public :: MV_HasFlagsAll, MV_HasFlagsAny, MV_SetFlags, MV_ClearFlags
 public :: MV_NumVars, MV_NumVals, MV_FindVarDatLoc
 public :: LoadFields, MotionFields, TransFields, AngularFields
-public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv
+public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv, quat_compose
 public :: MV_FieldString, MV_IsLoad, MV_IsMotion, IdxStr
 public :: DumpMatrix, MV_AddModule
 public :: MV_EqualDL
+public :: MV_PackMesh, MV_UnpackMesh
 
-integer(IntKi), parameter :: &
-   LoadFields(*) = [FieldForce, FieldMoment], &
-   TransFields(*) = [FieldTransDisp, FieldTransVel, FieldTransAcc], &
-   AngularFields(*) = [FieldOrientation, FieldAngularVel, FieldAngularAcc, FieldAngularDisp], &
-   MotionFields(*) = [FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel, FieldTransAcc, FieldAngularAcc]
+integer(IntKi), parameter :: LoadFields(*) = [FieldForce, FieldMoment]
+integer(IntKi), parameter :: TransFields(*) = [FieldTransDisp, FieldTransVel, FieldTransAcc]
+integer(IntKi), parameter :: AngularFields(*) = [FieldOrientation, FieldAngularVel, FieldAngularAcc, FieldAngularDisp]
+integer(IntKi), parameter :: MotionFields(*) = [FieldTransDisp, FieldOrientation, FieldTransVel, &
+                                                FieldAngularVel, FieldTransAcc, FieldAngularAcc]
 
-interface MV_Pack
-   module procedure MV_PackVarRank0R4, MV_PackVarRank1R4
-   module procedure MV_PackVarRank0R8, MV_PackVarRank1R8
-   module procedure MV_PackMesh
-end interface
-
-interface MV_Unpack
-   module procedure MV_UnpackVarRank0R4, MV_UnpackVarRank1R4
-   module procedure MV_UnpackVarRank0R8, MV_UnpackVarRank1R8
-   module procedure MV_UnpackMesh
-end interface
-
-logical, parameter   :: UseSmallRotAngles = .true.
+logical, parameter   :: UseSmallRotAngles = .false.
 
 contains
-
-!-------------------------------------------------------------------------------
-! MV_Pack
-!-------------------------------------------------------------------------------
-
-subroutine MV_PackVarRank0R4(Var, SrcVal, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R4Ki), intent(in)        :: SrcVal
-   real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iLoc(1)) = real(SrcVal, R8Ki)
-end subroutine
-
-subroutine MV_PackVarRank0R8(Var, SrcVal, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcVal
-   real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iLoc(1)) = SrcVal
-end subroutine
-
-subroutine MV_PackVarRank1R4(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R4Ki), intent(in)        :: SrcAry(:)
-   real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry(Var%iLoc(1):Var%iLoc(2)) = real(SrcAry, R8Ki)
-end subroutine
-
-subroutine MV_PackVarRank1R8(Var, SrcAry, Ary)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R8Ki), intent(inout)     :: Ary(:)
-   Ary(Var%iLoc(1):Var%iLoc(2)) = SrcAry
-end subroutine
 
 subroutine MV_PackMesh(Var, Mesh, DstAry)
    type(ModVarType), intent(in)  :: Var
@@ -125,38 +82,6 @@ subroutine MV_PackMesh(Var, Mesh, DstAry)
    case (FieldScalar)
       DstAry(Var%iLoc(1):Var%iLoc(2)) = pack(real(Mesh%Scalars, R8Ki), .true.)
    end select
-end subroutine
-
-!-------------------------------------------------------------------------------
-! MV_Unpack
-!-------------------------------------------------------------------------------
-
-subroutine MV_UnpackVarRank0R4(Var, SrcAry, DstVal)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R4Ki), intent(inout)     :: DstVal
-   DstVal = real(SrcAry(Var%iLoc(1)), R4Ki)
-end subroutine
-
-subroutine MV_UnpackVarRank0R8(Var, SrcAry, DstVal)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R8Ki), intent(inout)     :: DstVal
-   DstVal = SrcAry(Var%iLoc(1))
-end subroutine
-
-subroutine MV_UnpackVarRank1R4(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R4Ki), intent(inout)     :: DstAry(:)
-   DstAry = real(SrcAry(Var%iLoc(1):Var%iLoc(2)), R4Ki)
-end subroutine
-
-subroutine MV_UnpackVarRank1R8(Var, SrcAry, DstAry)
-   type(ModVarType), intent(in)  :: Var
-   real(R8Ki), intent(in)        :: SrcAry(:)
-   real(R8Ki), intent(inout)     :: DstAry(:)
-   DstAry = SrcAry(Var%iLoc(1):Var%iLoc(2))
 end subroutine
 
 subroutine MV_UnpackMesh(Var, SrcAry, Mesh)
@@ -284,26 +209,26 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
    Jac%Ny = Vars%Ny
 
    ! Allocate Jacobian data arrays
-   if (Linearize) then
-      if (Jac%Nx > 0) then
-         call AllocAry(Jac%x, Jac%Nx, "Lin%x", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(Jac%x_perturb, Jac%Nx, "Lin%x_perturb", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(Jac%x_pos, Jac%Nx, "Lin%x_pos", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(Jac%x_neg, Jac%Nx, "Lin%x_neg", ErrStat2, ErrMsg2); if (Failed()) return
-      end if
-      if (Jac%Nz > 0) then
-         call AllocAry(Jac%z, Jac%Nz, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
-      end if
-      if (Jac%Nu > 0) then
-         call AllocAry(Jac%u, Jac%Nu, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(Jac%u_perturb, Jac%Nu, "Lin%u_perturb", ErrStat2, ErrMsg2); if (Failed()) return
-      end if
-      if (Jac%Ny > 0) then
-         call AllocAry(Jac%y, Jac%Ny, "Lin%y", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(Jac%y_pos, Jac%Ny, "Lin%y_pos", ErrStat2, ErrMsg2); if (Failed()) return
-         call AllocAry(Jac%y_neg, Jac%Ny, "Lin%y_neg", ErrStat2, ErrMsg2); if (Failed()) return
-      end if
+   ! if (Linearize) then
+   if (Jac%Nx > 0) then
+      call AllocAry(Jac%x, Jac%Nx, "Lin%x", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(Jac%x_perturb, Jac%Nx, "Lin%x_perturb", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(Jac%x_pos, Jac%Nx, "Lin%x_pos", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(Jac%x_neg, Jac%Nx, "Lin%x_neg", ErrStat2, ErrMsg2); if (Failed()) return
    end if
+   if (Jac%Nz > 0) then
+      call AllocAry(Jac%z, Jac%Nz, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
+   end if
+   if (Jac%Nu > 0) then
+      call AllocAry(Jac%u, Jac%Nu, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(Jac%u_perturb, Jac%Nu, "Lin%u_perturb", ErrStat2, ErrMsg2); if (Failed()) return
+   end if
+   if (Jac%Ny > 0) then
+      call AllocAry(Jac%y, Jac%Ny, "Lin%y", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(Jac%y_pos, Jac%Ny, "Lin%y_pos", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(Jac%y_neg, Jac%Ny, "Lin%y_neg", ErrStat2, ErrMsg2); if (Failed()) return
+   end if
+   ! end if
 
 contains
 
@@ -360,7 +285,7 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
       Var%Num = Var%Nodes*3
 
       ! If linearization enabled
-      if (Linearize) then
+      if (.true.) then
 
          ! Set unit description for line mesh
          UnitDesc = ''
@@ -396,7 +321,7 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
    ! Linearization
    !----------------------------------------------------------------------------
 
-   if (Linearize) then
+   if (.true.) then
       if (.not. allocated(Var%LinNames)) then
          call SetErrStat(ErrID_Fatal, "LinNames not allocated for "//Var%Name, ErrStat, ErrMsg, RoutineName)
          return
@@ -492,12 +417,6 @@ subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, V
          return
       end if
    end if
-
-   !----------------------------------------------------------------------------
-   ! Allocate source and destination mapping indices
-   !----------------------------------------------------------------------------
-
-   allocate (ModData%iSrcMaps(0), ModData%iDstMaps(0))
 
    !----------------------------------------------------------------------------
    ! Add module info to array
@@ -948,9 +867,6 @@ subroutine MV_AddMeshVar(VarAry, Name, Fields, DL, Mesh, Flags, Perturbs, Active
                      Num=Mesh%Nnodes, &
                      Flags=FlagsLocal, &
                      Perturb=PerturbsLocal(i))
-
-      ! Save mesh ID
-      VarAry(size(VarAry))%MeshID = Mesh%ID
    end do
 end subroutine
 
@@ -985,12 +901,14 @@ subroutine MV_AddVar(VarAry, Name, Field, DL, Num, iAry, jAry, kAry, Flags, Deri
    ! Set optional values
    if (present(Flags)) Var%Flags = Flags
    if (present(iAry)) then
-      Var%iAry = [iAry, iAry + Var%Num - 1]
+      Var%iLB = iAry
+      Var%iUB = iAry + Var%Num - 1
    else
-      Var%iAry = [1, Var%Num]
+      Var%iLB = 1
+      Var%iUB = Var%Num
    end if
-   if (present(jAry)) Var%jAry = jAry
-   if (present(kAry)) Var%kAry = kAry
+   if (present(jAry)) Var%j = jAry
+   if (present(kAry)) Var%k = kAry
    if (present(Perturb)) Var%Perturb = Perturb
    if (present(LinNames)) then
       allocate (Var%LinNames(size(LinNames)))

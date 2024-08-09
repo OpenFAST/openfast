@@ -1714,7 +1714,7 @@ SUBROUTINE HD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
    call HydroDyn_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
    
    ! Pack inputs into array
-   call HydroDyn_PackInputAry(Vars, u, m%Jac%u); if (Failed()) return
+   call HydroDyn_VarsPackInput(Vars, u, m%Jac%u); if (Failed()) return
 
    ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
    if (present(dYdu)) then
@@ -1735,15 +1735,15 @@ SUBROUTINE HD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
-            call HydroDyn_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call HydroDyn_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call HydroDyn_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call HydroDyn_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call HydroDyn_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
-            call HydroDyn_UnpackInputAry(Vars, m%Jac%u_perturb, m%u_perturb)
+            call HydroDyn_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             call HydroDyn_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call HydroDyn_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call HydroDyn_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Calculate column index
             col = Vars%u(i)%iLoc(1) + j - 1
@@ -1914,7 +1914,7 @@ SUBROUTINE HD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
      
    ! Copy State values to perturb
    call HydroDyn_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-   call HydroDyn_PackContStateAry(Vars, x, m%Jac%x)
+   call HydroDyn_VarsPackContState(Vars, x, m%Jac%x)
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    if (present(dYdx)) then
@@ -1932,15 +1932,15 @@ SUBROUTINE HD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
 
             ! Calculate positive perturbation
             call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
-            call HydroDyn_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call HydroDyn_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call HydroDyn_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call HydroDyn_PackOutputAry(Vars, m%y_lin, m%Jac%y_pos)
+            call HydroDyn_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
 
             ! Calculate negative perturbation
             call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
-            call HydroDyn_UnpackContStateAry(Vars, m%Jac%x_perturb, m%x_perturb)
+            call HydroDyn_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
             call HydroDyn_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
-            call HydroDyn_PackOutputAry(Vars, m%y_lin, m%Jac%y_neg)
+            call HydroDyn_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
 
             ! Calculate column index
             col = Vars%x(i)%iLoc(1) + j - 1

@@ -1918,36 +1918,50 @@ function InflowWind_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-subroutine InflowWind_PackContStateAry(Vars, x, ValAry)
+subroutine InflowWind_VarsPackContState(Vars, x, ValAry)
    type(InflowWind_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_x_DummyContState)
-            call MV_Pack(V, x%DummyContState, ValAry)                           ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call InflowWind_VarPackContState(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine InflowWind_UnpackContStateAry(Vars, ValAry, x)
+subroutine InflowWind_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(InflowWind_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_x_DummyContState)
+         VarVals(1) = x%DummyContState                                        ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine InflowWind_VarsUnpackContState(Vars, ValAry, x)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(InflowWind_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_x_DummyContState)
-            call MV_Unpack(V, ValAry, x%DummyContState)                         ! Scalar
-         end select
-      end associate
+      call InflowWind_VarUnpackContState(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+subroutine InflowWind_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(InflowWind_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_x_DummyContState)
+         x%DummyContState = VarVals(1)                                        ! Scalar
+      end select
+   end associate
 end subroutine
 
 function InflowWind_ContinuousStateFieldName(DL) result(Name)
@@ -1961,53 +1975,74 @@ function InflowWind_ContinuousStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine InflowWind_PackContStateDerivAry(Vars, x, ValAry)
+subroutine InflowWind_VarsPackContStateDeriv(Vars, x, ValAry)
    type(InflowWind_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_x_DummyContState)
-            call MV_Pack(V, x%DummyContState, ValAry)                           ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call InflowWind_VarPackContStateDeriv(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine InflowWind_PackConstrStateAry(Vars, z, ValAry)
+subroutine InflowWind_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(InflowWind_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_x_DummyContState)
+         VarVals(1) = x%DummyContState                                        ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine InflowWind_VarsPackConstrState(Vars, z, ValAry)
    type(InflowWind_ConstraintStateType), intent(in) :: z
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_z_DummyConstrState)
-            call MV_Pack(V, z%DummyConstrState, ValAry)                         ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call InflowWind_VarPackConstrState(Vars%z(i), z, ValAry)
    end do
 end subroutine
 
-subroutine InflowWind_UnpackConstrStateAry(Vars, ValAry, z)
+subroutine InflowWind_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(InflowWind_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_z_DummyConstrState)
+         VarVals(1) = z%DummyConstrState                                      ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine InflowWind_VarsUnpackConstrState(Vars, ValAry, z)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(InflowWind_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_z_DummyConstrState)
-            call MV_Unpack(V, ValAry, z%DummyConstrState)                       ! Scalar
-         end select
-      end associate
+      call InflowWind_VarUnpackConstrState(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+subroutine InflowWind_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(InflowWind_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_z_DummyConstrState)
+         z%DummyConstrState = VarVals(1)                                      ! Scalar
+      end select
+   end associate
 end subroutine
 
 function InflowWind_ConstraintStateFieldName(DL) result(Name)
@@ -2021,64 +2056,78 @@ function InflowWind_ConstraintStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine InflowWind_PackInputAry(Vars, u, ValAry)
+subroutine InflowWind_VarsPackInput(Vars, u, ValAry)
    type(InflowWind_InputType), intent(in)  :: u
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_u_PositionXYZ)
-            call MV_Pack(V, u%PositionXYZ(V%iAry(1):V%iAry(2),V%jAry), ValAry)  ! Rank 2 Array
-         case (InflowWind_u_lidar_PulseLidEl)
-            call MV_Pack(V, u%lidar%PulseLidEl, ValAry)                         ! Scalar
-         case (InflowWind_u_lidar_PulseLidAz)
-            call MV_Pack(V, u%lidar%PulseLidAz, ValAry)                         ! Scalar
-         case (InflowWind_u_lidar_HubDisplacementX)
-            call MV_Pack(V, u%lidar%HubDisplacementX, ValAry)                   ! Scalar
-         case (InflowWind_u_lidar_HubDisplacementY)
-            call MV_Pack(V, u%lidar%HubDisplacementY, ValAry)                   ! Scalar
-         case (InflowWind_u_lidar_HubDisplacementZ)
-            call MV_Pack(V, u%lidar%HubDisplacementZ, ValAry)                   ! Scalar
-         case (InflowWind_u_HubPosition)
-            call MV_Pack(V, u%HubPosition(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
-         case (InflowWind_u_HubOrientation)
-            call MV_Pack(V, u%HubOrientation(V%iAry(1):V%iAry(2),V%jAry), ValAry) ! Rank 2 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call InflowWind_VarPackInput(Vars%u(i), u, ValAry)
    end do
 end subroutine
 
-subroutine InflowWind_UnpackInputAry(Vars, ValAry, u)
+subroutine InflowWind_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(InflowWind_InputType), intent(in)  :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_u_PositionXYZ)
+         VarVals = u%PositionXYZ(V%iLB:V%iUB,V%j)                             ! Rank 2 Array
+      case (InflowWind_u_lidar_PulseLidEl)
+         VarVals(1) = u%lidar%PulseLidEl                                      ! Scalar
+      case (InflowWind_u_lidar_PulseLidAz)
+         VarVals(1) = u%lidar%PulseLidAz                                      ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementX)
+         VarVals(1) = u%lidar%HubDisplacementX                                ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementY)
+         VarVals(1) = u%lidar%HubDisplacementY                                ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementZ)
+         VarVals(1) = u%lidar%HubDisplacementZ                                ! Scalar
+      case (InflowWind_u_HubPosition)
+         VarVals = u%HubPosition(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (InflowWind_u_HubOrientation)
+         VarVals = u%HubOrientation(V%iLB:V%iUB,V%j)                          ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine InflowWind_VarsUnpackInput(Vars, ValAry, u)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(InflowWind_InputType), intent(inout) :: u
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_u_PositionXYZ)
-            call MV_Unpack(V, ValAry, u%PositionXYZ(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (InflowWind_u_lidar_PulseLidEl)
-            call MV_Unpack(V, ValAry, u%lidar%PulseLidEl)                       ! Scalar
-         case (InflowWind_u_lidar_PulseLidAz)
-            call MV_Unpack(V, ValAry, u%lidar%PulseLidAz)                       ! Scalar
-         case (InflowWind_u_lidar_HubDisplacementX)
-            call MV_Unpack(V, ValAry, u%lidar%HubDisplacementX)                 ! Scalar
-         case (InflowWind_u_lidar_HubDisplacementY)
-            call MV_Unpack(V, ValAry, u%lidar%HubDisplacementY)                 ! Scalar
-         case (InflowWind_u_lidar_HubDisplacementZ)
-            call MV_Unpack(V, ValAry, u%lidar%HubDisplacementZ)                 ! Scalar
-         case (InflowWind_u_HubPosition)
-            call MV_Unpack(V, ValAry, u%HubPosition(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
-         case (InflowWind_u_HubOrientation)
-            call MV_Unpack(V, ValAry, u%HubOrientation(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         end select
-      end associate
+      call InflowWind_VarUnpackInput(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+subroutine InflowWind_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(InflowWind_InputType), intent(inout) :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_u_PositionXYZ)
+         u%PositionXYZ(V%iLB:V%iUB, V%j) = VarVals                            ! Rank 2 Array
+      case (InflowWind_u_lidar_PulseLidEl)
+         u%lidar%PulseLidEl = VarVals(1)                                      ! Scalar
+      case (InflowWind_u_lidar_PulseLidAz)
+         u%lidar%PulseLidAz = VarVals(1)                                      ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementX)
+         u%lidar%HubDisplacementX = VarVals(1)                                ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementY)
+         u%lidar%HubDisplacementY = VarVals(1)                                ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementZ)
+         u%lidar%HubDisplacementZ = VarVals(1)                                ! Scalar
+      case (InflowWind_u_HubPosition)
+         u%HubPosition(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (InflowWind_u_HubOrientation)
+         u%HubOrientation(V%iLB:V%iUB, V%j) = VarVals                         ! Rank 2 Array
+      end select
+   end associate
 end subroutine
 
 function InflowWind_InputFieldName(DL) result(Name)
@@ -2106,72 +2155,86 @@ function InflowWind_InputFieldName(DL) result(Name)
    end select
 end function
 
-subroutine InflowWind_PackOutputAry(Vars, y, ValAry)
+subroutine InflowWind_VarsPackOutput(Vars, y, ValAry)
    type(InflowWind_OutputType), intent(in) :: y
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_y_VelocityUVW)
-            call MV_Pack(V, y%VelocityUVW(V%iAry(1):V%iAry(2),V%jAry), ValAry)  ! Rank 2 Array
-         case (InflowWind_y_AccelUVW)
-            call MV_Pack(V, y%AccelUVW(V%iAry(1):V%iAry(2),V%jAry), ValAry)     ! Rank 2 Array
-         case (InflowWind_y_WriteOutput)
-            call MV_Pack(V, y%WriteOutput(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
-         case (InflowWind_y_DiskVel)
-            call MV_Pack(V, y%DiskVel(V%iAry(1):V%iAry(2)), ValAry)             ! Rank 1 Array
-         case (InflowWind_y_HubVel)
-            call MV_Pack(V, y%HubVel(V%iAry(1):V%iAry(2)), ValAry)              ! Rank 1 Array
-         case (InflowWind_y_lidar_LidSpeed)
-            call MV_Pack(V, y%lidar%LidSpeed(V%iAry(1):V%iAry(2)), ValAry)      ! Rank 1 Array
-         case (InflowWind_y_lidar_WtTrunc)
-            call MV_Pack(V, y%lidar%WtTrunc(V%iAry(1):V%iAry(2)), ValAry)       ! Rank 1 Array
-         case (InflowWind_y_lidar_MsrPositionsX)
-            call MV_Pack(V, y%lidar%MsrPositionsX(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (InflowWind_y_lidar_MsrPositionsY)
-            call MV_Pack(V, y%lidar%MsrPositionsY(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case (InflowWind_y_lidar_MsrPositionsZ)
-            call MV_Pack(V, y%lidar%MsrPositionsZ(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call InflowWind_VarPackOutput(Vars%y(i), y, ValAry)
    end do
 end subroutine
 
-subroutine InflowWind_UnpackOutputAry(Vars, ValAry, y)
+subroutine InflowWind_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(InflowWind_OutputType), intent(in) :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_y_VelocityUVW)
+         VarVals = y%VelocityUVW(V%iLB:V%iUB,V%j)                             ! Rank 2 Array
+      case (InflowWind_y_AccelUVW)
+         VarVals = y%AccelUVW(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (InflowWind_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (InflowWind_y_DiskVel)
+         VarVals = y%DiskVel(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (InflowWind_y_HubVel)
+         VarVals = y%HubVel(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (InflowWind_y_lidar_LidSpeed)
+         VarVals = y%lidar%LidSpeed(V%iLB:V%iUB)                              ! Rank 1 Array
+      case (InflowWind_y_lidar_WtTrunc)
+         VarVals = y%lidar%WtTrunc(V%iLB:V%iUB)                               ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsX)
+         VarVals = y%lidar%MsrPositionsX(V%iLB:V%iUB)                         ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsY)
+         VarVals = y%lidar%MsrPositionsY(V%iLB:V%iUB)                         ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsZ)
+         VarVals = y%lidar%MsrPositionsZ(V%iLB:V%iUB)                         ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine InflowWind_VarsUnpackOutput(Vars, ValAry, y)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(InflowWind_OutputType), intent(inout) :: y
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (InflowWind_y_VelocityUVW)
-            call MV_Unpack(V, ValAry, y%VelocityUVW(V%iAry(1):V%iAry(2),V%jAry)) ! Rank 2 Array
-         case (InflowWind_y_AccelUVW)
-            call MV_Unpack(V, ValAry, y%AccelUVW(V%iAry(1):V%iAry(2),V%jAry))   ! Rank 2 Array
-         case (InflowWind_y_WriteOutput)
-            call MV_Unpack(V, ValAry, y%WriteOutput(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
-         case (InflowWind_y_DiskVel)
-            call MV_Unpack(V, ValAry, y%DiskVel(V%iAry(1):V%iAry(2)))           ! Rank 1 Array
-         case (InflowWind_y_HubVel)
-            call MV_Unpack(V, ValAry, y%HubVel(V%iAry(1):V%iAry(2)))            ! Rank 1 Array
-         case (InflowWind_y_lidar_LidSpeed)
-            call MV_Unpack(V, ValAry, y%lidar%LidSpeed(V%iAry(1):V%iAry(2)))    ! Rank 1 Array
-         case (InflowWind_y_lidar_WtTrunc)
-            call MV_Unpack(V, ValAry, y%lidar%WtTrunc(V%iAry(1):V%iAry(2)))     ! Rank 1 Array
-         case (InflowWind_y_lidar_MsrPositionsX)
-            call MV_Unpack(V, ValAry, y%lidar%MsrPositionsX(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (InflowWind_y_lidar_MsrPositionsY)
-            call MV_Unpack(V, ValAry, y%lidar%MsrPositionsY(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         case (InflowWind_y_lidar_MsrPositionsZ)
-            call MV_Unpack(V, ValAry, y%lidar%MsrPositionsZ(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         end select
-      end associate
+      call InflowWind_VarUnpackOutput(Vars%y(i), ValAry, y)
    end do
+end subroutine
+
+subroutine InflowWind_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(InflowWind_OutputType), intent(inout) :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_y_VelocityUVW)
+         y%VelocityUVW(V%iLB:V%iUB, V%j) = VarVals                            ! Rank 2 Array
+      case (InflowWind_y_AccelUVW)
+         y%AccelUVW(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (InflowWind_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (InflowWind_y_DiskVel)
+         y%DiskVel(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (InflowWind_y_HubVel)
+         y%HubVel(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (InflowWind_y_lidar_LidSpeed)
+         y%lidar%LidSpeed(V%iLB:V%iUB) = VarVals                              ! Rank 1 Array
+      case (InflowWind_y_lidar_WtTrunc)
+         y%lidar%WtTrunc(V%iLB:V%iUB) = VarVals                               ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsX)
+         y%lidar%MsrPositionsX(V%iLB:V%iUB) = VarVals                         ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsY)
+         y%lidar%MsrPositionsY(V%iLB:V%iUB) = VarVals                         ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsZ)
+         y%lidar%MsrPositionsZ(V%iLB:V%iUB) = VarVals                         ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 function InflowWind_OutputFieldName(DL) result(Name)

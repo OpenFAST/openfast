@@ -2554,36 +2554,50 @@ function UA_OutputMeshPointer(y, DL) result(Mesh)
    end select
 end function
 
-subroutine UA_PackContStateAry(Vars, x, ValAry)
+subroutine UA_VarsPackContState(Vars, x, ValAry)
    type(UA_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (UA_x_element_x)
-            call MV_Pack(V, x%element(DL%i1, DL%i2)%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call UA_VarPackContState(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine UA_UnpackContStateAry(Vars, ValAry, x)
+subroutine UA_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(UA_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (UA_x_element_x)
+         VarVals = x%element(DL%i1, DL%i2)%x(V%iLB:V%iUB)                     ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine UA_VarsUnpackContState(Vars, ValAry, x)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(UA_ContinuousStateType), intent(inout) :: x
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (UA_x_element_x)
-            call MV_Unpack(V, ValAry, x%element(DL%i1, DL%i2)%x(V%iAry(1):V%iAry(2))) ! Rank 1 Array
-         end select
-      end associate
+      call UA_VarUnpackContState(Vars%x(i), ValAry, x)
    end do
+end subroutine
+
+subroutine UA_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(UA_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (UA_x_element_x)
+         x%element(DL%i1, DL%i2)%x(V%iLB:V%iUB) = VarVals                     ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 function UA_ContinuousStateFieldName(DL) result(Name)
@@ -2597,53 +2611,74 @@ function UA_ContinuousStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine UA_PackContStateDerivAry(Vars, x, ValAry)
+subroutine UA_VarsPackContStateDeriv(Vars, x, ValAry)
    type(UA_ContinuousStateType), intent(in) :: x
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%x)
-      associate (V => Vars%x(i), DL => Vars%x(i)%DL)
-         select case (DL%Num)
-         case (UA_x_element_x)
-            call MV_Pack(V, x%element(DL%i1, DL%i2)%x(V%iAry(1):V%iAry(2)), ValAry) ! Rank 1 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call UA_VarPackContStateDeriv(Vars%x(i), x, ValAry)
    end do
 end subroutine
 
-subroutine UA_PackConstrStateAry(Vars, z, ValAry)
+subroutine UA_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(UA_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (UA_x_element_x)
+         VarVals = x%element(DL%i1, DL%i2)%x(V%iLB:V%iUB)                     ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine UA_VarsPackConstrState(Vars, z, ValAry)
    type(UA_ConstraintStateType), intent(in) :: z
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (UA_z_DummyConstraintState)
-            call MV_Pack(V, z%DummyConstraintState, ValAry)                     ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call UA_VarPackConstrState(Vars%z(i), z, ValAry)
    end do
 end subroutine
 
-subroutine UA_UnpackConstrStateAry(Vars, ValAry, z)
+subroutine UA_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(UA_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (UA_z_DummyConstraintState)
+         VarVals(1) = z%DummyConstraintState                                  ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine UA_VarsUnpackConstrState(Vars, ValAry, z)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(UA_ConstraintStateType), intent(inout) :: z
    integer(IntKi)                         :: i
    do i = 1, size(Vars%z)
-      associate (V => Vars%z(i), DL => Vars%z(i)%DL)
-         select case (DL%Num)
-         case (UA_z_DummyConstraintState)
-            call MV_Unpack(V, ValAry, z%DummyConstraintState)                   ! Scalar
-         end select
-      end associate
+      call UA_VarUnpackConstrState(Vars%z(i), ValAry, z)
    end do
+end subroutine
+
+subroutine UA_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(UA_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (UA_z_DummyConstraintState)
+         z%DummyConstraintState = VarVals(1)                                  ! Scalar
+      end select
+   end associate
 end subroutine
 
 function UA_ConstraintStateFieldName(DL) result(Name)
@@ -2657,56 +2692,70 @@ function UA_ConstraintStateFieldName(DL) result(Name)
    end select
 end function
 
-subroutine UA_PackInputAry(Vars, u, ValAry)
+subroutine UA_VarsPackInput(Vars, u, ValAry)
    type(UA_InputType), intent(in)          :: u
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (UA_u_U)
-            call MV_Pack(V, u%U, ValAry)                                        ! Scalar
-         case (UA_u_alpha)
-            call MV_Pack(V, u%alpha, ValAry)                                    ! Scalar
-         case (UA_u_Re)
-            call MV_Pack(V, u%Re, ValAry)                                       ! Scalar
-         case (UA_u_UserProp)
-            call MV_Pack(V, u%UserProp, ValAry)                                 ! Scalar
-         case (UA_u_v_ac)
-            call MV_Pack(V, u%v_ac(V%iAry(1):V%iAry(2)), ValAry)                ! Rank 1 Array
-         case (UA_u_omega)
-            call MV_Pack(V, u%omega, ValAry)                                    ! Scalar
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call UA_VarPackInput(Vars%u(i), u, ValAry)
    end do
 end subroutine
 
-subroutine UA_UnpackInputAry(Vars, ValAry, u)
+subroutine UA_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(UA_InputType), intent(in)          :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (UA_u_U)
+         VarVals(1) = u%U                                                     ! Scalar
+      case (UA_u_alpha)
+         VarVals(1) = u%alpha                                                 ! Scalar
+      case (UA_u_Re)
+         VarVals(1) = u%Re                                                    ! Scalar
+      case (UA_u_UserProp)
+         VarVals(1) = u%UserProp                                              ! Scalar
+      case (UA_u_v_ac)
+         VarVals = u%v_ac(V%iLB:V%iUB)                                        ! Rank 1 Array
+      case (UA_u_omega)
+         VarVals(1) = u%omega                                                 ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine UA_VarsUnpackInput(Vars, ValAry, u)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(UA_InputType), intent(inout)       :: u
    integer(IntKi)                         :: i
    do i = 1, size(Vars%u)
-      associate (V => Vars%u(i), DL => Vars%u(i)%DL)
-         select case (DL%Num)
-         case (UA_u_U)
-            call MV_Unpack(V, ValAry, u%U)                                      ! Scalar
-         case (UA_u_alpha)
-            call MV_Unpack(V, ValAry, u%alpha)                                  ! Scalar
-         case (UA_u_Re)
-            call MV_Unpack(V, ValAry, u%Re)                                     ! Scalar
-         case (UA_u_UserProp)
-            call MV_Unpack(V, ValAry, u%UserProp)                               ! Scalar
-         case (UA_u_v_ac)
-            call MV_Unpack(V, ValAry, u%v_ac(V%iAry(1):V%iAry(2)))              ! Rank 1 Array
-         case (UA_u_omega)
-            call MV_Unpack(V, ValAry, u%omega)                                  ! Scalar
-         end select
-      end associate
+      call UA_VarUnpackInput(Vars%u(i), ValAry, u)
    end do
+end subroutine
+
+subroutine UA_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(UA_InputType), intent(inout)       :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (UA_u_U)
+         u%U = VarVals(1)                                                     ! Scalar
+      case (UA_u_alpha)
+         u%alpha = VarVals(1)                                                 ! Scalar
+      case (UA_u_Re)
+         u%Re = VarVals(1)                                                    ! Scalar
+      case (UA_u_UserProp)
+         u%UserProp = VarVals(1)                                              ! Scalar
+      case (UA_u_v_ac)
+         u%v_ac(V%iLB:V%iUB) = VarVals                                        ! Rank 1 Array
+      case (UA_u_omega)
+         u%omega = VarVals(1)                                                 ! Scalar
+      end select
+   end associate
 end subroutine
 
 function UA_InputFieldName(DL) result(Name)
@@ -2730,56 +2779,70 @@ function UA_InputFieldName(DL) result(Name)
    end select
 end function
 
-subroutine UA_PackOutputAry(Vars, y, ValAry)
+subroutine UA_VarsPackOutput(Vars, y, ValAry)
    type(UA_OutputType), intent(in)         :: y
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(inout)              :: ValAry(:)
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (UA_y_Cn)
-            call MV_Pack(V, y%Cn, ValAry)                                       ! Scalar
-         case (UA_y_Cc)
-            call MV_Pack(V, y%Cc, ValAry)                                       ! Scalar
-         case (UA_y_Cm)
-            call MV_Pack(V, y%Cm, ValAry)                                       ! Scalar
-         case (UA_y_Cl)
-            call MV_Pack(V, y%Cl, ValAry)                                       ! Scalar
-         case (UA_y_Cd)
-            call MV_Pack(V, y%Cd, ValAry)                                       ! Scalar
-         case (UA_y_WriteOutput)
-            call MV_Pack(V, y%WriteOutput(V%iAry(1):V%iAry(2)), ValAry)         ! Rank 1 Array
-         case default
-            ValAry(V%iLoc(1):V%iLoc(2)) = 0.0_R8Ki
-         end select
-      end associate
+      call UA_VarPackOutput(Vars%y(i), y, ValAry)
    end do
 end subroutine
 
-subroutine UA_UnpackOutputAry(Vars, ValAry, y)
+subroutine UA_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(UA_OutputType), intent(in)         :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (UA_y_Cn)
+         VarVals(1) = y%Cn                                                    ! Scalar
+      case (UA_y_Cc)
+         VarVals(1) = y%Cc                                                    ! Scalar
+      case (UA_y_Cm)
+         VarVals(1) = y%Cm                                                    ! Scalar
+      case (UA_y_Cl)
+         VarVals(1) = y%Cl                                                    ! Scalar
+      case (UA_y_Cd)
+         VarVals(1) = y%Cd                                                    ! Scalar
+      case (UA_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine UA_VarsUnpackOutput(Vars, ValAry, y)
    type(ModVarsType), intent(in)          :: Vars
    real(R8Ki), intent(in)                 :: ValAry(:)
    type(UA_OutputType), intent(inout)      :: y
    integer(IntKi)                         :: i
    do i = 1, size(Vars%y)
-      associate (V => Vars%y(i), DL => Vars%y(i)%DL)
-         select case (DL%Num)
-         case (UA_y_Cn)
-            call MV_Unpack(V, ValAry, y%Cn)                                     ! Scalar
-         case (UA_y_Cc)
-            call MV_Unpack(V, ValAry, y%Cc)                                     ! Scalar
-         case (UA_y_Cm)
-            call MV_Unpack(V, ValAry, y%Cm)                                     ! Scalar
-         case (UA_y_Cl)
-            call MV_Unpack(V, ValAry, y%Cl)                                     ! Scalar
-         case (UA_y_Cd)
-            call MV_Unpack(V, ValAry, y%Cd)                                     ! Scalar
-         case (UA_y_WriteOutput)
-            call MV_Unpack(V, ValAry, y%WriteOutput(V%iAry(1):V%iAry(2)))       ! Rank 1 Array
-         end select
-      end associate
+      call UA_VarUnpackOutput(Vars%y(i), ValAry, y)
    end do
+end subroutine
+
+subroutine UA_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(UA_OutputType), intent(inout)      :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (UA_y_Cn)
+         y%Cn = VarVals(1)                                                    ! Scalar
+      case (UA_y_Cc)
+         y%Cc = VarVals(1)                                                    ! Scalar
+      case (UA_y_Cm)
+         y%Cm = VarVals(1)                                                    ! Scalar
+      case (UA_y_Cl)
+         y%Cl = VarVals(1)                                                    ! Scalar
+      case (UA_y_Cd)
+         y%Cd = VarVals(1)                                                    ! Scalar
+      case (UA_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
 end subroutine
 
 function UA_OutputFieldName(DL) result(Name)

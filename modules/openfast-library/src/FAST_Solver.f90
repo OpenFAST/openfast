@@ -5508,7 +5508,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
       n_t_module = n_t_global*p_FAST%n_substeps( MODULE_ED ) + j_ss - 1
       t_module   = n_t_module*p_FAST%dt_module( MODULE_ED ) + t_initial
             
-      CALL ED_UpdateStates( t_module, n_t_module, ED%Input, ED%InputTimes, ED%p, ED%x(STATE_PRED), ED%xd(STATE_PRED), &
+      CALL ED_UpdateStates( t_module, n_t_module, ED%Input(1:), ED%InputTimes, ED%p, ED%x(STATE_PRED), ED%xd(STATE_PRED), &
                             ED%z(STATE_PRED), ED%OtherSt(STATE_PRED), ED%m, ErrStat2, ErrMsg2 )
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
@@ -5537,7 +5537,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
             n_t_module = n_t_global*p_FAST%n_substeps( Module_BD ) + j_ss - 1
             t_module   = n_t_module*p_FAST%dt_module( Module_BD ) + t_initial
                            
-            CALL BD_UpdateStates( t_module, n_t_module, BD%Input(:,k), BD%InputTimes(:,k), BD%p(k), BD%x(k,STATE_PRED), &
+            CALL BD_UpdateStates( t_module, n_t_module, BD%Input(1:,k), BD%InputTimes(:,k), BD%p(k), BD%x(k,STATE_PRED), &
                                        BD%xd(k,STATE_PRED), BD%z(k,STATE_PRED), BD%OtherSt(k,STATE_PRED), BD%m(k), ErrStat2, ErrMsg2 )
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':B'//trim(num2lstr(k)))
          END DO !j_ss
@@ -5568,7 +5568,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
 !         n_t_module = n_t_global*p_FAST%n_substeps( MODULE_IfW ) + j_ss - 1
 !         t_module   = n_t_module*p_FAST%dt_module( MODULE_IfW ) + t_initial
 !            
-!         CALL InflowWind_UpdateStates( t_module, n_t_module, IfW%Input, IfW%InputTimes, IfW%p, IfW%x(STATE_PRED), IfW%xd(STATE_PRED), &
+!         CALL InflowWind_UpdateStates( t_module, n_t_module, IfW%Input(1:), IfW%InputTimes, IfW%p, IfW%x(STATE_PRED), IfW%xd(STATE_PRED), &
 !                                       IfW%z(STATE_PRED), IfW%OtherSt(STATE_PRED), IfW%m, ErrStat2, ErrMsg2 )
 !            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 !      END DO !j_ss
@@ -5594,7 +5594,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( MODULE_AD ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( MODULE_AD ) + t_initial
             
-         CALL AD_UpdateStates( t_module, n_t_module, AD%Input, AD%InputTimes, AD%p, AD%x(STATE_PRED), &
+         CALL AD_UpdateStates( t_module, n_t_module, AD%Input(1:), AD%InputTimes, AD%p, AD%x(STATE_PRED), &
                                AD%xd(STATE_PRED), AD%z(STATE_PRED), AD%OtherSt(STATE_PRED), AD%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
@@ -5619,7 +5619,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( Module_SrvD ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_SrvD ) + t_initial
                
-         CALL SrvD_UpdateStates( t_module, n_t_module, SrvD%Input, SrvD%InputTimes, SrvD%p, SrvD%x(STATE_PRED), SrvD%xd(STATE_PRED), &
+         CALL SrvD_UpdateStates( t_module, n_t_module, SrvD%Input(1:), SrvD%InputTimes, SrvD%p, SrvD%x(STATE_PRED), SrvD%xd(STATE_PRED), &
                  SrvD%z(STATE_PRED), SrvD%OtherSt(STATE_PRED), SrvD%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             if (ErrStat >= AbortErrLev) return
@@ -5642,7 +5642,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( Module_HD ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_HD ) + t_initial
                
-         CALL HydroDyn_UpdateStates( t_module, n_t_module, HD%Input, HD%InputTimes, HD%p, HD%x(STATE_PRED), HD%xd(STATE_PRED), &
+         CALL HydroDyn_UpdateStates( t_module, n_t_module, HD%Input(1:), HD%InputTimes, HD%p, HD%x(STATE_PRED), HD%xd(STATE_PRED), &
                                      HD%z(STATE_PRED), HD%OtherSt(STATE_PRED), HD%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
@@ -5665,7 +5665,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( Module_SD ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_SD ) + t_initial
                
-         CALL SD_UpdateStates( t_module, n_t_module, SD%Input, SD%InputTimes, SD%p, SD%x(STATE_PRED), SD%xd(STATE_PRED), & 
+         CALL SD_UpdateStates( t_module, n_t_module, SD%Input(1:), SD%InputTimes, SD%p, SD%x(STATE_PRED), SD%xd(STATE_PRED), & 
                                SD%z(STATE_PRED), SD%OtherSt(STATE_PRED), SD%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
@@ -5684,7 +5684,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( Module_ExtPtfm ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_ExtPtfm ) + t_initial
                
-         CALL ExtPtfm_UpdateStates( t_module, n_t_module, ExtPtfm%Input, ExtPtfm%InputTimes, ExtPtfm%p, ExtPtfm%x(STATE_PRED), &
+         CALL ExtPtfm_UpdateStates( t_module, n_t_module, ExtPtfm%Input(1:), ExtPtfm%InputTimes, ExtPtfm%p, ExtPtfm%x(STATE_PRED), &
                                    ExtPtfm%xd(STATE_PRED), ExtPtfm%z(STATE_PRED), ExtPtfm%OtherSt(STATE_PRED), ExtPtfm%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss   
@@ -5708,7 +5708,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( Module_MAP ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_MAP ) + t_initial
                
-         CALL MAP_UpdateStates( t_module, n_t_module, MAPp%Input, MAPp%InputTimes, MAPp%p, MAPp%x(STATE_PRED), MAPp%xd(STATE_PRED), MAPp%z(STATE_PRED), MAPp%OtherSt, ErrStat2, ErrMsg2 )
+         CALL MAP_UpdateStates( t_module, n_t_module, MAPp%Input(1:), MAPp%InputTimes, MAPp%p, MAPp%x(STATE_PRED), MAPp%xd(STATE_PRED), MAPp%z(STATE_PRED), MAPp%OtherSt, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
                
@@ -5726,7 +5726,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( Module_MD ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_MD ) + t_initial
                
-         CALL MD_UpdateStates( t_module, n_t_module, MD%Input, MD%InputTimes, MD%p, MD%x(STATE_PRED), MD%xd(STATE_PRED), &
+         CALL MD_UpdateStates( t_module, n_t_module, MD%Input(1:), MD%InputTimes, MD%p, MD%x(STATE_PRED), MD%xd(STATE_PRED), &
                                MD%z(STATE_PRED), MD%OtherSt(STATE_PRED), MD%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
@@ -5745,7 +5745,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( Module_FEAM ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_FEAM ) + t_initial
                
-         CALL FEAM_UpdateStates( t_module, n_t_module, FEAM%Input, FEAM%InputTimes, FEAM%p, FEAM%x(STATE_PRED), FEAM%xd(STATE_PRED), &
+         CALL FEAM_UpdateStates( t_module, n_t_module, FEAM%Input(1:), FEAM%InputTimes, FEAM%p, FEAM%x(STATE_PRED), FEAM%xd(STATE_PRED), &
                                   FEAM%z(STATE_PRED), FEAM%OtherSt(STATE_PRED), FEAM%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
@@ -5764,7 +5764,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( Module_Orca ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_Orca ) + t_initial
                
-         CALL Orca_UpdateStates( t_module, n_t_module, Orca%Input, Orca%InputTimes, Orca%p, Orca%x(STATE_PRED), &
+         CALL Orca_UpdateStates( t_module, n_t_module, Orca%Input(1:), Orca%InputTimes, Orca%p, Orca%x(STATE_PRED), &
                                  Orca%xd(STATE_PRED), Orca%z(STATE_PRED), Orca%OtherSt(STATE_PRED), Orca%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
@@ -5787,7 +5787,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          n_t_module = n_t_global*p_FAST%n_substeps( Module_IceF ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_IceF ) + t_initial
                
-         CALL IceFloe_UpdateStates( t_module, n_t_module, IceF%Input, IceF%InputTimes, IceF%p, IceF%x(STATE_PRED), &
+         CALL IceFloe_UpdateStates( t_module, n_t_module, IceF%Input(1:), IceF%InputTimes, IceF%p, IceF%x(STATE_PRED), &
                                     IceF%xd(STATE_PRED), IceF%z(STATE_PRED), IceF%OtherSt(STATE_PRED), IceF%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
@@ -5808,7 +5808,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
             n_t_module = n_t_global*p_FAST%n_substeps( Module_IceD ) + j_ss - 1
             t_module   = n_t_module*p_FAST%dt_module( Module_IceD ) + t_initial
                
-            CALL IceD_UpdateStates( t_module, n_t_module, IceD%Input(:,i), IceD%InputTimes(:,i), IceD%p(i), IceD%x(i,STATE_PRED), &
+            CALL IceD_UpdateStates( t_module, n_t_module, IceD%Input(1:,i), IceD%InputTimes(1:,i), IceD%p(i), IceD%x(i,STATE_PRED), &
                                        IceD%xd(i,STATE_PRED), IceD%z(i,STATE_PRED), IceD%OtherSt(i,STATE_PRED), IceD%m(i), ErrStat2, ErrMsg2 )
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO !j_ss
@@ -5866,7 +5866,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ErrMsg  = ""
       
       ! ElastoDyn
-      CALL ED_Input_ExtrapInterp(ED%Input, ED%InputTimes, ED%u, t_global_next, ErrStat2, ErrMsg2)
+      CALL ED_Input_ExtrapInterp(ED%Input(1:), ED%InputTimes, ED%u, t_global_next, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
 
       DO j = p_FAST%InterpOrder, 1, -1
@@ -5885,7 +5885,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
          
          DO k = 1,p_FAST%nBeams
          
-            CALL BD_Input_ExtrapInterp(BD%Input(:,k), BD%InputTimes(:,k), BD%u(k), t_global_next, ErrStat2, ErrMsg2)
+            CALL BD_Input_ExtrapInterp(BD%Input(1:,k), BD%InputTimes(1:,k), BD%u(k), t_global_next, ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
             ! Shift "window" of BD%Input 
@@ -5907,7 +5907,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! AeroDyn
       IF ( (p_FAST%CompAero == Module_AD ) .or. (p_FAST%CompAero == Module_ExtLd ) ) THEN
          
-         CALL AD_Input_ExtrapInterp(AD%Input, AD%InputTimes, AD%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL AD_Input_ExtrapInterp(AD%Input(1:), AD%InputTimes, AD%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
                         
          ! Shift "window" of AD%Input 
@@ -5931,7 +5931,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! InflowWind
       IF ( p_FAST%CompInflow == Module_IfW ) THEN
          
-         CALL InflowWind_Input_ExtrapInterp(IfW%Input, IfW%InputTimes, IfW%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL InflowWind_Input_ExtrapInterp(IfW%Input(1:), IfW%InputTimes, IfW%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
          ! Shift "window" of IfW%Input
@@ -5952,7 +5952,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! ServoDyn
       IF ( p_FAST%CompServo == Module_SrvD ) THEN
          
-         CALL SrvD_Input_ExtrapInterp(SrvD%Input, SrvD%InputTimes, SrvD%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL SrvD_Input_ExtrapInterp(SrvD%Input(1:), SrvD%InputTimes, SrvD%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
          ! Shift "window" of SrvD%Input
@@ -5976,7 +5976,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! HydroDyn
       IF ( p_FAST%CompHydro == Module_HD ) THEN
 
-         CALL HydroDyn_Input_ExtrapInterp(HD%Input, HD%InputTimes, HD%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL HydroDyn_Input_ExtrapInterp(HD%Input(1:), HD%InputTimes, HD%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
          ! Shift "window" of HD%Input
@@ -5998,7 +5998,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! SubDyn/ExtPtfm_MCKF
       IF ( p_FAST%CompSub == Module_SD ) THEN
 
-         CALL SD_Input_ExtrapInterp(SD%Input, SD%InputTimes, SD%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL SD_Input_ExtrapInterp(SD%Input(1:), SD%InputTimes, SD%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
          ! Shift "window" of SD%Input
@@ -6015,7 +6015,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
             
       ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
 
-         CALL ExtPtfm_Input_ExtrapInterp(ExtPtfm%Input, ExtPtfm%InputTimes, ExtPtfm%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL ExtPtfm_Input_ExtrapInterp(ExtPtfm%Input(1:), ExtPtfm%InputTimes, ExtPtfm%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
                         
          ! Shift "window" of ExtPtfm%Input
@@ -6036,7 +6036,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! MAP
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
          
-         CALL MAP_Input_ExtrapInterp(MAPp%Input, MAPp%InputTimes, MAPp%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL MAP_Input_ExtrapInterp(MAPp%Input(1:), MAPp%InputTimes, MAPp%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
          ! Shift "window" of MAPp%Input
@@ -6054,7 +6054,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! MoorDyn
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
          
-         CALL MD_Input_ExtrapInterp(MD%Input, MD%InputTimes, MD%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL MD_Input_ExtrapInterp(MD%Input(1:), MD%InputTimes, MD%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
          ! Shift "window" of MD%Input
@@ -6072,7 +6072,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! FEAM
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
          
-         CALL FEAM_Input_ExtrapInterp(FEAM%Input, FEAM%InputTimes, FEAM%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL FEAM_Input_ExtrapInterp(FEAM%Input(1:), FEAM%InputTimes, FEAM%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
          ! Shift "window" of FEAM%Input
@@ -6090,7 +6090,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! OrcaFlex
       ELSEIF ( p_FAST%CompMooring == Module_Orca ) THEN
          
-         CALL Orca_Input_ExtrapInterp(Orca%Input, Orca%InputTimes, Orca%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL Orca_Input_ExtrapInterp(Orca%Input(1:), Orca%InputTimes, Orca%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
                         
          ! Shift "window" of Orca%Input
@@ -6113,7 +6113,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       ! IceFloe
       IF ( p_FAST%CompIce == Module_IceF ) THEN
          
-         CALL IceFloe_Input_ExtrapInterp(IceF%Input, IceF%InputTimes, IceF%u, t_global_next, ErrStat2, ErrMsg2)
+         CALL IceFloe_Input_ExtrapInterp(IceF%Input(1:), IceF%InputTimes, IceF%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
          ! Shift "window" of IceF%Input
@@ -6133,7 +6133,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
          
          DO i = 1,p_FAST%numIceLegs
          
-            CALL IceD_Input_ExtrapInterp(IceD%Input(:,i), IceD%InputTimes(:,i), IceD%u(i), t_global_next, ErrStat2, ErrMsg2)
+            CALL IceD_Input_ExtrapInterp(IceD%Input(1:,i), IceD%InputTimes(:,i), IceD%u(i), t_global_next, ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
             ! Shift "window" of IceD%Input

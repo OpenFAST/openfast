@@ -56,7 +56,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_2PI                           = 64      ! Variable is an angle with range [0,2pi] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_WM_Rot                        = 128      ! Variable is a Wiener-Milenkovic rotation [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_WriteOut                      = 256      ! Variable for write output [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Solve                         = 512      ! Variable for solver [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Solve                         = 512      ! Variable for tight coupling solver [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_AeroMap                       = 1024      ! Variable for aeromap [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder1                   = 2048      ! Variable is derivative order 1 in linearization file [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_DerivOrder2                   = 4096      ! Variable is derivative order 2 in linearization file [-]
@@ -135,12 +135,13 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: DerivOrder = 0      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iLoc = 0      !< indices in module arrays [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iGlu = 0      !< indices in module arrays [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: iAry = 0      !< first user defined index for variable [-]
-    INTEGER(IntKi)  :: jAry = 0      !< second user defined index for variable [-]
-    INTEGER(IntKi)  :: kAry = 0      !< third user defined index for variable [-]
-    INTEGER(IntKi)  :: mAry = 0      !< fourth user defined index for variable [-]
-    INTEGER(IntKi)  :: nAry = 0      !< fifth user defined index for variable [-]
-    INTEGER(IntKi)  :: MeshID = 0      !< Mesh identification number [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iq = 0      !< solver state row indices [-]
+    INTEGER(IntKi)  :: iLB = 0      !< first user defined index lower bound for variable [-]
+    INTEGER(IntKi)  :: iUB = 0      !< first user defined index upper bound for variable [-]
+    INTEGER(IntKi)  :: j = 0      !< second user defined index for variable [-]
+    INTEGER(IntKi)  :: k = 0      !< third user defined index for variable [-]
+    INTEGER(IntKi)  :: m = 0      !< fourth user defined index for variable [-]
+    INTEGER(IntKi)  :: n = 0      !< fifth user defined index for variable [-]
     REAL(R8Ki)  :: Perturb = 0      !< perturbation amount for linearization [-]
     TYPE(DatLoc)  :: DL      !< data location [-]
     character(VarNameLen)  :: Name      !<  [-]
@@ -200,13 +201,11 @@ IMPLICIT NONE
 ! =========  ModDataType  =======
   TYPE, PUBLIC :: ModDataType
     character(ChanLen)  :: Abbr      !< Module name abbreviation [-]
-    INTEGER(IntKi)  :: ID = 0      !< Module identification number [-]
     INTEGER(IntKi)  :: iMod = 0      !< Module index in array of modules [-]
+    INTEGER(IntKi)  :: ID = 0      !< Module identification number [-]
     INTEGER(IntKi)  :: Ins = 0      !< Module instance number [-]
     INTEGER(IntKi)  :: SubSteps = 0      !< Module number of substeps per solver time step [-]
     REAL(R8Ki)  :: DT = 0      !< Module time step [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iSrcMaps      !< Indices of mappings where module is the source [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iDstMaps      !< Indices of mappings where module is the destination [-]
     TYPE(ModVarsType)  :: Vars      !< Module variables type [-]
     TYPE(ModLinType)  :: Lin      !< Module linearization arrays and matrices [-]
   END TYPE ModDataType
@@ -704,12 +703,13 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    DstModVarTypeData%DerivOrder = SrcModVarTypeData%DerivOrder
    DstModVarTypeData%iLoc = SrcModVarTypeData%iLoc
    DstModVarTypeData%iGlu = SrcModVarTypeData%iGlu
-   DstModVarTypeData%iAry = SrcModVarTypeData%iAry
-   DstModVarTypeData%jAry = SrcModVarTypeData%jAry
-   DstModVarTypeData%kAry = SrcModVarTypeData%kAry
-   DstModVarTypeData%mAry = SrcModVarTypeData%mAry
-   DstModVarTypeData%nAry = SrcModVarTypeData%nAry
-   DstModVarTypeData%MeshID = SrcModVarTypeData%MeshID
+   DstModVarTypeData%iq = SrcModVarTypeData%iq
+   DstModVarTypeData%iLB = SrcModVarTypeData%iLB
+   DstModVarTypeData%iUB = SrcModVarTypeData%iUB
+   DstModVarTypeData%j = SrcModVarTypeData%j
+   DstModVarTypeData%k = SrcModVarTypeData%k
+   DstModVarTypeData%m = SrcModVarTypeData%m
+   DstModVarTypeData%n = SrcModVarTypeData%n
    DstModVarTypeData%Perturb = SrcModVarTypeData%Perturb
    call NWTC_Library_CopyDatLoc(SrcModVarTypeData%DL, DstModVarTypeData%DL, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -757,12 +757,13 @@ subroutine NWTC_Library_PackModVarType(RF, Indata)
    call RegPack(RF, InData%DerivOrder)
    call RegPack(RF, InData%iLoc)
    call RegPack(RF, InData%iGlu)
-   call RegPack(RF, InData%iAry)
-   call RegPack(RF, InData%jAry)
-   call RegPack(RF, InData%kAry)
-   call RegPack(RF, InData%mAry)
-   call RegPack(RF, InData%nAry)
-   call RegPack(RF, InData%MeshID)
+   call RegPack(RF, InData%iq)
+   call RegPack(RF, InData%iLB)
+   call RegPack(RF, InData%iUB)
+   call RegPack(RF, InData%j)
+   call RegPack(RF, InData%k)
+   call RegPack(RF, InData%m)
+   call RegPack(RF, InData%n)
    call RegPack(RF, InData%Perturb)
    call NWTC_Library_PackDatLoc(RF, InData%DL) 
    call RegPack(RF, InData%Name)
@@ -785,12 +786,13 @@ subroutine NWTC_Library_UnPackModVarType(RF, OutData)
    call RegUnpack(RF, OutData%DerivOrder); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iLoc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iGlu); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iAry); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%jAry); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%kAry); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%mAry); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%nAry); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%MeshID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iLB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iUB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%j); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%k); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%m); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Perturb); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackDatLoc(RF, OutData%DL) ! DL 
    call RegUnpack(RF, OutData%Name); if (RegCheckErr(RF, RoutineName)) return
@@ -1586,42 +1588,17 @@ subroutine NWTC_Library_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModDataType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstModDataTypeData%Abbr = SrcModDataTypeData%Abbr
-   DstModDataTypeData%ID = SrcModDataTypeData%ID
    DstModDataTypeData%iMod = SrcModDataTypeData%iMod
+   DstModDataTypeData%ID = SrcModDataTypeData%ID
    DstModDataTypeData%Ins = SrcModDataTypeData%Ins
    DstModDataTypeData%SubSteps = SrcModDataTypeData%SubSteps
    DstModDataTypeData%DT = SrcModDataTypeData%DT
-   if (allocated(SrcModDataTypeData%iSrcMaps)) then
-      LB(1:1) = lbound(SrcModDataTypeData%iSrcMaps, kind=B8Ki)
-      UB(1:1) = ubound(SrcModDataTypeData%iSrcMaps, kind=B8Ki)
-      if (.not. allocated(DstModDataTypeData%iSrcMaps)) then
-         allocate(DstModDataTypeData%iSrcMaps(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModDataTypeData%iSrcMaps.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModDataTypeData%iSrcMaps = SrcModDataTypeData%iSrcMaps
-   end if
-   if (allocated(SrcModDataTypeData%iDstMaps)) then
-      LB(1:1) = lbound(SrcModDataTypeData%iDstMaps, kind=B8Ki)
-      UB(1:1) = ubound(SrcModDataTypeData%iDstMaps, kind=B8Ki)
-      if (.not. allocated(DstModDataTypeData%iDstMaps)) then
-         allocate(DstModDataTypeData%iDstMaps(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModDataTypeData%iDstMaps.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModDataTypeData%iDstMaps = SrcModDataTypeData%iDstMaps
-   end if
    call NWTC_Library_CopyModVarsType(SrcModDataTypeData%Vars, DstModDataTypeData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -1639,12 +1616,6 @@ subroutine NWTC_Library_DestroyModDataType(ModDataTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyModDataType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ModDataTypeData%iSrcMaps)) then
-      deallocate(ModDataTypeData%iSrcMaps)
-   end if
-   if (allocated(ModDataTypeData%iDstMaps)) then
-      deallocate(ModDataTypeData%iDstMaps)
-   end if
    call NWTC_Library_DestroyModVarsType(ModDataTypeData%Vars, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyModLinType(ModDataTypeData%Lin, ErrStat2, ErrMsg2)
@@ -1657,13 +1628,11 @@ subroutine NWTC_Library_PackModDataType(RF, Indata)
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackModDataType'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Abbr)
-   call RegPack(RF, InData%ID)
    call RegPack(RF, InData%iMod)
+   call RegPack(RF, InData%ID)
    call RegPack(RF, InData%Ins)
    call RegPack(RF, InData%SubSteps)
    call RegPack(RF, InData%DT)
-   call RegPackAlloc(RF, InData%iSrcMaps)
-   call RegPackAlloc(RF, InData%iDstMaps)
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    call NWTC_Library_PackModLinType(RF, InData%Lin) 
    if (RegCheckErr(RF, RoutineName)) return
@@ -1673,18 +1642,13 @@ subroutine NWTC_Library_UnPackModDataType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ModDataType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackModDataType'
-   integer(B8Ki)   :: LB(1), UB(1)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Abbr); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%ID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Ins); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SubSteps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iSrcMaps); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iDstMaps); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call NWTC_Library_UnpackModLinType(RF, OutData%Lin) ! Lin 
 end subroutine
