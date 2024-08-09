@@ -266,6 +266,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: Kurv      !< curvature at each node point [[1/m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: dl_1      !< segment stretch attributed to static stiffness portion [[m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: V      !< segment volume [[m^3]]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: F      !< VOF scalar for each segment (1 = fully submerged, 0 = out of water) [-]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: U      !< water velocity at node [[m/s]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Ud      !< water acceleration at node [[m/s^2]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: zeta      !< water surface elevation above node [[m]]
@@ -1731,6 +1732,18 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstLineData%V = SrcLineData%V
    end if
+   if (allocated(SrcLineData%F)) then
+      LB(1:1) = lbound(SrcLineData%F, kind=B8Ki)
+      UB(1:1) = ubound(SrcLineData%F, kind=B8Ki)
+      if (.not. allocated(DstLineData%F)) then
+         allocate(DstLineData%F(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%F.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%F = SrcLineData%F
+   end if
    if (allocated(SrcLineData%U)) then
       LB(1:2) = lbound(SrcLineData%U, kind=B8Ki)
       UB(1:2) = ubound(SrcLineData%U, kind=B8Ki)
@@ -1980,6 +1993,9 @@ subroutine MD_DestroyLine(LineData, ErrStat, ErrMsg)
    if (allocated(LineData%V)) then
       deallocate(LineData%V)
    end if
+   if (allocated(LineData%F)) then
+      deallocate(LineData%F)
+   end if
    if (allocated(LineData%U)) then
       deallocate(LineData%U)
    end if
@@ -2081,6 +2097,7 @@ subroutine MD_PackLine(RF, Indata)
    call RegPackAlloc(RF, InData%Kurv)
    call RegPackAlloc(RF, InData%dl_1)
    call RegPackAlloc(RF, InData%V)
+   call RegPackAlloc(RF, InData%F)
    call RegPackAlloc(RF, InData%U)
    call RegPackAlloc(RF, InData%Ud)
    call RegPackAlloc(RF, InData%zeta)
@@ -2155,6 +2172,7 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Kurv); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dl_1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%V); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%U); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Ud); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%zeta); if (RegCheckErr(RF, RoutineName)) return
