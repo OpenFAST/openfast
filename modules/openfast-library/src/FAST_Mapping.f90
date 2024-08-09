@@ -2419,6 +2419,8 @@ subroutine FAST_InputSolve(iModDst, ModAry, MapAry, iInput, Turbine, ErrStat, Er
       ! Loop through mappings
       do i = 1, size(MapAry)
 
+         if (.not. MapAry(i)%Ready) cycle
+
          ! Skip mappings where this isn't the destination module
          if (iModDst /= MapAry(i)%iModDst) cycle
          
