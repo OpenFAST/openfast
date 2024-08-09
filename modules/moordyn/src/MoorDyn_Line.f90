@@ -1135,59 +1135,64 @@ CONTAINS
       
       ! --------- calculate line partial submergence (Line::calcSubSeg from MD-C) ---------
       DO i=1,N
-         ! TODO - figure out the best math to do here
-         ! Averaging the surface heights at the two nodes is probably never
-         ! correct
-         surface_height = 0.5 * (Line%zeta(i-1) + Line%zeta(i)) 
+         
+         Line%F(i) = 1.0_DbKi
+         
+         ! TODO: Is the below the right way to handle partial submergence
 
-         ! The below could also be made an inline function with surface height and node indicies as inputs, same as MD-C
-         firstNodeZ = Line%r(3,i-1) - surface_height 
-         secondNodeZ = Line%r(3,i) - surface_height 
-         if ((firstNodeZ <= 0.0) .AND. (secondNodeZ < 0.0)) then
-            Line%F(i) = 1.0 ! Both nodes below water; segment must be too
-         else if ((firstNodeZ > 0.0) .AND. (secondNodeZ > 0.0)) then
-            Line%F(i) = 0.0 ! Both nodes above water; segment must be too
-         else if (firstNodeZ == -secondNodeZ) then
-            Line%F(i) = 0.5 ! Segment halfway submerged
-         else 
-            ! Segment partially submerged - figure out which node is above water
-            if (firstNodeZ < 0.0) then
-               lowerEnd = Line%r(:,i-1)
-            else
-               lowerEnd = Line%r(:,i) 
-            endif
-            if (firstNodeZ < 0.0) then
-               upperEnd = Line%r(:,i)
-            else   
-               upperEnd = Line%r(:,i-1)
+         ! ! TODO - figure out the best math to do here
+         ! ! Averaging the surface heights at the two nodes is probably never
+         ! ! correct
+         ! surface_height = 0.5 * (Line%zeta(i-1) + Line%zeta(i)) 
 
-            endif
-            lowerEnd(3) = lowerEnd(3) - surface_height
-            upperEnd(3) = upperEnd(3) - surface_height
+         ! ! The below could also be made an inline function with surface height and node indicies as inputs, same as MD-C
+         ! firstNodeZ = Line%r(3,i-1) - surface_height 
+         ! secondNodeZ = Line%r(3,i) - surface_height 
+         ! if ((firstNodeZ <= 0.0) .AND. (secondNodeZ < 0.0)) then
+         !    Line%F(i) = 1.0 ! Both nodes below water; segment must be too
+         ! else if ((firstNodeZ > 0.0) .AND. (secondNodeZ > 0.0)) then
+         !    Line%F(i) = 0.0 ! Both nodes above water; segment must be too
+         ! else if (firstNodeZ == -secondNodeZ) then
+         !    Line%F(i) = 0.5 ! Segment halfway submerged
+         ! else 
+         !    ! Segment partially submerged - figure out which node is above water
+         !    if (firstNodeZ < 0.0) then
+         !       lowerEnd = Line%r(:,i-1)
+         !    else
+         !       lowerEnd = Line%r(:,i) 
+         !    endif
+         !    if (firstNodeZ < 0.0) then
+         !       upperEnd = Line%r(:,i)
+         !    else   
+         !       upperEnd = Line%r(:,i-1)
 
-            ! segment submergence is calculated by calculating submergence of
-            ! hypotenuse across segment from upper corner to lower corner
-            ! To calculate this, we need the coordinates of these corners.
-            ! first step is to get vector from lowerEnd to upperEnd
-            segmentAxis = upperEnd - lowerEnd
+         !    endif
+         !    lowerEnd(3) = lowerEnd(3) - surface_height
+         !    upperEnd(3) = upperEnd(3) - surface_height
 
-            ! Next, find normal vector in z-plane, i.e. the normal vecto that
-            ! points "up" the most. See the following stackexchange:
-            ! https://math.stackexchange.com/questions/2283842/
-            upVec = (/0.0_DbKi, 0.0_DbKi, 1.0_DbKi/) ! the global up-unit vector 
-            normVec = Cross_Product(segmentAxis, (Cross_Product(upVec, segmentAxis)))
-            normVec = normVec / SQRT(normVec(1)**2+normVec(2)**2+normVec(3)**2) ! normalize
+         !    ! segment submergence is calculated by calculating submergence of
+         !    ! hypotenuse across segment from upper corner to lower corner
+         !    ! To calculate this, we need the coordinates of these corners.
+         !    ! first step is to get vector from lowerEnd to upperEnd
+         !    segmentAxis = upperEnd - lowerEnd
 
-            ! make sure normal vector has length equal to radius of segment
-            call scalevector(normVec, Line%d / 2, normVec)
+         !    ! Next, find normal vector in z-plane, i.e. the normal vecto that
+         !    ! points "up" the most. See the following stackexchange:
+         !    ! https://math.stackexchange.com/questions/2283842/
+         !    upVec = (/0.0_DbKi, 0.0_DbKi, 1.0_DbKi/) ! the global up-unit vector 
+         !    normVec = Cross_Product(segmentAxis, (Cross_Product(upVec, segmentAxis)))
+         !    normVec = normVec / SQRT(normVec(1)**2+normVec(2)**2+normVec(3)**2) ! normalize
 
-            ! Calculate and return submerged ratio:
-            lowerEnd = lowerEnd - normVec
-            upperEnd = upperEnd + normVec
+         !    ! make sure normal vector has length equal to radius of segment
+         !    call scalevector(normVec, Line%d / 2, normVec)
 
-            Line%F(i) = abs(lowerEnd(3)) / (abs(lowerEnd(3)) + upperEnd(3))
+         !    ! Calculate and return submerged ratio:
+         !    lowerEnd = lowerEnd - normVec
+         !    upperEnd = upperEnd + normVec
 
-         endif
+         !    Line%F(i) = abs(lowerEnd(3)) / (abs(lowerEnd(3)) + upperEnd(3))
+
+         ! endif
 
       END DO
 
