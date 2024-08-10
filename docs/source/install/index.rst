@@ -159,7 +159,7 @@ containing the executables, and running a simple test command:
 
 Running OpenFAST with docker
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-OpenFAST is avilable to be run on docker starting with version 3.5.3. Three approaches are shared below.
+OpenFAST is available to be run on docker starting with version 3.5.3. Three approaches are shared below.
 
 Using a docker image from Docker hub
 ------------------------------------
