@@ -303,7 +303,7 @@ GOTO checkError
 :AeroDisk
 SET CURR_LOC=%ADsk_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\AeroDisk_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\AeroDisk_Registry.txt" -I %NWTC_Lib_Loc% -I %IfW_Loc%  -I "%CURR_LOC%" -noextrap -O "%Output_Loc%"
 GOTO checkError
 
 :Version

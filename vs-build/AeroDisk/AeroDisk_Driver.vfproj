@@ -118,8 +118,10 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk.f90"/>
 		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_IO.f90"/>
-  		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Output_Params.f90"/></Filter>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Output_Params.f90"/></Filter>
 		<Filter Name="AeroDisk_Driver">
+		<File RelativePath="..\..\modules\aerodisk\src\driver\AeroDisk_Driver.f90"/>
+		<File RelativePath="..\..\modules\aerodisk\src\driver\AeroDisk_Driver_Subs.f90"/>
 		<File RelativePath="..\..\modules\aerodisk\src\driver\AeroDisk_Driver_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
@@ -128,20 +130,30 @@
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\aerodisk\src\driver\AeroDisk_Driver.f90"/>
-		<File RelativePath="..\..\modules\aerodisk\src\driver\AeroDisk_Driver_Subs.f90"/></Filter>
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<Filter Name="IfW_FlowField">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\inflowwind\src\IfW_FlowField.txt">
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FLowField_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></Filter>
+		<File RelativePath="..\..\modules\inflowwind\src\IfW_FlowField.f90"/></Filter>
 		<Filter Name="NWTC_Library">
 		<Filter Name="NetLib">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
+		<Filter Name="RanLux">
+		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/></Filter>
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library.txt"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\JSON.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModReg.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_IncSubs.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
@@ -152,10 +164,12 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Str.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/></Filter>
 		<Filter Name="VersionInfo">
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Filter></Files>
 	<Globals/></VisualStudioProject>
