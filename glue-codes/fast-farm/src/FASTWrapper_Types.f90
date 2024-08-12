@@ -268,7 +268,7 @@ subroutine FWrap_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%UseSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%fromSCGlob); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackPtr(RF, OutData%Vdist_High); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Vdist_High, LB, UB); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FWrap_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
