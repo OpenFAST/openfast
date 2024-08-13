@@ -1105,7 +1105,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       call ParseVar(FileInfo_In, CurLine, 'amplitude'//sWT         , wt%amplitude,       errStat2, errMsg2, unEc); if(Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'frequency'//sWT         , wt%frequency,       errStat2, errMsg2, unEc); if(Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
-      wt%frequency = wt%frequency * 2 *pi ! Hz to rad/s
+      wt%frequency = wt%frequency * 2 * pi ! Hz to rad/s
       if (dvr%analysisType==idAnalysisRegular) then
          if (wt%motionType==idBaseMotionGeneral) then
             call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
@@ -1313,7 +1313,7 @@ subroutine setSimpleMotion(wt, rotSpeed, bldPitch, nacYaw, DOF, amplitude, frequ
    integer                       :: i
    wt%degreeofFreedom   = DOF
    wt%amplitude         = amplitude
-   wt%frequency         = frequency * 2 *pi ! Hz to rad/s
+   wt%frequency         = frequency
    wt%nac%motionType    = idNacMotionConstant
    wt%nac%yaw           = nacYaw* PI /180._ReKi ! deg 2 rad
    wt%hub%motionType    = idHubMotionConstant
