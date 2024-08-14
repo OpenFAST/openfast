@@ -462,8 +462,8 @@ position (x,y,z vector) of the nacelle center of buoyancy from
 the yaw bearing in local nacelle coordinates. To neglect buoyant 
 loads on the nacelle, set ``VolNac`` to 0. Only used when ``Buoyancy = TRUE``.
 
-``NacArea`` are the projected areas (x,y,z) of the nacelle in the nacelle coordinate system, 
-``NacCd`` is the drag coefficient for the nacelle areas defined by ``NacArea``and ``NacDragAC`` is the 
+``NacArea`` are the projected areas (Ax,Ay,Az vector) of the nacelle in the nacelle coordinate system, 
+``NacCd`` are the drag coefficients (Cdx, Cdy, Cdz vector) for the three nacelle areas defined by ``NacArea``and ``NacDragAC`` is the 
 position (x,y,z vector) of the nacelle aerodynamic center from
 the yaw bearing in local nacelle coordinates.  Only used when ``NacelleDrag = TRUE``.
 
