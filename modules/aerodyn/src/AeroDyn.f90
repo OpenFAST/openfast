@@ -2596,10 +2596,6 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       m%NacFB = NacFBtmp
       m%NacMB = NacMBtmp
 
-      ! Passing buoyant loads to m variable, drag loads are called after buoyant loads
-      m%NacFi = NacFBtmp
-      m%NacMi = NacMBtmp
-
    else
          ! Check that nacelle node does not go beneath the seabed or pierce the free surface
       if ( u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) >= p%MSL2SWL .OR. u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) <= -p%WtrDpth ) &
@@ -2636,14 +2632,16 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       m%NacFB = NacFBtmp
       m%NacMB = NacMBtmp
 
-      ! Passing buoyant loads to m variable, drag loads are called after buoyant loads
-      m%NacFi = NacFBtmp
-      m%NacMi = NacMBtmp
    end if
 
       ! Assign buoyant loads to nacelle mesh. Mesh might contain the nacelle drag force.
    y%NacelleLoad%Force(:,1) = y%NacelleLoad%Force(:,1) + NacFBtmp
    y%NacelleLoad%Moment(:,1) = y%NacelleLoad%Moment(:,1) + NacMBtmp
+
+   ! Passing buoyant loads to m variable, drag loads are called after buoyant loads
+   m%NacFi = y%NacelleLoad%Force(:,1)
+   m%NacMi = y%NacelleLoad%Moment(:,1)
+
 
 end subroutine CalcBuoyantLoads
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -7750,14 +7748,14 @@ SUBROUTINE computeNacelleDrag( u, p, m, y, RotInflow, ErrStat, ErrMsg )
    moment = CROSS_PRODUCT(p%NacDragAC, force)
 
    ! Add drag forces and moments to nacelle node
-   y%NacelleLoad%Force(1:3,1)  = y%NacelleLoad%Force(1:3,1) + matmul(transpose(u%NacelleMotion%Orientation(:,:,1)),force)
-   y%NacelleLoad%Moment(1:3,1) = y%NacelleLoad%Moment(1:3,1) + matmul(transpose(u%NacelleMotion%Orientation(:,:,1)),moment)
+   y%NacelleLoad%Force(:,1)  = y%NacelleLoad%Force(:,1) + matmul(transpose(u%NacelleMotion%Orientation(:,:,1)),force)
+   y%NacelleLoad%Moment(:,1) = y%NacelleLoad%Moment(:,1) + matmul(transpose(u%NacelleMotion%Orientation(:,:,1)),moment)
 
    ! Adding to misc vars for output in Global c.s.
    m%NacDragF = matmul(transpose(u%NacelleMotion%Orientation(:,:,1)),force)
    m%NacDragM = matmul(transpose(u%NacelleMotion%Orientation(:,:,1)),moment)
-   m%NacFi    = y%NacelleLoad%Force(1:3,1)
-   m%NacMi    = y%NacelleLoad%Moment(1:3,1)
+   m%NacFi    = y%NacelleLoad%Force(:,1)
+   m%NacMi    = y%NacelleLoad%Moment(:,1)
 
 
 
