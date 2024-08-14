@@ -547,7 +547,6 @@ CONTAINS
          ! initial position and orientation of node
          InitPos  = tmpNodePos(1:3,iNode)
          theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-         ! CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat, ErrMsg )
          Orient = EulerConstructZYX(theta)
          call MeshPositionNode(  HD_MotionMesh            , &
                                  iNode                    , &
@@ -750,8 +749,7 @@ SUBROUTINE HydroDyn_C_CalcOutput(Time_C, NumNodePts_C, NodePos_C, NodeVel_C, Nod
 
 
    ! Transfer motions to input meshes
-   call Set_MotionMesh( ErrStat2, ErrMsg2 )           ! update motion mesh with input motion arrays
-      if (Failed())  return
+   call Set_MotionMesh()           ! update motion mesh with input motion arrays
    call HD_SetInputMotion( HD%u(1), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
       if (Failed())  return
 
@@ -903,8 +901,7 @@ SUBROUTINE HydroDyn_C_UpdateStates( Time_C, TimeNext_C, NumNodePts_C, NodePos_C,
    tmpNodeAcc(1:6,1:NumNodePts)   = reshape( real(NodeAcc_C(1:6*NumNodePts),ReKi), (/6,NumNodePts/) )
 
    ! Transfer motions to input meshes
-   call Set_MotionMesh( ErrStat2, ErrMsg2 )                    ! update motion mesh with input motion arrays
-      if (Failed())  return
+   call Set_MotionMesh()                    ! update motion mesh with input motion arrays
    call HD_SetInputMotion( HD%u(INPUT_PRED), ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
       if (Failed())  return
 
@@ -1063,16 +1060,13 @@ END SUBROUTINE HydroDyn_C_End
 
 
 !> This routine is operating on module level data, hence few inputs
-subroutine Set_MotionMesh(ErrStat3, ErrMsg3)
-   integer(IntKi),            intent(  out)  :: ErrStat3
-   character(ErrMsgLen),      intent(  out)  :: ErrMsg3
+subroutine Set_MotionMesh()
    integer(IntKi)                            :: iNode
    real(R8Ki)                                :: theta(3)
    real(R8Ki)                                :: Orient(3,3)
    ! Set mesh corresponding to input motions
    do iNode=1,NumNodePts
       theta    = real(tmpNodePos(4:6,iNode),DbKi)    ! convert ReKi to DbKi to avoid roundoff
-      ! CALL SmllRotTrans( 'InputRotation', theta(1), theta(2), theta(3), Orient, 'Orient', ErrStat3, ErrMsg3 )
       Orient = EulerConstructZYX(theta)
       HD_MotionMesh%TranslationDisp(1:3,iNode) = tmpNodePos(1:3,iNode) - HD_MotionMesh%Position(1:3,iNode)  ! relative displacement only
       HD_MotionMesh%Orientation(1:3,1:3,iNode) = Orient
