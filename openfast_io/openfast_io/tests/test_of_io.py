@@ -7,9 +7,32 @@ from openfast_io.FAST_reader import InputReader_OpenFAST
 from openfast_io.FAST_writer import InputWriter_OpenFAST
 from openfast_io.FAST_output_reader import FASTOutputFile
 
+from openfast_io.FileTools import check_rtest_cloned
+from pathlib import Path
+
 REPOSITORY_ROOT = osp.dirname(osp.dirname(osp.dirname(osp.dirname(__file__))))
 RTESTS_DIR = osp.join(REPOSITORY_ROOT, "reg_tests","r-test")
-TEST_DATA_DIR = osp.join(RTESTS_DIR, "glue-codes", "openfast", "5MW_Land_DLL_WTurb")
+TEST_DATA_DIR = osp.join(RTESTS_DIR, "glue-codes", "openfast")
+
+RUN_DIR = osp.join(REPOSITORY_ROOT, "build_ofio", "testSuite")
+Path(RUN_DIR).mkdir(parents=True, exist_ok=True)
+
+
+# Exercising the  various OpenFAST modules
+FOLDERS_TO_RUN = [
+    "5MW_Land_DLL_WTurb"                    ,       # "openfast;elastodyn;aerodyn15;servodyn")
+    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr"        ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
+    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart",       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore;restart")
+    "5MW_ITIBarge_DLL_WTurb_WavesIrr"       ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
+    "5MW_OC4Semi_WSt_WavesWN"               ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
+    "5MW_Land_BD_DLL_WTurb"                 ,       # "openfast;beamdyn;aerodyn15;servodyn")
+    "5MW_OC4Jckt_ExtPtfm"                   ,       # "openfast;elastodyn;extptfm")
+    "HelicalWake_OLAF"                      ,       # "openfast;aerodyn15;olaf")
+    "StC_test_OC4Semi"                      ,       # "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
+    "MHK_RM1_Fixed"                         ,       # "openfast;elastodyn;aerodyn15;mhk")
+    "MHK_RM1_Floating"                      ,       # "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
+    "Tailfin_FreeYaw1DOF_PolarBased"        ,       # "openfast;elastodyn;aerodyn15")
+]
 
 # looking up OS for the correct executable extension
 mactype = platform.system().lower()
@@ -27,8 +50,13 @@ class TestOFutils(unittest.TestCase):
     def testOF_Inputs(self):
 
         # Check if r-tests are available
-        if not osp.isdir(RTESTS_DIR):
-            Exception("The test data directory, {}, does not exist. If you haven't already, run `git submodule update --init --recursive`".format(RTESTS_DIR))
+        if check_rtest_cloned(TEST_DATA_DIR):
+            sys.exit(1)
+
+        # Check if OpenFAST executable is available else inform user
+        if not osp.exists(of_path):
+            print(f"OpenFAST executable not found at {of_path}. Please build OpenFAST and try again.")
+            sys.exit(1)
 
 
         # Read input deck
