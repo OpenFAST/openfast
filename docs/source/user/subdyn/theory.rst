@@ -386,8 +386,6 @@ element stiffness and consistent mass matrices can be written as follows
 
 .. math:: 	:label: ke0
 
-    \setcounter{MaxMatrixCols}{20}
-
     {\scriptstyle
     [k_e]= 
             \begin{bmatrix}
