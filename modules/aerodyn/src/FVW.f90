@@ -1573,7 +1573,7 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    
-   integer(IntKi), parameter :: NumBladesPerWing = 1 !bjj why are we using this number?
+   integer(IntKi), parameter :: NumBladesPerWing = 1 ! UA is called separately for each wing (i.e., blade). In BEMT, UA is called for all blades on a single rotor.
    !
    type(UA_InitOutputType):: InitOutData_UA
    integer                :: i,iW

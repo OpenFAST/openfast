@@ -2705,6 +2705,9 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    BL_p%T_f0 = BL_p%T_f0 * Tu ! Emmanuel wants a factor of 2 here to match HAWC2, but we don't want that factor for Bladed comparisons
    BL_p%T_p  = BL_p%T_p  * Tu
 
+   TuOmega = Tu * u%omega
+   TuOmega = MIN( MAX(TuOmega, -MaxTuOmega), MaxTuOmega)
+
       ! calculate fs_aF (stored in AFI_interp%f_st):
     ! find alphaF where FullyAttached(alphaF) = x(3)
    alphaF = Get_alphaF(p, u, x, BL_p, alpha_34, alphaE)
@@ -2736,13 +2739,13 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    
    if (p%UAMod == UA_HGM) then
       call AddOrSub2Pi(BL_p%alpha0, alphaE)
-      Clp = BL_p%c_lalpha * (alphaE - BL_p%alpha0) + pi * Tu * u%omega   ! Eq. 13
-      dxdt%x(3) = -1.0_R8Ki / BL_p%T_p                                  * x%x(3) +         1.0_ReKi / BL_p%T_p  * Clp              ! Eq. 10 [40]
-      dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st  ! Eq. 11 [40]
+      Clp = BL_p%c_lalpha * (alphaE - BL_p%alpha0) + pi * TuOmega      ! Eq. 13
+      dxdt%x(3) = ( Clp             - x%x(3) ) / BL_p%T_p              ! Eq. 10 [40]
+      dxdt%x(4) = ( AFI_AlphaF%f_st - x4     ) / BL_p%T_f0             ! Eq. 11 [40]
       dxdt%x(5) = 0.0_R8Ki
 
    elseif (p%UAMod == UA_OYE) then
-      dxdt%x(4) = -1.0_R8Ki / BL_p%T_f0                                 *    x4  +         1.0_ReKi / BL_p%T_f0 * AFI_AlphaF%f_st
+      dxdt%x(4) = ( AFI_AlphaF%f_st - x4     ) / BL_p%T_f0
       dxdt%x(1) = 0.0_R8Ki
       dxdt%x(2) = 0.0_R8Ki
       dxdt%x(3) = 0.0_R8Ki
@@ -2753,9 +2756,6 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
       call AFI_ComputeAirfoilCoefs( alphaE, u%Re, u%UserProp, AFInfo, AFI_AlphaE, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
-
-      TuOmega = Tu * u%omega
-      TuOmega = MIN( MAX(TuOmega, -MaxTuOmega), MaxTuOmega)
 
       Clp = AFI_AlphaE%FullyAttached + pi * TuOmega                                        ! Eq. 13 (this is really Cnp)
       dxdt%x(3) = ( Clp             - x%x(3) ) / BL_p%T_p

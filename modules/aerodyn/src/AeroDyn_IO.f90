@@ -1394,9 +1394,12 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, c
    INTEGER,         PARAMETER                :: MaxCols = 10
    CHARACTER(NWTC_SizeOfNumWord*(MaxCols+1)) :: Line
    INTEGER(IntKi)                            :: Indx(MaxCols)
+   CHARACTER(8),   PARAMETER                 :: AvailableChanNames(MaxCols) = (/'BLSPN   ', 'BLCRVAC ','BLSWPAC ','BLCRVANG','BLTWIST ','BLCHORD ', 'BLAFID  ', 'BLCB    ', 'BLCENBN ','BLCENBT ' /) ! in upper case only
+   LOGICAL,        PARAMETER                 :: RequiredChanNames( MaxCols) = (/.true.    , .true.    ,.true.    ,.false.   ,.true.    ,.true.    , .true.    , .false.   , .false.   ,.false.    /)
 
    CHARACTER(*), PARAMETER                   :: RoutineName = 'ReadBladeInputs'
 
+   
    ErrStat = ErrID_None
    ErrMsg  = ""
    UnIn = -1
@@ -1482,7 +1485,7 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, c
    
    
    ! figure out what columns are specified in this file and in what order:
-   CALL GetInputColumnIndex(Line, Indx, ErrStat2, ErrMsg2)
+   CALL GetInputColumnIndex(MaxCols, AvailableChanNames, RequiredChanNames, Line, Indx, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -1570,7 +1573,7 @@ SUBROUTINE ConvertLineToCols(Line, i, Indx, BladeKInputFileData, ErrStat, ErrMsg
       
    IOS = 0 ! initialize in case we don't read all of the columns
       
-   ! Note: See order of variable AvailableChanNames in subroutine GetInputColumnIndex() for these variables indices
+   ! Note: See order of variable AvailableChanNames in subroutine ReadBladeInputs() for these variables indices
    ! Also, we have checked that Indx is non zero and less than MaxCols for each of the required words
    c=Indx( 1); READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlSpn(I)
    c=Indx( 2); READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCrvAC(I)
@@ -1605,61 +1608,6 @@ SUBROUTINE ConvertLineToCols(Line, i, Indx, BladeKInputFileData, ErrStat, ErrMsg
    END IF
       
 END SUBROUTINE ConvertLineToCols
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE GetInputColumnIndex(HeaderLine, Indx, ErrStat, ErrMsg)
-   
-   CHARACTER(*),   INTENT(IN   )    :: HeaderLine
-   INTEGER(IntKi), INTENT(INOUT)    :: Indx(:)
-   INTEGER(IntKi), INTENT(  OUT)    :: ErrStat
-   CHARACTER(*),   INTENT(  OUT)    :: ErrMsg
-      
-      
-   CHARACTER(8),   PARAMETER        :: AvailableChanNames(10) = (/'BLSPN   ', 'BLCRVAC ','BLSWPAC ','BLCRVANG','BLTWIST ','BLCHORD ', 'BLAFID  ', 'BLCB    ', 'BLCENBN ','BLCENBT ' /) ! in upper case only
-   LOGICAL,        PARAMETER        :: RequiredChanNames( 10) = (/.true.    , .true.    ,.true.    ,.false.   ,.true.    ,.true.    , .true.    , .false.   , .false.   ,.false.    /)
-   CHARACTER(ChanLen)               :: Words(SIZE(AvailableChanNames))
-   INTEGER(IntKi)                   :: i  ! loop counter
-   INTEGER(IntKi)                   :: j  ! loop counter
-   INTEGER(IntKi)                   :: FirstCheck
-   INTEGER(IntKi)                   :: NumFound
-            
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-      
-   CALL GetWords ( HeaderLine, Words, SIZE(AvailableChanNames), NumFound )
-      
-   DO j = 1,NumFound
-      CALL Conv2UC ( Words(j) )
-      
-      ! stop reading any more headers if this word starts with a comment character (indicating that the columns aren't in the table)
-      IF ( INDEX( CommChars, Words(j)(1:1) ) > 0 ) THEN
-         NumFound = j - 1
-         EXIT
-      END IF
-   END DO
-      
-   Indx = -1 ! initialize all values to be "not found"
-      
-   FirstCheck = 1
-   DO i = 1,SIZE(Indx)
-      DO j = FirstCheck,NumFound
-         IF ( TRIM(AvailableChanNames(i)) == TRIM(Words(j)) ) THEN
-            Indx(I) = j
-            IF (j == FirstCheck + 1) FirstCheck = FirstCheck + 1 ! attempt to make this loop a little faster without assuming anything about the order of the words found
-            CYCLE
-         END IF
-      END DO
-   END DO
-      
-   ! check that the required columns are in the file:
-   DO i = 1,SIZE(Indx)
-      IF (Indx(i) < 1 .and. RequiredChanNames(i)) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg = TRIM(AvailableChanNames(i))//" , a required input, was not found in the blade input file."
-         RETURN
-      END IF
-   END DO
-      
-END SUBROUTINE GetInputColumnIndex
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Read Tail Fin inputs

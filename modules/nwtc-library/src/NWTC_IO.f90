@@ -1892,7 +1892,6 @@ END SUBROUTINE CheckR8Var
 
 
    END FUNCTION GetErrStr
-   
 !=======================================================================
 !> This function extracts the Name field from the ProgDesc data type
 !  and return it.
@@ -2133,6 +2132,65 @@ END SUBROUTINE CheckR8Var
 
    RETURN
    END SUBROUTINE GetWords
+!=======================================================================
+!> This subroutine is used to compare a header line (`HeaderLine`) with a list of column names.
+!! It searches for each possible column name (AvailableChanName) and returns an index array indicating which
+!! order the columns are listed in the file (this allows columns to be entered in different orders or for 
+!! some columns to be missing. It returns an error if any of the required channels are missing.
+   SUBROUTINE GetInputColumnIndex(MaxCols, AvailableChanNames, RequiredChanNames, HeaderLine, Indx, ErrStat, ErrMsg)
+   
+      INTEGER(IntKi), INTENT(IN   )    :: MaxCols                             !< maximum number of columns that should be in the input file
+      CHARACTER(*),   INTENT(IN   )    :: AvailableChanNames(MaxCols)         !< list of column headers, THESE SHOULD BE IN UPPER CASE
+      LOGICAL,        INTENT(IN   )    :: RequiredChanNames( MaxCols)         !< T/F corresponding to channel names to determine if these channels should be required
+      CHARACTER(*),   INTENT(IN   )    :: HeaderLine                          !< line of text to be read
+      INTEGER(IntKi), INTENT(INOUT)    :: Indx(MaxCols)                       !< index relating upper-case column names found in header line with AvailableChanNames
+      INTEGER(IntKi), INTENT(  OUT)    :: ErrStat                             !< returns a fatal error if a required channel name isn't found in HeaderLine
+      CHARACTER(*),   INTENT(  OUT)    :: ErrMsg                              !< returns message about which column is missing
+   
+      CHARACTER(ChanLen)               :: Words(MaxCols)
+      INTEGER(IntKi)                   :: i                    ! loop counter
+      INTEGER(IntKi)                   :: j                    ! loop counter
+      INTEGER(IntKi)                   :: FirstCheck
+      INTEGER(IntKi)                   :: NumFound
+            
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      
+      CALL GetWords ( HeaderLine, Words, MaxCols, NumFound )
+      
+      DO j = 1,NumFound
+         CALL Conv2UC ( Words(j) )
+      
+         ! stop reading any more headers if this word starts with a comment character (indicating that the columns aren't in the table)
+         IF ( INDEX( CommChars, Words(j)(1:1) ) > 0 ) THEN
+            NumFound = j - 1
+            EXIT
+         END IF
+      END DO
+      
+      Indx = -1 ! initialize all values to be "not found"
+      
+      FirstCheck = 1
+      DO i = 1,SIZE(Indx)
+         DO j = FirstCheck,NumFound
+            IF ( TRIM(AvailableChanNames(i)) == TRIM(Words(j)) ) THEN
+               Indx(I) = j
+               IF (j == FirstCheck + 1) FirstCheck = FirstCheck + 1 ! attempt to make this loop a little faster without assuming anything about the order of the words found
+               CYCLE
+            END IF
+         END DO
+      END DO
+      
+      ! check that the required columns are in the file:
+      DO i = 1,SIZE(Indx)
+         IF (Indx(i) < 1 .and. RequiredChanNames(i)) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg = TRIM(AvailableChanNames(i))//" , a required input, was not found in the line."
+            RETURN
+         END IF
+      END DO
+      
+   END SUBROUTINE GetInputColumnIndex
 !=======================================================================
 !> This routine converts an ASCII array of integers into an equivalent string
 !! (character array). This routine is the inverse of the Str2IntAry() (nwtc_io::str2intary) routine.
