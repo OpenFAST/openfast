@@ -673,41 +673,20 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, RotI
             endif
          
          CASE ( BldNd_Curve )
-            if (p_AD%Wake_Mod /= WakeMod_FVW) then
-               DO iB=1,nB
-                  do iNdL=1,nNd; iNd=Nd(iNdL);                   
-                     y%WriteOutput(iOut)  = m%Curve(iNd,iB)*R2D                                            
-                     iOut = iOut + 1
-                  END DO
+            DO iB=1,nB
+               DO iNdL=1,nNd; iNd=Nd(iNdL);                   
+                  y%WriteOutput(iOut)  = m%Cant(iNd,iB)*R2D                                            
+                  iOut = iOut + 1
                END DO
-            else
-               DO iB=1,nB
-                  iW = W2B(iB)
-                  do iNdL=1,nNd; iNd=Nd(iNdL);                   
-!NOT available in FVW yet
-                     y%WriteOutput(iOut) = 0.0_ReKi 
-                     iOut = iOut + 1
-                  END DO
-               END DO
-            endif
+            END DO
 
          CASE ( BldNd_Toe )
-            if (p_AD%Wake_Mod /= WakeMod_FVW) then
-               DO iB=1,nB
-                  do iNdL=1,nNd; iNd=Nd(iNdL);                   
-                     y%WriteOutput(iOut)  = m%BEMT_u(Indx)%toeAngle(iNd,iB)*R2D
-                     iOut = iOut + 1
-                  END DO
+            DO iB=1,nB
+               DO iNdL=1,nNd; iNd=Nd(iNdL);                   
+                  y%WriteOutput(iOut)  = m%Toe(iNd,iB)*R2D
+                  iOut = iOut + 1
                END DO
-            else
-               DO iB=1,nB
-                  iW = W2B(iB)
-                  do iNdL=1,nNd; iNd=Nd(iNdL);                   
-                     y%WriteOutput(iOut)  = 0.0_ReKi
-                     iOut = iOut + 1
-                  END DO
-               END DO
-            endif
+            END DO
          
          
          ! Unsteady lift force, drag force, pitching moment coefficients

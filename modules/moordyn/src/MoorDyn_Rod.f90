@@ -447,7 +447,7 @@ CONTAINS
 ! FIXME: should LU_temp be set to M_out before calling LUsolve?????
       LU_temp = 0.0_DbKi
 
-      CALL Rod_GetNetForceAndMass(Rod, Rod%r(:,0), Fnet, M_out, m, p)
+      CALL Rod_GetNetForceAndMass(Rod, Rod%r(:,0), Rod%v6(4:6), Fnet, M_out, m, p)
                   
                   
 
@@ -581,7 +581,6 @@ CONTAINS
       Real(DbKi)                 :: I_l                    ! axial inertia of rod
       Real(DbKi)                 :: I_r                    ! radial inertia of rod about CG
       Real(DbKi)                 :: Imat_l(3,3)            ! inertia about CG aligned with Rod axis
-      Real(DbKi)                 :: Imat(3,3)              ! inertia about CG in global frame     
       Real(DbKi)                 :: h_c                    ! location of CG along axis
       Real(DbKi)                 :: r_c(3)                 ! 3d location of CG relative to node A      
       Real(DbKi)                 :: Fcentripetal(3)        ! centripetal force
@@ -964,10 +963,10 @@ CONTAINS
       ! >>> some of the kinematics parts of this could potentially be moved to a different routine <<<
       Rod%OrMat = CalcOrientation(phi, beta, 0.0_DbKi)        ! get rotation matrix to put things in global rather than rod-axis orientations
       
-      Imat = RotateM3(Imat_l, Rod%OrMat)  ! rotate to give inertia matrix about CG in global frame
+      Rod%Imat = RotateM3(Imat_l, Rod%OrMat)  ! rotate to give inertia matrix about CG in global frame
       
       ! these supplementary inertias can then be added the matrix (these are the terms ASIDE from the parallel axis terms)
-      Rod%M6net(4:6,4:6) = Rod%M6net(4:6,4:6) + Imat
+      Rod%M6net(4:6,4:6) = Rod%M6net(4:6,4:6) + Rod%Imat
       
 
       ! now add centripetal and gyroscopic forces/moments, and that should be everything
@@ -975,9 +974,9 @@ CONTAINS
       r_c = h_c*Rod%q                 ! vector to center of mass
       
       ! note that Rod%v6(4:6) is the rotational velocity vector, omega   
-      Fcentripetal = 0.0_DbKi !<<<TEMP<<< -cross_product(Rod%v6(4:6), cross_product(Rod%v6(4:6), r_c ))*Rod%mass <<<
-      Mcentripetal = 0.0_DbKi !<<<TEMP<<< cross_product(r_c, Fcentripetal) - cross_product(Rod%v6(4:6), MATMUL(Imat,Rod%v6(4:6)))
-      
+      Fcentripetal = -cross_product(Rod%v6(4:6), cross_product(Rod%v6(4:6), r_c ))*Rod%mass
+      Mcentripetal = cross_product(r_c, Fcentripetal) - cross_product(Rod%v6(4:6), MATMUL(Rod%Imat,Rod%v6(4:6))) ! r_c cross Fcentripetal term needed becasue inertia matrix is about COG not end A
+
       ! add centripetal force/moment, gyroscopic moment, and any moments applied from lines at either end (might be zero)
       Rod%F6net(1:3) = Rod%F6net(1:3) + Fcentripetal 
       Rod%F6net(4:6) = Rod%F6net(4:6) + Mcentripetal + Rod%Mext
@@ -1047,16 +1046,22 @@ CONTAINS
 
    ! calculate the aggregate 6DOF rigid-body force and mass data of the rod 
    !--------------------------------------------------------------
-   SUBROUTINE Rod_GetNetForceAndMass(Rod, rRef, Fnet_out, M_out, m, p)
+   SUBROUTINE Rod_GetNetForceAndMass(Rod, rRef, wRef, Fnet_out, M_out, m, p)
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod         ! the Rod object
       Real(DbKi),            INTENT(IN   )  :: rRef(3)     ! global coordinates of reference point (end A for free Rods)
+      Real(DbKi),            INTENT(IN   )  :: wRef(3)     ! global angular velocities of reference point (i.e. the parent body)
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector about rRef
       Real(DbKi),            INTENT(  OUT)  :: M_out(6,6)  ! mass and inertia matrix about rRef
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
       
-      Real(DbKi)                 :: rRel(  3)              ! relative position of each node i from rRef      
+      Real(DbKi)                 :: rRel(  3)              ! relative position of each node i from rRef  
+      Real(DbKi)                 :: I_out(6,6)             ! Rod COG inertia matrix (no parallel axis terms) about rRef    
+      Real(DbKi)                 :: Fcentripetal(3)        ! centripetal force
+      Real(DbKi)                 :: Mcentripetal(3)        ! centripetal moment   
+      Real(DbKi)                 :: h_c
+      Real(DbKi)                 :: r_c(3)  
       
       ! do calculations of forces and masses on each rod node
       CALL Rod_DoRHS(Rod, m, p)
@@ -1064,13 +1069,27 @@ CONTAINS
       ! note: Some difference from MoorDyn C here. If this function is called by the Rod itself, the reference point must be end A
 
       ! shift everything from end A reference to rRef reference point
-      
-      rRel = Rod%r(:,0) - rRef   ! vector from reference point to end A            
+
+      rRel = Rod%r(:,0) - rRef   ! vector from reference point to end A. If this is called by Rod itself rRel will be zero           
          
       CALL translateForce3to6DOF(rRel, Rod%F6net(1:3), Fnet_out)      ! shift net forces
       Fnet_out(4:6) = Fnet_out(4:6) + Rod%F6net(4:6)               ! add in the existing moments
-         
+
       CALL translateMass6to6DOF(rRel, Rod%M6net, M_out)          ! shift mass matrix to be about ref point
+
+      IF (norm2(rRel) > 0.0) THEN ! In the case where rRel is zero, this is called at rod end A where the centriptal forces about that point have been accounted for in doRHS
+         ! Add in the centripetal force and moment on the body. These are valid when referring to the rods COG, hence the reference vector is r_c+rRel. 
+            ! Note that this is centripetal force/moment and gyroscopic term from the rods COG to body while the rod mass and f6 are from end A to body. 
+         h_c = 0.5*Rod%UnstrLen          ! distance to center of mass
+         r_c = h_c*Rod%q                 ! vector to center of mass
+         CALL TranslateMass3to6DOF(r_c+rRel, Rod%Imat, I_out) ! translate the COG inertia matrix (no parallel axis terms) about the body ref point
+
+         Fcentripetal = - MATMUL(Rod%M6net(1:3,1:3), CROSS_PRODUCT(wRef, CROSS_PRODUCT(wRef,r_c+rRel)))
+         Mcentripetal = - CROSS_PRODUCT(wRef, MATMUL(I_out(4:6,4:6), wRef))
+
+         Fnet_out(1:3) = Fnet_out(1:3) + Fcentripetal
+         Fnet_out(4:6) = Fnet_out(4:6) + Mcentripetal
+      ENDIF
          
       ! >>> do we need to ensure zero moment is passed if it's pinned? <<<
       !if (abs(Rod%typeNum)==1) then
