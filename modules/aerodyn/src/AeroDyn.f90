@@ -694,7 +694,9 @@ if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
    call AllocAry( m%TwrClrnc, p%NumBlNds, p%NumBlades, 'm%TwrClrnc', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 end if            
-   call AllocAry( m%Curve, p%NumBlNds, p%NumBlades, 'm%Curve', ErrStat2, ErrMsg2 )
+   call AllocAry( m%Cant, p%NumBlNds, p%NumBlades, 'm%Cant', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )            
+   call AllocAry( m%Toe, p%NumBlNds, p%NumBlades, 'm%Toe', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )            
    call AllocAry( m%X, p%NumBlNds, p%NumBlades, 'm%X', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -3145,18 +3147,20 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    if (ErrStat >= AbortErrLev) return
 
    !..........................
-   ! Set main geometry parameters (orientatioAnnulus, Curve, rLocal)
+   ! Set main geometry parameters (orientatioAnnulus, Twist, Toe, Cant, rLocal)
    !..........................
+   ! TODO (EB): For harmonization between BEM and OLAF we should always compute R_li, r_Local, Twist, Toe, Cant
+   !            BEM would then switch below between an "orientationMomentum", either Annulus (R_li) or NoPitchSweepPitch (R_wi)
    if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
 
       ! orientationAnnulus and curve
       if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist) then
-         call Calculate_MeshOrientation_NoSweepPitchTwist(p, u, m, ErrStat=ErrStat, ErrMsg=ErrMsg, thetaBladeNds=thetaBladeNds)
+         call Calculate_MeshOrientation_NoSweepPitchTwist(p, u, m, thetaBladeNds, m%Toe, m%Cant, ErrStat=ErrStat, ErrMsg=ErrMsg)
       else
-         call Calculate_MeshOrientation_LiftingLine(p, u, m, ErrStat=ErrStat, ErrMsg=ErrMsg, thetaBladeNds=thetaBladeNds)
+         call Calculate_MeshOrientation_LiftingLine(p, u, m, thetaBladeNds, m%Toe, m%Cant, ErrStat=ErrStat, ErrMsg=ErrMsg)
       endif
 
-      ! local radius (normalized distance from rotor centerline)
+      ! local radius (normalized distance from rotor centerline) NOTE: unfortunate calculation, see comment above for harmonization
       do k=1,p%NumBlades
          call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, elemPosRelToHub_save=elemPosRelToHub, elemPosRotorProj_save=elemPosRotorProj)
          do j=1,p%NumBlNds    
@@ -3169,6 +3173,8 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          
          ! Determine current azimuth angle and pitch axis vector of blade k, element j
          call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%orientationAnnulus(:,:,:,k), elemPosRelToHub_save=elemPosRelToHub, elemPosRotorProj_save=elemPosRotorProj)
+         ! Twist (aero+elastic), Toe, Cant (instantaneous and local), include elastic deformation
+         call TwistToeCant_FromLocalPolar(u%BladeMotion(k), m%orientationAnnulus(:,:,:,k), thetaBladeNds, m%Toe(:,k), m%Cant(:,k))
 
          !..........................
          ! Compute local radius
@@ -3202,10 +3208,10 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
   
    
    !..........................
-   ! local blade angles
+   ! local blade angles passed to BEM
    !..........................
    if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
-     ! Theta
+      ! Local and instantaneous blade twist+pitch (aerodynamic + elastic), cant and toe (include elastic deformation)
       do k=1,p%NumBlades
          do j=1,p%NumBlNds         
             m%BEMT_u(indx)%theta(j,k) = thetaBladeNds(j,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
@@ -3218,16 +3224,9 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    elseif (p%AeroProjMod==APM_BEM_Polar) then
          do k=1,p%NumBlades
             do j=1,p%NumBlNds
-               ! Get local blade cant angle and twist
-               orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose( m%orientationAnnulus(:,:,j,k) ) )
-               theta = EulerExtract( orientation )
-               ! Get toe angle
-               m%BEMT_u(indx)%toeAngle(j,k) = theta(1)
-               ! cant angle (including aeroelastic deformation)
-               m%BEMT_u(indx)%cantAngle(j,k) = theta(2)
-               m%Curve(j,k) = theta(2)
-               ! twist (including pitch and aeroelastic deformation)
-               m%BEMT_u(indx)%theta(j,k) = -theta(3)
+               m%BEMT_u(indx)%theta(j,k)     = thetaBladeNds(j,k)
+               m%BEMT_u(indx)%toeAngle(j,k)  = m%Toe(j,k)
+               m%BEMT_u(indx)%cantAngle(j,k) = m%Cant(j,k)
             end do !j=nodes
          end do !k=blades
    else
@@ -3404,6 +3403,27 @@ subroutine StorePitchAndAzimuth(p, u, m, ErrStat,ErrMsg)
 
 endsubroutine StorePitchAndAzimuth
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Instantaneous and local Twist Toe Cant angles from local polar to section
+!! Note: could also be placed in Calculate_MeshOrientation_Rel2Hub
+subroutine TwistToeCant_FromLocalPolar(secMesh, R_li, twist, toe, cant)
+   type(MeshType), intent(in   ) :: secMesh                  !< Blade section mesh "BladeMotion"
+   real(R8Ki),     intent(in   ) :: R_li(3,3,secMesh%NNodes) !< Orientation from inertial (i) to local polar (l), aka "orientationAnnulus"
+   real(R8Ki),     intent(out  ) :: twist(secMesh%NNodes)    !< Twist
+   real(ReKi),     intent(out  ) :: toe  (secMesh%NNodes)    !< Toe
+   real(ReKi),     intent(out  ) :: cant (secMesh%NNodes)    !< Cant
+   real(R8Ki)     :: R_sl(3,3) !< Orientation from local polar to section
+   integer(intKi) :: j         !< loop counter for nodes
+   real(R8Ki)     :: thetas(3) !< Euler angles
+   do j = 1, secMesh%NNodes
+      R_sl = matmul( secMesh%Orientation(:,:,j), transpose( R_li(:,:,j) ) ) ! From local polar to section - R_sec_i R_i_annulus
+      thetas = EulerExtract( R_sl )
+      toe(j)   = real( thetas(1), ReKi) ! toe angle
+      cant(j)  = real( thetas(2), ReKi) ! cant angle (including aeroelastic deformation)
+      twist(j) =      -thetas(3)        ! twist (including pitch and aeroelastic deformation)
+   end do
+end subroutine TwistToeCant_FromLocalPolar
+
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine Calculate_MeshOrientation_Rel2Hub(Mesh1, HubMotion, x_hat_disk, orientationAnnulus, elemPosRelToHub_save, elemPosRotorProj_save)
    TYPE(MeshType),             intent(in)  :: Mesh1          !< either BladeMotion or BladeRootMotion mesh
    TYPE(MeshType),             intent(in)  :: HubMotion      !< HubMotion mesh
@@ -3452,25 +3472,16 @@ subroutine Calculate_MeshOrientation_Rel2Hub(Mesh1, HubMotion, x_hat_disk, orien
       if (present(elemPosRotorProj_save)) elemPosRotorProj_save(:,j) = elemPosRotorProj
    end do
 
-   ! orientation = matmul( Mesh1(k)%Orientation(:,:,j), transpose( orientationAnnulus(:,:,j) ) )
-   ! theta = EulerExtract( orientation )
-   ! ! Get toe angle
-   ! toeAngle(j) = theta(1)
-   ! ! cant angle (including aeroelastic deformation)
-   ! cantAngle(j) = theta(2)
-   ! Curve(j) = theta(2)
-   ! ! twist (including pitch and aeroelastic deformation)
-   ! thetaNds(j) = -theta(3)
-      
 end subroutine Calculate_MeshOrientation_Rel2Hub
 !----------------------------------------------------------------------------------------------------------------------------------
 ! Calculate_MeshOrientation_NoSweepPitchTwist sets orientationAnnulus, Curve and potential Blades nodes angles
-subroutine Calculate_MeshOrientation_NoSweepPitchTwist(p, u, m, thetaBladeNds, toeBladeNds, ErrStat, ErrMsg)
+subroutine Calculate_MeshOrientation_NoSweepPitchTwist(p, u, m, twist, toe, cant, ErrStat, ErrMsg)
    type(RotParameterType),  intent(in   )  :: p                               !< AD parameters
    type(RotInputType),      intent(in   )  :: u                               !< AD Inputs at Time
    type(RotMiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
-   real(R8Ki), optional,    intent(  out)  :: thetaBladeNds(p%NumBlNds,p%NumBlades)
-   real(R8Ki), optional,    intent(  out)  :: toeBladeNds(p%NumBlNds,p%NumBlades)
+   real(R8Ki), optional,    intent(  out)  :: twist(p%NumBlNds,p%NumBlades)
+   real(ReKi), optional,    intent(  out)  :: toe(p%NumBlNds,p%NumBlades)
+   real(ReKi), optional,    intent(  out)  :: cant(p%NumBlNds,p%NumBlades)
    integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
    real(R8Ki)                              :: theta(3)
@@ -3508,9 +3519,9 @@ subroutine Calculate_MeshOrientation_NoSweepPitchTwist(p, u, m, thetaBladeNds, t
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          theta = EulerExtract( orientation ) !root(k)WithoutPitch_theta(j)_blade(k)
 
-         m%Curve(      j,k) =  theta(2)  ! save value for possible output later
-         if (present(thetaBladeNds)) thetaBladeNds(j,k) = -theta(3) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
-         if (present(toeBladeNds  )) toeBladeNds(  j,k) =  theta(1)
+         if (present(cant))  cant (j,k) =  theta(2) ! save value for possible output later
+         if (present(twist)) twist(j,k) = -theta(3) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
+         if (present(toe  )) toe(  j,k) =  theta(1)
 
          theta(1) = 0.0_ReKi
          theta(3) = 0.0_ReKi
@@ -3520,15 +3531,16 @@ subroutine Calculate_MeshOrientation_NoSweepPitchTwist(p, u, m, thetaBladeNds, t
    end do !k=blades
 end subroutine Calculate_MeshOrientation_NoSweepPitchTwist
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Calculate_MeshOrientation_LiftingLine(p, u, m, thetaBladeNds, toeBladeNds, ErrStat, ErrMsg)
+subroutine Calculate_MeshOrientation_LiftingLine(p, u, m, twist, toe, cant, ErrStat, ErrMsg)
    type(RotParameterType),  intent(in   )  :: p                               !< AD parameters
    type(RotInputType),      intent(in   )  :: u                               !< AD Inputs at Time
    type(RotMiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
-   real(R8Ki), optional,    intent(  out)  :: thetaBladeNds(p%NumBlNds,p%NumBlades)
-   real(R8Ki), optional,    intent(  out)  :: toeBladeNds(p%NumBlNds,p%NumBlades)
+   real(R8Ki),              intent(  out)  :: twist(p%NumBlNds,p%NumBlades)
+   real(ReKi),              intent(  out)  :: toe(p%NumBlNds,p%NumBlades)
+   real(ReKi),              intent(  out)  :: cant(p%NumBlNds,p%NumBlades)
    integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
-   real(R8Ki)                              :: theta(3)
+   real(R8Ki)                              :: thetas(3)
    real(R8Ki)                              :: orientation(3,3)
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
@@ -3545,10 +3557,10 @@ subroutine Calculate_MeshOrientation_LiftingLine(p, u, m, thetaBladeNds, toeBlad
    
       do j=1,p%NumBlNds
          orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose( m%orientationAnnulus(:,:,j,k) ) )
-         theta = EulerExtract( orientation )
-         m%Curve(      j,k) =  theta(2) ! TODO
-         if (present(thetaBladeNds)) thetaBladeNds(j,k) = -theta(3)
-         if (present(toeBladeNds  )) toeBladeNds(  j,k) =  theta(1)
+         thetas = EulerExtract( orientation )
+         twist(j,k) = -thetas(3)
+         toe(  j,k) =  thetas(1)
+         cant( j,k) =  thetas(2)
       enddo
    end do !k=blades
       
@@ -3588,15 +3600,16 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          ! TODO TODO TODO All this below is mostly a calcOutput thing, we should move it somewhere else!
          !                orientation annulus is only used for Outputs with OLAF, same for pitch and azimuth
          if (p%rotors(iR)%AeroProjMod==APM_BEM_NoSweepPitchTwist) then
-            call Calculate_MeshOrientation_NoSweepPitchTwist(p%rotors(iR), u(tIndx)%rotors(iR),  m%rotors(iR), thetaBladeNds,ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
+            call Calculate_MeshOrientation_NoSweepPitchTwist(p%rotors(iR), u(tIndx)%rotors(iR),  m%rotors(iR), thetaBladeNds, m%rotors(iR)%Toe, m%rotors(iR)%Cant, ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
 
          elseif (p%rotors(iR)%AeroProjMod==APM_BEM_Polar) then
             do k=1,p%rotors(iR)%numBlades
                call Calculate_MeshOrientation_Rel2Hub(u(tIndx)%rotors(iR)%BladeMotion(k), u(tIndx)%rotors(iR)%HubMotion, x_hat_disk, m%rotors(iR)%orientationAnnulus(:,:,:,k))
+               call TwistToeCant_FromLocalPolar(u(tIndx)%rotors(iR)%BladeMotion(k), m%rotors(iR)%orientationAnnulus(:,:,:,k), thetaBladeNds, m%rotors(iR)%Toe(:,k), m%rotors(iR)%Cant(:,k))
             enddo
 
          else if (p%rotors(iR)%AeroProjMod==APM_LiftingLine) then
-            call Calculate_MeshOrientation_LiftingLine      (p%rotors(iR),u(tIndx)%rotors(iR), m%rotors(iR), thetaBladeNds,ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
+            call Calculate_MeshOrientation_LiftingLine      (p%rotors(iR),u(tIndx)%rotors(iR), m%rotors(iR), thetaBladeNds, m%rotors(iR)%Toe, m%rotors(iR)%Cant, ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
          else
             call SetErrStat(ErrID_Fatal, 'Aero Projection Method not implemented' ,ErrStat, ErrMsg, RoutineName)
          endif
