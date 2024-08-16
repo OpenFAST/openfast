@@ -297,6 +297,7 @@ of_regression("SWRT_YFree_VS_EDG01"                    "openfast;elastodyn;aerod
 of_regression("SWRT_YFree_VS_EDC01"                    "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("SWRT_YFree_VS_WTurb"                    "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("5MW_Land_DLL_WTurb"                     "openfast;elastodyn;aerodyn15;servodyn")
+of_regression("5MW_Land_DLL_WTurb_wNacDrag"            "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart" "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore;restart")
 of_regression("5MW_OC3Trpd_DLL_WSt_WavesReg"           "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
@@ -313,6 +314,7 @@ of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf"
 of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
 of_regression("MHK_RM1_Fixed"                          "openfast;elastodyn;aerodyn15;mhk")
 of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
+of_regression("MHK_RM1_Floating_wNacDrag"              "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
 of_regression("Tailfin_FreeYaw1DOF_PolarBased"         "openfast;elastodyn;aerodyn15")
 of_regression("Tailfin_FreeYaw1DOF_Unsteady"           "openfast;elastodyn;aerodyn15")
 

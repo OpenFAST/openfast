@@ -375,24 +375,30 @@ An example is given below for two turbines, the first one having 3 blades, the s
 
 **Hub and nacelle inputs**
 
-The sections defining the hub and nacelle buoyancy parameters must also be reproduced for each turbine.
+The sections defining the hub and nacelle parameters must also be reproduced for each turbine.
 
 An example is given below for two turbines:
 
 .. code::
 
     ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
-    7.0   VolHub             - Hub volume (m^3)
-    0.0   HubCenBx           - Hub center of buoyancy x direction offset (m)
+    7.0   VolHub                - Hub volume (m^3)
+    0.0   HubCenBx              - Hub center of buoyancy x direction offset (m)
     ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
-    5.0   VolHub             - Hub volume (m^3)
-    0.2   HubCenBx           - Hub center of buoyancy x direction offset (m)
-    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
-    32.0  VolNac             - Nacelle volume (m^3)
-    0.3, 0.0, 0.05 NacCenB   - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
-    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
-    30.0  VolNac             - Nacelle volume (m^3)
-    0.5, 0.1, 0.05 NacCenB   - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+    5.0   VolHub                - Hub volume (m^3)
+    0.2   HubCenBx              - Hub center of buoyancy x direction offset (m)
+    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True or NacelleDrag=True]
+    32.0            VolNac      - Nacelle volume (m^3)
+    0.3, 0.0, 0.05  NacCenB     - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+    4.67, 20.15, 20.15 NacArea  - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
+    0.5, 0.5, 0.5   NacCd       - Drag coefficient for the nacelle areas defined above (-)
+    0.43, 0, 0      NacDragAC   - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
+    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True or NacelleDrag=True]
+    32.0            VolNac      - Nacelle volume (m^3)
+    0.3, 0.0, 0.05  NacCenB     - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+    4.67, 20.15, 20.15 NacArea  - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
+    0.5, 0.5, 0.5   NacCd       - Drag coefficient for the nacelle areas defined above (-)
+    0.43, 0, 0      NacDragAC   - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
 
 
 **Aerodynamic tower inputs**
