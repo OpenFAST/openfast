@@ -2020,33 +2020,73 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
       IF (.NOT. SrcMesh%Initialized) RETURN !bjj: maybe we should first CALL MeshDestroy(DestMesh,ErrStat, ErrMess)
 
-      IF ( CtrlCode .EQ. MESH_NEWCOPY .OR. CtrlCode .EQ. MESH_SIBLING .OR. CtrlCode .EQ. MESH_COUSIN ) THEN
-         
-         IF (CtrlCode .EQ. MESH_NEWCOPY) THEN
-            IOS_l              = SrcMesh%IOS
-            Force_l            = SrcMesh%FieldMask(MASKID_FORCE)                     
-            Moment_l           = SrcMesh%FieldMask(MASKID_MOMENT)                   
-            Orientation_l      = SrcMesh%FieldMask(MASKID_ORIENTATION)         
-            TranslationDisp_l  = SrcMesh%FieldMask(MASKID_TRANSLATIONDISP) 
-            TranslationVel_l   = SrcMesh%FieldMask(MASKID_TRANSLATIONVEL)   
-            RotationVel_l      = SrcMesh%FieldMask(MASKID_ROTATIONVEL)         
-            TranslationAcc_l   = SrcMesh%FieldMask(MASKID_TRANSLATIONACC)   
-            RotationAcc_l      = SrcMesh%FieldMask(MASKID_ROTATIONACC)         
-            nScalars_l         = SrcMesh%nScalars          
-         ELSE ! Sibling or cousin
-            IOS_l          = SrcMesh%IOS ; IF ( PRESENT(IOS) )                         IOS_l = IOS
-            Force_l            = .FALSE. ; IF ( PRESENT(Force) )                     Force_l = Force
-            Moment_l           = .FALSE. ; IF ( PRESENT(Moment) )                   Moment_l = Moment
-            Orientation_l      = .FALSE. ; IF ( PRESENT(Orientation) )         Orientation_l = Orientation
-            TranslationDisp_l  = .FALSE. ; IF ( PRESENT(TranslationDisp) ) TranslationDisp_l = TranslationDisp
-            TranslationVel_l   = .FALSE. ; IF ( PRESENT(TranslationVel) )   TranslationVel_l = TranslationVel
-            RotationVel_l      = .FALSE. ; IF ( PRESENT(RotationVel) )         RotationVel_l = RotationVel
-            TranslationAcc_l   = .FALSE. ; IF ( PRESENT(TranslationAcc) )   TranslationAcc_l = TranslationAcc
-            RotationAcc_l      = .FALSE. ; IF ( PRESENT(RotationAcc) )         RotationAcc_l = RotationAcc
-            nScalars_l         = 0       ; IF ( PRESENT(nScalars) )               nScalars_l = nScalars
-         END IF
-            
-         IF ( CtrlCode .EQ. MESH_NEWCOPY .OR. CtrlCode .EQ. MESH_COUSIN ) THEN
+      select case (CtrlCode)
+      case (MESH_NEWCOPY)
+         IOS_l              = SrcMesh%IOS
+         Force_l            = SrcMesh%FieldMask(MASKID_FORCE)                     
+         Moment_l           = SrcMesh%FieldMask(MASKID_MOMENT)                   
+         Orientation_l      = SrcMesh%FieldMask(MASKID_ORIENTATION)         
+         TranslationDisp_l  = SrcMesh%FieldMask(MASKID_TRANSLATIONDISP) 
+         TranslationVel_l   = SrcMesh%FieldMask(MASKID_TRANSLATIONVEL)   
+         RotationVel_l      = SrcMesh%FieldMask(MASKID_ROTATIONVEL)         
+         TranslationAcc_l   = SrcMesh%FieldMask(MASKID_TRANSLATIONACC)   
+         RotationAcc_l      = SrcMesh%FieldMask(MASKID_ROTATIONACC)         
+         nScalars_l         = SrcMesh%nScalars  
+      case (MESH_SIBLING, MESH_COUSIN)
+         IF ( PRESENT(IOS) ) then
+            IOS_l = IOS
+         else
+            IOS_l = SrcMesh%IOS
+         end if
+         IF ( PRESENT(Force) ) then
+            Force_l = Force
+         else
+            Force_l = .FALSE.
+         end if
+         IF ( PRESENT(Moment) ) then
+            Moment_l = Moment
+         else
+            Moment_l = .FALSE.
+         end if
+         IF ( PRESENT(Orientation) ) then
+            Orientation_l = Orientation
+         else
+            Orientation_l = .FALSE.
+         end if
+         IF ( PRESENT(TranslationDisp) ) then
+            TranslationDisp_l = TranslationDisp
+         else
+            TranslationDisp_l = .FALSE.
+         end if
+         IF ( PRESENT(TranslationVel) ) then
+            TranslationVel_l = TranslationVel
+         else
+            TranslationVel_l = .FALSE.
+         end if
+         IF ( PRESENT(RotationVel) ) then
+            RotationVel_l = RotationVel
+         else
+            RotationVel_l = .FALSE.
+         end if
+         IF ( PRESENT(TranslationAcc) ) then
+            TranslationAcc_l = TranslationAcc
+         else
+            TranslationAcc_l = .FALSE.
+         end if
+         IF ( PRESENT(RotationAcc) ) then
+            RotationAcc_l = RotationAcc
+         else
+            RotationAcc_l = .FALSE.
+         end if
+         IF ( PRESENT(nScalars) ) then
+            nScalars_l = nScalars
+         else
+            nScalars_l = 0      
+         end if
+      end select
+
+      select case (CtrlCode)         
+      case (MESH_NEWCOPY, MESH_COUSIN)
                                     
             CALL MeshCreate( DestMesh, IOS=IOS_l, Nnodes=SrcMesh%Nnodes, ErrStat=ErrStat, ErrMess=ErrMess &
                             ,Force=Force_l                                                                &
@@ -2123,7 +2163,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
             DestMesh%RemapFlag   = SrcMesh%RemapFlag
 
-         ELSE IF ( CtrlCode .EQ. MESH_SIBLING ) THEN
+      case (MESH_SIBLING)
 !bjj: we should make sure the mesh has been committed, otherwise the element lists haven't been created, yet (and thus not shared)
             IF ( ASSOCIATED(SrcMesh%SiblingMesh) ) THEN
                ErrStat = ErrID_Fatal
@@ -2165,17 +2205,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             DestMesh%maxelemlist = SrcMesh%maxelemlist
             DestMesh%nextelem    = SrcMesh%nextelem
 
-
-         ENDIF
-
-         DO i = 1, NELEMKINDS
-            IF ( ASSOCIATED(SrcMesh%ElemTable) ) THEN
-            ENDIF
-            IF ( ASSOCIATED(DestMesh%ElemTable) ) THEN
-            ENDIF
-         ENDDO
-
-      ELSE IF ( CtrlCode .EQ. MESH_UPDATECOPY ) THEN
+      case (MESH_UPDATECOPY)
          
          IF ( SrcMesh%nNodes .NE. DestMesh%nNodes ) THEN
             ErrStat = ErrID_Fatal
@@ -2183,7 +2213,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             RETURN
          ENDIF
                   
-      ELSE IF ( CtrlCode .EQ. MESH_UPDATEREFERENCE ) THEN
+      case (MESH_UPDATEREFERENCE)
 
          IF ( SrcMesh%nNodes .NE. DestMesh%nNodes ) THEN
             ErrStat = ErrID_Fatal
@@ -2195,11 +2225,11 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          DestMesh%RefOrientation = SrcMesh%RefOrientation
          DestMesh%RemapFlag      = SrcMesh%RemapFlag            
                         
-      ELSE
+      case default
          ErrStat = ErrID_Fatal
          ErrMess  = 'MeshCopy: Invalid CtrlCode.'
          RETURN
-      ENDIF
+      end select
 
          ! These aren't shared between siblings, so they get copied, no matter what the CtrlCode:
 
