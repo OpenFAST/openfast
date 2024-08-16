@@ -23,6 +23,8 @@ Modified in OpenFAST `dev`
 Module                                        Line    Flag Name            Example Value
 ============================================= ======= ==================== ========================================================================================================================================================================================================
 OpenFAST                                      15      CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 2=AeroDyn v15}
+AeroDyn                                       40      IntegrationMethod    3   IntegrationMethod  - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2)
+AeroDyn                                       140\*   BldNd_BlOutNd        "All"  BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
 ElastoDyn blade file                          15                           Removal of the `PitchAxis` input column
 HydroDyn                                       all                         Complete restructuring of input file
 SeaState                                       all                         New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
