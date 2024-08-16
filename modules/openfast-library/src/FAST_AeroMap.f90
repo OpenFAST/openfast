@@ -131,9 +131,6 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
                                  ErrStat=ErrStat2, ErrMsg=ErrMsg2)
    if (Failed()) return
 
-   ! Set number of driver outputs
-   T%y_FAST%DriverWriteOutputNum = 6
-
    !----------------------------------------------------------------------------
    ! Module Order
    !----------------------------------------------------------------------------

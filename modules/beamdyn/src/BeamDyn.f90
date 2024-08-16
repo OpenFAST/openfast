@@ -58,7 +58,7 @@ MODULE BeamDyn
    ! follow the moving BladeRootMotion mesh.  This requires changing the states after an UpdateStates call to be relative to
    ! the new BladeRootMotion mesh orientation and position.
    ! Update the reference frame after each State update (or use the old method)?
-   LOGICAL, PARAMETER :: ChangeRefFrame = .false.
+   LOGICAL, PARAMETER :: ChangeRefFrame = .true.
 
 CONTAINS
 
@@ -923,7 +923,7 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
 
 
    p%RotStates      = InputFileData%RotStates      ! Rotate states in linearization?
-   if (ChangeRefFrame) p%RotStates = .true.
+   ! if (ChangeRefFrame) p%RotStates = .true.
    
    p%rhoinf         = InputFileData%rhoinf         ! Numerical damping coefficient: [0,1].  No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
    p%dt             = InputFileData%DTBeam         ! Time step size

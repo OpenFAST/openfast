@@ -2070,7 +2070,7 @@ end do
    if (p_FAST%CompAeroMaps) then
       y_FAST%numOuts(Module_Glue) = 1 + size(y_FAST%DriverWriteOutput)
    else
-      y_FAST%numOuts(Module_Glue) = 1 ! time
+      y_FAST%numOuts(Module_Glue) = 4 ! time, ConvIter, ConvError, NumUJac
    end if
 
 
@@ -2103,11 +2103,18 @@ end do
 
       y_FAST%ChannelNames(SS_Indx_WS+1) = 'WindSpeed'
       y_FAST%ChannelUnits(SS_Indx_WS+1) = '(m/s)'
-
    else
       y_FAST%ChannelNames(1) = 'Time'
       y_FAST%ChannelUnits(1) = '(s)'
 
+      y_FAST%ChannelNames(2) = 'ConvIter'
+      y_FAST%ChannelUnits(2) = '(-)'
+
+      y_FAST%ChannelNames(3) = 'ConvError'
+      y_FAST%ChannelUnits(3) = '(-)'
+
+      y_FAST%ChannelNames(4) = 'NumUJac'
+      y_FAST%ChannelUnits(4) = '(-)'
    end if
 
    indxNext = y_FAST%numOuts(Module_Glue) + 1
@@ -7596,8 +7603,8 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, ExtInfwOutput, EDOutput, y_A
       indxNext = 1
 
       IF (y_FAST%numOuts(Module_Glue) > 1) THEN ! if we output more than just the time channel....
-         indxLast = indxNext + SIZE(y_FAST%DriverWriteOutput) - 1
-         OutputAry(indxNext:indxLast) = y_FAST%DriverWriteOutput
+         indxLast = y_FAST%numOuts(Module_Glue) - 1
+         OutputAry(indxNext:indxLast) = y_FAST%DriverWriteOutput(1:y_FAST%numOuts(Module_Glue)-1)
          indxNext = IndxLast + 1
       END IF
 

@@ -211,7 +211,6 @@ IMPLICIT NONE
     TYPE(TC_State)  :: State      !< Tight Coupling state [-]
     TYPE(TC_State)  :: StatePrev      !< Tight Coupling previous state for correction iterations [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: UCalc      !<  [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: UOrig      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T      !< Tangent matrix [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: XB      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IPIV      !<  [-]
@@ -1852,18 +1851,6 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       end if
       DstTCMiscData%UCalc = SrcTCMiscData%UCalc
    end if
-   if (allocated(SrcTCMiscData%UOrig)) then
-      LB(1:1) = lbound(SrcTCMiscData%UOrig, kind=B8Ki)
-      UB(1:1) = ubound(SrcTCMiscData%UOrig, kind=B8Ki)
-      if (.not. allocated(DstTCMiscData%UOrig)) then
-         allocate(DstTCMiscData%UOrig(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%UOrig.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstTCMiscData%UOrig = SrcTCMiscData%UOrig
-   end if
    if (allocated(SrcTCMiscData%T)) then
       LB(1:2) = lbound(SrcTCMiscData%T, kind=B8Ki)
       UB(1:2) = ubound(SrcTCMiscData%T, kind=B8Ki)
@@ -1924,9 +1911,6 @@ subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
    if (allocated(TCMiscData%UCalc)) then
       deallocate(TCMiscData%UCalc)
    end if
-   if (allocated(TCMiscData%UOrig)) then
-      deallocate(TCMiscData%UOrig)
-   end if
    if (allocated(TCMiscData%T)) then
       deallocate(TCMiscData%T)
    end if
@@ -1947,7 +1931,6 @@ subroutine Glue_PackTCMisc(RF, Indata)
    call Glue_PackTC_State(RF, InData%State) 
    call Glue_PackTC_State(RF, InData%StatePrev) 
    call RegPackAlloc(RF, InData%UCalc)
-   call RegPackAlloc(RF, InData%UOrig)
    call RegPackAlloc(RF, InData%T)
    call RegPackAlloc(RF, InData%XB)
    call RegPackAlloc(RF, InData%IPIV)
@@ -1970,7 +1953,6 @@ subroutine Glue_UnPackTCMisc(RF, OutData)
    call Glue_UnpackTC_State(RF, OutData%State) ! State 
    call Glue_UnpackTC_State(RF, OutData%StatePrev) ! StatePrev 
    call RegUnpackAlloc(RF, OutData%UCalc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%UOrig); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%T); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%XB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%IPIV); if (RegCheckErr(RF, RoutineName)) return

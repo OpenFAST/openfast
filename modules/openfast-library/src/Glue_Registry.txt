@@ -168,7 +168,6 @@ typedef ^ Glue_TCMisc           ModGlueType     Mod                     -  -  - 
 typedef ^ ^                     TC_State        State                   -  -  -     "Tight Coupling state"
 typedef ^ ^                     TC_State        StatePrev               -  -  -     "Tight Coupling previous state for correction iterations"
 typedef ^ ^                     R8Ki            UCalc                   :  -  -     "" -
-typedef ^ ^                     R8Ki            UOrig                   :  -  -     "" -
 typedef ^ ^                     R8Ki            T                      ::  -  -     "Tangent matrix" -
 typedef ^ ^                     R8Ki            XB                      :: -  -     "" -
 typedef ^ ^                     IntKi           IPIV                    :  -  -     "" -

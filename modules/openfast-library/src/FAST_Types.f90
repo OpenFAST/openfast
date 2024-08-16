@@ -392,10 +392,7 @@ IMPLICIT NONE
     TYPE(FAST_LinFileType)  :: Lin      !< linearization data for output [-]
     INTEGER(IntKi)  :: ActualChanLen = 0_IntKi      !< width of the column headers output in the text and/or binary file [-]
     TYPE(FAST_LinStateSave)  :: op      !< operating points of states and inputs for VTK output of mode shapes [-]
-    INTEGER(IntKi)  :: DriverWriteOutputNum = 0      !< Number of values in driver write output [-]
     REAL(ReKi) , DIMENSION(1:6)  :: DriverWriteOutput = 0.0_ReKi      !< pitch and tsr for current aero map case, plus error, number of iterations, wind speed, rotor speed [-]
-    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: DriverWriteOutputHdr      !< headers of data output from the driver [-]
-    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: DriverWriteOutputUnt      !< units of data output from the driver [-]
   END TYPE FAST_OutputFileType
 ! =======================
 ! =========  IceDyn_Data  =======
@@ -6045,32 +6042,7 @@ subroutine FAST_CopyOutputFileType(SrcOutputFileTypeData, DstOutputFileTypeData,
    call FAST_CopyLinStateSave(SrcOutputFileTypeData%op, DstOutputFileTypeData%op, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstOutputFileTypeData%DriverWriteOutputNum = SrcOutputFileTypeData%DriverWriteOutputNum
    DstOutputFileTypeData%DriverWriteOutput = SrcOutputFileTypeData%DriverWriteOutput
-   if (allocated(SrcOutputFileTypeData%DriverWriteOutputHdr)) then
-      LB(1:1) = lbound(SrcOutputFileTypeData%DriverWriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputFileTypeData%DriverWriteOutputHdr, kind=B8Ki)
-      if (.not. allocated(DstOutputFileTypeData%DriverWriteOutputHdr)) then
-         allocate(DstOutputFileTypeData%DriverWriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputFileTypeData%DriverWriteOutputHdr.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstOutputFileTypeData%DriverWriteOutputHdr = SrcOutputFileTypeData%DriverWriteOutputHdr
-   end if
-   if (allocated(SrcOutputFileTypeData%DriverWriteOutputUnt)) then
-      LB(1:1) = lbound(SrcOutputFileTypeData%DriverWriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputFileTypeData%DriverWriteOutputUnt, kind=B8Ki)
-      if (.not. allocated(DstOutputFileTypeData%DriverWriteOutputUnt)) then
-         allocate(DstOutputFileTypeData%DriverWriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputFileTypeData%DriverWriteOutputUnt.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstOutputFileTypeData%DriverWriteOutputUnt = SrcOutputFileTypeData%DriverWriteOutputUnt
-   end if
 end subroutine
 
 subroutine FAST_DestroyOutputFileType(OutputFileTypeData, ErrStat, ErrMsg)
@@ -6106,12 +6078,6 @@ subroutine FAST_DestroyOutputFileType(OutputFileTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyLinStateSave(OutputFileTypeData%op, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(OutputFileTypeData%DriverWriteOutputHdr)) then
-      deallocate(OutputFileTypeData%DriverWriteOutputHdr)
-   end if
-   if (allocated(OutputFileTypeData%DriverWriteOutputUnt)) then
-      deallocate(OutputFileTypeData%DriverWriteOutputUnt)
-   end if
 end subroutine
 
 subroutine FAST_PackOutputFileType(RF, Indata)
@@ -6144,10 +6110,7 @@ subroutine FAST_PackOutputFileType(RF, Indata)
    call FAST_PackLinFileType(RF, InData%Lin) 
    call RegPack(RF, InData%ActualChanLen)
    call FAST_PackLinStateSave(RF, InData%op) 
-   call RegPack(RF, InData%DriverWriteOutputNum)
    call RegPack(RF, InData%DriverWriteOutput)
-   call RegPackAlloc(RF, InData%DriverWriteOutputHdr)
-   call RegPackAlloc(RF, InData%DriverWriteOutputUnt)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -6183,10 +6146,7 @@ subroutine FAST_UnPackOutputFileType(RF, OutData)
    call FAST_UnpackLinFileType(RF, OutData%Lin) ! Lin 
    call RegUnpack(RF, OutData%ActualChanLen); if (RegCheckErr(RF, RoutineName)) return
    call FAST_UnpackLinStateSave(RF, OutData%op) ! op 
-   call RegUnpack(RF, OutData%DriverWriteOutputNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DriverWriteOutput); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DriverWriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DriverWriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode, ErrStat, ErrMsg)
