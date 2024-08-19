@@ -4252,7 +4252,7 @@ END SUBROUTINE WAMIT2_Init
                         ! See if the diagonal mirror one (WvDir2,WvDir1) value is not filled, set it and its flag
                      IF ( .NOT. Data4D%DataMask(TmpCoord(1), TmpCoord(2), TmpCoord(4), TmpCoord(3), TmpCoord(5))  ) THEN
                         Data4D%DataSet(TmpCoord(1), TmpCoord(2), TmpCoord(4), TmpCoord(3), TmpCoord(5) ) = &
-                              Data4D%DataSet(TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(3), TmpCoord(5) )
+                              Data4D%DataSet(TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) )
                         Data4D%DataMask(TmpCoord(1), TmpCoord(2), TmpCoord(4), TmpCoord(3), TmpCoord(5) ) = .TRUE.
                      ENDIF
 

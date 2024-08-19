@@ -8954,7 +8954,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%g1(2)
    Orientation(2,3) =     m%CoordSys%g2(2)
    Orientation(3,3) =     m%CoordSys%g3(2) 
-   call CreatePointMesh(u%HubPtLoad, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%HubPtLoad, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
          
                      
@@ -8963,7 +8963,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    Position = (/0.0_ReKi, 0.0_ReKi, p%PtfmRefzt /)
    call Eye(Orientation, ErrStat2, errMsg2)
-   call CreatePointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
       
    !.......................................................
@@ -8971,7 +8971,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    Position = (/0.0_ReKi, 0.0_ReKi, p%TowerHt /)
    call Eye(Orientation, ErrStat2, errMsg2)
-   call CreatePointMesh(u%NacelleLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%NacelleLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
       
    !.......................................................
@@ -8989,7 +8989,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%tf1(2)
    Orientation(2,3) =     m%CoordSys%tf2(2)
    Orientation(3,3) =     m%CoordSys%tf3(2) 
-   call CreatePointMesh(u%TFinCMLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%TFinCMLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
 
 

@@ -27,6 +27,8 @@ Module                                        Line    Flag Name            Examp
 ============================================= ======= ==================== ========================================================================================================================================================================================================
 OpenFAST                                      15      CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
 OpenFAST                                      13      CompElast            3   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades; 3=Simplified ElastoDyn}
+AeroDyn                                       40      IntegrationMethod    3   IntegrationMethod  - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2)
+AeroDyn                                       140\*   BldNd_BlOutNd        "All"  BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
 ElastoDyn blade file                          15                           Removal of the `PitchAxis` input column
 HydroDyn                                       all                         Complete restructuring of input file
 SeaState                                       all                         New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
@@ -46,6 +48,9 @@ FAST.Farm                                     75       WAT_DxDyDz          5.0, 
 FAST.Farm                                     76       WAT_ScaleBox        default            WAT_ScaleBox       - Flag to scale the input turbulence box to zero mean and unit standard deviation at every node [DEFAULT=False] (flag)
 FAST.Farm                                     77       WAT_k_Def           default            WAT_k_Def          - Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]
 FAST.Farm                                     78       WAT_k_Grad          default            WAT_k_Grad         - Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]                   
+AeroDyn                                       80\*     NacArea             0, 0, 0            NacArea            - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
+AeroDyn                                       81\*     NacCd               0, 0, 0            NacCd              - Drag coefficient for the nacelle areas defined above (-)
+AeroDyn                                       82\*     NacDragAC           0, 0, 0            NacDragAC          - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
 ============================================= ======= ==================== ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.

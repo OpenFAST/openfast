@@ -80,3 +80,14 @@ add_executable(versioninfo_utest
 )
 target_link_libraries(versioninfo_utest versioninfolib testdrivelib)
 add_test(NAME versioninfo_utest COMMAND versioninfo_utest)
+
+# Custom target combining all the unit tests
+add_custom_target(
+  unit_tests
+  DEPENDS 
+    nwtc_library_utest 
+    versioninfo_utest
+    beamdyn_utest 
+    aerodyn_utest 
+    inflowwind_utest 
+)

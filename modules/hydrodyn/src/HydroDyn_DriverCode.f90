@@ -81,7 +81,7 @@ PROGRAM HydroDynDriver
    real(DbKi)                                         :: TiLstPrn             ! The simulation time of the last print
    integer                                            :: n_SttsTime           ! Number of time steps between screen status messages (-)
 
-   
+   integer                                            :: i                    ! Loop counter   
    
    logical                                            :: SeaState_Initialized, HydroDyn_Initialized
    ! For testing
@@ -230,10 +230,31 @@ PROGRAM HydroDynDriver
          CALL CheckError()
       end if
    END IF
-   
-   
-   ! Set any steady-state inputs, once before the time-stepping loop (these don't change, so we don't need to update them in the time-marching simulation)
-   CALL SetHDInputs_Constant(u(1), mappingData, drvrData, ErrStat, ErrMsg);       CALL CheckError()
+
+   ! Set initial inputs at t = 0
+   IF (( drvrData%PRPInputsMod /= 2 ) .AND. ( drvrData%PRPInputsMod >= 0 )) THEN
+      ! Set any steady-state inputs, once before the time-stepping loop (these don't change, so we don't need to update them in the time-marching simulation)
+      CALL SetHDInputs_Constant(u(1), mappingData, drvrData, ErrStat, ErrMsg);       CALL CheckError()
+   ELSE
+      CALL SetHDInputs(0.0_R8Ki, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);   CALL CheckError()
+   END IF
+
+   ! Set the initial low-pass-filtered displacements of potential-flow bodies if ExctnDisp = 2
+   IF ( p%PotMod == 1_IntKi ) THEN
+      IF ( p%WAMIT(1)%ExctnDisp == 2_IntKi ) THEN
+         IF (p%NBodyMod .EQ. 1_IntKi) THEN ! One instance of WAMIT with NBody
+            DO i = 1,p%NBody
+               xd%WAMIT(1)%BdyPosFilt(1,i,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
+               xd%WAMIT(1)%BdyPosFilt(2,i,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
+            END DO
+         ELSE IF (p%NBodyMod > 1_IntKi) THEN ! NBody instances of WAMIT with one body each
+            DO i = 1,p%NBody
+               xd%WAMIT(i)%BdyPosFilt(1,1,:) = u(1)%WAMITMesh%TranslationDisp(1,i)
+               xd%WAMIT(i)%BdyPosFilt(2,1,:) = u(1)%WAMITMesh%TranslationDisp(2,i)
+            END DO
+         END IF
+      END IF
+   END IF
 
    !...............................................................................................................................
    ! --- Linearization
@@ -242,10 +263,10 @@ PROGRAM HydroDynDriver
       ! --- Creating useful EDRPtMesh
 
       call Eye(dcm, ErrStat, ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%EDRPt_Loads,     (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%EDRPt_Motion,    (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%ZZZPtMeshMotion, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%ZZZPtMeshLoads , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%EDRPt_Loads,     (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%EDRPt_Motion,    (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%ZZZPtMeshMotion, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%ZZZPtMeshLoads , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
 
       CALL MeshMapCreate( u(1)%PRPMesh,             mappingData%EDRPt_Motion,   mappingData%HD_Ref_2_ED_Ref,       ErrStat, ErrMsg );    CALL CheckError()
       CALL MeshMapCreate( mappingData%EDRPt_Motion, u(1)%PRPMesh,               mappingData%ED_Ref_2_HD_Ref,       ErrStat, ErrMsg );    CALL CheckError()
@@ -270,10 +291,11 @@ PROGRAM HydroDynDriver
       Time = (n-1) * drvrData%TimeInterval
       InputTime(1) = Time
 
+      IF (( drvrData%PRPInputsMod == 2 ) .OR. ( drvrData%PRPInputsMod < 0 )) THEN
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
-      call SetHDInputs(Time, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
-      ! SeaState has no inputs, so no need to set them.
-      
+         call SetHDInputs(Time, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
+         ! SeaState has no inputs, so no need to set them.
+      END IF
      
       if (n==1 .and. drvrData%Linearize) then
          ! we set u(1)%PRPMesh motions, so we should assume that EDRP changed similarly: 

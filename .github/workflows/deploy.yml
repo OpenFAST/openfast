@@ -1,16 +1,41 @@
-# This workflow builds an OpenFAST docker image for the linux/amd64 and linux/aarch64 architectures on merge into
-# `main` from a release candidate branch. The image is tagged both with "latest" and the version extracted from the
-# release candidate branch's name (e.g. "rc-3.5.3") before being pushed to the `nrel/openfast` repository. The build
-# cache is stored in GitHub actions.
-name: build-docker-image-automatic
+# This workflow uploads the `openfast` python package to PyPI before building an OpenFAST docker image for the
+# linux/amd64 and linux/aarch64 architectures on release. The image is tagged both with "latest" and the version
+# extracted from the release candidate branch's name (e.g. "rc-3.5.3") before being pushed to the `nrel/openfast`
+# repository. The build cache is stored in GitHub actions.
+name: deploy
 
 on:
+  workflow_dispatch:
+
   release:
     types:
       - released
 
 jobs:
-  build-and-push:
+  publish-to-pypi:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1.3.4
+
+      - name: Build a binary wheel and a source tarball
+        run: poetry build
+        working-directory: openfast_python
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.8.14
+        with:
+          packages-dir: openfast_python/dist
+
+
+  docker-build-and-push:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     env:

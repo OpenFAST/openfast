@@ -128,6 +128,7 @@ CONTAINS
       CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
 !      CHARACTER(1024)              :: FileName             !
 
+
       REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid [m]
       Real(DbKi)                   :: nvec(3)              ! local seabed surface normal vector (positive out)
       
@@ -724,13 +725,26 @@ CONTAINS
                        RETURN
                    END IF
                    
-                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd
+                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd  LinDamp
                    IF (ErrStat2 == 0) THEN
                       READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
-                         m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd   
-                         
+                         m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd,&
+                         m%RodTypeList(l)%LinDamp    ! Linear damping coefficient
+
+                      if (ErrStat2 == 0) then
+                          m%RodTypeList(l)%isLinDamp = .TRUE.     ! linear damping was read
+                      else    ! Linear damping not present, so reread the line without it
+                          READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
+                          m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd
+
+                          m%RodTypeList(l)%LinDamp = 0.0
+                          m%RodTypeList(l)%isLinDamp = .FALSE. 
+                      end if
+
+
                       m%RodTypeList(l)%Cdt = 0.0_DbKi ! not used
                       m%RodTypeList(l)%Cat = 0.0_DbKi ! not used
+
                    END IF
 
                    ! specify IdNum of rod type for error checking
@@ -2113,7 +2127,7 @@ CONTAINS
             J = J + 1
          
             rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6  ! set reference position as per input file
-            OrMatRef = ( m%RodList(m%CpldBodyIs(l,iTurb))%OrMat )  ! set reference orientation as per input file
+            OrMatRef = ( m%BodyList(m%CpldBodyIs(l,iTurb))%OrMat )  ! set reference orientation as per input file
             CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2, OrMatRef)
 
             ! set absolute initial positions in MoorDyn 
@@ -2125,7 +2139,7 @@ CONTAINS
             u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
             u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
             m%BodyList(m%CpldBodyIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract(OrMat2)     ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
+            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract( TRANSPOSE(OrMat2) )   ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
 
             CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
             
@@ -3330,8 +3344,7 @@ CONTAINS
          DO l = 1,p%nCpldBodies(iTurb)
             J = J + 1
             r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-            !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics(iTurb)%Orientation(:,:,J) ) )
-            r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! <<< changing back
+            r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! No Transpose becasue these are extrinsic
             v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
             v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
             a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
