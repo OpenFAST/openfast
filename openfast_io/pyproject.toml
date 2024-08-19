@@ -4,7 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openfast_io"
-dynamic = ["version"]
+# dynamic = ["version"]
+version = "4.0.0.a1"
 description = "Readers and writers for OpenFAST files."
 license = {file = "../LICENSE"}
 authors = [
