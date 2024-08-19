@@ -1,5 +1,5 @@
 #
-# Copyright 2017 National Renewable Energy Laboratory
+# Copyright 2024 National Renewable Energy Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -88,19 +88,6 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
-## create the local output directory if it does not already exist
-## and initialize it with input files for all test cases
-#if not os.path.isdir(testBuildDirectory):
-#    os.makedirs(testBuildDirectory, exist_ok = True)
-#    for file in glob.glob(os.path.join(inputsDirectory,"*inp")):
-#        filename = file.split(os.path.sep)[-1]
-#        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
-#    for file in glob.glob(os.path.join(inputsDirectory,"*dat")):
-#        filename = file.split(os.path.sep)[-1]
-#        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
-#    for file in glob.glob(os.path.join(inputsDirectory,"*csv")):
-#        filename = file.split(os.path.sep)[-1]
-#        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
 rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'adsk_driver.outb':'adsk_driver_ref.outb'})
 
 ### Run aerodisk on the test case
