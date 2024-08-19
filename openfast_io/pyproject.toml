@@ -48,17 +48,19 @@ classifiers = [  # Optional
   "Programming Language :: Python :: 3 :: Only",
 ]
 
-[project.urls]
-"homepage" = "https://github.com/OpenFAST/openfast"
-"documentation" = "https://openfast.readthedocs.io/en/main/"
-"repository" = "https://github.com/OpenFAST/openfast"
-"Bug Tracker" = "https://github.com/OpenFAST/openfast/issues"
-
 dependencies = [
     "numpy>1.0",
     "pandas>2.0",
     "ruamel_yaml>0.18",
     ]
+    
+[project.urls]
+homepage = "https://github.com/OpenFAST/openfast"
+documentation = "https://openfast.readthedocs.io/en/main/"
+repository = "https://github.com/OpenFAST/openfast"
+Issues = "https://github.com/OpenFAST/openfast/issues"
+
+
 
 [project.optional-dependencies]
 
