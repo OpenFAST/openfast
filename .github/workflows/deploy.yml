@@ -55,6 +55,9 @@ jobs:
       - name: Install Hatch
         uses: pypa/hatch@install
 
+      - name: cd to openfast_io
+        run: cd openfast_io
+
       - name: Build package
         run: hatch build
 
