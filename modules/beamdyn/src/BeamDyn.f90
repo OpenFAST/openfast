@@ -2699,9 +2699,9 @@ SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables.
    LOGICAL,                      INTENT(IN   )  :: fact        !< Boolean to calculate the Jacobian
 
-
-
-   INTEGER(IntKi)                               :: idx_qp      !< Index to quadrature point currently being calculated
+   REAL(BDKi)                 :: cet         !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
+   REAL(BDKi)                 :: k1s
+   INTEGER(IntKi)             :: idx_qp      !< Index to quadrature point currently being calculated
 
    
    if (.not. fact) then
@@ -2738,8 +2738,6 @@ contains
       REAL(BDKi)                 :: C21(3,3)
       REAL(BDKi)                 :: epsi(3,3)
       REAL(BDKi)                 :: mu(3,3)
-      REAL(BDKi)                 :: cet         !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
-      REAL(BDKi)                 :: k1s
 
       !> ###Calculate the \f$ \underline{\underline{\mathcal{O}}} \f$ from equation (19)
       !!
@@ -2808,8 +2806,6 @@ contains
       REAL(BDKi)                 :: R(3,3)      !< rotation matrix at quatrature point
       REAL(BDKi)                 :: Rx0p(3)     !< \f$ \underline{R} \underline{x}^\prime_0 \f$
       REAL(BDKi)                 :: Wrk(3)
-      REAL(BDKi)                 :: cet         !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
-      REAL(BDKi)                 :: k1s
    
          !> ### Calculate the 1D strain, \f$ \underline{\epsilon} \f$, equation (5)
          !! \f$ \underline{\epsilon} = \underline{x}^\prime_0 + \underline{u}^\prime -
