@@ -2,39 +2,67 @@
 name = "openfast_io"
 version = "4.0.0" # We can make this dynamic to use github tags using dynamic = ["version"]
 description = "Readers and writers for OpenFAST files."
-requires-python = ">=3.9"
 license = "Apache-2.0"
 authors = [
     "NREL WISDEM Team <systems.engineering@nrel.gov>",
     "Daniel Zalkind <daniel.zalkind@nrel.gov>",
     "Garrett Barter <garrett.barter@nrel.gov>",
-    "Pietro Bortolotti <ptrbortolotti@gmail.com>",
+    "Pietro Bortolotti <pietro.bortolotti@nrel.gov>",
     "Mayank Chetan <mayank.chetan@nrel.gov>",
     "John Jasa",
+]
+maintainers = [
+    "Mayank Chetan <mayank.chetan@nrel.gov>",
+    "Andy Platt <andy.platt@nrel.gov>",
+    "Derek Slaughter <derek.slaughter@nrel.gov>",
 ]
 readme = "README.md"
 packages = [{include = "openfast_io"}]
 
-classifiers = [
+classifiers = [  # Optional
+  # How mature is this project? Common values are
+  #   3 - Alpha
+  #   4 - Beta
+  #   5 - Production/Stable
   "Development Status :: 4 - Beta",
-  "Programming Language :: Python",
+
+  # Indicate who your project is intended for
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+
+  # Specify the Python versions you support here. In particular, ensure
+  # that you indicate you support Python 3. These classifiers are *not*
+  # checked by "pip install". See instead "python_requires" below.
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3 :: Only",
 ]
+
+homepage = "https://github.com/OpenFAST/openfast"
+documentation = "https://openfast.readthedocs.io/en/main/"
+repository = "https://github.com/OpenFAST/openfast"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/OpenFAST/openfast/issues"
 
 [tool.poetry.dependencies]
 python = "^3.9"
 numpy = "^1"
 pandas = "^2"
-xlrd = "^2"
+xlrd = {version = "^2", optional = true}
 ruamel_yaml = "^0.18"
 rosco = {version = "^2.9.2", optional = true}
 
 
 [tool.poetry.extras]
 rosco = ["rosco"]
+excel = ["xlrd"]
+all = ["rosco", "xlrd"]
 
 
 [build-system]
