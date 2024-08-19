@@ -1,5 +1,5 @@
 #
-# Copyright 2016 National Renewable Energy Laboratory
+# Copyright 2024 National Renewable Energy Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
