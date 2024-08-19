@@ -55,16 +55,16 @@ classifiers = [  # Optional
 "Bug Tracker" = "https://github.com/OpenFAST/openfast/issues"
 
 dependencies = [
-    "numpy^1.0",
-    "pandas^2.0",
-    "ruamel_yaml^0.18",
+    "numpy>1.0",
+    "pandas>2.0",
+    "ruamel_yaml>0.18",
     ]
 
 [project.optional-dependencies]
 
-rosco = ["rosco^2.9.2"]
-xlrd = ["xlrd^2"]
-all = ["rosco^2.9.2", "xlrd^2"]
+rosco = ["rosco>2.9.2"]
+xlrd = ["xlrd>2"]
+all = ["rosco>2.9.2", "xlrd>2"]
 
 [tool.hatch.version]
 source = "vcs"
