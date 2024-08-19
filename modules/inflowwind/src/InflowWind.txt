@@ -124,7 +124,7 @@ typedef  ^                       ^                 DbKi              DT         
 typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters
 typedef  ^                       ^                 ReKi              WindViXYZ         ::    -     -     "List of XYZ coordinates for wind velocity measurements, 3xNWindVel" meters
 typedef  ^                       ^                 FlowFieldType    &FlowField         -     -     -     "Flow field data to represent all wind types"  -
-#FIXME: PositionAvg is used for DiskVel, but unknown if DiskVel still used. ADP-20204.08.01
+#FIXME: PositionAvg is used for DiskVel. However DiskVel does not appear to be used anymore, so this could be removed. ADP-2024.08.01
 typedef  ^                       ^                 ReKi              PositionAvg       ::    -     -     "(non-rotated) positions of points used for averaging wind speed"  meters
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points in the wind velocity list"             -
 typedef  ^                       ^                 IntKi             NumOuts           -     0     -     "Number of parameters in the output list (number of outputs requested)" -
@@ -147,7 +147,7 @@ typedef  ^                       ^                 ReKi              HubOrientat
 typedef  ^                    OutputType           ReKi              VelocityUVW       ::    -     -     "Array holding the U,V,W velocity for a given timestep"  meters/sec
 typedef  ^                    OutputType           ReKi              AccelUVW          ::    -     -     "Array holding the U,V,W acceleration for a given timestep"  meters/sec
 typedef  ^                    OutputType           ReKi              WriteOutput       :     -     -     "Array with values to output to file"                    -
-#FIXME: is DiskVel still used? ADP-20204.08.01
+#FIXME: is DiskVel still used? ADP-2024.08.01
 typedef  ^                       ^                 ReKi              DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"  meters/sec
 typedef  ^                       ^                 ReKi              HubVel            {3}   -     -     "Vector holding the U,V,W velocity at the hub"  meters/sec
 typedef  ^                       ^              lidar_OutputType     lidar             -     -     -     "Lidar data"                                       -
