@@ -41,6 +41,7 @@ character(24), parameter   :: Custom_ED_to_ExtLd = 'ED -> ExtLd', &
                               Custom_SrvD_to_IfW = 'SrvD -> IfW', &
                               Custom_BD_to_SrvD = 'BD -> SrvD', &
                               Custom_ED_to_SrvD = 'ED -> SrvD', &
+                              Custom_SrvD_to_ED = 'SrvD -> ED', &
                               Custom_IfW_to_SrvD = 'IfW -> SrvD', &
                               Custom_ExtInfw_to_SrvD = 'ExtInfw -> SrvD', &
                               Custom_SrvD_to_SD = 'SrvD -> SD', &
@@ -828,6 +829,13 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        DstMod=DstMod, DstDL=DatLoc(ED_u_GenTrq), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
+      ! call MapVariable(Mappings, &
+      !                  SrcMod=SrcMod, SrcDL=DatLoc(SrvD_y_HssBrTrqC), &
+      !                  DstMod=DstMod, DstDL=DatLoc(ED_u_HssBrTrqC), &
+      !                  ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+
+      call MapCustom(Mappings, Custom_SrvD_to_ED, SrcMod, DstMod)
+
       ! Blade Structural Controller (if ElastoDyn is used for blades)
       do j = 1, Turbine%SrvD%p%NumBStC
          do i = 1, Turbine%ED%p%NumBl
@@ -1206,7 +1214,7 @@ subroutine InitMappings_IfW(Mappings, SrcMod, DstMod, T, ErrStat, ErrMsg)
    case (Module_ED)
       call MapCustom(Mappings, Custom_ED_to_IfW, SrcMod, DstMod)
    case (Module_SrvD)
-      call MapCustom(Mappings, Custom_SrvD_to_IfW, SrcMod=SrcMod, DstMod=DstMod)
+      call MapCustom(Mappings, Custom_SrvD_to_IfW, SrcMod, DstMod)
    end select
 
 contains
@@ -2621,6 +2629,17 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       end do
 
 !-------------------------------------------------------------------------------
+! ElastoDyn Inputs
+!-------------------------------------------------------------------------------
+
+   case (Custom_SrvD_to_ED)
+
+      T%ED%Input(iInput)%GenTrq = T%SrvD%y%GenTrq
+      T%ED%Input(iInput)%HSSBrTrqC = T%SrvD%y%HSSBrTrqC
+      T%ED%Input(iInput)%BlPitchCom = T%SrvD%y%BlPitchCom
+      T%ED%Input(iInput)%YawMom = T%SrvD%y%YawMom
+
+!-------------------------------------------------------------------------------
 ! ExtLoads Inputs
 !-------------------------------------------------------------------------------
 
@@ -2646,9 +2665,6 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       T%IfW%Input(iInput)%lidar%HubDisplacementZ = T%ED%y%HubPtMotion%TranslationDisp(3, 1)
 
    case (Custom_SrvD_to_IfW)
-
-      ! Set hub position so ServoDyn can get hub wind speed
-      T%IfW%Input(iInput)%PositionXYZ(:, 1) = T%ED%y%HubPtMotion%Position(:, 1)
 
 !-------------------------------------------------------------------------------
 ! MoorDyn Inputs
@@ -2724,8 +2740,8 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_IfW_to_SrvD)
 
-      T%SrvD%Input(iInput)%WindDir = atan2(T%IfW%y%VelocityUVW(2, 1), T%IfW%y%VelocityUVW(1, 1))
-      T%SrvD%Input(iInput)%HorWindV = sqrt(T%IfW%y%VelocityUVW(1, 1)**2 + T%IfW%y%VelocityUVW(2, 1)**2)
+      T%SrvD%Input(iInput)%WindDir = atan2(T%IfW%y%HubVel(2), T%IfW%y%HubVel(1))
+      T%SrvD%Input(iInput)%HorWindV = sqrt(T%IfW%y%HubVel(1)**2 + T%IfW%y%HubVel(2)**2)
       if (allocated(T%IfW%y%lidar%LidSpeed)) T%SrvD%Input(iInput)%LidSpeed = T%IfW%y%lidar%LidSpeed
       if (allocated(T%IfW%y%lidar%MsrPositionsX)) T%SrvD%Input(iInput)%MsrPositionsX = T%IfW%y%lidar%MsrPositionsX
       if (allocated(T%IfW%y%lidar%MsrPositionsY)) T%SrvD%Input(iInput)%MsrPositionsY = T%IfW%y%lidar%MsrPositionsY
