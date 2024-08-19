@@ -2,7 +2,7 @@
 !> ## SED_DriverCode: This code tests the SED module
 !!..................................................................................................................................
 !! LICENSING
-!! Copyright (C) 2012, 2015  National Renewable Energy Laboratory
+!! Copyright (C) 2024  National Renewable Energy Laboratory
 !!
 !!    This file is part of SED.
 !!
