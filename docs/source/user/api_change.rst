@@ -124,7 +124,6 @@ No input file changes were made.  Some input files now include additional
 output channels:  AeroDyn nodal outputs for another coordinate system, new
 MoorDyn output names (Connect changed to Point).
 
->>>>>>> OpenFAST/dev
 
 
 OpenFAST v3.4.0 to OpenFAST v3.5.0 
