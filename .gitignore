@@ -58,3 +58,7 @@ vs-build/
 #Simulink cache files
 varcache
 *.slxc
+
+# Python cache files
+__pycache__/
+openfast_io/dist/
