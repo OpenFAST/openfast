@@ -27,7 +27,7 @@ MODULE AeroDisk
    USE AeroDisk_Types
    USE AeroDisk_IO
    USE NWTC_Library
-   use IfW_FlowField, only: IfW_FlowField_GetVelAcc   !, IfW_UniformWind_GetOP, IfW_UniformWind_Perturb, IfW_FlowField_CopyFlowFieldType
+   use IfW_FlowField, only: IfW_FlowField_GetVelAcc
 
 
    implicit none
