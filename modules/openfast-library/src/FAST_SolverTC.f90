@@ -114,7 +114,6 @@ subroutine Solver_Init(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat,
    ! Indices of Option 1 modules
    p%iModOpt1 = [pack(modInds, ModIDs == Module_ExtPtfm), &
                  pack(modInds, ModIDs == Module_HD), &
-                 pack(modInds, ModIDs == Module_MD), &
                  pack(modInds, ModIDs == Module_Orca)]
 
    ! Indices of Option 2 modules
@@ -225,8 +224,11 @@ contains
             ! Skip custom mapping types
             if (Mapping%MapType == Map_Variable .or. Mapping%MapType == Map_Custom) cycle
 
-            ! If source module is in tight coupling or option 1
-            if (any(SrcMod%ID == TC_Modules) .or. any(SrcMod%ID == O1_Modules)) then
+            ! Skip mappings where source and destination are not in tight coupling
+            if (all(SrcMod%ID /= TC_Modules) .and. all(DstMod%ID /= TC_Modules)) cycle
+
+            ! If source module is in tight coupling
+            if (any(SrcMod%ID == TC_Modules)) then
 
                ! Set mapping flag on source variables
                do i = 1, size(SrcMod%Vars%y)
@@ -245,8 +247,36 @@ contains
                end if
             end if
 
-            ! If destination module is in tight coupling or option 1
-            if (any(DstMod%ID == TC_Modules) .or. any(DstMod%ID == O1_Modules)) then
+            ! If source module is in option 1
+            if (any(SrcMod%ID == O1_Modules)) then
+
+               ! Set mapping flag on source variables
+               do i = 1, size(SrcMod%Vars%y)
+                  associate (Var => SrcMod%Vars%y(i))
+                     if (.not. MV_EqualDL(Mapping%SrcDL, Var%DL)) cycle
+                     select case (Var%Field)
+                     case (FieldForce, FieldMoment)
+                        call MV_SetFlags(Var, VF_Solve)
+                     end select
+                  end associate
+               end do
+
+               ! Set mapping flag on source displacement mesh variables
+               if (Mapping%MapType == Map_LoadMesh) then
+                  do i = 1, size(SrcMod%Vars%u)
+                     associate (Var => SrcMod%Vars%u(i))
+                        if (.not. MV_EqualDL(Mapping%SrcDispDL, Var%DL)) cycle
+                        select case (Var%Field)
+                        case (FieldForce, FieldMoment)
+                           call MV_SetFlags(Var, VF_Solve)
+                        end select
+                     end associate
+                  end do
+               end if
+            end if
+
+            ! If destination module is in tight coupling
+            if (any(DstMod%ID == TC_Modules) ) then
 
                ! Set mapping flag on destination variables
                do i = 1, size(DstMod%Vars%u)
@@ -260,6 +290,34 @@ contains
                   do i = 1, size(DstMod%Vars%y)
                      associate (Var => DstMod%Vars%y(i))
                         if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) call MV_SetFlags(Var, VF_Solve)
+                     end associate
+                  end do
+               end if
+            end if
+
+            ! If destination module is in option 1
+            if (any(DstMod%ID == O1_Modules)) then
+
+               ! Set mapping flag on destination variables
+               do i = 1, size(DstMod%Vars%u)
+                  associate (Var => DstMod%Vars%u(i))
+                     if (.not. MV_EqualDL(Mapping%DstDL, Var%DL)) cycle
+                     select case (Var%Field)
+                     case (FieldTransAcc, FieldAngularAcc)
+                        call MV_SetFlags(Var, VF_Solve)
+                     end select
+                  end associate
+               end do
+
+               ! Set mapping flag on destination displacement mesh variables
+               if (Mapping%MapType == Map_LoadMesh) then
+                  do i = 1, size(DstMod%Vars%y)
+                     associate (Var => DstMod%Vars%y(i))
+                        if (.not. MV_EqualDL(Mapping%DstDispDL, Var%DL)) cycle
+                        select case (Var%Field)
+                        case (FieldTransAcc, FieldAngularAcc)
+                           call MV_SetFlags(Var, VF_Solve)
+                        end select
                      end associate
                   end do
                end if
@@ -743,7 +801,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
    logical, parameter         :: IsSolve = .true.
    integer(IntKi)             :: iterConv, iterCorr, iterTotal
    integer(IntKi)             :: NumUJac, NumCorrections
-   real(ReKi)                 :: delta_norm
+   real(R8Ki)                 :: delta_norm
    real(DbKi)                 :: t_global_next     ! next simulation time (m_FAST%t_global + p_FAST%dt)
    integer(IntKi)             :: n_t_global_next   ! n_t_global + 1
    integer(IntKi)             :: i, j, k
