@@ -65,7 +65,7 @@ subroutine Solver_Init(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat,
 
    ! Generalized alpha damping coefficient
    ! TODO: read from input file
-   p%RhoInf = 0.5_R8Ki
+   p%RhoInf = 1.0_R8Ki
 
    ! Max number of convergence iterations
    ! TODO: read from input file
@@ -223,7 +223,7 @@ contains
                     DstMod => GlueModData(GlueModMaps(j)%iModDst))
 
             ! Skip custom mapping types
-            if (Mapping%MapType == Map_Custom) cycle
+            if (Mapping%MapType == Map_Variable .or. Mapping%MapType == Map_Custom) cycle
 
             ! If source module is in tight coupling or option 1
             if (any(SrcMod%ID == TC_Modules) .or. any(SrcMod%ID == O1_Modules)) then
@@ -346,7 +346,7 @@ subroutine CalcVarGlobalIndices(p, ModTC, NumQ, NumJ, ErrStat, ErrMsg)
    end do
 
    ! Start and end indices of displacement variables
-   p%iX1 = [1, iGlu]
+   if (iGlu > 0) p%iX1 = [1, iGlu]
 
    ! Set indices for velocity variables
    do i = 1, size(ModTC%ModData)
@@ -370,32 +370,6 @@ subroutine CalcVarGlobalIndices(p, ModTC, NumQ, NumJ, ErrStat, ErrMsg)
 
    ! Initialize glue index
    iGlu = 0
-
-   ! ! Set indices of Tight Coupling input variables
-   ! do i = 1, size(p%iModTC)
-   !    associate (Vars => ModTC%ModData(i)%Vars)
-   !       if (.not. allocated(Vars%u)) cycle
-   !       do j = 1, size(Vars%u)
-   !          Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
-   !          iGlu = Vars%u(j)%iGlu(2)
-   !       end do
-   !    end associate
-   ! end do
-
-   ! if (iGlu > 0) p%iUT = [1, iGlu]
-
-   ! ! Set indices of Option 1 input variables
-   ! do i = size(p%iModTC) + 1, size(ModTC%ModData)
-   !    associate (Vars => ModTC%ModData(i)%Vars)
-   !       if (.not. allocated(Vars%u)) cycle
-   !       do j = 1, size(Vars%u)
-   !          Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
-   !          iGlu = Vars%u(j)%iGlu(2)
-   !       end do
-   !    end associate
-   ! end do
-
-   ! if (iGlu > p%iUT(2)) p%iU1 = [p%iUT(2) + 1, iGlu]
 
    ! Set indices of Tight Coupling input variables (non-load)
    do i = 1, size(p%iModTC)
@@ -589,7 +563,7 @@ subroutine CalcVarGlobalIndices(p, ModTC, NumQ, NumJ, ErrStat, ErrMsg)
    NumJ = NumQ + ModTC%Vars%Nu
 
    ! Get start and end indices for state part of Jacobian
-   p%iJX = [1, NumQ]
+   if (NumQ > 0) p%iJX = [1, NumQ]
 
    ! Get start and end indices for tight coupling input part of Jacobian
    if (p%iUT(1) > 0) p%iJUT = NumQ + p%iUT
@@ -1061,7 +1035,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
          !----------------------------------------------------------------------
 
          ! Calculate difference between calculated and predicted accelerations
-         m%XB(p%iJX(1):p%iJX(2), 1) = m%Mod%Lin%dx(p%iX2(1):p%iX2(2)) - m%State%vd
+         if (p%iJX(1) > 0) m%XB(p%iJX(1):p%iJX(2), 1) = m%Mod%Lin%dx(p%iX2(1):p%iX2(2)) - m%State%vd
 
          ! Calculate difference in U for all Option 1 modules (un - u_tmp)
          ! and add to RHS for TC and Option 1 modules
@@ -1103,7 +1077,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
          ! Update State for Tight Coupling modules
          !----------------------------------------------------------------------
 
-         call UpdateStatePrediction(p, m%Mod%Vars, m%XB(p%iJX(1):p%iJX(2), 1), m%State)
+         if (p%iJX(1) > 0) call UpdateStatePrediction(p, m%Mod%Vars, m%XB(p%iJX(1):p%iJX(2), 1), m%State)
 
          !----------------------------------------------------------------------
          ! Update inputs for Tight Coupling and Option 1 modules
@@ -1111,7 +1085,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
 
          ! Add change in inputs
          if (p%iJU(1) > 0) call MV_AddDelta(m%Mod%Vars%u, m%XB(p%iJU(1):p%iJU(2), 1), m%Mod%Lin%u)
-         ! if (p%iJU(1) > 0) m%UDelta = m%UDelta + m%XB(p%iJU(1):p%iJU(2), 1)
 
          !----------------------------------------------------------------------
          ! Transfer updated TC and Option 1 states and inputs to modules
@@ -1271,41 +1244,43 @@ subroutine BuildJacobian(p, m, GlueModMaps, ThisTime, Turbine, ErrStat, ErrMsg)
    ! Assemble Jacobian
    !----------------------------------------------------------------------------
 
-   ! If velocity or acceleration indices are zero, return
-   if (p%iX1(1) == 0 .or. p%iX2(1) == 0) return
+   ! If states in Jacobian
+   if (p%iJX(1) > 0) then
 
-   ! Group (1,1)
-   associate (J11 => m%Mod%Lin%J(p%iJX(1):p%iJX(2), p%iJX(1):p%iJX(2)), &
-              dX2dx2 => m%Mod%Lin%dXdx(p%iX2(1):p%iX2(2), p%iX2(1):p%iX2(2)), &
-              dX2dx1 => m%Mod%Lin%dXdx(p%iX2(1):p%iX2(2), p%iX1(1):p%iX1(2)))
-      J11 = -p%GammaPrime*dX2dx2 - p%BetaPrime*dX2dx1
-      do i = p%iJX(1), p%iJX(2)
-         J11(i, i) = J11(i, i) + 1.0_R8Ki
-      end do
-   end associate
-
-   ! Group (2,1)
-   if (p%iyT(1) > 0 .and. p%iUT(1) > 0) then
-      associate (J21 => m%Mod%Lin%J(p%iJUT(1):p%iJUT(2), p%iJX(1):p%iJX(2)), &
-                 dUTdyT => m%Mod%Lin%dUdy(p%iUT(1):p%iUT(2), p%iyT(1):p%iyT(2)), &
-                 dYTdx2 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX2(1):p%iX2(2)), &
-                 dYTdx1 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX1(1):p%iX1(2)))
-         ! J21 = C1*matmul(dUTdyT, dYTdx2) + C2*matmul(dUTdyT, dYTdx1)
-         call LAPACK_GEMM('N', 'N', p%GammaPrime, dUTdyT, dYTdx2, 0.0_R8Ki, J21, ErrStat2, ErrMsg2); if (Failed()) return
-         call LAPACK_GEMM('N', 'N', p%BetaPrime, dUTdyT, dYTdx1, 1.0_R8Ki, J21, ErrStat2, ErrMsg2); if (Failed()) return
+      ! Group (1,1)
+      associate (J11 => m%Mod%Lin%J(p%iJX(1):p%iJX(2), p%iJX(1):p%iJX(2)), &
+               dX2dx2 => m%Mod%Lin%dXdx(p%iX2(1):p%iX2(2), p%iX2(1):p%iX2(2)), &
+               dX2dx1 => m%Mod%Lin%dXdx(p%iX2(1):p%iX2(2), p%iX1(1):p%iX1(2)))
+         J11 = -p%GammaPrime*dX2dx2 - p%BetaPrime*dX2dx1
+         do i = p%iJX(1), p%iJX(2)
+            J11(i, i) = J11(i, i) + 1.0_R8Ki
+         end do
       end associate
-   end if
 
-   ! Group (1,2)
-   if (p%iUT(1) > 0) then
-      associate (J12 => m%Mod%Lin%J(p%iJX(1):p%iJX(2), p%iJUT(1):p%iJUT(2)), &
-                 dX2duT => m%Mod%Lin%dXdu(p%iX2(1):p%iX2(2), p%iUT(1):p%iUT(2)))
-         J12 = -dX2duT
-      end associate
+      ! Group (2,1)
+      if (p%iyT(1) > 0 .and. p%iUT(1) > 0) then
+         associate (J21 => m%Mod%Lin%J(p%iJUT(1):p%iJUT(2), p%iJX(1):p%iJX(2)), &
+                  dUTdyT => m%Mod%Lin%dUdy(p%iUT(1):p%iUT(2), p%iyT(1):p%iyT(2)), &
+                  dYTdx2 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX2(1):p%iX2(2)), &
+                  dYTdx1 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX1(1):p%iX1(2)))
+            ! J21 = C1*matmul(dUTdyT, dYTdx2) + C2*matmul(dUTdyT, dYTdx1)
+            call LAPACK_GEMM('N', 'N', p%GammaPrime, dUTdyT, dYTdx2, 0.0_R8Ki, J21, ErrStat2, ErrMsg2); if (Failed()) return
+            call LAPACK_GEMM('N', 'N', p%BetaPrime, dUTdyT, dYTdx1, 1.0_R8Ki, J21, ErrStat2, ErrMsg2); if (Failed()) return
+         end associate
+      end if
+
+      ! Group (1,2)
+      if (p%iUT(1) > 0) then
+         associate (J12 => m%Mod%Lin%J(p%iJX(1):p%iJX(2), p%iJUT(1):p%iJUT(2)), &
+                  dX2duT => m%Mod%Lin%dXdu(p%iX2(1):p%iX2(2), p%iUT(1):p%iUT(2)))
+            J12 = -dX2duT
+         end associate
+      end if
+
    end if
 
    ! Group (2,2) - Inputs = dUdu + matmul(dUdy, dYdu)
-   if (m%Mod%Vars%Nu > 0) then
+   if (p%iJU(1) > 0) then
       associate (J22 => m%Mod%Lin%J(p%iJU(1):p%iJU(2), p%iJU(1):p%iJU(2)))
          ! J22 = m%Mod%Lin%dUdu + matmul(m%Mod%Lin%dUdy, m%Mod%Lin%dYdu)
          J22 = m%Mod%Lin%dUdu
