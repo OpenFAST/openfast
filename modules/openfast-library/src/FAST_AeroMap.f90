@@ -206,19 +206,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    call AllocAry(AM%Mod%Lin%J, JacSize, JacSize, 'J', ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Allocate Idx Jacobian storage
-   call AllocAry(AM%Mod%Lin%dYdu, AM%Mod%Vars%Ny, AM%Mod%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(AM%Mod%Lin%dXdu, AM%Mod%Vars%Nx, AM%Mod%Vars%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(AM%Mod%Lin%dYdx, AM%Mod%Vars%Ny, AM%Mod%Vars%Nx, 'dYdx', ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(AM%Mod%Lin%dXdx, AM%Mod%Vars%Nx, AM%Mod%Vars%Nx, 'dXdx', ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(AM%Mod%Lin%dXdy, AM%Mod%Vars%Nx, AM%Mod%Vars%Ny, 'dXdy', ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(AM%Mod%Lin%dUdu, AM%Mod%Vars%Nu, AM%Mod%Vars%Nu, "dUdu", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(AM%Mod%Lin%dUdy, AM%Mod%Vars%Nu, AM%Mod%Vars%Ny, "dUdy", ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Allocate operating point arrays
-   call AllocAry(AM%Mod%Lin%x, AM%Mod%Vars%Nx, 'x', ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(AM%Mod%Lin%u, AM%Mod%Vars%Nu, 'u', ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(AM%Mod%Lin%dx, AM%Mod%Vars%Nx, 'dx', ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(AM%Mod%Lin%y, AM%Mod%Vars%Ny, 'y', ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Allocate arrays to store inputs
    call AllocAry(AM%u1, AM%Mod%Vars%Nu, 'u1', ErrStat2, ErrMsg2); if (Failed()) return
