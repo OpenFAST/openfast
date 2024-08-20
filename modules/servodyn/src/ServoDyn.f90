@@ -5011,6 +5011,11 @@ CONTAINS
    !> This routine performs the checks on inputs for the high-speed shaft brake.
    SUBROUTINE HSSBr_ValidateData( )
 
+      ! TODO: Implement brake in tight-coupling scheme
+      IF (InputFileData%HSSBrMode /= ControlMode_NONE) then
+         CALL SetErrStat( ErrID_Fatal, 'HSSBrMode must be 0 for tight-coupling.', ErrStat, ErrMsg, RoutineName )
+      end if
+
             ! Some special checks based on whether inputs will come from external source (e.g., Simulink, LabVIEW)
       IF ( .NOT. Cmpl4SFun .AND. .NOT. Cmpl4LV ) THEN
 
