@@ -49,7 +49,7 @@ integer(IntKi), parameter :: AngularFields(*) = [FieldOrientation, FieldAngularV
 integer(IntKi), parameter :: MotionFields(*) = [FieldTransDisp, FieldOrientation, FieldTransVel, &
                                                 FieldAngularVel, FieldTransAcc, FieldAngularAcc]
 
-logical, parameter   :: UseSmallRotAngles = .false.
+logical, parameter   :: UseSmallRotAngles = .true.
 
 contains
 
