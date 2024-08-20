@@ -1096,7 +1096,8 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapVariable(Mappings, &
                        SrcMod=SrcMod, SrcDL=DatLoc(SeaSt_y_WaveElev0), &
                        DstMod=DstMod, DstDL=DatLoc(HydroDyn_u_WaveElev0), &
-                       ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
+                       Active=Turbine%p_FAST%Linearize); if (Failed()) return
 
    case (Module_SD)
 
