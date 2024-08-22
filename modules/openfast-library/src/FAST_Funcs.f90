@@ -302,10 +302,10 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
       end do
 
    case (Module_BD)
-      ! State update is handled by solver as part of tight coupling
+      ! State update is handled by tight coupling solver
 
    case (Module_ED)
-      ! State update is handled by solver as part of tight coupling
+      ! State update is handled by tight coupling solver
 
    case (Module_ExtPtfm)
       call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
@@ -388,10 +388,10 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
       do j_ss = 1, ModData%SubSteps
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
-         call MD_UpdateStates(t_module, n_t_module, T%MD%Input(1:), T%MD%InputTimes, T%MD%p, &
-                              T%MD%x(STATE_PRED), T%MD%xd(STATE_PRED), &
-                              T%MD%z(STATE_PRED), T%MD%OtherSt(STATE_PRED), &
-                              T%MD%m, ErrStat2, ErrMsg2)
+         call MAP_UpdateStates(t_module, n_t_module, T%MAP%Input(1:), T%MAP%InputTimes, T%MAP%p, &
+                              T%MAP%x(STATE_PRED), T%MAP%xd(STATE_PRED), &
+                              T%MAP%z(STATE_PRED), T%MAP%OtherSt, &
+                              ErrStat2, ErrMsg2)
          if (Failed()) return
       end do
 
@@ -426,7 +426,7 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
       end do
 
    case (Module_SD)
-      ! State update is handled by solver as part of tight coupling
+      ! State update is handled by tight coupling solver
 
    case (Module_SeaSt)
       call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
@@ -551,7 +551,11 @@ subroutine FAST_CalcOutput(ModData, Mappings, ThisTime, iInput, iState, T, ErrSt
                          T%SD%x(iState), T%SD%xd(iState), T%SD%z(iState), T%SD%OtherSt(iState), &
                          T%SD%y, T%SD%m, ErrStat2, ErrMsg2)
 
-!  case (Module_SeaSt)
+   case (Module_SeaSt)
+      call SeaSt_CalcOutput(ThisTime, T%SeaSt%Input(iInput), T%SeaSt%p, &
+                            T%SeaSt%x(iState), T%SeaSt%xd(iState), T%SeaSt%z(iState), T%SeaSt%OtherSt(iState), &
+                            T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2)
+
    case (Module_SrvD)
       call SrvD_CalcOutput(ThisTime, T%SrvD%Input(iInput), T%SrvD%p, &
                            T%SrvD%x(iState), T%SrvD%xd(iState), T%SrvD%z(iState), T%SrvD%OtherSt(iState), &
