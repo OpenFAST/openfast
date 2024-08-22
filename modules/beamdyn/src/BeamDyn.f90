@@ -2606,17 +2606,16 @@ contains
       !     This is the following:
       !        tempBeta6 = matmul(tempR6, matmul(diag(p%beta), transpose(tempR6)))
 
-      ! Compute tempBeta_diag = beta * tempR6_T (for diagonal elements only)
-      do j = 1, 6
-         tempBeta_diag(j) = p%beta(j) * tempR6_T(j, j)
-      end do
-
-      ! Compute tempBeta6 using tempBeta_diag
-      do j = 1, 6
-         do i = 1, 6
-            tempBeta6(i, j) = tempR6(i, j) * tempBeta_diag(j)
-         end do
-      end do
+      ! Move damping ratio from material frame to the calculation reference frame
+      !     This is the following:
+      !        tempBEta6=matmul(tempR6,matmul(diag(p%beta),transpose(tempR6)))
+      do j=1,6
+         do i=1,6
+               ! diagonal of p%beta * TRANSPOSE(tempR6)
+            tempBeta6(i,j) = p%beta(i)*tempR6(j,i)
+         enddo
+      enddo
+      tempBeta6 = matmul(tempR6,tempBeta6)
 
       !> Modify the Mass matrix so it is in the calculation reference frame
       !! \f$ \begin{bmatrix}
@@ -2695,8 +2694,8 @@ SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables.
    LOGICAL,                      INTENT(IN   )  :: fact        !< Boolean to calculate the Jacobian
 
-   REAL(BDKi)                 :: cet         !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
-   REAL(BDKi)                 :: k1s
+   REAL(BDKi)                 :: cet_t       !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
+   REAL(BDKi)                 :: k1s_t
    INTEGER(IntKi)             :: idx_qp      !< Index to quadrature point currently being calculated
 
    
@@ -2704,21 +2703,33 @@ SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
       do idx_qp=1,p%nqp
          call Calc_Fc_Fd(m%qp%RR0(:,:,idx_qp,nelem), &
                          m%qp%uuu(:,idx_qp,nelem), &
+                         p%E10(:,idx_qp,nelem), &
                          m%qp%E1(:,idx_qp,nelem), &
+                         m%qp%kappa(1:3,idx_qp,nelem), &
+                         p%Stif0_QP(:,:,(nelem-1)*p%nqp+idx_qp), &
+                         m%qp%Stif(:,:,idx_qp,nelem), &
                          m%qp%Fc(:,idx_qp,nelem), &
-                         m%qp%Fd(:,idx_qp,nelem))
+                         m%qp%Fd(:,idx_qp,nelem), &
+                         cet_t, k1s_t)
       end do 
    else
       do idx_qp=1,p%nqp
          call Calc_Fc_Fd(m%qp%RR0(:,:,idx_qp,nelem), &
                          m%qp%uuu(:,idx_qp,nelem), &
+                         p%E10(:,idx_qp,nelem), &
                          m%qp%E1(:,idx_qp,nelem), &
+                         m%qp%kappa(1:3,idx_qp,nelem), &
+                         p%Stif0_QP(:,:,(nelem-1)*p%nqp+idx_qp), &
+                         m%qp%Stif(:,:,idx_qp,nelem), &
                          m%qp%Fc(:,idx_qp,nelem), &
-                         m%qp%Fd(:,idx_qp,nelem))
+                         m%qp%Fd(:,idx_qp,nelem), &
+                         cet_t, k1s_t)
 
          call Calc_Oe_Pe_Qe(m%qp%RR0(:,:,idx_qp,nelem), &
                            m%qp%Stif(:,:,idx_qp,nelem), &
+                           m%qp%E1(:,idx_qp,nelem), &
                            m%qp%Fc(:,idx_qp,nelem), &
+                           cet_t, k1s_t, &
                            m%qp%Oe(:,:,idx_qp,nelem), &
                            m%qp%Pe(:,:,idx_qp,nelem), &
                            m%qp%Qe(:,:,idx_qp,nelem))
@@ -2726,8 +2737,8 @@ SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
    end if
 
 contains
-   subroutine Calc_Oe_Pe_Qe(RR0, Stif, Fc, Oe, Pe, Qe)
-      REAL(BDKi), intent(in)     :: RR0(:,:), Stif(:,:), Fc(:)
+   subroutine Calc_Oe_Pe_Qe(RR0, Stif, E1, Fc, cet, k1s, Oe, Pe, Qe)
+      REAL(BDKi), intent(in)     :: RR0(:,:), Stif(:,:), E1(:), Fc(:), cet, k1s
       REAL(BDKi), intent(inout)  :: Oe(:,:), Pe(:,:), Qe(:,:)
       REAL(BDKi)                 :: Wrk33(3,3)
       REAL(BDKi)                 :: tildeE(3,3)
@@ -2750,7 +2761,7 @@ contains
       Wrk33      = OuterProduct(RR0(1:3,3), RR0(1:3,3))     ! z-direction in IEC coords
       C21        = Stif(4:6,1:3) + cet*k1s*Wrk33(:,:)
 
-      tildeE     = SkewSymMat(m%qp%E1(:,idx_qp,nelem))
+      tildeE     = SkewSymMat(E1)
       epsi       = MATMUL(Stif(1:3,1:3),tildeE)    ! Stif is RR0 * p%Stif0_QP * RR0^T
       mu         = MATMUL(C21,tildeE)
 
@@ -2793,9 +2804,9 @@ contains
       Qe(4:6,4:6) = -MATMUL(tildeE,Oe(1:3,4:6))
    end subroutine
 
-   subroutine Calc_Fc_Fd(RR0, uuu, E1, Fc, Fd)
-      REAL(BDKi), intent(in)     :: RR0(:,:), uuu(:), E1(:)
-      REAL(BDKi), intent(inout)  :: Fc(:), Fd(:)
+   subroutine Calc_Fc_Fd(RR0, uuu, E10, E1, kappa, Stif0, Stif, Fc, Fd, cet, k1s)
+      REAL(BDKi), intent(in)     :: RR0(:,:), uuu(:), E10(:), E1(:), kappa(:), Stif0(:,:), Stif(:,:)
+      REAL(BDKi), intent(out)    :: Fc(:), Fd(:), cet, k1s
       REAL(BDKi)                 :: e1s
       REAL(BDKi)                 :: eee(6)      !< intermediate array for calculation Strain and curvature terms of Fc
       REAL(BDKi)                 :: fff(6)      !< intermediate array for calculation of the elastic force, Fc
@@ -2815,7 +2826,7 @@ contains
          !!       and the transpose for the other direction.
       ! eee(1:3) = m%qp%E1(1:3,idx_qp,nelem) - m%qp%RR0(1:3,3,idx_qp,nelem)     ! Using RR0 z direction in IEC coords
       call BD_CrvMatrixR(uuu(4:6), R)  ! Get rotation at QP as a matrix
-      Rx0p = matmul(R,p%E10(:,idx_qp,nelem))             ! Calculate rotated initial tangent
+      Rx0p = matmul(R,E10)             ! Calculate rotated initial tangent
       eee(1:3) = E1(1:3) - Rx0p        ! Use rotated initial tangent in place of RR0*i1 to eliminate likely mismatch between R0*i1 and x0'
       
          !> ### Set the 1D sectional curvature, \f$ \underline{\kappa} \f$, equation (5)
@@ -2836,7 +2847,7 @@ contains
          !!    \f$
          !! In other words, \f$ \tilde{k} = \left(\underline{\underline{R}}^\prime\underline{\underline{R}}^T \right) \f$.
          !! Note: \f$ \underline{\kappa} \f$ was already calculated in the BD_DisplacementQP routine
-      eee(4:6) = m%qp%kappa(1:3,idx_qp,nelem)
+      eee(4:6) = kappa(1:3)
 
 
    !FIXME: note that the k_i terms may not be documented correctly here.
@@ -2868,7 +2879,7 @@ contains
          !!                \underline{k}
          !!          \end{array} \right\} \f$
          !!
-      fff(1:6) = MATMUL(m%qp%Stif(:,:,idx_qp,nelem),eee)
+      fff(1:6) = MATMUL(Stif,eee)
 
 
          !> ###Calculate the extension twist coupling.
@@ -2903,7 +2914,7 @@ contains
       !! Note that with coverting to the FAST / IEC coordinate system, we now are using the Ixx and Iyy terms which are located at
       !! \f$  C_{et} = C_{4,4} + C_{5,5} \f$
       ! Refer Section 1.4 in "Dymore User's Manual - Formulation and finite element implementation of beam elements".
-      cet=  p%Stif0_QP(4,4,(nelem-1)*p%nqp+idx_qp) + p%Stif0_QP(5,5,(nelem-1)*p%nqp+idx_qp)     ! Dymore theory (22)
+      cet =  Stif0(4,4) + Stif0(5,5)     ! Dymore theory (22)
       Fc(1:3) = fff(1:3) + 0.5_BDKi*cet*k1s*k1s*RR0(1:3,3)  ! Dymore theory (25a). Note z-axis is the length of blade.
       Fc(4:6) = fff(4:6) +          cet*e1s*k1s*RR0(1:3,3)  ! Dymore theory (25b). Note z-axis is the length of blade.
 
@@ -3085,6 +3096,7 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
    LOGICAL,                      INTENT(IN   )  :: fact
 
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
+   REAL(BDKi)                  :: ffd_t(6)
       
    IF (.NOT. fact) then ! skip all but Fc and Fd terms
    
@@ -3095,7 +3107,8 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
                              m%qp%vvp(:,idx_qp,nelem), &
                              m%qp%betaC(:,:,idx_qp,nelem), &
                              m%qp%Fc(:,idx_qp,nelem), &
-                             m%qp%Fd(:,idx_qp,nelem))
+                             m%qp%Fd(:,idx_qp,nelem), &
+                             ffd_t)
       END DO
       
    ! bjj: we don't use these values when fact is FALSE, so let's save time and ignore them here, too.
@@ -3117,11 +3130,13 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
                              m%qp%vvp(:,idx_qp,nelem), &
                              m%qp%betaC(:,:,idx_qp,nelem), &
                              m%qp%Fc(:,idx_qp,nelem), &
-                             m%qp%Fd(:,idx_qp,nelem))
+                             m%qp%Fd(:,idx_qp,nelem), &
+                             ffd_t)
                      
          call Calc_Sd_Pd_Od_Qd_Gd_Xd_Yd(m%qp%E1(:,idx_qp,nelem), &
                                         m%qp%vvp(:,idx_qp,nelem), &
                                         m%qp%betaC(:,:,idx_qp,nelem), &
+                                        ffd_t, &
                                         m%qp%Sd(:,:,idx_qp,nelem), &
                                         m%qp%Od(:,:,idx_qp,nelem), &
                                         m%qp%Qd(:,:,idx_qp,nelem), &
@@ -3133,14 +3148,13 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
    ENDIF
 
 CONTAINS
-   subroutine Calc_Sd_Pd_Od_Qd_Gd_Xd_Yd(E1, vvp, betaC, Sd, Od, Qd, Gd, Xd, Yd, Pd)
-      REAL(BDKi), intent(in)     :: E1(:), vvp(:), betaC(:,:)
-      REAL(BDKi), intent(inout)  :: Sd(:,:), Od(:,:), Qd(:,:), Gd(:,:), Xd(:,:), Yd(:,:), Pd(:,:)
+   subroutine Calc_Sd_Pd_Od_Qd_Gd_Xd_Yd(E1, vvp, betaC, ffd, Sd, Od, Qd, Gd, Xd, Yd, Pd)
+      REAL(BDKi), intent(in)     :: E1(:), vvp(:), betaC(:,:), ffd(:)
+      REAL(BDKi), intent(out)    :: Sd(:,:), Od(:,:), Qd(:,:), Gd(:,:), Xd(:,:), Yd(:,:), Pd(:,:)
       REAL(BDKi)                 :: D11(3,3), D12(3,3), D21(3,3), D22(3,3)
       REAL(BDKi)                 :: b11(3,3), b12(3,3)
       REAL(BDKi)                 :: alpha(3,3)
       REAL(BDKi)                 :: SS_ome(3,3)
-      REAL(BDKi)                 :: ffd(6)
 
       D11 = betaC(1:3,1:3)
       D12 = betaC(1:3,4:6)
@@ -3188,10 +3202,10 @@ CONTAINS
       Yd(4:6,4:6) = b12
    end subroutine
 
-   SUBROUTINE Calc_FC_FD_ffd(E1, vvv, vvp, betaC, Fc, Fd)
+   SUBROUTINE Calc_FC_FD_ffd(E1, vvv, vvp, betaC, Fc, Fd, ffd)
       REAL(BDKi), intent(in)     :: E1(:), vvv(:), vvp(:), betaC(:,:)
-      REAL(BDKi), intent(inout)  :: Fc(:), Fd(:)
-      REAL(BDKi)                 :: eed(6), ffd(6)
+      REAL(BDKi), intent(out)    :: Fc(:), Fd(:), ffd(:)
+      REAL(BDKi)                 :: eed(6)
 
       ! Compute strain rates
       eed      = vvp
