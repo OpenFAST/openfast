@@ -780,11 +780,11 @@ SUBROUTINE DBEMT_AB4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat, ErrMs
 
       else
          
-         x%element(i,j)%vind   = x%element(i,j)%vind   + p%DT/24. * ( 55.*OtherState%xdot(1)%element(i,j)%vind     - 59.*OtherState%xdot(2)%element(i,j)%vind   &
-                                                                        + 37.*OtherState%xdot(3)%element(i,j)%vind     -  9.*OtherState%xdot(4)%element(i,j)%vind )
+         x%element(i,j)%vind   = x%element(i,j)%vind   + p%DT/24. * ( 55.*OtherState%xdot(1)%element(i,j)%vind   - 59.*OtherState%xdot(2)%element(i,j)%vind &
+                                                                    + 37.*OtherState%xdot(3)%element(i,j)%vind   -  9.*OtherState%xdot(4)%element(i,j)%vind )
 
-         x%element(i,j)%vind_1 = x%element(i,j)%vind_1 + p%DT/24. * ( 55.*OtherState%xdot(1)%element(i,j)%vind_1 - 59.*OtherState%xdot(2)%element(i,j)%vind_1  &
-                                                                        + 37.*OtherState%xdot(3)%element(i,j)%vind_1 -  9.*OtherState%xdot(4)%element(i,j)%vind_1 )
+         x%element(i,j)%vind_1 = x%element(i,j)%vind_1 + p%DT/24. * ( 55.*OtherState%xdot(1)%element(i,j)%vind_1 - 59.*OtherState%xdot(2)%element(i,j)%vind_1 &
+                                                                    + 37.*OtherState%xdot(3)%element(i,j)%vind_1 -  9.*OtherState%xdot(4)%element(i,j)%vind_1 )
 
       endif
 
@@ -844,7 +844,7 @@ SUBROUTINE DBEMT_ABM4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat, ErrM
       x_in = x%element(i,j)
       
 
-         ! predict: (note that we are overwritting x%element(i,j)%vind and x%element(i,j)%vind_dot here):
+         ! predict: (note that we are overwritting x%element(i,j)%vind and x%element(i,j)%vind_1 here):
       CALL DBEMT_AB4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) RETURN
@@ -863,12 +863,12 @@ SUBROUTINE DBEMT_ABM4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat, ErrM
 
          
          x%element(i,j)%vind   = x_in%vind   + p%DT/24. * ( 9. * xdot_pred%vind   + 19. * OtherState%xdot(1)%element(i,j)%vind &
-                                                                                        -  5. * OtherState%xdot(2)%element(i,j)%vind &
-                                                                                        +  1. * OtherState%xdot(3)%element(i,j)%vind )
+                                                                                  -  5. * OtherState%xdot(2)%element(i,j)%vind &
+                                                                                  +  1. * OtherState%xdot(3)%element(i,j)%vind )
 
          x%element(i,j)%vind_1 = x_in%vind_1 + p%DT/24. * ( 9. * xdot_pred%vind_1 + 19. * OtherState%xdot(1)%element(i,j)%vind_1 &
-                                                                                        -  5. * OtherState%xdot(2)%element(i,j)%vind_1 &
-                                                                                        +  1. * OtherState%xdot(3)%element(i,j)%vind_1 )
+                                                                                  -  5. * OtherState%xdot(2)%element(i,j)%vind_1 &
+                                                                                  +  1. * OtherState%xdot(3)%element(i,j)%vind_1 )
       endif
       
 END SUBROUTINE DBEMT_ABM4

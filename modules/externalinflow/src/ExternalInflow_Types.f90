@@ -342,12 +342,12 @@ subroutine ExtInfw_UnPackInitInput(RF, OutData)
    OutData%C_obj%NumActForcePtsBlade = OutData%NumActForcePtsBlade
    call RegUnpack(RF, OutData%NumActForcePtsTower); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumActForcePtsTower = OutData%NumActForcePtsTower
-   call RegUnpackPtr(RF, OutData%StructBldRNodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%StructBldRNodes, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%StructBldRNodes)) then
       OutData%C_obj%StructBldRNodes_Len = size(OutData%StructBldRNodes)
       if (OutData%C_obj%StructBldRNodes_Len > 0) OutData%C_obj%StructBldRNodes = c_loc(OutData%StructBldRNodes(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%StructTwrHNodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%StructTwrHNodes, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%StructTwrHNodes)) then
       OutData%C_obj%StructTwrHNodes_Len = size(OutData%StructTwrHNodes)
       if (OutData%C_obj%StructTwrHNodes_Len > 0) OutData%C_obj%StructTwrHNodes = c_loc(OutData%StructTwrHNodes(LB(1)))
@@ -1139,12 +1139,12 @@ subroutine ExtInfw_UnPackParam(RF, OutData)
    OutData%C_obj%NnodesForceBlade = OutData%NnodesForceBlade
    call RegUnpack(RF, OutData%NnodesForceTower); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NnodesForceTower = OutData%NnodesForceTower
-   call RegUnpackPtr(RF, OutData%forceBldRnodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%forceBldRnodes, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%forceBldRnodes)) then
       OutData%C_obj%forceBldRnodes_Len = size(OutData%forceBldRnodes)
       if (OutData%C_obj%forceBldRnodes_Len > 0) OutData%C_obj%forceBldRnodes = c_loc(OutData%forceBldRnodes(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%forceTwrHnodes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%forceTwrHnodes, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%forceTwrHnodes)) then
       OutData%C_obj%forceTwrHnodes_Len = size(OutData%forceTwrHnodes)
       if (OutData%C_obj%forceTwrHnodes_Len > 0) OutData%C_obj%forceTwrHnodes = c_loc(OutData%forceTwrHnodes(LB(1)))
@@ -1676,87 +1676,87 @@ subroutine ExtInfw_UnPackInput(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%pxVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pxVel, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%pxVel)) then
       OutData%C_obj%pxVel_Len = size(OutData%pxVel)
       if (OutData%C_obj%pxVel_Len > 0) OutData%C_obj%pxVel = c_loc(OutData%pxVel(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%pyVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pyVel, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%pyVel)) then
       OutData%C_obj%pyVel_Len = size(OutData%pyVel)
       if (OutData%C_obj%pyVel_Len > 0) OutData%C_obj%pyVel = c_loc(OutData%pyVel(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%pzVel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pzVel, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%pzVel)) then
       OutData%C_obj%pzVel_Len = size(OutData%pzVel)
       if (OutData%C_obj%pzVel_Len > 0) OutData%C_obj%pzVel = c_loc(OutData%pzVel(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%pxForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pxForce, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%pxForce)) then
       OutData%C_obj%pxForce_Len = size(OutData%pxForce)
       if (OutData%C_obj%pxForce_Len > 0) OutData%C_obj%pxForce = c_loc(OutData%pxForce(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%pyForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pyForce, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%pyForce)) then
       OutData%C_obj%pyForce_Len = size(OutData%pyForce)
       if (OutData%C_obj%pyForce_Len > 0) OutData%C_obj%pyForce = c_loc(OutData%pyForce(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%pzForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pzForce, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%pzForce)) then
       OutData%C_obj%pzForce_Len = size(OutData%pzForce)
       if (OutData%C_obj%pzForce_Len > 0) OutData%C_obj%pzForce = c_loc(OutData%pzForce(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%xdotForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%xdotForce, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%xdotForce)) then
       OutData%C_obj%xdotForce_Len = size(OutData%xdotForce)
       if (OutData%C_obj%xdotForce_Len > 0) OutData%C_obj%xdotForce = c_loc(OutData%xdotForce(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%ydotForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%ydotForce, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%ydotForce)) then
       OutData%C_obj%ydotForce_Len = size(OutData%ydotForce)
       if (OutData%C_obj%ydotForce_Len > 0) OutData%C_obj%ydotForce = c_loc(OutData%ydotForce(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%zdotForce); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%zdotForce, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%zdotForce)) then
       OutData%C_obj%zdotForce_Len = size(OutData%zdotForce)
       if (OutData%C_obj%zdotForce_Len > 0) OutData%C_obj%zdotForce = c_loc(OutData%zdotForce(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%pOrientation); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%pOrientation, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%pOrientation)) then
       OutData%C_obj%pOrientation_Len = size(OutData%pOrientation)
       if (OutData%C_obj%pOrientation_Len > 0) OutData%C_obj%pOrientation = c_loc(OutData%pOrientation(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%fx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fx, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%fx)) then
       OutData%C_obj%fx_Len = size(OutData%fx)
       if (OutData%C_obj%fx_Len > 0) OutData%C_obj%fx = c_loc(OutData%fx(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%fy); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fy, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%fy)) then
       OutData%C_obj%fy_Len = size(OutData%fy)
       if (OutData%C_obj%fy_Len > 0) OutData%C_obj%fy = c_loc(OutData%fy(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%fz); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fz, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%fz)) then
       OutData%C_obj%fz_Len = size(OutData%fz)
       if (OutData%C_obj%fz_Len > 0) OutData%C_obj%fz = c_loc(OutData%fz(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%momentx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%momentx, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%momentx)) then
       OutData%C_obj%momentx_Len = size(OutData%momentx)
       if (OutData%C_obj%momentx_Len > 0) OutData%C_obj%momentx = c_loc(OutData%momentx(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%momenty); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%momenty, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%momenty)) then
       OutData%C_obj%momenty_Len = size(OutData%momenty)
       if (OutData%C_obj%momenty_Len > 0) OutData%C_obj%momenty = c_loc(OutData%momenty(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%momentz); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%momentz, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%momentz)) then
       OutData%C_obj%momentz_Len = size(OutData%momentz)
       if (OutData%C_obj%momentz_Len > 0) OutData%C_obj%momentz = c_loc(OutData%momentz(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%forceNodesChord); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%forceNodesChord, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%forceNodesChord)) then
       OutData%C_obj%forceNodesChord_Len = size(OutData%forceNodesChord)
       if (OutData%C_obj%forceNodesChord_Len > 0) OutData%C_obj%forceNodesChord = c_loc(OutData%forceNodesChord(LB(1)))
@@ -2281,17 +2281,17 @@ subroutine ExtInfw_UnPackOutput(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%u, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%u)) then
       OutData%C_obj%u_Len = size(OutData%u)
       if (OutData%C_obj%u_Len > 0) OutData%C_obj%u = c_loc(OutData%u(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%v); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%v, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%v)) then
       OutData%C_obj%v_Len = size(OutData%v)
       if (OutData%C_obj%v_Len > 0) OutData%C_obj%v = c_loc(OutData%v(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%w); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%w, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%w)) then
       OutData%C_obj%w_Len = size(OutData%w)
       if (OutData%C_obj%w_Len > 0) OutData%C_obj%w = c_loc(OutData%w(LB(1)))

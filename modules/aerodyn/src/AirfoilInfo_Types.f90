@@ -36,6 +36,15 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_1                       = 1      ! 1D interpolation on AoA (first table only) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2Re                     = 2      ! 2D interpolation on AoA and Re [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2User                   = 3      ! 2D interpolation on AoA and UserProp [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_None                          = 0      ! Steady aerodynamics, using the same angle of attack convention as UA [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Baseline                      = 1      ! UAMod = 1 [Baseline model (Original)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Gonzalez                      = 2      ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce                 = 3      ! Minnema/Pierce variant (changes in Cc and Cm) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGM                           = 4      ! continuous variant of HGM (Hansen) model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV                          = 5      ! continuous variant of HGM (Hansen) model with vortex modifications [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Oye                           = 6      ! Stieg Oye dynamic stall model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_BV                            = 7      ! Boeing-Vertol dynamic stall model (e.g. used in CACTUS) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV360                       = 8      ! continuous variant of HGM (Hansen) model with vortex modifications modified for 360-deg [-]
 ! =========  AFI_UA_BL_Type  =======
   TYPE, PUBLIC :: AFI_UA_BL_Type
     REAL(ReKi)  :: alpha0 = 0.0_ReKi      !< Angle of attack for zero lift (also used in HGM) [input in degrees; stored as radians]
@@ -75,16 +84,13 @@ IMPLICIT NONE
     REAL(ReKi)  :: filtCutOff = 0.0_ReKi      !< Reduced frequency cutoff used to calculate the dynamic low pass filter cut-off frequency for the pitching rate and accelerations [default = 0.5] [-]
     REAL(ReKi)  :: alphaUpper = 0.0_ReKi      !< (input) upper angle of attack defining fully attached region [input in degrees; stored as radians]
     REAL(ReKi)  :: alphaLower = 0.0_ReKi      !< (input) lower angle of attack defining fully attached region [input in degrees; stored as radians]
-    REAL(ReKi)  :: c_Rate = 0.0_ReKi      !< (calculated) linear slope in the fully attached region of cn or cl [1/rad]
-    REAL(ReKi)  :: c_RateUpper = 0.0_ReKi      !< (calculated) linear slope in the upper fully attached region of cn or cl [1/rad]
-    REAL(ReKi)  :: c_RateLower = 0.0_ReKi      !< (calculated) linear slope in the lower fully attached region of cn or cl [1/rad]
     REAL(ReKi)  :: c_alphaLower = 0.0_ReKi      !< (calculated) value of cn or cl at alphaLower [-]
     REAL(ReKi)  :: c_alphaUpper = 0.0_ReKi      !< (calculated) value of cn or cl at alphaUpper [-]
-    REAL(ReKi)  :: alphaUpperWrap = 0.0_ReKi      !< (calculated) upper angle of attack defining fully attached wrap-around region [stored as radians]
-    REAL(ReKi)  :: alphaLowerWrap = 0.0_ReKi      !< (calculated) lower angle of attack defining fully attached wrap-around region [stored as radians]
-    REAL(ReKi)  :: c_RateWrap = 0.0_ReKi      !< (calculated) linear slope in the fully attached wrap-around region of cn or cl (will be negative) [1/rad]
-    REAL(ReKi)  :: c_alphaLowerWrap = 0.0_ReKi      !< (calculated) value of cn or cl at alphaLowerWrap [-]
-    REAL(ReKi)  :: c_alphaUpperWrap = 0.0_ReKi      !< (calculated) value of cn or cl at alphaUpperWrap [-]
+    REAL(ReKi)  :: alpha0ReverseFlow = 0.0_ReKi      !< (calculated) Angle of attack for Cn=0 for reverse flow [rad]
+    REAL(ReKi)  :: alphaBreakUpper = 0.0_ReKi      !< (calculated) Angle of attack where normal and reverse flow CnAttached intersect; between 0 and +pi; will be near +pi/2 deg in most cases [rad]
+    REAL(ReKi)  :: CnBreakUpper = 0.0_ReKi      !< (calculated) CnAttached value at alphaBreakUpper where normal and reverse flow CnAttached intersect; will be positive [-]
+    REAL(ReKi)  :: alphaBreakLower = 0.0_ReKi      !< (calculated) Angle of attack where normal and reverse flow CnAttached intersect; between -pi and 0; will be near -pi/2 deg in most cases [rad]
+    REAL(ReKi)  :: CnBreakLower = 0.0_ReKi      !< (calculated) CnAttached value at alphaBreakLower where normal and reverse flow CnAttached intersect; will be negative [-]
   END TYPE AFI_UA_BL_Type
 ! =======================
 ! =========  AFI_UA_BL_Default_Type  =======
@@ -149,7 +155,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: InCol_Cd = 0_IntKi      !< The column of the coefficient tables that holds the minimum pressure coefficient [-]
     INTEGER(IntKi)  :: InCol_Cm = 0_IntKi      !< The column of the coefficient tables that holds the pitching-moment coefficient [-]
     INTEGER(IntKi)  :: InCol_Cpmin = 0_IntKi      !< The column of the coefficient tables that holds the minimum pressure coefficient [-]
-    LOGICAL  :: UA_f_cn = .false.      !< Whether any UA separation functions should be calculated on cn (true) or cl (false) [-]
+    INTEGER(IntKi)  :: UAMod = 0_IntKi      !< UA model: used to determine how UA separation functions should be calculated [-]
   END TYPE AFI_InitInputType
 ! =======================
 ! =========  AFI_InitOutputType  =======
@@ -259,16 +265,13 @@ subroutine AFI_CopyUA_BL_Type(SrcUA_BL_TypeData, DstUA_BL_TypeData, CtrlCode, Er
    DstUA_BL_TypeData%filtCutOff = SrcUA_BL_TypeData%filtCutOff
    DstUA_BL_TypeData%alphaUpper = SrcUA_BL_TypeData%alphaUpper
    DstUA_BL_TypeData%alphaLower = SrcUA_BL_TypeData%alphaLower
-   DstUA_BL_TypeData%c_Rate = SrcUA_BL_TypeData%c_Rate
-   DstUA_BL_TypeData%c_RateUpper = SrcUA_BL_TypeData%c_RateUpper
-   DstUA_BL_TypeData%c_RateLower = SrcUA_BL_TypeData%c_RateLower
    DstUA_BL_TypeData%c_alphaLower = SrcUA_BL_TypeData%c_alphaLower
    DstUA_BL_TypeData%c_alphaUpper = SrcUA_BL_TypeData%c_alphaUpper
-   DstUA_BL_TypeData%alphaUpperWrap = SrcUA_BL_TypeData%alphaUpperWrap
-   DstUA_BL_TypeData%alphaLowerWrap = SrcUA_BL_TypeData%alphaLowerWrap
-   DstUA_BL_TypeData%c_RateWrap = SrcUA_BL_TypeData%c_RateWrap
-   DstUA_BL_TypeData%c_alphaLowerWrap = SrcUA_BL_TypeData%c_alphaLowerWrap
-   DstUA_BL_TypeData%c_alphaUpperWrap = SrcUA_BL_TypeData%c_alphaUpperWrap
+   DstUA_BL_TypeData%alpha0ReverseFlow = SrcUA_BL_TypeData%alpha0ReverseFlow
+   DstUA_BL_TypeData%alphaBreakUpper = SrcUA_BL_TypeData%alphaBreakUpper
+   DstUA_BL_TypeData%CnBreakUpper = SrcUA_BL_TypeData%CnBreakUpper
+   DstUA_BL_TypeData%alphaBreakLower = SrcUA_BL_TypeData%alphaBreakLower
+   DstUA_BL_TypeData%CnBreakLower = SrcUA_BL_TypeData%CnBreakLower
 end subroutine
 
 subroutine AFI_DestroyUA_BL_Type(UA_BL_TypeData, ErrStat, ErrMsg)
@@ -322,16 +325,13 @@ subroutine AFI_PackUA_BL_Type(RF, Indata)
    call RegPack(RF, InData%filtCutOff)
    call RegPack(RF, InData%alphaUpper)
    call RegPack(RF, InData%alphaLower)
-   call RegPack(RF, InData%c_Rate)
-   call RegPack(RF, InData%c_RateUpper)
-   call RegPack(RF, InData%c_RateLower)
    call RegPack(RF, InData%c_alphaLower)
    call RegPack(RF, InData%c_alphaUpper)
-   call RegPack(RF, InData%alphaUpperWrap)
-   call RegPack(RF, InData%alphaLowerWrap)
-   call RegPack(RF, InData%c_RateWrap)
-   call RegPack(RF, InData%c_alphaLowerWrap)
-   call RegPack(RF, InData%c_alphaUpperWrap)
+   call RegPack(RF, InData%alpha0ReverseFlow)
+   call RegPack(RF, InData%alphaBreakUpper)
+   call RegPack(RF, InData%CnBreakUpper)
+   call RegPack(RF, InData%alphaBreakLower)
+   call RegPack(RF, InData%CnBreakLower)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -377,16 +377,13 @@ subroutine AFI_UnPackUA_BL_Type(RF, OutData)
    call RegUnpack(RF, OutData%filtCutOff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%alphaUpper); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%alphaLower); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%c_Rate); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%c_RateUpper); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%c_RateLower); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%c_alphaLower); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%c_alphaUpper); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%alphaUpperWrap); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%alphaLowerWrap); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%c_RateWrap); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%c_alphaLowerWrap); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%c_alphaUpperWrap); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alpha0ReverseFlow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alphaBreakUpper); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CnBreakUpper); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alphaBreakLower); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CnBreakLower); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AFI_CopyUA_BL_Default_Type(SrcUA_BL_Default_TypeData, DstUA_BL_Default_TypeData, CtrlCode, ErrStat, ErrMsg)
@@ -664,7 +661,7 @@ subroutine AFI_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
    DstInitInputData%InCol_Cd = SrcInitInputData%InCol_Cd
    DstInitInputData%InCol_Cm = SrcInitInputData%InCol_Cm
    DstInitInputData%InCol_Cpmin = SrcInitInputData%InCol_Cpmin
-   DstInitInputData%UA_f_cn = SrcInitInputData%UA_f_cn
+   DstInitInputData%UAMod = SrcInitInputData%UAMod
 end subroutine
 
 subroutine AFI_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -688,7 +685,7 @@ subroutine AFI_PackInitInput(RF, Indata)
    call RegPack(RF, InData%InCol_Cd)
    call RegPack(RF, InData%InCol_Cm)
    call RegPack(RF, InData%InCol_Cpmin)
-   call RegPack(RF, InData%UA_f_cn)
+   call RegPack(RF, InData%UAMod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -704,7 +701,7 @@ subroutine AFI_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%InCol_Cd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InCol_Cm); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InCol_Cpmin); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UA_f_cn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UAMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AFI_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1347,16 +1344,13 @@ SUBROUTINE AFI_UA_BL_Type_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, Er
    u_out%filtCutOff = a1*u1%filtCutOff + a2*u2%filtCutOff
    CALL Angles_ExtrapInterp( u1%alphaUpper, u2%alphaUpper, tin, u_out%alphaUpper, tin_out )
    CALL Angles_ExtrapInterp( u1%alphaLower, u2%alphaLower, tin, u_out%alphaLower, tin_out )
-   u_out%c_Rate = a1*u1%c_Rate + a2*u2%c_Rate
-   u_out%c_RateUpper = a1*u1%c_RateUpper + a2*u2%c_RateUpper
-   u_out%c_RateLower = a1*u1%c_RateLower + a2*u2%c_RateLower
    u_out%c_alphaLower = a1*u1%c_alphaLower + a2*u2%c_alphaLower
    u_out%c_alphaUpper = a1*u1%c_alphaUpper + a2*u2%c_alphaUpper
-   CALL Angles_ExtrapInterp( u1%alphaUpperWrap, u2%alphaUpperWrap, tin, u_out%alphaUpperWrap, tin_out )
-   CALL Angles_ExtrapInterp( u1%alphaLowerWrap, u2%alphaLowerWrap, tin, u_out%alphaLowerWrap, tin_out )
-   u_out%c_RateWrap = a1*u1%c_RateWrap + a2*u2%c_RateWrap
-   u_out%c_alphaLowerWrap = a1*u1%c_alphaLowerWrap + a2*u2%c_alphaLowerWrap
-   u_out%c_alphaUpperWrap = a1*u1%c_alphaUpperWrap + a2*u2%c_alphaUpperWrap
+   CALL Angles_ExtrapInterp( u1%alpha0ReverseFlow, u2%alpha0ReverseFlow, tin, u_out%alpha0ReverseFlow, tin_out )
+   CALL Angles_ExtrapInterp( u1%alphaBreakUpper, u2%alphaBreakUpper, tin, u_out%alphaBreakUpper, tin_out )
+   u_out%CnBreakUpper = a1*u1%CnBreakUpper + a2*u2%CnBreakUpper
+   CALL Angles_ExtrapInterp( u1%alphaBreakLower, u2%alphaBreakLower, tin, u_out%alphaBreakLower, tin_out )
+   u_out%CnBreakLower = a1*u1%CnBreakLower + a2*u2%CnBreakLower
 END SUBROUTINE
 
 SUBROUTINE AFI_UA_BL_Type_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -1449,16 +1443,13 @@ SUBROUTINE AFI_UA_BL_Type_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat
    u_out%filtCutOff = a1*u1%filtCutOff + a2*u2%filtCutOff + a3*u3%filtCutOff
    CALL Angles_ExtrapInterp( u1%alphaUpper, u2%alphaUpper, u3%alphaUpper, tin, u_out%alphaUpper, tin_out )
    CALL Angles_ExtrapInterp( u1%alphaLower, u2%alphaLower, u3%alphaLower, tin, u_out%alphaLower, tin_out )
-   u_out%c_Rate = a1*u1%c_Rate + a2*u2%c_Rate + a3*u3%c_Rate
-   u_out%c_RateUpper = a1*u1%c_RateUpper + a2*u2%c_RateUpper + a3*u3%c_RateUpper
-   u_out%c_RateLower = a1*u1%c_RateLower + a2*u2%c_RateLower + a3*u3%c_RateLower
    u_out%c_alphaLower = a1*u1%c_alphaLower + a2*u2%c_alphaLower + a3*u3%c_alphaLower
    u_out%c_alphaUpper = a1*u1%c_alphaUpper + a2*u2%c_alphaUpper + a3*u3%c_alphaUpper
-   CALL Angles_ExtrapInterp( u1%alphaUpperWrap, u2%alphaUpperWrap, u3%alphaUpperWrap, tin, u_out%alphaUpperWrap, tin_out )
-   CALL Angles_ExtrapInterp( u1%alphaLowerWrap, u2%alphaLowerWrap, u3%alphaLowerWrap, tin, u_out%alphaLowerWrap, tin_out )
-   u_out%c_RateWrap = a1*u1%c_RateWrap + a2*u2%c_RateWrap + a3*u3%c_RateWrap
-   u_out%c_alphaLowerWrap = a1*u1%c_alphaLowerWrap + a2*u2%c_alphaLowerWrap + a3*u3%c_alphaLowerWrap
-   u_out%c_alphaUpperWrap = a1*u1%c_alphaUpperWrap + a2*u2%c_alphaUpperWrap + a3*u3%c_alphaUpperWrap
+   CALL Angles_ExtrapInterp( u1%alpha0ReverseFlow, u2%alpha0ReverseFlow, u3%alpha0ReverseFlow, tin, u_out%alpha0ReverseFlow, tin_out )
+   CALL Angles_ExtrapInterp( u1%alphaBreakUpper, u2%alphaBreakUpper, u3%alphaBreakUpper, tin, u_out%alphaBreakUpper, tin_out )
+   u_out%CnBreakUpper = a1*u1%CnBreakUpper + a2*u2%CnBreakUpper + a3*u3%CnBreakUpper
+   CALL Angles_ExtrapInterp( u1%alphaBreakLower, u2%alphaBreakLower, u3%alphaBreakLower, tin, u_out%alphaBreakLower, tin_out )
+   u_out%CnBreakLower = a1*u1%CnBreakLower + a2*u2%CnBreakLower + a3*u3%CnBreakLower
 END SUBROUTINE
 
 function AFI_InputMeshPointer(u, DL) result(Mesh)

@@ -15492,7 +15492,7 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    call RegUnpack(RF, OutData%windGrid_n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%windGrid_delta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%windGrid_pZero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackPtr(RF, OutData%windGrid_data); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%windGrid_data, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumActForcePtsBlade); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumActForcePtsTower); if (RegCheckErr(RF, RoutineName)) return

@@ -591,26 +591,26 @@ subroutine Init_Meshes(dvr, FED, errStat, errMsg)
       orientation = R_gl2wt
       
       !bjj: Inspector consistently gives "Invalid Memory Access" errors here on the allocation of wt%ptMesh%RotationVel in MeshCreate. I haven't yet figured out why.
-      call CreatePointMesh(y_ED%PlatformPtMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
+      call CreateInputPointMesh(y_ED%PlatformPtMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
 
       ! Tower
       if (wt%hasTower) then
          pos         = y_ED%PlatformPtMesh%Position(:,1) + matmul(transpose(R_gl2wt),  wt%twr%origin_t)
          orientation = R_gl2wt
-         call CreatePointMesh(y_ED%TwrPtMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
+         call CreateInputPointMesh(y_ED%TwrPtMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
       endif
 
       ! Nacelle
       pos           = y_ED%PlatformPtMesh%Position(:,1) +  matmul(transpose(R_gl2wt),  wt%nac%origin_t)
       orientation   = R_gl2wt ! Yaw?
-      call CreatePointMesh(y_ED%NacelleMotion, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
+      call CreateInputPointMesh(y_ED%NacelleMotion, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
 
       ! Hub
       R_nac2gl  = transpose(y_ED%NacelleMotion%RefOrientation(:,:,1))
       R_nac2hub = EulerConstruct( wt%hub%orientation_n ) ! nacelle 2 hub (constant)
       pos         = y_ED%NacelleMotion%Position(:,1) + matmul(R_nac2gl,wt%hub%origin_n)
       orientation = matmul(R_nac2hub, y_ED%NacelleMotion%RefOrientation(:,:,1))   ! Global 2 hub at t=0
-      call CreatePointMesh(y_ED%HubPtMotion, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
+      call CreateInputPointMesh(y_ED%HubPtMotion, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
 
       ! Blades
 !       wt%Rg2b0 = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
@@ -624,7 +624,7 @@ subroutine Init_Meshes(dvr, FED, errStat, errMsg)
          R_hub2bl = EulerConstruct( wt%bld(iB)%orientation_h ) ! Rotation matrix hub 2 blade (constant)
          orientation = matmul(R_hub2bl,  y_ED%HubPtMotion%RefOrientation(:,:,1) ) ! Global 2 blade =    hub2blade   x global2hub
          pos         = y_ED%HubPtMotion%Position(:,1) + matmul(R_hub2gl, wt%bld(iB)%origin_h) +  wt%bld(iB)%hubRad_bl*orientation(3,:) 
-         call CreatePointMesh(y_ED%BladeRootMotion(iB), pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
+         call CreateInputPointMesh(y_ED%BladeRootMotion(iB), pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
       end do
 
       ! --- Mapping
@@ -1105,7 +1105,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       call ParseVar(FileInfo_In, CurLine, 'amplitude'//sWT         , wt%amplitude,       errStat2, errMsg2, unEc); if(Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'frequency'//sWT         , wt%frequency,       errStat2, errMsg2, unEc); if(Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
-      wt%frequency = wt%frequency * 2 *pi ! Hz to rad/s
+      wt%frequency = wt%frequency * 2 * pi ! Hz to rad/s
       if (dvr%analysisType==idAnalysisRegular) then
          if (wt%motionType==idBaseMotionGeneral) then
             call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
@@ -1313,7 +1313,7 @@ subroutine setSimpleMotion(wt, rotSpeed, bldPitch, nacYaw, DOF, amplitude, frequ
    integer                       :: i
    wt%degreeofFreedom   = DOF
    wt%amplitude         = amplitude
-   wt%frequency         = frequency * 2 *pi ! Hz to rad/s
+   wt%frequency         = frequency
    wt%nac%motionType    = idNacMotionConstant
    wt%nac%yaw           = nacYaw* PI /180._ReKi ! deg 2 rad
    wt%hub%motionType    = idHubMotionConstant
@@ -1452,7 +1452,7 @@ subroutine Dvr_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
             end if
             call OpenFOutFile ( out%unOutFile(iWT), trim(out%Root)//trim(sWT)//'.out', errStat, errMsg )
             if ( errStat >= AbortErrLev ) return
-            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( GetVersion(version) )
+            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( TRIM(GetVersion(version)) )
             write (out%unOutFile(iWT),'(1X,A)') trim(GetNVD(out%AD_ver))
             write (out%unOutFile(iWT),'()' )    !print a blank line
             write (out%unOutFile(iWT),'()' )    !print a blank line

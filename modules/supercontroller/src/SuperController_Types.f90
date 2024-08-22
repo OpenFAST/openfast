@@ -533,12 +533,12 @@ subroutine SC_UnPackParam(RF, OutData)
    OutData%C_obj%NumParamGlobal = OutData%NumParamGlobal
    call RegUnpack(RF, OutData%NumParamTurbine); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%NumParamTurbine = OutData%NumParamTurbine
-   call RegUnpackPtr(RF, OutData%ParamGlobal); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%ParamGlobal, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%ParamGlobal)) then
       OutData%C_obj%ParamGlobal_Len = size(OutData%ParamGlobal)
       if (OutData%C_obj%ParamGlobal_Len > 0) OutData%C_obj%ParamGlobal = c_loc(OutData%ParamGlobal(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%ParamTurbine); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%ParamTurbine, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%ParamTurbine)) then
       OutData%C_obj%ParamTurbine_Len = size(OutData%ParamTurbine)
       if (OutData%C_obj%ParamTurbine_Len > 0) OutData%C_obj%ParamTurbine = c_loc(OutData%ParamTurbine(LB(1)))
@@ -731,12 +731,12 @@ subroutine SC_UnPackDiscState(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%Global); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Global, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Global)) then
       OutData%C_obj%Global_Len = size(OutData%Global)
       if (OutData%C_obj%Global_Len > 0) OutData%C_obj%Global = c_loc(OutData%Global(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Turbine); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Turbine, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Turbine)) then
       OutData%C_obj%Turbine_Len = size(OutData%Turbine)
       if (OutData%C_obj%Turbine_Len > 0) OutData%C_obj%Turbine = c_loc(OutData%Turbine(LB(1)))
@@ -1228,12 +1228,12 @@ subroutine SC_UnPackInput(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%toSCglob); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%toSCglob, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%toSCglob)) then
       OutData%C_obj%toSCglob_Len = size(OutData%toSCglob)
       if (OutData%C_obj%toSCglob_Len > 0) OutData%C_obj%toSCglob = c_loc(OutData%toSCglob(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%toSC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%toSC, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%toSC)) then
       OutData%C_obj%toSC_Len = size(OutData%toSC)
       if (OutData%C_obj%toSC_Len > 0) OutData%C_obj%toSC = c_loc(OutData%toSC(LB(1)))
@@ -1405,12 +1405,12 @@ subroutine SC_UnPackOutput(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%fromSCglob); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fromSCglob, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%fromSCglob)) then
       OutData%C_obj%fromSCglob_Len = size(OutData%fromSCglob)
       if (OutData%C_obj%fromSCglob_Len > 0) OutData%C_obj%fromSCglob = c_loc(OutData%fromSCglob(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%fromSC, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%fromSC)) then
       OutData%C_obj%fromSC_Len = size(OutData%fromSC)
       if (OutData%C_obj%fromSC_Len > 0) OutData%C_obj%fromSC = c_loc(OutData%fromSC(LB(1)))

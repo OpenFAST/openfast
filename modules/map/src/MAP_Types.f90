@@ -1124,82 +1124,82 @@ subroutine MAP_UnPackOtherState(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%H); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%H, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%H)) then
       OutData%C_obj%H_Len = size(OutData%H)
       if (OutData%C_obj%H_Len > 0) OutData%C_obj%H = c_loc(OutData%H(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%V); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%V, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%V)) then
       OutData%C_obj%V_Len = size(OutData%V)
       if (OutData%C_obj%V_Len > 0) OutData%C_obj%V = c_loc(OutData%V(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Ha); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Ha, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Ha)) then
       OutData%C_obj%Ha_Len = size(OutData%Ha)
       if (OutData%C_obj%Ha_Len > 0) OutData%C_obj%Ha = c_loc(OutData%Ha(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Va); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Va, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Va)) then
       OutData%C_obj%Va_Len = size(OutData%Va)
       if (OutData%C_obj%Va_Len > 0) OutData%C_obj%Va = c_loc(OutData%Va(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%x); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%x, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%x)) then
       OutData%C_obj%x_Len = size(OutData%x)
       if (OutData%C_obj%x_Len > 0) OutData%C_obj%x = c_loc(OutData%x(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%y, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%y)) then
       OutData%C_obj%y_Len = size(OutData%y)
       if (OutData%C_obj%y_Len > 0) OutData%C_obj%y = c_loc(OutData%y(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%z); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%z, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%z)) then
       OutData%C_obj%z_Len = size(OutData%z)
       if (OutData%C_obj%z_Len > 0) OutData%C_obj%z = c_loc(OutData%z(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%xa); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%xa, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%xa)) then
       OutData%C_obj%xa_Len = size(OutData%xa)
       if (OutData%C_obj%xa_Len > 0) OutData%C_obj%xa = c_loc(OutData%xa(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%ya); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%ya, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%ya)) then
       OutData%C_obj%ya_Len = size(OutData%ya)
       if (OutData%C_obj%ya_Len > 0) OutData%C_obj%ya = c_loc(OutData%ya(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%za); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%za, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%za)) then
       OutData%C_obj%za_Len = size(OutData%za)
       if (OutData%C_obj%za_Len > 0) OutData%C_obj%za = c_loc(OutData%za(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Fx_connect); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Fx_connect, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Fx_connect)) then
       OutData%C_obj%Fx_connect_Len = size(OutData%Fx_connect)
       if (OutData%C_obj%Fx_connect_Len > 0) OutData%C_obj%Fx_connect = c_loc(OutData%Fx_connect(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Fy_connect); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Fy_connect, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Fy_connect)) then
       OutData%C_obj%Fy_connect_Len = size(OutData%Fy_connect)
       if (OutData%C_obj%Fy_connect_Len > 0) OutData%C_obj%Fy_connect = c_loc(OutData%Fy_connect(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Fz_connect); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Fz_connect, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Fz_connect)) then
       OutData%C_obj%Fz_connect_Len = size(OutData%Fz_connect)
       if (OutData%C_obj%Fz_connect_Len > 0) OutData%C_obj%Fz_connect = c_loc(OutData%Fz_connect(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Fx_anchor); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Fx_anchor, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Fx_anchor)) then
       OutData%C_obj%Fx_anchor_Len = size(OutData%Fx_anchor)
       if (OutData%C_obj%Fx_anchor_Len > 0) OutData%C_obj%Fx_anchor = c_loc(OutData%Fx_anchor(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Fy_anchor); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Fy_anchor, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Fy_anchor)) then
       OutData%C_obj%Fy_anchor_Len = size(OutData%Fy_anchor)
       if (OutData%C_obj%Fy_anchor_Len > 0) OutData%C_obj%Fy_anchor = c_loc(OutData%Fy_anchor(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Fz_anchor); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Fz_anchor, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Fz_anchor)) then
       OutData%C_obj%Fz_anchor_Len = size(OutData%Fz_anchor)
       if (OutData%C_obj%Fz_anchor_Len > 0) OutData%C_obj%Fz_anchor = c_loc(OutData%Fz_anchor(LB(1)))
@@ -1731,27 +1731,27 @@ subroutine MAP_UnPackConstrState(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%H); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%H, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%H)) then
       OutData%C_obj%H_Len = size(OutData%H)
       if (OutData%C_obj%H_Len > 0) OutData%C_obj%H = c_loc(OutData%H(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%V); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%V, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%V)) then
       OutData%C_obj%V_Len = size(OutData%V)
       if (OutData%C_obj%V_Len > 0) OutData%C_obj%V = c_loc(OutData%V(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%x); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%x, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%x)) then
       OutData%C_obj%x_Len = size(OutData%x)
       if (OutData%C_obj%x_Len > 0) OutData%C_obj%x = c_loc(OutData%x(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%y, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%y)) then
       OutData%C_obj%y_Len = size(OutData%y)
       if (OutData%C_obj%y_Len > 0) OutData%C_obj%y = c_loc(OutData%y(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%z); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%z, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%z)) then
       OutData%C_obj%z_Len = size(OutData%z)
       if (OutData%C_obj%z_Len > 0) OutData%C_obj%z = c_loc(OutData%z(LB(1)))
@@ -2131,17 +2131,17 @@ subroutine MAP_UnPackInput(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%x); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%x, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%x)) then
       OutData%C_obj%x_Len = size(OutData%x)
       if (OutData%C_obj%x_Len > 0) OutData%C_obj%x = c_loc(OutData%x(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%y, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%y)) then
       OutData%C_obj%y_Len = size(OutData%y)
       if (OutData%C_obj%y_Len > 0) OutData%C_obj%y = c_loc(OutData%y(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%z); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%z, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%z)) then
       OutData%C_obj%z_Len = size(OutData%z)
       if (OutData%C_obj%z_Len > 0) OutData%C_obj%z = c_loc(OutData%z(LB(1)))
@@ -2404,23 +2404,23 @@ subroutine MAP_UnPackOutput(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%Fx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Fx, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Fx)) then
       OutData%C_obj%Fx_Len = size(OutData%Fx)
       if (OutData%C_obj%Fx_Len > 0) OutData%C_obj%Fx = c_loc(OutData%Fx(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Fy); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Fy, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Fy)) then
       OutData%C_obj%Fy_Len = size(OutData%Fy)
       if (OutData%C_obj%Fy_Len > 0) OutData%C_obj%Fy = c_loc(OutData%Fy(LB(1)))
    end if
-   call RegUnpackPtr(RF, OutData%Fz); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Fz, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%Fz)) then
       OutData%C_obj%Fz_Len = size(OutData%Fz)
       if (OutData%C_obj%Fz_Len > 0) OutData%C_obj%Fz = c_loc(OutData%Fz(LB(1)))
    end if
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackPtr(RF, OutData%wrtOutput); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%wrtOutput, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%wrtOutput)) then
       OutData%C_obj%wrtOutput_Len = size(OutData%wrtOutput)
       if (OutData%C_obj%wrtOutput_Len > 0) OutData%C_obj%wrtOutput = c_loc(OutData%wrtOutput(LB(1)))

@@ -307,11 +307,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: KinVisc = 0.0_ReKi      !< Kinematic air viscosity [m^2/s]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK flag [-]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
-    INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
-    LOGICAL  :: Flookup = .false.      !< Use table lookup for f' and f''  [-]
-    REAL(ReKi)  :: a_s = 0.0_ReKi      !< speed of sound [m/s]
-    LOGICAL  :: SumPrint = .false.      !< Whether to print summary file (primarially in in UA) [-]
+    TYPE(UA_InitInputType)  :: UA_Init      !< InitInput data for UA model [-]
   END TYPE FVW_InitInputType
 ! =======================
 ! =========  FVW_InputFile  =======
@@ -3417,11 +3414,10 @@ subroutine FVW_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
    DstInitInputData%KinVisc = SrcInitInputData%KinVisc
    DstInitInputData%MHK = SrcInitInputData%MHK
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-   DstInitInputData%UAMod = SrcInitInputData%UAMod
    DstInitInputData%UA_Flag = SrcInitInputData%UA_Flag
-   DstInitInputData%Flookup = SrcInitInputData%Flookup
-   DstInitInputData%a_s = SrcInitInputData%a_s
-   DstInitInputData%SumPrint = SrcInitInputData%SumPrint
+   call UA_CopyInitInput(SrcInitInputData%UA_Init, DstInitInputData%UA_Init, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine FVW_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -3453,6 +3449,8 @@ subroutine FVW_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       end do
       deallocate(InitInputData%WingsMesh)
    end if
+   call UA_DestroyInitInput(InitInputData%UA_Init, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FVW_PackInitInput(RF, Indata)
@@ -3487,11 +3485,8 @@ subroutine FVW_PackInitInput(RF, Indata)
    call RegPack(RF, InData%KinVisc)
    call RegPack(RF, InData%MHK)
    call RegPack(RF, InData%WtrDpth)
-   call RegPack(RF, InData%UAMod)
    call RegPack(RF, InData%UA_Flag)
-   call RegPack(RF, InData%Flookup)
-   call RegPack(RF, InData%a_s)
-   call RegPack(RF, InData%SumPrint)
+   call UA_PackInitInput(RF, InData%UA_Init) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3537,11 +3532,8 @@ subroutine FVW_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%KinVisc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UAMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UA_Flag); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Flookup); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%a_s); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SumPrint); if (RegCheckErr(RF, RoutineName)) return
+   call UA_UnpackInitInput(RF, OutData%UA_Init) ! UA_Init 
 end subroutine
 
 subroutine FVW_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)

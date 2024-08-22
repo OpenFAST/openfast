@@ -565,9 +565,9 @@ contains
    subroutine SetWind(i,z_h)
       integer(IntKi) :: i     ! point num
       real(ReKi)     :: z_h   !< height
-      ExtLd%m%FlowField%Points%Vel(iPt,1) = -mean_vel(z_h) * sin(ExtLd%p%wind_dir * pi / 180.0)
-      ExtLd%m%FlowField%Points%Vel(iPt,2) = -mean_vel(z_h) * cos(ExtLd%p%wind_dir * pi / 180.0)
-      ExtLd%m%FlowField%Points%Vel(iPt,3) = 0.0
+      ExtLd%m%FlowField%Points%Vel(1,iPt) = -mean_vel(z_h) * sin(ExtLd%p%wind_dir * pi / 180.0)
+      ExtLd%m%FlowField%Points%Vel(2,iPt) = -mean_vel(z_h) * cos(ExtLd%p%wind_dir * pi / 180.0)
+      ExtLd%m%FlowField%Points%Vel(3,iPt) = 0.0
    end subroutine
 END SUBROUTINE ExtLd_UpdateFlowField
 
