@@ -38,7 +38,7 @@ public :: CalcWriteLinearMatrices, Glue_CombineModules
 
 contains
 
-subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilter, Linearize, ErrStat, ErrMsg)
+subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilter, Linearize, ErrStat, ErrMsg, Name)
    type(ModGlueType), intent(out)      :: ModGlue
    type(ModDataType), intent(in)       :: ModDataAry(:)
    integer(IntKi), intent(in)          :: iModAry(:)
@@ -47,6 +47,7 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
    type(MappingType), intent(in)       :: Mappings(:)    !< Mesh and variable mappings
    integer(IntKi), intent(out)         :: ErrStat
    character(ErrMsgLen), intent(out)   :: ErrMsg
+   character(*), optional, intent(in)  :: Name
 
    character(*), parameter             :: RoutineName = 'Glue_CombineModules'
    integer(IntKi)                      :: ErrStat2
@@ -68,6 +69,13 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
    if ((size(ModDataAry) == 0) .or. (size(iModAry) == 0)) then
       call SetErrStat(ErrID_Fatal, "No modules were used", ErrStat, ErrMsg, RoutineName)
       return
+   end if
+
+   ! Set module name
+   if (present(Name)) then
+      ModGlue%Name = Name
+   else
+      ModGlue%Name = ''
    end if
 
    !----------------------------------------------------------------------------
