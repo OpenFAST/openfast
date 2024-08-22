@@ -208,15 +208,14 @@ IMPLICIT NONE
 ! =========  Glue_TCMisc  =======
   TYPE, PUBLIC :: Glue_TCMisc
     TYPE(ModGlueType)  :: Mod      !< Glue module combining tight coupling modules [-]
-    TYPE(TC_State)  :: State      !< Tight Coupling state [-]
-    TYPE(TC_State)  :: StatePrev      !< Tight Coupling previous state for correction iterations [-]
+    TYPE(TC_State)  :: StateCurr      !< Tight Coupling current state [-]
+    TYPE(TC_State)  :: StatePred      !< Tight Coupling predicted state [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: UCalc      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T      !< Tangent matrix [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: XB      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IPIV      !<  [-]
     INTEGER(IntKi)  :: IterTotal = 0      !<  [-]
-    INTEGER(IntKi)  :: IterUntilUJac = 0      !< Number of convergence iterations until Jacobian update [-]
-    INTEGER(IntKi)  :: StepsUntilUJac = 0      !< Number of time steps until Jacobian update [-]
+    INTEGER(IntKi)  :: UJacIterRemain = 0      !< Number of convergence iterations until Jacobian update [-]
+    INTEGER(IntKi)  :: UJacStepsRemain = 0      !< Number of time steps until Jacobian update [-]
     LOGICAL  :: ConvWarn = .false.      !< Flag to warn about convergence failure [-]
   END TYPE Glue_TCMisc
 ! =======================
@@ -1833,10 +1832,10 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
    call Glue_CopyModGlueType(SrcTCMiscData%Mod, DstTCMiscData%Mod, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call Glue_CopyTC_State(SrcTCMiscData%State, DstTCMiscData%State, CtrlCode, ErrStat2, ErrMsg2)
+   call Glue_CopyTC_State(SrcTCMiscData%StateCurr, DstTCMiscData%StateCurr, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call Glue_CopyTC_State(SrcTCMiscData%StatePrev, DstTCMiscData%StatePrev, CtrlCode, ErrStat2, ErrMsg2)
+   call Glue_CopyTC_State(SrcTCMiscData%StatePred, DstTCMiscData%StatePred, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcTCMiscData%UCalc)) then
@@ -1850,18 +1849,6 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstTCMiscData%UCalc = SrcTCMiscData%UCalc
-   end if
-   if (allocated(SrcTCMiscData%T)) then
-      LB(1:2) = lbound(SrcTCMiscData%T, kind=B8Ki)
-      UB(1:2) = ubound(SrcTCMiscData%T, kind=B8Ki)
-      if (.not. allocated(DstTCMiscData%T)) then
-         allocate(DstTCMiscData%T(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%T.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstTCMiscData%T = SrcTCMiscData%T
    end if
    if (allocated(SrcTCMiscData%XB)) then
       LB(1:2) = lbound(SrcTCMiscData%XB, kind=B8Ki)
@@ -1888,8 +1875,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       DstTCMiscData%IPIV = SrcTCMiscData%IPIV
    end if
    DstTCMiscData%IterTotal = SrcTCMiscData%IterTotal
-   DstTCMiscData%IterUntilUJac = SrcTCMiscData%IterUntilUJac
-   DstTCMiscData%StepsUntilUJac = SrcTCMiscData%StepsUntilUJac
+   DstTCMiscData%UJacIterRemain = SrcTCMiscData%UJacIterRemain
+   DstTCMiscData%UJacStepsRemain = SrcTCMiscData%UJacStepsRemain
    DstTCMiscData%ConvWarn = SrcTCMiscData%ConvWarn
 end subroutine
 
@@ -1904,15 +1891,12 @@ subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call Glue_DestroyModGlueType(TCMiscData%Mod, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call Glue_DestroyTC_State(TCMiscData%State, ErrStat2, ErrMsg2)
+   call Glue_DestroyTC_State(TCMiscData%StateCurr, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call Glue_DestroyTC_State(TCMiscData%StatePrev, ErrStat2, ErrMsg2)
+   call Glue_DestroyTC_State(TCMiscData%StatePred, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(TCMiscData%UCalc)) then
       deallocate(TCMiscData%UCalc)
-   end if
-   if (allocated(TCMiscData%T)) then
-      deallocate(TCMiscData%T)
    end if
    if (allocated(TCMiscData%XB)) then
       deallocate(TCMiscData%XB)
@@ -1928,15 +1912,14 @@ subroutine Glue_PackTCMisc(RF, Indata)
    character(*), parameter         :: RoutineName = 'Glue_PackTCMisc'
    if (RF%ErrStat >= AbortErrLev) return
    call Glue_PackModGlueType(RF, InData%Mod) 
-   call Glue_PackTC_State(RF, InData%State) 
-   call Glue_PackTC_State(RF, InData%StatePrev) 
+   call Glue_PackTC_State(RF, InData%StateCurr) 
+   call Glue_PackTC_State(RF, InData%StatePred) 
    call RegPackAlloc(RF, InData%UCalc)
-   call RegPackAlloc(RF, InData%T)
    call RegPackAlloc(RF, InData%XB)
    call RegPackAlloc(RF, InData%IPIV)
    call RegPack(RF, InData%IterTotal)
-   call RegPack(RF, InData%IterUntilUJac)
-   call RegPack(RF, InData%StepsUntilUJac)
+   call RegPack(RF, InData%UJacIterRemain)
+   call RegPack(RF, InData%UJacStepsRemain)
    call RegPack(RF, InData%ConvWarn)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -1950,15 +1933,14 @@ subroutine Glue_UnPackTCMisc(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call Glue_UnpackModGlueType(RF, OutData%Mod) ! Mod 
-   call Glue_UnpackTC_State(RF, OutData%State) ! State 
-   call Glue_UnpackTC_State(RF, OutData%StatePrev) ! StatePrev 
+   call Glue_UnpackTC_State(RF, OutData%StateCurr) ! StateCurr 
+   call Glue_UnpackTC_State(RF, OutData%StatePred) ! StatePred 
    call RegUnpackAlloc(RF, OutData%UCalc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%T); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%XB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%IPIV); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IterTotal); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%IterUntilUJac); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%StepsUntilUJac); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UJacIterRemain); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UJacStepsRemain); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvWarn); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 

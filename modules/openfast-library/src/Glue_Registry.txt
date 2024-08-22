@@ -165,15 +165,14 @@ typedef ^ ^                     R8Ki            vd                      :  -  - 
 typedef ^ ^                     R8Ki            a                       :  -  -     "Generalized alpha algorithmic acceleration" -
 
 typedef ^ Glue_TCMisc           ModGlueType     Mod                     -  -  -     "Glue module combining tight coupling modules" -
-typedef ^ ^                     TC_State        State                   -  -  -     "Tight Coupling state"
-typedef ^ ^                     TC_State        StatePrev               -  -  -     "Tight Coupling previous state for correction iterations"
+typedef ^ ^                     TC_State        StateCurr               -  -  -     "Tight Coupling current state"
+typedef ^ ^                     TC_State        StatePred               -  -  -     "Tight Coupling predicted state"
 typedef ^ ^                     R8Ki            UCalc                   :  -  -     "" -
-typedef ^ ^                     R8Ki            T                      ::  -  -     "Tangent matrix" -
 typedef ^ ^                     R8Ki            XB                      :: -  -     "" -
 typedef ^ ^                     IntKi           IPIV                    :  -  -     "" -
 typedef ^ ^                     IntKi           IterTotal               -  0  -     "" -
-typedef ^ ^                     IntKi           IterUntilUJac           -  0  -     "Number of convergence iterations until Jacobian update" -
-typedef ^ ^                     IntKi           StepsUntilUJac          -  0  -     "Number of time steps until Jacobian update" -
+typedef ^ ^                     IntKi           UJacIterRemain          -  0  -     "Number of convergence iterations until Jacobian update" -
+typedef ^ ^                     IntKi           UJacStepsRemain         -  0  -     "Number of time steps until Jacobian update" -
 typedef ^ ^                     logical         ConvWarn                -  -  -     "Flag to warn about convergence failure" -
 
 typedef ^ Glue_LinMisc          IntKi           TimeIndex               -  -  -     "" -
