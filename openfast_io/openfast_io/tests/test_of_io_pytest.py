@@ -18,17 +18,17 @@ Path(BUILD_DIR).mkdir(parents=True, exist_ok=True)
 # Exercising the  various OpenFAST modules
 FOLDERS_TO_RUN = [
     "5MW_Land_DLL_WTurb"                    ,       # "openfast;elastodyn;aerodyn15;servodyn")
-    # "5MW_OC3Mnpl_DLL_WTurb_WavesIrr"        ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
-    # "5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart",       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore;restart")
-    # "5MW_ITIBarge_DLL_WTurb_WavesIrr"       ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
-    # "5MW_OC4Semi_WSt_WavesWN"               ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
-    # "5MW_Land_BD_DLL_WTurb"                 ,       # "openfast;beamdyn;aerodyn15;servodyn")
-    # "5MW_OC4Jckt_ExtPtfm"                   ,       # "openfast;elastodyn;extptfm")
-    # "HelicalWake_OLAF"                      ,       # "openfast;aerodyn15;olaf")
-    # "StC_test_OC4Semi"                      ,       # "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
-    # "MHK_RM1_Fixed"                         ,       # "openfast;elastodyn;aerodyn15;mhk")
-    # "MHK_RM1_Floating"                      ,       # "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
-    # "Tailfin_FreeYaw1DOF_PolarBased"        ,       # "openfast;elastodyn;aerodyn15")
+    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr"        ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
+    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart",       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore;restart")
+    "5MW_ITIBarge_DLL_WTurb_WavesIrr"       ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
+    "5MW_OC4Semi_WSt_WavesWN"               ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
+    "5MW_Land_BD_DLL_WTurb"                 ,       # "openfast;beamdyn;aerodyn15;servodyn")
+    "5MW_OC4Jckt_ExtPtfm"                   ,       # "openfast;elastodyn;extptfm")
+    "HelicalWake_OLAF"                      ,       # "openfast;aerodyn15;olaf")
+    "StC_test_OC4Semi"                      ,       # "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
+    "MHK_RM1_Fixed"                         ,       # "openfast;elastodyn;aerodyn15;mhk")
+    "MHK_RM1_Floating"                      ,       # "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
+    "Tailfin_FreeYaw1DOF_PolarBased"        ,       # "openfast;elastodyn;aerodyn15")
 ]
 
 
@@ -72,7 +72,7 @@ def write_action(folder, fst_vt, path_dict = getPaths()):
 def run_action(folder, path_dict = getPaths()):
     # Placeholder for the actual run action
     print(f"Running simulation for {folder}")
-    subprocess.run([OF_PATH, str(osp.join(path_dict['build_dir'], folder, f"{folder}.fst"))], check=True)
+    subprocess.run([path_dict['executable'], str(osp.join(path_dict['build_dir'], folder, f"{folder}.fst"))], check=True)
 
 def check_ascii_out(folder, path_dict = getPaths()):
     # Placeholder for the actual check action
