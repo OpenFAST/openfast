@@ -1,3 +1,3 @@
 [submodule "reg_tests/r-test"]
 	path = reg_tests/r-test
-	url = https://github.com/OpenFAST/r-test.git
+	url = https://github.com/OpenFAST/r-test-5.git

@@ -124,7 +124,7 @@ if '_Restart' in caseName:
 
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, "5MW_Land_DLL_WTurb_cpp.outb")
-baselineOutFile = os.path.join(inputsDirectory, "5MW_Land_DLL_WTurb_cpp.outb.gold")
+baselineOutFile = os.path.join(inputsDirectory, "5MW_Land_DLL_WTurb_cpp.outb")
 
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
