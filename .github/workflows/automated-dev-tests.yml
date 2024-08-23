@@ -600,6 +600,49 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
+  rtest-openfast_io:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run openfast_io tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -j4 \
+          -L openfast_io \
+          -LE "cpp|linear|python|fastlib|aeromap" \
+          -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rtest-OF
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/openfast_io
+
 
   rtest-OF-simulink:
     runs-on: ubuntu-22.04
