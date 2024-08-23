@@ -33,19 +33,6 @@ FOLDERS_TO_RUN = [
 
 
 
-'''
-parser.add_argument("caseName", metavar="Case-Name", type=str, nargs=1, help="The name of the test case.")
-parser.add_argument("executable", metavar="NotUsed", type=str, nargs=1, help="Not used in this script, but kept for API compatibility.")
-parser.add_argument("sourceDirectory", metavar="path/to/openfast_repo", type=str, nargs=1, help="The path to the OpenFAST repository.")
-parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", type=str, nargs=1, help="The path to the OpenFAST repository build directory.")
-'''
-
-
-# def pytest_addoption(parser):
-#     parser.addoption("--executable", action="store", default=OF_PATH, help="Path to the OpenFAST executable")
-#     parser.addoption("--source_dir", action="store", default=REPOSITORY_ROOT, help="Path to the r-test directory")
-#     parser.addoption("--build_dir", action="store", default=BUILD_DIR, help="Path to the test data directory")
-
 def getPaths(OF_PATH = OF_PATH, REPOSITORY_ROOT = REPOSITORY_ROOT, BUILD_DIR = BUILD_DIR):
 
     return {
@@ -55,7 +42,6 @@ def getPaths(OF_PATH = OF_PATH, REPOSITORY_ROOT = REPOSITORY_ROOT, BUILD_DIR = B
         "rtest_dir": osp.join(REPOSITORY_ROOT, "reg_tests", "r-test"),
         "test_data_dir": osp.join(REPOSITORY_ROOT, "reg_tests", "r-test", "glue-codes", "openfast")
     }
-
 
 def read_action(folder, path_dict = getPaths()):
     print(f"Reading from {folder}")
@@ -67,8 +53,6 @@ def read_action(folder, path_dict = getPaths()):
     fast_reader.execute()
 
     return fast_reader.fst_vt
-
-
 
 def write_action(folder, fst_vt, path_dict = getPaths()):
     print(f"Writing to {folder}, with TMax = 2.0")
@@ -123,14 +107,6 @@ def test_openfast_executable_exists(request):
     else: # stop the test if the OpenFAST executable is not found
         print(f"OpenFAST executable not found at {path_dict['executable']}. Please build OpenFAST and try again.")
         sys.exit(1)
-
-# # Define a list of action functions for parameterization
-# actions = [
-#     ("read", read_action),
-#     ("write", write_action),
-#     ("run", run_action),
-#     ("check", check_action),
-# ]
 
 # Parameterize the test function to run for each folder and action
 @pytest.mark.parametrize("folder", FOLDERS_TO_RUN)
