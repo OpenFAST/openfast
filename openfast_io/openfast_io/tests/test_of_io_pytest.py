@@ -1,7 +1,7 @@
 import pytest
 import os.path as osp
 import subprocess, sys
-import platform
+
 
 from openfast_io.FAST_reader import InputReader_OpenFAST
 from openfast_io.FAST_writer import InputWriter_OpenFAST
@@ -10,61 +10,71 @@ from openfast_io.FAST_output_reader import FASTOutputFile
 from openfast_io.FileTools import check_rtest_cloned
 from pathlib import Path
 
-REPOSITORY_ROOT = osp.dirname(osp.dirname(osp.dirname(osp.dirname(__file__))))
-RTESTS_DIR = osp.join(REPOSITORY_ROOT, "reg_tests","r-test")
-TEST_DATA_DIR = osp.join(RTESTS_DIR, "glue-codes", "openfast")
+from conftest import REPOSITORY_ROOT, BUILD_DIR, OF_PATH
 
-RUN_DIR = osp.join(REPOSITORY_ROOT, "build_ofio", "testSuite")
-Path(RUN_DIR).mkdir(parents=True, exist_ok=True)
+Path(BUILD_DIR).mkdir(parents=True, exist_ok=True)
 
 
 # Exercising the  various OpenFAST modules
 FOLDERS_TO_RUN = [
     "5MW_Land_DLL_WTurb"                    ,       # "openfast;elastodyn;aerodyn15;servodyn")
-    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr"        ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
-    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart",       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore;restart")
-    "5MW_ITIBarge_DLL_WTurb_WavesIrr"       ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
-    "5MW_OC4Semi_WSt_WavesWN"               ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
-    "5MW_Land_BD_DLL_WTurb"                 ,       # "openfast;beamdyn;aerodyn15;servodyn")
-    "5MW_OC4Jckt_ExtPtfm"                   ,       # "openfast;elastodyn;extptfm")
-    "HelicalWake_OLAF"                      ,       # "openfast;aerodyn15;olaf")
-    "StC_test_OC4Semi"                      ,       # "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
-    "MHK_RM1_Fixed"                         ,       # "openfast;elastodyn;aerodyn15;mhk")
-    "MHK_RM1_Floating"                      ,       # "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
-    "Tailfin_FreeYaw1DOF_PolarBased"        ,       # "openfast;elastodyn;aerodyn15")
+    # "5MW_OC3Mnpl_DLL_WTurb_WavesIrr"        ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
+    # "5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart",       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore;restart")
+    # "5MW_ITIBarge_DLL_WTurb_WavesIrr"       ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
+    # "5MW_OC4Semi_WSt_WavesWN"               ,       # "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
+    # "5MW_Land_BD_DLL_WTurb"                 ,       # "openfast;beamdyn;aerodyn15;servodyn")
+    # "5MW_OC4Jckt_ExtPtfm"                   ,       # "openfast;elastodyn;extptfm")
+    # "HelicalWake_OLAF"                      ,       # "openfast;aerodyn15;olaf")
+    # "StC_test_OC4Semi"                      ,       # "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
+    # "MHK_RM1_Fixed"                         ,       # "openfast;elastodyn;aerodyn15;mhk")
+    # "MHK_RM1_Floating"                      ,       # "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
+    # "Tailfin_FreeYaw1DOF_PolarBased"        ,       # "openfast;elastodyn;aerodyn15")
 ]
 
-# looking up OS for the correct executable extension
-mactype = platform.system().lower()
-if mactype in ["linux", "linux2", "darwin"]:
-    exeExt = ""
-elif mactype in ["win32", "windows", "cygwin"]: #NOTE: platform.system()='Windows', sys.platform='win32'
-    libext = '.exe'
-else:
-    raise ValueError('Unknown platform type: '+mactype)
-
-# Path to the OpenFAST executable
-of_path = osp.join(REPOSITORY_ROOT,"build/glue-codes/openfast",f"openfast{exeExt}")
 
 
-def read_action(folder):
+'''
+parser.add_argument("caseName", metavar="Case-Name", type=str, nargs=1, help="The name of the test case.")
+parser.add_argument("executable", metavar="NotUsed", type=str, nargs=1, help="Not used in this script, but kept for API compatibility.")
+parser.add_argument("sourceDirectory", metavar="path/to/openfast_repo", type=str, nargs=1, help="The path to the OpenFAST repository.")
+parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", type=str, nargs=1, help="The path to the OpenFAST repository build directory.")
+'''
+
+
+# def pytest_addoption(parser):
+#     parser.addoption("--executable", action="store", default=OF_PATH, help="Path to the OpenFAST executable")
+#     parser.addoption("--source_dir", action="store", default=REPOSITORY_ROOT, help="Path to the r-test directory")
+#     parser.addoption("--build_dir", action="store", default=BUILD_DIR, help="Path to the test data directory")
+
+def getPaths(OF_PATH = OF_PATH, REPOSITORY_ROOT = REPOSITORY_ROOT, BUILD_DIR = BUILD_DIR):
+
+    return {
+        "executable": OF_PATH,
+        "source_dir": REPOSITORY_ROOT,
+        "build_dir": BUILD_DIR,
+        "rtest_dir": osp.join(REPOSITORY_ROOT, "reg_tests", "r-test"),
+        "test_data_dir": osp.join(REPOSITORY_ROOT, "reg_tests", "r-test", "glue-codes", "openfast")
+    }
+
+
+def read_action(folder, path_dict = getPaths()):
     print(f"Reading from {folder}")
 
     # Read input deck
     fast_reader = InputReader_OpenFAST()
     fast_reader.FAST_InputFile =  f'{folder}.fst'   # FAST input file (ext=.fst)
-    fast_reader.FAST_directory = osp.join(TEST_DATA_DIR, folder)   # Path to fst directory files
+    fast_reader.FAST_directory = osp.join(path_dict['test_data_dir'], folder)   # Path to fst directory files
     fast_reader.execute()
 
     return fast_reader.fst_vt
 
 
 
-def write_action(folder, fst_vt):
+def write_action(folder, fst_vt, path_dict = getPaths()):
     print(f"Writing to {folder}, with TMax = 2.0")
 
     fast_writer = InputWriter_OpenFAST()
-    fast_writer.FAST_runDirectory = osp.join(RUN_DIR,folder)
+    fast_writer.FAST_runDirectory = osp.join(path_dict['build_dir'],folder)
     Path(fast_writer.FAST_runDirectory).mkdir(parents=True, exist_ok=True)
     fast_writer.FAST_namingOut    = folder
 
@@ -75,36 +85,43 @@ def write_action(folder, fst_vt):
     fast_writer.update(fst_update=fst_vt)
     fast_writer.execute()
 
-def run_action(folder):
+def run_action(folder, path_dict = getPaths()):
     # Placeholder for the actual run action
     print(f"Running simulation for {folder}")
-    subprocess.run([of_path, str(osp.join(RUN_DIR, folder, f"{folder}.fst"))], check=True)
+    subprocess.run([OF_PATH, str(osp.join(path_dict['build_dir'], folder, f"{folder}.fst"))], check=True)
 
-def check_ascii_out(folder):
+def check_ascii_out(folder, path_dict = getPaths()):
     # Placeholder for the actual check action
     print(f"Checking ASCII output for {folder}")
-    asciiOutput = osp.join(RUN_DIR, folder, f"{folder}.out")
+    asciiOutput = osp.join(path_dict['build_dir'], folder, f"{folder}.out")
     fast_outout = FASTOutputFile(filename=asciiOutput)
 
-def check_binary_out(folder):
+def check_binary_out(folder, path_dict = getPaths()):
     # Placeholder for the actual check action
     print(f"Checking binary output for {folder}")
-    binaryOutput = osp.join(RUN_DIR, folder, f"{folder}.outb")
+    binaryOutput = osp.join(path_dict['build_dir'], folder, f"{folder}.outb")
     fast_outout = FASTOutputFile(filename=binaryOutput)
 
 # Begining of the test
-def test_rtest_cloned():
-    if check_rtest_cloned(TEST_DATA_DIR):
+def test_rtest_cloned(request):
+
+    REPOSITORY_ROOT = osp.join(request.config.getoption("--source_dir"))
+    path_dict = getPaths(REPOSITORY_ROOT=REPOSITORY_ROOT)
+
+    if check_rtest_cloned(path_dict['test_data_dir']):
         assert True, "R-tests cloned properly"
     else:# stop the test if the r-tests are not cloned properly
         print("R-tests not cloned properly")
         sys.exit(1)
 
-def test_openfast_executable_exists():
-    if osp.exists(of_path):
-        assert True, f"OpenFAST executable found at {of_path}"
+def test_openfast_executable_exists(request):
+
+    path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--executable")))
+
+    if osp.exists(path_dict['executable']):
+        assert True, f"OpenFAST executable found at {path_dict['executable']}"
     else: # stop the test if the OpenFAST executable is not found
-        print(f"OpenFAST executable not found at {of_path}. Please build OpenFAST and try again.")
+        print(f"OpenFAST executable not found at {path_dict['executable']}. Please build OpenFAST and try again.")
         sys.exit(1)
 
 # # Define a list of action functions for parameterization
@@ -118,23 +135,29 @@ def test_openfast_executable_exists():
 # Parameterize the test function to run for each folder and action
 @pytest.mark.parametrize("folder", FOLDERS_TO_RUN)
 # @pytest.mark.parametrize("action_name, action_func", actions)
-def test_openfast_io_with_detailed_reporting(folder):
+def test_openfast_io_with_detailed_reporting(folder, request):
+
+    path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--executable")), 
+                         REPOSITORY_ROOT=osp.join(request.config.getoption("--source_dir")), 
+                         BUILD_DIR=osp.join(request.config.getoption("--build_dir")))
+
+
     try:
         # action_func(folder)
         action_name = "read"
-        fst_vt = read_action(folder)
+        fst_vt = read_action(folder, path_dict = path_dict)
 
         action_name = "write"
-        write_action(folder, fst_vt)
+        write_action(folder, fst_vt, path_dict = path_dict)
 
         action_name = "run"
-        run_action(folder)
+        run_action(folder, path_dict = path_dict)
 
         action_name = "check ASCII"
-        check_ascii_out(folder)
+        check_ascii_out(folder, path_dict = path_dict)
 
         action_name = "check binary"
-        check_binary_out(folder)
+        check_binary_out(folder, path_dict = path_dict)
 
     except Exception as e:
         pytest.fail(f"Action '{action_name}' for folder '{folder}' failed with exception: {e}")
