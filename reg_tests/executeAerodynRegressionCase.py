@@ -101,8 +101,7 @@ except:
     time.sleep(1)
 
 # create the local output directory and initialize it with input files 
-rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'ad_driver.outb':'ad_driver_ref.outb'})
-       # , excludeExt=['.out','.outb'])
+rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'ad_driver.out':'ad_driver_ref.out'})
 
 ### Run aerodyn on the test case
 if not noExec:
@@ -113,9 +112,9 @@ if not noExec:
     
 ### Build the filesystem navigation variables for running the regression test
 # For multiple turbines, test turbine 2, for combined cases, test case 4 
-localOutFile      = os.path.join(testBuildDirectory, "ad_driver.outb")
-localOutFileWT2   = os.path.join(testBuildDirectory, "ad_driver.T2.outb")
-localOutFileCase4 = os.path.join(testBuildDirectory, "ad_driver.4.outb")
+localOutFile      = os.path.join(testBuildDirectory, "ad_driver.out")
+localOutFileWT2   = os.path.join(testBuildDirectory, "ad_driver.T2.out")
+localOutFileCase4 = os.path.join(testBuildDirectory, "ad_driver.4.out")
 if os.path.exists(localOutFileWT2) :
     localOutFile = localOutFileWT2
 elif os.path.exists(localOutFileCase4) :
