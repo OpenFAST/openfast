@@ -75,8 +75,10 @@ def write_action(folder, fst_vt, path_dict = getPaths()):
 def run_action(folder, path_dict = getPaths()):
     # Placeholder for the actual run action
     print(f"Running simulation for {folder}")
-    command = [path_dict['executable'], str(osp.join(path_dict['build_dir'], folder, f"{folder}.fst")), f"> {folder}.log"]
-    subprocess.run([path_dict['executable'], str(osp.join(path_dict['build_dir'], folder, f"{folder}.fst"))], check=True)
+    command = [f"{path_dict['executable']}",  f"{osp.join(path_dict['build_dir'], folder, f'{folder}.fst')}"]
+    with open(osp.join(path_dict['build_dir'], folder, f'{folder}.log'), 'w') as f:
+        subprocess.run(command, check=True, stdout=f, stderr=subprocess.STDOUT)
+        f.close()
 
 def check_ascii_out(folder, path_dict = getPaths()):
     # Placeholder for the actual check action
