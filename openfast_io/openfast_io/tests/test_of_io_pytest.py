@@ -12,7 +12,6 @@ from pathlib import Path
 
 from conftest import REPOSITORY_ROOT, BUILD_DIR, OF_PATH
 
-Path(BUILD_DIR).mkdir(parents=True, exist_ok=True)
 
 
 # Exercising the  various OpenFAST modules
@@ -56,6 +55,10 @@ def read_action(folder, path_dict = getPaths()):
 
 def write_action(folder, fst_vt, path_dict = getPaths()):
     print(f"Writing to {folder}, with TMax = 2.0")
+
+    # check if the folder exists, if not, mostly being called not from cmake, so create it
+    if not osp.exists(osp.join(path_dict['build_dir'])):
+        Path(path_dict['build_dir']).mkdir(parents=True, exist_ok=True)
 
     fast_writer = InputWriter_OpenFAST()
     fast_writer.FAST_runDirectory = osp.join(path_dict['build_dir'],folder)
@@ -111,7 +114,7 @@ def test_openfast_executable_exists(request):
 # Parameterize the test function to run for each folder and action
 @pytest.mark.parametrize("folder", FOLDERS_TO_RUN)
 # @pytest.mark.parametrize("action_name, action_func", actions)
-def test_openfast_io_with_detailed_reporting(folder, request):
+def test_openfast_io_read_write_run_outRead(folder, request):
 
     path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--executable")), 
                          REPOSITORY_ROOT=osp.join(request.config.getoption("--source_dir")), 

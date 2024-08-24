@@ -632,9 +632,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           ctest -VV -j4 \
-          -L openfast_io \
-          -LE "cpp|linear|python|fastlib|aeromap" \
-          -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
+          -L openfast_io 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()

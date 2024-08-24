@@ -284,6 +284,7 @@ function(py_openfast_io_library_pytest TESTNAME LABEL)
   set(source_dir "--source_dir=${CMAKE_CURRENT_LIST_DIR}/..")
   set(build_dir "--build_dir=${CTEST_BINARY_DIR}/openfast_io/")
   add_test(${TESTNAME} ${Python_EXECUTABLE} ${module} ${pytest} ${pytestVerbose} ${py_test_file} ${executable} ${source_dir} ${build_dir})
+  set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")
 endfunction(py_openfast_io_library_pytest)
 
 
