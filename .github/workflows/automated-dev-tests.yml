@@ -620,7 +620,7 @@ jobs:
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Install openfast_io
-        working-directory: ${{runner.workspace}}/openfast_io
+        working-directory: ${{runner.workspace}}/openfast/openfast_io
         run: |
           pip install -e .
       - name: Configure Tests
