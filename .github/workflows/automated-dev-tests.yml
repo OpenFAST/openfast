@@ -641,7 +641,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: rtest-OF
+          name: rtest-openfast_io
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/openfast_io
 
