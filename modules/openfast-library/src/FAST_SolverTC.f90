@@ -1,7 +1,6 @@
 module FAST_SolverTC
 
 use NWTC_LAPACK
-use FAST_Solver
 use FAST_ModTypes
 use FAST_Mapping
 use FAST_ModGlue
@@ -18,7 +17,7 @@ implicit none
 private
 
 ! Public functions
-public Solver_Init, Solver_Step0, Solver_Step
+public SolverTC_Init, Solver_Step0, Solver_Step, CalcOutputs_And_SolveForInputs
 
 ! Debugging
 logical, parameter         :: DebugSolver = .false.
@@ -29,7 +28,7 @@ integer(IntKi)             :: MatrixUn = -1
 
 contains
 
-subroutine Solver_Init(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
+subroutine SolverTC_Init(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
    type(FAST_ParameterType), intent(in)      :: p_FAST         !< FAST parameters
    type(Glue_TCParam), intent(inout)         :: p              !< Glue Parameters
    type(Glue_TCMisc), intent(out)            :: m              !< Glue miscellaneous variables
@@ -116,6 +115,14 @@ subroutine Solver_Init(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat,
                  pack(modInds, ModIDs == Module_Orca), &
                  pack(modInds, ModIDs == Module_SrvD)] ! ServoDyn is last
 
+   ! Indices of modules needed for ServoDyn initialization
+   p%iModUY1 = [pack(modInds, ModIDs == Module_ED), &
+                pack(modInds, ModIDs == Module_BD), &
+                pack(modInds, ModIDs == Module_SD), &
+                pack(modInds, ModIDs == Module_IfW), &
+                pack(modInds, ModIDs == Module_ExtInfw), &
+                pack(modInds, ModIDs == Module_ExtLd)]
+
    ! Indices of tight coupling modules
    p%iModTC = [pack(modInds, ModIDs == Module_ED), &
                pack(modInds, ModIDs == Module_BD), &
@@ -138,8 +145,7 @@ subroutine Solver_Init(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat,
                  pack(modInds, ModIDs == Module_FEAM), &
                  pack(modInds, ModIDs == Module_IceD), &
                  pack(modInds, ModIDs == Module_IceF), &
-                 pack(modInds, ModIDs == Module_MAP), &
-                 pack(modInds, ModIDs == Module_MD)]
+                 pack(modInds, ModIDs == Module_MAP)]
 
    ! Indices of modules to perform InputSolves after the Option 1 solve
    p%iModPost = [pack(modInds, ModIDs == Module_SrvD), &
@@ -168,8 +174,11 @@ subroutine Solver_Init(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat,
    if (Failed()) return
 
    !----------------------------------------------------------------------------
-   ! Allocate state, input, and output storage
+   ! Initialize MiscVars
    !----------------------------------------------------------------------------
+
+   ! Set flag to warn about convergence errors
+   m%ConvWarn = .true.
 
    ! Calculated inputs array
    call AllocAry(m%uCalc, m%Mod%Vars%Nu, "m%uCalc", ErrStat2, ErrMsg2); if (Failed()) return
@@ -187,10 +196,6 @@ subroutine Solver_Init(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat,
    m%StateCurr%v = 0.0_R8Ki
    m%StateCurr%vd = 0.0_R8Ki
    m%StateCurr%a = 0.0_R8Ki
-
-   !----------------------------------------------------------------------------
-   ! Allocate solver Jacobian matrix and right hand side
-   !----------------------------------------------------------------------------
 
    ! Allocate Jacobian matrix, RHS/X matrix, Pivot array
    call AllocAry(m%Mod%Lin%J, p%NumJ, p%NumJ, "m%J", ErrStat, ErrMsg); if (Failed()) return
@@ -674,13 +679,9 @@ subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg
 
    t_initial = Turbine%m_FAST%t_global
    t_global_next = t_initial + n_t_global_next*p%h
-   Turbine%y_FAST%WriteThisStep = NeedWriteOutput(n_t_global_next, t_initial, Turbine%p_FAST%TStart, Turbine%p_FAST%n_DT_Out)
-
-   ! Set flag to warn about convergence errors
-   m%ConvWarn = .true.
 
    !----------------------------------------------------------------------------
-   ! Calculate initial accelerations
+   ! Collect initial states from modules
    !----------------------------------------------------------------------------
 
    ! Transfer initial state from modules to solver
@@ -710,28 +711,51 @@ subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg
    ! Reset mapping ready for transfer flag
    GlueModMaps%Ready = .false.
 
-   !----------------------------------------------------------------------------
-   ! Perform iterations to initialize inputs and acceleration
-   ! States are not modified
-   !----------------------------------------------------------------------------
-
    ! Initialize temporary input structure for TC and Option1 modules
    do i = 1, size(m%Mod%ModData)
       call FAST_CopyInput(m%Mod%ModData(i), Turbine, INPUT_CURR, INPUT_TEMP, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       if (Failed()) return
    end do
 
-   TotalIter = 0
+   !----------------------------------------------------------------------------
+   ! Perform iterations to initialize inputs and acceleration
+   ! States are not modified
+   !----------------------------------------------------------------------------
 
    ! Copy TC solver states from current to predicted
    call Glue_CopyTC_State(m%StateCurr, m%StatePred, MESH_NEWCOPY, ErrStat2, ErrMsg2)
    if (Failed()) return
 
+   TotalIter = 0
+
    ! Do two input correction iterations
-   do CorrIter = 1, 3
+   do CorrIter = 1, 2
 
       ! Set converged flag to false
       IsConverged = .false.
+
+      ! Copy TC solver states from current to predicted
+      call Glue_CopyTC_State(m%StateCurr, m%StatePred, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      ! Loop through tight coupling modules
+      do i = 1, size(p%iModTC)
+         associate (ModData => m%Mod%ModData(i))
+
+            ! Transfer current states to linearization array
+            call TransferQtoX(ModData, m%StatePred, m%Mod%Lin%x)
+
+            ! Transfer solver states to module
+            call FAST_SetOP(ModData, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                            x_op=ModData%Lin%x, x_glue=m%Mod%Lin%x)
+            if (Failed()) return
+
+            ! Transfer accelerations to BeamDyn
+            if (ModData%ID == Module_BD) then
+               call SetBDAccel(ModData, m%StatePred, Turbine%BD%OtherSt(ModData%Ins, STATE_CURR))
+            end if
+         end associate
+      end do
 
       !-------------------------------------------------------------------------
       ! InputSolve and CalcOutput for all modules, pack TC and Option 1 inputs
@@ -800,19 +824,12 @@ subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg
          ! Update Jacobian
          !----------------------------------------------------------------------
 
-         call BuildJacobian(p, m, GlueModMaps, t_initial, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
+         call BuildJacobianTC(p, m, GlueModMaps, t_initial, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
          if (Failed()) return
 
          !----------------------------------------------------------------------
          ! Formulate right hand side (X_2^tight, U^tight, U^Option1)
          !----------------------------------------------------------------------
-
-         ! Calculate continuous state derivatives for tight coupling modules
-         do i = 1, size(m%Mod%ModData)
-            call FAST_GetOP(m%Mod%ModData(i), t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                            dx_op=m%Mod%ModData(i)%Lin%dx, dx_glue=m%Mod%Lin%dx)
-            if (Failed()) return
-         end do
 
          ! Input solve for tight coupling modules
          do i = 1, size(p%iModTC)
@@ -913,7 +930,7 @@ subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg
       end do
 
       ! Calculate output for ServoDyn
-      if (CorrIter == 2) then
+      if (CorrIter == 1) then
          call FAST_CalcOutput(GlueModData(p%iModOpt2(1)), GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
          if (Failed()) return
       end if
@@ -932,22 +949,6 @@ subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg
 
    ! Set algorithmic acceleration from actual acceleration
    m%StatePred%a = m%StatePred%vd
-
-   !----------------------------------------------------------------------------
-   ! Post-convergence initialization
-   !----------------------------------------------------------------------------
-
-   ! Copy current state to previous state
-   call Glue_CopyTC_State(m%StatePred, m%StateCurr, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-   if (Failed()) return
-
-   ! Initialize IO and states for all modules (also copies STATE_CURR to STATE_PRED)
-   call FAST_InitIO(GlueModData, t_initial, p%h, Turbine, ErrStat, ErrMsg)
-   if (ErrStat >= AbortErrLev) return
-
-   ! Reset the Remap flags for all modules
-   call FAST_ResetRemapFlags(GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
-   if (ErrStat >= AbortErrLev) return
 
    !----------------------------------------------------------------------------
    ! Set Outputs
@@ -1000,9 +1001,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
    n_t_global_next = n_t_global + 1
    t_global_next = t_initial + n_t_global_next*p%h
 
-   ! Determine if output should be written in this step
-   Turbine%y_FAST%WriteThisStep = NeedWriteOutput(n_t_global_next, t_global_next, Turbine%p_FAST%TStart, Turbine%p_FAST%n_DT_Out)
-
    ! Decrement number of time steps before updating the Jacobian
    m%UJacStepsRemain = m%UJacStepsRemain - 1
 
@@ -1012,61 +1010,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
    ! Init counters for number of Jacobian updates and number of convergence iterations
    NumUJac = 0
    TotalIter = 0
-
-   !----------------------------------------------------------------------------
-   ! Extrapolate/interpolate inputs for all modules
-   !----------------------------------------------------------------------------
-
-   ! Loop through all modules and extrapolate inputs
-   do i = 1, size(GlueModData)
-      associate (ModData => GlueModData(i))
-         call FAST_ExtrapInterp(ModData, t_global_next, Turbine, ErrStat2, ErrMsg2)
-         if (Failed()) return
-      end associate
-   end do
-
-   !----------------------------------------------------------------------------
-   ! Reset BD States
-   !----------------------------------------------------------------------------
-
-   ! Perform additional state manipulation on a per-module basis
-   do i = 1, size(p%iModTC)
-      associate (ModData => m%Mod%ModData(i))
-         select case (ModData%ID)
-         case (Module_ED)
-
-            ! Update the azimuth angle
-            call ED_UpdateAzimuth(Turbine%ED%p, Turbine%ED%x(STATE_CURR), ModData%DT)
-
-         case (Module_BD)
-
-            ! Transfer acceleration from TC state to BeamDyn
-            call SetBDAccel(ModData, m%StateCurr, Turbine%BD%OtherSt(ModData%Ins, STATE_CURR))
-
-            ! Reset BeamDyn states so they are relative to the root node
-            call BD_UpdateGlobalRef(Turbine%BD%Input(INPUT_CURR, ModData%Ins), &
-                                    Turbine%BD%p(ModData%Ins), &
-                                    Turbine%BD%x(ModData%Ins, STATE_CURR), &
-                                    Turbine%BD%OtherSt(ModData%Ins, STATE_CURR), &
-                                    ErrStat2, ErrMsg2)
-            if (Failed()) return
-
-            ! Transfer acceleration from BeamDyn to state
-            call GetBDAccel(ModData, Turbine%BD%OtherSt(ModData%Ins, STATE_CURR), m%StateCurr)
-
-         case default
-            cycle
-         end select
-
-         ! Collect updated states
-         call FAST_GetOP(ModData, t_global_next, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                         x_op=ModData%Lin%x, x_glue=m%Mod%Lin%x)
-         if (Failed()) return
-
-         ! Transfer current states to linearization array
-         call TransferXtoQ(ModData, m%Mod%Lin%x, m%StateCurr)
-      end associate
-   end do
 
    !----------------------------------------------------------------------------
    ! Correction Iterations
@@ -1084,6 +1027,51 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
       call Glue_CopyTC_State(m%StateCurr, m%StatePred, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
       if (Failed()) return
 
+      ! Perform additional state manipulation on a per-module basis
+      do i = 1, size(p%iModTC)
+         associate (ModData => m%Mod%ModData(i))
+
+            ! Copy state from current to predicted
+            call FAST_CopyStates(ModData, Turbine, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+            if (Failed()) return
+
+            ! Additional state manipulation per module
+            select case (ModData%ID)
+            case (Module_ED)
+
+               ! Update the azimuth angle
+               call ED_UpdateAzimuth(Turbine%ED%p, Turbine%ED%x(STATE_PRED), ModData%DT)
+
+            case (Module_BD)
+
+               ! Transfer acceleration from TC state to BeamDyn
+               call SetBDAccel(ModData, m%StatePred, Turbine%BD%OtherSt(ModData%Ins, STATE_PRED))
+
+               ! Reset BeamDyn states so they are relative to the root node
+               call BD_UpdateGlobalRef(Turbine%BD%Input(INPUT_CURR, ModData%Ins), &
+                                       Turbine%BD%p(ModData%Ins), &
+                                       Turbine%BD%x(ModData%Ins, STATE_PRED), &
+                                       Turbine%BD%OtherSt(ModData%Ins, STATE_PRED), &
+                                       ErrStat2, ErrMsg2)
+               if (Failed()) return
+
+               ! Transfer acceleration from BeamDyn to state
+               call GetBDAccel(ModData, Turbine%BD%OtherSt(ModData%Ins, STATE_PRED), m%StatePred)
+
+            case default
+               cycle
+            end select
+
+            ! Collect updated states
+            call FAST_GetOP(ModData, t_global_next, INPUT_CURR, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
+                            x_op=ModData%Lin%x, x_glue=m%Mod%Lin%x)
+            if (Failed()) return
+
+            ! Transfer current states to linearization array
+            call TransferXtoQ(ModData, m%Mod%Lin%x, m%StatePred)
+         end associate
+      end do
+
       ! Update state prediction
       call PredictNextState(p, m%StatePred, m%Mod%Vars)
 
@@ -1093,10 +1081,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
 
             ! Transfer current states to linearization array
             call TransferQtoX(ModData, m%StatePred, m%Mod%Lin%x)
-
-            ! Copy state from current to predicted
-            call FAST_CopyStates(ModData, Turbine, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
-            if (Failed()) return
 
             ! Transfer solver states to module
             call FAST_SetOP(ModData, INPUT_CURR, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
@@ -1226,7 +1210,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
          ! Note: BuildJacobian resets these counters.
          if ((m%UJacIterRemain <= 0) .or. (m%UJacStepsRemain <= 0)) then
             NumUJac = NumUJac + 1
-            call BuildJacobian(p, m, GlueModMaps, t_global_next, STATE_PRED, Turbine, ErrStat2, ErrMsg2)
+            call BuildJacobianTC(p, m, GlueModMaps, t_global_next, STATE_PRED, Turbine, ErrStat2, ErrMsg2)
             if (Failed()) return
          end if
 
@@ -1356,35 +1340,12 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Tu
    end do
 
    !----------------------------------------------------------------------------
-   ! Update states for next step
-   !----------------------------------------------------------------------------
-
-   ! Update algorithmic acceleration
-   m%StatePred%a = m%StatePred%a + (1.0_R8Ki - p%AlphaF)/(1.0_R8Ki - p%AlphaM)*m%StatePred%vd
-
-   ! Copy predicted state to current state
-   call Glue_CopyTC_State(m%StatePred, m%StateCurr, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
-   if (Failed()) return
-
-   ! Copy the final predicted states from step t_global_next to actual states for that step
-   do i = 1, size(GlueModData)
-      call FAST_SaveStates(GlueModData(i), Turbine, ErrStat2, ErrMsg2)
-      if (Failed()) return
-   end do
-
-   !----------------------------------------------------------------------------
    ! Set Outputs
    !----------------------------------------------------------------------------
 
    Turbine%y_FAST%DriverWriteOutput(1) = real(TotalIter, ReKi)    ! ConvIter
    Turbine%y_FAST%DriverWriteOutput(2) = real(ConvError, ReKi)    ! ConvError
    Turbine%y_FAST%DriverWriteOutput(3) = real(NumUJac, ReKi)      ! NumUJac
-
-   !----------------------------------------------------------------------------
-   ! Update the global time
-   !----------------------------------------------------------------------------
-
-   Turbine%m_FAST%t_global = t_global_next
 
 contains
    logical function Failed()
@@ -1393,7 +1354,228 @@ contains
    end function
 end subroutine
 
-subroutine BuildJacobian(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat, ErrMsg)
+subroutine CalcOutputs_And_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, iInput, iState, Turbine, ErrStat, ErrMsg, DoInit)
+   type(Glue_TCParam), intent(in)         :: p              !< Parameters
+   type(Glue_TCMisc), intent(inout)       :: m              !< Misc variables
+   type(ModDataType), intent(inout)       :: GlueModData(:) !< Module data
+   type(MappingType), intent(inout)       :: GlueModMaps(:) !< Module mappings at glue level
+   real(DbKi), intent(in)                 :: ThisTime       !< Time
+   integer(IntKi), intent(in)             :: iInput         !< Input index
+   integer(IntKi), intent(in)             :: iState         !< State index
+   type(FAST_TurbineType), intent(inout)  :: Turbine        !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+   logical, optional                      :: DoInit
+
+   character(*), parameter                :: RoutineName = 'CalcOutputs_And_SolveForInputs'
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
+   integer(IntKi)                         :: ConvIter
+   real(R8Ki)                             :: ConvError
+   integer(IntKi)                         :: i
+
+   !----------------------------------------------------------------------------
+   ! Special Initialization
+   !----------------------------------------------------------------------------
+
+   if (present(DoInit)) then
+      if (DoInit) then
+
+         ! Input solve and calc output for ServoDyn inputs
+         do i = 1, size(p%iModUY1)
+            associate (ModData => GlueModData(p%iModUY1(i)))
+
+               ! Solve for inputs
+               call FAST_InputSolve(p%iModUY1(i), GlueModData, GlueModMaps, iInput, Turbine, ErrStat2, ErrMsg2)
+               if (Failed()) return
+
+               ! Calculate outputs
+               call FAST_CalcOutput(ModData, GlueModMaps, ThisTime, iInput, iState, Turbine, ErrStat2, ErrMsg2)
+               if (Failed()) return
+
+            end associate
+         end do
+      end if
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Option 2 Solve
+   !----------------------------------------------------------------------------
+
+   ! Do input solve and calculate outputs for Option 2 modules (except ServoDyn)
+   do i = 2, size(p%iModOpt2)
+      associate (ModData => GlueModData(p%iModOpt2(i)))
+
+         ! Solve for inputs
+         call FAST_InputSolve(p%iModOpt2(i), GlueModData, GlueModMaps, iInput, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+         ! Calculate outputs
+         call FAST_CalcOutput(ModData, GlueModMaps, ThisTime, iInput, iState, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+      end associate
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Option 1 Solve
+   !----------------------------------------------------------------------------
+
+   ! Get inputs for Option 1 modules
+   do i = 1, size(p%iModOpt1)
+      call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, iInput, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Pack inputs
+   !----------------------------------------------------------------------------
+
+   ! Pack TC and Option 1 inputs into u array
+   do i = 1, size(m%Mod%ModData)
+      associate (ModData => m%Mod%ModData(i))
+         call FAST_GetOP(ModData, ThisTime, iInput, iState, Turbine, ErrStat2, ErrMsg2, &
+                         u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
+         if (Failed()) return
+      end associate
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Option 1 Convergence Iterations
+   !----------------------------------------------------------------------------
+
+   ! Loop through convergence iterations
+   do ConvIter = 0, p%MaxConvIter
+
+      ! Calculate outputs for TC & Option 1 modules
+      do i = 1, size(m%Mod%ModData)
+         associate (ModData => m%Mod%ModData(i))
+            call FAST_CalcOutput(ModData, GlueModMaps, ThisTime, iInput, iState, &
+                                 Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end associate
+      end do
+
+      !-------------------------------------------------------------------------
+      ! Convergence iteration limit check
+      !-------------------------------------------------------------------------
+
+      ! If convergence iteration has reached or exceeded limit, exit loop
+      if (ConvIter >= p%MaxConvIter) then
+         call SetErrStat(ErrID_Warn, "Failed to converge in "//trim(Num2LStr(p%MaxConvIter))// &
+                         " iterations (error="//trim(Num2LStr(ConvError))// &
+                         ", tolerance="//trim(Num2LStr(p%ConvTol))//").", &
+                         ErrStat, ErrMsg, RoutineName)
+         exit
+      end if
+
+      !-------------------------------------------------------------------------
+      ! Update Jacobian
+      !-------------------------------------------------------------------------
+
+      call BuildJacobianIO(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      !----------------------------------------------------------------------
+      ! Formulate right hand side (U)
+      !----------------------------------------------------------------------
+
+      ! Input solve for tight coupling modules
+      do i = 1, size(p%iModTC)
+         associate (ModData => GlueModData(p%iModTC(i)))
+            call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end associate
+      end do
+
+      ! Input solve for Option 1 modules
+      do i = 1, size(p%iModOpt1)
+         associate (ModData => GlueModData(p%iModOpt1(i)))
+            call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end associate
+      end do
+
+      ! Transfer collect inputs into uCalc
+      do i = 1, size(m%Mod%ModData)
+         call FAST_GetOP(m%Mod%ModData(i), ThisTime, INPUT_TEMP, iState, Turbine, ErrStat2, ErrMsg2, &
+                         u_op=m%Mod%ModData(i)%Lin%u, u_glue=m%uCalc)
+         if (Failed()) return
+      end do
+
+      !-------------------------------------------------------------------------
+      ! Populate residual vector and apply conditioning to loads
+      !-------------------------------------------------------------------------
+
+      ! Calculate difference in U for all Option 1 modules (un - u_tmp)
+      ! and add to RHS for TC and Option 1 modules
+      if (p%iJU(1) > 0) call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, m%XB_IO(:, 1))
+
+      ! Apply conditioning factor to loads in RHS
+      if (p%iUL(1) > 0) m%XB_IO(p%iUL(1):p%iUL(2), 1) = m%XB_IO(p%iUL(1):p%iUL(2), 1)/p%Scale_UJac
+
+      !-------------------------------------------------------------------------
+      ! Solve for state and input perturbations
+      !-------------------------------------------------------------------------
+
+      ! Solve Jacobian and RHS
+      call LAPACK_getrs('N', size(m%Jac_IO, 1), m%Jac_IO, m%IPIV, m%XB_IO, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      !-------------------------------------------------------------------------
+      ! Check perturbations for convergence and exit if below tolerance
+      !-------------------------------------------------------------------------
+
+      ! Calculate average L2 norm of change in states and inputs
+      ConvError = TwoNorm(m%XB_IO(:, 1))/size(m%XB_IO)
+
+      ! If at least one convergence iteration has been done and
+      ! the RHS norm is less than convergence tolerance, exit loop
+      if ((ConvIter > 0) .and. (ConvError < p%ConvTol)) exit
+
+      ! Remove load condition conditioning on input changes
+      if (p%iUL(1) > 0) m%XB_IO(p%iUL(1):p%iUL(2), 1) = m%XB_IO(p%iUL(1):p%iUL(2), 1)*p%Scale_UJac
+
+      !-------------------------------------------------------------------------
+      ! Update inputs for Tight Coupling and Option 1 modules
+      !-------------------------------------------------------------------------
+
+      ! Add change in inputs
+      if (p%iJU(1) > 0) call MV_AddDelta(m%Mod%Vars%u, m%XB_IO(:, 1), m%Mod%Lin%u)
+
+      ! Transfer updated TC and Option 1 inputs to modules
+      do i = 1, size(m%Mod%ModData)
+         associate (ModData => m%Mod%ModData(i))
+            call FAST_SetOP(ModData, iInput, iState, Turbine, ErrStat2, ErrMsg2, &
+                            u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
+            if (Failed()) return
+         end associate
+      end do
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Post Option 1 solve
+   !----------------------------------------------------------------------------
+
+   ! Perform input solve for modules post Option 1 convergence
+   do i = 1, size(p%iModPost)
+      call FAST_InputSolve(p%iModPost(i), GlueModData, GlueModMaps, iInput, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end do
+
+   ! Reset mesh remap
+   call FAST_ResetRemapFlags(GlueModData, GlueModMaps, Turbine, ErrStat2, ErrMsg2)
+   if (Failed()) return
+
+contains
+   logical function Failed()
+      if (ErrStat2 /= ErrID_None) call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+! Build Jacobian for tight coupling solve
+subroutine BuildJacobianTC(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat, ErrMsg)
    type(Glue_TCParam), intent(in)         :: p              !< Parameters
    type(Glue_TCMisc), intent(inout)       :: m              !< Misc variables
    type(MappingType), intent(inout)       :: GlueModMaps(:) !< Module mappings at glue level
@@ -1403,7 +1585,7 @@ subroutine BuildJacobian(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat, 
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter                :: RoutineName = 'BuildJacobian'
+   character(*), parameter                :: RoutineName = 'BuildJacobianTC'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    real(R8Ki)                             :: phi, rv(3), T(3, 3), tmp1, tmp2, T2(3, 3)
@@ -1552,11 +1734,86 @@ contains
    end function
 end subroutine
 
+! Build Jacobian for Input-Output solve (CalcOutputs_And_SolveForInputs)
+subroutine BuildJacobianIO(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat, ErrMsg)
+   type(Glue_TCParam), intent(in)         :: p              !< Parameters
+   type(Glue_TCMisc), intent(inout)       :: m              !< Misc variables
+   type(MappingType), intent(inout)       :: GlueModMaps(:) !< Module mappings at glue level
+   real(DbKi), intent(in)                 :: ThisTime       !< Time
+   integer(IntKi), intent(in)             :: iState         !< State index
+   type(FAST_TurbineType), intent(inout)  :: Turbine        !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter                :: RoutineName = 'BuildJacobian'
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
+   real(R8Ki)                             :: phi, rv(3), T(3, 3), tmp1, tmp2, T2(3, 3)
+   integer(IntKi)                         :: i, j, k, idx
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   if (.not. allocated(m%Jac_IO)) then
+      call AllocAry(m%Jac_IO, m%Mod%Vars%Nu, m%Mod%Vars%Nu, 'm%Jac_IO', ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end if
+
+   if (.not. allocated(m%XB_IO)) then
+      call AllocAry(m%XB_IO, m%Mod%Vars%Nu, 1, 'm%XB_IO', ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end if
+
+   ! Loop through TC and Option 1 modules and calculate dYdu
+   if (allocated(m%Mod%Lin%dYdu)) m%Mod%Lin%dYdu = 0.0_R8Ki
+   do i = 1, size(m%Mod%ModData)
+      associate (ModData => m%Mod%ModData(i))
+         call FAST_JacobianPInput(ModData, ThisTime, INPUT_CURR, iState, Turbine, ErrStat2, ErrMsg2, &
+                                  dYdu=ModData%Lin%dYdu, dYdu_glue=m%Mod%Lin%dYdu)
+         if (Failed()) return
+      end associate
+   end do
+
+   ! Calculate dUdu and dUdy for TC and Option 1 modules
+   if (allocated(m%Mod%Lin%dUdy) .and. allocated(m%Mod%Lin%dUdu)) then
+      m%Mod%Lin%dUdy = 0.0_R8Ki
+      call Eye2D(m%Mod%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
+      call FAST_LinearizeMappings(m%Mod, GlueModMaps, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Assemble Jacobian
+   !----------------------------------------------------------------------------
+
+   ! Jac = m%Mod%Lin%dUdu + matmul(m%Mod%Lin%dUdy, m%Mod%Lin%dYdu)
+   if (m%Mod%Vars%Nu > 0) then
+      m%Jac_IO = m%Mod%Lin%dUdu
+      call LAPACK_GEMM('N', 'N', 1.0_R8Ki, m%Mod%Lin%dUdy, m%Mod%Lin%dYdu, 1.0_R8Ki, m%Jac_IO, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end if
+
+   ! Condition Jacobian matrix before factoring
+   if (p%iUL(1) > 0) then
+      m%Jac_IO(p%iUL(1):p%iUL(2), :) = m%Jac_IO(p%iUL(1):p%iUL(2), :)/p%Scale_UJac
+      m%Jac_IO(:, p%iUL(1):p%iUL(2)) = m%Jac_IO(:, p%iUL(1):p%iUL(2))*p%Scale_UJac
+   end if
+
+   ! Factor Jacobian matrix
+   call LAPACK_getrf(size(m%Jac_IO, 1), size(m%Jac_IO, 2), m%Jac_IO, m%IPIV, ErrStat2, ErrMsg2)
+   if (Failed()) return
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
 !-------------------------------------------------------------------------------
 ! Utility functions
 !-------------------------------------------------------------------------------
 
-subroutine PredictNextState(p, State, Vars)
+pure subroutine PredictNextState(p, State, Vars)
    type(Glue_TCParam), intent(in)   :: p
    type(TC_State), intent(inout)    :: State
    type(ModVarsType), intent(in)    :: Vars
@@ -1591,7 +1848,7 @@ subroutine PredictNextState(p, State, Vars)
    call CalculateStateQ(State, Vars, p%h)
 end subroutine
 
-subroutine CalculateStateQ(State, Vars, h)
+pure subroutine CalculateStateQ(State, Vars, h)
    type(TC_State), intent(inout) :: State
    type(ModVarsType), intent(in) :: Vars
    real(R8Ki), intent(in)        :: h
@@ -1617,7 +1874,7 @@ subroutine CalculateStateQ(State, Vars, h)
    end do
 end subroutine
 
-subroutine UpdateStatePrediction(p, Vars, delta_vd, State)
+pure subroutine UpdateStatePrediction(p, Vars, delta_vd, State)
    type(Glue_TCParam), intent(in)   :: p
    type(ModVarsType), intent(in)    :: Vars
    real(R8Ki), intent(in)           :: delta_vd(:)
@@ -1632,12 +1889,15 @@ subroutine UpdateStatePrediction(p, Vars, delta_vd, State)
    ! Update acceleration
    State%vd = State%vd + delta_vd
 
+   ! Update algorithmic acceleration
+   State%a = State%a + (1.0_R8Ki - p%AlphaF)/(1.0_R8Ki - p%AlphaM)*delta_vd
+
    ! Update displacement calculation
    call CalculateStateQ(State, Vars, p%h)
 
 end subroutine
 
-subroutine TransferXtoQ(ModData, x, State)
+pure subroutine TransferXtoQ(ModData, x, State)
    type(ModDataType), intent(in)       :: ModData
    real(R8Ki), intent(in)              :: x(:)
    type(TC_State), intent(inout)       :: State
@@ -1654,7 +1914,7 @@ subroutine TransferXtoQ(ModData, x, State)
    end do
 end subroutine
 
-subroutine TransferQtoX(ModData, State, x)
+pure subroutine TransferQtoX(ModData, State, x)
    type(ModDataType), intent(in) :: ModData
    type(TC_State), intent(in)    :: State
    real(R8Ki), intent(inout)     :: x(:)
@@ -1671,7 +1931,7 @@ subroutine TransferQtoX(ModData, State, x)
    end do
 end subroutine
 
-subroutine SetBDAccel(ModData, State, BD_OtherSt)
+pure subroutine SetBDAccel(ModData, State, BD_OtherSt)
    type(ModDataType), intent(in)          :: ModData
    type(TC_State), intent(in)             :: State
    type(BD_OtherStateType), intent(inout) :: BD_OtherSt
@@ -1687,7 +1947,7 @@ subroutine SetBDAccel(ModData, State, BD_OtherSt)
    end do
 end subroutine
 
-subroutine GetBDAccel(ModData, BD_OtherSt, State)
+pure subroutine GetBDAccel(ModData, BD_OtherSt, State)
    type(ModDataType), intent(in)       :: ModData
    type(BD_OtherStateType), intent(in) :: BD_OtherSt
    type(TC_State), intent(inout)       :: State
@@ -1703,21 +1963,6 @@ subroutine GetBDAccel(ModData, BD_OtherSt, State)
    end do
 end subroutine
 
-pure function NeedWriteOutput(n_t_global, t_global, t_initial, n_DT_Out) result(WriteNeeded)
-   integer(IntKi), intent(in)    :: n_t_global  !< Current global time step
-   real(DbKi), intent(in)        :: t_initial   !< Initial time
-   real(DbKi), intent(in)        :: t_global    !< Current global time
-   integer(IntKi), intent(in)    :: n_DT_Out    !< Write output every n steps
-   logical                       :: WriteNeeded !< Function result; if true, WriteOutput values are needed on this time step
-
-   ! note that if TStart isn't an multiple of DT_out, we will not necessarily start output to the file at TStart
-   if (t_global >= t_initial) then
-      WriteNeeded = MOD(n_t_global, n_DT_Out) == 0
-   else
-      WriteNeeded = .false.
-   end if
-end function
-
 !-------------------------------------------------------------------------------
 ! Debugging routines
 !-------------------------------------------------------------------------------
@@ -1725,7 +1970,7 @@ end function
 subroutine Solver_Init_Debug(p, m, GlueModData, GlueModMaps)
    type(Glue_TCParam), intent(in)   :: p              !< Parameters
    type(Glue_TCMisc), intent(in)    :: m              !< Misc variables
-   type(ModDataType), intent(in)    :: GlueModData(:)  !< Module data
+   type(ModDataType), intent(in)    :: GlueModData(:) !< Module data
    type(MappingType), intent(in)    :: GlueModMaps(:) !< Module mappings at glue level
    integer(IntKi)                   :: i, j
 

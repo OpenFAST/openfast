@@ -1075,7 +1075,7 @@ subroutine ModGlue_RestoreOperatingPoint(p, m, OPIndex, Turbine, ErrStat, ErrMsg
    StateIndex = NumStateTimes + OPIndex
 
    ! Index into input save array where linearization data will be stored for OP
-   InputIndex = Turbine%p_FAST%InterpOrder + 1 + OPIndex
+   InputIndex = -(Turbine%p_FAST%InterpOrder + 1 + OPIndex)
 
    ! Loop through modules by index
    do i = 1, size(p%Lin%iMod)
@@ -1086,7 +1086,7 @@ subroutine ModGlue_RestoreOperatingPoint(p, m, OPIndex, Turbine, ErrStat, ErrMsg
          if (Failed()) return
 
          ! Copy current module input to linearization save location
-         call FAST_CopyInput(ModData, Turbine, -InputIndex, INPUT_CURR, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call FAST_CopyInput(ModData, Turbine, InputIndex, INPUT_CURR, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
          if (Failed()) return
 
       end associate

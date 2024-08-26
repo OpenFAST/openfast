@@ -27,22 +27,22 @@ use NWTC_LAPACK
 use AeroDyn
 use BeamDyn
 use ElastoDyn
+USE ExternalInflow
+USE ExtLoads
 use ExtPtfm_MCKF
 use FEAMooring
 use HydroDyn
+use IceDyn
+use IceFloe
 use InflowWind
 use MAP
 use MoorDyn
+use OrcaFlexInterface
 use SeaState
 use ServoDyn
 use SubDyn
-use IceDyn
-use IceFloe
-use OrcaFlexInterface
 
 implicit none
-
-#define SOLVER_DEBUG
 
 contains
 
@@ -177,7 +177,7 @@ contains
    end function
 end subroutine
 
-subroutine FAST_InitIO(ModAry, ThisTime, DT, T, ErrStat, ErrMsg)
+subroutine FAST_InitInputStateArrays(ModAry, ThisTime, DT, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)           :: ModAry(:)   !< Module data
    real(DbKi), intent(in)                  :: ThisTime    !< Initial simulation time (almost always 0)
    real(DbKi), intent(in)                  :: DT          !< Glue code time step size
@@ -241,8 +241,10 @@ subroutine FAST_InitIO(ModAry, ThisTime, DT, T, ErrStat, ErrMsg)
             T%MAP%InputTimes = InputTimes
          case (Module_MD)
             T%MD%InputTimes = InputTimes
-!        case (Module_ExtInfw)
-!           T%ExtInfw%InputTimes = InputTimes
+         case (Module_ExtInfw)
+            ! T%ExtInfw%InputTimes = InputTimes
+         case (Module_ExtLd)
+            ! T%ExtLd%InputTimes = InputTimes
          case (Module_Orca)
             T%Orca%InputTimes = InputTimes
          case (Module_SD)
@@ -389,9 +391,9 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
          call MAP_UpdateStates(t_module, n_t_module, T%MAP%Input(1:), T%MAP%InputTimes, T%MAP%p, &
-                              T%MAP%x(STATE_PRED), T%MAP%xd(STATE_PRED), &
-                              T%MAP%z(STATE_PRED), T%MAP%OtherSt, &
-                              ErrStat2, ErrMsg2)
+                               T%MAP%x(STATE_PRED), T%MAP%xd(STATE_PRED), &
+                               T%MAP%z(STATE_PRED), T%MAP%OtherSt, &
+                               ErrStat2, ErrMsg2)
          if (Failed()) return
       end do
 
@@ -1325,16 +1327,6 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat
 
 end subroutine
 
-subroutine FAST_SaveStates(ModData, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)             :: ModData  !< Module data
-   type(FAST_TurbineType), intent(inout)     :: T        !< Turbine type
-   integer(IntKi), intent(out)               :: ErrStat
-   character(*), intent(out)                 :: ErrMsg
-
-   ! Copy state from predicted to current with MESH_UPDATECOPY
-   call FAST_CopyStates(ModData, T, STATE_PRED, STATE_CURR, MESH_UPDATECOPY, ErrStat, ErrMsg)
-end subroutine
-
 subroutine FAST_CopyStates(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
@@ -1478,7 +1470,7 @@ subroutine FAST_CopyStates(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
       call SrvD_CopyOtherState(T%SrvD%OtherSt(iSrc), T%SrvD%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(ModData%Abbr), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module "//trim(ModData%Abbr), ErrStat, ErrMsg, RoutineName)
       return
    end select
 
@@ -1497,7 +1489,7 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
 
-   character(*), parameter    :: RoutineName = 'FAST_CopyInputs'
+   character(*), parameter    :: RoutineName = 'FAST_CopyInput'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
 
@@ -1571,6 +1563,11 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
             call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
+
+   case (Module_ExtLd)
+      ! ExtLd only has u
+      Errstat2 = ErrID_None
+      ErrMsg2 = ''
 
    case (Module_ExtPtfm)
 
@@ -1804,7 +1801,7 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
 
    case default
       ErrStat2 = ErrID_Fatal
-      ErrMsg2 = "Unknown module ID "//trim(Num2LStr(ModData%ID))
+      ErrMsg2 = "Unknown module "//trim(ModData%Abbr)
    end select
 
    ! Set error
