@@ -2331,7 +2331,7 @@ END SUBROUTINE WAMIT2_Init
                         !> The phase shift due to an (x,y) offset for second order difference frequencies is of the form
                         !! \f$  exp[-\imath ( k(\omega_1) ( X cos(\beta(w_1)) + Y sin(\beta(w_1)) )
                         !!                  1 k(\omega_2) ( X cos(\beta(w_2)) + Y sin(\beta(w_2)) ) ) ]\f$.
-                        !! For the first term, \f$ \omega_1 = \omega_2 \$f.
+                        !! For the first term, \f$ \omega_1 = \omega_2 \f$.
                         !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
                         !        of above is mathematically equivalent, but only because each frequency has only one wave
                         !        direction associated with it through the equal energy approach used in multidirectional waves.
@@ -4388,7 +4388,7 @@ END SUBROUTINE WAMIT2_Init
                         ! See if the diagonal mirror one (WvDir2,WvDir1) value is not filled, set it and its flag
                      IF ( .NOT. Data4D%DataMask(TmpCoord(1), TmpCoord(2), TmpCoord(4), TmpCoord(3), TmpCoord(5))  ) THEN
                         Data4D%DataSet(TmpCoord(1), TmpCoord(2), TmpCoord(4), TmpCoord(3), TmpCoord(5) ) = &
-                              Data4D%DataSet(TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(3), TmpCoord(5) )
+                              Data4D%DataSet(TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) )
                         Data4D%DataMask(TmpCoord(1), TmpCoord(2), TmpCoord(4), TmpCoord(3), TmpCoord(5) ) = .TRUE.
                      ENDIF
 

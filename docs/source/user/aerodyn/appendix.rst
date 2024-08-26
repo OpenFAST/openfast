@@ -27,7 +27,7 @@ outside of OpenFAST.
 3) AeroDyn Primary Input File 
 :download:`(primary input file example) <examples/ad_primary_example.dat>`: 
 
-The primary AeroDyn input file defines modeling options, environmental conditions (except freestream flow), airfoils, tower nodal discretization and properties, tower, hub, and nacelle buoyancy properties, as well as output file specifications.
+The primary AeroDyn input file defines modeling options, environmental conditions (except freestream flow), airfoils, tower nodal discretization and properties, tower, hub, and nacelle properties, as well as output file specifications.
 
 The file is organized into several functional sections.  Each section corresponds to an aspect of the aerodynamics model.  
 

@@ -5201,6 +5201,10 @@ SUBROUTINE Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
               - p%YawDamp*( u%YawRate - YawRateCom )                ! {-f(qd,q,t)}DampYaw;
 
 
+   ! Return the commands directly from the controller (used by SED module)
+   y%YawPosCom  = YawPosCom
+   y%YawRateCom = YawRateCom
+
    !...................................................................
    ! Apply trim case for linearization:
    ! prescribed yaw will be wrong in this case.....

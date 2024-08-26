@@ -161,7 +161,7 @@ CONTAINS
       END IF
 
       ! allocate segment scalar quantities
-      ALLOCATE ( Line%l(N), Line%ld(N), Line%lstr(N), Line%lstrd(N), Line%Kurv(0:N), Line%V(N), STAT = ErrStat )
+      ALLOCATE ( Line%l(N), Line%ld(N), Line%lstr(N), Line%lstrd(N), Line%Kurv(0:N), Line%V(N), Line%F(N), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating segment scalar quantity arrays.'
          !CALL CleanUp()
@@ -1032,6 +1032,8 @@ CONTAINS
       Real(DbKi)                       :: Vi(3)          ! relative water velocity at a given node
       Real(DbKi)                       :: Vp(3)          ! transverse relative water velocity component at a given node
       Real(DbKi)                       :: Vq(3)          ! tangential relative water velocity component at a given node
+      Real(DbKi)                       :: ap(3)          ! transverse fluid acceleration component at a given node
+      Real(DbKi)                       :: aq(3)          ! tangential fluid acceleration component at a given node
       Real(DbKi)                       :: SumSqVp        !
       Real(DbKi)                       :: SumSqVq        !
       Real(DbKi)                       :: MagVp          !
@@ -1043,6 +1045,15 @@ CONTAINS
       Real(DbKi)                       :: dl             ! stretch of a segment [m]
       Real(DbKi)                       :: ld_1           ! rate of change of static stiffness portion of segment [m/s]
       Real(DbKi)                       :: EA_1           ! stiffness of 'static stiffness' portion of segment, combines with dynamic stiffness to give static stiffnes [m/s]
+
+      REAL(DbKi)                       :: surface_height ! Average the surface heights at the two nodes
+      REAL(DbKi)                       :: firstNodeZ     ! Difference of first node depth from surface height
+      REAL(DbKi)                       :: secondNodeZ    ! Difference of second node depth from surface height
+      REAL(DbKi)                       :: lowerEnd(3)    ! XYZ location of lower segment end   
+      REAL(DbKi)                       :: upperEnd(3)    ! XYZ location of upper segment end
+      REAL(DbKi)                       :: segmentAxis(3) ! Vector from segment lower end to upper end
+      REAL(DbKi)                       :: upVec(3)       ! Universal up unit vector = (0,0,1)
+      REAL(DbKi)                       :: normVec(3)     ! Normal vector to segment
 
       Real(DbKi)                       :: Kurvi          ! temporary curvature value [1/m]
       Real(DbKi)                       :: pvec(3)        ! the p vector used in bending stiffness calcs
@@ -1122,18 +1133,80 @@ CONTAINS
          CALL getWaterKin(p, Line%r(1,i), Line%r(2,i), Line%r(3,i), Line%time, m%WaveTi, Line%U(:,i), Line%Ud(:,i), Line%zeta(i), Line%PDyn(i))
       END DO
       
+      ! --------- calculate line partial submergence (Line::calcSubSeg from MD-C) ---------
+      DO i=1,N
+         
+         Line%F(i) = 1.0_DbKi
+         
+         ! TODO: Is the below the right way to handle partial submergence
+
+         ! ! TODO - figure out the best math to do here
+         ! ! Averaging the surface heights at the two nodes is probably never
+         ! ! correct
+         ! surface_height = 0.5 * (Line%zeta(i-1) + Line%zeta(i)) 
+
+         ! ! The below could also be made an inline function with surface height and node indicies as inputs, same as MD-C
+         ! firstNodeZ = Line%r(3,i-1) - surface_height 
+         ! secondNodeZ = Line%r(3,i) - surface_height 
+         ! if ((firstNodeZ <= 0.0) .AND. (secondNodeZ < 0.0)) then
+         !    Line%F(i) = 1.0 ! Both nodes below water; segment must be too
+         ! else if ((firstNodeZ > 0.0) .AND. (secondNodeZ > 0.0)) then
+         !    Line%F(i) = 0.0 ! Both nodes above water; segment must be too
+         ! else if (firstNodeZ == -secondNodeZ) then
+         !    Line%F(i) = 0.5 ! Segment halfway submerged
+         ! else 
+         !    ! Segment partially submerged - figure out which node is above water
+         !    if (firstNodeZ < 0.0) then
+         !       lowerEnd = Line%r(:,i-1)
+         !    else
+         !       lowerEnd = Line%r(:,i) 
+         !    endif
+         !    if (firstNodeZ < 0.0) then
+         !       upperEnd = Line%r(:,i)
+         !    else   
+         !       upperEnd = Line%r(:,i-1)
+
+         !    endif
+         !    lowerEnd(3) = lowerEnd(3) - surface_height
+         !    upperEnd(3) = upperEnd(3) - surface_height
+
+         !    ! segment submergence is calculated by calculating submergence of
+         !    ! hypotenuse across segment from upper corner to lower corner
+         !    ! To calculate this, we need the coordinates of these corners.
+         !    ! first step is to get vector from lowerEnd to upperEnd
+         !    segmentAxis = upperEnd - lowerEnd
+
+         !    ! Next, find normal vector in z-plane, i.e. the normal vecto that
+         !    ! points "up" the most. See the following stackexchange:
+         !    ! https://math.stackexchange.com/questions/2283842/
+         !    upVec = (/0.0_DbKi, 0.0_DbKi, 1.0_DbKi/) ! the global up-unit vector 
+         !    normVec = Cross_Product(segmentAxis, (Cross_Product(upVec, segmentAxis)))
+         !    normVec = normVec / SQRT(normVec(1)**2+normVec(2)**2+normVec(3)**2) ! normalize
+
+         !    ! make sure normal vector has length equal to radius of segment
+         !    call scalevector(normVec, Line%d / 2, normVec)
+
+         !    ! Calculate and return submerged ratio:
+         !    lowerEnd = lowerEnd - normVec
+         !    upperEnd = upperEnd + normVec
+
+         !    Line%F(i) = abs(lowerEnd(3)) / (abs(lowerEnd(3)) + upperEnd(3))
+
+         ! endif
+
+      END DO
 
       ! --------------- calculate mass (including added mass) matrix for each node -----------------
       DO I = 0, N
          IF (I==0) THEN
             m_i = Pi/8.0 *d*d*Line%l(1)*rho
-            v_i = 0.5 *Line%V(1)
+            v_i = 0.5 * Line%F(1) * Line%V(1)
          ELSE IF (I==N) THEN
             m_i = pi/8.0 *d*d*Line%l(N)*rho;
-            v_i = 0.5*Line%V(N)
+            v_i = 0.5 * Line%F(N) * Line%V(N)
          ELSE
             m_i = pi/8.0 * d*d*rho*(Line%l(I) + Line%l(I+1))
-            v_i = 0.5 *(Line%V(I) + Line%V(I+1))
+            v_i = 0.5 *(Line%F(I) * Line%V(I) + Line%F(I+1) * Line%V(I+1))
          END IF
 
          DO J=1,3
@@ -1315,11 +1388,11 @@ CONTAINS
 
          !submerged weight (including buoyancy)
          IF (I==0) THEN
-            Line%W(3,I) = Pi/8.0*d*d* Line%l(1)*(rho - p%rhoW) *(-p%g)   ! assuming g is positive
+            Line%W(3,I) = Pi/8.0*d*d* Line%l(1)*(rho - Line%F(1) * p%rhoW) *(-p%g)   ! assuming g is positive
          ELSE IF (i==N)  THEN
-            Line%W(3,I) = pi/8.0*d*d* Line%l(N)*(rho - p%rhoW) *(-p%g)
+            Line%W(3,I) = pi/8.0*d*d* Line%l(N)*(rho - Line%F(N) * p%rhoW) *(-p%g)
          ELSE
-            Line%W(3,I) = pi/8.0*d*d* (Line%l(I)*(rho - p%rhoW) + Line%l(I+1)*(rho - p%rhoW) )*(-p%g)  ! left in this form for future free surface handling
+            Line%W(3,I) = pi/8.0*d*d* (Line%l(I)*(rho - Line%F(I) * p%rhoW) + Line%l(I+1)*(rho - Line%F(I+1) * p%rhoW) )*(-p%g)  ! left in this form for future free surface handling
          END IF
 
          ! relative flow velocities
@@ -1341,17 +1414,32 @@ CONTAINS
 
          ! transverse and tangenential drag
          IF (I==0) THEN
-            Line%Dp(:,I) = 0.25*p%rhoW*Line%Cdn*    d*Line%l(1) * MagVp * Vp
-            Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*Line%l(1) * MagVq * Vq
+            Line%Dp(:,I) = 0.25*p%rhoW*Line%Cdn*    d*Line%F(1)*Line%l(1) * MagVp * Vp
+            Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*Line%F(1)*Line%l(1) * MagVq * Vq
          ELSE IF (I==N)  THEN
-            Line%Dp(:,I) = 0.25*p%rhoW*Line%Cdn*    d*Line%l(N) * MagVp * Vp
-            Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*Line%l(N) * MagVq * Vq
+            Line%Dp(:,I) = 0.25*p%rhoW*Line%Cdn*    d*Line%F(N)*Line%l(N) * MagVp * Vp
+            Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*Line%F(N)*Line%l(N) * MagVq * Vq
          ELSE
-            Line%Dp(:,I) = 0.25*p%rhoW*Line%Cdn*    d*(Line%l(I) + Line%l(I+1)) * MagVp * vp
-            Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*(Line%l(I) + Line%l(I+1)) * MagVq * vq
+            Line%Dp(:,I) = 0.25*p%rhoW*Line%Cdn*    d*(Line%F(I)*Line%l(I) + Line%F(I+1)*Line%l(I+1)) * MagVp * Vp
+            Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*(Line%F(I)*Line%l(I) + Line%F(I+1)*Line%l(I+1)) * MagVq * Vq
          END IF
 
-         ! F-K force from fluid acceleration not implemented yet
+         ! ------ fluid acceleration components for current node (from MD-C) ------
+         DO J = 1, 3
+            aq(J) = DOT_PRODUCT( Line%Ud(:,I) , Line%q(:,I) ) * Line%q(J,I);   ! tangential fluid acceleration component
+            ap(J) = Line%Ud(J,I) - aq(J)                                    ! transverse fluid acceleration component
+         ENDDO
+         
+         if (I == 0) then
+            Line%Ap(:,I) = p%rhoW * (1. + Line%Can) * 0.5 * (Line%F(1)* Line%V(1)) * ap
+            Line%Aq(:,I) = p%rhoW * (1. + Line%Cat) * 0.5 * (Line%F(1)* Line%V(1)) * aq
+         else if (I == N) then
+            Line%Ap(:,I) = p%rhoW * (1. + Line%Can) * 0.5 * (Line%F(N)* Line%V(N)) * ap
+            Line%Aq(:,I) = p%rhoW * (1. + Line%Cat) * 0.5 * (Line%F(N)* Line%V(N)) * aq
+         else
+            Line%Ap(:,I) = p%rhoW * (1. + Line%Can) * 0.5 * (Line%F(I)* Line%V(I) + Line%F(I+1)* Line%V(I+1)) * ap
+            Line%Aq(:,I) = p%rhoW * (1. + Line%Cat) * 0.5 * (Line%F(I)* Line%V(I) + Line%F(I+1)* Line%V(I+1)) * aq
+         endif
 
          ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
          ! bottom contact - updated throughout October 2021 for seabed bathymetry and friction models
@@ -1430,11 +1518,11 @@ CONTAINS
 
          ! total forces
          IF (I==0)  THEN
-            Line%Fnet(:,I) = Line%T(:,1)                 + Line%Td(:,1)                  + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%B(:,I) + Line%Bs(:,I)
+            Line%Fnet(:,I) = Line%T(:,1)                 + Line%Td(:,1)                  + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I)
          ELSE IF (I==N)  THEN
-            Line%Fnet(:,I) =                -Line%T(:,N)                  - Line%Td(:,N) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%B(:,I) + Line%Bs(:,I)
+            Line%Fnet(:,I) =                -Line%T(:,N)                  - Line%Td(:,N) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I)
          ELSE
-            Line%Fnet(:,I) = Line%T(:,I+1) - Line%T(:,I) + Line%Td(:,I+1) - Line%Td(:,I) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%B(:,I) + Line%Bs(:,I)
+            Line%Fnet(:,I) = Line%T(:,I+1) - Line%T(:,I) + Line%Td(:,I+1) - Line%Td(:,I) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I)
          END IF
 
       END DO  ! I  - done looping through nodes

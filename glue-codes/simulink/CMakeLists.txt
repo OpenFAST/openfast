@@ -41,6 +41,8 @@ set(MEX_LIBS
   $<TARGET_FILE:versioninfolib>
   $<TARGET_FILE:nwtclibs-matlab>    # MATLAB Specific
   $<TARGET_FILE:seastlib>
+  $<TARGET_FILE:aerodisklib>
+  $<TARGET_FILE:sedlib>
 )
 
 # Build the matlab shared library (mex) using the current toolchain.
