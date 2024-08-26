@@ -11,6 +11,7 @@ False          TwrAero     - Calculate tower aerodynamic loads? (flag)
 False          FrozenWake  - Assume frozen wake during linearization? (flag
 False          CavitCheck  - Perform cavitation check? (flag)
 False          Buoyancy    - Include buoyancy effects? (flag)
+False          NacelleDrag - Include Nacelle Drag effects? (flag)
 True           CompAA      - Flag to compute AeroAcoustics calculation
 "AeroAcousticsInput.dat"   AA_InputFile
 ====== Environmental Conditions ==========================================

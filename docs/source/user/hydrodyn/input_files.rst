@@ -58,7 +58,7 @@ computed and printed to the calling terminal. **NSteps** specifies the
 number of simulation time steps, and **TimeInterval** specifies the time 
 between steps.
 
-Setting **PRPInputsMod** = 0 forces all principal reference point (PRP)
+Setting **PRPInputsMod** = 0 forces all platform reference point (PRP)
 input motions to zero for all time. If you set **PRPInputsMod** = 1,
 then you must set the steady-state inputs in the PRP STEADY STATE
 INPUTS section of the file. Setting **PRPInputsMod** = 2 requires the

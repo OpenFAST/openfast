@@ -1658,6 +1658,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
 END SUBROUTINE CalculateOutput
                       
 !====================================================================================================
+!FIXME: is this routine necessary anymore?
 !> this routine calculates a rotor-averaged mean velocity, DiskVel 
 SUBROUTINE InflowWind_GetRotorSpatialAverage( Time, InputData, p, x, xd, z, OtherStates, m, MeanVelocity, ErrStat, ErrMsg )
 

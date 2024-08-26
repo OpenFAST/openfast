@@ -69,18 +69,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: zTip      !< Distance to blade tip, measured along the blade [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rLocal      !< Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: rTipFix      !< Nominally the coned rotor diameter (without prebend), used to align with Bladed calculations [m]
-    INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
-    LOGICAL  :: Flookup = .false.      !< Use table lookup for f' and f''  [-]
-    REAL(ReKi)  :: a_s = 0.0_ReKi      !< speed of sound [m/s]
     INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< DBEMT model.  1 = constant tau1, 2 = time dependent tau1 [-]
     REAL(ReKi)  :: tau1_const = 0.0_ReKi      !< DBEMT time constant (when DBEMT_Mod=1) [s]
     REAL(ReKi)  :: yawCorrFactor = 0.0_ReKi      !< constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_innerNode      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_outerNode      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: SumPrint = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
     INTEGER(IntKi)  :: BEM_Mod = 0_IntKi      !< BEM Model 0=OpenFAST 2=Envision  [-]
+    TYPE(UA_InitInputType)  :: UA_Init      !< InitInput data for UA model [-]
   END TYPE BEMT_InitInputType
 ! =======================
 ! =========  BEMT_InitOutputType  =======
@@ -240,6 +236,7 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    character(*),    intent(  out) :: ErrMsg
    integer(B8Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'BEMT_CopyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -343,46 +340,24 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
       end if
       DstInitInputData%rTipFix = SrcInitInputData%rTipFix
    end if
-   DstInitInputData%UAMod = SrcInitInputData%UAMod
    DstInitInputData%UA_Flag = SrcInitInputData%UA_Flag
-   DstInitInputData%Flookup = SrcInitInputData%Flookup
-   DstInitInputData%a_s = SrcInitInputData%a_s
    DstInitInputData%DBEMT_Mod = SrcInitInputData%DBEMT_Mod
    DstInitInputData%tau1_const = SrcInitInputData%tau1_const
    DstInitInputData%yawCorrFactor = SrcInitInputData%yawCorrFactor
-   if (allocated(SrcInitInputData%UAOff_innerNode)) then
-      LB(1:1) = lbound(SrcInitInputData%UAOff_innerNode, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%UAOff_innerNode, kind=B8Ki)
-      if (.not. allocated(DstInitInputData%UAOff_innerNode)) then
-         allocate(DstInitInputData%UAOff_innerNode(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%UAOff_innerNode.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%UAOff_innerNode = SrcInitInputData%UAOff_innerNode
-   end if
-   if (allocated(SrcInitInputData%UAOff_outerNode)) then
-      LB(1:1) = lbound(SrcInitInputData%UAOff_outerNode, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%UAOff_outerNode, kind=B8Ki)
-      if (.not. allocated(DstInitInputData%UAOff_outerNode)) then
-         allocate(DstInitInputData%UAOff_outerNode(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%UAOff_outerNode.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%UAOff_outerNode = SrcInitInputData%UAOff_outerNode
-   end if
    DstInitInputData%RootName = SrcInitInputData%RootName
    DstInitInputData%SumPrint = SrcInitInputData%SumPrint
    DstInitInputData%BEM_Mod = SrcInitInputData%BEM_Mod
+   call UA_CopyInitInput(SrcInitInputData%UA_Init, DstInitInputData%UA_Init, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine BEMT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    type(BEMT_InitInputType), intent(inout) :: InitInputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'BEMT_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -407,12 +382,8 @@ subroutine BEMT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%rTipFix)) then
       deallocate(InitInputData%rTipFix)
    end if
-   if (allocated(InitInputData%UAOff_innerNode)) then
-      deallocate(InitInputData%UAOff_innerNode)
-   end if
-   if (allocated(InitInputData%UAOff_outerNode)) then
-      deallocate(InitInputData%UAOff_outerNode)
-   end if
+   call UA_DestroyInitInput(InitInputData%UA_Init, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BEMT_PackInitInput(RF, Indata)
@@ -443,18 +414,14 @@ subroutine BEMT_PackInitInput(RF, Indata)
    call RegPackAlloc(RF, InData%zTip)
    call RegPackAlloc(RF, InData%rLocal)
    call RegPackAlloc(RF, InData%rTipFix)
-   call RegPack(RF, InData%UAMod)
    call RegPack(RF, InData%UA_Flag)
-   call RegPack(RF, InData%Flookup)
-   call RegPack(RF, InData%a_s)
    call RegPack(RF, InData%DBEMT_Mod)
    call RegPack(RF, InData%tau1_const)
    call RegPack(RF, InData%yawCorrFactor)
-   call RegPackAlloc(RF, InData%UAOff_innerNode)
-   call RegPackAlloc(RF, InData%UAOff_outerNode)
    call RegPack(RF, InData%RootName)
    call RegPack(RF, InData%SumPrint)
    call RegPack(RF, InData%BEM_Mod)
+   call UA_PackInitInput(RF, InData%UA_Init) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -489,18 +456,14 @@ subroutine BEMT_UnPackInitInput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%zTip); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%rLocal); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%rTipFix); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UAMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UA_Flag); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Flookup); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%a_s); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DBEMT_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%tau1_const); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%yawCorrFactor); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%UAOff_innerNode); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%UAOff_outerNode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SumPrint); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BEM_Mod); if (RegCheckErr(RF, RoutineName)) return
+   call UA_UnpackInitInput(RF, OutData%UA_Init) ! UA_Init 
 end subroutine
 
 subroutine BEMT_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)

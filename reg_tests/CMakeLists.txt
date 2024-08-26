@@ -74,6 +74,12 @@ set(CTEST_MOORDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/moordyn/moordyn_driver
 # Set the SeaState executable configuration option and default
 set(CTEST_SEASTATE_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/seastate/seastate_driver" CACHE FILEPATH "Specify the SeaState driver executable to use in testing.")
 
+# Set the AeroDisk executable configuration option and default
+set(CTEST_AERODISK_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodisk/aerodisk_driver" CACHE FILEPATH "Specify the AeroDisk driver executable to use in testing.")
+
+# Set the SED executable configuration option and default
+set(CTEST_SED_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/simple-elastodyn/sed_driver" CACHE FILEPATH "Specify the SED driver executable to use in testing.")
+
 
 # Set the testing tolerance
 set(CTEST_RTEST_RTOL "2" CACHE STRING "Sets the relative orders of magnitude to allow to deviate from the baseline.")
