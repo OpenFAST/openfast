@@ -838,7 +838,8 @@ subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg
          !----------------------------------------------------------------------
 
          ! Calculate difference between calculated and predicted accelerations
-         if (p%iJX(1) > 0) m%XB(p%iJX(1):p%iJX(2), 1) = m%Mod%Lin%dx(p%iX2(1):p%iX2(2)) - m%StatePred%vd
+         ! if (p%iJX(1) > 0) m%XB(p%iJX(1):p%iJX(2), 1) = m%Mod%Lin%dx(p%iX2(1):p%iX2(2)) - m%StatePred%vd
+         if (p%iJX(1) > 0) m%XB(p%iJX(1):p%iJX(2), 1) = 0.0_R8Ki
 
          ! Calculate difference in U for all Option 1 modules (un - u_tmp)
          ! and add to RHS for TC and Option 1 modules
@@ -864,7 +865,7 @@ subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg
 
          ! If at least one convergence iteration has been done and the RHS norm
          ! is less than convergence tolerance, set flag and exit convergence loop
-         if ((ConvIter > 0) .and. (ConvError < p%ConvTol)) then
+         if (ConvError < p%ConvTol) then
             IsConverged = .true.
             exit
          end if
@@ -877,8 +878,8 @@ subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg
          !----------------------------------------------------------------------
 
          ! Update State acceleration prediction (do not change other states)
-         if (p%iJX(1) > 0) call UpdateStatePrediction(p, m%Mod%Vars, m%XB(p%iJX(1):p%iJX(2), 1), m%StatePred)
-         ! if (p%iJX(1) > 0) m%StatePred%vd = m%StatePred%vd + m%XB(p%iJX(1):p%iJX(2), 1)
+         ! if (p%iJX(1) > 0) call UpdateStatePrediction(p, m%Mod%Vars, m%XB(p%iJX(1):p%iJX(2), 1), m%StatePred)
+         if (p%iJX(1) > 0) m%StatePred%vd = m%StatePred%vd + m%XB(p%iJX(1):p%iJX(2), 1)
 
          ! Add change in inputs
          if (p%iJU(1) > 0) call MV_AddDelta(m%Mod%Vars%u, m%XB(p%iJU(1):p%iJU(2), 1), m%Mod%Lin%u)
@@ -930,7 +931,7 @@ subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg
    !----------------------------------------------------------------------------
 
    ! Set algorithmic acceleration from actual acceleration
-   m%StatePred%a = (1.0_R8Ki - p%AlphaF)/(1.0_R8Ki - p%AlphaM)*m%StatePred%vd
+   m%StatePred%a = m%StatePred%vd
 
    !----------------------------------------------------------------------------
    ! Post-convergence initialization
