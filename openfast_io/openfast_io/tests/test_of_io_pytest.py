@@ -27,7 +27,7 @@ FOLDERS_TO_RUN = [
     "StC_test_OC4Semi"                      ,       # "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
     "MHK_RM1_Fixed"                         ,       # "openfast;elastodyn;aerodyn15;mhk")
     "MHK_RM1_Floating"                      ,       # "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
-    "Tailfin_FreeYaw1DOF_PolarBased"        ,       # "openfast;elastodyn;aerodyn15")
+    # "Tailfin_FreeYaw1DOF_PolarBased"        ,       # "openfast;elastodyn;aerodyn15") # lets wait for furl to be included in fst_vt
 ]
 
 
