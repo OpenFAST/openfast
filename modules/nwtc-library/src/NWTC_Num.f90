@@ -112,6 +112,12 @@ MODULE NWTC_Num
       MODULE PROCEDURE EulerExtractR8
    END INTERFACE
 
+      !> \copydoc nwtc_num::fzero_r4()
+   INTERFACE fZeros
+      MODULE PROCEDURE fzero_r4
+      MODULE PROCEDURE fzero_r8
+   END INTERFACE
+
       !> \copydoc nwtc_num::taitbryanyxzextractr4()
       !! See nwtc_num::taitbryanyxzextractr4() for details on the algorithm
    INTERFACE TaitBryanYXZExtract
@@ -3006,7 +3012,75 @@ END FUNCTION FindValidChannelIndx
 
    RETURN
    END FUNCTION InterpStpComp8
+!=======================================================================
+!> Routine to interpolate and/or extrapolate
+   FUNCTION InterpExtrapStp( XVal, XAry, YAry, Ind, AryLen ) RESULT(InterpExtrap)
 
+      ! Function declaration.
+
+   REAL(ReKi)                   :: InterpExtrap                                     !< The interpolated or extrapolated value of Y at XVal
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+
+
+      ! Let's check the limits first.
+   IF (AryLen < 2) THEN
+      Ind = 1
+      InterpExtrap = YAry(1)
+      RETURN
+   END IF
+   
+   IF ( XVal <= XAry(1) )  THEN
+      Ind            = 1
+      InterpExtrap = GetLinearVal()  ! extrapolate (using slope of x(1) and x(2))
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      Ind            = MAX(AryLen - 1, 1)
+      InterpExtrap = GetLinearVal()  ! extrapolate (using slope of x(AryLen-1) and x(AryLen))
+      RETURN
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+
+         InterpExtrap = GetLinearVal()
+         RETURN
+
+      END IF
+
+   END DO
+
+
+   RETURN
+   
+   contains
+      real(ReKi) function GetLinearVal()
+         GetLinearVal = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
+      end function GetLinearVal
+   END FUNCTION InterpExtrapStp
 !=======================================================================
 !> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpReal4( XVal, XAry, YAry, Ind, AryLen )
@@ -6880,4 +6954,78 @@ end function Rad2M180to180Deg
       
    END SUBROUTINE Angles_ExtrapInterp2_R8R
 !=======================================================================  
+   SUBROUTINE fZero_R4(x, f, roots, nZeros, Period)
+      REAL(R4Ki),           intent(in)    :: x(:) ! assumed to be monotonic increasing: x(1) < x(2) < ... < x(n)
+      REAL(R4Ki),           intent(in)    :: f(:) ! f(x)
+      REAL(R4Ki),           intent(inout) :: roots(:)
+      INTEGER(IntKi),       intent(  out) :: nZeros
+      REAL(R4Ki), OPTIONAL, intent(in)    :: Period   ! if this is provided, the function f is assumed to be periodic with f(x(j)) = f(x(j)+Period)
+      
+      integer(IntKi)                :: n, j
+      real(R4Ki)                    :: dx, df, m ! help to find zero crossing
+      
+      n = size(f)
+      
+      nZeros = 0
+      do j=2,n
+         if ((f(j-1) < 0 .and. f(j) >= 0) .or. (f(j-1) >= 0 .and. f(j) < 0)) then !this is a zero-crossing, so a root is located here
+            nZeros = nZeros + 1
+            
+            df = f(j) - f(j-1)
+            dx = x(j) - x(j-1)
+            
+            roots( min(nZeros,size(roots)) ) = x(j) - f(j) * dx / df
+         end if
+      end do
+            
+      if (present(Period)) then
+         if ((f(n) < 0 .and. f(1) >= 0) .or. (f(n) >= 0 .and. f(1) < 0)) then !this is a zero-crossing, so a root is located here
+            nZeros = nZeros + 1
+            
+            df = f(1) - f(n)
+            dx = x(1) - x(n) + Period
+            
+            roots( min(nZeros,size(roots)) ) = x(1) - f(1) * dx / df
+         end if
+      end if
+   
+   END SUBROUTINE fZero_R4
+!=======================================================================
+   SUBROUTINE fZero_R8(x, f, roots, nZeros, Period)
+      REAL(R8Ki),           intent(in)    :: x(:) ! assumed to be monotonic increasing: x(1) < x(2) < ... < x(n)
+      REAL(R8Ki),           intent(in)    :: f(:) ! f(x)
+      REAL(R8Ki),           intent(inout) :: roots(:)
+      INTEGER(IntKi),       intent(  out) :: nZeros
+      REAL(R8Ki), OPTIONAL, intent(in)    :: Period   ! if this is provided, the function f is assumed to be periodic with f(x(j)) = f(x(j)+Period)
+      
+      integer(IntKi)                :: n, j
+      real(R8Ki)                    :: dx, df, m ! help to find zero crossing
+      
+      n = size(f)
+      
+      nZeros = 0
+      do j=2,n
+         if ((f(j-1) < 0 .and. f(j) >= 0) .or. (f(j-1) >= 0 .and. f(j) < 0)) then !this is a zero-crossing, so a root is located here
+            nZeros = nZeros + 1
+            
+            df = f(j) - f(j-1)
+            dx = x(j) - x(j-1)
+            
+            roots( min(nZeros,size(roots)) ) = x(j) - f(j) * dx / df
+         end if
+      end do
+            
+      if (present(Period)) then
+         if ((f(n) < 0 .and. f(1) >= 0) .or. (f(n) >= 0 .and. f(1) < 0)) then !this is a zero-crossing, so a root is located here
+            nZeros = nZeros + 1
+            
+            df = f(1) - f(n)
+            dx = x(1) - x(n) + Period
+            
+            roots( min(nZeros,size(roots)) ) = x(1) - f(1) * dx / df
+         end if
+      end if
+   
+   END SUBROUTINE fZero_R8
+!=======================================================================
 END MODULE NWTC_Num

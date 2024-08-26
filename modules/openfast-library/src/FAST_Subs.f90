@@ -2302,6 +2302,11 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
       y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_ExtInfw )))
    END IF
 
+   IF ( p_FAST%CompAero == Module_AD .OR. p_FAST%CompAero == Module_ExtLd)  THEN
+      y_FAST%Module_Ver( Module_AD  ) = Init%OutData_AD%Ver
+      y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_AD  ) ))
+   END IF
+
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
       y_FAST%Module_Ver( Module_SrvD ) = Init%OutData_SrvD%Ver
       y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_SrvD )))

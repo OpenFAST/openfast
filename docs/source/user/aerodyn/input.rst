@@ -45,7 +45,7 @@ AeroDyn Primary Input File
  
 The primary AeroDyn input file defines modeling options, environmental
 conditions (except freestream flow), airfoils, tower nodal
-discretization and properties, tower, hub, and nacelle buoyancy properties,
+discretization and properties, tower, hub, and nacelle properties,
 as well as output file specifications.
 
 The file is organized into several functional sections. Each section
@@ -133,6 +133,9 @@ Set the ``Buoyancy`` flag to TRUE to calculate buoyant loads on the blades,
 tower, nacelle, and hub of an MHK turbine or FALSE to disable this calculation.
 If ``Buoyancy`` is TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver 
 input file must be set to 1 or 2 to indicate an MHK turbine is being modeled.
+
+Set the ``NacelleDrag`` flag to TRUE to calculate the drag loads on the nacelle
+or FALSE to disable this calculation. 
 
 Set the ``CompAA`` flag to TRUE to run aero-acoustic calculations.  This
 option is only available for ``Wake_Mod = 1`` and is not available for
@@ -451,13 +454,18 @@ Since the hub and blades are joined elements, hub buoyancy should be turned on i
 
 Nacelle Properties
 ~~~~~~~~~~~~~~~~~~
-The input parameters in this section pertain to the calculation of buoyant loads
-on the nacelle and are only used when ``Buoyancy = TRUE``.
+The input parameters in this section pertain to the calculation of buoyant and drag loads
+on the nacelle and are only used when ``Buoyancy = TRUE`` or ``NacelleDrag = TRUE``.
 
 ``VolNac`` is the volume of the nacelle and ``NacCenB``` is the 
 position (x,y,z vector) of the nacelle center of buoyancy from
 the yaw bearing in local nacelle coordinates. To neglect buoyant 
-loads on the nacelle, set ``VolNac`` to 0.
+loads on the nacelle, set ``VolNac`` to 0. Only used when ``Buoyancy = TRUE``.
+
+``NacArea`` are the projected areas (Ax,Ay,Az vector) of the nacelle in the nacelle coordinate system, 
+``NacCd`` are the drag coefficients (Cdx, Cdy, Cdz vector) for the three nacelle areas defined by ``NacArea``and ``NacDragAC`` is the 
+position (x,y,z vector) of the nacelle aerodynamic center from
+the yaw bearing in local nacelle coordinates.  Only used when ``NacelleDrag = TRUE``.
 
 Tail fin AeroDynamics
 ~~~~~~~~~~~~~~~~~~~~~

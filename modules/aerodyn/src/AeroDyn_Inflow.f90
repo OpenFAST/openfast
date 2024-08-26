@@ -558,7 +558,7 @@ subroutine Init_MeshMap_For_ADI(FED, p, uAD, errStat, errMsg)
             pos         = y_ED%TwrPtMesh%Position(:,1)
             orientation = y_ED%TwrPtMesh%RefOrientation(:,:,1)
             call Eye(orientation, errStat2, errMsg2)
-            call CreatePointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
+            call CreateInputPointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
 
             ! TowerBase to AD tower base
             call MeshMapCreate(y_ED%TwrPtMesh, y_ED%TwrPtMeshAD, y_ED%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
