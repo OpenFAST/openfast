@@ -997,19 +997,19 @@ An example of tail fin input file is given below:
     Comment
     ======  General inputs =============================================================
     1         TFinMod     - Tail fin aerodynamics model {0: none, 1: polar-based, 2: USB-based} (switch)
-    0.5       TFinChord   - Tail fin chord (m) [used only when TFinMod=1]
-    0.3       TFinArea    - Tail fin planform area (m^2) [used only when TFinMod=1]
+    0.3       TFinArea    - Tail fin planform area (m^2)
     10.,0.,0. TFinRefP_n  - Undeflected position of the tail fin reference point wrt the tower top (m)
     0.,0.,0.  TFinAngles  - Tail fin chordline skew, tilt, and bank angles about the reference point (degrees)
     0         TFinIndMod  - Model for induced velocity calculation {0: none, 1:rotor-average} (switch)
     ====== Polar-based model ================================ [used only when TFinMod=1] 
-    1        TFinAFID - Index of Tail fin airfoil number [1 to NumAFfiles]
+    1         TFinAFID - Index of Tail fin airfoil number [1 to NumAFfiles]
+    0.5       TFinChord   - Tail fin chord (m)
     ====== Unsteady slender body model  ===================== [used only when TFinMod=2]
-    0.9           TFinKp        - Tail fin moment of area about reference point
-    0.3,0.1,0.1   TFinSigma     - Tail fin empirical constant for vortex separation functions
+    0.9           TFinKp        - Tail fin potential flow coefficient (-)
+    0.3,0.1,0.1   TFinSigma     - Tail fin empirical constant for vortex separation functions (1/deg)
     40,60,60      TFinAStar     - Tail fin initial angles for vortex separation functions (deg)
-    3.1416        TFinKv        - Tail fin vortex lift coefficient
-    1.3           TFinCDc       - Tail fin drag coefficient
+    3.1416        TFinKv        - Tail fin vortex lift coefficient (-)
+    1.3           TFinCDc       - Tail fin drag coefficient (-)
 
 General inputs
 ~~~~~~~~~~~~~~
