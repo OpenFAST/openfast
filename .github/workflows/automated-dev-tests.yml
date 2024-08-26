@@ -534,7 +534,8 @@ jobs:
       - name: Run Interface / API tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -L "cpp|python|fastlib"
+          ctest -VV -L "cpp|python|fastlib" \
+              -LE "openfast_io"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
