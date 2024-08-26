@@ -21,6 +21,7 @@ param	ElastoDyn/ED	-	IntKi	ED_NMX	-	4	-	"Used in updating predictor-corrector va
 typedef	ElastoDyn/ED	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
 typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
 typedef	^	InitInputType	LOGICAL	CompElast	-	-	-	"flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false)"	-
+typedef	^	InitInputType	LOGICAL	RigidAero	-	-	-	"flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"
 typedef ^   InitInputType   ReKi Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef ^   InitInputType   IntKi MHK     -   -   -   "MHK turbine type switch"   -
@@ -771,6 +772,7 @@ typedef	^	ParameterType	IntKi	method	-	-	-	"Identifier for integration method (1
 typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
+typedef	^	ParameterType	LOGICAL	RigidAero	-	-	-	"flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used"	-
 typedef ^       ParameterType   IntKi   YawFrctMod      -       -       -       "Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], or 2 [does use Fz at bearing]"     -
 typedef ^       ParameterType   R8Ki    M_CD    -       -       -       "Dynamic friction moment at null yaw rate"      N-m
 typedef ^       ParameterType   R8Ki    M_CSMAX -       -       -       "Maximum Coulomb friction torque"       N-m
