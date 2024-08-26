@@ -1,23 +1,28 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
 name = "openfast_io"
-version = "4.0.0" # We can make this dynamic to use github tags using dynamic = ["version"]
+# dynamic = ["version"]
+version = "4.0.0.a1"
 description = "Readers and writers for OpenFAST files."
-license = "Apache-2.0"
+license = {file = "../LICENSE"}
 authors = [
-    "NREL WISDEM Team <systems.engineering@nrel.gov>",
-    "Daniel Zalkind <daniel.zalkind@nrel.gov>",
-    "Garrett Barter <garrett.barter@nrel.gov>",
-    "Pietro Bortolotti <pietro.bortolotti@nrel.gov>",
-    "Mayank Chetan <mayank.chetan@nrel.gov>",
-    "John Jasa",
+    { name = "NREL WISDEM Team", email = "systems.engineering@nrel.gov"    },
+    { name = "Daniel Zalkind", email = "daniel.zalkind@nrel.gov"           },
+    { name = "Garrett Barter", email = "garrett.barter@nrel.gov"           },
+    { name = "Pietro Bortolotti", email = "pietro.bortolotti@nrel.gov"     },
+    { name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"             },
+    { name = "John Jasa"                                          },
 ]
 maintainers = [
-    "Mayank Chetan <mayank.chetan@nrel.gov>",
-    "Andy Platt <andy.platt@nrel.gov>",
-    "Derek Slaughter <derek.slaughter@nrel.gov>",
-]
+    {name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"      },
+    {name = "Andy Platt", email = "andy.platt@nrel.gov"            },
+    {name = "Derek Slaughter", email = "derek.slaughter@nrel.gov"  },
+]  
 readme = "README.md"
-packages = [{include = "openfast_io"}]
+requires-python = ">3.10"
 
 classifiers = [  # Optional
   # How mature is this project? Common values are
@@ -43,28 +48,28 @@ classifiers = [  # Optional
   "Programming Language :: Python :: 3 :: Only",
 ]
 
+dependencies = [
+    "numpy>1.0",
+    "pandas>2.0",
+    "ruamel_yaml>0.18",
+    ]
+    
+[project.urls]
 homepage = "https://github.com/OpenFAST/openfast"
 documentation = "https://openfast.readthedocs.io/en/main/"
 repository = "https://github.com/OpenFAST/openfast"
-
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/OpenFAST/openfast/issues"
-
-[tool.poetry.dependencies]
-python = "^3.9"
-numpy = "^1"
-pandas = "^2"
-xlrd = {version = "^2", optional = true}
-ruamel_yaml = "^0.18"
-rosco = {version = "^2.9.2", optional = true}
+Issues = "https://github.com/OpenFAST/openfast/issues"
 
 
-[tool.poetry.extras]
-rosco = ["rosco"]
-excel = ["xlrd"]
-all = ["rosco", "xlrd"]
 
+[project.optional-dependencies]
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+rosco = ["rosco>2.9.2"]
+xlrd = ["xlrd>2"]
+all = ["rosco>2.9.2", "xlrd>2"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "openfast_io/_version.py"

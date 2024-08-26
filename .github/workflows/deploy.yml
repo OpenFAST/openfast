@@ -4,12 +4,14 @@
 # repository. The build cache is stored in GitHub actions.
 name: deploy
 
-on:
-  workflow_dispatch:
+# on:
+  # workflow_dispatch:
 
-  release:
-    types:
-      - released
+  # release:
+  #   types:
+  #     - released
+on:
+  push:
 
 jobs:
   # publish-to-pypi:
@@ -43,17 +45,30 @@ jobs:
 # jobs:
   publish-to-test-pypi:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
-      - name: Build and publish to pypi
-        uses: JRubics/poetry-publish@v2.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          pypi_token: ${{ secrets.PYPI_TOKEN }}
-          package_directory: "openfast_io"
-          repository_name: "openfast_io"
-          repository_url: "https://test.pypi.org/legacy/"
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Hatch
+        uses: pypa/hatch@install
 
 
+      - name: Build package
+        run: hatch build
+        working-directory: openfast_io
+
+      - name: Publish to PyPI
+        env:
+          HATCH_INDEX_USER: __token__
+          HATCH_INDEX_AUTH: ${{ secrets.PYPI_TOKEN }}
+        run: hatch publish -r test
+        working-directory: openfast_io
 
   docker-build-and-push:
     runs-on: ubuntu-latest
