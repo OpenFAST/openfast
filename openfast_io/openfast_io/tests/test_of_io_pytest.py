@@ -37,9 +37,10 @@ def getPaths(OF_PATH = OF_PATH, REPOSITORY_ROOT = REPOSITORY_ROOT, BUILD_DIR = B
     return {
         "executable": OF_PATH,
         "source_dir": REPOSITORY_ROOT,
-        "build_dir": BUILD_DIR,
+        "build_dir": BUILD_DIR, # Location of the reg_tests directory inside the build directory created by the user
         "rtest_dir": osp.join(REPOSITORY_ROOT, "reg_tests", "r-test"),
-        "test_data_dir": osp.join(REPOSITORY_ROOT, "reg_tests", "r-test", "glue-codes", "openfast")
+        "test_data_dir": osp.join(REPOSITORY_ROOT, "reg_tests", "r-test", "glue-codes", "openfast"),
+        "discon_dir": osp.join(BUILD_DIR, "glue-codes", "openfast", "5MW_Baseline", "ServoData"),
     }
 
 def read_action(folder, path_dict = getPaths()):
@@ -57,11 +58,11 @@ def write_action(folder, fst_vt, path_dict = getPaths()):
     print(f"Writing to {folder}, with TMax = 2.0")
 
     # check if the folder exists, if not, mostly being called not from cmake, so create it
-    if not osp.exists(osp.join(path_dict['build_dir'])):
+    if not osp.exists(osp.join(path_dict['build_dir'],'openfast_io')):
         Path(path_dict['build_dir']).mkdir(parents=True, exist_ok=True)
 
     fast_writer = InputWriter_OpenFAST()
-    fast_writer.FAST_runDirectory = osp.join(path_dict['build_dir'],folder)
+    fast_writer.FAST_runDirectory = osp.join(path_dict['build_dir'],'openfast_io',folder)
     Path(fast_writer.FAST_runDirectory).mkdir(parents=True, exist_ok=True)
     fast_writer.FAST_namingOut    = folder
 
@@ -69,27 +70,31 @@ def write_action(folder, fst_vt, path_dict = getPaths()):
     fst_vt = {}
     fst_vt['Fst', 'TMax'] = 2.
     fst_vt['Fst','OutFileFmt'] = 3
+    # check if the case needs ServoDyn
+    if 'DLL_FileName' in fast_writer.fst_vt['ServoDyn']:
+        # Copy the DISCON name and add the path to the build location
+        fst_vt['ServoDyn', 'DLL_FileName'] = osp.join(path_dict['discon_dir'], osp.basename(fast_writer.fst_vt['ServoDyn']['DLL_FileName'])) 
     fast_writer.update(fst_update=fst_vt)
     fast_writer.execute()
 
 def run_action(folder, path_dict = getPaths()):
     # Placeholder for the actual run action
     print(f"Running simulation for {folder}")
-    command = [f"{path_dict['executable']}",  f"{osp.join(path_dict['build_dir'], folder, f'{folder}.fst')}"]
-    with open(osp.join(path_dict['build_dir'], folder, f'{folder}.log'), 'w') as f:
+    command = [f"{path_dict['executable']}",  f"{osp.join(path_dict['build_dir'],'openfast_io', folder, f'{folder}.fst')}"]
+    with open(osp.join(path_dict['build_dir'],'openfast_io', folder, f'{folder}.log'), 'w') as f:
         subprocess.run(command, check=True, stdout=f, stderr=subprocess.STDOUT)
         f.close()
 
 def check_ascii_out(folder, path_dict = getPaths()):
     # Placeholder for the actual check action
     print(f"Checking ASCII output for {folder}")
-    asciiOutput = osp.join(path_dict['build_dir'], folder, f"{folder}.out")
+    asciiOutput = osp.join(path_dict['build_dir'],'openfast_io', folder, f"{folder}.out")
     fast_outout = FASTOutputFile(filename=asciiOutput)
 
 def check_binary_out(folder, path_dict = getPaths()):
     # Placeholder for the actual check action
     print(f"Checking binary output for {folder}")
-    binaryOutput = osp.join(path_dict['build_dir'], folder, f"{folder}.outb")
+    binaryOutput = osp.join(path_dict['build_dir'],'openfast_io', folder, f"{folder}.outb")
     fast_outout = FASTOutputFile(filename=binaryOutput)
 
 # Begining of the test
@@ -104,6 +109,18 @@ def test_rtest_cloned(request):
         print("R-tests not cloned properly")
         sys.exit(1)
 
+def test_DLLs_exist(request):
+
+    path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--build_dir")))
+
+    # Check if the DISCON.dll file exists
+    DISCON_DLL = osp.join(path_dict['discon_dir'], "DISCON.dll")
+    if osp.exists(DISCON_DLL):
+        assert True, f"DISCON.dll found at {DISCON_DLL}"
+    else: # stop the test if the DISCON.dll is not found
+        print(f"DISCON.dll not found at {DISCON_DLL}. Please build with ''' make regression_test_controllers ''' and try again.")
+        sys.exit(1)
+
 def test_openfast_executable_exists(request):
 
     path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--executable")))
@@ -113,6 +130,8 @@ def test_openfast_executable_exists(request):
     else: # stop the test if the OpenFAST executable is not found
         print(f"OpenFAST executable not found at {path_dict['executable']}. Please build OpenFAST and try again.")
         sys.exit(1)
+
+
 
 # Parameterize the test function to run for each folder and action
 @pytest.mark.parametrize("folder", FOLDERS_TO_RUN)
@@ -148,6 +167,7 @@ def main():
     # Initialize any necessary setup here
 
     for folder in FOLDERS_TO_RUN:
+        print(" ")
         print(f"Processing folder: {folder}")
 
         # Assuming read_action, write_action, run_action, and check_action are defined elsewhere

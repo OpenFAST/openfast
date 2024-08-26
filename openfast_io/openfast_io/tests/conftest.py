@@ -12,7 +12,7 @@ else:
     raise ValueError('Unknown platform type: '+mactype)
 
 REPOSITORY_ROOT = osp.dirname(osp.dirname(osp.dirname(osp.dirname(__file__))))
-BUILD_DIR = osp.join(REPOSITORY_ROOT, "build_ofio", "testSuite")
+BUILD_DIR = osp.join(REPOSITORY_ROOT, "build/reg_tests")
 
 # Path to the OpenFAST executable
 OF_PATH = osp.join(REPOSITORY_ROOT,"build/glue-codes/openfast",f"openfast{exeExt}")
