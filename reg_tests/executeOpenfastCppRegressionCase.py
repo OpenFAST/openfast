@@ -123,8 +123,10 @@ if '_Restart' in caseName:
         sys.exit(returnCode*10)
 
 ### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, "5MW_Land_DLL_WTurb_cpp.outb")
-baselineOutFile = os.path.join(inputsDirectory, "5MW_Land_DLL_WTurb_cpp.outb")
+localOutFile = os.path.join(testBuildDirectory, "5MW_Land_DLL_WTurb_cpp.out")
+baselineOutFile = os.path.join(inputsDirectory, "5MW_Land_DLL_WTurb_cpp.out")
+if not os.path.exists(baselineOutFile):
+    baselineOutFile = os.path.join(inputsDirectory, "5MW_Land_DLL_WTurb_cpp.outb")
 
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
