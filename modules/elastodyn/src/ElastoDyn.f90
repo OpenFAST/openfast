@@ -120,6 +120,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Read the input file and validate the data
       !............................................................................................
    p%BD4Blades = .NOT. InitInp%CompElast           ! if we're not using ElastoDyn for the blades, use BeamDyn
+   p%RigidAero = InitInp%RigidAero                 ! If AeroDisk is used, set blades to all be rigid
 
    p%RootName = InitInp%RootName ! FAST already adds '.ED' to the root name
    p%CompAeroMaps = InitInp%CompAeroMaps
@@ -129,13 +130,15 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-   IF ( p%BD4Blades ) THEN
-   
-         ! Set DOFs to FALSE for whatever values you don't want on for BeamDyn
+
+   IF ( p%BD4Blades .or. p%RigidAero ) THEN
+         ! Set DOFs to make rotor rigid
       InputFileData%FlapDOF1 = .FALSE.
       InputFileData%FlapDOF2 = .FALSE.
       InputFileData%EdgeDOF  = .FALSE.
-      
+   ENDIF
+
+   IF ( p%BD4Blades ) THEN
          ! Set other values not used for BeamDyn      
       InputFileData%OoPDefl  = 0.0_ReKi
       InputFileData%IPDefl   = 0.0_ReKi
@@ -144,7 +147,6 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       InputFileData%NBlGages = 0
       InputFileData%BldGagNd = 0
       InputFileData%BldNodes = 0
-       
    END IF
 
    IF (p%CompAeroMaps) THEN
@@ -4204,7 +4206,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
 
 !   ..... Developer must add checking for invalid inputs here: .....
-if (p%BD4Blades) then
+if (p%BD4Blades .or. p%RigidAero) then
    startIndx = 1
 else
    startIndx = p%NumBl+1
@@ -4388,7 +4390,7 @@ end if
    
    InvalidOutput(HSSBrTq) = p%method == Method_RK4
 
-    IF ( p%BD4Blades ) THEN
+    IF ( p%BD4Blades .or. p%RigidAero ) THEN
       InvalidOutput(   Q_B1E1) = .TRUE.
       InvalidOutput(   Q_B1F1) = .TRUE.
       InvalidOutput(   Q_B1F2) = .TRUE.
@@ -8952,7 +8954,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%g1(2)
    Orientation(2,3) =     m%CoordSys%g2(2)
    Orientation(3,3) =     m%CoordSys%g3(2) 
-   call CreatePointMesh(u%HubPtLoad, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%HubPtLoad, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
          
                      
@@ -8961,7 +8963,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    Position = (/0.0_ReKi, 0.0_ReKi, p%PtfmRefzt /)
    call Eye(Orientation, ErrStat2, errMsg2)
-   call CreatePointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
       
    !.......................................................
@@ -8969,7 +8971,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    Position = (/0.0_ReKi, 0.0_ReKi, p%TowerHt /)
    call Eye(Orientation, ErrStat2, errMsg2)
-   call CreatePointMesh(u%NacelleLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%NacelleLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
       
    !.......................................................
@@ -8987,7 +8989,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%tf1(2)
    Orientation(2,3) =     m%CoordSys%tf2(2)
    Orientation(3,3) =     m%CoordSys%tf3(2) 
-   call CreatePointMesh(u%TFinCMLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%TFinCMLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
 
 

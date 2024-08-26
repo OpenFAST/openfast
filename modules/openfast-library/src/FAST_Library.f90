@@ -785,6 +785,11 @@ subroutine FAST_ExtInfw_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, OutF
       else
          NumTwrElem_c = 0
       endif
+   ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_ADsk) THEN
+      call WrScr("AeroDisk cannot be used with ExtInfw through the FAST_Library interface")
+      ErrStat = AbortErrLev
+      ErrMsg  = "AeroDisk cannot be used with ExtInfw through the FAST_Library interface"
+      if (Failed()) return
    ELSE
       NumBl_c     = 0
       NumBlElem_c = 0

@@ -99,7 +99,7 @@ SUBROUTINE FAST_InitializeSteadyState_T( Turbine, ErrStat, ErrMsg )
    Turbine%TurbID = 1
 
       CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
+                     Turbine%ED, Turbine%SED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%ADsk, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
                      Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, CompAeroMaps, ErrStat, ErrMsg )
 
@@ -242,8 +242,8 @@ SUBROUTINE FAST_SteadyState(p_FAST, y_FAST, m_FAST, ED, BD, AD, MeshMapData, Err
       !----------------------------------------------------------------------------------------
       n_global = real(n_case, DbKi) ! n_global is double-precision so that we can reuse existing code.
       
-      CALL WrOutputLine( n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, ED%y%WriteOutput, &
-            AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
+      CALL WrOutputLine( n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, ED%y%WriteOutput, UnusedAry, &
+            AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
             UnusedAry, UnusedAry, UnusedAry, UnusedAry, y_IceD, BD%y, ErrStat2, ErrMsg2 )
 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

@@ -555,9 +555,12 @@ Member Cosine Matrices COSM (i,j)
 to be provided. Each row of the table will list the nine entries of the
 direction cosine matrices (COSM11, COSM12,…COSM33) for matrix elements.
 Each row is a vector in the global coordinate system for principal axes 
-in the x, y and z directions respectively. These vectors need to be 
-specified with an extremely high level of precision for results to be
-equivalent to an internal calculation.
+in the x (COSM11, COSM12, COSM13), y (COSM21, COSM22, COSM23) and 
+z (COSM31, COSM32, COSM33) directions respectively. Internally, SubDyn 
+transposes this provided matrix to make it consistent with the definition 
+of direction cosine matrix :math:`[ \mathbf{D_c} ]` used in SubDyn (Eq. :eq:`Dc`). 
+The vectors provided need to be specified with an extremely high level of 
+precision for results to be equivalent to an internal calculation.
 
 Joint Additional Concentrated Masses
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
