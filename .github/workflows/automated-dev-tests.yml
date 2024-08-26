@@ -588,7 +588,7 @@ jobs:
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
-        # if: failure()
+        if: failure()
         with:
           name: rtest-OF
           path: |
