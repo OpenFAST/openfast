@@ -17,7 +17,7 @@ implicit none
 private
 
 ! Public functions
-public SolverTC_Init, Solver_Step0, Solver_Step, CalcOutputs_And_SolveForInputs
+public FAST_SolverInit, FAST_SolverStep0, FAST_SolverStep, CalcOutputs_And_SolveForInputs
 
 ! Debugging
 logical, parameter         :: DebugSolver = .false.
@@ -28,7 +28,7 @@ integer(IntKi)             :: MatrixUn = -1
 
 contains
 
-subroutine SolverTC_Init(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
+subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
    type(FAST_ParameterType), intent(in)      :: p_FAST         !< FAST parameters
    type(Glue_TCParam), intent(inout)         :: p              !< Glue Parameters
    type(Glue_TCMisc), intent(out)            :: m              !< Glue miscellaneous variables
@@ -649,7 +649,7 @@ contains
    end function
 end subroutine
 
-subroutine Solver_Step0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
+subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
    type(Glue_TCParam), intent(in)            :: p              !< Parameters
    type(Glue_TCMisc), intent(inout)          :: m              !< Misc variables
    type(ModDataType), intent(inout)          :: GlueModData(:) !< Glue module data
@@ -965,7 +965,7 @@ contains
    end function
 end subroutine
 
-subroutine Solver_Step(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
+subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
    integer(IntKi), intent(in)                :: n_t_global     !< global time step
    real(DbKi), intent(in)                    :: t_initial      !< Initial simulation time
    type(Glue_TCParam), intent(in)            :: p              !< Parameters

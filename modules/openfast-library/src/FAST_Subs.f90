@@ -61,7 +61,7 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
    if(ErrStat >= AbortErrLev) return
 
    ! Initialize solver
-   call SolverTC_Init(Turbine%p_FAST, Turbine%p_Glue%TC, Turbine%m_Glue%TC, &
+   call FAST_SolverInit(Turbine%p_FAST, Turbine%p_Glue%TC, Turbine%m_Glue%TC, &
                     Turbine%m_Glue%ModData, Turbine%m_Glue%Mappings, Turbine, ErrStat, ErrMsg)
    if(ErrStat >= AbortErrLev) return
 
@@ -4572,7 +4572,7 @@ END SUBROUTINE FAST_WrSum
 !> Routine that calls FAST_Solution0 for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level.
 SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
-   USE FAST_SolverTC, only: Solver_Step0
+   USE FAST_SolverTC, only: FAST_SolverStep0
 
    TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             !< all data for one instance of a turbine
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
@@ -4608,7 +4608,7 @@ SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
    end if
 
    ! Perform initial solve
-   CALL Solver_Step0(Turbine%p_Glue%TC, Turbine%m_Glue%TC, Turbine%m_Glue%ModData, &
+   CALL FAST_SolverStep0(Turbine%p_Glue%TC, Turbine%m_Glue%TC, Turbine%m_Glue%ModData, &
                      Turbine%m_Glue%Mappings, Turbine, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -5025,8 +5025,8 @@ SUBROUTINE FAST_UpdateStates_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
    ! Advance simulation one step and calculate outputs
-   CALL Solver_Step(n_t_global, t_initial, Turbine%p_Glue%TC, Turbine%m_Glue%TC, &
-                    Turbine%m_Glue%ModData, Turbine%m_Glue%Mappings, Turbine, ErrStat2, ErrMsg2)
+   CALL FAST_SolverStep(n_t_global, t_initial, Turbine%p_Glue%TC, Turbine%m_Glue%TC, &
+                        Turbine%m_Glue%ModData, Turbine%m_Glue%Mappings, Turbine, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
