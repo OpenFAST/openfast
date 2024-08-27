@@ -449,7 +449,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    character(ErrMsgLen)                            :: ErrMsg2
    integer(IntKi), allocatable                     :: modIDs(:), modIdx(:)
    integer(IntKi)                                  :: i, j, k
-   integer(IntKi)                                  :: FlagFilters
+   integer(IntKi)                                  :: LinFlags
 
    ! Initialize error return
    ErrStat = ErrID_None
@@ -542,7 +542,10 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    ! Glue Module
    !----------------------------------------------------------------------------
 
-   call Glue_CombineModules(m%ModGlue, m%ModData, m%Mappings, p%Lin%iMod, VF_None, p_FAST%Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+   LinFlags = VF_Linearize + VF_Mapping
+   call Glue_CombineModules(m%ModGlue, m%ModData, m%Mappings, p%Lin%iMod, LinFlags, &
+                            p_FAST%Linearize, ErrStat2, ErrMsg2, Name="Lin")
+   if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! Allocate linearization arrays and matrices
