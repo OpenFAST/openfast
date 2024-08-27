@@ -163,7 +163,7 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
 
    ! Build tight coupling module using solve variables from TC and Option 1 modules
    call Glue_CombineModules(m%Mod, GlueModData, GlueModMaps, iMod, &
-                            VF_Solve, .true., ErrStat2, ErrMsg2)
+                            VF_Solve, .true., ErrStat2, ErrMsg2, Name='Solver')
    if (Failed()) return
 
    !----------------------------------------------------------------------------
