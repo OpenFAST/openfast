@@ -39,6 +39,16 @@ add_library(mappplib STATIC
   src/MAP_Fortran_Types.f90
   ${MAP_CLIB_SOURCES}
 )
+target_sources(
+  mappplib
+  PUBLIC
+    $<INSTALL_INTERFACE:MAP_Types.h>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/MAP_Types.h>
+    $<INSTALL_INTERFACE:mapsys.h>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/mapsys.h>
+    $<INSTALL_INTERFACE:mapapi.h>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/mapapi.h>
+)
 target_link_libraries(mappplib nwtclibs)
 target_include_directories(mappplib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/bstring>
@@ -47,9 +57,8 @@ target_include_directories(mappplib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/simclist>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
-set_target_properties(mappplib PROPERTIES PUBLIC_HEADER src/MAP_Types.h
-                                                        src/mapsys.h
-                                                        src/mapapi.h)
+get_target_property(MAPPP_PUBLIC_HEADERS mappplib INTERFACE_SOURCES)
+set_target_properties(mappplib PROPERTIES PUBLIC_HEADER "${MAPPP_PUBLIC_HEADERS}")
 
 install(TARGETS mappplib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
