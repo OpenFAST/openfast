@@ -26,7 +26,6 @@ implicit none
 
 public IfW_FlowField_GetVelAcc
 public IfW_UniformField_CalcAccel, IfW_Grid3DField_CalcAccel
-public IfW_UniformWind_GetOP  ! for linearization
 public Grid3D_to_Uniform, Uniform_to_Grid3D
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
@@ -709,30 +708,6 @@ contains
    end subroutine
 
 end subroutine
-
-!> Routine to compute the Jacobians of the output (Y) function with respect to the inputs (u). The partial
-!! derivative dY/du is returned. This submodule does not follow the modularization framework.
-subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
-   type(UniformFieldType), intent(IN)  :: UF             !< Parameters
-   real(DbKi), intent(IN)              :: t              !< Current simulation time in seconds
-   logical, intent(in)                 :: InterpCubic    !< flag for using cubic interpolation
-   real(R8Ki), intent(OUT)             :: OP_out(3)      !< operating point (HWindSpeed and PLexp
-
-   type(UniformField_Interp)           :: op         ! interpolated values of InterpParams
-
-   ! Linearly interpolate parameters in time at operating point (or use nearest-neighbor to extrapolate)
-   if (InterpCubic) then
-      op = UniformField_InterpCubic(UF, t)
-   else
-      op = UniformField_InterpLinear(UF, t)
-   end if
-
-   OP_out(1) = real(op%VelH, R8Ki)
-   OP_out(2) = real(op%ShrV, R8Ki)
-   OP_out(3) = real(op%AngleH, R8Ki)
-
-end subroutine
-
 
 subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
                                VelCell, AccCell, Xi, Is3D, ErrStat, ErrMsg)
