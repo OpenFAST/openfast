@@ -1184,8 +1184,13 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       A(:,1) = alpha
       A(:,2) = 1.0_ReKi
       
-      B(:,1) = Cn
-      B(:,2) = Cl
+      if (size(Cn) == 1) then
+         B(:,1) = Cn(1)
+         B(:,2) = Cl(1)
+      else
+         B(:,1) = Cn
+         B(:,2) = Cl
+      end if
       
       CALL LAPACK_gels('N', A, B, ErrStat, ErrMsg)
    
