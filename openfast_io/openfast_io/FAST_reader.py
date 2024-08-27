@@ -795,7 +795,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['InflowWind']['FileName_BTS'] = os.path.join(os.path.split(inflow_file)[0], f.readline().split()[0][1:-1])
         # Parameters for Binary Bladed-style Full-Field files   [used only for WindType = 4] (bladed_wind_params)
         f.readline()
-        self.fst_vt['InflowWind']['FilenameRoot'] = f.readline().split()[0][1:-1]       
+        self.fst_vt['InflowWind']['FilenameRoot'] = os.path.join(os.path.split(inflow_file)[0], f.readline().split()[0][1:-1])
         self.fst_vt['InflowWind']['TowerFile'] = bool_read(f.readline().split()[0])
 
         # Parameters for HAWC-format binary files  [Only used with WindType = 5] (hawc_wind_params)
@@ -835,9 +835,9 @@ class InputReader_OpenFAST(object):
         self.fst_vt['InflowWind']['NumPulseGate'] = int(f.readline().split()[0])
         self.fst_vt['InflowWind']['PulseSpacing'] = float_read(f.readline().split()[0])
         self.fst_vt['InflowWind']['NumBeam'] = int(f.readline().split()[0])
-        self.fst_vt['InflowWind']['FocalDistanceX'] = float_read(f.readline().split()[0])
-        self.fst_vt['InflowWind']['FocalDistanceY'] = float_read(f.readline().split()[0])
-        self.fst_vt['InflowWind']['FocalDistanceZ'] = float_read(f.readline().split()[0])
+        self.fst_vt['InflowWind']['FocalDistanceX'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
+        self.fst_vt['InflowWind']['FocalDistanceY'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
+        self.fst_vt['InflowWind']['FocalDistanceZ'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
         self.fst_vt['InflowWind']['RotorApexOffsetPos'] = [idx.strip() for idx in f.readline().split('RotorApexOffsetPos')[0].split(',')]
         self.fst_vt['InflowWind']['URefLid'] = float_read(f.readline().split()[0])
         self.fst_vt['InflowWind']['MeasurementInterval'] = float_read(f.readline().split()[0])
@@ -884,6 +884,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn15']['TwrAero']       = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['CavitCheck']    = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['Buoyancy']      = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn15']['NacelleDrag']      = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['CompAA']        = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['AA_InputFile']  = f.readline().split()[0]
 
@@ -935,6 +936,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn15']['AoA34']                  = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['UA_Mod']                  = int(f.readline().split()[0])
         self.fst_vt['AeroDyn15']['FLookup']                = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn15']['IntegrationMethod']      = int(f.readline().split()[0])
         
         file_pos = f.tell()
         line = f.readline()
@@ -980,6 +982,10 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn15']['VolNac'] = float_read(f.readline().split()[0])
         # data = [float(val) for val in f.readline().split(',')]
         self.fst_vt['AeroDyn15']['NacCenB'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
+
+        self.fst_vt['AeroDyn15']['NacArea'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
+        self.fst_vt['AeroDyn15']['NacCd'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
+        self.fst_vt['AeroDyn15']['NacDragAC'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
         f.readline()
         self.fst_vt['AeroDyn15']['TFinAero'] = bool_read(f.readline().split()[0])
         tfa_filename = fix_path(f.readline().split()[0])[1:-1]
@@ -1763,6 +1769,27 @@ class InputReader_OpenFAST(object):
         else:
             del self.fst_vt['DISCON_in']
 
+    def read_spd_trq(self, file):
+        '''
+        read the speed-torque curve data to the fst_vt
+        '''
+        spd_trq = {}
+
+        f = open(os.path.normpath(os.path.join(self.FAST_directory, file)))
+
+        spd_trq['header'] = f.readline().strip()[0]
+
+        # handle arbritraty number of rows and two columns: RPM and Torque
+        data = f.readlines()
+        spd_trq['RPM'] = [float(line.split()[0]) for line in data]
+        spd_trq['Torque'] = [float(line.split()[1]) for line in data]
+        f.close()
+
+        self.fst_vt['spd_trq'] = spd_trq
+
+
+
+
     def read_HydroDyn(self, hd_file):
 
         f = open(hd_file)
@@ -2522,7 +2549,7 @@ class InputReader_OpenFAST(object):
         ln = f.readline().split()
         ln = f.readline().split()
         for i in range(self.fst_vt['SubDyn']['NMOutputs']):
-            ln = f.readline().split()
+            ln = f.readline().split('!')[0].split() # allows for comments
             self.fst_vt['SubDyn']['MemberID_out'][i] = int(ln[0])
             self.fst_vt['SubDyn']['NOutCnt'][i]      = int(ln[1])
             self.fst_vt['SubDyn']['NodeCnt'][i]      = [int(node) for node in ln[2:]]
@@ -3080,6 +3107,8 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['SStC'].append(self.read_StC(StC_file))
             if ROSCO:
                 self.read_DISCON_in()
+            if self.fst_vt['ServoDyn']['VSContrl'] == 3: # user-defined from routine UserVSCont refered
+                self.read_spd_trq('spd_trq.dat')
         hd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['HydroFile']))
         if os.path.isfile(hd_file): 
             self.read_HydroDyn(hd_file)
@@ -3116,6 +3145,6 @@ if __name__=="__main__":
                                        'glue-codes', 'openfast', 
                                        '5MW_Land_BD_DLL_WTurb')   # Path to fst directory files
 
-    check_rtest_cloned(os.path.join(fast.FAST_directory, fast.FAST_InputFile))
+    check_rtest_cloned(os.path.join(fast.FAST_directory))
 
     fast.execute()
