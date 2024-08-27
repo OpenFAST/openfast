@@ -33,26 +33,28 @@ endif()
 file(GLOB MAP_CLIB_SOURCES src/*.c src/*.cc src/*/*.c src/*/*.cc)
 file(GLOB MAP_C_HEADERS src/*.h src/*/*.h)
 
-add_library(maplib STATIC
+add_library(mappplib STATIC
   src/map.f90
   src/MAP_Types.f90
   src/MAP_Fortran_Types.f90
   ${MAP_CLIB_SOURCES}
 )
-target_link_libraries(maplib nwtclibs)
-target_include_directories(maplib PUBLIC
+target_link_libraries(mappplib nwtclibs)
+target_include_directories(mappplib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/bstring>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/cminpack>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/lapack>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/simclist>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
-set_target_properties(maplib PROPERTIES PUBLIC_HEADER src/MAP_Types.h)
+set_target_properties(mappplib PROPERTIES PUBLIC_HEADER src/MAP_Types.h
+                                                        src/mapsys.h
+                                                        src/mapapi.h)
 
-install(TARGETS maplib
+install(TARGETS mappplib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  PUBLIC_HEADER DESTINATION include
+  PUBLIC_HEADER DESTINATION include/mappp
 )
