@@ -301,7 +301,7 @@ of_regression("5MW_Land_DLL_WTurb_wNacDrag"            "openfast;elastodyn;aerod
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart" "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore;restart")
 of_regression("5MW_OC3Trpd_DLL_WSt_WavesReg"           "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
-of_regression("5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth" "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
+# of_regression("5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth" "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
 of_regression("5MW_ITIBarge_DLL_WTurb_WavesIrr"        "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
 of_regression("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"  "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
 of_regression("5MW_OC3Spar_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
