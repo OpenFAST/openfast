@@ -144,6 +144,8 @@ if caseName.endswith('_Restart'):
 
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName + ".out")
+if not os.path.exists(localOutFile):
+    localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".out")
 if not os.path.exists(baselineOutFile):
     baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
