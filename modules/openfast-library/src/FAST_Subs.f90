@@ -2559,6 +2559,33 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
          RETURN
       end if
 
+
+      ! RhoInf - Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]
+   CALL ReadVar( UnIn, InputFile, p%RhoInf, "RhoInf", "Numerical damping parameter "//&
+                     "for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
+
+      ! ConvTol - Convergence iteration error tolerance for tight coupling generalized alpha integrator (-)
+   CALL ReadVar( UnIn, InputFile, p%ConvTol, "ConvTol", "Convergence iteration error tolerance for tight coupling generalized alpha integrator (-)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
+
+      ! MaxConvIter - Maximum number of convergence interations for tight coupling generalized alpha integrator (-)
+   CALL ReadVar( UnIn, InputFile, p%MaxConvIter, "MaxConvIter", "Maximum number of convergence iterations "//&
+                     "for tight coupling generalized alpha integrator (-)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
+      
       ! DT_UJac - Time between calls to get Jacobians (s)
    CALL ReadVar( UnIn, InputFile, p%DT_UJac, "DT_UJac", "Time between calls to get Jacobians (s)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

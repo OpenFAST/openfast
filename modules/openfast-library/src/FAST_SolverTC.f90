@@ -50,15 +50,15 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
 
    ! Generalized alpha damping coefficient
    ! TODO: read from input file
-   p%RhoInf = 0.0_R8Ki
+   p%RhoInf = p_FAST%RhoInf
 
    ! Max number of convergence iterations
    ! TODO: read from input file
-   p%MaxConvIter = 6
+   p%MaxConvIter = p_FAST%MaxConvIter
 
    ! Convergence tolerance
    ! TODO: read from input file
-   p%ConvTol = 1.0e-4_R8Ki
+   p%ConvTol = p_FAST%ConvTol
 
    ! Solver time step
    p%h = p_FAST%DT
