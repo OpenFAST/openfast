@@ -103,15 +103,15 @@ class FASTOutputFile():
         return df
 
 
-def load_ascii_output(filename):
+def load_ascii_output(filename, headerLines = 8, descriptionLine = 4, attributeLine = 6, unitLine = 7, delimiter = None):
     with open(filename) as f:
         info = {}
         info['name'] = os.path.splitext(os.path.basename(filename))[0]
-        header = [f.readline() for _ in range(8)]
-        info['description'] = header[4].strip()
-        info['attribute_names'] = header[6].split()
-        info['attribute_units'] = [unit[1:-1] for unit in header[7].split()]  #removing "()"
-        data = np.array([line.split() for line in f.readlines()], dtype=float)
+        header = [f.readline() for _ in range(headerLines)]
+        info['description'] = header[descriptionLine].strip()
+        info['attribute_names'] = header[attributeLine].strip().split(delimiter)
+        info['attribute_units'] = [unit[1:-1] for unit in header[unitLine].strip().split(delimiter)]  #removing "()"
+        data = np.array([line.split(delimiter) for line in f.readlines()], dtype=float)
         return data, info
 
 def load_binary_output(filename):

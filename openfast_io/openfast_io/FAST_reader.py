@@ -3,6 +3,7 @@ import numpy as np
 from functools import reduce
 import operator
 from openfast_io.FAST_vars_out import FstOutput
+from openfast_io.FAST_output_reader import load_ascii_output
 
 try:
     from rosco.toolbox.utilities import read_DISCON, load_from_txt
@@ -102,11 +103,13 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']  = {}
         self.fst_vt['outlist']  = FstOutput
         self.fst_vt['ElastoDyn'] = {}
+        self.fst_vt['SimpleElastoDyn'] = {}
         self.fst_vt['ElastoDynBlade'] = {}
         self.fst_vt['ElastoDynTower'] = {}
         self.fst_vt['InflowWind'] = {}
         self.fst_vt['AeroDyn15'] = {}
         self.fst_vt['AeroDyn14'] = {}
+        self.fst_vt['AeroDisk'] = {}
         self.fst_vt['AeroDynBlade'] = {}
         self.fst_vt['AeroDynTower'] = {}
         self.fst_vt['AeroDynPolar'] = {}
@@ -147,7 +150,7 @@ class InputReader_OpenFAST(object):
             var = var.replace(' ', '')
             loop_dict(vartree_head, var, [])
 
-    def read_outlist(self,f,module):
+    def read_outlist_freeForm(self,f,module):
         '''
         Replacement for set_outlist that doesn't care about whether the channel is in the outlist vartree
         Easier, but riskier because OpenFAST can crash
@@ -165,6 +168,28 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['outlist'][module][c] = True
             data = f.readline()
     
+    def read_outlist(self,f,module):
+        '''
+        Read the outlist section of the FAST input file, genralized for most modules
+
+        Inputs: f - file handle
+                module - of OpenFAST, e.g. ElastoDyn, ServoDyn, AeroDyn, AeroDisk, etc.
+
+        '''
+        data = f.readline().split()[0] # to counter if we dont have any quotes
+        while data != 'END':
+            if data.find('"')>=0:
+                channels = data.split('"')
+                channel_list = channels[1].split(',')
+            else:
+                row_string = data.split(',')
+                if len(row_string)==1:
+                    channel_list = [row_string[0].split('\n')[0]]
+                else:
+                    channel_list = row_string
+            self.set_outlist(self.fst_vt['outlist'][module], channel_list)
+            data = f.readline().split()[0] # to counter if we dont have any quotes
+
     def read_MainInput(self):
         # Main FAST v8.16-v8.17 Input File
         # Currently no differences between FASTv8.16 and OpenFAST.
@@ -498,6 +523,109 @@ class InputReader_OpenFAST(object):
             None
 
         f.close()
+
+    def read_SimpleElastoDyn(self, sed_file):
+        # Read the Simplified ElastoDyn input file
+        '''
+        Here is the format of the Simplified ElastoDyn input file:
+
+        ------- SIMPLIFIED ELASTODYN INPUT FILE ----------------------------------------
+        Test case input file for SED (not representative of any model)
+        ---------------------- SIMULATION CONTROL --------------------------------------
+        True          Echo        - Echo input data to "<RootName>.ech" (flag)
+                3   IntMethod   - Integration method: {1: RK4, 2: AB4, or 3: ABM4} (-)
+        "default"     DT          - Integration time step (s)
+        ---------------------- DEGREES OF FREEDOM --------------------------------------
+        True          GenDOF      - Generator DOF (flag)
+        True          YawDOF      - Yaw degree of freedom -- controlled by controller (flag)
+        ---------------------- INITIAL CONDITIONS --------------------------------------
+                0   Azimuth     - Initial azimuth angle for blades (degrees)
+                0   BlPitch     - Blades initial pitch (degrees)
+            12.1   RotSpeed    - Initial or fixed rotor speed (rpm)
+                0   NacYaw      - Initial or fixed nacelle-yaw angle (degrees)
+                0   PtfmPitch   - Fixed pitch tilt rotational displacement of platform (degrees)
+        ---------------------- TURBINE CONFIGURATION -----------------------------------
+                3   NumBl       - Number of blades (-)
+                63   TipRad      - The distance from the rotor apex to the blade tip (meters)
+                1.5   HubRad      - The distance from the rotor apex to the blade root (meters)
+            -2.5   PreCone     - Blades cone angle (degrees)
+            -5.0191   OverHang    - Distance from yaw axis to rotor apex [3 blades] or teeter pin [2 blades] (meters)
+                -5   ShftTilt    - Rotor shaft tilt angle (degrees)
+            1.96256   Twr2Shft    - Vertical distance from the tower-top to the rotor shaft (meters)
+            87.6   TowerHt     - Height of tower above ground level [onshore] or MSL [offshore] (meters)
+        ---------------------- MASS AND INERTIA ----------------------------------------
+        38677052   RotIner     - Rot inertia about rotor axis [blades + hub] (kg m^2)
+            534.116   GenIner     - Generator inertia about HSS (kg m^2)
+        ---------------------- DRIVETRAIN ----------------------------------------------
+                97   GBoxRatio   - Gearbox ratio (-)
+        ---------------------- OUTPUT --------------------------------------------------
+                    OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+        "BlPitch1"
+        "BlPitch2"
+        "BlPitch3"
+        "Azimuth"                 - Blades azimuth angle                        (deg)
+        "RotSpeed"                - Low-speed shaft rotational speed            (rpm)
+        "RotAcc"                  - Low-speed shaft rotational acceleration     (rad/s^2)
+        "GenSpeed"                - High-speed shaft rotational speed           (rpm)
+        "GenAcc"                  - High-speed shaft rotational acceleration    (rad/s^2)
+        "Yaw"                     - Commanded yaw angle
+        "YawRate"                 - Commanded yaw angle rate
+        "RotPwr"
+        "RotTorq"
+        END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+        -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        '''
+        f = open(sed_file)
+
+        f.readline()
+        f.readline()
+        f.readline()
+        self.fst_vt['SimpleElastoDyn']['Echo'] = bool_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['IntMethod'] = int_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['DT'] = float_read(f.readline().split()[0])
+
+        # Degrees of Freedom
+        f.readline()
+        self.fst_vt['SimpleElastoDyn']['GenDOF'] = bool_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['YawDOF'] = bool_read(f.readline().split()[0])
+
+        # Initial Conditions
+        f.readline()
+        self.fst_vt['SimpleElastoDyn']['Azimuth'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['BlPitch'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['RotSpeed'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['NacYaw'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['PtfmPitch'] = float_read(f.readline().split()[0])
+
+        # Turbine Configuration
+        f.readline()
+        self.fst_vt['SimpleElastoDyn']['NumBl'] = int_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['TipRad'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['HubRad'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['PreCone'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['OverHang'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['ShftTilt'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['Twr2Shft'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['TowerHt'] = float_read(f.readline().split()[0])
+
+        # Mass and Inertia
+        f.readline()
+        self.fst_vt['SimpleElastoDyn']['RotIner'] = float_read(f.readline().split()[0])
+        self.fst_vt['SimpleElastoDyn']['GenIner'] = float_read(f.readline().split()[0])
+
+        # Drivetrain
+        f.readline()
+        self.fst_vt['SimpleElastoDyn']['GBoxRatio'] = float_read(f.readline().split()[0])
+
+        # Output
+        f.readline()
+        f.readline()
+
+        self.read_outlist(f,'SimpleElastoDyn')
+
+        f.close()
+
+
 
     def read_ElastoDynBlade(self, blade_file):
         # ElastoDyn v1.00 Blade Input File
@@ -1440,6 +1568,60 @@ class InputReader_OpenFAST(object):
 
         return airfoil
 
+    def read_AeroDisk(self):
+        ''''
+        Reading the AeroDisk input file.
+        '''
+
+        aDisk_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile'])
+        f = open(aDisk_file)
+        f.readline()
+        f.readline()
+        f.readline()
+
+        # Simulation Control
+        self.fst_vt['AeroDisk']['Echo'] = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDisk']['DT'] = float_read(f.readline().split()[0])
+
+        # Environmental Conditions
+        f.readline()
+        self.fst_vt['AeroDisk']['AirDens'] = float_read(f.readline().split()[0])
+
+        # Actuator Disk Properties
+        f.readline()
+        self.fst_vt['AeroDisk']['RotorRad'] = float_read(f.readline().split()[0])
+        
+        # read InColNames      - Input column headers (string) {may include a combination of "TSR, RtSpd, VRel, Pitch, Skew"} (up to 4 columns) 
+        # Read between the quotes
+        self.fst_vt['AeroDisk']['InColNames'] = read_array(f, len = None, split_val=',', array_type=str)
+        # read InColDims       - Number of unique values in each column (-) (must have same number of columns as InColName) [each >=2]
+        self.fst_vt['AeroDisk']['InColDims'] = read_array(f, len=len(self.fst_vt['AeroDisk']['InColNames']), array_type=int)
+
+        # read the contents table of the CSV file referenced next
+        # if the next line starts with an @, then it is a file reference
+        line = f.readline()
+        if line[0] == '@':
+            self.fst_vt['AeroDisk']['actuatorDiskFile'] = os.path.join(self.FAST_directory, line[1:].strip())
+
+            # using the load_ascii_output function to read the CSV file, ;)
+            data, info = load_ascii_output(self.fst_vt['AeroDisk']['actuatorDiskFile'], headerLines=3,
+                                           descriptionLine=0, attributeLine=1, unitLine=2, delimiter = ',')
+            self.fst_vt['AeroDisk']['actuatorDiskTable'] = {'dsc': info['description'], 
+                                                            'attr': info['attribute_names'], 
+                                                            'units': info['attribute_units'], 
+                                                            'data': data} 
+        else:
+            raise Exception('Expecting a file reference to the actuator disk CSV file')
+
+        # read the output list
+        f.readline()
+        f.readline()
+
+        self.read_outlist(f,'AeroDisk')
+
+        f.close()
+
+
     def read_ServoDyn(self):
         # ServoDyn v1.05 Input File
         # Currently no differences between FASTv8.16 and OpenFAST.
@@ -2248,7 +2430,7 @@ class InputReader_OpenFAST(object):
 
         # SeaState Outlist
         f.readline()
-        self.read_outlist(f,'SeaState')
+        self.read_outlist_freeForm(f,'SeaState')
 
         f.close()
     
@@ -2555,7 +2737,7 @@ class InputReader_OpenFAST(object):
             self.fst_vt['SubDyn']['NodeCnt'][i]      = [int(node) for node in ln[2:]]
         f.readline()
         # SSOutList
-        self.read_outlist(f,'SubDyn')
+        self.read_outlist_freeForm(f,'SubDyn')
             
         f.close()
 
@@ -3042,7 +3224,7 @@ class InputReader_OpenFAST(object):
 
             elif 'outputs' in data_line:
 
-                self.read_outlist(f,'MoorDyn')
+                self.read_outlist_freeForm(f,'MoorDyn')
 
                 f.close()
                 break
@@ -3078,19 +3260,24 @@ class InputReader_OpenFAST(object):
           
         self.read_MainInput()
         ed_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['EDFile'])
-        self.read_ElastoDyn(ed_file)
-        if not os.path.isabs(self.fst_vt['ElastoDyn']['BldFile1']):
-            ed_blade_file = os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['BldFile1'])
-        if self.fst_vt['Fst']['CompElast'] == 1 or  os.path.isfile(ed_blade_file): # If elastodyn blade is being used OR if the blade file exists
-            self.read_ElastoDynBlade(ed_blade_file)
-        if not os.path.isabs(self.fst_vt['ElastoDyn']['TwrFile']):
-            ed_tower_file = os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['TwrFile'])
-        self.read_ElastoDynTower(ed_tower_file)
+
+        if self.fst_vt['Fst']['CompElast'] == 3: # SimpleElastoDyn
+            self.read_SimpleElastoDyn(ed_file)
+        else:
+            self.read_ElastoDyn(ed_file)
+            if not os.path.isabs(self.fst_vt['ElastoDyn']['BldFile1']):
+                ed_blade_file = os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['BldFile1'])
+            if self.fst_vt['Fst']['CompElast'] == 1 or  os.path.isfile(ed_blade_file): # If elastodyn blade is being used OR if the blade file exists
+                self.read_ElastoDynBlade(ed_blade_file)
+            if not os.path.isabs(self.fst_vt['ElastoDyn']['TwrFile']):
+                ed_tower_file = os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['TwrFile'])
+            self.read_ElastoDynTower(ed_tower_file)
+        
         if self.fst_vt['Fst']['CompInflow'] == 1:
             self.read_InflowWind()
         # AeroDyn version selection
         if self.fst_vt['Fst']['CompAero'] == 1:
-            self.read_AeroDyn14()
+            self.read_AeroDisk()
         elif self.fst_vt['Fst']['CompAero'] == 2:
             self.read_AeroDyn15()
             

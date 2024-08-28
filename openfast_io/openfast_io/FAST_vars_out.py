@@ -9668,6 +9668,79 @@ ExtPtfm['CBF_024']                = False #                  - Modal force      
 ExtPtfm['CBF_025']                = False #                  - Modal force        on internal Craig-Bampton mode number XXX  (-)
 ExtPtfm['WavElev']                = False #                  - Wave elevation                                                (m)
 
+""" AeroDisk """
+AeroDisk = {}
+
+# All channels
+AeroDisk['ADSpeed']           = False     # (rpm); Actuator disk rotational speed; 
+AeroDisk['ADTSR']             = False     # (-); Actuator disk tip-speed ratio; 
+AeroDisk['ADPitch']           = False     # (deg); Actuator disk collective blade-pitch angle; 
+AeroDisk['ADVWindx']          = False     # (m/s); Actuator-disk-average wind velocity; local coordinate system - X
+AeroDisk['ADVWindy']          = False     # (m/s); Actuator-disk-average wind velocity; local coordinate system - Y
+AeroDisk['ADVWindz']          = False     # (m/s); Actuator-disk-average wind velocity; local coordinate system - Z
+AeroDisk['ADVWindxi']         = False     # (m/s); Actuator-disk-average wind velocity; global (inertial) coordinate system - X
+AeroDisk['ADVWindyi']         = False     # (m/s); Actuator-disk-average wind velocity; global (inertial) coordinate system - Y
+AeroDisk['ADVWindzi']         = False     # (m/s); Actuator-disk-average wind velocity; global (inertial) coordinate system - Z
+AeroDisk['ADSTVx']            = False     # (m/s); Actuator-disk structural translation velocity; local coordinate system - X
+AeroDisk['ADSTVy']            = False     # (m/s); Actuator-disk structural translation velocity; local coordinate system - Y
+AeroDisk['ADSTVz']            = False     # (m/s); Actuator-disk structural translation velocity; local coordinate system - Z
+AeroDisk['ADSTVxi']           = False     # (m/s); Actuator-disk structural translation velocity; global (inertial) coordinate system - X
+AeroDisk['ADSTVyi']           = False     # (m/s); Actuator-disk structural translation velocity; global (inertial) coordinate system - Y
+AeroDisk['ADSTVzi']           = False     # (m/s); Actuator-disk structural translation velocity; global (inertial) coordinate system - Z
+AeroDisk['ADVRel']            = False     # (m/s); Actuator-disk -average relative wind speed; 
+AeroDisk['ADSkew']            = False     # (deg); Actuator-disk inflow-skew angle; 
+AeroDisk['ADYawErr']          = False     # (deg); Actuator-disk yaw-error angle; 
+AeroDisk['ADCp']              = False     # (-); Actuator-disk coeficent of power; 
+AeroDisk['ADCt']              = False     # (-); Actuator-disk coeficent of thrust; 
+AeroDisk['ADCq']              = False     # (-); Actuator-disk coeficent of torque; 
+AeroDisk['ADFx']              = False     # (N); Actuator-disk aerodynamic force; local coordinate system - X
+AeroDisk['ADFy']              = False     # (N); Actuator-disk aerodynamic force; local coordinate system - Y
+AeroDisk['ADFz']              = False     # (N); Actuator-disk aerodynamic force; local coordinate system - Z
+AeroDisk['ADFxi']             = False     # (N); Actuator-disk aerodynamic force; global (inertial) coordinate system - X
+AeroDisk['ADFyi']             = False     # (N); Actuator-disk aerodynamic force; global (inertial) coordinate system - Y
+AeroDisk['ADFzi']             = False     # (N); Actuator-disk aerodynamic force; global (inertial) coordinate system - Z
+AeroDisk['ADMx']              = False     # (N-m); Actuator-disk aerodynamic moment; local coordinate system - X
+AeroDisk['ADMy']              = False     # (N-m); Actuator-disk aerodynamic moment; local coordinate system - Y
+AeroDisk['ADMz']              = False     # (N-m); Actuator-disk aerodynamic moment; local coordinate system - Z
+AeroDisk['ADMxi']             = False     # (N-m); Actuator-disk aerodynamic moment; global (inertial) coordinate system - X
+AeroDisk['ADMyi']             = False     # (N-m); Actuator-disk aerodynamic moment; global (inertial) coordinate system - Y
+AeroDisk['ADMzi']             = False     # (N-m); Actuator-disk aerodynamic moment; global (inertial) coordinate system - Z
+AeroDisk['ADPower']           = False     # (W); Actuator-disk power; 
+
+
+""" SimpleElastoDyn """
+SimpleElastoDyn = {}
+
+# Outputs
+SimpleElastoDyn['Azimuth']    = False     # (deg); Rotor azimuth angle (position); 
+SimpleElastoDyn['RotSpeed']   = False     # (rpm); Rotor azimuth angular speed; 
+SimpleElastoDyn['LSSTipVxa']  = False     # (rpm); Rotor azimuth angular speed; 
+SimpleElastoDyn['LSSTipVxs']  = False     # (rpm); Rotor azimuth angular speed; 
+SimpleElastoDyn['LSSTipV']    = False     # (rpm); Rotor azimuth angular speed; 
+SimpleElastoDyn['RotAcc']     = False     # (deg/s^2); Rotor azimuth angular acceleration; 
+SimpleElastoDyn['LSSTipAxs']  = False     # (deg/s^2); Rotor azimuth angular acceleration; 
+SimpleElastoDyn['LSSTipA']    = False     # (deg/s^2); Rotor azimuth angular acceleration; 
+SimpleElastoDyn['LSSTipAxa']  = False     # (deg/s^2); Rotor azimuth angular acceleration; 
+SimpleElastoDyn['GenSpeed']   = False     # (rpm); Angular speed of the high-speed shaft and generator; 
+SimpleElastoDyn['HSShftV']    = False     # (rpm); Angular speed of the high-speed shaft and generator; 
+SimpleElastoDyn['GenAcc']     = False     # (deg/s^2); Angular acceleration of the high-speed shaft and generator; 
+SimpleElastoDyn['HSShftA']    = False     # (deg/s^2); Angular acceleration of the high-speed shaft and generator; 
+SimpleElastoDyn['Yaw']        = False     # (deg); Commanded yaw position from controller; 
+SimpleElastoDyn['YawRate']    = False     # (deg/s); commanded yaw rate from controller; 
+
+# Blade Pitch Motions
+SimpleElastoDyn['BldPitch1']  = False     # (deg); Blade 1 pitch angle (position); Positive towards feather about the minus zc1- and minus zb1-axes
+SimpleElastoDyn['BlPitch1']   = False     # (deg); Blade 1 pitch angle (position); Positive towards feather about the minus zc1- and minus zb1-axes
+SimpleElastoDyn['BldPitch2']  = False     # (deg); Blade 2 pitch angle (position); Positive towards feather about the minus zc2- and minus zb2-axes
+SimpleElastoDyn['BlPitch2']   = False     # (deg); Blade 2 pitch angle (position); Positive towards feather about the minus zc2- and minus zb2-axes
+SimpleElastoDyn['BldPitch3']  = False     # (deg); Blade 3 pitch angle (position); Positive towards feather about the minus zc3- and minus zb3-axes
+SimpleElastoDyn['BlPitch3']   = False     # (deg); Blade 3 pitch angle (position); Positive towards feather about the minus zc3- and minus zb3-axes
+
+# Hub and Rotor Loads
+SimpleElastoDyn['RotTorq']    = False     # (kN-m); Low-speed shaft torque (this is constant along the shaft and is equivalent to the rotor torque); About the xa- and xs-axes
+SimpleElastoDyn['LSShftTq']   = False     # (kN-m); Low-speed shaft torque (this is constant along the shaft and is equivalent to the rotor torque); About the xa- and xs-axes
+SimpleElastoDyn['RotPwr']     = False     # (kW); Rotor power (this is equivalent to the low-speed shaft power); N/A
+SimpleElastoDyn['LSShftPwr']  = False     # (kW); Rotor power (this is equivalent to the low-speed shaft power); N/A
 
 
 """ Final Output Dictionary """
@@ -9687,3 +9760,5 @@ FstOutput['BeamDyn_Nodes']    = BeamDyn_Nodes
 FstOutput['ElastoDyn_Nodes']  = ElastoDyn_Nodes
 FstOutput['MoorDyn']          = MoorDyn
 FstOutput['ExtPtfm']          = ExtPtfm
+FstOutput['AeroDisk']         = AeroDisk
+FstOutput['SimpleElastoDyn']  = SimpleElastoDyn

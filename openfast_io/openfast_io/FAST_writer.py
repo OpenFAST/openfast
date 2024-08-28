@@ -150,17 +150,20 @@ class InputWriter_OpenFAST(object):
         if not os.path.exists(self.FAST_runDirectory):
             os.makedirs(self.FAST_runDirectory)
 
-        # If elastodyn blade is being used OR if the blade file exists
-        if self.fst_vt['Fst']['CompElast'] == 1 or os.path.isfile(self.fst_vt['ElastoDyn']['BldFile1']):
-            self.write_ElastoDynBlade()
+        if self.fst_vt['Fst']['CompElast'] == 3: # Simplified ElastoDyn
+            self.write_SimpleElastoDyn()
+        else:
+            # If elastodyn blade is being used OR if the blade file exists
+            if self.fst_vt['Fst']['CompElast'] == 1 or os.path.isfile(self.fst_vt['ElastoDyn']['BldFile1']):
+                self.write_ElastoDynBlade()
 
-        self.write_ElastoDynTower()
-        self.write_ElastoDyn()
+            self.write_ElastoDynTower()
+            self.write_ElastoDyn()
         # self.write_WindWnd()
         if self.fst_vt['Fst']['CompInflow'] == 1:
             self.write_InflowWind()
         if self.fst_vt['Fst']['CompAero'] == 1:
-            self.write_AeroDyn14()
+            self.write_AeroDisk()
         elif self.fst_vt['Fst']['CompAero'] == 2:
             self.write_AeroDyn15()
         
@@ -457,10 +460,108 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
+    def write_SimpleElastoDyn(self):
+        '''
+        Here is the format of the Simplified ElastoDyn input file:
+
+        ------- SIMPLIFIED ELASTODYN INPUT FILE ----------------------------------------
+        Test case input file for SED (not representative of any model)
+        ---------------------- SIMULATION CONTROL --------------------------------------
+        True          Echo        - Echo input data to "<RootName>.ech" (flag)
+                3   IntMethod   - Integration method: {1: RK4, 2: AB4, or 3: ABM4} (-)
+        "default"     DT          - Integration time step (s)
+        ---------------------- DEGREES OF FREEDOM --------------------------------------
+        True          GenDOF      - Generator DOF (flag)
+        True          YawDOF      - Yaw degree of freedom -- controlled by controller (flag)
+        ---------------------- INITIAL CONDITIONS --------------------------------------
+                0   Azimuth     - Initial azimuth angle for blades (degrees)
+                0   BlPitch     - Blades initial pitch (degrees)
+            12.1   RotSpeed    - Initial or fixed rotor speed (rpm)
+                0   NacYaw      - Initial or fixed nacelle-yaw angle (degrees)
+                0   PtfmPitch   - Fixed pitch tilt rotational displacement of platform (degrees)
+        ---------------------- TURBINE CONFIGURATION -----------------------------------
+                3   NumBl       - Number of blades (-)
+                63   TipRad      - The distance from the rotor apex to the blade tip (meters)
+                1.5   HubRad      - The distance from the rotor apex to the blade root (meters)
+            -2.5   PreCone     - Blades cone angle (degrees)
+            -5.0191   OverHang    - Distance from yaw axis to rotor apex [3 blades] or teeter pin [2 blades] (meters)
+                -5   ShftTilt    - Rotor shaft tilt angle (degrees)
+            1.96256   Twr2Shft    - Vertical distance from the tower-top to the rotor shaft (meters)
+            87.6   TowerHt     - Height of tower above ground level [onshore] or MSL [offshore] (meters)
+        ---------------------- MASS AND INERTIA ----------------------------------------
+        38677052   RotIner     - Rot inertia about rotor axis [blades + hub] (kg m^2)
+            534.116   GenIner     - Generator inertia about HSS (kg m^2)
+        ---------------------- DRIVETRAIN ----------------------------------------------
+                97   GBoxRatio   - Gearbox ratio (-)
+        ---------------------- OUTPUT --------------------------------------------------
+                    OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+        "BlPitch1"
+        "BlPitch2"
+        "BlPitch3"
+        "Azimuth"                 - Blades azimuth angle                        (deg)
+        "RotSpeed"                - Low-speed shaft rotational speed            (rpm)
+        "RotAcc"                  - Low-speed shaft rotational acceleration     (rad/s^2)
+        "GenSpeed"                - High-speed shaft rotational speed           (rpm)
+        "GenAcc"                  - High-speed shaft rotational acceleration    (rad/s^2)
+        "Yaw"                     - Commanded yaw angle
+        "YawRate"                 - Commanded yaw angle rate
+        "RotPwr"
+        "RotTorq"
+        END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+        -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        '''
+        self.fst_vt['Fst']['EDFile'] = self.FAST_namingOut + '_SimpleElastoDyn.dat'
+        sed_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['EDFile'])
+        f = open(sed_file, 'w')
+
+        f.write('------- SIMPLIFIED ELASTODYN INPUT FILE ----------------------------------------\n')
+        f.write('Generated with OpenFAST_IO\n')
+        f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['Echo'], 'Echo', '- Echo input data to "<RootName>.ech" (flag)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['IntMethod'], 'IntMethod', '- Integration method: {1: RK4, 2: AB4, or 3: ABM4} (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['DT'], 'DT', '- Integration time step (s)\n'))
+        f.write('---------------------- DEGREES OF FREEDOM --------------------------------------\n')
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['GenDOF'], 'GenDOF', '- Generator DOF (flag)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['YawDOF'], 'YawDOF', '- Yaw degree of freedom -- controlled by controller (flag)\n'))
+        f.write('---------------------- INITIAL CONDITIONS --------------------------------------\n')
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['Azimuth'], 'Azimuth', '- Initial azimuth angle for blades (degrees)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['BlPitch'], 'BlPitch', '- Blades initial pitch (degrees)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['RotSpeed'], 'RotSpeed', '- Initial or fixed rotor speed (rpm)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['NacYaw'], 'NacYaw', '- Initial or fixed nacelle-yaw angle (degrees)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['PtfmPitch'], 'PtfmPitch', '- Fixed pitch tilt rotational displacement of platform (degrees)\n'))
+        f.write('---------------------- TURBINE CONFIGURATION -----------------------------------\n')
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['NumBl'], 'NumBl', '- Number of blades (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['TipRad'], 'TipRad', '- The distance from the rotor apex to the blade tip (meters)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['HubRad'], 'HubRad', '- The distance from the rotor apex to the blade root (meters)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['PreCone'], 'PreCone', '- Blades cone angle (degrees)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['OverHang'], 'OverHang', '- Distance from yaw axis to rotor apex [3 blades] or teeter pin [2 blades] (meters)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['ShftTilt'], 'ShftTilt', '- Rotor shaft tilt angle (degrees)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['Twr2Shft'], 'Twr2Shft', '- Vertical distance from the tower-top to the rotor shaft (meters)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['TowerHt'], 'TowerHt', '- Height of tower above ground level [onshore] or MSL [offshore] (meters)\n'))
+        f.write('---------------------- MASS AND INERTIA ----------------------------------------\n')
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['RotIner'], 'RotIner', '- Rot inertia about rotor axis [blades + hub] (kg m^2)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['GenIner'], 'GenIner', '- Generator inertia about HSS (kg m^2)\n'))
+        f.write('---------------------- DRIVETRAIN ----------------------------------------------\n')
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['SimpleElastoDyn']['GBoxRatio'], 'GBoxRatio', '- Gearbox ratio (-)\n'))
+        f.write('---------------------- OUTPUT --------------------------------------------------\n')
+        f.write('                   OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
+
+        outlist = self.get_outlist(self.fst_vt['outlist'], ['SimpleElastoDyn'])
+        for channel_list in outlist:
+            for i in range(len(channel_list)):
+                f.write('"' + channel_list[i] + '"\n')
+
+        f.write('END of input file (the word "END" must appear in the first 3 columns of this last OutList line)\n')
+        f.write('---------------------------------------------------------------------------------------\n')
+
+        f.flush()
+        os.fsync(f)
+        f.close()
+
     def write_ElastoDynBlade(self):
 
         self.fst_vt['ElastoDyn']['BldFile1'] = self.FAST_namingOut + '_ElastoDyn_blade.dat'
-        self.fst_vt['ElastoDyn']['BldFile2'] = self.fst_vt['ElastoDyn']['BldFile1']
+        self.fst_vt['ElastoDyn']['BldFile2'] = self.fst_vt['ElastoDyn']['BldFile1']         # TODO: have the possibility of different blade files
         self.fst_vt['ElastoDyn']['BldFile3'] = self.fst_vt['ElastoDyn']['BldFile1']
         blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile1'])
         f = open(blade_file, 'w')
@@ -1319,6 +1420,84 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
     
+    def write_AeroDisk(self):
+        # Writing the aeroDisk input file
+        ''''
+        example input file:
+
+        --- AERO DISK INPUT FILE -------
+        NREL 5MW actuator disk input file
+        --- SIMULATION CONTROL ---------
+        true          echo            - Echo input data to "<RootName>.ADsk.ech" (flag)
+        "default"   DT              - Integration time step (s)
+        --- ENVIRONMENTAL CONDITIONS ---
+            1.225   AirDens         - Air density (kg/m^3) (or "default")
+        --- ACTUATOR DISK PROPERTIES ---
+            63.0     RotorRad        - Rotor radius (m) (or "default")
+        "TSR,  RtSpd ,   VRel,  Skew ,   Pitch" InColNames      - Input column headers (string) {may include a combination of "TSR, RtSpd, VRel, Pitch, Skew"} (up to 4 columns) [choose TSR or RtSpd,VRel; if Skew is absent, Skew is modeled as (COS(Skew))^2]
+        48, 0, 0, 0, 104       InColDims       - Number of unique values in each column (-) (must have same number of columns as InColName) [each >=2]
+        @CpCtCq.csv
+        --- OUTPUTS --------------------
+                    OutList         - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+        ADSpeed        ! Actuator disk rotational speed                                                    (rpm)   
+        ADTSR          ! Actuator disk tip-speed ratio                                                     (-)   
+        ADPitch        ! Actuator-disk collective blade-pitch angle                                        (deg)   
+        ADVWindx       ! Actuator-disk-averaged wind velocity (x) in the local coordinate system           (m/s)
+        ADVWindy       ! Actuator-disk-averaged wind velocity (y) in the local coordinate system           (m/s)
+        ADVWindz      
+        
+        '''
+        self.fst_vt['Fst']['AeroFile'] = self.FAST_namingOut + '_AeroDisk.dat'
+        adisk_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['AeroFile'])
+        f = open(adisk_file,'w')
+
+        f.write('--- AERO DISK INPUT FILE -------\n')
+        f.write('Generated with OpenFAST_IO\n')
+        f.write('--- SIMULATION CONTROL ---------\n')
+        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDisk']['Echo'], 'Echo', '- Echo input data to "<RootName>.ADsk.ech" (flag)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDisk']['DT'], 'DT', '- Integration time step (s)\n'))   
+        f.write('--- ENVIRONMENTAL CONDITIONS ---\n')
+        f.write('{:<22f} {:<11} {:}'.format(self.fst_vt['AeroDisk']['AirDens'], 'AirDens', '- Air density (kg/m^3) (or "default")\n'))
+        f.write('--- ACTUATOR DISK PROPERTIES ---\n')
+        f.write('{:<22f} {:<11} {:}'.format(self.fst_vt['AeroDisk']['RotorRad'], 'RotorRad', '- Rotor radius (m) (or "default")\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(['%s'%i for i in self.fst_vt['AeroDisk']['InColNames']]), 'InColNames', '- Input column headers (string) {may include a combination of "TSR, RtSpd, VRel, Pitch, Skew"} (up to 4 columns) [choose TSR or RtSpd,VRel; if Skew is absent, Skew is modeled as (COS(Skew))^2]\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(['%s'%i for i in self.fst_vt['AeroDisk']['InColDims']]), 'InColDims', '- Number of unique values in each column (-) (must have same number of columns as InColName) [each >=2]\n'))
+        self.write_AeroDiskProp()
+        f.write('@{:<22} {:}'.format(self.fst_vt['AeroDisk']['actuatorDiskFile'], '\n'))
+        f.write('--- OUTPUTS --------------------\n')
+        f.write('{:<22} {:<11} {:}'.format('OutList', 'OutList', '- The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n'))
+
+        outlist = self.get_outlist(self.fst_vt['outlist'], ['AeroDisk'])
+        for channel_list in outlist:
+            for i in range(len(channel_list)):
+                f.write('"' + channel_list[i] + '"\n')
+
+        f.write('END of input file (the word "END" must appear in the first 3 columns of this last OutList line)\n')
+        f.write('---------------------------------------------------------------------------------------\n')
+
+        f.flush()
+        os.fsync(f)
+        f.close()
+
+    def write_AeroDiskProp(self):
+        # Writing the aeroDiskProp input file
+
+        self.fst_vt['AeroDisk']['actuatorDiskFile'] = self.FAST_namingOut + '_AeroDiskProp.csv'
+        adiskprop_file = os.path.join(self.FAST_runDirectory,self.fst_vt['AeroDisk']['actuatorDiskFile'])
+        f = open(adiskprop_file,'w')
+
+        f.write('{:<22} {:}'.format(self.fst_vt['AeroDisk']['actuatorDiskTable']['dsc'],'\n'))
+        f.write('{:<22} {:}'.format(', '.join(['%s'%i for i in self.fst_vt['AeroDisk']['actuatorDiskTable']['attr']]), '\n'))
+        f.write('{:<22} {:}'.format(', '.join(['%s'%i for i in self.fst_vt['AeroDisk']['actuatorDiskTable']['units']]), '\n'))
+        for idx in range(len(self.fst_vt['AeroDisk']['actuatorDiskTable']['data'])):
+            f.write('{:<22} {:}'.format(', '.join(['%.6f'%i for i in self.fst_vt['AeroDisk']['actuatorDiskTable']['data'][idx]]), '\n'))
+        
+        f.flush()
+        os.fsync(f)
+        f.close()
+
+
+
     def write_ServoDyn(self):
         # ServoDyn v1.05 Input File
 

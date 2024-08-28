@@ -81,8 +81,22 @@ if __name__=="__main__":
         root_dir = os.path.dirname(os.path.dirname( os.path.dirname( ( os.path.realpath(__file__) ) ) )) + os.sep
         outlist_fast_lib = os.path.join(root_dir, 'docs', 'OtherSupporting' , 'OutListParameters.xls')
         # Sheets to grab
-        sheet_list = ['AeroDyn', 'BeamDyn', 'ElastoDyn', 'InflowWind', 'ServoDyn', 'HydroDyn', 'Morison', 'SeaState', 'SubDyn',
-                        'AeroDyn_Nodes','BeamDyn_Nodes','ElastoDyn_Nodes'] 
+        sheet_list = [
+                        'AeroDyn', 
+                        'BeamDyn', 
+                        'ElastoDyn', 
+                        'InflowWind', 
+                        'ServoDyn', 
+                        'HydroDyn', 
+                        'Morison', 
+                        'SeaState', 
+                        'SubDyn',
+                        'AeroDyn_Nodes',
+                        'BeamDyn_Nodes',
+                        'ElastoDyn_Nodes',
+                        'AeroDisk',
+                        'SimpleElastoDyn',
+                        ] 
         xl_files = [outlist_fast_lib]*len(sheet_list)
         # Output naming
         fname_vars_out = 'FAST_vars_out.py'
