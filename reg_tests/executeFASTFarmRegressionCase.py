@@ -129,8 +129,8 @@ if not noExec:
         sys.exit(returnCode*10)
     
 ### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, caseName + ".out")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".out")
+localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
+baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
