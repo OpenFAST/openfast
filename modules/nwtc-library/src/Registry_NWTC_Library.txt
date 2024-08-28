@@ -18,8 +18,6 @@ typedef     ^             ^                 DbKi                           TimeS
 typedef     ^             ^                 CHARACTER(ChanLen)             ChanNames       {:}    -  - "Strings describing the names of the channels from the binary file (including the time channel)"
 typedef     ^             ^                 CHARACTER(ChanLen)             ChanUnits       {:}    -  - "Strings describing the units of the channels from the binary file (including the time channel)"
 typedef     ^             ^                 ReKi                           Data            {:}{:} -  - "numeric data (rows and columns) from the binary file, including the time channel"
-typedef     ^             ^                 DbKi                           Time            {:}
-typedef     ^             ^                 IntKi                          OutputFileFmtID
 
 typedef   NWTC_Library  OutParmType         IntKi                          Indx             -     -  - "An index into AllOuts array where this channel is computed/stored"
 typedef     ^             ^                 CHARACTER(ChanLen)             Name             -     -  - "Name of the output channel"
