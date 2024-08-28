@@ -64,6 +64,7 @@ MAP_EXTERNCALL void map_initialize_msqs_base(MAP_Input_t u_type, MAP_Parameter_t
 
 
 MAP_EXTERNCALL void set_init_to_null(MAP_InitInput_t init_type, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL void map_set_input_text(MAP_InitInput_t init_type, const char* input_txt_line);
 MAP_EXTERNCALL void map_add_cable_library_input_text(MAP_InitInput_t init_type);
 MAP_EXTERNCALL void map_add_node_input_text(MAP_InitInput_t init_type);
 MAP_EXTERNCALL void map_add_line_input_text(MAP_InitInput_t init_type);
