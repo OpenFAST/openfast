@@ -2049,6 +2049,9 @@ subroutine FAST_LinearizeMappings(ModGlue, Mappings, Turbine, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ''
 
+   ! Exit function if dUdy and dUdu aren't allocated
+   if (.not. (allocated(ModGlue%Lin%dUdy) .and. allocated(ModGlue%Lin%dUdu))) return
+
    ! Initialize dUdy to zero
    ModGlue%Lin%dUdy = 0.0_R8Ki
 

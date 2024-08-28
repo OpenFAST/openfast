@@ -932,10 +932,10 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
    iy = 1
 
    ! Initialize data in Jacobian matrices to zero
-   m%ModGlue%Lin%dYdu = 0.0_R8Ki
-   m%ModGlue%Lin%dXdu = 0.0_R8Ki
-   m%ModGlue%Lin%dYdx = 0.0_R8Ki
-   m%ModGlue%Lin%dXdx = 0.0_R8Ki
+   if (allocated(m%ModGlue%Lin%dYdu)) m%ModGlue%Lin%dYdu = 0.0_R8Ki
+   if (allocated(m%ModGlue%Lin%dXdu)) m%ModGlue%Lin%dXdu = 0.0_R8Ki
+   if (allocated(m%ModGlue%Lin%dYdx)) m%ModGlue%Lin%dYdx = 0.0_R8Ki
+   if (allocated(m%ModGlue%Lin%dXdx)) m%ModGlue%Lin%dXdx = 0.0_R8Ki
 
    ! Loop through linearization modules by index
    do i = 1, size(m%ModGlue%ModData)
@@ -1117,6 +1117,8 @@ subroutine CalcGlueStateMatrices(Vars, Lin, JacScaleFactor, ErrStat, ErrMsg)
    character(ErrMsgLen)             :: ErrMsg2
    real(R8Ki), allocatable          :: G(:, :), tmp(:, :)
    integer(IntKi), allocatable      :: ipiv(:)
+
+   if (.not. allocated(Lin%dUdu)) return
 
    ! A = dXdx
    ! B = dXdu
