@@ -46,6 +46,8 @@ target_sources(
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/MAP_Types.h>
     $<INSTALL_INTERFACE:mapsys.h>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/mapsys.h>
+    $<INSTALL_INTERFACE:maperror.h>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/maperror.h>
     $<INSTALL_INTERFACE:mapapi.h>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/mapapi.h>
 )
