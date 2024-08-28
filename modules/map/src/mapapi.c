@@ -21,10 +21,9 @@
  ****************************************************************/
 
 
-#include "map.h"
-#include "maperror.h"
-#include "MAP_Types.h"
 #include "mapapi.h"
+#include "map.h"
+#include "MAP_Types.h"
 #include "lineroutines.h"
 #include "freedata.h"
 #include "mapinit.h"
