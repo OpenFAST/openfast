@@ -18,6 +18,8 @@ typedef     ^             ^                 DbKi                     TimeStep - 
 typedef     ^             ^                 CHARACTER(ChanLen)       ChanNames {:} - - "Strings describing the names of the channels from the binary file (including the time channel)"
 typedef     ^             ^                 CHARACTER(ChanLen)       ChanUnits {:} - - "Strings describing the units of the channels from the binary file (including the time channel)"
 typedef     ^             ^                 ReKi                     Data      {:}{:} - - "numeric data (rows and columns) from the binary file, including the time channel"
+typedef     ^             ^                 DbKi                     Time      {:}    - - "The time being output to the file (if using FileFmtID_WithoutTime [or FileFmtID_ChanLen]: element 1 is the first output time, element 2 is the delta t)"
+typedef     ^             ^                 IntKi                    OutputFileFmtID - - - "Identifier for file format (changes definition of Time field)"
 
 typedef   NWTC_Library  OutParmType         IntKi                    Indx   - - - "An index into AllOuts array where this channel is computed/stored"
 typedef     ^             ^                 CHARACTER(ChanLen)       Name   - - - "Name of the output channel"
@@ -34,7 +36,7 @@ typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  Lines
 typedef   NWTC_Library  Quaternion          ReKi                     q0
 typedef     ^             ^                 ReKi                     v  {3}
 
-typedef   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
+typedef   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi      pRNG
 typedef     ^             ^                     IntKi                RandSeed          {3}
 typedef     ^             ^                     IntKi                RandSeedAry       {:}
 typedef     ^             ^              CHARACTER(6)                RNG_type
