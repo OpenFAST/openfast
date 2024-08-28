@@ -37,7 +37,7 @@ import pass_fail
 from errorPlotting import exportCaseSummary
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
+excludeExt=['.ech','.yaml','.sum','.log']
 
 ##### Main program
 
@@ -120,7 +120,8 @@ else:
             shutil.copy2(srcname, dstname)
 
 if not os.path.isdir(testBuildDirectory):
-    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, 
+                 renameExtDict={'.out': '.ref.out', '.outb': '.ref.outb'})
 
 ### Run openfast on the test case
 if not noExec:
@@ -143,12 +144,8 @@ if caseName.endswith('_Restart'):
         sys.exit(returnCode*10)
 
 ### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, caseName + ".out")
-if not os.path.exists(localOutFile):
-    localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".out")
-if not os.path.exists(baselineOutFile):
-    baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
+localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
+baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 

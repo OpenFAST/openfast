@@ -107,8 +107,8 @@ if not noExec:
     
 ### Build the filesystem navigation variables for running the regression test
 # testing on file 2.  Gives each observer and sweep of frequency ranges
-localOutFile = os.path.join(testBuildDirectory, caseName + "_2.out")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName + "_2.out")
+localOutFile = os.path.join(testBuildDirectory, caseName + "_2.outb")
+baselineOutFile = os.path.join(targetOutputDirectory, caseName + "_2.outb")
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
