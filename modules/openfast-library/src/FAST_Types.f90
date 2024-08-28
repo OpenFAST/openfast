@@ -153,7 +153,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: CompServo = 0_IntKi      !< Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD} [-]
     INTEGER(IntKi)  :: CompSeaSt = 0_IntKi      !< Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt} [-]
     INTEGER(IntKi)  :: CompHydro = 0_IntKi      !< Compute hydrodynamic loads (switch) {Module_None; Module_HD} [-]
-    INTEGER(IntKi)  :: CompSub = 0_IntKi      !< Compute sub-structural dynamics (switch) {Module_None; Module_HD} [-]
+    INTEGER(IntKi)  :: CompSub = 0_IntKi      !< Compute sub-structural dynamics (switch) {Module_None; Module_SD, Module_ExtPtfm} [-]
     INTEGER(IntKi)  :: CompMooring = 0_IntKi      !< Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca} [-]
     INTEGER(IntKi)  :: CompIce = 0_IntKi      !< Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD} [-]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine} [-]
