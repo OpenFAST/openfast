@@ -30,6 +30,10 @@
 // MAP_ERROR_CODE
 #include "maperror.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 // Some redefinitions from MAP_Types.h, so the API does not need to exposes the
 // internal data structures.
@@ -587,5 +591,8 @@ MAP_EXTERNCALL MAP_Output_t map_create_output_type(char* map_msg, MAP_ERROR_CODE
  */
 MAP_EXTERNCALL MAP_ContinuousState_t map_create_continuous_type(char* map_msg, MAP_ERROR_CODE* ierr);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _MAPAPI_H */
