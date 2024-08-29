@@ -81,7 +81,7 @@ PROGRAM HydroDynDriver
    real(DbKi)                                         :: TiLstPrn             ! The simulation time of the last print
    integer                                            :: n_SttsTime           ! Number of time steps between screen status messages (-)
 
-   integer                                            :: i                    ! Loop counter   
+   integer                                            :: i                    ! Loop counter
    
    logical                                            :: SeaState_Initialized, HydroDyn_Initialized
    ! For testing
@@ -172,7 +172,8 @@ PROGRAM HydroDynDriver
    InitInData_SeaSt%OutRootName  = trim(drvrData%OutRootName)//'.SEA'
    InitInData_SeaSt%TMax         = drvrData%TMax
    InitInData_SeaSt%Linearize    = drvrData%Linearize
-   
+
+      ! Initialize the HydroDyn module
    Interval = drvrData%TimeInterval
    
    call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
@@ -322,7 +323,6 @@ PROGRAM HydroDynDriver
 
       CALL HydroDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, m, ErrStat, ErrMsg ); CALL CheckError()
       
-   
       IF ( MOD( n + 1, n_SttsTime ) == 0 ) THEN
          CALL SimStatus( TiLstPrn, PrevClockTime, time, drvrData%TMax )
       ENDIF   
