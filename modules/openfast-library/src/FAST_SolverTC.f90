@@ -784,9 +784,9 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
       ! Increment total number of convergence iterations in step
       TotalIter = TotalIter + 1
 
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
       ! Calculate outputs for TC & Opt1 modules
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
 
       do i = 1, size(m%Mod%ModData)
          associate (ModData => m%Mod%ModData(i))
@@ -796,29 +796,31 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
          end associate
       end do
 
-      !----------------------------------------------------------------------
-      ! Convergence iteration check
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
+      ! Convergence iteration and input check
+      !-------------------------------------------------------------------------
 
-      ! If convergence iteration has reached or exceeded limit, exit loop
-      if (ConvIter >= p%MaxConvIter) exit
+      ! If convergence iteration limit has been reached or there are no inputs
+      ! involved in module mappings, exit loop
+      if ((ConvIter >= p%MaxConvIter) .or. (m%Mod%Vars%Nu == 0)) exit
 
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
       ! Update Jacobian
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
 
+      ! Only calculate the Jacobian on the first convergence iteration, as
+      ! it should remain the same through subsequent iterations
       if (ConvIter == 0) then
 
          !----------------------------------------------------------------------
          ! Calculate Input-Output Solve Jacobian for TC and Option 1 modules
          !----------------------------------------------------------------------
 
-         if (allocated(m%Mod%Lin%dYdu)) m%Mod%Lin%dYdu = 0.0_R8Ki
-         if (allocated(m%Mod%Lin%dUdy)) m%Mod%Lin%dUdy = 0.0_R8Ki
-         if (allocated(m%Mod%Lin%dUdu)) then
-            call Eye2D(m%Mod%Lin%dUdu, ErrStat2, ErrMsg2)
-            if (Failed()) return
-         end if
+         m%Mod%Lin%dYdu = 0.0_R8Ki
+         m%Mod%Lin%dUdy = 0.0_R8Ki
+
+         call Eye2D(m%Mod%Lin%dUdu, ErrStat2, ErrMsg2)
+         if (Failed()) return
 
          ! Loop through TC and Option 1 modules and calculate dYdu
          do i = 1, size(m%Mod%ModData)
@@ -830,22 +832,19 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
          end do
 
          ! Calculate dUdu and dUdy for TC and Option 1 modules
-         if (allocated(m%Mod%Lin%dUdy) .and. allocated(m%Mod%Lin%dUdu)) then
-            call FAST_LinearizeMappings(m%Mod, GlueModMaps, Turbine, ErrStat2, ErrMsg2)
-            if (Failed()) return
-         end if
+         call FAST_LinearizeMappings(m%Mod, GlueModMaps, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
 
          !----------------------------------------------------------------------
          ! Assemble Jacobian
          !----------------------------------------------------------------------
 
          ! Jac = m%Mod%Lin%dUdu + matmul(m%Mod%Lin%dUdy, m%Mod%Lin%dYdu)
-         if (m%Mod%Vars%Nu > 0) then
-            Jac = m%Mod%Lin%dUdu
-            call LAPACK_GEMM('N', 'N', 1.0_R8Ki, m%Mod%Lin%dUdy, m%Mod%Lin%dYdu, 1.0_R8Ki, Jac, ErrStat2, ErrMsg2); if (Failed()) return
-         end if
+         Jac = m%Mod%Lin%dUdu
+         call LAPACK_GEMM('N', 'N', 1.0_R8Ki, m%Mod%Lin%dUdy, m%Mod%Lin%dYdu, 1.0_R8Ki, Jac, ErrStat2, ErrMsg2)
+         if (Failed()) return
 
-         ! Condition jacobian matrix before factoring
+         ! Condition Jacobian matrix loads before factoring
          if (p%iUL(1) > 0) then
             Jac(p%iUL(1):p%iUL(2), :) = Jac(p%iUL(1):p%iUL(2), :)/p%Scale_UJac
             Jac(:, p%iUL(1):p%iUL(2)) = Jac(:, p%iUL(1):p%iUL(2))*p%Scale_UJac
@@ -885,7 +884,7 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
 
       ! Calculate difference in U for all Option 1 modules (un - u_tmp)
       ! and add to RHS for TC and Option 1 modules
-      if (m%Mod%Vars%Nu > 0) call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, XB(:, 1))
+      call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, XB(:, 1))
 
       ! Apply conditioning factor to loads in RHS
       if (p%iUL(1) > 0) XB(p%iUL(1):p%iUL(2), 1) = XB(p%iUL(1):p%iUL(2), 1)/p%Scale_UJac
@@ -920,7 +919,7 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
       !-------------------------------------------------------------------------
 
       ! Add change in inputs
-      if (m%Mod%Vars%Nu > 0) call MV_AddDelta(m%Mod%Vars%u, XB(:, 1), m%Mod%Lin%u)
+      call MV_AddDelta(m%Mod%Vars%u, XB(:, 1), m%Mod%Lin%u)
 
       ! Transfer updated inputs to modules
       do i = 1, size(m%Mod%ModData)
