@@ -4921,6 +4921,9 @@ SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    INTEGER(IntKi)                          :: n_t_global_next     ! n_t_global + 1
    REAL(R8Ki)                              :: t_global_next
 
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
    ! Calculate next global time
    n_t_global_next = n_t_global + 1
    t_global_next = t_initial + n_t_global_next*Turbine%p_FAST%DT
