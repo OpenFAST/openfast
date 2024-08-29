@@ -383,7 +383,9 @@ CONTAINS
       REAL(DbKi),       INTENT(INOUT)    :: rdEnd(3)
       
       Integer(IntKi)    :: l,m,J
-      Integer(IntKi)    :: found = 0
+      logical           :: found
+
+      found = .false.
       
       DO l = 1,Point%nAttached    ! look through attached lines
       
@@ -409,13 +411,13 @@ CONTAINS
                EXIT
             END DO
             
-            found = 1
+            found = .true.
          
          END IF
          
       END DO
 
-      IF (found == 0) THEN   ! detect if line not found TODO: fix this, its wrong. If pointNnattached is oprginally 2, then it will be 1 after one run of the loop and l will also be 1
+      IF (found) THEN   ! detect if line not found TODO: fix this, its wrong. If pointNnattached is oprginally 2, then it will be 1 after one run of the loop and l will also be 1
          CALL WrScr("Error: failed to find line to remove during RemoveLine call to Point "//trim(num2lstr(Point%IdNum))//". Line "//trim(num2lstr(lineID)))
       END IF
       
