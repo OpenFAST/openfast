@@ -1326,24 +1326,24 @@ class InputReader_OpenFAST(object):
             self.fst_vt['AeroDyn15']['af_coord'].append({})
             if not (self.fst_vt['AeroDyn15']['af_data'][afi][0]['NumCoords'] == 0 or self.fst_vt['AeroDyn15']['af_data'][afi][0]['NumCoords'] == '0'):
                 coord_filename = af_filename[0:af_filename.rfind(os.sep)] + os.sep + self.fst_vt['AeroDyn15']['af_data'][afi][0]['NumCoords'][2:-1]
+
                 f = open(coord_filename)
-                n_coords = int_read(readline_filterComments(f).split()[0])
-                x = np.zeros(n_coords)
-                y = np.zeros(n_coords)
-                f.readline()
-                f.readline()
-                f.readline()
-                self.fst_vt['AeroDyn15']['ac'][afi] = float(f.readline().split()[0])
-                f.readline()
-                f.readline()
-                f.readline()
-                for j in range(n_coords - 1):
-                    x[j], y[j] = f.readline().split()
+                lines = f.readlines()
+                f.close()
+                lines = [line for line in lines if not line.strip().startswith('!')]
+                n_coords = int(lines[0].split()[0])
+
+                x = np.zeros(n_coords-1)
+                y = np.zeros(n_coords-1)
+
+                self.fst_vt['AeroDyn15']['ac'][afi] = float(lines[1].split()[0])
+
+                for j in range(2, n_coords+1):
+                    x[j - 2], y[j - 2] = map(float, lines[j].split())
 
                 self.fst_vt['AeroDyn15']['af_coord'][afi]['x'] = x
                 self.fst_vt['AeroDyn15']['af_coord'][afi]['y'] = y
 
-                f.close()
 
     def read_AeroDyn15OLAF(self, olaf_filename):
         
