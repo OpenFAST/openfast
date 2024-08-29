@@ -103,25 +103,8 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                  pack(modInds, ModIDs == Module_BD), &
                  pack(modInds, ModIDs == Module_SD), &
                  pack(modInds, ModIDs == Module_IfW), &
-                 pack(modInds, ModIDs == Module_SeaSt), &
-                 pack(modInds, ModIDs == Module_AD), &
-                 pack(modInds, ModIDs == Module_FEAM), &
-                 pack(modInds, ModIDs == Module_IceD), &
-                 pack(modInds, ModIDs == Module_IceF), &
-                 pack(modInds, ModIDs == Module_MAP), &
-                 pack(modInds, ModIDs == Module_MD), &
-                 pack(modInds, ModIDs == Module_ExtPtfm), &
-                 pack(modInds, ModIDs == Module_HD), &
-                 pack(modInds, ModIDs == Module_Orca), &
-                 pack(modInds, ModIDs == Module_SrvD)] ! ServoDyn is last
-
-   ! Indices of modules needed for ServoDyn initialization
-   p%iModUY1 = [pack(modInds, ModIDs == Module_ED), &
-                pack(modInds, ModIDs == Module_BD), &
-                pack(modInds, ModIDs == Module_SD), &
-                pack(modInds, ModIDs == Module_IfW), &
-                pack(modInds, ModIDs == Module_ExtInfw), &
-                pack(modInds, ModIDs == Module_ExtLd)]
+                 pack(modInds, ModIDs == Module_ExtInfw), &
+                 pack(modInds, ModIDs == Module_ExtLd)]
 
    ! Indices of tight coupling modules
    p%iModTC = [pack(modInds, ModIDs == Module_ED), &
@@ -669,6 +652,7 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
    logical                    :: IsConverged
    integer(IntKi)             :: ConvIter, CorrIter, TotalIter
    real(R8Ki)                 :: ConvError
+   real(R8Ki), allocatable    :: Jac(:, :), XB(:, :)
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -679,6 +663,10 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
 
    t_initial = Turbine%m_FAST%t_global
    t_global_next = t_initial + n_t_global_next*p%h
+
+   ! Initialize Jacobian update counters to zero to calculate on first iteration
+   m%UJacIterRemain = 0
+   m%UJacStepsRemain = 0
 
    !----------------------------------------------------------------------------
    ! Collect initial states from modules
@@ -717,11 +705,6 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
       if (Failed()) return
    end do
 
-   !----------------------------------------------------------------------------
-   ! Perform iterations to initialize inputs and acceleration
-   ! States are not modified
-   !----------------------------------------------------------------------------
-
    ! Copy TC solver states from current to predicted
    call Glue_CopyTC_State(m%StateCurr, m%StatePred, MESH_NEWCOPY, ErrStat2, ErrMsg2)
    if (Failed()) return
@@ -731,15 +714,21 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
    ! Set converged flag to false
    IsConverged = .false.
 
+   ! Allocate input-output solve Jacobian matrix and RHS vector
+   call AllocAry(Jac, m%Mod%Vars%Nu, m%Mod%Vars%Nu, 'Jac', ErrStat2, ErrMsg2)
+   if (Failed()) return
+   call AllocAry(XB, m%Mod%Vars%Nu, 1, 'XB', ErrStat2, ErrMsg2)
+   if (Failed()) return
+
    !----------------------------------------------------------------------------
    ! Input solve and calc output for ServoDyn inputs
    !----------------------------------------------------------------------------
 
-   do i = 1, size(p%iModUY1)
-      associate (ModData => GlueModData(p%iModUY1(i)))
+   do i = 1, size(p%iModInit)
+      associate (ModData => GlueModData(p%iModInit(i)))
 
          ! Solve for inputs
-         call FAST_InputSolve(p%iModUY1(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+         call FAST_InputSolve(p%iModInit(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
          if (Failed()) return
 
          ! Calculate outputs
@@ -818,12 +807,58 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
       ! Update Jacobian
       !----------------------------------------------------------------------
 
-      call BuildJacobianTC(p, m, GlueModMaps, t_initial, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
-      if (Failed()) return
+      if (ConvIter == 0) then
 
-      !----------------------------------------------------------------------
-      ! Formulate right hand side (X_2^tight, U^tight, U^Option1)
-      !----------------------------------------------------------------------
+         !----------------------------------------------------------------------
+         ! Calculate Input-Output Solve Jacobian for TC and Option 1 modules
+         !----------------------------------------------------------------------
+
+         if (allocated(m%Mod%Lin%dYdu)) m%Mod%Lin%dYdu = 0.0_R8Ki
+         if (allocated(m%Mod%Lin%dUdy)) m%Mod%Lin%dUdy = 0.0_R8Ki
+         if (allocated(m%Mod%Lin%dUdu)) then
+            call Eye2D(m%Mod%Lin%dUdu, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end if
+
+         ! Loop through TC and Option 1 modules and calculate dYdu
+         do i = 1, size(m%Mod%ModData)
+            associate (ModData => m%Mod%ModData(i))
+               call FAST_JacobianPInput(ModData, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                                        dYdu=ModData%Lin%dYdu, dYdu_glue=m%Mod%Lin%dYdu)
+               if (Failed()) return
+            end associate
+         end do
+
+         ! Calculate dUdu and dUdy for TC and Option 1 modules
+         if (allocated(m%Mod%Lin%dUdy) .and. allocated(m%Mod%Lin%dUdu)) then
+            call FAST_LinearizeMappings(m%Mod, GlueModMaps, Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end if
+
+         !----------------------------------------------------------------------
+         ! Assemble Jacobian
+         !----------------------------------------------------------------------
+
+         ! Jac = m%Mod%Lin%dUdu + matmul(m%Mod%Lin%dUdy, m%Mod%Lin%dYdu)
+         if (m%Mod%Vars%Nu > 0) then
+            Jac = m%Mod%Lin%dUdu
+            call LAPACK_GEMM('N', 'N', 1.0_R8Ki, m%Mod%Lin%dUdy, m%Mod%Lin%dYdu, 1.0_R8Ki, Jac, ErrStat2, ErrMsg2); if (Failed()) return
+         end if
+
+         ! Condition jacobian matrix before factoring
+         if (p%iUL(1) > 0) then
+            Jac(p%iUL(1):p%iUL(2), :) = Jac(p%iUL(1):p%iUL(2), :)/p%Scale_UJac
+            Jac(:, p%iUL(1):p%iUL(2)) = Jac(:, p%iUL(1):p%iUL(2))*p%Scale_UJac
+         end if
+
+         ! Factor jacobian matrix
+         call LAPACK_getrf(size(Jac, 1), size(Jac, 2), Jac, m%IPIV, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end if
+
+      !-------------------------------------------------------------------------
+      ! Formulate right hand side (U^tight, U^Option1)
+      !-------------------------------------------------------------------------
 
       ! Input solve for tight coupling modules
       do i = 1, size(p%iModTC)
@@ -844,36 +879,31 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
          if (Failed()) return
       end do
 
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
       ! Populate residual vector and apply conditioning to loads
-      !----------------------------------------------------------------------
-
-      ! Calculate difference between calculated and predicted accelerations
-      ! Step0 is assuming this is zero since it's not advancing in time
-      ! Changes in acceleration will be due only to input changes
-      if (p%iJX(1) > 0) m%XB(p%iJX(1):p%iJX(2), 1) = 0.0_R8Ki
+      !-------------------------------------------------------------------------
 
       ! Calculate difference in U for all Option 1 modules (un - u_tmp)
       ! and add to RHS for TC and Option 1 modules
-      if (p%iJU(1) > 0) call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, m%XB(p%iJU(1):p%iJU(2), 1))
+      if (m%Mod%Vars%Nu > 0) call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, XB(:, 1))
 
       ! Apply conditioning factor to loads in RHS
-      if (p%iJL(1) > 0) m%XB(p%iJL(1):p%iJL(2), 1) = m%XB(p%iJL(1):p%iJL(2), 1)/p%Scale_UJac
+      if (p%iUL(1) > 0) XB(p%iUL(1):p%iUL(2), 1) = XB(p%iUL(1):p%iUL(2), 1)/p%Scale_UJac
 
-      !----------------------------------------------------------------------
-      ! Solve for state and input perturbations
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
+      ! Solve for input perturbations
+      !-------------------------------------------------------------------------
 
       ! Solve Jacobian and RHS
-      call LAPACK_getrs('N', p%NumJ, m%Mod%Lin%J, m%IPIV, m%XB, ErrStat2, ErrMsg2)
+      call LAPACK_getrs('N', size(Jac, 1), Jac, m%IPIV, XB, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
       ! Check perturbations for convergence and exit if below tolerance
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
 
       ! Calculate average L2 norm of change in states and inputs
-      ConvError = TwoNorm(m%XB(:, 1))/size(m%XB)
+      ConvError = TwoNorm(XB(:, 1))/size(XB)
 
       ! If at least one convergence iteration has been done and the RHS norm
       ! is less than convergence tolerance, set flag and exit convergence loop
@@ -883,38 +913,20 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
       end if
 
       ! Remove load conditioning on inputs
-      if (p%iJL(1) > 0) m%XB(p%iJL(1):p%iJL(2), 1) = m%XB(p%iJL(1):p%iJL(2), 1)*p%Scale_UJac
+      if (p%iUL(1) > 0) XB(p%iUL(1):p%iUL(2), 1) = XB(p%iUL(1):p%iUL(2), 1)*p%Scale_UJac
 
-      !----------------------------------------------------------------------
-      ! Update acceleration and inputs
-      !----------------------------------------------------------------------
-
-      ! Update State acceleration prediction (do not change other states)
-      ! if (p%iJX(1) > 0) call UpdateStatePrediction(p, m%Mod%Vars, m%XB(p%iJX(1):p%iJX(2), 1), m%StatePred)
-      if (p%iJX(1) > 0) m%StatePred%vd = m%StatePred%vd + m%XB(p%iJX(1):p%iJX(2), 1)
+      !-------------------------------------------------------------------------
+      ! Update inputs
+      !-------------------------------------------------------------------------
 
       ! Add change in inputs
-      if (p%iJU(1) > 0) call MV_AddDelta(m%Mod%Vars%u, m%XB(p%iJU(1):p%iJU(2), 1), m%Mod%Lin%u)
+      if (m%Mod%Vars%Nu > 0) call MV_AddDelta(m%Mod%Vars%u, XB(:, 1), m%Mod%Lin%u)
 
       ! Transfer updated inputs to modules
       do i = 1, size(m%Mod%ModData)
-         associate (ModData => m%Mod%ModData(i))
-
-            ! Transfer States to linearization array
-            call TransferQtoX(ModData, m%StatePred, m%Mod%Lin%x)
-
-            ! Transfer states and inputs to modules
-            call FAST_SetOP(ModData, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                            x_op=ModData%Lin%x, x_glue=m%Mod%Lin%x, &
-                            u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
-            if (Failed()) return
-
-            ! Transfer accelerations to BeamDyn
-            if (ModData%ID == Module_BD) then
-               call SetBDAccel(ModData, m%StatePred, Turbine%BD%OtherSt(ModData%Ins, STATE_CURR))
-            end if
-
-         end associate
+         call FAST_SetOP(m%Mod%ModData(i), INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                         u_op=m%Mod%ModData(i)%Lin%u, u_glue=m%Mod%Lin%u)
+         if (Failed()) return
       end do
    end do   ! Convergence loop
 
@@ -1369,11 +1381,11 @@ subroutine CalcOutputs_And_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTi
       if (DoInit) then
 
          ! Input solve and calc output for ServoDyn inputs
-         do i = 1, size(p%iModUY1)
-            associate (ModData => GlueModData(p%iModUY1(i)))
+         do i = 1, size(p%iModInit)
+            associate (ModData => GlueModData(p%iModInit(i)))
 
                ! Solve for inputs
-               call FAST_InputSolve(p%iModUY1(i), GlueModData, GlueModMaps, iInput, Turbine, ErrStat2, ErrMsg2)
+               call FAST_InputSolve(p%iModInit(i), GlueModData, GlueModMaps, iInput, Turbine, ErrStat2, ErrMsg2)
                if (Failed()) return
 
                ! Calculate outputs

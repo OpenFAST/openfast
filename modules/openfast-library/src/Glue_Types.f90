@@ -123,7 +123,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:2)  :: iJUT = 0_IntKi      !< Indices of Jacobian input variables from tight coupling [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iJL = 0_IntKi      !< Indices of Jacobian load variables [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModInit      !< ModData index order for step 0 initialization [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModUY1      !< ModData index order for step 0 initialization [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModTC      !< ModData index order for tight coupling modules [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOpt1      !< ModData index order for option 1 modules [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOpt2      !< ModData index order for option 2 modules [-]
@@ -758,18 +757,6 @@ subroutine Glue_CopyTCParam(SrcTCParamData, DstTCParamData, CtrlCode, ErrStat, E
       end if
       DstTCParamData%iModInit = SrcTCParamData%iModInit
    end if
-   if (allocated(SrcTCParamData%iModUY1)) then
-      LB(1:1) = lbound(SrcTCParamData%iModUY1, kind=B8Ki)
-      UB(1:1) = ubound(SrcTCParamData%iModUY1, kind=B8Ki)
-      if (.not. allocated(DstTCParamData%iModUY1)) then
-         allocate(DstTCParamData%iModUY1(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCParamData%iModUY1.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstTCParamData%iModUY1 = SrcTCParamData%iModUY1
-   end if
    if (allocated(SrcTCParamData%iModTC)) then
       LB(1:1) = lbound(SrcTCParamData%iModTC, kind=B8Ki)
       UB(1:1) = ubound(SrcTCParamData%iModTC, kind=B8Ki)
@@ -830,9 +817,6 @@ subroutine Glue_DestroyTCParam(TCParamData, ErrStat, ErrMsg)
    if (allocated(TCParamData%iModInit)) then
       deallocate(TCParamData%iModInit)
    end if
-   if (allocated(TCParamData%iModUY1)) then
-      deallocate(TCParamData%iModUY1)
-   end if
    if (allocated(TCParamData%iModTC)) then
       deallocate(TCParamData%iModTC)
    end if
@@ -880,7 +864,6 @@ subroutine Glue_PackTCParam(RF, Indata)
    call RegPack(RF, InData%iJUT)
    call RegPack(RF, InData%iJL)
    call RegPackAlloc(RF, InData%iModInit)
-   call RegPackAlloc(RF, InData%iModUY1)
    call RegPackAlloc(RF, InData%iModTC)
    call RegPackAlloc(RF, InData%iModOpt1)
    call RegPackAlloc(RF, InData%iModOpt2)
@@ -924,7 +907,6 @@ subroutine Glue_UnPackTCParam(RF, OutData)
    call RegUnpack(RF, OutData%iJUT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iJL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iModInit); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%iModUY1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iModTC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iModOpt1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%iModOpt2); if (RegCheckErr(RF, RoutineName)) return

@@ -96,7 +96,6 @@ typedef ^ ^                     IntKi           iJU                     2  -  - 
 typedef ^ ^                     IntKi           iJUT                    2  -  -     "Indices of Jacobian input variables from tight coupling" -
 typedef ^ ^                     IntKi           iJL                     2  -  -     "Indices of Jacobian load variables" -
 typedef ^ ^                     IntKi           iModInit                :  -  -     "ModData index order for step 0 initialization" -
-typedef ^ ^                     IntKi           iModUY1                 :  -  -     "ModData index order for step 0 initialization" -
 typedef ^ ^                     IntKi           iModTC                  :  -  -     "ModData index order for tight coupling modules" -
 typedef ^ ^                     IntKi           iModOpt1                :  -  -     "ModData index order for option 1 modules" -
 typedef ^ ^                     IntKi           iModOpt2                :  -  -     "ModData index order for option 2 modules" -
