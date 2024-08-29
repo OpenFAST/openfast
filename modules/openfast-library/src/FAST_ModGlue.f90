@@ -542,7 +542,8 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    ! Glue Module
    !----------------------------------------------------------------------------
 
-   LinFlags = VF_Linearize + VF_Mapping
+   ! LinFlags = VF_Linearize + VF_Mapping
+   LinFlags = VF_None
    call Glue_CombineModules(m%ModGlue, m%ModData, m%Mappings, p%Lin%iMod, LinFlags, &
                             p_FAST%Linearize, ErrStat2, ErrMsg2, Name="Lin")
    if (Failed()) return
