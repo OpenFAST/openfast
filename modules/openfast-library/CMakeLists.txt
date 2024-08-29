@@ -66,13 +66,8 @@ target_link_libraries(openfast_prelib
 )
 
 add_library(openfast_postlib STATIC
-  # src/FAST_Lin.f90
   src/FAST_Mods.f90
   src/FAST_Subs.f90
-  # src/FAST_Solver.f90
-  # src/FAST_SS_Subs.f90
-  # src/FAST_SS_Solver.f90
-  
   src/FAST_Funcs.f90
   src/FAST_ModGlue.f90
   src/FAST_Mapping.f90

@@ -728,214 +728,201 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
 
    TotalIter = 0
 
-   ! Do two input correction iterations
-   do CorrIter = 1, 2
+   ! Set converged flag to false
+   IsConverged = .false.
 
-      ! Set converged flag to false
-      IsConverged = .false.
+   !----------------------------------------------------------------------------
+   ! Input solve and calc output for ServoDyn inputs
+   !----------------------------------------------------------------------------
 
-      ! Copy TC solver states from current to predicted
-      call Glue_CopyTC_State(m%StateCurr, m%StatePred, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+   do i = 1, size(p%iModUY1)
+      associate (ModData => GlueModData(p%iModUY1(i)))
+
+         ! Solve for inputs
+         call FAST_InputSolve(p%iModUY1(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+         ! Calculate outputs
+         call FAST_CalcOutput(ModData, GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+
+      end associate
+   end do
+
+   !----------------------------------------------------------------------------
+   ! InputSolve and CalcOutput for Option 2 modules
+   !----------------------------------------------------------------------------
+
+   ! Do input solve and calculate outputs for Option 2 modules (includes TC modules)
+   do i = 1, size(p%iModOpt2)
+
+      ! Solve for inputs
+      call FAST_InputSolve(p%iModOpt2(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      ! Loop through tight coupling modules
+      ! Calculate outputs
+      call FAST_CalcOutput(GlueModData(p%iModOpt2(i)), GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+   end do
+
+   !----------------------------------------------------------------------------
+   ! InputSolve and pack inputs for TC and Option 1 modules
+   !----------------------------------------------------------------------------
+
+   ! Do input solve for Option 1 modules
+   do i = 1, size(p%iModOpt1)
+      call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end do
+
+   ! Pack TC and Option 1 inputs into u array
+   do i = 1, size(m%Mod%ModData)
+      associate (ModData => m%Mod%ModData(i))
+         call FAST_GetOP(ModData, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                         u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
+         if (Failed()) return
+      end associate
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Convergence Iterations for TC and Option 1 modules
+   !----------------------------------------------------------------------------
+
+   ! Loop through convergence iterations
+   do ConvIter = 0, p%MaxConvIter
+
+      ! Increment total number of convergence iterations in step
+      TotalIter = TotalIter + 1
+
+      !----------------------------------------------------------------------
+      ! Calculate outputs for TC & Opt1 modules
+      !----------------------------------------------------------------------
+
+      do i = 1, size(m%Mod%ModData)
+         associate (ModData => m%Mod%ModData(i))
+            call FAST_CalcOutput(ModData, GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, &
+                                 Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end associate
+      end do
+
+      !----------------------------------------------------------------------
+      ! Convergence iteration check
+      !----------------------------------------------------------------------
+
+      ! If convergence iteration has reached or exceeded limit, exit loop
+      if (ConvIter >= p%MaxConvIter) exit
+
+      !----------------------------------------------------------------------
+      ! Update Jacobian
+      !----------------------------------------------------------------------
+
+      call BuildJacobianTC(p, m, GlueModMaps, t_initial, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      !----------------------------------------------------------------------
+      ! Formulate right hand side (X_2^tight, U^tight, U^Option1)
+      !----------------------------------------------------------------------
+
+      ! Input solve for tight coupling modules
       do i = 1, size(p%iModTC)
+         call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+      ! Input solve for Option 1 modules
+      do i = 1, size(p%iModOpt1)
+         call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+      ! Collect TC and Option 1 inputs into uCalc
+      do i = 1, size(m%Mod%ModData)
+         call FAST_GetOP(m%Mod%ModData(i), t_initial, INPUT_TEMP, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                         u_op=m%Mod%ModData(i)%Lin%u, u_glue=m%uCalc)
+         if (Failed()) return
+      end do
+
+      !----------------------------------------------------------------------
+      ! Populate residual vector and apply conditioning to loads
+      !----------------------------------------------------------------------
+
+      ! Calculate difference between calculated and predicted accelerations
+      ! Step0 is assuming this is zero since it's not advancing in time
+      ! Changes in acceleration will be due only to input changes
+      if (p%iJX(1) > 0) m%XB(p%iJX(1):p%iJX(2), 1) = 0.0_R8Ki
+
+      ! Calculate difference in U for all Option 1 modules (un - u_tmp)
+      ! and add to RHS for TC and Option 1 modules
+      if (p%iJU(1) > 0) call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, m%XB(p%iJU(1):p%iJU(2), 1))
+
+      ! Apply conditioning factor to loads in RHS
+      if (p%iJL(1) > 0) m%XB(p%iJL(1):p%iJL(2), 1) = m%XB(p%iJL(1):p%iJL(2), 1)/p%Scale_UJac
+
+      !----------------------------------------------------------------------
+      ! Solve for state and input perturbations
+      !----------------------------------------------------------------------
+
+      ! Solve Jacobian and RHS
+      call LAPACK_getrs('N', p%NumJ, m%Mod%Lin%J, m%IPIV, m%XB, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      !----------------------------------------------------------------------
+      ! Check perturbations for convergence and exit if below tolerance
+      !----------------------------------------------------------------------
+
+      ! Calculate average L2 norm of change in states and inputs
+      ConvError = TwoNorm(m%XB(:, 1))/size(m%XB)
+
+      ! If at least one convergence iteration has been done and the RHS norm
+      ! is less than convergence tolerance, set flag and exit convergence loop
+      if (ConvError < p%ConvTol) then
+         IsConverged = .true.
+         exit
+      end if
+
+      ! Remove load conditioning on inputs
+      if (p%iJL(1) > 0) m%XB(p%iJL(1):p%iJL(2), 1) = m%XB(p%iJL(1):p%iJL(2), 1)*p%Scale_UJac
+
+      !----------------------------------------------------------------------
+      ! Update acceleration and inputs
+      !----------------------------------------------------------------------
+
+      ! Update State acceleration prediction (do not change other states)
+      ! if (p%iJX(1) > 0) call UpdateStatePrediction(p, m%Mod%Vars, m%XB(p%iJX(1):p%iJX(2), 1), m%StatePred)
+      if (p%iJX(1) > 0) m%StatePred%vd = m%StatePred%vd + m%XB(p%iJX(1):p%iJX(2), 1)
+
+      ! Add change in inputs
+      if (p%iJU(1) > 0) call MV_AddDelta(m%Mod%Vars%u, m%XB(p%iJU(1):p%iJU(2), 1), m%Mod%Lin%u)
+
+      ! Transfer updated inputs to modules
+      do i = 1, size(m%Mod%ModData)
          associate (ModData => m%Mod%ModData(i))
 
-            ! Transfer current states to linearization array
+            ! Transfer States to linearization array
             call TransferQtoX(ModData, m%StatePred, m%Mod%Lin%x)
 
-            ! Transfer solver states to module
+            ! Transfer states and inputs to modules
             call FAST_SetOP(ModData, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                            x_op=ModData%Lin%x, x_glue=m%Mod%Lin%x)
+                            x_op=ModData%Lin%x, x_glue=m%Mod%Lin%x, &
+                            u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
             if (Failed()) return
 
             ! Transfer accelerations to BeamDyn
             if (ModData%ID == Module_BD) then
                call SetBDAccel(ModData, m%StatePred, Turbine%BD%OtherSt(ModData%Ins, STATE_CURR))
             end if
-         end associate
-      end do
-
-      !-------------------------------------------------------------------------
-      ! InputSolve and CalcOutput for all modules, pack TC and Option 1 inputs
-      !-------------------------------------------------------------------------
-
-      ! Do input solve and calculate outputs for Option 2 modules (except ServoDyn)
-      do i = 2, size(p%iModOpt2)
-         associate (ModData => GlueModData(p%iModOpt2(i)))
-
-            ! Solve for inputs
-            call FAST_InputSolve(p%iModOpt2(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
-            if (Failed()) return
-
-            ! Calculate outputs
-            call FAST_CalcOutput(ModData, GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
-            if (Failed()) return
 
          end associate
       end do
+   end do   ! Convergence loop
 
-      ! Do input solve for Option 1 modules
-      do i = 1, size(p%iModOpt1)
-         call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
-         if (Failed()) return
-      end do
-
-      ! Pack TC and Option 1 inputs into u array
-      do i = 1, size(m%Mod%ModData)
-         associate (ModData => m%Mod%ModData(i))
-            call FAST_GetOP(ModData, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                            u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
-            if (Failed()) return
-         end associate
-      end do
-
-      !-------------------------------------------------------------------------
-      ! Convergence Iterations for TC and Option 1 modules
-      !-------------------------------------------------------------------------
-
-      ! Loop through convergence iterations
-      do ConvIter = 0, p%MaxConvIter
-
-         ! Increment total number of convergence iterations in step
-         TotalIter = TotalIter + 1
-
-         !----------------------------------------------------------------------
-         ! Calculate outputs for TC & Opt1 modules
-         !----------------------------------------------------------------------
-
-         do i = 1, size(m%Mod%ModData)
-            associate (ModData => m%Mod%ModData(i))
-               call FAST_CalcOutput(ModData, GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, &
-                                    Turbine, ErrStat2, ErrMsg2)
-               if (Failed()) return
-            end associate
-         end do
-
-         !----------------------------------------------------------------------
-         ! Convergence iteration check
-         !----------------------------------------------------------------------
-
-         ! If convergence iteration has reached or exceeded limit, exit loop
-         if (ConvIter >= p%MaxConvIter) exit
-
-         !----------------------------------------------------------------------
-         ! Update Jacobian
-         !----------------------------------------------------------------------
-
-         call BuildJacobianTC(p, m, GlueModMaps, t_initial, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
-         if (Failed()) return
-
-         !----------------------------------------------------------------------
-         ! Formulate right hand side (X_2^tight, U^tight, U^Option1)
-         !----------------------------------------------------------------------
-
-         ! Input solve for tight coupling modules
-         do i = 1, size(p%iModTC)
-            call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
-            if (Failed()) return
-         end do
-
-         ! Input solve for Option 1 modules
-         do i = 1, size(p%iModOpt1)
-            call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
-            if (Failed()) return
-         end do
-
-         ! Collect TC and Option 1 inputs into uCalc
-         do i = 1, size(m%Mod%ModData)
-            call FAST_GetOP(m%Mod%ModData(i), t_initial, INPUT_TEMP, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                            u_op=m%Mod%ModData(i)%Lin%u, u_glue=m%uCalc)
-            if (Failed()) return
-         end do
-
-         !----------------------------------------------------------------------
-         ! Populate residual vector and apply conditioning to loads
-         !----------------------------------------------------------------------
-
-         ! Calculate difference between calculated and predicted accelerations
-         ! if (p%iJX(1) > 0) m%XB(p%iJX(1):p%iJX(2), 1) = m%Mod%Lin%dx(p%iX2(1):p%iX2(2)) - m%StatePred%vd
-         if (p%iJX(1) > 0) m%XB(p%iJX(1):p%iJX(2), 1) = 0.0_R8Ki
-
-         ! Calculate difference in U for all Option 1 modules (un - u_tmp)
-         ! and add to RHS for TC and Option 1 modules
-         if (p%iJU(1) > 0) call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, m%XB(p%iJU(1):p%iJU(2), 1))
-
-         ! Apply conditioning factor to loads in RHS
-         if (p%iJL(1) > 0) m%XB(p%iJL(1):p%iJL(2), 1) = m%XB(p%iJL(1):p%iJL(2), 1)/p%Scale_UJac
-
-         !----------------------------------------------------------------------
-         ! Solve for state and input perturbations
-         !----------------------------------------------------------------------
-
-         ! Solve Jacobian and RHS
-         call LAPACK_getrs('N', p%NumJ, m%Mod%Lin%J, m%IPIV, m%XB, ErrStat2, ErrMsg2)
-         if (Failed()) return
-
-         !----------------------------------------------------------------------
-         ! Check perturbations for convergence and exit if below tolerance
-         !----------------------------------------------------------------------
-
-         ! Calculate average L2 norm of change in states and inputs
-         ConvError = TwoNorm(m%XB(:, 1))/size(m%XB)
-
-         ! If at least one convergence iteration has been done and the RHS norm
-         ! is less than convergence tolerance, set flag and exit convergence loop
-         if (ConvError < p%ConvTol) then
-            IsConverged = .true.
-            exit
-         end if
-
-         ! Remove load conditioning on inputs
-         if (p%iJL(1) > 0) m%XB(p%iJL(1):p%iJL(2), 1) = m%XB(p%iJL(1):p%iJL(2), 1)*p%Scale_UJac
-
-         !----------------------------------------------------------------------
-         ! Update acceleration and inputs
-         !----------------------------------------------------------------------
-
-         ! Update State acceleration prediction (do not change other states)
-         ! if (p%iJX(1) > 0) call UpdateStatePrediction(p, m%Mod%Vars, m%XB(p%iJX(1):p%iJX(2), 1), m%StatePred)
-         if (p%iJX(1) > 0) m%StatePred%vd = m%StatePred%vd + m%XB(p%iJX(1):p%iJX(2), 1)
-
-         ! Add change in inputs
-         if (p%iJU(1) > 0) call MV_AddDelta(m%Mod%Vars%u, m%XB(p%iJU(1):p%iJU(2), 1), m%Mod%Lin%u)
-
-         ! Transfer updated inputs to modules
-         do i = 1, size(m%Mod%ModData)
-            associate (ModData => m%Mod%ModData(i))
-
-               ! Transfer States to linearization array
-               call TransferQtoX(ModData, m%StatePred, m%Mod%Lin%x)
-
-               ! Transfer states and inputs to modules
-               call FAST_SetOP(ModData, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                               x_op=ModData%Lin%x, x_glue=m%Mod%Lin%x, &
-                               u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
-               if (Failed()) return
-
-               ! Transfer accelerations to BeamDyn
-               if (ModData%ID == Module_BD) then
-                  call SetBDAccel(ModData, m%StatePred, Turbine%BD%OtherSt(ModData%Ins, STATE_CURR))
-               end if
-
-            end associate
-         end do
-      end do   ! Convergence loop
-
-      ! Perform input solve for modules post Option 1 convergence
-      do i = 1, size(p%iModPost)
-         call FAST_InputSolve(p%iModPost(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
-         if (Failed()) return
-      end do
-
-      ! Calculate output for ServoDyn
-      if (CorrIter == 1) then
-         call FAST_CalcOutput(GlueModData(p%iModOpt2(1)), GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2)
-         if (Failed()) return
-      end if
-
-   end do   ! Input correction loop
+   ! Perform input solve for modules post Option 1 convergence
+   do i = 1, size(p%iModPost)
+      call FAST_InputSolve(p%iModPost(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end do
 
    ! Print warning if not converged
    if (.not. IsConverged) then
