@@ -2004,30 +2004,8 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    endif
 
    ! Cavitation check
-   call AD_CavtCrit(u, p, m, errStat2, errMsg2)
+   call RotCavtCrit(u, p, m, errStat2, errMsg2)
    if(Failed()) return
-
-   ! initialize nacelle mesh loads
-   do iR = 1,size(p%rotors)
-      y%rotors(iR)%NacelleLoad%Force = 0.0_ReKi
-      y%rotors(iR)%NacelleLoad%Moment = 0.0_ReKi
-   end do
-
-   ! Calculate buoyant loads
-   do iR = 1,size(p%rotors)
-      if ( p%rotors(iR)%Buoyancy ) then 
-         call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
-            if(Failed()) return
-      end if
-   end do  
-
-   ! Calculate nacelle drag loads
-   do iR = 1,size(p%rotors)
-      if ( p%rotors(iR)%NacelleDrag ) then 
-         call computeNacelleDrag( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), m%Inflow(1)%RotInflow(iR), ErrStat, ErrMsg )
-            if(Failed()) return
-      end if
-   end do 
 
    !-------------------------------------------------------   
    !     get values to output to file:  
@@ -2115,6 +2093,22 @@ subroutine RotCalcOutput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, 
       call ADTwr_CalcOutput(p, u, RotInflow, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
+
+   ! initialize nacelle mesh loads
+   y%NacelleLoad%Force = 0.0_ReKi
+   y%NacelleLoad%Moment = 0.0_ReKi
+
+   ! Calculate buoyant loads
+   if (p%Buoyancy) then 
+      call RotCalcBuoyantLoads(u, p, m, y, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end if  
+
+   ! Calculate nacelle drag loads
+   if (p%NacelleDrag) then 
+      call RotCalcNacelleDrag(u, p, m, y, RotInflow, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end if 
 
    ! --- Tail Fin
    if (p%TFinAero) then
@@ -2204,7 +2198,7 @@ subroutine RotWriteOutputs( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m
 end subroutine RotWriteOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
 
-subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
+subroutine RotCavtCrit(u, p, m, errStat, errMsg)
    TYPE(AD_InputType),           INTENT(IN   )   :: u           !< Inputs at time t
    TYPE(AD_ParameterType),       INTENT(IN   )   :: p           !< Parameters
    TYPE(AD_MiscVarType),         INTENT(INOUT)   :: m           !< Misc/optimization variables
@@ -2253,10 +2247,10 @@ subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
          end do  ! p%numBlades
       end if  ! Cavitation check
    end do  ! p%numRotors
-end subroutine AD_CavtCrit
+end subroutine RotCavtCrit
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates buoyant loads on an MHK turbine.
-subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
+subroutine RotCalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    TYPE(RotInputType),                             INTENT(IN   )  :: u                !< AD inputs - used for mesh node positions
    TYPE(RotParameterType),                         INTENT(IN   )  :: p                !< Parameters
    TYPE(RotMiscVarType),                           INTENT(INOUT)  :: m                !< Misc/optimization variables
@@ -2654,7 +2648,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    m%NacMi = y%NacelleLoad%Moment(:,1)
 
 
-end subroutine CalcBuoyantLoads
+end subroutine RotCalcBuoyantLoads
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
 subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
@@ -6799,7 +6793,7 @@ END SUBROUTINE Compute_dX
 
 !-------------------------------------------------------------------------------------------------------
 !> This routine calculates nacelle drag loads on a turbine.
-SUBROUTINE computeNacelleDrag( u, p, m, y, RotInflow, ErrStat, ErrMsg )
+SUBROUTINE RotCalcNacelleDrag( u, p, m, y, RotInflow, ErrStat, ErrMsg )
 
    TYPE(RotInputType)               , INTENT(IN   ) :: u                !< AD inputs - used for mesh node positions
    TYPE(RotParameterType)           , INTENT(IN   ) :: p                !< Parameters
@@ -6874,7 +6868,7 @@ SUBROUTINE computeNacelleDrag( u, p, m, y, RotInflow, ErrStat, ErrMsg )
 
 
 
-END SUBROUTINE computeNacelleDrag
+END SUBROUTINE RotCalcNacelleDrag
 
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE AeroDyn
