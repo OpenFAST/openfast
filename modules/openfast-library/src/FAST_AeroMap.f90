@@ -164,7 +164,8 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Generate index for variables with AeroMap flag
-   call Glue_CombineModules(AM%Mod, m%ModData, m%Mappings, iModOrder, VF_AeroMap, .true., ErrStat2, ErrMsg2)
+   call Glue_CombineModules(AM%Mod, m%ModData, m%Mappings, iModOrder, VF_AeroMap, &
+                            .true., ErrStat2, ErrMsg2, Name="AeroMap")
    if (Failed()) return
 
    ! Loop through modules in AM module
@@ -501,7 +502,7 @@ subroutine SS_Solve(AM, m, Mappings, caseData, p_FAST, y_FAST, m_FAST, T, ErrSta
       y_FAST%DriverWriteOutput(SS_Indx_Err) = sqrt(err)/size(AM%Mod%Lin%J, 1)
 
       ! Remove conditioning from solution vector
-      call PostconditionInputDelta(AM%SolveDelta(nx + 1:), AM%JacScale)
+      call PostconditionInputDelta(AM%Mod%Vars, AM%SolveDelta(nx + 1:), AM%JacScale)
 
       ! If error is below tolerance
       if (err <= AM%SolveTolerance) then
@@ -577,19 +578,35 @@ contains
 
    end subroutine ResetInputsAndStates
 
-   subroutine PostconditionInputDelta(u_delta, JacScale)
-      real(R8Ki), intent(inout)  :: u_delta(:)
-      real(R8Ki), intent(in)     :: JacScale
-      do i = 1, size(AM%Mod%Vars%u)
-         associate (Var => AM%Mod%Vars%u(i))
-         if (MV_IsLoad(Var)) then
-            u_delta(Var%iLoc(1):Var%iLoc(2)) = u_delta(Var%iLoc(1):Var%iLoc(2))*JacScale
-         end if
-         end associate
-      end do
-   end subroutine
-
 end subroutine SS_Solve
+
+subroutine PreconditionInputResidual(Vars, u_residual, JacScale)
+   type(ModVarsType), intent(in) :: Vars
+   real(R8Ki), intent(inout)     :: u_residual(:)
+   real(R8Ki), intent(in)        :: JacScale
+   integer(IntKi)                :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i))
+      if (MV_IsLoad(Var)) then
+         u_residual(Var%iLoc(1):Var%iLoc(2)) = u_residual(Var%iLoc(1):Var%iLoc(2))/JacScale
+      end if
+      end associate
+   end do
+end subroutine
+
+subroutine PostconditionInputDelta(Vars, u_delta, JacScale)
+   type(ModVarsType), intent(in) :: Vars
+   real(R8Ki), intent(inout)     :: u_delta(:)
+   real(R8Ki), intent(in)        :: JacScale
+   integer(IntKi)                :: i
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i))
+      if (MV_IsLoad(Var)) then
+         u_delta(Var%iLoc(1):Var%iLoc(2)) = u_delta(Var%iLoc(1):Var%iLoc(2))*JacScale
+      end if
+      end associate
+   end do
+end subroutine
 
 subroutine SS_UpdateInputsStates(AM, delta, T, ErrStat, ErrMsg)
    use ElastoDyn_IO, only: DOF_BF, DOF_BE
@@ -743,7 +760,7 @@ subroutine SS_BuildJacobian(AM, caseData, Mappings, p_FAST, y_FAST, m_FAST, T, E
 
             ! Write linearization matrices
             call CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, p_FAST, y_FAST, SS_t_global, Un, &
-                                         LinRootName, VF_AeroMap, ErrStat2, ErrMsg2, ModData%Abbr)
+                                         LinRootName, VF_AeroMap, ErrStat2, ErrMsg2, ModData%Abbr, CalcGlue=.false.)
             if (Failed()) return
 
          end if
@@ -910,28 +927,13 @@ subroutine SS_BuildResidual(AM, caseData, Mappings, T, ErrStat, ErrMsg)
       call SS_GetCalculatedInputs(AM, AM%u2, Mappings, T, ErrStat2, ErrMsg2) ! calculate new inputs and store in InputIndex=2
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      ! call PreconditionInputResidual(AM%u1, AM%JacScale)
-      ! call PreconditionInputResidual(AM%u2, AM%JacScale)
-
       ! Calculate difference between prescribed and calculated inputs
       call MV_ComputeDiff(AM%Mod%Vars%u, AM%u1, AM%u2, uResidual)
 
       ! Condition residual for solve
-      call PreconditionInputResidual(uResidual, AM%JacScale)
+      call PreconditionInputResidual(AM%Mod%Vars, uResidual, AM%JacScale)
    end associate
-
-contains
-   subroutine PreconditionInputResidual(u_residual, JacScale)
-      real(R8Ki), intent(inout)  :: u_residual(:)
-      real(R8Ki), intent(in)     :: JacScale
-      do i = 1, size(AM%Mod%Vars%u)
-         associate (Var => AM%Mod%Vars%u(i))
-         if (MV_IsLoad(Var)) then
-            u_residual(Var%iLoc(1):Var%iLoc(2)) = u_residual(Var%iLoc(1):Var%iLoc(2))/JacScale
-         end if
-         end associate
-      end do
-   end subroutine
+   
 end subroutine
 
 !-------------------------------------------------------------------------------

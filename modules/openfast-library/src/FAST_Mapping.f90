@@ -2427,19 +2427,38 @@ subroutine FAST_InputSolve(iModDst, ModAry, MapAry, iInput, Turbine, ErrStat, Er
 
    if (present(VarMapAry)) then
 
-      ! Loop through mappings
+      ! Loop through mappings and zero load meshes before transfer
+      do i = 1, size(VarMapAry)
+         associate (Mapping => MapAry(VarMapAry(i)%iMapping))
+
+            ! Skip mappings where this isn't the destination module
+            if (iModDst /= Mapping%iModDst) cycle
+
+            ! Skip mappings that are not ready
+            if (.not. Mapping%Ready) cycle
+            
+            ! If this is a load mesh mapping, clear the loads
+            if (Mapping%MapType == Map_LoadMesh) call ZeroDstLoadMesh(Mapping, ModAry(VarMapAry(i)%iModDst))
+         end associate
+      end do
+
+      ! Loop through mappings and perform input solve
       do i = 1, size(VarMapAry)
 
          ! Skip mappings where this isn't the destination module
          if (iModDst /= VarMapAry(i)%iModDst) cycle
+
+         ! Perform input solve
          call InputSolveMapping(MapAry(VarMapAry(i)%iMapping), ModAry(VarMapAry(i)%iModSrc), ModAry(VarMapAry(i)%iModDst))
+         
       end do
    
    else
 
-      ! Loop through mappings
+      ! Loop through mappings and zero load meshes before transfer
       do i = 1, size(MapAry)
 
+         ! Skip mappings that are not ready
          if (.not. MapAry(i)%Ready) cycle
 
          ! Skip mappings where this isn't the destination module
@@ -2449,11 +2468,13 @@ subroutine FAST_InputSolve(iModDst, ModAry, MapAry, iInput, Turbine, ErrStat, Er
          if (MapAry(i)%MapType == Map_LoadMesh) call ZeroDstLoadMesh(MapAry(i), ModAry(MapAry(i)%iModDst))
       end do
 
+      ! Loop through mappings and perform input solve
       do i = 1, size(MapAry)
 
          ! Skip mappings where this isn't the destination module
          if (iModDst /= MapAry(i)%iModDst) cycle
 
+         ! Perform input solve
          call InputSolveMapping(MapAry(i), ModAry(MapAry(i)%iModSrc), ModAry(MapAry(i)%iModDst))
       end do
    end if
