@@ -25,7 +25,6 @@
 #define _MAPERROR_H
 
 
-#include "map.h"
 #include <stdarg.h>
 
 

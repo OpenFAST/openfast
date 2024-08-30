@@ -27,7 +27,7 @@ set(MEX_LIBS
   $<TARGET_FILE:hydrodynlib>
   $<TARGET_FILE:icedynlib>
   $<TARGET_FILE:icefloelib>
-  $<TARGET_FILE:maplib>
+  $<TARGET_FILE:mappplib>
   $<TARGET_FILE:moordynlib>
   $<TARGET_FILE:orcaflexlib>
   $<TARGET_FILE:sctypeslib>

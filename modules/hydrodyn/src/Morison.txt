@@ -269,7 +269,8 @@ typedef   ^                            ^                             CHARACTER(C
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                        -          -        -         "Pointer to SeaState wave field" -
-typedef   ^                            ^                             logical                  VisMeshes                         -      .false.     -         "Output visualization meshes" -
+typedef   ^                            ^                             logical                  VisMeshes                        -       .false.     -         "Output visualization meshes" -
+typedef   ^                            ^                             INTEGER                  PtfmYMod                         -          -        -         "Large yaw model" -
 #
 #
 # Define outputs from the initialization routine here:
@@ -353,13 +354,15 @@ typedef   ^                            ^                             Morison_JOu
 typedef   ^                            ^                             OutParmType              OutParam                      {:}        -        -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                       -          -        -         ""        -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                     -          -        -         "SeaState wave field" -
-typedef   ^                            ^                             logical                  VisMeshes                       -        .false.     -         "Output visualization meshes" -
+typedef   ^                            ^                             logical                  VisMeshes                     -       .false.     -         "Output visualization meshes" -
+typedef   ^                            ^                             INTEGER                  PtfmYMod                      -          -        -         "Large yaw model" -
 #
 #
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
 typedef   ^                            InputType                     MeshType                 Mesh                          -          -        -         "Kinematics of each node input mesh" -
+typedef   ^                            ^                             ReKi                     PtfmRefY                      -          -        -         "Reference platform yaw offset" (rad)
 #
 #
 # ..... Outputs ...................................................................................................................
