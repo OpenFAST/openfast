@@ -33,9 +33,9 @@ FOLDERS_TO_RUN = [
     "SWRT_YFree_VS_EDC01"                    , # "openfast;elastodyn;aerodyn;servodyn")
     "SWRT_YFree_VS_WTurb"                    , # "openfast;elastodyn;aerodyn;servodyn")
     "5MW_Land_DLL_WTurb"                     , # "openfast;elastodyn;aerodyn;servodyn")
-    "5MW_Land_DLL_WTurb_ADsk"                  ,
-    "5MW_Land_DLL_WTurb_ADsk_SED"              ,
-    "5MW_Land_DLL_WTurb_SED"                   ,
+    # "5MW_Land_DLL_WTurb_ADsk"                  ,
+    # "5MW_Land_DLL_WTurb_ADsk_SED"              ,
+    # "5MW_Land_DLL_WTurb_SED"                   ,
     "5MW_Land_DLL_WTurb_wNacDrag"            , # "openfast;elastodyn;aerodyn;servodyn")
     "5MW_OC3Mnpl_DLL_WTurb_WavesIrr"         , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore")
     "5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart" , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore;restart")
