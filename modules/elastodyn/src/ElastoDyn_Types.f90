@@ -275,6 +275,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  ED_CoordSys  =======
   TYPE, PUBLIC :: ED_CoordSys
+    REAL(R8Ki) , DIMENSION(1:3)  :: alpha1 = 0.0_R8Ki      !< Vector / direction alpha1 after ptfm yaw rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: alpha2 = 0.0_R8Ki      !< Vector / direction alpha2 after ptfm yaw rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: alpha3 = 0.0_R8Ki      !< Vector / direction alpha3 after ptfm yaw rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: beta1 = 0.0_R8Ki      !< Vector / direction beta1 after ptfm yaw and pitch rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: beta2 = 0.0_R8Ki      !< Vector / direction beta2 after ptfm yaw and pitch rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: beta3 = 0.0_R8Ki      !< Vector / direction beta3 after ptfm yaw and pitch rotation [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: a1 = 0.0_R8Ki      !< Vector / direction a1 (=  xt from the IEC coord. system) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: a2 = 0.0_R8Ki      !< Vector / direction a2 (=  zt from the IEC coord. system) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: a3 = 0.0_R8Ki      !< Vector / direction a3 (= -yt from the IEC coord. system) [-]
@@ -2365,6 +2371,12 @@ subroutine ED_CopyCoordSys(SrcCoordSysData, DstCoordSysData, CtrlCode, ErrStat, 
    character(*), parameter        :: RoutineName = 'ED_CopyCoordSys'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   DstCoordSysData%alpha1 = SrcCoordSysData%alpha1
+   DstCoordSysData%alpha2 = SrcCoordSysData%alpha2
+   DstCoordSysData%alpha3 = SrcCoordSysData%alpha3
+   DstCoordSysData%beta1 = SrcCoordSysData%beta1
+   DstCoordSysData%beta2 = SrcCoordSysData%beta2
+   DstCoordSysData%beta3 = SrcCoordSysData%beta3
    DstCoordSysData%a1 = SrcCoordSysData%a1
    DstCoordSysData%a2 = SrcCoordSysData%a2
    DstCoordSysData%a3 = SrcCoordSysData%a3
@@ -2683,6 +2695,12 @@ subroutine ED_PackCoordSys(RF, Indata)
    type(ED_CoordSys), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ED_PackCoordSys'
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%alpha1)
+   call RegPack(RF, InData%alpha2)
+   call RegPack(RF, InData%alpha3)
+   call RegPack(RF, InData%beta1)
+   call RegPack(RF, InData%beta2)
+   call RegPack(RF, InData%beta3)
    call RegPack(RF, InData%a1)
    call RegPack(RF, InData%a2)
    call RegPack(RF, InData%a3)
@@ -2744,6 +2762,12 @@ subroutine ED_UnPackCoordSys(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%alpha1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alpha2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alpha3); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%beta1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%beta2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%beta3); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a3); if (RegCheckErr(RF, RoutineName)) return
