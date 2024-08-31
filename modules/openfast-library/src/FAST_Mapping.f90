@@ -614,7 +614,7 @@ subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                         SrcDL=DatLoc(ExtLd_y_BladeLoad, DstMod%Ins), &           ! ExtLd%y%BladeLoad(DstMod%Ins), &
-                        SrcDispDL=DatLoc(ExtLd_u_BladeMotion, DstMod%Ins), &     ! ExtLd%u%BStCMotionMesh(DstMod%Ins)
+                        SrcDispDL=DatLoc(ExtLd_u_BladeMotion, DstMod%Ins), &     ! ExtLd%u%BladeMotion(DstMod%Ins)
                         DstDL=DatLoc(BD_u_DistrLoad), &                          ! BD%Input(1, DstMod%Ins)%DistrLoad
                         DstDispDL=DatLoc(BD_y_BldMotion), &                      ! BD%y(DstMod%Ins)%BldMotion
                         ErrStat=ErrStat2, ErrMsg=ErrMsg2)
@@ -892,13 +892,13 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapCustom(Mappings, Custom_SrvD_to_ED, SrcMod, DstMod)
 
       ! Blade Structural Controller (if ElastoDyn is used for blades)
-      do j = 1, Turbine%SrvD%p%NumBStC
-         do i = 1, Turbine%ED%p%NumBl
+      do j = 1, size(Turbine%SrvD%Input(1)%BStCMotionMesh, 2)     ! Number of controllers
+         do i = 1, size(Turbine%SrvD%Input(1)%BStCMotionMesh, 1)  ! Number of blades
             call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                              SrcDL=DatLoc(SrvD_y_BStCLoadMesh, i, j), &        ! SrvD%y%BStCLoadMesh(i, j), &
                              SrcDispDL=DatLoc(SrvD_u_BStCMotionMesh, i, j), &  ! SrvD%u%BStCMotionMesh(i, j)
-                             DstDL=DatLoc(ED_u_BladePtLoads, j), &             ! ED%u%BladePtLoads(j)
-                             DstDispDL=DatLoc(ED_y_BladeLn2Mesh, j), &         ! ED%y%BladeLn2Mesh(j)
+                             DstDL=DatLoc(ED_u_BladePtLoads, i), &             ! ED%u%BladePtLoads(i)
+                             DstDispDL=DatLoc(ED_y_BladeLn2Mesh, i), &         ! ED%y%BladeLn2Mesh(i)
                              Active=Turbine%p_FAST%CompElast == Module_ED, &
                              ErrStat=ErrStat2, ErrMsg=ErrMsg2)
             if (Failed()) return
