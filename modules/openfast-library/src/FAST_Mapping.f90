@@ -892,8 +892,8 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapCustom(Mappings, Custom_SrvD_to_ED, SrcMod, DstMod)
 
       ! Blade Structural Controller (if ElastoDyn is used for blades)
-      do j = 1, size(Turbine%SrvD%Input(1)%BStCMotionMesh, 2)     ! Number of controllers
-         do i = 1, size(Turbine%SrvD%Input(1)%BStCMotionMesh, 1)  ! Number of blades
+      do j = 1, Turbine%SrvD%p%NumBStC
+         do i = 1, Turbine%ED%p%NumBl
             call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                              SrcDL=DatLoc(SrvD_y_BStCLoadMesh, i, j), &        ! SrvD%y%BStCLoadMesh(i, j), &
                              SrcDispDL=DatLoc(SrvD_u_BStCMotionMesh, i, j), &  ! SrvD%u%BStCMotionMesh(i, j)
