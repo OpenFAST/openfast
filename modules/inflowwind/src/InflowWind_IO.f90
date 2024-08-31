@@ -152,14 +152,15 @@ subroutine IfW_SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMs
 
 end subroutine
 
-subroutine IfW_SteadyFlowField_Init(FF, RefHt, HWindSpeed, PLExp, ErrStat, ErrMsg)
+subroutine IfW_SteadyFlowField_Init(FF, RefHt, HWindSpeed, PLExp, ErrStat, ErrMsg, AngleH)
    use InflowWind_IO_Types, only: Steady_InitInputType, WindFileDat
-   type(FlowFieldType), pointer, intent(inout)  :: FF          !< FlowField
-   real(ReKi), intent(in)                       :: RefHt       !< Hub reference height
-   real(ReKi), intent(in)                       :: HWindSpeed  !< Horizontal wind speed at reference height
-   real(ReKi), intent(in)                       :: PLExp       !< Power law shear coefficient
-   integer(IntKi), intent(out)                  :: ErrStat     !< Error status
-   character(*), intent(out)                    :: ErrMsg      !< Error message
+   type(FlowFieldType), pointer, intent(inout)  :: FF                !< FlowField
+   real(ReKi), intent(in)                       :: RefHt             !< Hub reference height
+   real(ReKi), intent(in)                       :: HWindSpeed        !< Horizontal wind speed at reference height
+   real(ReKi), intent(in)                       :: PLExp             !< Power law shear coefficient
+   integer(IntKi), intent(out)                  :: ErrStat           !< Error status
+   character(*), intent(out)                    :: ErrMsg            !< Error message
+   real(ReKi), optional, intent(in)             :: AngleH            !< Horizontal angle
 
    character(*), parameter    :: RoutineName = 'IfW_SteadyFlowField_Init'
    integer(IntKi)             :: ErrStat2
@@ -198,11 +199,18 @@ subroutine IfW_SteadyFlowField_Init(FF, RefHt, HWindSpeed, PLExp, ErrStat, ErrMs
    FF%Uniform%VelH = HWindSpeed
    FF%Uniform%VelV = 0.0_ReKi
    FF%Uniform%VelGust = 0.0_ReKi
-   FF%Uniform%AngleH = 0.0_ReKi
+   if (present(AngleH)) then
+      FF%Uniform%AngleH = AngleH
+   else
+      FF%Uniform%AngleH = 0.0_ReKi
+   end if
    FF%Uniform%AngleV = 0.0_ReKi
    FF%Uniform%ShrH = 0.0_ReKi
    FF%Uniform%ShrV = PLExp
    FF%Uniform%LinShrV = 0.0_ReKi
+
+
+
 
 contains
    logical function Failed()

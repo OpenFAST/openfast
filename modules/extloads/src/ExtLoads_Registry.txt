@@ -101,11 +101,12 @@ typedef	^	InputType	MeshType	HubMotion	-	-	-	"motion on the hub"	-
 typedef	^	InputType	MeshType	NacelleMotion	-	-	-	"motion on the nacelle"	-
 typedef	^	InputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade root"	-
 typedef	^	InputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
+typedef ^   InputType   MeshType    TowerLoadAD 	 -	-	-	"loads on the tower from aerodyn"	-
+typedef ^   InputType   MeshType    BladeLoadAD	{:}	-	-	"loads on each blade from aerodyn"	-
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef ^ OutputType ExtLdDX_OutputType  DX_y    -       -       -       "Data to get from external driver"
 typedef ^ OutputType MeshType TowerLoad 	 -	-	-	"loads on the tower"	-
 typedef ^ OutputType MeshType BladeLoad	{:}	-	-	"loads on each blade"	-
-typedef ^ OutputType MeshType TowerLoadAD 	 -	-	-	"loads on the tower from aerodyn"	-
-typedef ^ OutputType MeshType BladeLoadAD	{:}	-	-	"loads on each blade from aerodyn"	-
+

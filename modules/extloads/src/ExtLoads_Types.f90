@@ -128,6 +128,8 @@ IMPLICIT NONE
     TYPE(MeshType)  :: NacelleMotion      !< motion on the nacelle [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootMotion      !< motion on each blade root [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeMotion      !< motion on each blade [-]
+    TYPE(MeshType)  :: TowerLoadAD      !< loads on the tower from aerodyn [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeLoadAD      !< loads on each blade from aerodyn [-]
   END TYPE ExtLd_InputType
 ! =======================
 ! =========  ExtLd_OutputType  =======
@@ -135,8 +137,6 @@ IMPLICIT NONE
     TYPE(ExtLdDX_OutputType)  :: DX_y      !< Data to get from external driver [-]
     TYPE(MeshType)  :: TowerLoad      !< loads on the tower [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeLoad      !< loads on each blade [-]
-    TYPE(MeshType)  :: TowerLoadAD      !< loads on the tower from aerodyn [-]
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeLoadAD      !< loads on each blade from aerodyn [-]
   END TYPE ExtLd_OutputType
 ! =======================
    integer(IntKi), public, parameter :: ExtLd_x_blah                     =   1 ! ExtLd%blah
@@ -153,12 +153,12 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: ExtLd_u_NacelleMotion            =  12 ! ExtLd%NacelleMotion
    integer(IntKi), public, parameter :: ExtLd_u_BladeRootMotion          =  13 ! ExtLd%BladeRootMotion(DL%i1)
    integer(IntKi), public, parameter :: ExtLd_u_BladeMotion              =  14 ! ExtLd%BladeMotion(DL%i1)
-   integer(IntKi), public, parameter :: ExtLd_y_DX_y_twrLd               =  15 ! ExtLd%DX_y%twrLd
-   integer(IntKi), public, parameter :: ExtLd_y_DX_y_bldLd               =  16 ! ExtLd%DX_y%bldLd
-   integer(IntKi), public, parameter :: ExtLd_y_TowerLoad                =  17 ! ExtLd%TowerLoad
-   integer(IntKi), public, parameter :: ExtLd_y_BladeLoad                =  18 ! ExtLd%BladeLoad(DL%i1)
-   integer(IntKi), public, parameter :: ExtLd_y_TowerLoadAD              =  19 ! ExtLd%TowerLoadAD
-   integer(IntKi), public, parameter :: ExtLd_y_BladeLoadAD              =  20 ! ExtLd%BladeLoadAD(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_u_TowerLoadAD              =  15 ! ExtLd%TowerLoadAD
+   integer(IntKi), public, parameter :: ExtLd_u_BladeLoadAD              =  16 ! ExtLd%BladeLoadAD(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_y_DX_y_twrLd               =  17 ! ExtLd%DX_y%twrLd
+   integer(IntKi), public, parameter :: ExtLd_y_DX_y_bldLd               =  18 ! ExtLd%DX_y%bldLd
+   integer(IntKi), public, parameter :: ExtLd_y_TowerLoad                =  19 ! ExtLd%TowerLoad
+   integer(IntKi), public, parameter :: ExtLd_y_BladeLoad                =  20 ! ExtLd%BladeLoad(DL%i1)
 
 contains
 
@@ -1030,6 +1030,25 @@ subroutine ExtLd_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   call MeshCopy(SrcInputData%TowerLoadAD, DstInputData%TowerLoadAD, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcInputData%BladeLoadAD)) then
+      LB(1:1) = lbound(SrcInputData%BladeLoadAD, kind=B8Ki)
+      UB(1:1) = ubound(SrcInputData%BladeLoadAD, kind=B8Ki)
+      if (.not. allocated(DstInputData%BladeLoadAD)) then
+         allocate(DstInputData%BladeLoadAD(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%BladeLoadAD.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcInputData%BladeLoadAD(i1), DstInputData%BladeLoadAD(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
 end subroutine
 
 subroutine ExtLd_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -1069,6 +1088,17 @@ subroutine ExtLd_DestroyInput(InputData, ErrStat, ErrMsg)
       end do
       deallocate(InputData%BladeMotion)
    end if
+   call MeshDestroy( InputData%TowerLoadAD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(InputData%BladeLoadAD)) then
+      LB(1:1) = lbound(InputData%BladeLoadAD, kind=B8Ki)
+      UB(1:1) = ubound(InputData%BladeLoadAD, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( InputData%BladeLoadAD(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(InputData%BladeLoadAD)
+   end if
 end subroutine
 
 subroutine ExtLd_PackInput(RF, Indata)
@@ -1099,6 +1129,16 @@ subroutine ExtLd_PackInput(RF, Indata)
       UB(1:1) = ubound(InData%BladeMotion, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%BladeMotion(i1)) 
+      end do
+   end if
+   call MeshPack(RF, InData%TowerLoadAD) 
+   call RegPack(RF, allocated(InData%BladeLoadAD))
+   if (allocated(InData%BladeLoadAD)) then
+      call RegPackBounds(RF, 1, lbound(InData%BladeLoadAD, kind=B8Ki), ubound(InData%BladeLoadAD, kind=B8Ki))
+      LB(1:1) = lbound(InData%BladeLoadAD, kind=B8Ki)
+      UB(1:1) = ubound(InData%BladeLoadAD, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call MeshPack(RF, InData%BladeLoadAD(i1)) 
       end do
    end if
    if (RegCheckErr(RF, RoutineName)) return
@@ -1144,6 +1184,20 @@ subroutine ExtLd_UnPackInput(RF, OutData)
          call MeshUnpack(RF, OutData%BladeMotion(i1)) ! BladeMotion 
       end do
    end if
+   call MeshUnpack(RF, OutData%TowerLoadAD) ! TowerLoadAD 
+   if (allocated(OutData%BladeLoadAD)) deallocate(OutData%BladeLoadAD)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%BladeLoadAD(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeLoadAD.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(RF, OutData%BladeLoadAD(i1)) ! BladeLoadAD 
+      end do
+   end if
 end subroutine
 
 subroutine ExtLd_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1181,25 +1235,6 @@ subroutine ExtLd_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   call MeshCopy(SrcOutputData%TowerLoadAD, DstOutputData%TowerLoadAD, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcOutputData%BladeLoadAD)) then
-      LB(1:1) = lbound(SrcOutputData%BladeLoadAD, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%BladeLoadAD, kind=B8Ki)
-      if (.not. allocated(DstOutputData%BladeLoadAD)) then
-         allocate(DstOutputData%BladeLoadAD(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%BladeLoadAD.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshCopy(SrcOutputData%BladeLoadAD(i1), DstOutputData%BladeLoadAD(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
 end subroutine
 
 subroutine ExtLd_DestroyOutput(OutputData, ErrStat, ErrMsg)
@@ -1226,17 +1261,6 @@ subroutine ExtLd_DestroyOutput(OutputData, ErrStat, ErrMsg)
       end do
       deallocate(OutputData%BladeLoad)
    end if
-   call MeshDestroy( OutputData%TowerLoadAD, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(OutputData%BladeLoadAD)) then
-      LB(1:1) = lbound(OutputData%BladeLoadAD, kind=B8Ki)
-      UB(1:1) = ubound(OutputData%BladeLoadAD, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call MeshDestroy( OutputData%BladeLoadAD(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(OutputData%BladeLoadAD)
-   end if
 end subroutine
 
 subroutine ExtLd_PackOutput(RF, Indata)
@@ -1255,16 +1279,6 @@ subroutine ExtLd_PackOutput(RF, Indata)
       UB(1:1) = ubound(InData%BladeLoad, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%BladeLoad(i1)) 
-      end do
-   end if
-   call MeshPack(RF, InData%TowerLoadAD) 
-   call RegPack(RF, allocated(InData%BladeLoadAD))
-   if (allocated(InData%BladeLoadAD)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeLoadAD, kind=B8Ki), ubound(InData%BladeLoadAD, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeLoadAD, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeLoadAD, kind=B8Ki)
-      do i1 = LB(1), UB(1)
-         call MeshPack(RF, InData%BladeLoadAD(i1)) 
       end do
    end if
    if (RegCheckErr(RF, RoutineName)) return
@@ -1292,20 +1306,6 @@ subroutine ExtLd_UnPackOutput(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call MeshUnpack(RF, OutData%BladeLoad(i1)) ! BladeLoad 
-      end do
-   end if
-   call MeshUnpack(RF, OutData%TowerLoadAD) ! TowerLoadAD 
-   if (allocated(OutData%BladeLoadAD)) deallocate(OutData%BladeLoadAD)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BladeLoadAD(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeLoadAD.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshUnpack(RF, OutData%BladeLoadAD(i1)) ! BladeLoadAD 
       end do
    end if
 end subroutine
@@ -1428,6 +1428,14 @@ SUBROUTINE ExtLd_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMs
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
+   CALL MeshExtrapInterp1(u1%TowerLoadAD, u2%TowerLoadAD, tin, u_out%TowerLoadAD, tin_out, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   IF (ALLOCATED(u_out%BladeLoadAD) .AND. ALLOCATED(u1%BladeLoadAD)) THEN
+      DO i1 = LBOUND(u_out%BladeLoadAD,1, kind=B8Ki),UBOUND(u_out%BladeLoadAD,1, kind=B8Ki)
+         CALL MeshExtrapInterp1(u1%BladeLoadAD(i1), u2%BladeLoadAD(i1), tin, u_out%BladeLoadAD(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
 END SUBROUTINE
 
 SUBROUTINE ExtLd_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -1503,6 +1511,14 @@ SUBROUTINE ExtLd_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, E
    IF (ALLOCATED(u_out%BladeMotion) .AND. ALLOCATED(u1%BladeMotion)) THEN
       DO i1 = LBOUND(u_out%BladeMotion,1, kind=B8Ki),UBOUND(u_out%BladeMotion,1, kind=B8Ki)
          CALL MeshExtrapInterp2(u1%BladeMotion(i1), u2%BladeMotion(i1), u3%BladeMotion(i1), tin, u_out%BladeMotion(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
+   CALL MeshExtrapInterp2(u1%TowerLoadAD, u2%TowerLoadAD, u3%TowerLoadAD, tin, u_out%TowerLoadAD, tin_out, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   IF (ALLOCATED(u_out%BladeLoadAD) .AND. ALLOCATED(u1%BladeLoadAD)) THEN
+      DO i1 = LBOUND(u_out%BladeLoadAD,1, kind=B8Ki),UBOUND(u_out%BladeLoadAD,1, kind=B8Ki)
+         CALL MeshExtrapInterp2(u1%BladeLoadAD(i1), u2%BladeLoadAD(i1), u3%BladeLoadAD(i1), tin, u_out%BladeLoadAD(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
@@ -1615,14 +1631,6 @@ SUBROUTINE ExtLd_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrM
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
-   CALL MeshExtrapInterp1(y1%TowerLoadAD, y2%TowerLoadAD, tin, y_out%TowerLoadAD, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   IF (ALLOCATED(y_out%BladeLoadAD) .AND. ALLOCATED(y1%BladeLoadAD)) THEN
-      DO i1 = LBOUND(y_out%BladeLoadAD,1, kind=B8Ki),UBOUND(y_out%BladeLoadAD,1, kind=B8Ki)
-         CALL MeshExtrapInterp1(y1%BladeLoadAD(i1), y2%BladeLoadAD(i1), tin, y_out%BladeLoadAD(i1), tin_out, ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-      END DO
-   END IF ! check if allocated
 END SUBROUTINE
 
 SUBROUTINE ExtLd_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
@@ -1690,14 +1698,6 @@ SUBROUTINE ExtLd_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
-   CALL MeshExtrapInterp2(y1%TowerLoadAD, y2%TowerLoadAD, y3%TowerLoadAD, tin, y_out%TowerLoadAD, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   IF (ALLOCATED(y_out%BladeLoadAD) .AND. ALLOCATED(y1%BladeLoadAD)) THEN
-      DO i1 = LBOUND(y_out%BladeLoadAD,1, kind=B8Ki),UBOUND(y_out%BladeLoadAD,1, kind=B8Ki)
-         CALL MeshExtrapInterp2(y1%BladeLoadAD(i1), y2%BladeLoadAD(i1), y3%BladeLoadAD(i1), tin, y_out%BladeLoadAD(i1), tin_out, ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-      END DO
-   END IF ! check if allocated
 END SUBROUTINE
 
 function ExtLd_InputMeshPointer(u, DL) result(Mesh)
@@ -1716,6 +1716,10 @@ function ExtLd_InputMeshPointer(u, DL) result(Mesh)
        Mesh => u%BladeRootMotion(DL%i1)
    case (ExtLd_u_BladeMotion)
        Mesh => u%BladeMotion(DL%i1)
+   case (ExtLd_u_TowerLoadAD)
+       Mesh => u%TowerLoadAD
+   case (ExtLd_u_BladeLoadAD)
+       Mesh => u%BladeLoadAD(DL%i1)
    end select
 end function
 
@@ -1729,10 +1733,6 @@ function ExtLd_OutputMeshPointer(y, DL) result(Mesh)
        Mesh => y%TowerLoad
    case (ExtLd_y_BladeLoad)
        Mesh => y%BladeLoad(DL%i1)
-   case (ExtLd_y_TowerLoadAD)
-       Mesh => y%TowerLoadAD
-   case (ExtLd_y_BladeLoadAD)
-       Mesh => y%BladeLoadAD(DL%i1)
    end select
 end function
 
@@ -1914,6 +1914,10 @@ subroutine ExtLd_VarPackInput(V, u, ValAry)
          call MV_PackMesh(V, u%BladeRootMotion(DL%i1), ValAry)                ! Mesh
       case (ExtLd_u_BladeMotion)
          call MV_PackMesh(V, u%BladeMotion(DL%i1), ValAry)                    ! Mesh
+      case (ExtLd_u_TowerLoadAD)
+         call MV_PackMesh(V, u%TowerLoadAD, ValAry)                           ! Mesh
+      case (ExtLd_u_BladeLoadAD)
+         call MV_PackMesh(V, u%BladeLoadAD(DL%i1), ValAry)                    ! Mesh
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -1960,6 +1964,10 @@ subroutine ExtLd_VarUnpackInput(V, ValAry, u)
          call MV_UnpackMesh(V, ValAry, u%BladeRootMotion(DL%i1))              ! Mesh
       case (ExtLd_u_BladeMotion)
          call MV_UnpackMesh(V, ValAry, u%BladeMotion(DL%i1))                  ! Mesh
+      case (ExtLd_u_TowerLoadAD)
+         call MV_UnpackMesh(V, ValAry, u%TowerLoadAD)                         ! Mesh
+      case (ExtLd_u_BladeLoadAD)
+         call MV_UnpackMesh(V, ValAry, u%BladeLoadAD(DL%i1))                  ! Mesh
       end select
    end associate
 end subroutine
@@ -1992,6 +2000,10 @@ function ExtLd_InputFieldName(DL) result(Name)
        Name = "u%BladeRootMotion("//trim(Num2LStr(DL%i1))//")"
    case (ExtLd_u_BladeMotion)
        Name = "u%BladeMotion("//trim(Num2LStr(DL%i1))//")"
+   case (ExtLd_u_TowerLoadAD)
+       Name = "u%TowerLoadAD"
+   case (ExtLd_u_BladeLoadAD)
+       Name = "u%BladeLoadAD("//trim(Num2LStr(DL%i1))//")"
    case default
        Name = "Unknown Field"
    end select
@@ -2021,10 +2033,6 @@ subroutine ExtLd_VarPackOutput(V, y, ValAry)
          call MV_PackMesh(V, y%TowerLoad, ValAry)                             ! Mesh
       case (ExtLd_y_BladeLoad)
          call MV_PackMesh(V, y%BladeLoad(DL%i1), ValAry)                      ! Mesh
-      case (ExtLd_y_TowerLoadAD)
-         call MV_PackMesh(V, y%TowerLoadAD, ValAry)                           ! Mesh
-      case (ExtLd_y_BladeLoadAD)
-         call MV_PackMesh(V, y%BladeLoadAD(DL%i1), ValAry)                    ! Mesh
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -2055,10 +2063,6 @@ subroutine ExtLd_VarUnpackOutput(V, ValAry, y)
          call MV_UnpackMesh(V, ValAry, y%TowerLoad)                           ! Mesh
       case (ExtLd_y_BladeLoad)
          call MV_UnpackMesh(V, ValAry, y%BladeLoad(DL%i1))                    ! Mesh
-      case (ExtLd_y_TowerLoadAD)
-         call MV_UnpackMesh(V, ValAry, y%TowerLoadAD)                         ! Mesh
-      case (ExtLd_y_BladeLoadAD)
-         call MV_UnpackMesh(V, ValAry, y%BladeLoadAD(DL%i1))                  ! Mesh
       end select
    end associate
 end subroutine
@@ -2075,10 +2079,6 @@ function ExtLd_OutputFieldName(DL) result(Name)
        Name = "y%TowerLoad"
    case (ExtLd_y_BladeLoad)
        Name = "y%BladeLoad("//trim(Num2LStr(DL%i1))//")"
-   case (ExtLd_y_TowerLoadAD)
-       Name = "y%TowerLoadAD"
-   case (ExtLd_y_BladeLoadAD)
-       Name = "y%BladeLoadAD("//trim(Num2LStr(DL%i1))//")"
    case default
        Name = "Unknown Field"
    end select

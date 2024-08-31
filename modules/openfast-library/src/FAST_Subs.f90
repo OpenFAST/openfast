@@ -700,28 +700,22 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, BD
    ! External Loads
    !----------------------------------------------------------------------------
 
-   IF ( p_FAST%CompAero == Module_ExtLd ) THEN
+   IF ( (p_FAST%CompAero == Module_ExtLd) .and. PRESENT(ExternInitData) ) THEN
 
-      IF ( PRESENT(ExternInitData) ) THEN
+      ! set initialization data for ExtLoads
+      CALL ExtLd_SetInitInput(Init%InData_ExtLd, Init%OutData_ED, ED%y, Init%OutData_BD, BD%y(:), Init%OutData_AD, p_FAST, ExternInitData, ErrStat2, ErrMsg2)
+      CALL ExtLd_Init( Init%InData_ExtLd, ExtLd%u, ExtLd%xd(1), ExtLd%p, ExtLd%y, ExtLd%m, p_FAST%dt_module( MODULE_ExtLd ), Init%OutData_ExtLd, ErrStat2, ErrMsg2 )
+      if (Failed()) return
 
-         ! set initialization data for ExtLoads
-         CALL ExtLd_SetInitInput(Init%InData_ExtLd, Init%OutData_ED, ED%y, Init%OutData_BD, BD%y(:), Init%OutData_AD, p_FAST, ExternInitData, ErrStat2, ErrMsg2)
-         CALL ExtLd_Init( Init%InData_ExtLd, ExtLd%u, ExtLd%xd(1), ExtLd%p, ExtLd%y, ExtLd%m, p_FAST%dt_module( MODULE_ExtLd ), Init%OutData_ExtLd, ErrStat2, ErrMsg2 )
-         if (Failed()) return
+      ! Add module to list of modules, return on error
+      CALL MV_AddModule(m_Glue%ModData, Module_ExtLd, 'ExtLd', 1, p_FAST%dt_module(Module_ExtLd), p_FAST%DT, &
+                        Init%OutData_ExtLd%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
+      if (Failed()) return
 
-         CALL SetModuleSubstepTime(Module_ExtLd, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-         if (Failed()) return
+      AirDens = Init%OutData_ExtLd%AirDens
+      AD%p%FlowField => Init%OutData_ExtLd%FlowField
 
-         ! Add module to list of modules, return on error
-         CALL MV_AddModule(m_Glue%ModData, Module_ExtLd, 'ExtLd', 1, p_FAST%dt_module(Module_ExtLd), p_FAST%DT, &
-                           Init%OutData_ExtLd%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
-         if (Failed()) return
-
-         AirDens = Init%OutData_ExtLd%AirDens
-
-         p_FAST%ModuleInitialized(Module_ExtLd) = .TRUE.
-
-      END IF
+      p_FAST%ModuleInitialized(Module_ExtLd) = .TRUE.
 
    END IF
 

@@ -29,7 +29,7 @@ from errorPlotting import exportCaseSummary
 import glob
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.sum','.log']
+excludeExt=['.ech','.sum','.log']
 
 ##### Main program
 
@@ -101,7 +101,8 @@ else:
             shutil.copy2(srcname, dstname)
 
 if not os.path.isdir(testBuildDirectory):
-    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt,
+                 renameExtDict={'.outb':'.ref.outb', '.out':'.ref.out'})
 
 ### Run openfast on the test case
 if not noExec:

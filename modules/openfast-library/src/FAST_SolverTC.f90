@@ -98,7 +98,7 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    ! Get array of module IDs
    modIDs = [(GlueModData(i)%ID, i=1, size(GlueModData))]
 
-   ! Indices of all modules in Step 0 initialization order
+   ! Indices of all modules in Step 0 initialization order (SrvD inputs)
    p%iModInit = [pack(modInds, ModIDs == Module_ED), &
                  pack(modInds, ModIDs == Module_BD), &
                  pack(modInds, ModIDs == Module_SD), &
@@ -125,6 +125,7 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                  pack(modInds, ModIDs == Module_IfW), &
                  pack(modInds, ModIDs == Module_SeaSt), &
                  pack(modInds, ModIDs == Module_AD), &
+                 pack(modInds, ModIDs == Module_ExtLd), &
                  pack(modInds, ModIDs == Module_FEAM), &
                  pack(modInds, ModIDs == Module_IceD), &
                  pack(modInds, ModIDs == Module_IceF), &
@@ -697,7 +698,7 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
    m%StateCurr%x = 0.0_R8Ki
 
    ! Reset mapping ready for transfer flag
-   GlueModMaps%Ready = .false.
+   call FAST_ResetMappingReady(GlueModMaps)
 
    ! Initialize temporary input structure for TC and Option1 modules
    do i = 1, size(m%Mod%ModData)
@@ -1019,7 +1020,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
    do while (CorrIter <= NumCorrections)
 
       ! Reset mapping ready flags
-      GlueModMaps%Ready = .false.
+      call FAST_ResetMappingReady(GlueModMaps)
 
       ! Copy TC solver states from current to predicted
       call Glue_CopyTC_State(m%StateCurr, m%StatePred, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
