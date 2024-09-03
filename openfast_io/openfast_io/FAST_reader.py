@@ -107,7 +107,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['ElastoDynBlade'] = {}
         self.fst_vt['ElastoDynTower'] = {}
         self.fst_vt['InflowWind'] = {}
-        self.fst_vt['AeroDyn15'] = {}
+        self.fst_vt['AeroDyn'] = {}
         self.fst_vt['AeroDyn14'] = {}
         self.fst_vt['AeroDisk'] = {}
         self.fst_vt['AeroDynBlade'] = {}
@@ -526,55 +526,6 @@ class InputReader_OpenFAST(object):
 
     def read_SimpleElastoDyn(self, sed_file):
         # Read the Simplified ElastoDyn input file
-        '''
-        Here is the format of the Simplified ElastoDyn input file:
-
-        ------- SIMPLIFIED ELASTODYN INPUT FILE ----------------------------------------
-        Test case input file for SED (not representative of any model)
-        ---------------------- SIMULATION CONTROL --------------------------------------
-        True          Echo        - Echo input data to "<RootName>.ech" (flag)
-                3   IntMethod   - Integration method: {1: RK4, 2: AB4, or 3: ABM4} (-)
-        "default"     DT          - Integration time step (s)
-        ---------------------- DEGREES OF FREEDOM --------------------------------------
-        True          GenDOF      - Generator DOF (flag)
-        True          YawDOF      - Yaw degree of freedom -- controlled by controller (flag)
-        ---------------------- INITIAL CONDITIONS --------------------------------------
-                0   Azimuth     - Initial azimuth angle for blades (degrees)
-                0   BlPitch     - Blades initial pitch (degrees)
-            12.1   RotSpeed    - Initial or fixed rotor speed (rpm)
-                0   NacYaw      - Initial or fixed nacelle-yaw angle (degrees)
-                0   PtfmPitch   - Fixed pitch tilt rotational displacement of platform (degrees)
-        ---------------------- TURBINE CONFIGURATION -----------------------------------
-                3   NumBl       - Number of blades (-)
-                63   TipRad      - The distance from the rotor apex to the blade tip (meters)
-                1.5   HubRad      - The distance from the rotor apex to the blade root (meters)
-            -2.5   PreCone     - Blades cone angle (degrees)
-            -5.0191   OverHang    - Distance from yaw axis to rotor apex [3 blades] or teeter pin [2 blades] (meters)
-                -5   ShftTilt    - Rotor shaft tilt angle (degrees)
-            1.96256   Twr2Shft    - Vertical distance from the tower-top to the rotor shaft (meters)
-            87.6   TowerHt     - Height of tower above ground level [onshore] or MSL [offshore] (meters)
-        ---------------------- MASS AND INERTIA ----------------------------------------
-        38677052   RotIner     - Rot inertia about rotor axis [blades + hub] (kg m^2)
-            534.116   GenIner     - Generator inertia about HSS (kg m^2)
-        ---------------------- DRIVETRAIN ----------------------------------------------
-                97   GBoxRatio   - Gearbox ratio (-)
-        ---------------------- OUTPUT --------------------------------------------------
-                    OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
-        "BlPitch1"
-        "BlPitch2"
-        "BlPitch3"
-        "Azimuth"                 - Blades azimuth angle                        (deg)
-        "RotSpeed"                - Low-speed shaft rotational speed            (rpm)
-        "RotAcc"                  - Low-speed shaft rotational acceleration     (rad/s^2)
-        "GenSpeed"                - High-speed shaft rotational speed           (rpm)
-        "GenAcc"                  - High-speed shaft rotational acceleration    (rad/s^2)
-        "Yaw"                     - Commanded yaw angle
-        "YawRate"                 - Commanded yaw angle rate
-        "RotPwr"
-        "RotTorq"
-        END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
-        -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        '''
         f = open(sed_file)
 
         f.readline()
@@ -994,7 +945,7 @@ class InputReader_OpenFAST(object):
 
         f.close()
                 
-    def read_AeroDyn15(self):
+    def read_AeroDyn(self):
         # AeroDyn v15.03
 
         ad_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile'])
@@ -1004,148 +955,148 @@ class InputReader_OpenFAST(object):
         f.readline()
         f.readline()
         f.readline()
-        self.fst_vt['AeroDyn15']['Echo']          = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['DTAero']        = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['Wake_Mod']       = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['TwrPotent']     = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['TwrShadow']     = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['TwrAero']       = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['CavitCheck']    = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['Buoyancy']      = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['NacelleDrag']      = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['CompAA']        = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['AA_InputFile']  = f.readline().split()[0]
+        self.fst_vt['AeroDyn']['Echo']          = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['DTAero']        = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['Wake_Mod']       = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['TwrPotent']     = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['TwrShadow']     = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['TwrAero']       = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['CavitCheck']    = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['Buoyancy']      = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['NacelleDrag']      = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['CompAA']        = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['AA_InputFile']  = f.readline().split()[0]
 
         # Environmental Conditions
         f.readline()
-        self.fst_vt['AeroDyn15']['AirDens']        = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['KinVisc']        = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['SpdSound']       = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['Patm']           = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['Pvap']           = float_read(f.readline().split()[0])
-        #self.fst_vt['AeroDyn15']['FluidDepth']           = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['AirDens']        = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['KinVisc']        = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['SpdSound']       = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['Patm']           = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['Pvap']           = float_read(f.readline().split()[0])
+        #self.fst_vt['AeroDyn']['FluidDepth']           = float_read(f.readline().split()[0])
 
         f.readline()
-        self.fst_vt['AeroDyn15']['BEM_Mod']           = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['BEM_Mod']           = int(f.readline().split()[0])
 
         # Blade-Element/Momentum Theory Options
         f.readline()
-        self.fst_vt['AeroDyn15']['Skew_Mod']             = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['SkewMomCorr']         = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['SkewRedistr_Mod']     = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['SkewRedistrFactor']   = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['Skew_Mod']             = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['SkewMomCorr']         = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['SkewRedistr_Mod']     = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['SkewRedistrFactor']   = float_read(f.readline().split()[0])
         f.readline()
-        self.fst_vt['AeroDyn15']['TipLoss']               = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['HubLoss']               = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['TanInd']                = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['AIDrag']                = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['TIDrag']                = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['IndToler']              = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['MaxIter']               = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['TipLoss']               = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['HubLoss']               = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['TanInd']                = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['AIDrag']                = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['TIDrag']                = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['IndToler']              = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['MaxIter']               = int(f.readline().split()[0])
         f.readline()
-        self.fst_vt['AeroDyn15']['SectAvg']               = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['SectAvgWeighting']      = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['SectAvgNPoints']        = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['SectAvgPsiBwd']         = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['SectAvgPsiFwd']         = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['SectAvg']               = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['SectAvgWeighting']      = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['SectAvgNPoints']        = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['SectAvgPsiBwd']         = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['SectAvgPsiFwd']         = float_read(f.readline().split()[0])
 
 
         # Dynamic Blade-Element/Momentum Theory Options 
         f.readline()
-        self.fst_vt['AeroDyn15']['DBEMT_Mod']          = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['tau1_const']         = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['DBEMT_Mod']          = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['tau1_const']         = float_read(f.readline().split()[0])
 
         # Olaf -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
         f.readline()
-        self.fst_vt['AeroDyn15']['OLAFInputFileName']  = f.readline().split()[0][1:-1]
+        self.fst_vt['AeroDyn']['OLAFInputFileName']  = f.readline().split()[0][1:-1]
         
         # Unsteady Airfoil Aerodynamics Options
         f.readline()
-        self.fst_vt['AeroDyn15']['AoA34']                  = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['UA_Mod']                  = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['FLookup']                = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['IntegrationMethod']      = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['AoA34']                  = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['UA_Mod']                  = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['FLookup']                = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['IntegrationMethod']      = int(f.readline().split()[0])
         
         file_pos = f.tell()
         line = f.readline()
         if 'UAStartRad' in line:
-            self.fst_vt['AeroDyn15']['UAStartRad']             = float_read(line.split()[0])
+            self.fst_vt['AeroDyn']['UAStartRad']             = float_read(line.split()[0])
         else:
             f.seek(file_pos)
         
         file_pos = f.tell()
         line = f.readline()
         if 'UAEndRad' in line:
-            self.fst_vt['AeroDyn15']['UAEndRad']             = float_read(line.split()[0])
+            self.fst_vt['AeroDyn']['UAEndRad']             = float_read(line.split()[0])
         else:
             f.seek(file_pos)
 
 
         # Airfoil Information
         f.readline()
-        self.fst_vt['AeroDyn15']['AFTabMod']         = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['InCol_Alfa']       = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['InCol_Cl']         = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['InCol_Cd']         = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['InCol_Cm']         = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['InCol_Cpmin']      = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['NumAFfiles']       = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['AFNames']          = [None] * self.fst_vt['AeroDyn15']['NumAFfiles']
-        for i in range(self.fst_vt['AeroDyn15']['NumAFfiles']):
+        self.fst_vt['AeroDyn']['AFTabMod']         = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['InCol_Alfa']       = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['InCol_Cl']         = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['InCol_Cd']         = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['InCol_Cm']         = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['InCol_Cpmin']      = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['NumAFfiles']       = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['AFNames']          = [None] * self.fst_vt['AeroDyn']['NumAFfiles']
+        for i in range(self.fst_vt['AeroDyn']['NumAFfiles']):
             af_filename = fix_path(f.readline().split()[0])[1:-1]
-            self.fst_vt['AeroDyn15']['AFNames'][i]   = os.path.abspath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], af_filename))
+            self.fst_vt['AeroDyn']['AFNames'][i]   = os.path.abspath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], af_filename))
 
         # Rotor/Blade Properties
         f.readline()
-        self.fst_vt['AeroDyn15']['UseBlCm']        = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['ADBlFile1']      = f.readline().split()[0][1:-1]
-        self.fst_vt['AeroDyn15']['ADBlFile2']      = f.readline().split()[0][1:-1]
-        self.fst_vt['AeroDyn15']['ADBlFile3']      = f.readline().split()[0][1:-1]
+        self.fst_vt['AeroDyn']['UseBlCm']        = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['ADBlFile1']      = f.readline().split()[0][1:-1]
+        self.fst_vt['AeroDyn']['ADBlFile2']      = f.readline().split()[0][1:-1]
+        self.fst_vt['AeroDyn']['ADBlFile3']      = f.readline().split()[0][1:-1]
 
         # Hub, nacelle, and tail fin aerodynamics
         f.readline()
-        self.fst_vt['AeroDyn15']['VolHub'] = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['HubCenBx'] = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['VolHub'] = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['HubCenBx'] = float_read(f.readline().split()[0])
         f.readline()
-        self.fst_vt['AeroDyn15']['VolNac'] = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['VolNac'] = float_read(f.readline().split()[0])
         # data = [float(val) for val in f.readline().split(',')]
-        self.fst_vt['AeroDyn15']['NacCenB'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
+        self.fst_vt['AeroDyn']['NacCenB'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
 
-        self.fst_vt['AeroDyn15']['NacArea'] = [idx.strip() for idx in f.readline().split('NacArea')[0].split(',')]
-        self.fst_vt['AeroDyn15']['NacCd'] = [idx.strip() for idx in f.readline().split('NacCd')[0].split(',')]
-        self.fst_vt['AeroDyn15']['NacDragAC'] = [idx.strip() for idx in f.readline().split('NacDragAC')[0].split(',')]
+        self.fst_vt['AeroDyn']['NacArea'] = [idx.strip() for idx in f.readline().split('NacArea')[0].split(',')]
+        self.fst_vt['AeroDyn']['NacCd'] = [idx.strip() for idx in f.readline().split('NacCd')[0].split(',')]
+        self.fst_vt['AeroDyn']['NacDragAC'] = [idx.strip() for idx in f.readline().split('NacDragAC')[0].split(',')]
         f.readline()
-        self.fst_vt['AeroDyn15']['TFinAero'] = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['TFinAero'] = bool_read(f.readline().split()[0])
         tfa_filename = fix_path(f.readline().split()[0])[1:-1]
-        self.fst_vt['AeroDyn15']['TFinFile'] = os.path.abspath(os.path.join(self.FAST_directory, tfa_filename))
+        self.fst_vt['AeroDyn']['TFinFile'] = os.path.abspath(os.path.join(self.FAST_directory, tfa_filename))
 
         # Tower Influence and Aerodynamics
         f.readline()
-        self.fst_vt['AeroDyn15']['NumTwrNds']      = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['NumTwrNds']      = int(f.readline().split()[0])
         f.readline()
         f.readline()
-        self.fst_vt['AeroDyn15']['TwrElev'] = [None]*self.fst_vt['AeroDyn15']['NumTwrNds']
-        self.fst_vt['AeroDyn15']['TwrDiam'] = [None]*self.fst_vt['AeroDyn15']['NumTwrNds']
-        self.fst_vt['AeroDyn15']['TwrCd'] = [None]*self.fst_vt['AeroDyn15']['NumTwrNds']
-        self.fst_vt['AeroDyn15']['TwrTI'] = [None]*self.fst_vt['AeroDyn15']['NumTwrNds']
-        self.fst_vt['AeroDyn15']['TwrCb'] = [None]*self.fst_vt['AeroDyn15']['NumTwrNds']
-        for i in range(self.fst_vt['AeroDyn15']['NumTwrNds']):
+        self.fst_vt['AeroDyn']['TwrElev'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
+        self.fst_vt['AeroDyn']['TwrDiam'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
+        self.fst_vt['AeroDyn']['TwrCd'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
+        self.fst_vt['AeroDyn']['TwrTI'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
+        self.fst_vt['AeroDyn']['TwrCb'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
+        for i in range(self.fst_vt['AeroDyn']['NumTwrNds']):
             data = [float(val) for val in f.readline().split()]
-            self.fst_vt['AeroDyn15']['TwrElev'][i] = data[0] 
-            self.fst_vt['AeroDyn15']['TwrDiam'][i] = data[1] 
-            self.fst_vt['AeroDyn15']['TwrCd'][i]   = data[2]
-            self.fst_vt['AeroDyn15']['TwrTI'][i]   = data[3]
-            self.fst_vt['AeroDyn15']['TwrCb'][i]   = data[4]
+            self.fst_vt['AeroDyn']['TwrElev'][i] = data[0] 
+            self.fst_vt['AeroDyn']['TwrDiam'][i] = data[1] 
+            self.fst_vt['AeroDyn']['TwrCd'][i]   = data[2]
+            self.fst_vt['AeroDyn']['TwrTI'][i]   = data[3]
+            self.fst_vt['AeroDyn']['TwrCb'][i]   = data[4]
 
         # Outputs
         f.readline()
-        self.fst_vt['AeroDyn15']['SumPrint']    = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['NBlOuts']     = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['BlOutNd']     = [idx.strip() for idx in f.readline().split('BlOutNd')[0].split(',')]
-        self.fst_vt['AeroDyn15']['NTwOuts']     = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['TwOutNd']     = [idx.strip() for idx in f.readline().split('TwOutNd')[0].split(',')]
+        self.fst_vt['AeroDyn']['SumPrint']    = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['NBlOuts']     = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['BlOutNd']     = [idx.strip() for idx in f.readline().split('BlOutNd')[0].split(',')]
+        self.fst_vt['AeroDyn']['NTwOuts']     = int(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['TwOutNd']     = [idx.strip() for idx in f.readline().split('TwOutNd')[0].split(',')]
 
-        # AeroDyn15 Outlist
+        # AeroDyn Outlist
         f.readline()
         data = f.readline()
 
@@ -1167,11 +1118,11 @@ class InputReader_OpenFAST(object):
             self.set_outlist(self.fst_vt['outlist']['AeroDyn'], channel_list)
             data = f.readline()
 
-        # AeroDyn15 optional outlist
+        # AeroDyn optional outlist
         try:
             f.readline()
-            self.fst_vt['AeroDyn15']['BldNd_BladesOut']    = int(f.readline().split()[0])
-            self.fst_vt['AeroDyn15']['BldNd_BlOutNd']    = f.readline().split()[0]
+            self.fst_vt['AeroDyn']['BldNd_BladesOut']    = int(f.readline().split()[0])
+            self.fst_vt['AeroDyn']['BldNd_BlOutNd']    = f.readline().split()[0]
 
             f.readline()
             data =  f.readline()
@@ -1193,17 +1144,17 @@ class InputReader_OpenFAST(object):
 
         f.close()
 
-        self.read_AeroDyn15Blade()
-        self.read_AeroDyn15Polar()
-        self.read_AeroDyn15Coord()
-        olaf_filename = os.path.join(self.FAST_directory, self.fst_vt['AeroDyn15']['OLAFInputFileName'])
+        self.read_AeroDynBlade()
+        self.read_AeroDynPolar()
+        self.read_AeroDynCoord()
+        olaf_filename = os.path.join(self.FAST_directory, self.fst_vt['AeroDyn']['OLAFInputFileName'])
         if os.path.isfile(olaf_filename):
-            self.read_AeroDyn15OLAF(olaf_filename)
+            self.read_AeroDynOLAF(olaf_filename)
 
-    def read_AeroDyn15Blade(self):
+    def read_AeroDynBlade(self):
         # AeroDyn v5.00 Blade Definition File
 
-        ad_blade_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn15']['ADBlFile1'])
+        ad_blade_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile1'])
         f = open(ad_blade_file)
 
         f.readline()
@@ -1232,13 +1183,13 @@ class InputReader_OpenFAST(object):
         
         f.close()
 
-    def read_AeroDyn15Polar(self):
+    def read_AeroDynPolar(self):
         # AirfoilInfo v1.01
 
         
-        self.fst_vt['AeroDyn15']['af_data'] = [None]*self.fst_vt['AeroDyn15']['NumAFfiles']
+        self.fst_vt['AeroDyn']['af_data'] = [None]*self.fst_vt['AeroDyn']['NumAFfiles']
 
-        for afi, af_filename in enumerate(self.fst_vt['AeroDyn15']['AFNames']):
+        for afi, af_filename in enumerate(self.fst_vt['AeroDyn']['AFNames']):
             f = open(af_filename)
             # print af_filename
 
@@ -1249,7 +1200,7 @@ class InputReader_OpenFAST(object):
             polar['NumCoords']      = readline_filterComments(f).split()[0]
             polar['BL_file']        = readline_filterComments(f).split()[0]
             polar['NumTabs']        = int_read(readline_filterComments(f).split()[0])
-            self.fst_vt['AeroDyn15']['af_data'][afi] = [None]*polar['NumTabs']
+            self.fst_vt['AeroDyn']['af_data'][afi] = [None]*polar['NumTabs']
 
             for tab in range(polar['NumTabs']): # For multiple tables
                 polar['Re']             = float_read(readline_filterComments(f).split()[0]) * 1.e+6
@@ -1302,30 +1253,30 @@ class InputReader_OpenFAST(object):
                 polar['Cpmin']          = [None]*polar['NumAlf']
                 for i in range(polar['NumAlf']):
                     data = [float(val) for val in readline_filterComments(f).split()]
-                    if self.fst_vt['AeroDyn15']['InCol_Alfa'] > 0:
-                        polar['Alpha'][i] = data[self.fst_vt['AeroDyn15']['InCol_Alfa']-1]
-                    if self.fst_vt['AeroDyn15']['InCol_Cl'] > 0:
-                        polar['Cl'][i]    = data[self.fst_vt['AeroDyn15']['InCol_Cl']-1]
-                    if self.fst_vt['AeroDyn15']['InCol_Cd'] > 0:
-                        polar['Cd'][i]    = data[self.fst_vt['AeroDyn15']['InCol_Cd']-1]
-                    if self.fst_vt['AeroDyn15']['InCol_Cm'] > 0:
-                        polar['Cm'][i]    = data[self.fst_vt['AeroDyn15']['InCol_Cm']-1]
-                    if self.fst_vt['AeroDyn15']['InCol_Cpmin'] > 0:
-                        polar['Cpmin'][i] = data[self.fst_vt['AeroDyn15']['InCol_Cpmin']-1]
+                    if self.fst_vt['AeroDyn']['InCol_Alfa'] > 0:
+                        polar['Alpha'][i] = data[self.fst_vt['AeroDyn']['InCol_Alfa']-1]
+                    if self.fst_vt['AeroDyn']['InCol_Cl'] > 0:
+                        polar['Cl'][i]    = data[self.fst_vt['AeroDyn']['InCol_Cl']-1]
+                    if self.fst_vt['AeroDyn']['InCol_Cd'] > 0:
+                        polar['Cd'][i]    = data[self.fst_vt['AeroDyn']['InCol_Cd']-1]
+                    if self.fst_vt['AeroDyn']['InCol_Cm'] > 0:
+                        polar['Cm'][i]    = data[self.fst_vt['AeroDyn']['InCol_Cm']-1]
+                    if self.fst_vt['AeroDyn']['InCol_Cpmin'] > 0:
+                        polar['Cpmin'][i] = data[self.fst_vt['AeroDyn']['InCol_Cpmin']-1]
 
-                self.fst_vt['AeroDyn15']['af_data'][afi][tab] = copy.copy(polar) # For multiple tables
+                self.fst_vt['AeroDyn']['af_data'][afi][tab] = copy.copy(polar) # For multiple tables
             
             f.close()
 
-    def read_AeroDyn15Coord(self):
+    def read_AeroDynCoord(self):
         
-        self.fst_vt['AeroDyn15']['af_coord'] = []
-        self.fst_vt['AeroDyn15']['ac']   = np.zeros(len(self.fst_vt['AeroDyn15']['AFNames']))
+        self.fst_vt['AeroDyn']['af_coord'] = []
+        self.fst_vt['AeroDyn']['ac']   = np.zeros(len(self.fst_vt['AeroDyn']['AFNames']))
 
-        for afi, af_filename in enumerate(self.fst_vt['AeroDyn15']['AFNames']):
-            self.fst_vt['AeroDyn15']['af_coord'].append({})
-            if not (self.fst_vt['AeroDyn15']['af_data'][afi][0]['NumCoords'] == 0 or self.fst_vt['AeroDyn15']['af_data'][afi][0]['NumCoords'] == '0'):
-                coord_filename = af_filename[0:af_filename.rfind(os.sep)] + os.sep + self.fst_vt['AeroDyn15']['af_data'][afi][0]['NumCoords'][2:-1]
+        for afi, af_filename in enumerate(self.fst_vt['AeroDyn']['AFNames']):
+            self.fst_vt['AeroDyn']['af_coord'].append({})
+            if not (self.fst_vt['AeroDyn']['af_data'][afi][0]['NumCoords'] == 0 or self.fst_vt['AeroDyn']['af_data'][afi][0]['NumCoords'] == '0'):
+                coord_filename = af_filename[0:af_filename.rfind(os.sep)] + os.sep + self.fst_vt['AeroDyn']['af_data'][afi][0]['NumCoords'][2:-1]
 
                 f = open(coord_filename)
                 lines = f.readlines()
@@ -1336,237 +1287,64 @@ class InputReader_OpenFAST(object):
                 x = np.zeros(n_coords-1)
                 y = np.zeros(n_coords-1)
 
-                self.fst_vt['AeroDyn15']['ac'][afi] = float(lines[1].split()[0])
+                self.fst_vt['AeroDyn']['ac'][afi] = float(lines[1].split()[0])
 
                 for j in range(2, n_coords+1):
                     x[j - 2], y[j - 2] = map(float, lines[j].split())
 
-                self.fst_vt['AeroDyn15']['af_coord'][afi]['x'] = x
-                self.fst_vt['AeroDyn15']['af_coord'][afi]['y'] = y
+                self.fst_vt['AeroDyn']['af_coord'][afi]['x'] = x
+                self.fst_vt['AeroDyn']['af_coord'][afi]['y'] = y
 
 
-    def read_AeroDyn15OLAF(self, olaf_filename):
+    def read_AeroDynOLAF(self, olaf_filename):
         
-        self.fst_vt['AeroDyn15']['OLAF'] = {}
+        self.fst_vt['AeroDyn']['OLAF'] = {}
         f = open(olaf_filename)
         f.readline()
         f.readline()
         f.readline()
-        self.fst_vt['AeroDyn15']['OLAF']['IntMethod']       = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['DTfvw']           = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['FreeWakeStart']   = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['FullCircStart']   = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['IntMethod']       = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['DTfvw']           = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['FreeWakeStart']   = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['FullCircStart']   = float_read(f.readline().split()[0])
         f.readline()
-        self.fst_vt['AeroDyn15']['OLAF']['CircSolvMethod']   = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['CircSolvConvCrit']    = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['CircSolvRelaxation']  = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['CircSolvMaxIter']     = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['PrescribedCircFile']  = os.path.join(self.FAST_directory, f.readline().split()[0][1:-1]) # unmodified by this script, hence pointing to absolute location
-        f.readline()
-        f.readline()
-        f.readline()
-        self.fst_vt['AeroDyn15']['OLAF']['nNWPanels']   = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['nNWPanelsFree'] = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['nFWPanels']  = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['nFWPanelsFree']  = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['FWShedVorticity'] = bool_read(f.readline().split()[0])
-        f.readline()
-        self.fst_vt['AeroDyn15']['OLAF']['DiffusionMethod'] = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['RegDeterMethod']  = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['RegFunction']     = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['WakeRegMethod']   = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['WakeRegFactor']   = float(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['WingRegFactor']   = float(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['CoreSpreadEddyVisc'] = int(f.readline().split()[0])
-        f.readline()
-        self.fst_vt['AeroDyn15']['OLAF']['TwrShadowOnWake'] = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['ShearModel']      = int_read(f.readline().split()[0])
-        f.readline()
-        self.fst_vt['AeroDyn15']['OLAF']['VelocityMethod']  = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['TreeBranchFactor']= float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['PartPerSegment']  = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['CircSolvMethod']   = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['CircSolvConvCrit']    = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['CircSolvRelaxation']  = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['CircSolvMaxIter']     = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['PrescribedCircFile']  = os.path.join(self.FAST_directory, f.readline().split()[0][1:-1]) # unmodified by this script, hence pointing to absolute location
         f.readline()
         f.readline()
-        self.fst_vt['AeroDyn15']['OLAF']['WrVTk']       = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['nVTKBlades']  = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['VTKCoord']    = int_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['VTK_fps']     = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn15']['OLAF']['nGridOut']    = int_read(f.readline().split()[0])
+        f.readline()
+        self.fst_vt['AeroDyn']['OLAF']['nNWPanels']   = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['nNWPanelsFree'] = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['nFWPanels']  = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['nFWPanelsFree']  = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['FWShedVorticity'] = bool_read(f.readline().split()[0])
+        f.readline()
+        self.fst_vt['AeroDyn']['OLAF']['DiffusionMethod'] = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['RegDeterMethod']  = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['RegFunction']     = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['WakeRegMethod']   = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['WakeRegFactor']   = float(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['WingRegFactor']   = float(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['CoreSpreadEddyVisc'] = int(f.readline().split()[0])
+        f.readline()
+        self.fst_vt['AeroDyn']['OLAF']['TwrShadowOnWake'] = bool_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['ShearModel']      = int_read(f.readline().split()[0])
+        f.readline()
+        self.fst_vt['AeroDyn']['OLAF']['VelocityMethod']  = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['TreeBranchFactor']= float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['PartPerSegment']  = int_read(f.readline().split()[0])
+        f.readline()
+        f.readline()
+        self.fst_vt['AeroDyn']['OLAF']['WrVTk']       = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['nVTKBlades']  = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['VTKCoord']    = int_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['VTK_fps']     = float_read(f.readline().split()[0])
+        self.fst_vt['AeroDyn']['OLAF']['nGridOut']    = int_read(f.readline().split()[0])
         f.readline()
         f.close()
-
-    def read_AeroDyn14(self):
-        # AeroDyn v14.04
-
-        ad_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile'])
-        f = open(ad_file)
-        # AeroDyn file header (aerodyn)
-        f.readline()
-        f.readline()
-        self.fst_vt['AeroDyn14']['StallMod'] = f.readline().split()[0]
-        self.fst_vt['AeroDyn14']['UseCm'] = f.readline().split()[0]
-        self.fst_vt['AeroDyn14']['InfModel'] = f.readline().split()[0]
-        self.fst_vt['AeroDyn14']['IndModel'] = f.readline().split()[0]
-        self.fst_vt['AeroDyn14']['AToler'] = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn14']['TLModel'] = f.readline().split()[0]
-        self.fst_vt['AeroDyn14']['HLModel'] = f.readline().split()[0]
-        self.fst_vt['AeroDyn14']['TwrShad'] = int(f.readline().split()[0])
-        if self.fst_vt['AeroDyn14']['TwrShad'] > 0:
-            self.fst_vt['AeroDyn14']['TwrPotent'] = bool_read(f.readline().split()[0])
-            self.fst_vt['AeroDyn14']['TwrShadow'] = bool_read(f.readline().split()[0])
-            self.fst_vt['AeroDyn14']['TwrFile'] = f.readline().split()[0].replace('"','').replace("'",'')
-            self.fst_vt['AeroDyn14']['CalcTwrAero'] = bool_read(f.readline().split()[0])
-        else:
-            self.fst_vt['AeroDyn14']['ShadHWid'] = float_read(f.readline().split()[0])
-            self.fst_vt['AeroDyn14']['T_Shad_Refpt'] = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn14']['AirDens'] = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn14']['KinVisc'] = float_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn14']['DTAero'] = float_read(f.readline().split()[0])
-
-        # AeroDyn Blade Properties (blade_aero)
-        self.fst_vt['AeroDyn14']['NumFoil'] = int(f.readline().split()[0])
-        self.fst_vt['AeroDyn14']['FoilNm'] = [None] * self.fst_vt['AeroDyn14']['NumFoil']
-        for i in range(self.fst_vt['AeroDyn14']['NumFoil']):
-            af_filename = f.readline().split()[0]
-            af_filename = fix_path(af_filename)
-            self.fst_vt['AeroDyn14']['FoilNm'][i]  = af_filename[1:-1]
-        
-        self.fst_vt['AeroDynBlade']['BldNodes'] = int(f.readline().split()[0])
-        f.readline()
-        self.fst_vt['AeroDynBlade']['RNodes'] = [None] * self.fst_vt['AeroDynBlade']['BldNodes']
-        self.fst_vt['AeroDynBlade']['AeroTwst'] = [None] * self.fst_vt['AeroDynBlade']['BldNodes']
-        self.fst_vt['AeroDynBlade']['DRNodes'] = [None] * self.fst_vt['AeroDynBlade']['BldNodes']
-        self.fst_vt['AeroDynBlade']['Chord'] = [None] * self.fst_vt['AeroDynBlade']['BldNodes']
-        self.fst_vt['AeroDynBlade']['NFoil'] = [None] * self.fst_vt['AeroDynBlade']['BldNodes']
-        self.fst_vt['AeroDynBlade']['PrnElm'] = [None] * self.fst_vt['AeroDynBlade']['BldNodes']       
-        for i in range(self.fst_vt['AeroDynBlade']['BldNodes']):
-            data = f.readline().split()
-            self.fst_vt['AeroDynBlade']['RNodes'][i]  = float_read(data[0])
-            self.fst_vt['AeroDynBlade']['AeroTwst'][i]  = float_read(data[1])
-            self.fst_vt['AeroDynBlade']['DRNodes'][i]  = float_read(data[2])
-            self.fst_vt['AeroDynBlade']['Chord'][i]  = float_read(data[3])
-            self.fst_vt['AeroDynBlade']['NFoil'][i]  = int(data[4])
-            self.fst_vt['AeroDynBlade']['PrnElm'][i]  = data[5]
-
-        f.close()
-
-        # create airfoil objects
-        self.fst_vt['AeroDynBlade']['af_data'] = []
-        for i in range(self.fst_vt['AeroDyn14']['NumFoil']):
-             self.fst_vt['AeroDynBlade']['af_data'].append(self.read_AeroDyn14Polar(os.path.join(self.FAST_directory,self.fst_vt['AeroDyn14']['FoilNm'][i])))
-
-        # tower
-        if self.fst_vt['AeroDyn14']['TwrShad'] > 0:
-            self.read_AeroDyn14Tower()
-
-    def read_AeroDyn14Tower(self):
-        # AeroDyn v14.04 Tower
-
-        ad_tower_file = os.path.join(self.FAST_directory, self.fst_vt['AeroDyn14']['TwrFile'])
-        f = open(ad_tower_file)
-
-        f.readline()
-        f.readline()
-        self.fst_vt['AeroDynTower']['NTwrHt'] = int(f.readline().split()[0])
-        self.fst_vt['AeroDynTower']['NTwrRe'] = int(f.readline().split()[0])
-        self.fst_vt['AeroDynTower']['NTwrCD'] = int(f.readline().split()[0])
-        self.fst_vt['AeroDynTower']['Tower_Wake_Constant'] = float_read(f.readline().split()[0])
-        
-        f.readline()
-        f.readline()
-        self.fst_vt['AeroDynTower']['TwrHtFr'] = [None]*self.fst_vt['AeroDynTower']['NTwrHt']
-        self.fst_vt['AeroDynTower']['TwrWid'] = [None]*self.fst_vt['AeroDynTower']['NTwrHt']
-        self.fst_vt['AeroDynTower']['NTwrCDCol'] = [None]*self.fst_vt['AeroDynTower']['NTwrHt']
-        for i in range(self.fst_vt['AeroDynTower']['NTwrHt']):
-            data = [float(val) for val in f.readline().split()]
-            self.fst_vt['AeroDynTower']['TwrHtFr'][i]  = data[0] 
-            self.fst_vt['AeroDynTower']['TwrWid'][i]  = data[1]
-            self.fst_vt['AeroDynTower']['NTwrCDCol'][i]  = data[2]
-
-        f.readline()
-        f.readline()
-        self.fst_vt['AeroDynTower']['TwrRe'] = [None]*self.fst_vt['AeroDynTower']['NTwrRe']
-        self.fst_vt['AeroDynTower']['TwrCD'] = np.zeros((self.fst_vt['AeroDynTower']['NTwrRe'], self.fst_vt['AeroDynTower']['NTwrCD']))
-        for i in range(self.fst_vt['AeroDynTower']['NTwrRe']):
-            data = [float(val) for val in f.readline().split()]
-            self.fst_vt['AeroDynTower']['TwrRe'][i]  = data[0]
-            self.fst_vt['AeroDynTower']['TwrCD'][i,:]  = data[1:]
-
-        f.close()
-
-    def read_AeroDyn14Polar(self, aerodynFile):
-        # AeroDyn v14 Airfoil Polar Input File
-
-        # open aerodyn file
-        f = open(aerodynFile, 'r')
-                
-        airfoil = copy.copy(self.fst_vt['AeroDynPolar'])
-
-        # skip through header
-        airfoil['description'] = f.readline().rstrip()  # remove newline
-        f.readline()
-        airfoil['number_tables'] = int(f.readline().split()[0])
-
-        IDParam = [float_read(val) for val in f.readline().split()[0:airfoil['number_tables']]]
-        StallAngle = [float_read(val) for val in f.readline().split()[0:airfoil['number_tables']]]
-        f.readline()
-        f.readline()
-        f.readline()
-        ZeroCn = [float_read(val) for val in f.readline().split()[0:airfoil['number_tables']]]
-        CnSlope = [float_read(val) for val in f.readline().split()[0:airfoil['number_tables']]]
-        CnPosStall = [float_read(val) for val in f.readline().split()[0:airfoil['number_tables']]]
-        CnNegStall = [float_read(val) for val in f.readline().split()[0:airfoil['number_tables']]]
-        alphaCdMin = [float_read(val) for val in f.readline().split()[0:airfoil['number_tables']]]
-        CdMin = [float_read(val) for val in f.readline().split()[0:airfoil['number_tables']]]
-
-        data = []
-        airfoil['af_tables'] = []
-        while True:
-            line = f.readline()
-            if 'EOT' in line:
-                break
-            line = [float_read(s) for s in line.split()]
-            if len(line) < 1:
-                break
-            data.append(line)
-
-        # loop through tables
-        for i in range(airfoil['number_tables']):
-            polar = {}
-            polar['IDParam'] = IDParam[i]
-            polar['StallAngle'] = StallAngle[i]
-            polar['ZeroCn'] = ZeroCn[i]
-            polar['CnSlope'] = CnSlope[i]
-            polar['CnPosStall'] = CnPosStall[i]
-            polar['CnNegStall'] = CnNegStall[i]
-            polar['alphaCdMin'] = alphaCdMin[i]
-            polar['CdMin'] = CdMin[i]
-
-            alpha = []
-            cl = []
-            cd = []
-            cm = []
-            # read polar information line by line
-            for datai in data:
-                if len(datai) == airfoil['number_tables']*3+1:
-                    alpha.append(datai[0])
-                    cl.append(datai[1 + 3*i])
-                    cd.append(datai[2 + 3*i])
-                    cm.append(datai[3 + 3*i])
-                elif len(datai) == airfoil['number_tables']*2+1:
-                    alpha.append(datai[0])
-                    cl.append(datai[1 + 2*i])
-                    cd.append(datai[2 + 2*i])
-
-            polar['alpha'] = alpha
-            polar['cl'] = cl
-            polar['cd'] = cd
-            polar['cm'] = cm
-            airfoil['af_tables'].append(polar)
-
-        f.close()
-
-        return airfoil
 
     def read_AeroDisk(self):
         ''''
@@ -3283,7 +3061,7 @@ class InputReader_OpenFAST(object):
         if self.fst_vt['Fst']['CompAero'] == 1:
             self.read_AeroDisk()
         elif self.fst_vt['Fst']['CompAero'] == 2:
-            self.read_AeroDyn15()
+            self.read_AeroDyn()
             
         if self.fst_vt['Fst']['CompServo'] == 1:
             self.read_ServoDyn()

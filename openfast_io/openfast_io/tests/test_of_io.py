@@ -78,7 +78,7 @@ class TestOFutils(unittest.TestCase):
         fast_writer.fst_vt = dict(fast_reader.fst_vt)
         fst_vt = {}
         fst_vt['Fst', 'TMax'] = 2.
-        fst_vt['AeroDyn15', 'TwrAero'] = False
+        fst_vt['AeroDyn', 'TwrAero'] = False
         fst_vt['Fst','CompMooring'] = 0
         fst_vt['Fst','CompServo'] = 0
         fst_vt['Fst','OutFileFmt'] = 3
