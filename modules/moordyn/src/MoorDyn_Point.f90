@@ -417,7 +417,7 @@ CONTAINS
          
       END DO
 
-      IF (found) THEN   ! detect if line not found TODO: fix this, its wrong. If pointNnattached is oprginally 2, then it will be 1 after one run of the loop and l will also be 1
+      IF (.not. found) THEN   ! detect if line not found TODO: fix this, its wrong. If pointNnattached is oprginally 2, then it will be 1 after one run of the loop and l will also be 1
          CALL WrScr("Error: failed to find line to remove during RemoveLine call to Point "//trim(num2lstr(Point%IdNum))//". Line "//trim(num2lstr(lineID)))
       END IF
       
