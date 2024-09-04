@@ -32,6 +32,7 @@ public :: FAST_LinearizeMappings
 public :: FAST_ResetRemapFlags
 public :: FAST_InputSolve
 public :: FAST_ResetMappingReady
+public :: FAST_InputFieldName, FAST_OutputFieldName
 
 integer(IntKi), parameter  :: Xfr_Invalid = 0, &
                               Xfr_Point_to_Point = 1, &
@@ -907,9 +908,11 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       ! Nacelle Structural Controller
       do j = 1, Turbine%SrvD%p%NumNStC
-         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+         call MapLoadMesh(Turbine, Mappings, &
+                          SrcMod=SrcMod, &
                           SrcDL=DatLoc(SrvD_y_NStCLoadMesh, j), &         ! SrvD%y%NStCLoadMesh(j), &
                           SrcDispDL=DatLoc(SrvD_u_NStCMotionMesh, j), &   ! SrvD%u%NStCMotionMesh(j)
+                          DstMod=DstMod, &
                           DstDL=DatLoc(ED_u_NacelleLoads), &              ! ED%u%NacelleLoads
                           DstDispDL=DatLoc(ED_y_NacelleMotion), &         ! ED%y%NacelleMotion
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2)
@@ -918,9 +921,11 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       ! Tower Structural Controller
       do j = 1, Turbine%SrvD%p%NumTStC
-         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+         call MapLoadMesh(Turbine, Mappings, &
+                          SrcMod=SrcMod, &
                           SrcDL=DatLoc(SrvD_y_TStCLoadMesh, j), &         ! SrvD%y%TStCLoadMesh(j), &
                           SrcDispDL=DatLoc(SrvD_u_TStCMotionMesh, j), &   ! SrvD%u%TStCMotionMesh(j)
+                          DstMod=DstMod, &
                           DstDL=DatLoc(ED_u_TowerPtLoads), &              ! ED%u%TowerLoads
                           DstDispDL=DatLoc(ED_y_TowerLn2Mesh), &          ! ED%y%TowerLn2Mesh
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2)
@@ -929,9 +934,11 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       ! Substructure Structural Controller
       do j = 1, Turbine%SrvD%p%NumSStC
-         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+         call MapLoadMesh(Turbine, Mappings, &
+                          SrcMod=SrcMod, &
                           SrcDL=DatLoc(SrvD_y_SStCLoadMesh, j), &         ! SrvD%y%SStCLoadMesh(j), &
                           SrcDispDL=DatLoc(SrvD_u_SStCMotionMesh, j), &   ! SrvD%u%SStCMotionMesh(j)
+                          DstMod=DstMod, &
                           DstDL=DatLoc(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
                           DstDispDL=DatLoc(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
                           Active=Turbine%p_FAST%CompSub /= Module_SD, &
@@ -2895,177 +2902,52 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
 end subroutine
 
-subroutine SumMeshLoads(SrcMesh, DstMesh, DstResetFlag)
-   type(MeshType), intent(in)    :: SrcMesh
-   type(MeshType), intent(inout) :: DstMesh
-   logical, intent(inout)        :: DstResetFlag
-   if (DstResetFlag) then
-      DstResetFlag = .false.
-      if (DstMesh%fieldmask(MASKID_FORCE)) DstMesh%Force = 0.0_ReKi
-      if (DstMesh%fieldmask(MASKID_MOMENT)) DstMesh%Moment = 0.0_ReKi
-   end if
-   if (DstMesh%fieldmask(MASKID_FORCE)) DstMesh%Force = DstMesh%Force + SrcMesh%Force
-   if (DstMesh%fieldmask(MASKID_MOMENT)) DstMesh%Moment = DstMesh%Moment + SrcMesh%Moment
-end subroutine
-
 subroutine FAST_ResetRemapFlags(Mods, Maps, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)           :: Mods(:) !< Module data
-   type(MappingType), intent(inout)     :: Maps(:)
-   type(FAST_TurbineType), intent(inout)   :: T       !< Turbine type
-   integer(IntKi), intent(out)             :: ErrStat
-   character(*), intent(out)               :: ErrMsg
+   type(ModDataType), intent(in)                   :: Mods(:) !< Module data
+   type(MappingType), intent(inout)                :: Maps(:)
+   type(FAST_TurbineType), target, intent(inout)   :: T       !< Turbine type
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
 
    character(*), parameter    :: RoutineName = 'FAST_ResetRemapFlags'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
    integer(IntKi)             :: i, k
+   type(MeshType), pointer    :: SrcMesh, DstMesh
 
    ErrStat = ErrID_None
    ErrMsg = ''
 
-   ! Reset remap flags in mapping temporary meshes
+   ! Reset remap flags in mapping meshes
    do i = 1, size(Maps)
-      if (associated(Maps(i)%TmpLoadMesh%RemapFlag)) Maps(i)%TmpLoadMesh%RemapFlag = .false.
-   end do
+      select case (Maps(i)%MapType)
+      case (Map_LoadMesh, Map_MotionMesh)
 
-   do i = 1, size(Mods)
+         if (associated(Maps(i)%TmpLoadMesh%RemapFlag)) Maps(i)%TmpLoadMesh%RemapFlag = .false.
+         if (associated(Maps(i)%TmpMotionMesh%RemapFlag)) Maps(i)%TmpMotionMesh%RemapFlag = .false.
 
-      ! Select based on module ID
-      select case (Mods(i)%ID)
+         call FAST_OutputMeshPointer(Mods(Maps(i)%iModSrc), T, Maps(i)%SrcDL, SrcMesh, ErrStat2, ErrMsg2)
+         if (Failed()) return
+         SrcMesh%RemapFlag = .false.
 
-      case (Module_AD)
+         call FAST_InputMeshPointer(Mods(Maps(i)%iModDst), T, Maps(i)%DstDL, DstMesh, INPUT_CURR, ErrStat2, ErrMsg2)
+         if (Failed()) return
+         DstMesh%RemapFlag = .false.
 
-         if (T%AD%Input(1)%rotors(1)%HubMotion%Committed) then
-            T%AD%Input(1)%rotors(1)%HubMotion%RemapFlag = .false.
-            T%AD%y%rotors(1)%HubLoad%RemapFlag = .false.
-         end if
+         ! call FAST_OutputMeshPointer(Mods(Maps(i)%SrcModID), T, Maps(i)%SrcDL, SrcMesh, ErrStat2, ErrMsg2)
+         ! if (ErrStat2 == ErrID_None) SrcMesh%RemapFlag = .false.
 
-         if (T%AD%Input(1)%rotors(1)%TowerMotion%Committed) then
-            T%AD%Input(1)%rotors(1)%TowerMotion%RemapFlag = .false.
-
-            if (T%AD%y%rotors(1)%TowerLoad%Committed) then
-               T%AD%y%rotors(1)%TowerLoad%RemapFlag = .false.
-            end if
-         end if
-
-         if (T%AD%Input(1)%rotors(1)%NacelleMotion%Committed) then
-            T%AD%Input(1)%rotors(1)%NacelleMotion%RemapFlag = .false.
-            T%AD%y%rotors(1)%NacelleLoad%RemapFlag = .false.
-         end if
-
-         if (T%AD%Input(1)%rotors(1)%TFinMotion%Committed) then
-            T%AD%Input(1)%rotors(1)%TFinMotion%RemapFlag = .false.
-            T%AD%y%rotors(1)%TFinLoad%RemapFlag = .false.
-         end if
-
-         do k = 1, size(T%AD%Input(1)%rotors(1)%BladeMotion)
-            T%AD%Input(1)%rotors(1)%BladeRootMotion(k)%RemapFlag = .false.
-            T%AD%Input(1)%rotors(1)%BladeMotion(k)%RemapFlag = .false.
-            T%AD%y%rotors(1)%BladeLoad(k)%RemapFlag = .false.
-         end do
-
-      case (Module_BD)
-
-         T%BD%Input(1, Mods(i)%Ins)%RootMotion%RemapFlag = .false.
-         T%BD%Input(1, Mods(i)%Ins)%PointLoad%RemapFlag = .false.
-         T%BD%Input(1, Mods(i)%Ins)%DistrLoad%RemapFlag = .false.
-         T%BD%Input(1, Mods(i)%Ins)%HubMotion%RemapFlag = .false.
-
-         T%BD%y(Mods(i)%Ins)%ReactionForce%RemapFlag = .false.
-         T%BD%y(Mods(i)%Ins)%BldMotion%RemapFlag = .false.
-
-      case (Module_ED)
-
-         T%ED%Input(1)%PlatformPtMesh%RemapFlag = .false.
-         T%ED%y%PlatformPtMesh%RemapFlag = .false.
-         T%ED%Input(1)%TowerPtLoads%RemapFlag = .false.
-         T%ED%y%TowerLn2Mesh%RemapFlag = .false.
-         do K = 1, size(T%ED%y%BladeRootMotion)
-            T%ED%y%BladeRootMotion(K)%RemapFlag = .false.
-         end do
-         if (allocated(T%ED%Input(1)%BladePtLoads)) then
-            do K = 1, size(T%ED%Input(1)%BladePtLoads)
-               T%ED%Input(1)%BladePtLoads(K)%RemapFlag = .false.
-               T%ED%y%BladeLn2Mesh(K)%RemapFlag = .false.
-            end do
-         end if
-         T%ED%Input(1)%NacelleLoads%RemapFlag = .false.
-         T%ED%y%NacelleMotion%RemapFlag = .false.
-         T%ED%Input(1)%TFinCMLoads%RemapFlag = .false.
-         T%ED%y%TFinCMMotion%RemapFlag = .false.
-         T%ED%Input(1)%HubPtLoad%RemapFlag = .false.
-         T%ED%y%HubPtMotion%RemapFlag = .false.
-
-      case (Module_ExtPtfm)
-
-         if (T%ExtPtfm%Input(1)%PtfmMesh%Committed) then
-            T%ExtPtfm%Input(1)%PtfmMesh%RemapFlag = .false.
-            T%ExtPtfm%y%PtfmMesh%RemapFlag = .false.
-         end if
-
-      case (Module_FEAM)
-
-         T%FEAM%Input(1)%PtFairleadDisplacement%RemapFlag = .false.
-         T%FEAM%y%PtFairleadLoad%RemapFlag = .false.
-
-      case (Module_HD)
-
-         T%HD%Input(1)%PRPMesh%RemapFlag = .false.
-         if (T%HD%Input(1)%WAMITMesh%Committed) then
-            T%HD%Input(1)%WAMITMesh%RemapFlag = .false.
-            T%HD%y%WAMITMesh%RemapFlag = .false.
-         end if
-         if (T%HD%Input(1)%Morison%Mesh%Committed) then
-            T%HD%Input(1)%Morison%Mesh%RemapFlag = .false.
-            T%HD%y%Morison%Mesh%RemapFlag = .false.
-         end if
-
-      case (Module_IceD)
-
-         if (T%IceD%Input(1, Mods(i)%Ins)%PointMesh%Committed) then
-            T%IceD%Input(1, Mods(i)%Ins)%PointMesh%RemapFlag = .false.
-            T%IceD%y(Mods(i)%Ins)%PointMesh%RemapFlag = .false.
-         end if
-
-      case (Module_IceF)
-
-         if (T%IceF%Input(1)%iceMesh%Committed) then
-            T%IceF%Input(1)%iceMesh%RemapFlag = .false.
-            T%IceF%y%iceMesh%RemapFlag = .false.
-         end if
-
-      case (Module_MAP)
-
-         T%MAP%Input(1)%PtFairDisplacement%RemapFlag = .false.
-         T%MAP%y%PtFairleadLoad%RemapFlag = .false.
-
-      case (Module_MD)
-
-         T%MD%Input(1)%CoupledKinematics(1)%RemapFlag = .false.
-         T%MD%y%CoupledLoads(1)%RemapFlag = .false.
-
-      case (Module_Orca)
-
-         T%Orca%Input(1)%PtfmMesh%RemapFlag = .false.
-         T%Orca%y%PtfmMesh%RemapFlag = .false.
-
-      case (Module_SD)
-
-         if (T%SD%Input(1)%TPMesh%Committed) then
-            T%SD%Input(1)%TPMesh%RemapFlag = .false.
-            T%SD%y%Y1Mesh%RemapFlag = .false.
-         end if
-
-         if (T%SD%Input(1)%LMesh%Committed) then
-            T%SD%Input(1)%LMesh%RemapFlag = .false.
-            T%SD%y%Y2Mesh%RemapFlag = .false.
-            T%SD%y%Y3Mesh%RemapFlag = .false.
-         end if
+         ! call FAST_InputMeshPointer(Mods(Maps(i)%DstModID), T, Maps(i)%DstDL, DstMesh, INPUT_CURR, ErrStat2, ErrMsg2)
+         ! if (ErrStat2 == ErrID_None) DstMesh%RemapFlag = .false.
 
       end select
-
    end do
 
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 end subroutine
 
 end module
