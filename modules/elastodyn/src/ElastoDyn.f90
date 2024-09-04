@@ -10913,7 +10913,7 @@ subroutine ED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, E
    if (allocated(u%BladePtLoads)) then
       do i = 1, p%NumBl
          Flags = VF_None
-         if (i == 1) Flags = VF_AeroMap
+         if (i == 1) Flags = ior(Flags, VF_AeroMap)
          call MV_AddMeshVar(Vars%u, "Blade "//Num2LStr(i), LoadFields, &
                             DL=DatLoc(ED_u_BladePtLoads, i), &
                             Mesh=u%BladePtLoads(i), &
@@ -10992,7 +10992,7 @@ subroutine ED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, E
    if (allocated(y%BladeLn2Mesh))then
       do i = 1, p%NumBl
          Flags = VF_None
-         if (i == 1) Flags = VF_AeroMap
+         if (i == 1) Flags = ior(Flags, VF_AeroMap)
          call MV_AddMeshVar(Vars%y, 'Blade '//Num2LStr(i), [FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel], &
                             DatLoc(ED_y_BladeLn2Mesh, i), &
                             Flags=Flags, &
