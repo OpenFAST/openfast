@@ -229,13 +229,6 @@ static gravity and buoyancy loads, and high-frequency loads transferred
 from the turbine. Recommended to set to True.
 
 
-**GuyanLoadCorrection** is a flag to specify whether the extra moment due to 
-the lever arm from the Guyan deflection of the structure is to be added to the loads
-passed to SubDyn, and, whether the FEM representation should be expressed in the rotating 
-frame in the floating case (the rotation is induced by the rigid body Guyan modes).
-See section :numref:`SD_Loads` for details. Recommended to set to True.
-
-
 FEA and Craig-Bampton Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -257,12 +250,11 @@ recommend using **NDiv** > 1 when modeling tapered members.
 should be carried out by the module. If FALSE, then the full
 finite-element model is retained and **Nmodes** is ignored.
 
-**Nmodes** sets the number of internal C-B modal DOFs to retain in the
+**Nmodes** sets the number of internal C-B modal DOF to retain in the
 C-B reduction. **Nmodes** = 0 corresponds to a Guyan (static)
-reduction. **Nmodes** is ignored if **CBMod** is set to FALSE,
-meaning the full finite-element model is retained by keeping all modes
-(i.e. a modal analysis is still done, and all the modes are used as DOFs)  .
-
+reduction. With **Nmodes** < 0 (equivalent to **CBMod** set to FALSE 
+in previous versions), SubDyn will retain all C-B modes, leading to the 
+same number of DOF as the full finite-element model.
 
 **JDampings** specifies value(s) of damping coefficients as a
 percentage of critical damping for the retained C-B modes. Distinct
