@@ -199,15 +199,48 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
 
 contains
 
+   ! SetVarSolveFlags adds the VF_Solve flags to variables in Option 1 modules
+   ! which need to be in the tight couping solver Jacobian.
    subroutine SetVarSolveFlags()
-      ! Loop through tight coupling modules and add VF_Solve flag to
+      logical :: SrcModTC, SrcModO1
+      logical :: DstModTC, DstModO1
+      logical :: HasSolveFlag
+
+      ! Loop through tight coupling modules and add VF_Solve flag to continuous state variables
       do i = 1, size(p%iModTC)
          associate (ModData => GlueModData(p%iModTC(i)))
             do j = 1, size(ModData%Vars%x)
-               call MV_SetFlags(ModData%Vars%x(j), VF_Solve)   ! Continuous state variables
+               call MV_SetFlags(ModData%Vars%x(j), VF_Solve)
             end do
          end associate
       end do
+
+      ! dUdu 
+      ! VarsDst%u, VarDst(FieldTransDisp),         VarsDst%u, VarDst(FieldTransVel)
+      ! VarsDst%u, VarDst(FieldTransDisp),         VarsDst%u, VarDst(FieldTransAcc)
+      ! VarsSrc%u, VarSrcDisp(FieldTransDisp),     VarsDst%u, VarDst(FieldMoment)
+
+      ! dUdy Loads
+      ! VarsSrc%y, VarSrc(FieldForce),             VarsDst%u, VarDst(FieldForce)
+      ! VarsSrc%y, VarSrc(FieldMoment),            VarsDst%u, VarDst(FieldMoment)
+      ! VarsSrc%y, VarSrc(FieldForce),             VarsDst%u, VarDst(FieldMoment)
+      ! VarsDst%y, VarDstDisp(FieldTransDisp),     VarsDst%u, VarDst(FieldMoment)
+      ! VarsDst%y, VarDstDisp(FieldTransDisp),     VarsDst%u, VarDst(FieldMoment)
+      ! VarsDst%y, VarDstDisp(FieldOrientation),   VarsDst%u, VarDst(FieldMoment)
+
+      ! dUdy Motions
+      ! VarsSrc%y, VarSrc(FieldTransDisp),         VarsDst%u, VarDst(FieldTransDisp)
+      ! VarsSrc%y, VarSrc(FieldOrientation),       VarsDst%u, VarDst(FieldOrientation)
+      ! VarsSrc%y, VarSrc(FieldTransVel),          VarsDst%u, VarDst(FieldTransVel)
+      ! VarsSrc%y, VarSrc(FieldAngularVel),        VarsDst%u, VarDst(FieldAngularVel)
+      ! VarsSrc%y, VarSrc(FieldTransAcc),          VarsDst%u, VarDst(FieldTransAcc)
+      ! VarsSrc%y, VarSrc(FieldAngularAcc),        VarsDst%u, VarDst(FieldAngularAcc)
+      ! VarsSrc%y, VarSrc(FieldOrientation),       VarsDst%u, VarDst(FieldTransDisp)
+      ! VarsSrc%y, VarSrc(FieldAngularVel),        VarsDst%u, VarDst(FieldTransVel)
+      ! VarsSrc%y, VarSrc(FieldAngularAcc),        VarsDst%u, VarDst(FieldTransAcc)
+      ! VarsSrc%y, VarSrc(FieldTransDisp),         VarsDst%u, VarDst(FieldTransVel)
+      ! VarsSrc%y, VarSrc(FieldTransDisp),         VarsDst%u, VarDst(FieldTransAcc)
+      ! VarsSrc%y, VarSrc(FieldAngularVel),        VarsDst%u, VarDst(FieldTransAcc)
 
       ! Loop through module mappings
       do j = 1, size(GlueModMaps)
@@ -215,107 +248,125 @@ contains
                     SrcMod => GlueModData(GlueModMaps(j)%iModSrc), &
                     DstMod => GlueModData(GlueModMaps(j)%iModDst))
 
-            ! Skip custom mapping types
-            if (Mapping%MapType == Map_Variable .or. Mapping%MapType == Map_Custom) cycle
+            ! Determine if source and destination modules are in tight coupling or Option 1
+            SrcModTC = any(SrcMod%ID == TC_Modules)
+            SrcModO1 = any(SrcMod%ID == O1_Modules)
+            DstModTC = any(DstMod%ID == TC_Modules)
+            DstModO1 = any(DstMod%ID == O1_Modules)
 
-            ! Skip mappings where source and destination are not in tight coupling
-            if (all(SrcMod%ID /= TC_Modules) .and. all(DstMod%ID /= TC_Modules)) cycle
+            ! Select based on mapping type
+            select case (Mapping%MapType)
+            case (Map_MotionMesh)
 
-            ! If source module is in tight coupling
-            if (any(SrcMod%ID == TC_Modules)) then
+               ! Add flag based on module locations
+               if (SrcModTC .and. DstModTC) then
 
-               ! Set mapping flag on source variables
-               do i = 1, size(SrcMod%Vars%y)
-                  associate (Var => SrcMod%Vars%y(i))
-                     if (MV_EqualDL(Mapping%SrcDL, Var%DL)) call MV_SetFlags(Var, VF_Solve)
-                  end associate
-               end do
-
-               ! Set mapping flag on source displacement mesh variables
-               if (Mapping%MapType == Map_LoadMesh) then
-                  do i = 1, size(SrcMod%Vars%u)
-                     associate (Var => SrcMod%Vars%u(i))
-                        if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) call MV_SetFlags(Var, VF_Solve)
-                     end associate
-                  end do
-               end if
-            end if
-
-            ! If source module is in option 1
-            if (any(SrcMod%ID == O1_Modules)) then
-
-               ! Set mapping flag on source variables
-               do i = 1, size(SrcMod%Vars%y)
-                  associate (Var => SrcMod%Vars%y(i))
-                     if (.not. MV_EqualDL(Mapping%SrcDL, Var%DL)) cycle
-                     select case (Var%Field)
-                     case (FieldForce, FieldMoment)
-                        call MV_SetFlags(Var, VF_Solve)
-                     end select
-                  end associate
-               end do
-
-               ! Set mapping flag on source displacement mesh variables
-               if (Mapping%MapType == Map_LoadMesh) then
-                  do i = 1, size(SrcMod%Vars%u)
-                     associate (Var => SrcMod%Vars%u(i))
-                        if (.not. MV_EqualDL(Mapping%SrcDispDL, Var%DL)) cycle
-                        select case (Var%Field)
-                        case (FieldForce, FieldMoment)
+                  ! Add flag for source displacement, velocity, and acceleration
+                  do i = 1, size(SrcMod%Vars%y)
+                     associate (Var => SrcMod%Vars%y(i))
+                        if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
                            call MV_SetFlags(Var, VF_Solve)
-                        end select
+                           write (*,*) 'Solve y:', FAST_OutputFieldName(SrcMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                        end if
+                     end associate
+                  end do
+
+                  ! Add flag for destination displacement, velocity, and acceleration
+                  do i = 1, size(DstMod%Vars%u)
+                     associate (Var => DstMod%Vars%u(i))
+                        if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
+                           call MV_SetFlags(Var, VF_Solve)
+                           write (*,*) 'Solve u:', FAST_InputFieldName(DstMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                        end if
+                     end associate
+                  end do
+
+               else if ((SrcModTC .and. DstModO1) .or. &
+                        (SrcModO1 .and. DstModTC) .or. &
+                        (SrcModO1 .and. DstModO1)) then
+
+                  ! Add flag for source displacement, velocity, acceleration for dUdy
+                  do i = 1, size(SrcMod%Vars%y)
+                     associate (Var => SrcMod%Vars%y(i))
+                        if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
+                           call MV_SetFlags(Var, VF_Solve)
+                           write (*,*) 'Solve y:', FAST_OutputFieldName(SrcMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                        end if
+                     end associate
+                  end do
+
+                  ! Add flag for destination accelerations
+                  do i = 1, size(DstMod%Vars%u)
+                     associate (Var => DstMod%Vars%u(i))
+                        if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
+                           select case (Var%Field)
+                           case (FieldTransAcc, FieldAngularAcc)
+                              call MV_SetFlags(Var, VF_Solve)
+                              write (*,*) 'Solve u:', FAST_InputFieldName(DstMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                           end select
+                        end if
                      end associate
                   end do
                end if
-            end if
 
-            ! If destination module is in tight coupling
-            if (any(DstMod%ID == TC_Modules)) then
+            case (Map_LoadMesh)
 
-               ! Set mapping flag on destination variables
-               do i = 1, size(DstMod%Vars%u)
-                  associate (Var => DstMod%Vars%u(i))
-                     if (MV_EqualDL(Mapping%DstDL, Var%DL)) call MV_SetFlags(Var, VF_Solve)
-                  end associate
-               end do
+               if (DstModTC .or. DstModO1) then
 
-               ! Set mapping flag on destination displacement mesh variables
-               if (Mapping%MapType == Map_LoadMesh) then
+                  ! Add flag for destination loads
+                  do i = 1, size(DstMod%Vars%u)
+                     associate (Var => DstMod%Vars%u(i))
+                        if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
+                           call MV_SetFlags(Var, VF_Solve)
+                           write (*,*) 'Solve u:', FAST_InputFieldName(DstMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                        end if
+                     end associate
+                  end do
+
+                  ! Add flag to destination displacements for dUdy
                   do i = 1, size(DstMod%Vars%y)
                      associate (Var => DstMod%Vars%y(i))
-                        if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) call MV_SetFlags(Var, VF_Solve)
+                        if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) then
+                           select case (Var%Field)
+                           case (FieldTransDisp, FieldOrientation)
+                              call MV_SetFlags(Var, VF_Solve)
+                              write (*,*) 'Solve y:', FAST_OutputFieldName(DstMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                           end select
+                        end if
                      end associate
                   end do
+
+                  if ((SrcModTC .or. SrcModO1)) then
+
+                     ! Add flag for source loads
+                     do i = 1, size(SrcMod%Vars%y)
+                        associate (Var => SrcMod%Vars%y(i))
+                           if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
+                              call MV_SetFlags(Var, VF_Solve)
+                              write (*,*) 'Solve y:', FAST_OutputFieldName(SrcMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                           end if
+                        end associate
+                     end do
+
+                     ! Add flag for source translation displacement for dUdu
+                     do i = 1, size(SrcMod%Vars%u)
+                        associate (Var => SrcMod%Vars%u(i))
+                           if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) then
+                              select case (Var%Field)
+                              case (FieldTransDisp)
+                                 call MV_SetFlags(Var, VF_Solve)
+                                 write (*,*) 'Solve u:', FAST_InputFieldName(SrcMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                              end select
+                           end if
+                        end associate
+                     end do
+
+                  end if
+
                end if
-            end if
 
-            ! If destination module is in option 1
-            if (any(DstMod%ID == O1_Modules)) then
+            end select
 
-               ! Set mapping flag on destination variables
-               do i = 1, size(DstMod%Vars%u)
-                  associate (Var => DstMod%Vars%u(i))
-                     if (.not. MV_EqualDL(Mapping%DstDL, Var%DL)) cycle
-                     select case (Var%Field)
-                     case (FieldTransAcc, FieldAngularAcc)
-                        call MV_SetFlags(Var, VF_Solve)
-                     end select
-                  end associate
-               end do
-
-               ! Set mapping flag on destination displacement mesh variables
-               if (Mapping%MapType == Map_LoadMesh) then
-                  do i = 1, size(DstMod%Vars%y)
-                     associate (Var => DstMod%Vars%y(i))
-                        if (.not. MV_EqualDL(Mapping%DstDispDL, Var%DL)) cycle
-                        select case (Var%Field)
-                        case (FieldTransAcc, FieldAngularAcc)
-                           call MV_SetFlags(Var, VF_Solve)
-                        end select
-                     end associate
-                  end do
-               end if
-            end if
          end associate
       end do
    end subroutine
@@ -642,7 +693,7 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
 
-   character(*), parameter    :: RoutineName = 'Solver_Step0'
+   character(*), parameter    :: RoutineName = 'FAST_SolverStep0'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
    integer(IntKi)             :: i, j, k
