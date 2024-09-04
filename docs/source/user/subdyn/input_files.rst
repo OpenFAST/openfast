@@ -246,10 +246,6 @@ Increasing the number of elements per member may increase accuracy, with
 the trade-off of increased memory usage and computation time. We
 recommend using **NDiv** > 1 when modeling tapered members.
 
-**CBMod** is a flag that specifies whether or not the C-B reduction
-should be carried out by the module. If FALSE, then the full
-finite-element model is retained and **Nmodes** is ignored.
-
 **Nmodes** sets the number of internal C-B modal DOF to retain in the
 C-B reduction. **Nmodes** = 0 corresponds to a Guyan (static)
 reduction. With **Nmodes** < 0 (equivalent to **CBMod** set to FALSE 
