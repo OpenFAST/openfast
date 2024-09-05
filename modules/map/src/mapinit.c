@@ -2681,7 +2681,6 @@ void log_initialization_information(MAP_InitInputType_t* init_type, MAP_Paramete
     success = write_summary_file(init_data, p_type, domain, map_msg, ierr); CHECKERRQ(MAP_FATAL_37); 
   }
 
-  success = write_summary_file(init_data, p_type, domain, map_msg, ierr); CHECKERRQ(MAP_FATAL_37);           
   success = get_iteration_output_stream(y_type, other_type, map_msg, ierr); // @todo CHECKERRQ()    
   MAP_END_ERROR_LOG; 
 };
