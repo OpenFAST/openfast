@@ -30,7 +30,7 @@ MODULE SED
 
    implicit none
    private
-   type(ProgDesc), parameter :: SED_Ver = ProgDesc( 'SED', 'v1.00.00', '15-Feb-2022' )
+   type(ProgDesc), parameter :: SED_Ver = ProgDesc( 'SED', '', '' )
 
    public :: SED_Init
    public :: SED_End
