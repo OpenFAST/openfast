@@ -1780,7 +1780,7 @@ Corrections to the baseline formulation ("GuyanLoadCorrection")
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The baseline FEM implementation needs to be corrected to account for the fact that loads are provided to SubDyn at the displaced positions, and to account for the rigid body motions in the floating case.
-The corrections are activated by setting the parameter **GuyanLoadCorrection** to True.
+In previous versions of SubDyn, the corrections are activated by setting the parameter **GuyanLoadCorrection** to True. This input parameter has been removed from the SubDyn primary input file, and the load corrections will always be used in current and future versions of SubDyn.
 
 
 
