@@ -783,17 +783,28 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
       Init%InData_AD%MSL2SWL            = p_FAST%MSL2SWL
 
 
-      Init%InData_AD%rotors(1)%HubPosition        = ED%y%HubPtMotion%Position(:,1)
-      Init%InData_AD%rotors(1)%HubOrientation     = ED%y%HubPtMotion%RefOrientation(:,:,1)
-      Init%InData_AD%rotors(1)%NacellePosition    = ED%y%NacelleMotion%Position(:,1)
-      Init%InData_AD%rotors(1)%NacelleOrientation = ED%y%NacelleMotion%RefOrientation(:,:,1)
+      if (p_FAST%CompElast == Module_SED) then
+         Init%InData_AD%rotors(1)%HubPosition        = SED%y%HubPtMotion%Position(:,1)
+         Init%InData_AD%rotors(1)%HubOrientation     = SED%y%HubPtMotion%RefOrientation(:,:,1)
+         Init%InData_AD%rotors(1)%NacellePosition    = SED%y%NacelleMotion%Position(:,1)
+         Init%InData_AD%rotors(1)%NacelleOrientation = SED%y%NacelleMotion%RefOrientation(:,:,1)
+         do k=1,NumBl
+            Init%InData_AD%rotors(1)%BladeRootPosition(:,k)      = SED%y%BladeRootMotion(k)%Position(:,1)
+            Init%InData_AD%rotors(1)%BladeRootOrientation(:,:,k) = SED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+         end do
+      elseif (p_FAST%CompElast == Module_ED .or. p_FAST%CompElast == Module_BD) then
+         Init%InData_AD%rotors(1)%HubPosition        = ED%y%HubPtMotion%Position(:,1)
+         Init%InData_AD%rotors(1)%HubOrientation     = ED%y%HubPtMotion%RefOrientation(:,:,1)
+         Init%InData_AD%rotors(1)%NacellePosition    = ED%y%NacelleMotion%Position(:,1)
+         Init%InData_AD%rotors(1)%NacelleOrientation = ED%y%NacelleMotion%RefOrientation(:,:,1)
+         do k=1,NumBl
+            Init%InData_AD%rotors(1)%BladeRootPosition(:,k)      = ED%y%BladeRootMotion(k)%Position(:,1)
+            Init%InData_AD%rotors(1)%BladeRootOrientation(:,:,k) = ED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
+         end do
+      endif
+
       ! Note: not passing tailfin position and orientation at init
       Init%InData_AD%rotors(1)%AeroProjMod        = APM_BEM_NoSweepPitchTwist
-
-      do k=1,NumBl
-         Init%InData_AD%rotors(1)%BladeRootPosition(:,k)      = ED%y%BladeRootMotion(k)%Position(:,1)
-         Init%InData_AD%rotors(1)%BladeRootOrientation(:,:,k) = ED%y%BladeRootMotion(k)%RefOrientation(:,:,1)
-      end do
 
       ! Set pointers to flowfield
       IF (p_FAST%CompInflow == Module_IfW) Init%InData_AD%FlowField => Init%OutData_IfW%FlowField

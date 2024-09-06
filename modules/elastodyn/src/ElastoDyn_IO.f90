@@ -4276,22 +4276,21 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
       CALL SetErrStat(ErrID_Fatal,'ShftTilt must be between -pi/2 and pi/2 radians (i.e., in the range [-90, 90] degrees).',ErrStat,ErrMsg,RoutineName)
    END IF
 
-
       ! Check for violations of the small-angle assumption (15-degree limit, using radians):
-   IF ( ABS( InputFileData%PtfmRoll ) > SmallAngleLimit_Rad ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'PtfmRoll must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
-                                    //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
-   END IF
+   ! IF ( ABS( InputFileData%PtfmRoll ) > SmallAngleLimit_Rad ) THEN
+   !    CALL SetErrStat( ErrID_Fatal, 'PtfmRoll must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
+   !                                  //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
+   ! END IF
 
-   IF ( ABS( InputFileData%PtfmPitch ) > SmallAngleLimit_Rad ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'PtfmPitch must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
-                                    //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
-   END IF
+   ! IF ( ABS( InputFileData%PtfmPitch ) > SmallAngleLimit_Rad ) THEN
+   !    CALL SetErrStat( ErrID_Fatal, 'PtfmPitch must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
+   !                                  //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
+   ! END IF
 
-   IF ( ABS( InputFileData%PtfmYaw ) > SmallAngleLimit_Rad ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'PtfmYaw must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
-                                    //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
-   END IF
+   ! IF ( ABS( InputFileData%PtfmYaw  ) > SmallAngleLimit_Rad ) THEN
+   !    CALL SetErrStat( ErrID_Fatal, 'PtfmYaw must be between -'//TRIM(Num2LStr(SmallAngleLimit_Rad))//' and ' &
+   !                                  //TRIM(Num2LStr(SmallAngleLimit_Rad))//' radians.',ErrStat,ErrMsg,RoutineName)
+   ! END IF
 
       ! Check the output parameters:
    IF ( InputFileData%DecFact < 1_IntKi )  CALL SetErrStat( ErrID_Fatal, 'DecFact must be greater than 0.',ErrStat,ErrMsg,RoutineName )

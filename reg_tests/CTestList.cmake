@@ -335,6 +335,9 @@ of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerod
 of_regression("MHK_RM1_Floating_wNacDrag"              "openfast;elastodyn;aerodyn;hydrodyn;moordyn;mhk")
 of_regression("Tailfin_FreeYaw1DOF_PolarBased"         "openfast;elastodyn;aerodyn")
 of_regression("Tailfin_FreeYaw1DOF_Unsteady"           "openfast;elastodyn;aerodyn")
+of_regression("5MW_Land_DLL_WTurb_ADsk"                "openfast;elastodyn;aerodisk")
+of_regression("5MW_Land_DLL_WTurb_ADsk_SED"            "openfast;simple-elastodyn;aerodisk")
+of_regression("5MW_Land_DLL_WTurb_SED"                 "openfast;simple-elastodyn;aerodyn")
 
 of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn")
 
@@ -443,6 +446,9 @@ hd_regression("hd_MCF_WaveStMod2"                           "hydrodyn;offshore")
 hd_regression("hd_MCF_WaveStMod3"                           "hydrodyn;offshore")
 hd_regression("hd_ExctnMod1_ExctnDisp1"                     "hydrodyn;offshore")
 hd_regression("hd_ExctnMod1_ExctnDisp2"                     "hydrodyn;offshore")
+hd_regression("hd_ExctnMod1_ExctnDisp2_PtfmYMod1"           "hydrodyn;offshore")
+hd_regression("hd_5MW_OC4Semi_WSt_WavesWN_PtfmYMod0_LargeYaw" "hydrodyn;offshore")
+hd_regression("hd_5MW_OC4Semi_WSt_WavesWN_PtfmYMod1_LargeYaw" "hydrodyn;offshore")
 
 # Py-HydroDyn regression tests
 py_hd_regression("py_hd_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore;python")

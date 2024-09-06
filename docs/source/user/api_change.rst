@@ -51,6 +51,7 @@ FAST.Farm                                     78       WAT_k_Grad          defau
 AeroDyn                                       80\*     NacArea             0, 0, 0            NacArea            - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
 AeroDyn                                       81\*     NacCd               0, 0, 0            NacCd              - Drag coefficient for the nacelle areas defined above (-)
 AeroDyn                                       82\*     NacDragAC           0, 0, 0            NacDragAC          - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
+Subdyn                                        11       --removed--
 ============================================= ======= ==================== ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
