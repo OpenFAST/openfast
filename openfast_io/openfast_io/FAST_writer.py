@@ -828,8 +828,10 @@ class InputWriter_OpenFAST(object):
         self.write_AeroDynPolar()
         
         # Generate AeroDyn v15 airfoil coordinates
-        if self.fst_vt['AeroDyn']['af_data'][0][0]['NumCoords'] != '0': # changing from ['af_data'][1] to ['af_data'][0] because we can have a single airfoil too. 
-            self.write_AeroDynCoord()
+        # some polars may have airfoil coordinates, need to account for all possible scenarios
+        if any([self.fst_vt['AeroDyn']['af_data'][i][0]['NumCoords'] != '0' for i in range(len(self.fst_vt['AeroDyn']['af_data']))]):
+            af_coords = [i for i in range(len(self.fst_vt['AeroDyn']['af_data'])) if self.fst_vt['AeroDyn']['af_data'][i][0]['NumCoords'] != '0']
+            self.write_AeroDynCoord(af_coords)
         
         if self.fst_vt['AeroDyn']['Wake_Mod'] == 3:
             if self.fst_vt['AeroDyn']['UA_Mod'] > 0:
@@ -1026,6 +1028,9 @@ class InputWriter_OpenFAST(object):
             f.write('! line\n')
             f.write('! ------------------------------------------------------------------------------\n')
             f.write('{:<22}   {:<11} {:}'.format(self.fst_vt['AeroDyn']['af_data'][afi][0]['InterpOrd'], 'InterpOrd', '! Interpolation order to use for quasi-steady table lookup {1=linear; 3=cubic spline; "default"} [default=3]\n'))
+            if 'RelThickness' in self.fst_vt['AeroDyn']['af_data'][afi][0]:
+                f.write('{:<22f}   {:<11} {:}'.format(self.fst_vt['AeroDyn']['af_data'][afi][0]['RelThickness'], 'RelThickness', '! The non-dimensional thickness of the airfoil (thickness/chord) [only used if UAMod=7] [default=0.2] (-)\n'))
+            
             f.write('{:<22}   {:<11} {:}'.format(self.fst_vt['AeroDyn']['af_data'][afi][0]['NonDimArea'], 'NonDimArea', '! The non-dimensional area of the airfoil (area/chord^2) (set to 1.0 if unsure or unneeded)\n'))
             if self.fst_vt['AeroDyn']['af_data'][afi][0]['NumCoords'] != '0':
                 f.write('@"{:}_AF{:02d}_Coords.txt"       {:<11} {:}'.format(self.FAST_namingOut, afi, 'NumCoords', '! The number of coordinates in the airfoil shape file. Set to zero if coordinates not included.\n'))
@@ -1142,11 +1147,11 @@ class InputWriter_OpenFAST(object):
             os.fsync(f)
             f.close()
             
-    def write_AeroDynCoord(self):
+    def write_AeroDynCoord(self, af_coord):
 
         self.fst_vt['AeroDyn']['AFNames_coord'] = ['']*self.fst_vt['AeroDyn']['NumAFfiles']
         
-        for afi in range(int(self.fst_vt['AeroDyn']['NumAFfiles'])):
+        for afi in af_coord: 
             self.fst_vt['AeroDyn']['AFNames_coord'][afi] = os.path.join('Airfoils', self.FAST_namingOut + '_AF%02d_Coords.txt'%afi)
             
             x     = self.fst_vt['AeroDyn']['af_coord'][afi]['x']
@@ -1857,8 +1862,8 @@ class InputWriter_OpenFAST(object):
         f.write('-------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------\n')
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['FEMMod'], 'FEMMod', '- FEM switch: element model in the FEM. [1= Euler-Bernoulli(E-B);  2=Tapered E-B (unavailable);  3= 2-node Timoshenko;  4= 2-node tapered Timoshenko (unavailable)]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NDiv'], 'NDiv', '- Number of sub-elements per member\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SubDyn']['CBMod'], 'CBMod', '- [T/F] If True perform C-B reduction, else full FEM dofs will be retained. If True, select Nmodes to retain in C-B reduced system.\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['Nmodes'], 'Nmodes', '- Number of internal modes to retain (ignored if CBMod=False). If Nmodes=0 --> Guyan Reduction.\n'))
+        # f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SubDyn']['CBMod'], 'CBMod', '- [T/F] If True perform C-B reduction, else full FEM dofs will be retained. If True, select Nmodes to retain in C-B reduced system.\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['Nmodes'], 'Nmodes', '- Number of internal modes to retain. If Nmodes=0 --> Guyan Reduction. If Nmodes<0 --> retain all modes.\n'))
         
         JDampings = self.fst_vt['SubDyn']['JDampings']
         if isinstance(JDampings, float):

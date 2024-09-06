@@ -1196,7 +1196,13 @@ class InputReader_OpenFAST(object):
             polar = {}
 
             polar['InterpOrd']      = int_read(readline_filterComments(f).split()[0])
-            polar['NonDimArea']     = float_read(readline_filterComments(f).split()[0])
+            temp = readline_filterComments(f).split()
+            if temp[1] == "RelThickness":
+                polar['RelThickness'] = float_read(temp[0])
+                polar['NonDimArea']     = float_read(readline_filterComments(f).split()[0])
+            else:
+                polar['NonDimArea']    = float_read(temp[0])
+            # polar['NonDimArea']     = float_read(readline_filterComments(f).split()[0])
             polar['NumCoords']      = readline_filterComments(f).split()[0]
             polar['BL_file']        = readline_filterComments(f).split()[0]
             polar['NumTabs']        = int_read(readline_filterComments(f).split()[0])
@@ -2233,7 +2239,7 @@ class InputReader_OpenFAST(object):
         # FEA and CRAIG-BAMPTON PARAMETERS
         self.fst_vt['SubDyn']['FEMMod']    = int_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['NDiv']      = int_read(f.readline().split()[0])
-        self.fst_vt['SubDyn']['CBMod']     = bool_read(f.readline().split()[0])
+        # self.fst_vt['SubDyn']['CBMod']     = bool_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['Nmodes']    = int_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['JDampings'] = float_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['GuyanDampMod'] = int_read(f.readline().split()[0])

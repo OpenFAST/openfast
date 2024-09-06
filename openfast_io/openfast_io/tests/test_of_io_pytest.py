@@ -16,46 +16,46 @@ from conftest import REPOSITORY_ROOT, BUILD_DIR, OF_PATH
 
 # Exercising the  various OpenFAST modules
 FOLDERS_TO_RUN = [
-    "AWT_YFix_WSt"                           , # "openfast;elastodyn;aerodyn;servodyn")
-    "AWT_WSt_StartUp_HighSpShutDown"         , # "openfast;elastodyn;aerodyn;servodyn")
-    "AWT_YFree_WSt"                          , # "openfast;elastodyn;aerodyn;servodyn")
-    "AWT_YFree_WTurb"                        , # "openfast;elastodyn;aerodyn;servodyn")
-    "AWT_WSt_StartUpShutDown"                , # "openfast;elastodyn;aerodyn;servodyn")
-    "AOC_WSt"                                , # "openfast;elastodyn;aerodyn;servodyn")
-    "AOC_YFree_WTurb"                        , # "openfast;elastodyn;aerodyn;servodyn")
-    "AOC_YFix_WSt"                           , # "openfast;elastodyn;aerodyn;servodyn")
-    "UAE_Dnwind_YRamp_WSt"                   , # "openfast;elastodyn;aerodyn;servodyn")
-    "UAE_Upwind_Rigid_WRamp_PwrCurve"        , # "openfast;elastodyn;aerodyn;servodyn")
-    "WP_VSP_WTurb_PitchFail"                 , # "openfast;elastodyn;aerodyn;servodyn")
-    "WP_VSP_ECD"                             , # "openfast;elastodyn;aerodyn;servodyn")
-    "WP_VSP_WTurb"                           , # "openfast;elastodyn;aerodyn;servodyn")
-    "SWRT_YFree_VS_EDG01"                    , # "openfast;elastodyn;aerodyn;servodyn")
-    "SWRT_YFree_VS_EDC01"                    , # "openfast;elastodyn;aerodyn;servodyn")
-    "SWRT_YFree_VS_WTurb"                    , # "openfast;elastodyn;aerodyn;servodyn")
-    "5MW_Land_DLL_WTurb"                     , # "openfast;elastodyn;aerodyn;servodyn")
-    # "5MW_Land_DLL_WTurb_ADsk"                  ,
-    # "5MW_Land_DLL_WTurb_ADsk_SED"              ,
-    # "5MW_Land_DLL_WTurb_SED"                   ,
-    "5MW_Land_DLL_WTurb_wNacDrag"            , # "openfast;elastodyn;aerodyn;servodyn")
-    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr"         , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore")
-    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart" , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore;restart")
-    "5MW_OC3Trpd_DLL_WSt_WavesReg"           , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore")
-    "5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth" , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore")
-    "5MW_ITIBarge_DLL_WTurb_WavesIrr"        , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;map;offshore")
-    "5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"  , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;map;offshore")
-    "5MW_OC3Spar_DLL_WTurb_WavesIrr"         , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;map;offshore")
-    "5MW_OC4Semi_WSt_WavesWN"                , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;moordyn;offshore")
-    "5MW_Land_BD_DLL_WTurb"                  , # "openfast;beamdyn;aerodyn;servodyn")
-    "5MW_Land_BD_Init"                       , # "openfast;beamdyn;aerodyn;servodyn")
-    "5MW_OC4Jckt_ExtPtfm"                    , # "openfast;elastodyn;extptfm")
-    "HelicalWake_OLAF"                       , # "openfast;aerodyn;olaf")
-    "EllipticalWing_OLAF"                    , # "openfast;aerodyn;olaf")
-    "StC_test_OC4Semi"                       , # "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
-    "MHK_RM1_Fixed"                          , # "openfast;elastodyn;aerodyn;mhk")
-    "MHK_RM1_Floating"                       , # "openfast;elastodyn;aerodyn;hydrodyn;moordyn;mhk")
-    "MHK_RM1_Floating_wNacDrag"              , # "openfast;elastodyn;aerodyn;hydrodyn;moordyn;mhk")
-    "Tailfin_FreeYaw1DOF_PolarBased"         , # "openfast;elastodyn;aerodyn")
-    "Tailfin_FreeYaw1DOF_Unsteady"           , # "openfast;elastodyn;aerodyn")
+    "AWT_YFix_WSt"                           , # "openfast;elastodyn;aerodyn;servodyn"
+    "AWT_WSt_StartUp_HighSpShutDown"         , # "openfast;elastodyn;aerodyn;servodyn"
+    "AWT_YFree_WSt"                          , # "openfast;elastodyn;aerodyn;servodyn"
+    "AWT_YFree_WTurb"                        , # "openfast;elastodyn;aerodyn;servodyn"
+    "AWT_WSt_StartUpShutDown"                , # "openfast;elastodyn;aerodyn;servodyn"
+    "AOC_WSt"                                , # "openfast;elastodyn;aerodyn;servodyn"
+    "AOC_YFree_WTurb"                        , # "openfast;elastodyn;aerodyn;servodyn"
+    "AOC_YFix_WSt"                           , # "openfast;elastodyn;aerodyn;servodyn"
+    "UAE_Dnwind_YRamp_WSt"                   , # "openfast;elastodyn;aerodyn;servodyn"
+    "UAE_Upwind_Rigid_WRamp_PwrCurve"        , # "openfast;elastodyn;aerodyn;servodyn"
+    "WP_VSP_WTurb_PitchFail"                 , # "openfast;elastodyn;aerodyn;servodyn"
+    "WP_VSP_ECD"                             , # "openfast;elastodyn;aerodyn;servodyn"
+    "WP_VSP_WTurb"                           , # "openfast;elastodyn;aerodyn;servodyn"
+    "SWRT_YFree_VS_EDG01"                    , # "openfast;elastodyn;aerodyn;servodyn"
+    "SWRT_YFree_VS_EDC01"                    , # "openfast;elastodyn;aerodyn;servodyn"
+    "SWRT_YFree_VS_WTurb"                    , # "openfast;elastodyn;aerodyn;servodyn"
+    "5MW_Land_DLL_WTurb"                     , # "openfast;elastodyn;aerodyn;servodyn"
+    "5MW_Land_DLL_WTurb_wNacDrag"            , # "openfast;elastodyn;aerodyn;servodyn"
+    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr"         , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore"
+    "5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart" , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore;restart"
+    "5MW_OC3Trpd_DLL_WSt_WavesReg"           , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore"
+    "5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth" , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;subdyn;offshore"
+    "5MW_ITIBarge_DLL_WTurb_WavesIrr"        , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;map;offshore"
+    "5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"  , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;map;offshore"
+    "5MW_OC3Spar_DLL_WTurb_WavesIrr"         , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;map;offshore"
+    "5MW_OC4Semi_WSt_WavesWN"                , # "openfast;elastodyn;aerodyn;servodyn;hydrodyn;moordyn;offshore"
+    "5MW_Land_BD_DLL_WTurb"                  , # "openfast;beamdyn;aerodyn;servodyn"
+    "5MW_Land_BD_Init"                       , # "openfast;beamdyn;aerodyn;servodyn"
+    "5MW_OC4Jckt_ExtPtfm"                    , # "openfast;elastodyn;extptfm"
+    "HelicalWake_OLAF"                       , # "openfast;aerodyn;olaf"
+    "EllipticalWing_OLAF"                    , # "openfast;aerodyn;olaf"
+    "StC_test_OC4Semi"                       , # "openfast;servodyn;hydrodyn;moordyn;offshore;stc"
+    "MHK_RM1_Fixed"                          , # "openfast;elastodyn;aerodyn;mhk"
+    "MHK_RM1_Floating"                       , # "openfast;elastodyn;aerodyn;hydrodyn;moordyn;mhk"
+    "MHK_RM1_Floating_wNacDrag"              , # "openfast;elastodyn;aerodyn;hydrodyn;moordyn;mhk"
+    "Tailfin_FreeYaw1DOF_PolarBased"         , # "openfast;elastodyn;aerodyn"
+    "Tailfin_FreeYaw1DOF_Unsteady"           , # "openfast;elastodyn;aerodyn"
+    "5MW_Land_DLL_WTurb_ADsk"                , # "openfast;elastodyn;aerodisk"
+    "5MW_Land_DLL_WTurb_ADsk_SED"            , # "openfast;simple-elastodyn;aerodisk"
+    "5MW_Land_DLL_WTurb_SED"                 , # "openfast;simple-elastodyn;aerodyn"
 ]
 
 
