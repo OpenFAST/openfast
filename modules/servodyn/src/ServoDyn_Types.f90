@@ -545,7 +545,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: LSShftFzs = 0.0_ReKi      !< Nonrotating low-speed shaft force z [N]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCglob      !< A swap array: used to pass global input data to the DLL controller from the supercontroller [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Lidar      !< A swap array: used to pass input data to the DLL controller from the Lidar [-]
     TYPE(MeshType)  :: PtfmMotionMesh      !< Platform motion mesh at platform reference point [-]
     TYPE(MeshType) , DIMENSION(:,:), ALLOCATABLE  :: BStCMotionMesh      !< StC module blade        input motion mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: NStCMotionMesh      !< StC module nacelle      input motion mesh [-]
@@ -569,7 +568,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: HSSBrTrqC = 0.0_ReKi      !< Commanded HSS brake torque [N-m]
     REAL(ReKi)  :: ElecPwr = 0.0_ReKi      !< Electrical power [W]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TBDrCon      !< Instantaneous tip-brake drag constant, Cd*Area [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Lidar      !< A swap array: used to pass output data from the DLL controller to the Lidar [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaL      !< Cable control -- Length change request (passed to MD or SD) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaLdot      !< Cable control -- Length change rate request (passed to MD or SD) [m/s]
     TYPE(MeshType) , DIMENSION(:,:), ALLOCATABLE  :: BStCLoadMesh      !< StC module blade        output load mesh (NumBl,NumBStC) [-]
@@ -5564,18 +5562,6 @@ subroutine SrvD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstInputData%fromSCglob = SrcInputData%fromSCglob
    end if
-   if (allocated(SrcInputData%Lidar)) then
-      LB(1:1) = lbound(SrcInputData%Lidar, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%Lidar, kind=B8Ki)
-      if (.not. allocated(DstInputData%Lidar)) then
-         allocate(DstInputData%Lidar(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Lidar.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInputData%Lidar = SrcInputData%Lidar
-   end if
    call MeshCopy(SrcInputData%PtfmMotionMesh, DstInputData%PtfmMotionMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -5727,9 +5713,6 @@ subroutine SrvD_DestroyInput(InputData, ErrStat, ErrMsg)
    if (allocated(InputData%fromSCglob)) then
       deallocate(InputData%fromSCglob)
    end if
-   if (allocated(InputData%Lidar)) then
-      deallocate(InputData%Lidar)
-   end if
    call MeshDestroy( InputData%PtfmMotionMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputData%BStCMotionMesh)) then
@@ -5832,7 +5815,6 @@ subroutine SrvD_PackInput(RF, Indata)
    call RegPack(RF, InData%LSShftFzs)
    call RegPackAlloc(RF, InData%fromSC)
    call RegPackAlloc(RF, InData%fromSCglob)
-   call RegPackAlloc(RF, InData%Lidar)
    call MeshPack(RF, InData%PtfmMotionMesh) 
    call RegPack(RF, allocated(InData%BStCMotionMesh))
    if (allocated(InData%BStCMotionMesh)) then
@@ -5929,7 +5911,6 @@ subroutine SrvD_UnPackInput(RF, OutData)
    call RegUnpack(RF, OutData%LSShftFzs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%fromSCglob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Lidar); if (RegCheckErr(RF, RoutineName)) return
    call MeshUnpack(RF, OutData%PtfmMotionMesh) ! PtfmMotionMesh 
    if (allocated(OutData%BStCMotionMesh)) deallocate(OutData%BStCMotionMesh)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -6058,18 +6039,6 @@ subroutine SrvD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       end if
       DstOutputData%TBDrCon = SrcOutputData%TBDrCon
    end if
-   if (allocated(SrcOutputData%Lidar)) then
-      LB(1:1) = lbound(SrcOutputData%Lidar, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%Lidar, kind=B8Ki)
-      if (.not. allocated(DstOutputData%Lidar)) then
-         allocate(DstOutputData%Lidar(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%Lidar.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstOutputData%Lidar = SrcOutputData%Lidar
-   end if
    if (allocated(SrcOutputData%CableDeltaL)) then
       LB(1:1) = lbound(SrcOutputData%CableDeltaL, kind=B8Ki)
       UB(1:1) = ubound(SrcOutputData%CableDeltaL, kind=B8Ki)
@@ -6197,9 +6166,6 @@ subroutine SrvD_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%TBDrCon)) then
       deallocate(OutputData%TBDrCon)
    end if
-   if (allocated(OutputData%Lidar)) then
-      deallocate(OutputData%Lidar)
-   end if
    if (allocated(OutputData%CableDeltaL)) then
       deallocate(OutputData%CableDeltaL)
    end if
@@ -6266,7 +6232,6 @@ subroutine SrvD_PackOutput(RF, Indata)
    call RegPack(RF, InData%HSSBrTrqC)
    call RegPack(RF, InData%ElecPwr)
    call RegPackAlloc(RF, InData%TBDrCon)
-   call RegPackAlloc(RF, InData%Lidar)
    call RegPackAlloc(RF, InData%CableDeltaL)
    call RegPackAlloc(RF, InData%CableDeltaLdot)
    call RegPack(RF, allocated(InData%BStCLoadMesh))
@@ -6330,7 +6295,6 @@ subroutine SrvD_UnPackOutput(RF, OutData)
    call RegUnpack(RF, OutData%HSSBrTrqC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ElecPwr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TBDrCon); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Lidar); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CableDeltaL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CableDeltaLdot); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BStCLoadMesh)) deallocate(OutData%BStCLoadMesh)
@@ -6548,9 +6512,6 @@ SUBROUTINE SrvD_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg
    IF (ALLOCATED(u_out%fromSCglob) .AND. ALLOCATED(u1%fromSCglob)) THEN
       u_out%fromSCglob = a1*u1%fromSCglob + a2*u2%fromSCglob
    END IF ! check if allocated
-   IF (ALLOCATED(u_out%Lidar) .AND. ALLOCATED(u1%Lidar)) THEN
-      u_out%Lidar = a1*u1%Lidar + a2*u2%Lidar
-   END IF ! check if allocated
    CALL MeshExtrapInterp1(u1%PtfmMotionMesh, u2%PtfmMotionMesh, tin, u_out%PtfmMotionMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(u_out%BStCMotionMesh) .AND. ALLOCATED(u1%BStCMotionMesh)) THEN
@@ -6708,9 +6669,6 @@ SUBROUTINE SrvD_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, Er
    END IF ! check if allocated
    IF (ALLOCATED(u_out%fromSCglob) .AND. ALLOCATED(u1%fromSCglob)) THEN
       u_out%fromSCglob = a1*u1%fromSCglob + a2*u2%fromSCglob + a3*u3%fromSCglob
-   END IF ! check if allocated
-   IF (ALLOCATED(u_out%Lidar) .AND. ALLOCATED(u1%Lidar)) THEN
-      u_out%Lidar = a1*u1%Lidar + a2*u2%Lidar + a3*u3%Lidar
    END IF ! check if allocated
    CALL MeshExtrapInterp2(u1%PtfmMotionMesh, u2%PtfmMotionMesh, u3%PtfmMotionMesh, tin, u_out%PtfmMotionMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
@@ -6873,9 +6831,6 @@ SUBROUTINE SrvD_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMs
    IF (ALLOCATED(y_out%TBDrCon) .AND. ALLOCATED(y1%TBDrCon)) THEN
       y_out%TBDrCon = a1*y1%TBDrCon + a2*y2%TBDrCon
    END IF ! check if allocated
-   IF (ALLOCATED(y_out%Lidar) .AND. ALLOCATED(y1%Lidar)) THEN
-      y_out%Lidar = a1*y1%Lidar + a2*y2%Lidar
-   END IF ! check if allocated
    IF (ALLOCATED(y_out%CableDeltaL) .AND. ALLOCATED(y1%CableDeltaL)) THEN
       y_out%CableDeltaL = a1*y1%CableDeltaL + a2*y2%CableDeltaL
    END IF ! check if allocated
@@ -6989,9 +6944,6 @@ SUBROUTINE SrvD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
    y_out%ElecPwr = a1*y1%ElecPwr + a2*y2%ElecPwr + a3*y3%ElecPwr
    IF (ALLOCATED(y_out%TBDrCon) .AND. ALLOCATED(y1%TBDrCon)) THEN
       y_out%TBDrCon = a1*y1%TBDrCon + a2*y2%TBDrCon + a3*y3%TBDrCon
-   END IF ! check if allocated
-   IF (ALLOCATED(y_out%Lidar) .AND. ALLOCATED(y1%Lidar)) THEN
-      y_out%Lidar = a1*y1%Lidar + a2*y2%Lidar + a3*y3%Lidar
    END IF ! check if allocated
    IF (ALLOCATED(y_out%CableDeltaL) .AND. ALLOCATED(y1%CableDeltaL)) THEN
       y_out%CableDeltaL = a1*y1%CableDeltaL + a2*y2%CableDeltaL + a3*y3%CableDeltaL
