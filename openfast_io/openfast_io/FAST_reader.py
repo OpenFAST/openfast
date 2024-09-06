@@ -914,9 +914,9 @@ class InputReader_OpenFAST(object):
         self.fst_vt['InflowWind']['NumPulseGate'] = int(f.readline().split()[0])
         self.fst_vt['InflowWind']['PulseSpacing'] = float_read(f.readline().split()[0])
         self.fst_vt['InflowWind']['NumBeam'] = int(f.readline().split()[0])
-        self.fst_vt['InflowWind']['FocalDistanceX'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
-        self.fst_vt['InflowWind']['FocalDistanceY'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
-        self.fst_vt['InflowWind']['FocalDistanceZ'] = [idx.strip() for idx in f.readline().split('NacCenB')[0].split(',')]
+        self.fst_vt['InflowWind']['FocalDistanceX'] = [idx.strip() for idx in f.readline().split('FocalDistanceX')[0].split(',')]
+        self.fst_vt['InflowWind']['FocalDistanceY'] = [idx.strip() for idx in f.readline().split('FocalDistanceY')[0].split(',')]
+        self.fst_vt['InflowWind']['FocalDistanceZ'] = [idx.strip() for idx in f.readline().split('FocalDistanceZ')[0].split(',')]
         self.fst_vt['InflowWind']['RotorApexOffsetPos'] = [idx.strip() for idx in f.readline().split('RotorApexOffsetPos')[0].split(',')]
         self.fst_vt['InflowWind']['URefLid'] = float_read(f.readline().split()[0])
         self.fst_vt['InflowWind']['MeasurementInterval'] = float_read(f.readline().split()[0])
