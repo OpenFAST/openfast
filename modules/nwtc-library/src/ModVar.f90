@@ -124,23 +124,25 @@ function MV_FieldString(Field) result(str)
    character(16)              :: str
    select case (Field)
    case (FieldAngularAcc)
-      str = "FieldAngularAcc"
+      str = "AngularAcc"
    case (FieldAngularDisp)
-      str = "FieldAngularDisp"
+      str = "AngularDisp"
    case (FieldAngularVel)
-      str = "FieldAngularVel"
+      str = "AngularVel"
    case (FieldForce)
-      str = "FieldForce"
+      str = "Force"
    case (FieldMoment)
-      str = "FieldMoment"
+      str = "Moment"
    case (FieldOrientation)
-      str = "FieldOrientation"
+      str = "Orientation"
    case (FieldTransAcc)
-      str = "FieldTransAcc"
+      str = "TransAcc"
    case (FieldTransDisp)
-      str = "FieldTransDisp"
+      str = "TransDisp"
    case (FieldTransVel)
-      str = "FieldTransVel"
+      str = "TransVel"
+   case (FieldScalar)
+      str = "Scalar"
    case default
       str = "Unknown"
    end select
