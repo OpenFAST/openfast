@@ -266,7 +266,6 @@ contains
                      associate (Var => SrcMod%Vars%y(i))
                         if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
                            call MV_SetFlags(Var, VF_Solve)
-                           write (*,*) 'Solve y:', FAST_OutputFieldName(SrcMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
                         end if
                      end associate
                   end do
@@ -276,7 +275,6 @@ contains
                      associate (Var => DstMod%Vars%u(i))
                         if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
                            call MV_SetFlags(Var, VF_Solve)
-                           write (*,*) 'Solve u:', FAST_InputFieldName(DstMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
                         end if
                      end associate
                   end do
@@ -290,7 +288,6 @@ contains
                      associate (Var => SrcMod%Vars%y(i))
                         if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
                            call MV_SetFlags(Var, VF_Solve)
-                           write (*,*) 'Solve y:', FAST_OutputFieldName(SrcMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
                         end if
                      end associate
                   end do
@@ -302,7 +299,6 @@ contains
                            select case (Var%Field)
                            case (FieldTransAcc, FieldAngularAcc)
                               call MV_SetFlags(Var, VF_Solve)
-                              write (*,*) 'Solve u:', FAST_InputFieldName(DstMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
                            end select
                         end if
                      end associate
@@ -318,7 +314,6 @@ contains
                      associate (Var => DstMod%Vars%u(i))
                         if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
                            call MV_SetFlags(Var, VF_Solve)
-                           write (*,*) 'Solve u:', FAST_InputFieldName(DstMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
                         end if
                      end associate
                   end do
@@ -330,7 +325,6 @@ contains
                            select case (Var%Field)
                            case (FieldTransDisp, FieldOrientation)
                               call MV_SetFlags(Var, VF_Solve)
-                              write (*,*) 'Solve y:', FAST_OutputFieldName(DstMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
                            end select
                         end if
                      end associate
@@ -343,7 +337,6 @@ contains
                         associate (Var => SrcMod%Vars%y(i))
                            if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
                               call MV_SetFlags(Var, VF_Solve)
-                              write (*,*) 'Solve y:', FAST_OutputFieldName(SrcMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
                            end if
                         end associate
                      end do
@@ -355,7 +348,6 @@ contains
                               select case (Var%Field)
                               case (FieldTransDisp)
                                  call MV_SetFlags(Var, VF_Solve)
-                                 write (*,*) 'Solve u:', FAST_InputFieldName(SrcMod, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
                               end select
                            end if
                         end associate
@@ -369,6 +361,32 @@ contains
 
          end associate
       end do
+
+      if (DebugSolver) then
+         do i = 1, size(GlueModData)
+            associate (ModData => GlueModData(i))
+               if (allocated(ModData%Vars%u)) then
+                  do j = 1, size(ModData%Vars%u)
+                     associate (Var => ModData%Vars%u(j))
+                        if (MV_HasFlagsAny(Var, VF_Solve)) then
+                           write (*,*) 'Solve u:', FAST_InputFieldName(ModData, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                        end if
+                     end associate
+                  end do
+               end if
+               if (allocated(ModData%Vars%y)) then
+                  do j = 1, size(ModData%Vars%y)
+                     associate (Var => ModData%Vars%y(j))
+                        if (MV_HasFlagsAny(Var, VF_Solve)) then
+                           write (*,*) 'Solve y:', FAST_OutputFieldName(ModData, Var%DL)//' '//MV_FieldString(Var%Field), Var%Num
+                        end if
+                     end associate
+                  end do
+               end if
+            end associate
+         end do
+      end if
+
    end subroutine
 
    logical function Failed()
