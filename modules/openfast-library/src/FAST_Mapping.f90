@@ -1500,14 +1500,14 @@ subroutine InitMappings_SD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        SrcDL=DatLoc(HydroDyn_y_Morison_Mesh), &          ! HD%y%Morison%Mesh
                        SrcDispDL=DatLoc(HydroDyn_u_Morison_Mesh), &      ! HD%u%Morison%Mesh
                        DstDL=DatLoc(SD_u_LMesh), &                       ! SD%u%LMesh
-                       DstDispDL=DatLoc(SD_y_y3Mesh), &                  ! SD%y%y3Mesh
+                       DstDispDL=DatLoc(SD_y_y2Mesh), &                  ! SD%y%y2Mesh
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                        SrcDL=DatLoc(HydroDyn_y_WAMITMesh), &             ! HD%y%WAMITMesh
                        SrcDispDL=DatLoc(HydroDyn_u_WAMITMesh), &         ! HD%u%WAMITMesh
                        DstDL=DatLoc(SD_u_LMesh), &                       ! SD%u%LMesh
-                       DstDispDL=DatLoc(SD_y_y3Mesh), &                  ! SD%y%y3Mesh
+                       DstDispDL=DatLoc(SD_y_y2Mesh), &                  ! SD%y%y2Mesh
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    case (Module_IceD)
