@@ -7,7 +7,7 @@ from openfast_io.FAST_reader import InputReader_OpenFAST
 from openfast_io.FAST_writer import InputWriter_OpenFAST
 from openfast_io.FAST_output_reader import FASTOutputFile
 
-from openfast_io.FileTools import check_rtest_cloned
+from openfast_io.FileTools import check_rtest_cloned, compare_fst_vt
 from pathlib import Path
 
 from conftest import REPOSITORY_ROOT, BUILD_DIR, OF_PATH
@@ -126,6 +126,37 @@ def check_binary_out(folder, path_dict = getPaths()):
     binaryOutput = osp.join(path_dict['build_dir'],'openfast_io', folder, f"{folder}.outb")
     fast_outout = FASTOutputFile(filename=binaryOutput)
 
+def check_fst_vt_with_source(folder, path_dict = getPaths()):
+    print(f"Checking the fst_vt with the source for {folder}")
+
+    # creating the two InputReader_OpenFAST objects
+    fast_reader1 = InputReader_OpenFAST() #  for the source
+    fast_reader1.FAST_InputFile =  f'{folder}.fst'   # FAST input file (ext=.fst)
+    fast_reader1.FAST_directory = osp.join(path_dict['test_data_dir'], folder)   # Path to fst directory files
+    fast_reader1.execute()
+
+    fast_reader2 = InputReader_OpenFAST() #  for the build
+    fast_reader2.FAST_InputFile =  f'{folder}.fst'   # FAST input file (ext=.fst)
+    fast_reader2.FAST_directory = osp.join(path_dict['build_dir'],'openfast_io',folder)   # Path to fst directory files
+    fast_reader2.execute()
+
+    # List of acceptable differences
+    acceptable_diff = [
+                        'TMax', # TMax is updated in the write_action
+                        'TStart', # TStart is updated in the write_action
+                        'OutFileFmt', # OutFileFmt is updated in the write_action # TODO check why its not being removed
+    ]
+
+
+    # compare the two fst_vt
+    diff = compare_fst_vt(fast_reader1.fst_vt, fast_reader2.fst_vt, ignoreVars = acceptable_diff,
+                   removeFileRef=True, removeArrayProps=True, print_diff=True)
+    
+    if diff:
+        pytest.fail(f"fst_vt for {folder} is not matching with the source")
+
+
+
 # Begining of the test
 def test_rtest_cloned(request):
 
@@ -189,6 +220,9 @@ def test_openfast_io_read_write_run_outRead(folder, request):
         action_name = "check binary"
         check_binary_out(folder, path_dict = path_dict)
 
+        action_name = "check fst_vt"
+        check_fst_vt_with_source(folder, path_dict = path_dict)
+
     except Exception as e:
         pytest.fail(f"Action '{action_name}' for folder '{folder}' failed with exception: {e}")
 
@@ -205,6 +239,7 @@ def main():
         run_action(folder)
         check_ascii_out(folder)
         check_binary_out(folder)
+        check_fst_vt_with_source(folder)
         print(f"Successfully processed folder: {folder}")
 
 if __name__ == "__main__":
