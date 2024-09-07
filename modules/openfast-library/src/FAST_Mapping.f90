@@ -1765,7 +1765,7 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
                   trim(FAST_InputFieldName(DstMod, DstDL))// &
                   " ["//trim(FAST_InputFieldName(SrcMod, SrcDispDL))// &
-                  " -> "//trim(FAST_OutputFieldName(DstMod, DstDispDL))//"]"
+                  " @ "//trim(FAST_OutputFieldName(DstMod, DstDispDL))//"]"
 
    ! Initialize mapping structure
    Mapping%MapType = Map_LoadMesh
@@ -2572,9 +2572,6 @@ contains
       type(MeshType), pointer          :: SrcMesh, DstMesh
       type(MeshType), pointer          :: SrcDispMesh, DstDispMesh
 
-      ! Return if mapping is not ready
-      if (.not. Mapping%Ready) return
-
       ! Select based on type of mapping
       select case (Mapping%MapType)
 
@@ -2933,12 +2930,6 @@ subroutine FAST_ResetRemapFlags(Mods, Maps, T, ErrStat, ErrMsg)
          call FAST_InputMeshPointer(Mods(Maps(i)%iModDst), T, Maps(i)%DstDL, DstMesh, INPUT_CURR, ErrStat2, ErrMsg2)
          if (Failed()) return
          DstMesh%RemapFlag = .false.
-
-         ! call FAST_OutputMeshPointer(Mods(Maps(i)%SrcModID), T, Maps(i)%SrcDL, SrcMesh, ErrStat2, ErrMsg2)
-         ! if (ErrStat2 == ErrID_None) SrcMesh%RemapFlag = .false.
-
-         ! call FAST_InputMeshPointer(Mods(Maps(i)%DstModID), T, Maps(i)%DstDL, DstMesh, INPUT_CURR, ErrStat2, ErrMsg2)
-         ! if (ErrStat2 == ErrID_None) DstMesh%RemapFlag = .false.
 
       end select
    end do
