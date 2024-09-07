@@ -164,7 +164,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       REAL(ReKi), ALLOCATABLE                :: WAMITPer  (:)                        ! Period         components as ordered in the WAMIT output files (sec    )
       REAL(ReKi), ALLOCATABLE                :: WAMITWvDir(:)                        ! Wave direction components as ordered in the WAMIT output files (degrees)
 
-      INTEGER                                :: I,iGrid,iX,iY,iHdg                   ! Generic index
+      INTEGER                                :: I,iGrid,iX,iY,iHdg,iBdy              ! Generic index
       INTEGER                                :: InsertInd                            ! The lowest sorted index whose associated frequency component is higher than the current frequency component -- this is to sort the frequency components from lowest to highest
       INTEGER                                :: J                                    ! Generic index
       INTEGER                                :: K                                    ! Generic index
@@ -1188,10 +1188,12 @@ end if
                      PRPHdg = -PI + (iHdg-1) * TwoPi/REAL(p%NExctnHdg,ReKi)
                   END IF
                   DO J = 0,p%WaveField%NStepWave
-                     call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,1:3),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                     p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,1:3) = tmpVec3
-                     call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,4:6),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                     p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,4:6) = tmpVec3
+                     DO iBdy = 1,p%NBody
+                        call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,(6*(iBdy-1)+1):(6*(iBdy-1)+3)),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                        p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,(6*(iBdy-1)+1):(6*(iBdy-1)+3)) = tmpVec3
+                        call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,(6*(iBdy-1)+4):(6*(iBdy-1)+6)),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                        p%WaveExctnGrid(J,1_IntKi,1_IntKi,iHdg,(6*(iBdy-1)+4):(6*(iBdy-1)+6)) = tmpVec3
+                     END DO
                   END DO
                END DO
             else  ! p%ExctnDisp > 0
@@ -1275,10 +1277,12 @@ end if
                      iX = mod(iGrid-1, p%ExctnGridParams%n(2)) + 1  ! 1st n index is time
                      iY = (iGrid-1) / p%ExctnGridParams%n(2) + 1
                      DO J = 0,p%WaveField%NStepWave
-                        call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,iX,iY,iHdg,1:3),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                        p%WaveExctnGrid(J,iX,iY,iHdg,1:3) = tmpVec3
-                        call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,iX,iY,iHdg,4:6),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                        p%WaveExctnGrid(J,iX,iY,iHdg,4:6) = tmpVec3
+                        DO iBdy = 1,p%NBody
+                           call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,iX,iY,iHdg,(6*(iBdy-1)+1):(6*(iBdy-1)+3)),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                           p%WaveExctnGrid(J,iX,iY,iHdg,(6*(iBdy-1)+1):(6*(iBdy-1)+3)) = tmpVec3
+                           call hiFrameTransform(h2i,PRPHdg,p%WaveExctnGrid(J,iX,iY,iHdg,(6*(iBdy-1)+4):(6*(iBdy-1)+6)),tmpVec3,ErrStat2,ErrMsg2);  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                           p%WaveExctnGrid(J,iX,iY,iHdg,(6*(iBdy-1)+4):(6*(iBdy-1)+6)) = tmpVec3
+                        END DO
                      END DO
                   END DO
                END DO
@@ -1871,6 +1875,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       INTEGER(IntKi)                       :: iBody                                   ! Counter for WAMIT bodies.  If NBodyMod > 1 then NBody = 1, and hence iBody = 1
       INTEGER(IntKi)                       :: indxStart, indxEnd                      ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
       REAL(ReKi)                           :: bodyPosition(3)                         ! x-y displaced location of a WAMIT body (relative to 
+      REAL(ReKi)                           :: refBodyPosition(3)
       REAL(ReKi)                           :: tmpVec3(3),tmpVec6(6)
       REAL(ReKi),      PARAMETER           :: LrgAngle = 0.261799387799149            ! Threshold for platform roll and pitch rotation (15 deg). This is consistent with the ElastoDyn check.
 
@@ -1937,6 +1942,12 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                   bodyPosition(2) = p%ExctnFiltConst * xd%BdyPosFilt(2,iBody,1) + (1.0_ReKi - p%ExctnFiltConst) * u%Mesh%TranslationDisp(2,iBody)
                END IF
                bodyPosition(3) = WrapToPi(u%PtfmRefY)
+
+               ! Remove baseline displacement due to non-zero yaw orientation and body offset from PRP
+               CALL hiFrameTransform(h2i,u%PtfmRefY,u%Mesh%Position(1:3,iBody), refBodyPosition, ErrStat2, ErrMsg2 )
+               bodyPosition(1) = bodyPosition(1) - (refBodyPosition(1) - u%Mesh%Position(1,iBody))
+               bodyPosition(2) = bodyPosition(2) - (refBodyPosition(2) - u%Mesh%Position(2,iBody))
+
                iStart = (iBody-1)*6+1
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: PRP yaw offset, 5th: Force component for each WAMIT Body
                m%F_Waves1(iStart:iStart+5) = WAMIT_ForceWaves_Interp( Time, bodyPosition, p%WaveExctnGrid(:,:,:,:,iStart:iStart+5), p%ExctnGridParams, m%WaveField_m, ErrStat2, ErrMsg2 )
