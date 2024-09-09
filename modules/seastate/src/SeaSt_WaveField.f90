@@ -686,15 +686,15 @@ subroutine WaveField_Interp_Setup3D( Time, Position, p, m, ErrStat, ErrMsg )
    enddo
 
    ! compute weighting factors
-   m%N3D(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   m%N3D(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   m%N3D(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   m%N3D(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   m%N3D(5)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   m%N3D(6)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   m%N3D(7)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   m%N3D(8)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   m%N3D     = m%N3D / REAL( SIZE(m%N3D), ReKi )  ! normalize
+   m%N3D(1)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi - isopc(2) )*( 1.0_SiKi - isopc(3) )
+   m%N3D(2)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi + isopc(2) )*( 1.0_SiKi - isopc(3) )
+   m%N3D(3)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi + isopc(2) )*( 1.0_SiKi - isopc(3) )
+   m%N3D(4)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi - isopc(2) )*( 1.0_SiKi - isopc(3) )
+   m%N3D(5)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi - isopc(2) )*( 1.0_SiKi + isopc(3) )
+   m%N3D(6)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi + isopc(2) )*( 1.0_SiKi + isopc(3) )
+   m%N3D(7)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi + isopc(2) )*( 1.0_SiKi + isopc(3) )
+   m%N3D(8)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi - isopc(2) )*( 1.0_SiKi + isopc(3) )
+   m%N3D     = m%N3D / REAL( SIZE(m%N3D), SiKi )  ! normalize
 
 contains
    logical function Failed()
@@ -716,22 +716,22 @@ function WaveField_Interp_4D( pKinXX, m )
 
    ! interpolate
    u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4) )
-   u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) )
-   u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) )
-   u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) )
-   u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4) )
-   u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) )
-   u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) )
-   u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) )
    u( 9) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4) )
-   u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) )
-   u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) )
-   u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) )
+   u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4) )
    u(13) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4) )
-   u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) )
+   u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) )
+   u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) )
+   u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) )
    u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) )
+   u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) )
+   u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) )
+   u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) )
+   u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) )
+   u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) )
+   u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) )
+   u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) )
    u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) )
-   WaveField_Interp_4D = SUM ( m%N4D * u )
+   WaveField_Interp_4D = dot_product(m%N4D, u)
 end function WaveField_Interp_4D
 
 
@@ -749,22 +749,22 @@ function WaveField_Interp_4D_Vec( pKinXX, m)
    ! interpolate
    do iDir = 1,3
       u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
       u( 9) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
       u(13) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
       u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
       u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      WaveField_Interp_4D_Vec(iDir) = SUM ( m%N4D * u )
+      WaveField_Interp_4D_Vec(iDir) = dot_product(m%N4D, u)
    end do
 END FUNCTION WaveField_Interp_4D_Vec
 
@@ -783,22 +783,22 @@ function WaveField_Interp_4D_Vec6( pKinXX, m)
    ! interpolate
    do iDir = 1,6
       u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
       u( 9) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
       u(13) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
       u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
+      u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
+      u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
+      u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
       u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      WaveField_Interp_4D_Vec6(iDir) = SUM ( m%N4D * u )
+      WaveField_Interp_4D_Vec6(iDir) = dot_product(m%N4D, u)
    end do
 END FUNCTION WaveField_Interp_4D_Vec6
 
@@ -817,15 +817,15 @@ function WaveField_Interp_3D( pKinXX, m )
    integer(IntKi)                         :: i
 
    ! interpolate
-   u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3) )
-   u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3) )
-   u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3) )
    u(4)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3) )
-   u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3) )
-   u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3) )
-   u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3) )
+   u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3) )
+   u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3) )
+   u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3) )
    u(8)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3) )
-   WaveField_Interp_3D = SUM ( m%N3D * u )
+   u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3) )
+   u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3) )
+   u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3) )
+   WaveField_Interp_3D = dot_product(m%N3D, u)
 end function WaveField_Interp_3D
 
 
@@ -840,15 +840,15 @@ FUNCTION WaveField_Interp_3D_VEC( pKinXX, m )
 
    ! interpolate
    do i = 1,3
-      u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
-      u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
-      u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
       u(4)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
-      u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
-      u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
-      u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
+      u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
+      u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
       u(8)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
-      WaveField_Interp_3D_VEC(i) = SUM ( m%N3D * u )
+      u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
+      u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      WaveField_Interp_3D_VEC(i) = dot_product(m%N3D, u)
    end do
 end function WaveField_Interp_3D_VEC
 
@@ -864,15 +864,15 @@ function Wavefield_Interp_3D_VEC6( pKinXX, m )
 
    ! interpolate
    do i = 1,6
-      u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
-      u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
-      u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
       u(4)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
-      u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
-      u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
-      u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
+      u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
+      u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
       u(8)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
-      Wavefield_Interp_3D_VEC6(i) = SUM ( m%N3D * u )
+      u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
+      u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
+      Wavefield_Interp_3D_VEC6(i) = dot_product(m%N3D, u)
    end do
 end function Wavefield_Interp_3D_VEC6
 

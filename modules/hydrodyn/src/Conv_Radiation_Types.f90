@@ -59,7 +59,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  Conv_Rdtn_DiscreteStateType  =======
   TYPE, PUBLIC :: Conv_Rdtn_DiscreteStateType
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: XDHistory      !<  [-]
+    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: XDHistory      !<  [-]
     REAL(DbKi)  :: LastTime = 0.0_R8Ki      !<  [-]
   END TYPE Conv_Rdtn_DiscreteStateType
 ! =======================
