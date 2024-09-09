@@ -6482,22 +6482,21 @@ end function Rad2M180to180Deg
 
       
    END FUNCTION TaitBryanYXZExtractR8
-
-
-      FUNCTION TaitBryanYXZConstructR4(theta) result(M)
-            ! this function creates a rotation matrix, M, from a 1-2-3 rotation
-      ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
-      ! M represents a change of basis (from global to local coordinates; 
-      ! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
-      ! 
-      ! M = R(theta_z) * R(theta_x) * R(theta_y)
-      !   = [ cz sz 0 |  [ 1   0   0 |    [ cy  0 -sy | 
-      !     |-sz cz 0 |* | 0  cx  sx |  * |  0  1   0 | 
-      !     |  0  0 1 ]  | 0 -sx  cx ]    | sy  0  cy ] 
-      !   = [ cy*cz+sy*sx*sz   cx*sz    cy*sx*sz-cz*sy |
-      !     |cz*sy*sx-cy*sz   cx*cz    cy*cz*sx+sy*sz |
-      !     |cx*sy           -sx             cx*cy    ]
-      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+!=======================================================================
+!> this function creates a rotation matrix, M, from a 1-2-3 rotation
+!! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
+!! M represents a change of basis (from global to local coordinates; 
+!! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
+!! 
+!! M = R(theta_z) * R(theta_x) * R(theta_y)
+!!   = [ cz sz 0 |  [ 1   0   0 |    [ cy  0 -sy | 
+!!     |-sz cz 0 |* | 0  cx  sx |  * |  0  1   0 | 
+!!     |  0  0 1 ]  | 0 -sx  cx ]    | sy  0  cy ] 
+!!   = [ cy*cz+sy*sx*sz   cx*sz    cy*sx*sz-cz*sy |
+!!     |cz*sy*sx-cy*sz   cx*cz    cy*cz*sx+sy*sz |
+!!     |cx*sy           -sx             cx*cy    ]
+!! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+   PURE FUNCTION TaitBryanYXZConstructR4(theta) result(M)
    
       REAL(SiKi)             :: M(3,3)    !< rotation matrix, M 
       REAL(SiKi), INTENT(IN) :: theta(3)  !< the 3 rotation angles: \f$\theta_x, \theta_y, \theta_z\f$
@@ -6531,8 +6530,8 @@ end function Rad2M180to180Deg
       M(3,3) =   cy*cx   
 
    END FUNCTION TaitBryanYXZConstructR4
-   
-   FUNCTION TaitBryanYXZConstructR8(theta) result(M)
+!=======================================================================
+   PURE FUNCTION TaitBryanYXZConstructR8(theta) result(M)
    
       ! this function creates a rotation matrix, M, from a 1-2-3 rotation
       ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
@@ -6580,7 +6579,6 @@ end function Rad2M180to180Deg
       M(3,3) =   cy*cx               
    
    END FUNCTION TaitBryanYXZConstructR8
-   
 
 !=======================================================================
 !> This routine takes an array of time values such as that returned from
