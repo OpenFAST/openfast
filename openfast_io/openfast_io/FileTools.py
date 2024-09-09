@@ -37,7 +37,7 @@ def remove_numpy(fst_vt):
 
                 if data_type in [np.int_, np.intc, np.intp, np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
                     get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = int(get_dict(fst_vt, branch_i[:-1])[branch_i[-1]])
-                elif data_type in [np.single, np.double, np.longdouble, np.csingle, np.cdouble, np.float_, np.float16, np.float32, np.float64, np.complex64, np.complex128]:
+                elif data_type in [np.single, np.double, np.longdouble, np.csingle, np.cdouble, np.float16, np.float32, np.float64, np.complex64, np.complex128]:
                     get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = float(get_dict(fst_vt, branch_i[:-1])[branch_i[-1]])
                 elif data_type in [np.bool_]:
                     get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = bool(get_dict(fst_vt, branch_i[:-1])[branch_i[-1]])
