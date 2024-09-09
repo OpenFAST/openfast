@@ -14,15 +14,38 @@ except:
 
 
 def readline_filterComments(f):
-            read = True
-            while read:
-                line = f.readline().strip()
-                if len(line)>0:
-                    if line[0] != '!':
-                        read = False
-            return line
+    """
+    Filter out comments and empty lines from a file
+
+    Args:
+    f: file handle
+
+    Returns:
+    line: next line in the file that is not a comment or empty
+    """
+    read = True
+    while read:
+        line = f.readline().strip()
+        if len(line)>0:
+            if line[0] != '!':
+                read = False
+    return line
 
 def read_array(f,len,split_val=None,array_type=str):
+    """
+    Read an array of values from a line in a file
+
+    Args:
+    f: file handle
+    len: number of values to read
+    split_val: value to stop reading at
+    array_type: type of values to return
+
+    Returns:
+    arr: list of values read from the file line with the specified type
+    """
+
+
     strings = re.split(',| ',f.readline().strip())
     while '' in strings:    # remove empties
         strings.remove('')
@@ -54,7 +77,15 @@ def read_array(f,len,split_val=None,array_type=str):
     return arr
 
 def fix_path(name):
-    """ split a path, then reconstruct it using os.path.join """
+    """ 
+    split a path, then reconstruct it using os.path.join 
+    
+    Args:
+    name: path to fix
+
+    Returns:
+    new: reconstructed path
+    """
     name = re.split("\\|/", name)
     new = name[0]
     for i in range(1,len(name)):
@@ -62,7 +93,15 @@ def fix_path(name):
     return new
 
 def bool_read(text):
-    # convert true/false strings to boolean
+    """
+    Read a boolean value from a string
+    
+    Args:
+    text: string to read
+
+    Returns:
+    True if the string is 'true', False otherwise
+    """
     if 'default' in text.lower():
         return str(text)
     else:
@@ -72,7 +111,15 @@ def bool_read(text):
             return False
 
 def float_read(text):
-    # return float with error handing for "default" values
+    """
+    Read a float value from a string, with error handling for 'default' values
+
+    Args:
+    text: string to read
+
+    Returns:
+    float value if the string can be converted, string otherwise
+    """
     if 'default' in text.lower():
         return str(text)
     else:
@@ -82,7 +129,15 @@ def float_read(text):
             return str(text)
 
 def int_read(text):
-    # return int with error handing for "default" values
+    """
+    Read an integer value from a string, with error handling for 'default' values
+
+    Args:
+    text: string to read
+
+    Returns:
+    int value if the string can be converted, string otherwise
+    """
     if 'default' in text.lower():
         return str(text)
     else:
@@ -92,7 +147,16 @@ def int_read(text):
             return str(text)
 
 def quoted_read(text):
-    # read a line, if the first part is quoted, return the quoted part, otherwise return the unquoted part
+    """
+    Read a quoted value from a string (i.e. a value between quotes)
+
+    Args:
+    text: string to read
+
+    Returns:
+    quoted value if the string is quoted, unquoted value otherwise
+
+    """
     if '"' in text:
         return text.split('"')[1]
     elif "'" in text:
@@ -2555,11 +2619,11 @@ class InputReader_OpenFAST(object):
         self.fst_vt['ExtPtfm']['Red_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
         self.fst_vt['ExtPtfm']['RedCst_FileName'] = os.path.join(os.path.dirname(ep_file), quoted_read(f.readline().split()[0]))
         self.fst_vt['ExtPtfm']['NActiveDOFList'] = int_read(f.readline().split()[0])
-        self.fst_vt['ExtPtfm']['ActiveDOFList'] = [idx.strip() for idx in f.readline().split('ActiveDOFList')[0].split(',')]
+        self.fst_vt['ExtPtfm']['ActiveDOFList'] = read_array(f,None,split_val='ActiveDOFList',array_type=int)
         self.fst_vt['ExtPtfm']['NInitPosList'] = int_read(f.readline().split()[0])
-        self.fst_vt['ExtPtfm']['InitPosList'] = [idx.strip() for idx in f.readline().split('InitPosList')[0].split(',')]
+        self.fst_vt['ExtPtfm']['InitPosList'] = read_array(f,None,split_val='InitPosList',array_type=float)
         self.fst_vt['ExtPtfm']['NInitVelList'] = int_read(f.readline().split()[0])
-        self.fst_vt['ExtPtfm']['InitVelList'] = [idx.strip() for idx in f.readline().split('InitVelList')[0].split(',')]
+        self.fst_vt['ExtPtfm']['InitVelList'] = read_array(f,None,split_val='InitVelList',array_type=float)
         f.readline()
 
         # Output

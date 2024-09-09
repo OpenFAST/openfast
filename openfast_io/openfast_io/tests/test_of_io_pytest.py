@@ -62,6 +62,18 @@ FOLDERS_TO_RUN = [
 
 def getPaths(OF_PATH = OF_PATH, REPOSITORY_ROOT = REPOSITORY_ROOT, BUILD_DIR = BUILD_DIR):
 
+    """
+    Function to get the paths for the OpenFAST executable, source directory, build directory, r-test directory, and test data directory
+
+    Args:
+    OF_PATH (str): Path to the OpenFAST executable
+    REPOSITORY_ROOT (str): Path to the OpenFAST repository
+    BUILD_DIR (str): Path to the build directory
+
+    Returns:
+    dict: Dictionary containing the paths
+    """
+
     return {
         "executable": OF_PATH,
         "source_dir": REPOSITORY_ROOT,
@@ -72,6 +84,17 @@ def getPaths(OF_PATH = OF_PATH, REPOSITORY_ROOT = REPOSITORY_ROOT, BUILD_DIR = B
     }
 
 def read_action(folder, path_dict = getPaths()):
+    """
+    Function to read the input deck for a given folder
+
+    Args:
+    folder (str): r-test folder name
+    path_dict (dict): Dictionary containing the paths. Default is getPaths()
+
+    Returns:
+    dict: OpenFAST VariableTree 
+
+    """
     print(f"Reading from {folder}")
 
     # Read input deck
@@ -83,6 +106,15 @@ def read_action(folder, path_dict = getPaths()):
     return fast_reader.fst_vt
 
 def write_action(folder, fst_vt, path_dict = getPaths()):
+    """
+    Function to write the input deck for a given folder
+
+    Args:
+    folder (str): r-test folder name
+    fst_vt (dict): OpenFAST VariableTree
+    path_dict (dict): Dictionary containing the paths. Default is getPaths()
+
+    """
     print(f"Writing to {folder}, with TMax = 2.0")
 
     # check if the folder exists, if not, mostly being called not from cmake, so create it
@@ -107,7 +139,14 @@ def write_action(folder, fst_vt, path_dict = getPaths()):
     fast_writer.execute()
 
 def run_action(folder, path_dict = getPaths()):
-    # Placeholder for the actual run action
+    """
+    Function to run the simulation for a given folder
+
+    Args:
+    folder (str): r-test folder name
+    path_dict (dict): Dictionary containing the paths. Default is getPaths()
+
+    """
     print(f"Running simulation for {folder}")
     command = [f"{path_dict['executable']}",  f"{osp.join(path_dict['build_dir'],'openfast_io', folder, f'{folder}.fst')}"]
     with open(osp.join(path_dict['build_dir'],'openfast_io', folder, f'{folder}.log'), 'w') as f:
@@ -115,18 +154,39 @@ def run_action(folder, path_dict = getPaths()):
         f.close()
 
 def check_ascii_out(folder, path_dict = getPaths()):
-    # Placeholder for the actual check action
+    """
+    Function to read the ASCII output for a given folder
+    
+    Args:
+    folder (str): r-test folder name
+    path_dict (dict): Dictionary containing the paths. Default is getPaths()
+    """
     print(f"Checking ASCII output for {folder}")
     asciiOutput = osp.join(path_dict['build_dir'],'openfast_io', folder, f"{folder}.out")
     fast_outout = FASTOutputFile(filename=asciiOutput)
 
 def check_binary_out(folder, path_dict = getPaths()):
-    # Placeholder for the actual check action
+    """
+    Function to read the binary output for a given folder
+
+    Args:
+    folder (str): r-test folder name
+    path_dict (dict): Dictionary containing the paths. Default is getPaths()
+    """
     print(f"Checking binary output for {folder}")
     binaryOutput = osp.join(path_dict['build_dir'],'openfast_io', folder, f"{folder}.outb")
     fast_outout = FASTOutputFile(filename=binaryOutput)
 
 def check_fst_vt_with_source(folder, path_dict = getPaths()):
+
+    """
+    Function to check the fst_vt with the source for a given folder
+
+    Args:
+    folder (str): r-test folder name
+    path_dict (dict): Dictionary containing the paths. Default is getPaths()
+    """
+
     print(f"Checking the fst_vt with the source for {folder}")
 
     # creating the two InputReader_OpenFAST objects
@@ -144,7 +204,7 @@ def check_fst_vt_with_source(folder, path_dict = getPaths()):
     acceptable_diff = [
                         'TMax', # TMax is updated in the write_action
                         'TStart', # TStart is updated in the write_action
-                        'OutFileFmt', # OutFileFmt is updated in the write_action # TODO check why its not being removed
+                        'OutFileFmt', # OutFileFmt is updated in the write_action 
     ]
 
 
@@ -159,6 +219,12 @@ def check_fst_vt_with_source(folder, path_dict = getPaths()):
 
 # Begining of the test
 def test_rtest_cloned(request):
+    """
+    Function to check if the r-tests are cloned properly
+
+    Args:
+    request (fixture): pytest request
+    """
 
     REPOSITORY_ROOT = osp.join(request.config.getoption("--source_dir"))
     path_dict = getPaths(REPOSITORY_ROOT=REPOSITORY_ROOT)
@@ -170,6 +236,12 @@ def test_rtest_cloned(request):
         sys.exit(1)
 
 def test_DLLs_exist(request):
+    """
+    Function to check if the DISCON.dll file exists
+
+    Args:
+    request (fixture): pytest request
+    """
 
     path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--build_dir")))
 
@@ -182,6 +254,12 @@ def test_DLLs_exist(request):
         sys.exit(1)
 
 def test_openfast_executable_exists(request):
+    """
+    Function to check if the OpenFAST executable exists
+
+    Args:
+    request (fixture): pytest request
+    """
 
     path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--executable")))
 
@@ -195,8 +273,14 @@ def test_openfast_executable_exists(request):
 
 # Parameterize the test function to run for each folder and action
 @pytest.mark.parametrize("folder", FOLDERS_TO_RUN)
-# @pytest.mark.parametrize("action_name, action_func", actions)
-def test_openfast_io_read_write_run_outRead(folder, request):
+def test_openfast_io_read_write_run_readOut_verify(folder, request):
+    """
+    Function to test the read, write, run, check ASCII, check binary, and check fst_vt for a given folder
+
+    Args:
+    folder (str): r-test folder name
+    request (fixture): pytest request
+    """
 
     path_dict = getPaths(OF_PATH=osp.join(request.config.getoption("--executable")), 
                          REPOSITORY_ROOT=osp.join(request.config.getoption("--source_dir")), 
@@ -204,7 +288,6 @@ def test_openfast_io_read_write_run_outRead(folder, request):
 
 
     try:
-        # action_func(folder)
         action_name = "read"
         fst_vt = read_action(folder, path_dict = path_dict)
 
@@ -227,13 +310,17 @@ def test_openfast_io_read_write_run_outRead(folder, request):
         pytest.fail(f"Action '{action_name}' for folder '{folder}' failed with exception: {e}")
 
 def main():
+    """
+    Main function to run the test for all the folders
+    """
+
     # Initialize any necessary setup here
 
     for folder in FOLDERS_TO_RUN:
         print(" ")
         print(f"Processing folder: {folder}")
 
-        # Assuming read_action, write_action, run_action, and check_action are defined elsewhere
+        # Assuming read_action, write_action, run_action, check_ascii_out, check_binary_out, and check_fst_vt_with_source are defined elsewhere
         data = read_action(folder)
         write_action(folder, data)
         run_action(folder)
@@ -243,4 +330,8 @@ def main():
         print(f"Successfully processed folder: {folder}")
 
 if __name__ == "__main__":
+    """
+    Run the main function if the script is run directly or through VSCode debugger
+    """
+
     main()

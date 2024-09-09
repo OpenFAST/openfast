@@ -15,7 +15,14 @@ except:
 
 
 def auto_format(f, var):
-    # Error handling for variables with 'Default' options
+    """
+    Error handling for variables with 'Default' options
+
+    args:
+    f: file object
+    var: variable to write to file
+
+    """
     if isinstance(var, str):
         f.write('{:}\n'.format(var))
     elif isinstance(var, int):
@@ -24,21 +31,46 @@ def auto_format(f, var):
         f.write('{: 2.15e}\n'.format(var))
 
 def float_default_out(val):
-    # formatted float output when 'default' is an option
+    """
+    Formatted float output when 'default' is an option
+
+    args:
+    val: value to be formatted
+
+    returns:
+    formatted value
+    """
     if type(val) is float:
         return '{: 22f}'.format(val)
     else:
         return '{:<22}'.format(val)
 
 def int_default_out(val):
-    # formatted int output when 'default' is an option
+    """
+    Formatted int output when 'default' is an option
+
+    args:
+    val: value to be formatted
+
+    returns:
+    formatted value
+    """
     if type(val) is float:
         return '{:<22d}'.format(val)
     else:
         return '{:<22}'.format(val)
 
-# given a list of nested dictionary keys, return the dict at that point
 def get_dict(vartree, branch):
+    """
+    Given a list of nested dictionary keys, return the dictionary at that point
+
+    args:
+    vartree: dictionary to search
+    branch: list of keys to search
+
+    returns:
+    dictionary at the specified branch
+    """
     return reduce(operator.getitem, branch, vartree)
 
 class InputWriter_OpenFAST(object):
@@ -2102,21 +2134,11 @@ class InputWriter_OpenFAST(object):
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['Red_FileName'], 'Red_FileName', '- Path of the file containing Guyan/Craig-Bampton inputs (-)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['RedCst_FileName'], 'RedCst_FileName', '- Path of the file containing Guyan/Craig-Bampton constant inputs (-) (currently unused)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['NActiveDOFList'], 'NActiveDOFList', '- Number of active CB mode listed in ActiveDOFList, use -1 for all modes (integer)\n'))
-        # f.write('{:<22} {:<11} {:}'.format(", ".join([str(i) for i in self.fst_vt['ExtPtfm']['ActiveDOFList']]), 'ActiveDOFList', '- List of CB modes index that are active, [unused if NActiveDOFList<=0]\n'))
-        if self.fst_vt['ExtPtfm']['NActiveDOFList'] > -1:
-            f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['ExtPtfm']['ActiveDOFList'][:self.fst_vt['ExtPtfm']['NActiveDOFList']]), 'ActiveDOFList', '- List of CB modes index that are active, [unused if NActiveDOFList<=0]\n'))
-        else:
-            f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['ExtPtfm']['ActiveDOFList']), 'ActiveDOFList', '- List of CB modes index that are active, [unused if NActiveDOFList<=0]\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['ExtPtfm']['ActiveDOFList']]), 'ActiveDOFList', '- List of CB modes index that are active, [unused if NActiveDOFList<=0]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['NInitPosList'], 'NInitPosList', '- Number of initial positions listed in InitPosList, using 0 implies all DOF initialized to 0  (integer)\n'))
-        if self.fst_vt['ExtPtfm']['NInitPosList'] > 0:
-            f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['ExtPtfm']['InitPosList'][:self.fst_vt['ExtPtfm']['NInitPosList']]), 'InitPosList', '- List of initial positions for the CB modes  [unused if NInitPosList<=0 or EquilStart=True]\n'))
-        else:
-            f.write('{:<22d} {:<11} {:}'.format(0, 'InitPosList', '- List of initial positions for the CB modes  [unused if NInitPosList<=0 or EquilStart=True]\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['ExtPtfm']['InitPosList']]), 'InitPosList', '- List of initial positions for the CB modes  [unused if NInitPosList<=0 or EquilStart=True]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['NInitVelList'], 'NInitVelList', '- Number of initial positions listed in InitVelList, using 0 implies all DOF initialized to 0  (integer)\n'))
-        if self.fst_vt['ExtPtfm']['NInitVelList'] > 0:
-            f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['ExtPtfm']['InitVelList'][:self.fst_vt['ExtPtfm']['NInitVelList']]), 'InitVelList', '- List of initial velocities for the CB modes  [unused if NInitVelPosList<=0 or EquilStart=True]\n'))
-        else:
-            f.write('{:<22d} {:<11} {:}'.format(0, 'InitVelList', '- List of initial velocities for the CB modes  [unused if NInitVelPosList<=0 or EquilStart=True]\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['ExtPtfm']['InitVelList']]), 'InitVelList', '- List of initial velocities for the CB modes  [unused if NInitVelPosList<=0 or EquilStart=True]\n'))
 
         f.write('---------------------- OUTPUT --------------------------------------------------\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['ExtPtfm']['SumPrint'], 'SumPrint', '- Print summary data to <RootName>.sum (flag)\n'))
