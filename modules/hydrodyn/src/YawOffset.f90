@@ -18,7 +18,7 @@ INTERFACE GetRotAngs
    MODULE PROCEDURE GetRotAngsD
 END INTERFACE GetRotAngs
 
-INTERFACE WrapToPi
+INTERFACE WrapToPi  ! See NWTC_Num.f90:: mpi2pi()
    MODULE PROCEDURE WrapToPiR
    MODULE PROCEDURE WrapToPiD
 END INTERFACE WrapToPi
@@ -238,7 +238,7 @@ FUNCTION WrapTo180R(angle)
 
    REAL(SiKi),    INTENT(IN) :: angle
    REAL(SiKi)                :: WrapTo180R
-   WrapTo180R = modulo(angle + 180.0, 360.0) - 180.0
+   WrapTo180R = modulo(angle + 180.0_SiKi, 360.0_SiKi) - 180.0_SiKi
 
 END FUNCTION WrapTo180R
 
@@ -246,7 +246,7 @@ FUNCTION WrapTo180D(angle)
 
    REAL(R8Ki),    INTENT(IN) :: angle
    REAL(R8Ki)                :: WrapTo180D
-   WrapTo180D = modulo(angle + 180.0, 360.0) - 180.0
+   WrapTo180D = modulo(angle + 180.0_R8Ki, 360.0_R8Ki) - 180.0_R8Ki
 
 END FUNCTION WrapTo180D
 
@@ -254,7 +254,7 @@ FUNCTION WrapToPiR(angle)
 
    REAL(SiKi),    INTENT(IN) :: angle
    REAL(SiKi)                :: WrapToPiR
-   WrapToPiR = modulo(angle + PI, TwoPi) - PI
+   WrapToPiR = modulo(angle + Pi_R4, TwoPi) - Pi_R4
 
 END FUNCTION WrapToPiR
 
@@ -262,7 +262,7 @@ FUNCTION WrapToPiD(angle)
 
    REAL(R8Ki),    INTENT(IN) :: angle
    REAL(R8Ki)                :: WrapToPiD
-   WrapToPiD = modulo(angle + PI, TwoPi) - PI
+   WrapToPiD = modulo(angle + Pi_R8, TwoPi) - Pi_R8
 
 END FUNCTION WrapToPiD
 
