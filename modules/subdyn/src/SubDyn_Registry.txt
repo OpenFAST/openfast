@@ -310,7 +310,8 @@ typedef  ^    MiscVarType    ReKi           U_full_NS     {:}  -  -  "Displaceme
 typedef  ^    MiscVarType    ReKi           U_full_dot    {:}  -  -  
 typedef  ^    MiscVarType    ReKi           U_full_dotdot {:}  -  -  
 typedef  ^    MiscVarType    ReKi           U_full_elast  {:}  -  -  "Elastic displacements for computation of K ue (without rigid body mode for floating), includes SIM"
-typedef  ^    MiscVarType    ReKi           U_red          {:}  -  -  
+typedef  ^    MiscVarType    R8Ki           U_red         {:}{:}  -  -  
+typedef  ^    MiscVarType    R8Ki           x_full        {:}{:}  -  -  
 typedef  ^    MiscVarType    ReKi           FC_unit   {:}   -  -   "Cable Force vector (for varying cable load, of unit cable load)"  N
 typedef  ^    MiscVarType    ReKi           SDWrOutput {:} -  -    "Data from previous step to be written to a SubDyn output file"
 typedef  ^    MiscVarType    ReKi           AllOuts    {:} -  -    "Data for output file"
