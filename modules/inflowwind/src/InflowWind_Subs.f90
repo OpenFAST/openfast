@@ -530,7 +530,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    if (Failed()) return
 
     ! Rotor Apex Offset Position
-   CALL ParseAry( InFileInfo, CurLine, "RotorApexOffsetPos", InputFileData%RotorApexOffsetPos, 1, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseAry( InFileInfo, CurLine, "RotorApexOffsetPos", InputFileData%RotorApexOffsetPos, size(InputFileData%RotorApexOffsetPos), TmpErrStat, TmpErrMsg, UnEc )
    IF (Failed()) RETURN
    
     ! URefIni
