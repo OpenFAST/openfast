@@ -745,12 +745,10 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       ! Compute the wave elevations at the requested output locations for this time.  Note that p%WaveElev has the second order added to it already.
       DO i = 1, p%NWaveElev
          positionXY = (/p%WaveElevxi(i),p%WaveElevyi(i)/)
-         WaveElev1(i) = WaveField_GetNodeWaveElev1( p%WaveField, m%WaveField_m, Time, positionXY, ErrStat2, ErrMsg2 )
+         zeta = WaveField_GetNodeTotalWaveElev(p%WaveField, m%WaveField_m, Time, positionXY, ErrStat2, ErrMsg2, Elev1=WaveElev1(i), Elev2=WaveElev2(i))
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         WaveElev2(i) = WaveField_GetNodeWaveElev2( p%WaveField, m%WaveField_m, Time, positionXY, ErrStat2, ErrMsg2 )
-           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         WaveElev(i)  = WaveElev1(i) + WaveElev2(i)
       END DO
+      WaveElev = WaveElev1 + WaveElev2
 
       ! Map calculated results into the AllOuts Array
       CALL SeaStOut_MapOutputs( p, WaveElev, WaveElev1, WaveElev2, WaveVel, WaveAcc, WaveAccMCF, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
