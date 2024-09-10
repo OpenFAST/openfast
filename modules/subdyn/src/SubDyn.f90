@@ -2778,13 +2778,12 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%UL_SIM,       p%nDOF__L,   'UL_SIM'   ,     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_0m,        p%nDOF__L,   'UL_0m',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%DU_full,      p%nDOF,      'DU_full',       ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%x_full,       p%nDOF, 1,   'x_full',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full,       p%nDOF,      'U_full',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_NS,    p%nDOF,      'U_full_NS',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_elast, p%nDOF,      'U_full_elast',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dot,   p%nDOF,      'U_full_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dotdot,p%nDOF,      'U_full_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_red,        p%nDOF_red, 1, 'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_red,        p%nDOF_red,  'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
 
    CALL AllocAry( Misc%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
@@ -3051,24 +3050,24 @@ END SUBROUTINE PartitionDOFNodes
 !! This is a generic function, "x" can be used for displacements, velocities, accelerations
 !! m%U_red is only used as a intermediate storage
 SUBROUTINE ReducedToFull(p, m, xR_bar, xL, x_full)
-   use NWTC_LAPACK, only: LAPACK_gemm
+   use NWTC_LAPACK, only: LAPACK_GEMV
    TYPE(SD_ParameterType),target,INTENT(IN   )  :: p           !< Parameters
    TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
    REAL(ReKi), DIMENSION(:),     INTENT(IN   )  :: xR_bar      !< Values of "x" interface nodes (6xnI)
    REAL(ReKi), DIMENSION(:),     INTENT(IN   )  :: xL          !< Values of "x" internal nodes
-   REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: x_full      !< Values of "x" transferred to full vector of DOF
+   REAL(R8Ki), DIMENSION(:),     INTENT(  OUT)  :: x_full      !< Values of "x" transferred to full vector of DOF
    integer(IntKi)                               :: ErrStat
    character(ErrMsgLen)                         :: ErrMsg
    if (p%reduced) then
       ! Filling up full vector of reduced DOF
-      m%U_red(p%IDI__,1) = xR_bar
-      m%U_red(p%ID__L,1) = xL     
-      m%U_red(p%IDC_Rb,1)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-      m%U_red(p%ID__F,1) = 0
+      m%U_red(p%IDI__) = xR_bar
+      m%U_red(p%ID__L) = xL     
+      m%U_red(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+      m%U_red(p%ID__F) = 0
       ! Transfer to full 
-      ! x_full = matmul(p%T_red, m%U_red(:,1))
-      call LAPACK_gemm('N', 'N', 1.0_R8Ki, p%T_red, m%U_red, 0.0_R8ki, m%x_full, ErrStat, ErrMsg)
-      x_full = real(m%x_full(:,1), ReKi)
+      ! x_full = matmul(p%T_red, m%U_red)
+      call LAPACK_GEMV('N', size(p%T_red, 1), size(p%T_red, 2), 1.0_R8Ki, p%T_red, &
+                       size(p%T_red, 1), m%U_red, 1, 0.0_R8ki, x_full, 1)
    else
       ! We use U_full directly
       x_full(p%IDI__) = xR_bar
@@ -4127,7 +4126,8 @@ FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
    b0=rho1
    b1=(rho2-rho1)/L
    !Here we will need to figure out what element it is for now circular pipes
-   IF (method<=0) THEN 
+   select case (method)
+   case (:0)
       ! Mid values for r, t, and potentially rho
       r1 = 0.25_ReKi*(D1 + D2)
       t  = 0.50_ReKi*(t1 + t2)
@@ -4142,22 +4142,25 @@ FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
       else
          BeamMass = rho1 * L  * Area ! WHAT is currently used by FEM
       endif
-   ELSEIF (method==1) THEN !circular tube
+      
+   case (1) ! circular tube
       a0=pi * (D1*t1-t1**2.)
       dt=t2-t1 !thickness variation
       dd=D2-D1 !OD variation
       a1=pi * ( dd*t1 + D1*dt -2.*t1*dt)/L 
       a2=pi * ( dd*dt-dt**2.)/L**2.
       BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
-   ELSEIF (method==2) THEN !linearly varying area
+
+   case (2) ! linearly varying area
       a0=D1  !This is an area
       a1=(D2-D1)/L !Delta area
       a2=0.
       BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
-   ELSE
+
+   case default
       print*,'Wrong call to BeamMass, method unknown',method
       STOP
-   ENDIF
+   end select
 
 END FUNCTION BeamMass
 

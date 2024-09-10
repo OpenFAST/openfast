@@ -354,14 +354,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: UL_NS      !< Internal DOFs (L) displacements, No SIM (NS) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: UL_dot 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: UL_dotdot 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: DU_full      !< Delta U used for extra moment, size nDOF [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: U_full      !< Displacement of all DOFs (full system) with SIM [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: U_full_NS      !< Displacement of all DOFs (full system), No SIM (NS) [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: U_full_dot 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: U_full_dotdot 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: U_full_elast      !< Elastic displacements for computation of K ue (without rigid body mode for floating), includes SIM [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: U_red 
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: x_full 
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: DU_full      !< Delta U used for extra moment, size nDOF [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: U_full      !< Displacement of all DOFs (full system) with SIM [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: U_full_NS      !< Displacement of all DOFs (full system), No SIM (NS) [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: U_full_dot 
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: U_full_dotdot 
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: U_full_elast      !< Elastic displacements for computation of K ue (without rigid body mode for floating), includes SIM [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: U_red 
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x_full 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FC_unit      !< Cable Force vector (for varying cable load, of unit cable load) [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: SDWrOutput      !< Data from previous step to be written to a SubDyn output file [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< Data for output file [-]
@@ -3598,7 +3598,7 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyMisc'
@@ -3815,10 +3815,10 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%U_full_elast = SrcMiscData%U_full_elast
    end if
    if (allocated(SrcMiscData%U_red)) then
-      LB(1:2) = lbound(SrcMiscData%U_red, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%U_red, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%U_red, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%U_red, kind=B8Ki)
       if (.not. allocated(DstMiscData%U_red)) then
-         allocate(DstMiscData%U_red(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         allocate(DstMiscData%U_red(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%U_red.', ErrStat, ErrMsg, RoutineName)
             return
@@ -3827,10 +3827,10 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%U_red = SrcMiscData%U_red
    end if
    if (allocated(SrcMiscData%x_full)) then
-      LB(1:2) = lbound(SrcMiscData%x_full, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%x_full, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%x_full, kind=B8Ki)
+      UB(1:1) = ubound(SrcMiscData%x_full, kind=B8Ki)
       if (.not. allocated(DstMiscData%x_full)) then
-         allocate(DstMiscData%x_full(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         allocate(DstMiscData%x_full(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%x_full.', ErrStat, ErrMsg, RoutineName)
             return
@@ -4069,7 +4069,7 @@ subroutine SD_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SD_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackMisc'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
