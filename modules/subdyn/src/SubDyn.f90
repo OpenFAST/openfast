@@ -4096,14 +4096,14 @@ FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
     MemberLength=0.0
     
     !Find the MemberID in the list
-    iMember = FINDLOC(Init%Members(:,1), MemberID, dim=1)
+    iMember = FINDLOCI(Init%Members(:,1), MemberID)
     if (iMember<=0) then
        call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' not found in member list!', ErrStat,ErrMsg,RoutineName);
        return
     endif
     ! Find joints ID for this member
-    Joint1 = FINDLOC(Init%Joints(:,1), Init%Members(iMember,2), dim=1)
-    Joint2 = FINDLOC(Init%Joints(:,1), Init%Members(iMember,3), dim=1)
+    Joint1 = FINDLOCI(Init%Joints(:,1), Init%Members(iMember,2))
+    Joint2 = FINDLOCI(Init%Joints(:,1), Init%Members(iMember,3))
     xyz1= Init%Joints(Joint1,2:4)
     xyz2= Init%Joints(Joint2,2:4)
     MemberLength=SQRT( SUM((xyz2-xyz1)**2.) )

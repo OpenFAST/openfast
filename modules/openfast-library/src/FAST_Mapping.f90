@@ -345,6 +345,7 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
    integer(IntKi)                   :: i, j, k
    integer(IntKi)                   :: iMap, ModIns, iModIn, iModSrc, iModDst
    type(MappingType), allocatable   :: MappingsTmp(:)
+   integer(IntKi), parameter        :: MappingTypeOrder(*) = [Map_MotionMesh, Map_LoadMesh, Map_Variable, Map_Custom]
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -354,9 +355,9 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Define a list of all possible module mesh mappings between modules
-   allocate (Mappings(0), stat=ErrStat2)
+   allocate (MappingsTmp(0), stat=ErrStat2)
    if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, "Error allocating mappings", ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Error allocating temporary mappings", ErrStat, ErrMsg, RoutineName)
       return
    end if
 
@@ -367,53 +368,71 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
          ! Switch by destination module (inputs)
          select case (Mods(IModDst)%ID)
          case (Module_AD)
-            call InitMappings_AD(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_AD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_BD)
-            call InitMappings_BD(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_BD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ED)
-            call InitMappings_ED(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_ED(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ExtInfw)
-            call InitMappings_ExtInfw(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_ExtInfw(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ExtLd)
-            call InitMappings_ExtLd(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_ExtLd(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ExtPtfm)
-            call InitMappings_ExtPtfm(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_ExtPtfm(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_FEAM)
-            call InitMappings_FEAM(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_FEAM(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_HD)
-            call InitMappings_HD(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_HD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_IceD)
-            call InitMappings_IceD(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_IceD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_IceF)
-            call InitMappings_IceF(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_IceF(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_IfW)
-            call InitMappings_IfW(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_IfW(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_MAP)
-            call InitMappings_MAP(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_MAP(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_MD)
-            call InitMappings_MD(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_MD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_Orca)
-            call InitMappings_Orca(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_Orca(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SD)
-            call InitMappings_SD(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_SD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SeaSt)
-            call InitMappings_SeaSt(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_SeaSt(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_SrvD)
-            call InitMappings_SrvD(Mappings, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+            call InitMappings_SrvD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          end select
          if (Failed()) return
       end do
    end do
 
    !----------------------------------------------------------------------------
-   ! Get module indices in ModData and determine which mappings are active
+   ! Reorder mappings to be Motion, Load, Variable, Custom
    !----------------------------------------------------------------------------
 
-   ! Reorder the mappings so that motion maps come before the load maps
-   Mappings = [pack(Mappings, Mappings%MapType == Map_MotionMesh), &
-               pack(Mappings, Mappings%MapType == Map_LoadMesh), &
-               pack(Mappings, Mappings%MapType == Map_Variable), &
-               pack(Mappings, Mappings%MapType == Map_Custom)]
+   allocate(Mappings(size(MappingsTmp)), stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating mappings", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Loop through MappingTypeOrder and copy mesh to Mappings array if it matches the type
+   k = 0
+   do i = 1, size(MappingTypeOrder)
+      do j = 1, size(MappingsTmp)
+         if (MappingsTmp(j)%MapType == MappingTypeOrder(i)) then
+            k = k + 1
+            call Glue_CopyMappingType(MappingsTmp(j), Mappings(k), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end if
+      end do
+   end do
+
+   ! Destroy temporary mappings
+   do i = 1, size(MappingsTmp)
+      call Glue_DestroyMappingType(MappingsTmp(i), ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end do
 
    ! Loop through mappings
    do iMap = 1, size(Mappings)
@@ -1709,8 +1728,8 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    type(FAST_TurbineType), target         :: Turbine
    type(MappingType), allocatable         :: Mappings(:)
    type(ModDataType), intent(inout)       :: SrcMod, DstMod
-   type(DatLoc), intent(in)          :: SrcDL, DstDL
-   type(DatLoc), intent(in)          :: SrcDispDL, DstDispDL
+   type(DatLoc), intent(in)               :: SrcDL, DstDL
+   type(DatLoc), intent(in)               :: SrcDispDL, DstDispDL
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
    logical, optional, intent(in)          :: Active
@@ -1718,7 +1737,7 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    character(*), parameter                :: RoutineName = 'MapLoadMesh'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
-   type(MappingType)                   :: Mapping
+   type(MappingType)                      :: Mapping
    type(MeshType), pointer                :: SrcMesh, SrcDispMesh
    type(MeshType), pointer                :: DstMesh, DstDispMesh
    type(MeshType)                         :: DstMotionMesh

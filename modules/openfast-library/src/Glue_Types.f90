@@ -110,7 +110,9 @@ IMPLICIT NONE
     REAL(R8Ki)  :: BetaPrime = 0.0_R8Ki      !< Generalized-alpha beta prime [-]
     REAL(R8Ki)  :: GammaPrime = 0.0_R8Ki      !< Generalized-alpha gamma prime [-]
     INTEGER(IntKi)  :: NumJ = 0_IntKi      !< Number of values in Jacobian [-]
-    INTEGER(IntKi)  :: NumQ = 0_IntKi      !< Number of values in state arrays [-]
+    INTEGER(IntKi)  :: NumQ = 0_IntKi      !< Number of states in Jacobian [-]
+    INTEGER(IntKi)  :: NumU = 0_IntKi      !< Number of total inputs in Jacobian [-]
+    INTEGER(IntKi)  :: NumUT = 0_IntKi      !< Number of TC inputs in Jacobian [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iX1 = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iX2 = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iUT = 0_IntKi      !<  [-]
@@ -219,6 +221,10 @@ IMPLICIT NONE
     LOGICAL  :: ConvWarn = .false.      !< Flag to warn about convergence failure [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: XB_IO      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac_IO      !<  [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J11      !< Jacobian upper left quadrant [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J12      !< Jacobian upper right quadrant [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J21      !< Jacobian lower left quadrant [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J22      !< Jacobian lower right quadrant [-]
   END TYPE Glue_TCMisc
 ! =======================
 ! =========  Glue_LinMisc  =======
@@ -734,6 +740,8 @@ subroutine Glue_CopyTCParam(SrcTCParamData, DstTCParamData, CtrlCode, ErrStat, E
    DstTCParamData%GammaPrime = SrcTCParamData%GammaPrime
    DstTCParamData%NumJ = SrcTCParamData%NumJ
    DstTCParamData%NumQ = SrcTCParamData%NumQ
+   DstTCParamData%NumU = SrcTCParamData%NumU
+   DstTCParamData%NumUT = SrcTCParamData%NumUT
    DstTCParamData%iX1 = SrcTCParamData%iX1
    DstTCParamData%iX2 = SrcTCParamData%iX2
    DstTCParamData%iUT = SrcTCParamData%iUT
@@ -852,6 +860,8 @@ subroutine Glue_PackTCParam(RF, Indata)
    call RegPack(RF, InData%GammaPrime)
    call RegPack(RF, InData%NumJ)
    call RegPack(RF, InData%NumQ)
+   call RegPack(RF, InData%NumU)
+   call RegPack(RF, InData%NumUT)
    call RegPack(RF, InData%iX1)
    call RegPack(RF, InData%iX2)
    call RegPack(RF, InData%iUT)
@@ -895,6 +905,8 @@ subroutine Glue_UnPackTCParam(RF, OutData)
    call RegUnpack(RF, OutData%GammaPrime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumJ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumQ); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumUT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iX1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iX2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%iUT); if (RegCheckErr(RF, RoutineName)) return
@@ -1904,6 +1916,54 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       end if
       DstTCMiscData%Jac_IO = SrcTCMiscData%Jac_IO
    end if
+   if (allocated(SrcTCMiscData%J11)) then
+      LB(1:2) = lbound(SrcTCMiscData%J11, kind=B8Ki)
+      UB(1:2) = ubound(SrcTCMiscData%J11, kind=B8Ki)
+      if (.not. allocated(DstTCMiscData%J11)) then
+         allocate(DstTCMiscData%J11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%J11.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%J11 = SrcTCMiscData%J11
+   end if
+   if (allocated(SrcTCMiscData%J12)) then
+      LB(1:2) = lbound(SrcTCMiscData%J12, kind=B8Ki)
+      UB(1:2) = ubound(SrcTCMiscData%J12, kind=B8Ki)
+      if (.not. allocated(DstTCMiscData%J12)) then
+         allocate(DstTCMiscData%J12(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%J12.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%J12 = SrcTCMiscData%J12
+   end if
+   if (allocated(SrcTCMiscData%J21)) then
+      LB(1:2) = lbound(SrcTCMiscData%J21, kind=B8Ki)
+      UB(1:2) = ubound(SrcTCMiscData%J21, kind=B8Ki)
+      if (.not. allocated(DstTCMiscData%J21)) then
+         allocate(DstTCMiscData%J21(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%J21.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%J21 = SrcTCMiscData%J21
+   end if
+   if (allocated(SrcTCMiscData%J22)) then
+      LB(1:2) = lbound(SrcTCMiscData%J22, kind=B8Ki)
+      UB(1:2) = ubound(SrcTCMiscData%J22, kind=B8Ki)
+      if (.not. allocated(DstTCMiscData%J22)) then
+         allocate(DstTCMiscData%J22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%J22.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%J22 = SrcTCMiscData%J22
+   end if
 end subroutine
 
 subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
@@ -1936,6 +1996,18 @@ subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
    if (allocated(TCMiscData%Jac_IO)) then
       deallocate(TCMiscData%Jac_IO)
    end if
+   if (allocated(TCMiscData%J11)) then
+      deallocate(TCMiscData%J11)
+   end if
+   if (allocated(TCMiscData%J12)) then
+      deallocate(TCMiscData%J12)
+   end if
+   if (allocated(TCMiscData%J21)) then
+      deallocate(TCMiscData%J21)
+   end if
+   if (allocated(TCMiscData%J22)) then
+      deallocate(TCMiscData%J22)
+   end if
 end subroutine
 
 subroutine Glue_PackTCMisc(RF, Indata)
@@ -1955,6 +2027,10 @@ subroutine Glue_PackTCMisc(RF, Indata)
    call RegPack(RF, InData%ConvWarn)
    call RegPackAlloc(RF, InData%XB_IO)
    call RegPackAlloc(RF, InData%Jac_IO)
+   call RegPackAlloc(RF, InData%J11)
+   call RegPackAlloc(RF, InData%J12)
+   call RegPackAlloc(RF, InData%J21)
+   call RegPackAlloc(RF, InData%J22)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1978,6 +2054,10 @@ subroutine Glue_UnPackTCMisc(RF, OutData)
    call RegUnpack(RF, OutData%ConvWarn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%XB_IO); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Jac_IO); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%J11); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%J12); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%J21); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%J22); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Glue_CopyLinMisc(SrcLinMiscData, DstLinMiscData, CtrlCode, ErrStat, ErrMsg)

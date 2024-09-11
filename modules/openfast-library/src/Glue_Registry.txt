@@ -83,7 +83,9 @@ typedef ^ ^                     R8Ki            Gamma                   -  -  - 
 typedef ^ ^                     R8Ki            BetaPrime               -  -  -     "Generalized-alpha beta prime" -
 typedef ^ ^                     R8Ki            GammaPrime              -  -  -     "Generalized-alpha gamma prime" -
 typedef ^ ^                     IntKi           NumJ                    -  -  -     "Number of values in Jacobian" -
-typedef ^ ^                     IntKi           NumQ                    -  -  -     "Number of values in state arrays" -
+typedef ^ ^                     IntKi           NumQ                    -  -  -     "Number of states in Jacobian" -
+typedef ^ ^                     IntKi           NumU                    -  -  -     "Number of total inputs in Jacobian" -
+typedef ^ ^                     IntKi           NumUT                   -  -  -     "Number of TC inputs in Jacobian" -
 typedef ^ ^                     IntKi           iX1                     2  -  -     "" -
 typedef ^ ^                     IntKi           iX2                     2  -  -     "" -
 typedef ^ ^                     IntKi           iUT                     2  -  -     "" -
@@ -176,6 +178,10 @@ typedef ^ ^                     IntKi           UJacStepsRemain         -  0  - 
 typedef ^ ^                     logical         ConvWarn                -  -  -     "Flag to warn about convergence failure" -
 typedef ^ ^                     R8Ki            XB_IO                   :: -  -     "" -
 typedef ^ ^                     R8Ki            Jac_IO                  :: -  -     "" -
+typedef ^ ^                     R8Ki            J11                     :: -  -     "Jacobian upper left quadrant" -
+typedef ^ ^                     R8Ki            J12                     :: -  -     "Jacobian upper right quadrant" -
+typedef ^ ^                     R8Ki            J21                     :: -  -     "Jacobian lower left quadrant" -
+typedef ^ ^                     R8Ki            J22                     :: -  -     "Jacobian lower right quadrant" -
 
 typedef ^ Glue_LinMisc          IntKi           TimeIndex               -  -  -     "" -
 typedef ^ ^                     IntKi           AzimuthIndex            -  -  -     "" -

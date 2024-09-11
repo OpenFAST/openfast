@@ -279,7 +279,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       ! AddCLin
    do i=1,6*InputFileData%vecMultiplier
 
-      write(strI,'(I1)') i
+      write(strI,'(I2)') i
       call ParseAry( FileInfo_In, CurLine, ' Row '//strI//' of the additional linear stiffness matrix', &
                      tmpVec2, 6*InputFileData%NBody, ErrStat2, ErrMsg2, UnEc )
          if (Failed())  return;
