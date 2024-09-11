@@ -1170,10 +1170,12 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             RETURN
          END IF
          
-            
+         ! Initialize element table
          DO i = 1, NELEMKINDS
-            BlankMesh%ElemTable(i)%nelem = 0  ; BlankMesh%ElemTable(i)%maxelem = 0
-            NULLIFY(BlankMesh%ElemTable(i)%Elements )
+            BlankMesh%ElemTable(i)%nelem = 0
+            BlankMesh%ElemTable(i)%maxelem = 0
+            BlankMesh%ElemTable(i)%Xelement = 0
+            NULLIFY(BlankMesh%ElemTable(i)%Elements)
          ENDDO
 
          ALLOCATE(BlankMesh%RemapFlag, Stat=ErrStat2 ) ! assign some space for this pointer to point to
