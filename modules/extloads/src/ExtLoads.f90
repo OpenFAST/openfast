@@ -26,7 +26,6 @@ module ExtLoads
 
    use NWTC_Library
    use ExtLoads_Types
-   use IfW_FlowField
    use InflowWind_IO_Types
    use InflowWind_IO
 
@@ -129,10 +128,6 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
 
    p%az_blend_mean = InitInp%az_blend_mean
    p%az_blend_delta = InitInp%az_blend_delta
-   p%vel_mean = InitInp%vel_mean
-   p%wind_dir = InitInp%wind_dir
-   p%z_ref = InitInp%z_ref
-   p%shear_exp = InitInp%shear_exp
    
       !............................................................................................
       ! Define and initialize inputs here 
@@ -150,7 +145,7 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
    m%phi_cfd = 0.0
 
    write(*,*) 'Initializing y '
-      ! 
+
       !............................................................................................
       ! Define outputs here
       !............................................................................................
@@ -158,26 +153,6 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) return
    
-      !............................................................................................
-      ! Initialize InflowWind FlowField
-      !............................................................................................
-   if (associated(m%FlowField)) deallocate(m%FlowField)
-   allocate(m%FlowField, stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat( ErrID_Fatal, 'Error allocating m%FlowField', ErrStat, ErrMsg, RoutineName )
-      return
-   end if
-
-   ! Initialize flowfield points type
-   m%FlowField%FieldType  = Point_FieldType
-   Points_InitInput%NumWindPoints = InitInp%nNodesVel
-   call IfW_Points_Init(Points_InitInput, m%FlowField%Points, ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Set pointer to flow field in InitOut
-   InitOut%FlowField => m%FlowField
-
-
-      write(*,*) 'Initializing InitOut '
       
       !............................................................................................
       ! Define initialization output here

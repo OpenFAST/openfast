@@ -36,10 +36,11 @@ typedef	^	                InitInputType	ReKi	TwrPos	{:}{:}	-	-	"X-Y-Z reference 
 typedef	^	                InitInputType	R8Ki	TwrOrient	{:}{:}{:}	-	-	"DCM reference orientation of tower (3x3 x NumTowerNodes)"	-
 typedef ^                       InitInputType   ReKi    az_blend_mean  -     -       -       "Mean azimuth at which to blend the external and aerodyn loads" - 
 typedef ^                       InitInputType   ReKi    az_blend_delta -     -       -       "The width of the tanh function over which to blend the external and aerodyn loads" - 
-typedef ^                       InitInputType   ReKi    vel_mean        -       -       -       "Mean velocity at reference height" m/s
-typedef ^                       InitInputType   ReKi    wind_dir        -       -       -       "Wind direction"                    degrees
-typedef ^                       InitInputType   ReKi    z_ref           -       -       -       "Reference height for velocity profile"  m
-typedef ^                       InitInputType   ReKi    shear_exp       -       -       -       "Shear exponent" -
+#FIXME: remove from the library also
+#typedef ^                       InitInputType   ReKi    vel_mean        -       -       -       "Mean velocity at reference height" m/s
+#typedef ^                       InitInputType   ReKi    wind_dir        -       -       -       "Wind direction"                    degrees
+#typedef ^                       InitInputType   ReKi    z_ref           -       -       -       "Reference height for velocity profile"  m
+#typedef ^                       InitInputType   ReKi    shear_exp       -       -       -       "Shear exponent" -
 typedef ^                       InitInputType   ReKi    BldChord       {:}{:}   -	-	"Blade chord  (NumBladeNodesMax x NumBlades)"	m
 typedef ^                       InitInputType   ReKi    BldRloc        {:}{:}   -	-	"Radial location of each node along the blade"	m
 typedef ^                       InitInputType   ReKi    TwrDia         {:}   -	-	"Tower diameter (NumTwrNodes)"	m
@@ -51,7 +52,7 @@ typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
-typedef	^	InitOutputType	FlowFieldType	*FlowField	-	-	-	"Pointer of flow field data type"	-
+#typedef	^	InitOutputType	FlowFieldType	*FlowField	-	-	-	"Pointer of flow field data type"	-
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -84,10 +85,10 @@ typedef	^	ParameterType	Logical	TwrAero	        -	.FALSE.	-	"Flag that tells thi
 typedef ^       ParameterType   IntKi   NumTwrNds      -       -       -       "Number of tower nodes"  -
 typedef ^       ParameterType   ReKi    az_blend_mean  -     -       -       "Mean azimuth at which to blend the external and aerodyn loads" - 
 typedef ^       ParameterType   ReKi    az_blend_delta -     -       -       "The width of the tanh function over which to blend the external and aerodyn loads" - 
-typedef ^       ParameterType   ReKi    vel_mean       -     -       -       "Mean velocity at reference height" m/s
-typedef ^       ParameterType   ReKi    wind_dir       -     -       -       "Wind direction"  m
-typedef ^       ParameterType   ReKi    z_ref          -     -       -       "Reference height for velocity profile" degrees
-typedef ^       ParameterType   ReKi    shear_exp      -     -       -       "Shear exponent" - 
+#typedef ^       ParameterType   ReKi    vel_mean       -     -       -       "Mean velocity at reference height" m/s
+#typedef ^       ParameterType   ReKi    wind_dir       -     -       -       "Wind direction"  m
+#typedef ^       ParameterType   ReKi    z_ref          -     -       -       "Reference height for velocity profile" degrees
+#typedef ^       ParameterType   ReKi    shear_exp      -     -       -       "Shear exponent" - 
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
