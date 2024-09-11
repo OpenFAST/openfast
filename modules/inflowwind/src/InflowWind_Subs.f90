@@ -542,7 +542,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    IF (Failed()) RETURN
    
     ! Lidar Radial Vel
-   CALL ParseLoVar( InFileInfo, CurLine, "LidRadialVel", InputFileData%LidRadialVel, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "LidRadialVel", InputFileData%LidRadialVel, TmpErrStat, TmpErrMsg, UnEc )
    IF (Failed()) RETURN
      
     ! Consider Hub Motion
