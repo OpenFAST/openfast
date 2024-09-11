@@ -5106,9 +5106,6 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
       CALL ExtLd_InputSolve_NoIfW( p_FAST, ExtLd%u, ExtLd%p, ED%y, BD, MeshMapData, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      IF ( p_FAST%CompInflow == MODULE_IfW .OR. p_FAST%CompInflow == MODULE_ExtInfw ) THEN
-         CALL SetErrStat(ErrID_Fatal,'p_FAST%CompInflow option not setup to work with ExtLoads module.',ErrStat,ErrMsg,RoutineName)
-      ENDIF
    END IF
 
    IF ( p_FAST%CompInflow == Module_IfW ) THEN
