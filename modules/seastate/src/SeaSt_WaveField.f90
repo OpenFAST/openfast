@@ -405,7 +405,13 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, F
    Indx_Lo = 0
    Indx_Hi = 0
 
-   ! Calculate low grid index
+   if ( nMax .EQ. 1_IntKi ) then ! Only one grid point
+      Indx_Lo = 1_IntKi
+      Indx_Hi = 1_IntKi
+      isopc   = 0_SiKi
+      return
+   end if
+
    Tmp =  (p-pZero) / delta
    Indx_Lo = INT( Tmp ) + 1            ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
    
@@ -586,8 +592,13 @@ subroutine WaveField_Interp_Setup4D( Time, Position, p, m, ErrStat, ErrMsg )
 
    ! Find the bounding indices for Z position
    i=4 ! z component
-   call SetCartesianZIndex(Position(i-1), p%Z_Depth, p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), m%FirstWarn_Clamp, ErrStat2, ErrMsg2)
-   if (Failed()) return;
+   if (p%Z_Depth>0) then
+      call SetCartesianZIndex(Position(i-1), p%Z_Depth, p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), m%FirstWarn_Clamp, ErrStat2, ErrMsg2)
+      if (Failed()) return;
+   else ! Regular z-grid
+      call SetCartesianXYIndex(Position(i-1), p%pZero(i), p%delta(i), p%n(i), m%Indx_Lo(i), m%Indx_Hi(i), isopc(i), m%FirstWarn_Clamp, ErrStat2, ErrMsg2)
+      if (Failed()) return;
+   end if
 
    ! Calculate 1+ and 1- isoparametric coordinates to avoid recalculations
    one_m_isopc = 1.0_SiKi - isopc

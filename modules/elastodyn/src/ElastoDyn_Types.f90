@@ -40,6 +40,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     LOGICAL  :: CompElast = .false.      !< flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false) [-]
+    LOGICAL  :: RigidAero = .false.      !< flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration [m/s^2]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
@@ -276,6 +277,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  ED_CoordSys  =======
   TYPE, PUBLIC :: ED_CoordSys
+    REAL(R8Ki) , DIMENSION(1:3)  :: alpha1 = 0.0_R8Ki      !< Vector / direction alpha1 after ptfm yaw rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: alpha2 = 0.0_R8Ki      !< Vector / direction alpha2 after ptfm yaw rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: alpha3 = 0.0_R8Ki      !< Vector / direction alpha3 after ptfm yaw rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: beta1 = 0.0_R8Ki      !< Vector / direction beta1 after ptfm yaw and pitch rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: beta2 = 0.0_R8Ki      !< Vector / direction beta2 after ptfm yaw and pitch rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: beta3 = 0.0_R8Ki      !< Vector / direction beta3 after ptfm yaw and pitch rotation [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: a1 = 0.0_R8Ki      !< Vector / direction a1 (=  xt from the IEC coord. system) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: a2 = 0.0_R8Ki      !< Vector / direction a2 (=  zt from the IEC coord. system) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: a3 = 0.0_R8Ki      !< Vector / direction a3 (= -yt from the IEC coord. system) [-]
@@ -748,6 +755,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmCMxt = 0.0_ReKi      !< Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
     REAL(ReKi)  :: PtfmCMyt = 0.0_ReKi      !< Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
     LOGICAL  :: BD4Blades = .false.      !< flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false) [-]
+    LOGICAL  :: RigidAero = .false.      !< flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used [-]
     INTEGER(IntKi)  :: YawFrctMod = 0_IntKi      !< Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], or 2 [does use Fz at bearing] [-]
     REAL(R8Ki)  :: M_CD = 0.0_R8Ki      !< Dynamic friction moment at null yaw rate [N-m]
     REAL(R8Ki)  :: M_CSMAX = 0.0_R8Ki      !< Maximum Coulomb friction torque [N-m]
@@ -910,6 +918,7 @@ subroutine ED_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%InputFile = SrcInitInputData%InputFile
    DstInitInputData%Linearize = SrcInitInputData%Linearize
    DstInitInputData%CompElast = SrcInitInputData%CompElast
+   DstInitInputData%RigidAero = SrcInitInputData%RigidAero
    DstInitInputData%RootName = SrcInitInputData%RootName
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%MHK = SrcInitInputData%MHK
@@ -935,6 +944,7 @@ subroutine ED_PackInitInput(RF, Indata)
    call RegPack(RF, InData%InputFile)
    call RegPack(RF, InData%Linearize)
    call RegPack(RF, InData%CompElast)
+   call RegPack(RF, InData%RigidAero)
    call RegPack(RF, InData%RootName)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%MHK)
@@ -952,6 +962,7 @@ subroutine ED_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%InputFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompElast); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RigidAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
@@ -2401,6 +2412,12 @@ subroutine ED_CopyCoordSys(SrcCoordSysData, DstCoordSysData, CtrlCode, ErrStat, 
    character(*), parameter        :: RoutineName = 'ED_CopyCoordSys'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   DstCoordSysData%alpha1 = SrcCoordSysData%alpha1
+   DstCoordSysData%alpha2 = SrcCoordSysData%alpha2
+   DstCoordSysData%alpha3 = SrcCoordSysData%alpha3
+   DstCoordSysData%beta1 = SrcCoordSysData%beta1
+   DstCoordSysData%beta2 = SrcCoordSysData%beta2
+   DstCoordSysData%beta3 = SrcCoordSysData%beta3
    DstCoordSysData%a1 = SrcCoordSysData%a1
    DstCoordSysData%a2 = SrcCoordSysData%a2
    DstCoordSysData%a3 = SrcCoordSysData%a3
@@ -2719,6 +2736,12 @@ subroutine ED_PackCoordSys(RF, Indata)
    type(ED_CoordSys), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ED_PackCoordSys'
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%alpha1)
+   call RegPack(RF, InData%alpha2)
+   call RegPack(RF, InData%alpha3)
+   call RegPack(RF, InData%beta1)
+   call RegPack(RF, InData%beta2)
+   call RegPack(RF, InData%beta3)
    call RegPack(RF, InData%a1)
    call RegPack(RF, InData%a2)
    call RegPack(RF, InData%a3)
@@ -2780,6 +2803,12 @@ subroutine ED_UnPackCoordSys(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%alpha1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alpha2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alpha3); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%beta1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%beta2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%beta3); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a3); if (RegCheckErr(RF, RoutineName)) return
@@ -5680,6 +5709,7 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%PtfmCMxt = SrcParamData%PtfmCMxt
    DstParamData%PtfmCMyt = SrcParamData%PtfmCMyt
    DstParamData%BD4Blades = SrcParamData%BD4Blades
+   DstParamData%RigidAero = SrcParamData%RigidAero
    DstParamData%YawFrctMod = SrcParamData%YawFrctMod
    DstParamData%M_CD = SrcParamData%M_CD
    DstParamData%M_CSMAX = SrcParamData%M_CSMAX
@@ -6176,6 +6206,7 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%PtfmCMxt)
    call RegPack(RF, InData%PtfmCMyt)
    call RegPack(RF, InData%BD4Blades)
+   call RegPack(RF, InData%RigidAero)
    call RegPack(RF, InData%YawFrctMod)
    call RegPack(RF, InData%M_CD)
    call RegPack(RF, InData%M_CSMAX)
@@ -6438,6 +6469,7 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%PtfmCMxt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmCMyt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BD4Blades); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RigidAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%YawFrctMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_CD); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_CSMAX); if (RegCheckErr(RF, RoutineName)) return

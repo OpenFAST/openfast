@@ -58,7 +58,7 @@ CONTAINS
 !!    1. It is complex valued.  The values represent the second order wave force as calculated by WAMIT.
 !!    2. The dimenions of DataSet2D are Frequency1 (positive valued) and Wave Direction (degrees).
 !!    3. The wave direction requested might be between end points of wave direction dimension (ie. at 179 degrees when 
-!!          WvDir1(1)=175, WvDir(Dims(3))=-175)
+!!          WvDir1(1)=175, WvDir(Dims(3))=-175) <- This is no longer the case. See comment below.
 !!    4. The arrays WvFreq1 and WvDir1 will give the values for each dimension that correspond to each index of DataSet2D.
 !!    5. The data is not necessarily equally spaced in any direction: ie. WvFreq1 may not have uniform spacing between points.
 !!    6. If a point is requested, it can be assumed that it lies within DataSet2D (this is checked before calling this subroutine)
@@ -83,6 +83,7 @@ SUBROUTINE WAMIT_Interp2D_Cplx( InCoord, DataSet2D, WvFreq1, WvDir1, LastIndex, 
       ! Local variables
 
    REAL(SiKi)                          :: Coords(2)                                    !< coordinates with wave directions converted to range [-180, 180)
+   INTEGER(IntKi)                      :: i                                            !< generic counter
    INTEGER(IntKi)                      :: n(2)                                         !< number of points in WvFreq1 and WvDir1, and WvDir2
    
    INTEGER(IntKi)                      :: Indx_Lo(2)                                   !< index associated with lower bound of dimension 1,2 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
@@ -106,10 +107,14 @@ SUBROUTINE WAMIT_Interp2D_Cplx( InCoord, DataSet2D, WvFreq1, WvDir1, LastIndex, 
       ! find the indices into the arrays representing coordinates of each dimension:
       
    Coords = InCoord
-      
-      ! make sure these requested degrees fall in the range -180 <= Coords(2) < 180
-   Coords(2) = MODULO( Coords(2), 360.0_SiKi )
-   IF ( Coords(2) >= 180.0_SiKi ) Coords(2) = Coords(2) - 360.0_SiKi
+
+   ! The periodic "looping" behavior of the wave direction interpolation has been commented out due to the potential for large error without warning.
+   ! With the WAMIT2 module updated to handle ranges of input wave directions crossing +/-180 deg, it is now the responsibility of the calling code 
+   ! to make sure the wave heading interpolation point is strictly in range.     
+ 
+   !    ! make sure these requested degrees fall in the range -180 <= Coords(2) < 180
+   ! Coords(2) = MODULO( Coords(2), 360.0_SiKi )
+   ! IF ( Coords(2) >= 180.0_SiKi ) Coords(2) = Coords(2) - 360.0_SiKi
    
    CALL LocateStp( Coords(1), WvFreq1, LastIndex(1), n(1) )
    CALL LocateStp( Coords(2), WvDir1,  LastIndex(2), n(2) )
@@ -118,23 +123,24 @@ SUBROUTINE WAMIT_Interp2D_Cplx( InCoord, DataSet2D, WvFreq1, WvDir1, LastIndex, 
    
    
    ! WvFreq1 (indx 1)
-   IF (Indx_Lo(1) == 0) THEN
-      Indx_Lo(1) = 1
-   ELSEIF (Indx_Lo(1) == n(1) ) THEN
-      Indx_Lo(1) = max( n(1) - 1, 1 )                    ! make sure it's a valid index
-   END IF     
-   Indx_Hi(1) = min( Indx_Lo(1) + 1 , n(1) )             ! make sure it's a valid index
-
+   DO i = 1,2
+      IF (Indx_Lo(i) == 0) THEN
+         Indx_Lo(i) = 1
+      ELSEIF (Indx_Lo(i) == n(i) ) THEN
+         Indx_Lo(i) = max( n(i) - 1, 1 )                    ! make sure it's a valid index
+      END IF     
+      Indx_Hi(i) = min( Indx_Lo(i) + 1 , n(i) )             ! make sure it's a valid index
+   END DO
    
-   ! WvDir1 (indx 2)   [use modular arithmetic]
-   IF (Indx_Lo(2) == 0) THEN
-      Indx_Hi(2) = 1                           
-      Indx_Lo(2) = n(2)
-   ELSEIF (Indx_Lo(2) == n(2) ) THEN
-      Indx_Hi(2) = 1      
-   ELSE
-      Indx_Hi(2) = min( Indx_Lo(2) + 1, n(2) )        ! make sure it's a valid index
-   END IF      
+   ! ! WvDir1 (indx 2)   [use modular arithmetic]
+   ! IF (Indx_Lo(2) == 0) THEN
+   !    Indx_Hi(2) = 1                           
+   !    Indx_Lo(2) = n(2)
+   ! ELSEIF (Indx_Lo(2) == n(2) ) THEN
+   !    Indx_Hi(2) = 1      
+   ! ELSE
+   !    Indx_Hi(2) = min( Indx_Lo(2) + 1, n(2) )        ! make sure it's a valid index
+   ! END IF      
       
       ! calculate the positions of all dimensions:
       
@@ -145,14 +151,14 @@ SUBROUTINE WAMIT_Interp2D_Cplx( InCoord, DataSet2D, WvFreq1, WvDir1, LastIndex, 
    pos_Hi(2) = WvDir1(Indx_Hi(2))
    
    
-      ! angles have to be adjusted so that pos_Lo(2) <= Coords(2) <= pos_Hi(2)
-   IF ( Indx_Hi(2) == 1 .AND. n(2) > 1 )  THEN ! we're looping around the array [periodic]
-      IF ( pos_Lo(2) < Coords(2) ) THEN
-         pos_Hi(2) = pos_Hi(2) + 360.0_SiKi
-      ELSEIF ( pos_Lo(2) /= Coords(2) ) THEN !bjj: I think it's okay if we don't use equalRealNos here
-         pos_Lo(2) = pos_Lo(2) - 360.0_SiKi 
-      END IF
-   END IF   
+   !    ! angles have to be adjusted so that pos_Lo(2) <= Coords(2) <= pos_Hi(2)
+   ! IF ( Indx_Hi(2) == 1 .AND. n(2) > 1 )  THEN ! we're looping around the array [periodic]
+   !    IF ( pos_Lo(2) < Coords(2) ) THEN
+   !       pos_Hi(2) = pos_Hi(2) + 360.0_SiKi
+   !    ELSEIF ( pos_Lo(2) /= Coords(2) ) THEN !bjj: I think it's okay if we don't use equalRealNos here
+   !       pos_Lo(2) = pos_Lo(2) - 360.0_SiKi 
+   !    END IF
+   ! END IF   
    
 
    CALL Interp2D_withIndx_Cplx( Coords, DataSet2D, Indx_Lo, Indx_Hi, pos_Lo, pos_Hi, OutForce )
@@ -169,7 +175,7 @@ END SUBROUTINE WAMIT_Interp2D_Cplx
 !!    1. It is complex valued.  The values represent the second order wave force as calculated by WAMIT.
 !!    2. The dimenions of DataSet3D are Frequency1 (positive valued), Wave Direction1 (degrees), and Wave Direction2 (degrees).
 !!    3. The wave direction requested might be between end points of wave direction dimension (ie. at 179 degrees when 
-!!          WvDir1(1)=175, WvDir(Dims(3))=-175)
+!!          WvDir1(1)=175, WvDir(Dims(3))=-175) <- This is no longer the case. See comment below.
 !!    4. The arrays WvFreq1, WvDir1, and WvDir2, will give the values for each dimension that correspond to each index of DataSet3D.
 !!    5. The data is not necessarily equally spaced in any direction: ie. WvFreq1 may not have uniform spacing between points.
 !!    6. If a point is requested, it can be assumed that it lies within DataSet3D (this is checked before calling this subroutine)
@@ -221,11 +227,15 @@ SUBROUTINE WAMIT_Interp3D_Cplx( InCoord, DataSet3D, WvFreq1, WvDir1, WvDir2, Las
       ! find the indices into the arrays representing coordinates of each dimension:
 
       Coords = InCoord
-      
-   DO i=2,3  ! make sure these requested degrees fall in the range -180 <= Coord(2:3) < 180
-      Coords(i) = MODULO( Coords(i), 360.0_SiKi )
-      IF ( Coords(i) >= 180.0_SiKi ) Coords(i) = Coords(i) - 360.0_SiKi
-   END DO
+
+   ! The periodic "looping" behavior of the wave direction interpolation has been commented out due to the potential for large error without warning.
+   ! With the WAMIT2 module updated to handle ranges of input wave directions crossing +/-180 deg, it is now the responsibility of the calling code 
+   ! to make sure the wave heading interpolation point is strictly in range.
+
+   ! DO i=2,3  ! make sure these requested degrees fall in the range -180 <= Coord(2:3) < 180
+   !    Coords(i) = MODULO( Coords(i), 360.0_SiKi )
+   !    IF ( Coords(i) >= 180.0_SiKi ) Coords(i) = Coords(i) - 360.0_SiKi
+   ! END DO
    
    CALL LocateStp( Coords(1), WvFreq1, LastIndex(1), n(1) )
    CALL LocateStp( Coords(2), WvDir1,  LastIndex(2), n(2) )
@@ -235,25 +245,27 @@ SUBROUTINE WAMIT_Interp3D_Cplx( InCoord, DataSet3D, WvFreq1, WvDir1, WvDir2, Las
    
    
    ! WvFreq1 (indx 1)
-   IF (Indx_Lo(1) == 0) THEN
-      Indx_Lo(1) = 1
-   ELSEIF (Indx_Lo(1) == n(1) ) THEN
-      Indx_Lo(1) = max( n(1) - 1, 1 )                    ! make sure it's a valid index
-   END IF     
-   Indx_Hi(1) = min( Indx_Lo(1) + 1 , n(1) )             ! make sure it's a valid index
 
-   
-   ! WvDir1, WvDir2 (indx 2,3)   [use modular arithmetic]
-   DO i=2,3
+   DO i = 1,3
       IF (Indx_Lo(i) == 0) THEN
-         Indx_Hi(i) = 1                           
-         Indx_Lo(i) = n(i)
+         Indx_Lo(i) = 1
       ELSEIF (Indx_Lo(i) == n(i) ) THEN
-         Indx_Hi(i) = 1      
-      ELSE
-         Indx_Hi(i) = min( Indx_Lo(i) + 1, n(i) )        ! make sure it's a valid index
-      END IF      
+         Indx_Lo(i) = max( n(i) - 1, 1 )                    ! make sure it's a valid index
+      END IF     
+      Indx_Hi(i) = min( Indx_Lo(i) + 1 , n(i) )             ! make sure it's a valid index
    END DO
+   
+   ! ! WvDir1, WvDir2 (indx 2,3)   [use modular arithmetic]
+   ! DO i=2,3
+   !    IF (Indx_Lo(i) == 0) THEN
+   !       Indx_Hi(i) = 1                           
+   !       Indx_Lo(i) = n(i)
+   !    ELSEIF (Indx_Lo(i) == n(i) ) THEN
+   !       Indx_Hi(i) = 1      
+   !    ELSE
+   !       Indx_Hi(i) = min( Indx_Lo(i) + 1, n(i) )        ! make sure it's a valid index
+   !    END IF      
+   ! END DO
       
       ! calculate the positions of all dimensions:
       
@@ -267,15 +279,15 @@ SUBROUTINE WAMIT_Interp3D_Cplx( InCoord, DataSet3D, WvFreq1, WvDir1, WvDir2, Las
    pos_Hi(3) = WvDir2(Indx_Hi(3))
    
       ! angles have to be adjusted so that pos_Lo(i) <= Coords(i) <= pos_Hi(i)
-   DO i=2,3      
-      IF ( Indx_Hi(i) == 1 .AND. n(i) > 1 )  THEN ! we're looping around the array [periodic]
-         IF ( pos_Lo(i) < Coords(i) ) THEN
-            pos_Hi(i) = pos_Hi(i) + 360.0_SiKi
-         ELSEIF ( pos_Lo(i) /= Coords(i) ) THEN !bjj: I think it's okay if we don't use equalRealNos here
-            pos_Lo(i) = pos_Lo(i) - 360.0_SiKi 
-         END IF
-      END IF   
-   END DO
+   ! DO i=2,3      
+   !    IF ( Indx_Hi(i) == 1 .AND. n(i) > 1 )  THEN ! we're looping around the array [periodic]
+   !       IF ( pos_Lo(i) < Coords(i) ) THEN
+   !          pos_Hi(i) = pos_Hi(i) + 360.0_SiKi
+   !       ELSEIF ( pos_Lo(i) /= Coords(i) ) THEN !bjj: I think it's okay if we don't use equalRealNos here
+   !          pos_Lo(i) = pos_Lo(i) - 360.0_SiKi 
+   !       END IF
+   !    END IF   
+   ! END DO
    
 
 
@@ -293,7 +305,7 @@ END SUBROUTINE WAMIT_Interp3D_Cplx
 !!    2. The dimenions of DataSet4D are Frequency1 (positive valued), Frequency2 (positive valued), Wave Direction 1 (degrees),
 !!          and Wave Direction 2 (degrees).
 !!    3. The wave direction requested might be between end points of wave direction dimension (ie. at 179 degrees when 
-!!          WvDir1(1)=175, WvDir(Dims(3))=-175)
+!!          WvDir1(1)=175, WvDir(Dims(3))=-175) <- This is no longer the case. See comment below.
 !!    4. The arrays WvFreq1, WvFreq2, WvDir1, and WvDir2 will give the values for each dimension that correspond to
 !!          each index of DataSet4D.
 !!    5. The data is not necessarily equally spaced in any direction: ie. WvFreq1 may not have uniform spacing between points.
@@ -353,10 +365,14 @@ SUBROUTINE WAMIT_Interp4D_Cplx( InCoord, DataSet4D, WvFreq1, WvFreq2, WvDir1, Wv
       
    Coords = InCoord
       
-   DO i=3,4  ! make sure these requested degrees fall in the range -180 <= Coord(3:4) < 180
-      Coords(i) = MODULO( Coords(i), 360.0_SiKi )
-      IF ( Coords(i) >= 180.0_SiKi ) Coords(i) = Coords(i) - 360.0_SiKi
-   END DO
+   ! The periodic "looping" behavior of the wave direction interpolation has been commented out due to the potential for large error without warning.
+   ! With the WAMIT2 module updated to handle ranges of input wave directions crossing +/-180 deg, it is now the responsibility of the calling code 
+   ! to make sure the wave heading interpolation point is strictly in range.
+
+   ! DO i=3,4  ! make sure these requested degrees fall in the range -180 <= Coord(3:4) < 180
+   !    Coords(i) = MODULO( Coords(i), 360.0_SiKi )
+   !    IF ( Coords(i) >= 180.0_SiKi ) Coords(i) = Coords(i) - 360.0_SiKi
+   ! END DO
    
    CALL LocateStp( Coords(1), WvFreq1, LastIndex(1), n(1) )
    CALL LocateStp( Coords(2), WvFreq2, LastIndex(2), n(2) )
@@ -367,7 +383,7 @@ SUBROUTINE WAMIT_Interp4D_Cplx( InCoord, DataSet4D, WvFreq1, WvFreq2, WvDir1, Wv
    
    
    ! WvFreq1, WvFreq2 (indx 1, 2)
-   DO i=1,2   
+   DO i=1,4   
       IF (Indx_Lo(i) == 0) THEN
          Indx_Lo(i) = 1
       ELSEIF (Indx_Lo(i) == n(i) ) THEN
@@ -378,16 +394,16 @@ SUBROUTINE WAMIT_Interp4D_Cplx( InCoord, DataSet4D, WvFreq1, WvFreq2, WvDir1, Wv
          
    
    ! WvDir1, WvDir2 (indx 3,4)   [use modular arithmetic]
-   DO i=3,4
-      IF (Indx_Lo(i) == 0) THEN
-         Indx_Hi(i) = 1                           
-         Indx_Lo(i) = n(i)
-      ELSEIF (Indx_Lo(i) == n(i) ) THEN
-         Indx_Hi(i) = 1      
-      ELSE
-         Indx_Hi(i) = min( Indx_Lo(i) + 1, n(i) )     ! make sure it's a valid index
-      END IF      
-   END DO
+   ! DO i=3,4
+   !    IF (Indx_Lo(i) == 0) THEN
+   !       Indx_Hi(i) = 1                           
+   !       Indx_Lo(i) = n(i)
+   !    ELSEIF (Indx_Lo(i) == n(i) ) THEN
+   !       Indx_Hi(i) = 1      
+   !    ELSE
+   !       Indx_Hi(i) = min( Indx_Lo(i) + 1, n(i) )     ! make sure it's a valid index
+   !    END IF      
+   ! END DO
       
    
       ! calculate the positions of all dimensions:
@@ -405,15 +421,15 @@ SUBROUTINE WAMIT_Interp4D_Cplx( InCoord, DataSet4D, WvFreq1, WvFreq2, WvDir1, Wv
    pos_Hi(4) = WvDir2(Indx_Hi(4))
    
       ! angles have to be adjusted so that pos_Lo(i) <= Coords(i) <= pos_Hi(i)
-   DO i=3,4
-      IF ( Indx_Hi(i) == 1 .AND. n(i) > 1 )  THEN ! we're looping around the array [periodic]
-         IF ( pos_Lo(i) < Coords(i) ) THEN
-            pos_Hi(i) = pos_Hi(i) + 360.0_SiKi
-         ELSEIF ( pos_Lo(i) /= Coords(i) ) THEN !bjj: I think it's okay if we don't use equalRealNos here
-            pos_Lo(i) = pos_Lo(i) - 360.0_SiKi 
-         END IF
-      END IF   
-   END DO
+   ! DO i=3,4
+   !    IF ( Indx_Hi(i) == 1 .AND. n(i) > 1 )  THEN ! we're looping around the array [periodic]
+   !       IF ( pos_Lo(i) < Coords(i) ) THEN
+   !          pos_Hi(i) = pos_Hi(i) + 360.0_SiKi
+   !       ELSEIF ( pos_Lo(i) /= Coords(i) ) THEN !bjj: I think it's okay if we don't use equalRealNos here
+   !          pos_Lo(i) = pos_Lo(i) - 360.0_SiKi 
+   !       END IF
+   !    END IF   
+   ! END DO
    
 
 

@@ -30,6 +30,7 @@ MODULE HydroDynDriverSubs
    USE HydroDyn_Output
    USE ModMesh_Types
    USE VersionInfo
+   USE YawOffset
    
    IMPLICIT NONE
    
@@ -80,6 +81,7 @@ MODULE HydroDynDriverSubs
       REAL(DbKi)                       :: TimeInterval
       REAL(DbKi)                       :: TMax
       INTEGER                          :: PRPInputsMod
+      REAL(ReKi)                       :: PtfmRefzt
       CHARACTER(1024)                  :: PRPInputsFile
       REAL(R8Ki)                       :: uPRPInSteady(6)
       REAL(R8Ki)                       :: uDotPRPInSteady(6)
@@ -87,10 +89,12 @@ MODULE HydroDynDriverSubs
       REAL(R8Ki), ALLOCATABLE          :: PRPin(:,:)           ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
       REAL(R8Ki), ALLOCATABLE          :: PRPinTime(:)         ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
       INTEGER(IntKi)                   :: NBody                ! Number of WAMIT bodies to work with if prescribing kinematics on each body (PRPInputsMod<0)
-      REAL(ReKi)                       :: PtfmRefzt
       TYPE(HD_Drvr_OutputFile)         :: OutData
       character(500)                   :: FTitle                  ! description from 2nd line of driver file
       
+      REAL(R8Ki)                       :: PRPHdg
+      REAL(ReKi)                       :: CYawFilt
+
    END TYPE HD_Drvr_Data
    
 ! -----------------------------------------------------------------------------------   
@@ -99,7 +103,6 @@ MODULE HydroDynDriverSubs
 ! ----------------------------------------------------------------------------------- 
    TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'HydroDyn Driver', '', '' )  ! The version number of this program.
    character(*), parameter          :: Delim = Tab
-
 
 CONTAINS
 
@@ -255,7 +258,7 @@ SUBROUTINE ReadDriverInputFile( FileName, drvrData, ErrStat, ErrMsg )
    CALL ReadVar ( UnIn, FileName, drvrData%PtfmRefzt, 'PtfmRefzt', 'Vertical distance from the ground level to the platform reference point', ErrStat, ErrMsg, UnEchoLocal )
    if (Failed()) return
    
-      ! PRPInputsFile
+       ! PRPInputsFile
    CALL ReadVar ( UnIn, FileName, drvrData%PRPInputsFile, 'PRPInputsFile', 'Filename for the PRP HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
    IF ( PathIsRelative( drvrData%PRPInputsFile ) ) drvrData%PRPInputsFile = TRIM(PriPath)//TRIM(drvrData%PRPInputsFile)
@@ -280,7 +283,6 @@ SUBROUTINE ReadDriverInputFile( FileName, drvrData, ErrStat, ErrMsg )
       ! uDotDotPRPInSteady
    CALL ReadAry ( UnIn, FileName, drvrData%uDotDotPRPInSteady, 6, 'uDotDotPRPInSteady', 'PRP Steady-state translational and rotational accelerations.', ErrStat2,  ErrMsg2, UnEchoLocal)
    if (Failed()) return
-
       
    IF ( drvrData%PRPInputsMod /= 1 ) THEN
       drvrData%uPRPInSteady       = 0.0
@@ -291,7 +293,6 @@ SUBROUTINE ReadDriverInputFile( FileName, drvrData, ErrStat, ErrMsg )
    drvrData%WrTxtOutFile = .true.
    drvrData%WrBinOutFile = .false.
    
-
    CALL cleanup()
    
 CONTAINS
@@ -776,14 +777,18 @@ SUBROUTINE SetHDInputs_Constant(u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       u_HD%PRPMesh%TranslationDisp(:,1)   = drvrData%uPRPInSteady(1:3) 
 
          ! Compute direction cosine matrix from the rotation angles
-      CALL SmllRotTrans( 'InputRotation', drvrData%uPRPInSteady(4), drvrData%uPRPInSteady(5), drvrData%uPRPInSteady(6), u_HD%PRPMesh%Orientation(:,:,1), 'Junk', ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      u_HD%PRPMesh%Orientation(:,:,1) = EulerConstructZYX(drvrData%uPRPInSteady(4:6))
 
+         ! Translation - No transformation needed
       u_HD%PRPMesh%TranslationVel(:,1)    = drvrData%uDotPRPInSteady(1:3)
-      u_HD%PRPMesh%RotationVel(:,1)       = drvrData%uDotPRPInSteady(4:6)
       u_HD%PRPMesh%TranslationAcc(:,1)    = drvrData%uDotDotPRPInSteady(1:3)
-      u_HD%PRPMesh%RotationAcc(:,1)       = drvrData%uDotDotPRPInSteady(4:6)
-      
+         ! Rotation - Compute angular velocity and acceleration from the rotation angles and time derivatives
+      call EulerDerivativeToAngVelAcc(drvrData%uPRPInSteady(4:6),&
+                                 REAL(drvrData%uDotPRPInSteady(4:6),ReKi),&
+                                 REAL(drvrData%uDotDotPRPInSteady(4:6),ReKi),&
+                                 u_HD%PRPMesh%RotationVel(:,1),&
+                                 u_HD%PRPMesh%RotationAcc(:,1))
+
       CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -801,9 +806,11 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
    INTEGER,                         INTENT(   OUT ) :: ErrStat                ! returns a non-zero value when an error occurs  
    CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg                 ! Error message if ErrStat /= ErrID_None
    
+   REAL(ReKi)                                       :: tmp(3),tmp2(3)
+
    integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
-   character(*), parameter                          :: RoutineName = 'SetHDInputs_Constant'
+   character(*), parameter                          :: RoutineName = 'SetHDInputs'
    real(R8Ki), allocatable                          :: yInterp(:)
    integer(intKi)                                   :: indxHigh, indxMid, indxLow
    integer(intKi)                                   :: i
@@ -824,18 +831,23 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
          ! Compute direction cosine matrix from the rotation angles
                
 !         maxAngle = max( maxAngle, abs(yInterp(4:6)) )
-            
-      CALL SmllRotTrans( 'InputRotation', yInterp(4), yInterp(5), yInterp(6), u_HD%PRPMesh%Orientation(:,:,1), 'Junk', ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+      ! Obtain the orientation matrix for the small rotation part from the reference yaw orientation
+      u_HD%PRPMesh%Orientation(:,:,1) = EulerConstructZYX(yInterp(4:6))
+
+      ! Translation - No transformation needed
       u_HD%PRPMesh%TranslationVel(:,1)    = yInterp( 7: 9)
-      u_HD%PRPMesh%RotationVel(:,1)       = yInterp(10:12)
       u_HD%PRPMesh%TranslationAcc(:,1)    = yInterp(13:15)
-      u_HD%PRPMesh%RotationAcc(:,1)       = yInterp(16:18)
-            
+      ! Rotation - Compute angular velocity and acceleration from the rotation angles and time derivatives
+      call EulerDerivativeToAngVelAcc(yInterp(4:6),&
+                                 REAL(yInterp(10:12),ReKi),&
+                                 REAL(yInterp(16:18),ReKi),&
+                                 u_HD%PRPMesh%RotationVel(:,1),&
+                                 u_HD%PRPMesh%RotationAcc(:,1))
+
       CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   
+
    ELSEIF ( drvrData%PRPInputsMod < 0 ) THEN
       
       !@mhall: new kinematics input for moving bodies individually
@@ -855,12 +867,10 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       END DO
                
       ! PRP and body 1-NBody orientations (skipping the maxAngle stuff)
-      CALL SmllRotTrans(    'InputRotation', drvrData%PRPin(n,    4), drvrData%PRPin(n,    5), drvrData%PRPin(n,    6), u_HD%PRPMesh%Orientation(:,:,1), 'PRP orientation', ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      u_HD%PRPMesh%Orientation(:,:,1) = EulerConstructZYX(drvrData%PRPin(n,4:6))
             
       DO I=1, drvrData%NBody
-         CALL SmllRotTrans( 'InputRotation', drvrData%PRPin(n,6*I+4), drvrData%PRPin(n,6*I+5), drvrData%PRPin(n,6*I+6), u_HD%WAMITMesh%Orientation(:,:,I), 'body orientation', ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         u_HD%WAMITMesh%Orientation(:,:,I) = EulerConstructZYX(drvrData%PRPin(n,(6*I+4):(6*I+6)))
       END DO
 
       ! use finite differences for velocities and accelerations
@@ -904,7 +914,8 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
          END DO
                
       END IF
-            
+
+      ! TO DO: Missing the first and last step below!            
       ! calculate accelerations based on displacements:
       u_HD%PRPMesh%TranslationAcc(:,1)      = (drvrData%PRPin(indxHigh, 1:3)         - 2*drvrData%PRPin(indxMid, 1:3)         + drvrData%PRPin(indxLow, 1:3))        /(drvrData%TimeInterval**2)
       u_HD%PRPMesh%RotationAcc(   :,1)      = (drvrData%PRPin(indxHigh, 4:6)         - 2*drvrData%PRPin(indxMid, 4:6)         + drvrData%PRPin(indxLow, 4:6))        /(drvrData%TimeInterval**2)
@@ -913,9 +924,26 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
          u_HD%WAMITMesh%TranslationAcc(:,I) = (drvrData%PRPin(indxHigh, 6*I+1:6*I+3) - 2*drvrData%PRPin(indxMid, 6*I+1:6*I+3) + drvrData%PRPin(indxLow, 6*I+1:6*I+3))/(drvrData%TimeInterval**2)
          u_HD%WAMITMesh%RotationAcc(   :,I) = (drvrData%PRPin(indxHigh, 6*I+4:6*I+6) - 2*drvrData%PRPin(indxMid, 6*I+4:6*I+6) + drvrData%PRPin(indxLow, 6*I+4:6*I+6))/(drvrData%TimeInterval**2)
       END DO
-               
+           
+      ! Rotation - Compute angular velocity and acceleration from the rotation angles and time derivatives
+      call EulerDerivativeToAngVelAcc(drvrData%PRPin(n,4:6),&
+                              u_HD%PRPMesh%RotationVel(:,1),&
+                              u_HD%PRPMesh%RotationAcc(:,1),&
+                              tmp,tmp2)
+      u_HD%PRPMesh%RotationVel(:,1) = tmp
+      u_HD%PRPMesh%RotationAcc(:,1) = tmp2
+
+      DO I=1,drvrData%NBody
+         call EulerDerivativeToAngVelAcc(drvrData%PRPin(n,(6*I+4):(6*I+6)),&
+                                           u_HD%WAMITMesh%RotationVel(:,I),&
+                                           u_HD%WAMITMesh%RotationAcc(:,I),&
+                                           tmp,tmp2)
+         u_HD%WAMITMesh%RotationVel(:,I) = tmp
+         u_HD%WAMITMesh%RotationAcc(:,I) = tmp2
+
+      END DO
             
-       ! half of the PRP_TransferToMotionInputs routine:
+      ! half of the PRP_TransferToMotionInputs routine:
       IF ( u_HD%Morison%Mesh%Initialized ) THEN
          ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
          CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
@@ -1040,7 +1068,7 @@ SUBROUTINE PRP_Perturb_u( n, perturb_sign, p, u, EDRPMotion, du, Motion_HDRP, ma
       CASE ( 1) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 1     
          pointMesh%TranslationDisp (fieldIndx,node) = pointMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
       CASE ( 2) !Module/Mesh/Field: u%PRPMesh%Orientation = 2
-         CALL PerturbOrientationMatrix( pointMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+         CALL PerturbOrientationMatrix( pointMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.false. )
       CASE ( 3) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 3
          pointMesh%TranslationVel( fieldIndx,node) = pointMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
       CASE ( 4) !Module/Mesh/Field: u%PRPMesh%RotationVel = 4
@@ -1259,6 +1287,40 @@ contains
    end subroutine cleanup
    
 END SUBROUTINE LINEARIZATION
+
+SUBROUTINE EulerDerivativeToAngVelAcc(u,udot,uddot,AngVel,AngAcc)
+   REAL(DbKi),                     INTENT( IN    ) :: u(3)       ! Tait-Bryan angles following the ZYX convention
+   REAL(ReKi),                     INTENT( IN    ) :: udot(3)    ! First time derivatives of the Tait-Bryan angles
+   REAL(ReKi),                     INTENT( IN    ) :: uddot(3)   ! Second time derivatives of the Tait-Bryan angles
+   REAL(ReKi),                     INTENT(   OUT ) :: AngVel(3)  ! Angular velocity in the earth-fixed frame of reference
+   REAL(ReKi),                     INTENT(   OUT ) :: AngAcc(3)  ! Angular acceleration in the earth-fixed frame of reference
+   REAL(DbKi)                                      :: R, P, Y
+   REAL(DbKi)                                      :: cR, sR, cP, sP, cY, sY
+   REAL(DbKi)                                      :: A(3,3)
+   REAL(ReKi)                                      :: Rdot, Pdot, Ydot
+
+   R  = u(1)
+   P  = u(2)
+   Y  = u(3)
+   Rdot = udot(1)
+   Pdot = udot(2)
+   Ydot = udot(3)
+   cR = cos(R)
+   sR = sin(R)
+   cP = cos(P)
+   sP = sin(P)
+   cY = cos(Y)
+   sY = sin(Y)
+   A(1,:) = (/cP*cY,      -sY, 0.0_DbKi/)
+   A(2,:) = (/cP*sY,       cY, 0.0_DbKi/)
+   A(3,:) = (/  -sP, 0.0_DbKi, 1.0_DbKi/)
+   AngVel    = matmul(A,udot)   
+   AngAcc(1) = -Rdot*(Pdot*sP*cY+Ydot*cP*sY)-Pdot*Ydot*cY
+   AngAcc(2) = -Rdot*(Pdot*sP*sY-Ydot*cP*cY)-Pdot*Ydot*sY
+   AngAcc(3) = -Rdot*Pdot*cP
+   AngAcc    = AngAcc + matmul(A,uddot)
+END SUBROUTINE EulerDerivativeToAngVelAcc
+
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE HydroDynDriverSubs
 

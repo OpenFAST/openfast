@@ -1677,7 +1677,6 @@ SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
    !====== General inputs ============================================================
    call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_In, iLine, 'TFinMod'   , TFData%TFinMod       , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_In, iLine, 'TFinChord' , TFData%TFinChord     , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_In, iLine, 'TFinArea'  , TFData%TFinArea      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseAry(FileInfo_In, iLine, 'TFinRefP_n', TFData%TFinRefP_n, 3 , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseAry(FileInfo_In, iLine, 'TFinAngles', TFData%TFinAngles, 3 , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
@@ -1685,6 +1684,7 @@ SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
    !====== Polar-based model ================================ [used only when TFinMod=1]
    call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_In, iLine, 'TFinAFID'  , TFData%TFinAFID      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinChord' , TFData%TFinChord     , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    !====== Unsteady slender body model ===================== [used only when TFinMod=2]
    call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_In, iLine, 'TFinKp'  , TFData%TFinKp      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;

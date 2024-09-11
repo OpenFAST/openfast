@@ -30,7 +30,10 @@ typedef     ^                 ^                 R8Ki                 PtfmRefztRo
 typedef     ^                 ^                 ReKi                 WAMITULEN         -        -        -        "WAMIT unit length scale"    -
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Supplied by Driver:  Gravitational acceleration"  (m/s^2)
 
-typedef    ^                  ^                 SeaSt_WaveFieldType *WaveField         -        -        -        "Pointer to wave field"
+typedef     ^                 ^                 SeaSt_WaveFieldType *WaveField         -        -        -        "Pointer to wave field"
+typedef     ^                 ^                 INTEGER              PtfmYMod          -        -        -         "Large yaw model" -
+typedef     ^                 ^                 ReKi                 PtfmRefY          -        -        -         "Initial reference yaw offset" (rad)
+typedef     ^                 ^                 IntKi                NExctnHdg         -        -        -         "Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1 in the HydroDyn driver or in ElastoDyn]"
 
 #[note: only one of MnDriff / NewmanApp / DiffQTF can be non-zero
 typedef     ^                 ^                 INTEGER              MnDrift           -        -        -        "Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use}"    -
@@ -42,16 +45,12 @@ typedef     ^                 ^                 LOGICAL              NewmanAppF 
 typedef     ^                 ^                 LOGICAL              DiffQTFF          -        -        -        "Flag indicating the full difference QTF should be calculated" -
 typedef     ^                 ^                 LOGICAL              SumQTFF           -        -        -        "Flag indicating the full    sum     QTF should be calculated" -
 
-
-
-
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef     ^                 MiscVarType       INTEGER              LastIndWave       :        -        -        "Index for last interpolation step of 2nd order forces"   -
-typedef     ^                 ^                 ReKi                 F_Waves2          {:}      -        -        "2nd order force from this timestep"   -
-
-
+typedef     ^                 ^                 ReKi                 F_Waves2         {:}       -        -        "2nd order force from this timestep"   -
+typedef     ^                 ^       SeaSt_WaveField_MiscVarType    WaveField_m       -        -        -        "misc var information from the SeaState Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -60,8 +59,9 @@ typedef     ^                 ^                 ReKi                 F_Waves2   
 typedef     ^                 ParameterType     INTEGER              NBody             -        -        -        "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
 typedef     ^                 ^                 INTEGER              NBodyMod          -        -        -        "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
 
-#The 2nd order force time series
-typedef     ^                 ^                 SiKi                 WaveExctn2        {:}{:}   -        -        "Time series of the resulting 2nd order force (first index is timestep, second index is load component)"    (N)
+#The 2nd order force time series grid
+typedef     ^                 ^                 SiKi             WaveExctn2Grid {:}{:}{:}{:}{:} -        -        "Grid of time series of the resulting 2nd order force (Index 1: Time, Index 2: x, Index 3: y, Index 4: platform heading, and Index 5: load component)"    (N)
+typedef     ^                 ^       SeaSt_WaveField_ParameterType  Exctn2GridParams  -        -        -        "Parameters of WaveExctn2Grid" -
 
 #Flags set for dimensions to use with each method (MnDrift, NewmanApp, etc). These are stored by method because .8 files that can be used in MnDrift or NewmanApp don't have some of the dimensions.
 typedef     ^                 ^                 LOGICAL              MnDriftDims       {6}      -        -        "Flags for which dimensions to calculate in MnDrift   calculations"  -
@@ -73,8 +73,8 @@ typedef     ^                 ^                 LOGICAL              MnDriftF   
 typedef     ^                 ^                 LOGICAL              NewmanAppF        -        -        -        "Flag indicating Newman approximation should be calculated"    -
 typedef     ^                 ^                 LOGICAL              DiffQTFF          -        -        -        "Flag indicating the full difference QTF should be calculated" -
 typedef     ^                 ^                 LOGICAL              SumQTFF           -        -        -        "Flag indicating the full    sum     QTF should be calculated" -
-
-
+typedef     ^                 ^                 INTEGER              PtfmYMod          -        -        -        "Large yaw model" -
+typedef     ^                 ^                 INTEGER              NExctnHdg         -        -        -        "Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1 in the HydroDyn driver or in ElastoDyn]"
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:

@@ -542,6 +542,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitchCom      !< Commanded blade pitch angles [radians]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlAirfoilCom      !< Commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables) [-]
     REAL(ReKi)  :: YawMom = 0.0_ReKi      !< Torque transmitted through the yaw bearing [N-m]
+    REAL(ReKi)  :: YawPosCom = 0.0_ReKi      !< Yaw command from controller (for SED module) [rad]
+    REAL(ReKi)  :: YawRateCom = 0.0_ReKi      !< Yaw rate command from controller (for SED module) [rad/s]
     REAL(ReKi)  :: GenTrq = 0.0_ReKi      !< Electrical generator torque [N-m]
     REAL(ReKi)  :: HSSBrTrqC = 0.0_ReKi      !< Commanded HSS brake torque [N-m]
     REAL(ReKi)  :: ElecPwr = 0.0_ReKi      !< Electrical power [W]
@@ -5512,6 +5514,8 @@ subroutine SrvD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       DstOutputData%BlAirfoilCom = SrcOutputData%BlAirfoilCom
    end if
    DstOutputData%YawMom = SrcOutputData%YawMom
+   DstOutputData%YawPosCom = SrcOutputData%YawPosCom
+   DstOutputData%YawRateCom = SrcOutputData%YawRateCom
    DstOutputData%GenTrq = SrcOutputData%GenTrq
    DstOutputData%HSSBrTrqC = SrcOutputData%HSSBrTrqC
    DstOutputData%ElecPwr = SrcOutputData%ElecPwr
@@ -5729,6 +5733,8 @@ subroutine SrvD_PackOutput(RF, Indata)
    call RegPackAlloc(RF, InData%BlPitchCom)
    call RegPackAlloc(RF, InData%BlAirfoilCom)
    call RegPack(RF, InData%YawMom)
+   call RegPack(RF, InData%YawPosCom)
+   call RegPack(RF, InData%YawRateCom)
    call RegPack(RF, InData%GenTrq)
    call RegPack(RF, InData%HSSBrTrqC)
    call RegPack(RF, InData%ElecPwr)
@@ -5791,6 +5797,8 @@ subroutine SrvD_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%BlPitchCom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlAirfoilCom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%YawMom); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%YawPosCom); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%YawRateCom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GenTrq); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HSSBrTrqC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ElecPwr); if (RegCheckErr(RF, RoutineName)) return
@@ -7053,6 +7061,8 @@ SUBROUTINE SrvD_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMs
       y_out%BlAirfoilCom = a1*y1%BlAirfoilCom + a2*y2%BlAirfoilCom
    END IF ! check if allocated
    y_out%YawMom = a1*y1%YawMom + a2*y2%YawMom
+   y_out%YawPosCom = a1*y1%YawPosCom + a2*y2%YawPosCom
+   y_out%YawRateCom = a1*y1%YawRateCom + a2*y2%YawRateCom
    y_out%GenTrq = a1*y1%GenTrq + a2*y2%GenTrq
    y_out%HSSBrTrqC = a1*y1%HSSBrTrqC + a2*y2%HSSBrTrqC
    y_out%ElecPwr = a1*y1%ElecPwr + a2*y2%ElecPwr
@@ -7168,6 +7178,8 @@ SUBROUTINE SrvD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
       y_out%BlAirfoilCom = a1*y1%BlAirfoilCom + a2*y2%BlAirfoilCom + a3*y3%BlAirfoilCom
    END IF ! check if allocated
    y_out%YawMom = a1*y1%YawMom + a2*y2%YawMom + a3*y3%YawMom
+   y_out%YawPosCom = a1*y1%YawPosCom + a2*y2%YawPosCom + a3*y3%YawPosCom
+   y_out%YawRateCom = a1*y1%YawRateCom + a2*y2%YawRateCom + a3*y3%YawRateCom
    y_out%GenTrq = a1*y1%GenTrq + a2*y2%GenTrq + a3*y3%GenTrq
    y_out%HSSBrTrqC = a1*y1%HSSBrTrqC + a2*y2%HSSBrTrqC + a3*y3%HSSBrTrqC
    y_out%ElecPwr = a1*y1%ElecPwr + a2*y2%ElecPwr + a3*y3%ElecPwr

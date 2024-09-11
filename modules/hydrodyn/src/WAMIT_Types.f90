@@ -54,10 +54,13 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ExctnMod = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
     REAL(ReKi)  :: ExctnCutOff = 0.0_ReKi      !< Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0]  [Hz]
+    INTEGER(IntKi)  :: NExctnHdg = 0_IntKi      !< Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1 in the HydroDyn driver or in ElastoDyn] [-]
     REAL(DbKi)  :: RdtnTMax = 0.0_R8Ki      !<  [-]
     CHARACTER(1024)  :: WAMITFile      !<  [-]
     TYPE(Conv_Rdtn_InitInputType)  :: Conv_Rdtn      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [(rad)]
   END TYPE WAMIT_InitInputType
 ! =======================
 ! =========  WAMIT_ContinuousStateType  =======
@@ -119,19 +122,23 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ExctnMod = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
     REAL(ReKi)  :: ExctnCutOff = 0.0_ReKi      !< Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0]  [Hz]
+    INTEGER(IntKi)  :: NExctnHdg = 0_IntKi      !< Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1 in the HydroDyn driver or in ElastoDyn] [-]
     REAL(ReKi)  :: ExctnFiltConst = 0.0_ReKi      !< Low-pass time filter constant computed from ExctnCutOff [-]
-    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveExctn      !<  [-]
-    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WaveExctnGrid      !< WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for eac WAMIT Body [-]
+    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveExctn      !<  [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveExctnGrid      !< WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: PRP Yaw, 5th: Force component for eac WAMIT Body [-]
     TYPE(Conv_Rdtn_ParameterType)  :: Conv_Rdtn      !<  [-]
     TYPE(SS_Rad_ParameterType)  :: SS_Rdtn      !<  [-]
     TYPE(SS_Exc_ParameterType)  :: SS_Exctn      !<  [-]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    TYPE(SeaSt_WaveField_ParameterType)  :: ExctnGridParams      !< Parameters of WaveExctnGrid [-]
   END TYPE WAMIT_ParameterType
 ! =======================
 ! =========  WAMIT_InputType  =======
   TYPE, PUBLIC :: WAMIT_InputType
     TYPE(MeshType)  :: Mesh      !< Displacements at the WAMIT reference point in the inertial frame [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Reference yaw offset [(rad)]
   END TYPE WAMIT_InputType
 ! =======================
 ! =========  WAMIT_OutputType  =======
@@ -255,12 +262,15 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%ExctnMod = SrcInitInputData%ExctnMod
    DstInitInputData%ExctnDisp = SrcInitInputData%ExctnDisp
    DstInitInputData%ExctnCutOff = SrcInitInputData%ExctnCutOff
+   DstInitInputData%NExctnHdg = SrcInitInputData%NExctnHdg
    DstInitInputData%RdtnTMax = SrcInitInputData%RdtnTMax
    DstInitInputData%WAMITFile = SrcInitInputData%WAMITFile
    call Conv_Rdtn_CopyInitInput(SrcInitInputData%Conv_Rdtn, DstInitInputData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitInputData%WaveField => SrcInitInputData%WaveField
+   DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
+   DstInitInputData%PtfmRefY = SrcInitInputData%PtfmRefY
 end subroutine
 
 subroutine WAMIT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -320,6 +330,7 @@ subroutine WAMIT_PackInitInput(RF, Indata)
    call RegPack(RF, InData%ExctnMod)
    call RegPack(RF, InData%ExctnDisp)
    call RegPack(RF, InData%ExctnCutOff)
+   call RegPack(RF, InData%NExctnHdg)
    call RegPack(RF, InData%RdtnTMax)
    call RegPack(RF, InData%WAMITFile)
    call Conv_Rdtn_PackInitInput(RF, InData%Conv_Rdtn) 
@@ -330,6 +341,8 @@ subroutine WAMIT_PackInitInput(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -359,6 +372,7 @@ subroutine WAMIT_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%ExctnMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnDisp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnCutOff); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NExctnHdg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RdtnTMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WAMITFile); if (RegCheckErr(RF, RoutineName)) return
    call Conv_Rdtn_UnpackInitInput(RF, OutData%Conv_Rdtn) ! Conv_Rdtn 
@@ -380,6 +394,8 @@ subroutine WAMIT_UnPackInitInput(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -833,7 +849,7 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(4), UB(4)
+   integer(B8Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT_CopyParam'
@@ -881,12 +897,13 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    DstParamData%ExctnMod = SrcParamData%ExctnMod
    DstParamData%ExctnDisp = SrcParamData%ExctnDisp
    DstParamData%ExctnCutOff = SrcParamData%ExctnCutOff
+   DstParamData%NExctnHdg = SrcParamData%NExctnHdg
    DstParamData%ExctnFiltConst = SrcParamData%ExctnFiltConst
    if (allocated(SrcParamData%WaveExctn)) then
-      LB(1:2) = lbound(SrcParamData%WaveExctn, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%WaveExctn, kind=B8Ki)
+      LB(1:3) = lbound(SrcParamData%WaveExctn, kind=B8Ki)
+      UB(1:3) = ubound(SrcParamData%WaveExctn, kind=B8Ki)
       if (.not. allocated(DstParamData%WaveExctn)) then
-         allocate(DstParamData%WaveExctn(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         allocate(DstParamData%WaveExctn(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctn.', ErrStat, ErrMsg, RoutineName)
             return
@@ -895,10 +912,10 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       DstParamData%WaveExctn = SrcParamData%WaveExctn
    end if
    if (allocated(SrcParamData%WaveExctnGrid)) then
-      LB(1:4) = lbound(SrcParamData%WaveExctnGrid, kind=B8Ki)
-      UB(1:4) = ubound(SrcParamData%WaveExctnGrid, kind=B8Ki)
+      LB(1:5) = lbound(SrcParamData%WaveExctnGrid, kind=B8Ki)
+      UB(1:5) = ubound(SrcParamData%WaveExctnGrid, kind=B8Ki)
       if (.not. allocated(DstParamData%WaveExctnGrid)) then
-         allocate(DstParamData%WaveExctnGrid(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         allocate(DstParamData%WaveExctnGrid(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctnGrid.', ErrStat, ErrMsg, RoutineName)
             return
@@ -917,6 +934,10 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    if (ErrStat >= AbortErrLev) return
    DstParamData%DT = SrcParamData%DT
    DstParamData%WaveField => SrcParamData%WaveField
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
+   call SeaSt_WaveField_CopyParam(SrcParamData%ExctnGridParams, DstParamData%ExctnGridParams, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine WAMIT_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -950,6 +971,8 @@ subroutine WAMIT_DestroyParam(ParamData, ErrStat, ErrMsg)
    call SS_Exc_DestroyParam(ParamData%SS_Exctn, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(ParamData%WaveField)
+   call SeaSt_WaveField_DestroyParam(ParamData%ExctnGridParams, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT_PackParam(RF, Indata)
@@ -967,6 +990,7 @@ subroutine WAMIT_PackParam(RF, Indata)
    call RegPack(RF, InData%ExctnMod)
    call RegPack(RF, InData%ExctnDisp)
    call RegPack(RF, InData%ExctnCutOff)
+   call RegPack(RF, InData%NExctnHdg)
    call RegPack(RF, InData%ExctnFiltConst)
    call RegPackAlloc(RF, InData%WaveExctn)
    call RegPackAlloc(RF, InData%WaveExctnGrid)
@@ -981,6 +1005,8 @@ subroutine WAMIT_PackParam(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PtfmYMod)
+   call SeaSt_WaveField_PackParam(RF, InData%ExctnGridParams) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -988,7 +1014,7 @@ subroutine WAMIT_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(WAMIT_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackParam'
-   integer(B8Ki)   :: LB(4), UB(4)
+   integer(B8Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -1003,6 +1029,7 @@ subroutine WAMIT_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%ExctnMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnDisp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnCutOff); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NExctnHdg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ExctnFiltConst); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveExctn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WaveExctnGrid); if (RegCheckErr(RF, RoutineName)) return
@@ -1028,6 +1055,8 @@ subroutine WAMIT_UnPackParam(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call SeaSt_WaveField_UnpackParam(RF, OutData%ExctnGridParams) ! ExctnGridParams 
 end subroutine
 
 subroutine WAMIT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1044,6 +1073,7 @@ subroutine WAMIT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    call MeshCopy(SrcInputData%Mesh, DstInputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInputData%PtfmRefY = SrcInputData%PtfmRefY
 end subroutine
 
 subroutine WAMIT_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -1065,6 +1095,7 @@ subroutine WAMIT_PackInput(RF, Indata)
    character(*), parameter         :: RoutineName = 'WAMIT_PackInput'
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%Mesh) 
+   call RegPack(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1074,6 +1105,7 @@ subroutine WAMIT_UnPackInput(RF, OutData)
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackInput'
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%Mesh) ! Mesh 
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1219,6 +1251,7 @@ SUBROUTINE WAMIT_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMs
    
    CALL MeshExtrapInterp1(u1%Mesh, u2%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY
 END SUBROUTINE
 
 SUBROUTINE WAMIT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -1276,6 +1309,7 @@ SUBROUTINE WAMIT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, E
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
    CALL MeshExtrapInterp2(u1%Mesh, u2%Mesh, u3%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY + a3*u3%PtfmRefY
 END SUBROUTINE
 
 subroutine WAMIT_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)

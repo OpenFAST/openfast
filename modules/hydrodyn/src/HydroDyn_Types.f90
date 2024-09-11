@@ -81,6 +81,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UnSum = 0_IntKi      !< File unit for the HydroDyn summary file [-1 = no summary file] [-]
     CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [(rad)]
+    REAL(ReKi)  :: PtfmYCutoff = 0.0_ReKi      !< Low-pass cutoff frequency for filtering the platform yaw motion to obtain the reference yaw offset [(Hz)]
   END TYPE HydroDyn_InputFile
 ! =======================
 ! =========  HydroDyn_InitInputType  =======
@@ -128,6 +131,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: HydroDyn_DiscreteStateType
     TYPE(WAMIT_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: WAMIT      !< discrete states from the wamit module [-]
     TYPE(Morison_DiscreteStateType)  :: Morison      !< discrete states from the Morison module [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefY      !< Reference yaw position of the PRP relative to the inertial frame - Current step and two previous steps [(radians)]
   END TYPE HydroDyn_DiscreteStateType
 ! =======================
 ! =========  HydroDyn_ConstraintStateType  =======
@@ -176,6 +180,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    REAL(ReKi)  :: CYawFilt = 0.0_ReKi      !< Low-pass filter constant for reference platform yaw position PtfmRefY [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
 ! =========  HydroDyn_InputType  =======
@@ -452,6 +458,9 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
    DstInputFileData%UnSum = SrcInputFileData%UnSum
    DstInputFileData%OutFmt = SrcInputFileData%OutFmt
    DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
+   DstInputFileData%PtfmYMod = SrcInputFileData%PtfmYMod
+   DstInputFileData%PtfmRefY = SrcInputFileData%PtfmRefY
+   DstInputFileData%PtfmYCutoff = SrcInputFileData%PtfmYCutoff
 end subroutine
 
 subroutine HydroDyn_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -555,6 +564,9 @@ subroutine HydroDyn_PackInputFile(RF, Indata)
    call RegPack(RF, InData%UnSum)
    call RegPack(RF, InData%OutFmt)
    call RegPack(RF, InData%OutSFmt)
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%PtfmRefY)
+   call RegPack(RF, InData%PtfmYCutoff)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -600,6 +612,9 @@ subroutine HydroDyn_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%UnSum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutFmt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutSFmt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYCutoff); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1084,6 +1099,18 @@ subroutine HydroDyn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, 
    call Morison_CopyDiscState(SrcDiscStateData%Morison, DstDiscStateData%Morison, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcDiscStateData%PtfmRefY)) then
+      LB(1:1) = lbound(SrcDiscStateData%PtfmRefY, kind=B8Ki)
+      UB(1:1) = ubound(SrcDiscStateData%PtfmRefY, kind=B8Ki)
+      if (.not. allocated(DstDiscStateData%PtfmRefY)) then
+         allocate(DstDiscStateData%PtfmRefY(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%PtfmRefY.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDiscStateData%PtfmRefY = SrcDiscStateData%PtfmRefY
+   end if
 end subroutine
 
 subroutine HydroDyn_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
@@ -1108,6 +1135,9 @@ subroutine HydroDyn_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    end if
    call Morison_DestroyDiscState(DiscStateData%Morison, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(DiscStateData%PtfmRefY)) then
+      deallocate(DiscStateData%PtfmRefY)
+   end if
 end subroutine
 
 subroutine HydroDyn_PackDiscState(RF, Indata)
@@ -1127,6 +1157,7 @@ subroutine HydroDyn_PackDiscState(RF, Indata)
       end do
    end if
    call Morison_PackDiscState(RF, InData%Morison) 
+   call RegPackAlloc(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1153,6 +1184,7 @@ subroutine HydroDyn_UnPackDiscState(RF, OutData)
       end do
    end if
    call Morison_UnpackDiscState(RF, OutData%Morison) ! Morison 
+   call RegUnpackAlloc(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1480,6 +1512,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%VisMeshes = SrcParamData%VisMeshes
    DstParamData%WaveField => SrcParamData%WaveField
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
+   DstParamData%CYawFilt = SrcParamData%CYawFilt
 end subroutine
 
 subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1616,6 +1650,8 @@ subroutine HydroDyn_PackParam(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%CYawFilt)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1715,6 +1751,8 @@ subroutine HydroDyn_UnPackParam(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CYawFilt); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

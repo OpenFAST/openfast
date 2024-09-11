@@ -3911,7 +3911,7 @@ END SUBROUTINE CheckR8Var
       CALL Conv2UC( defaultStr )
       IF ( INDEX(defaultStr, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable
          LineNum = LineNum - 1  ! back up a line
-         CALL ParseVar ( FileInfo, LineNum, ExpVarName, Var, ErrStatLcl, ErrMsg2, UnEc )
+         CALL ParseVar ( FileInfo, LineNum, ExpVarName, Var, ErrStatLcl, ErrMsg2 )
             CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       ELSE
          Var = VarDefault  ! "DEFAULT" value

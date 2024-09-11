@@ -280,9 +280,25 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    integer(IntKi)                 :: sgn !+1/-1 for node force calculations
    type(MeshAuxDataType), pointer :: pLst       !< Info for a given member-output (Alias to shorten notation)
    integer(IntKi), pointer        :: DOFList(:) !< List of DOF indices for a given Nodes (Alias to shorten notation)
+   real(R8Ki), dimension(3,3)     :: Rg2b  ! Rotation matrix global 2 body (Guyan) coordinates
+   real(R8Ki), dimension(6,6)     :: RRg2b ! Rotation matrix global 2 body (Guyan) coordinates, acts on a 6-vector
+   INTEGER(IntKi)                 :: ErrStat2      ! Error status of the operation
+   CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
+
    ErrStat = ErrID_None   
    ErrMsg  = ""
-   
+
+   if ( p%Floating ) then
+      ! For floating, m%U_full_dotdot is currently in the earth-fixed frame.
+      ! Need to transform back to the Guyan frame when computing MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze.
+      Rg2b = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
+   else
+      call Eye(Rg2b, ErrStat2, ErrMsg2)
+   end if
+   RRg2b = 0.0_R8Ki
+   RRg2b(1:3,1:3) = Rg2b
+   RRg2b(4:6,4:6) = Rg2b
+
    AllOuts = 0.0_ReKi  ! initialize for those outputs that aren't valid (and thus aren't set in this routine)
          
    ! --------------------------------------------------------------------------------
@@ -317,14 +333,14 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
             ! Displacement- Translational -no need for averaging since it is a node translation - In global reference SS
             !     "MαNβTDxss, MαNβTDyss, MαNβTDzss"
             AllOuts(MNTDss (:,iiNode,iMemberOutput))       = m%U_full(DOFList(1:3))
-            ! Displacement- Rotational - need direction cosine matrix to tranform rotations  - In Local reference Element Ref Sys
-            !     "MαNβRDxss, MαNβRDye, MαNβRDze"
-            AllOuts(MNRDe (:,iiNode,iMemberOutput))        = matmul(DIRCOS,m%U_full(DOFList(4:6))) !local ref
+            ! Displacement- Rotational - need direction cosine matrix to tranform rotations  - In Local reference Element Ref Sys <- Need to rethink this for large platform rotation
+            !     "MαNβRDxe, MαNβRDye, MαNβRDze"
+            AllOuts(MNRDe (:,iiNode,iMemberOutput))        = matmul(DIRCOS,m%U_full_elast(DOFList(4:6))) ! Element elastic rotation only in Guyan frame for floating. Full motion for fixed-bottom.
             ! Accelerations- I need to get the direction cosine matrix to tranform displacement and rotations
             !     "MαNβTAxe, MαNβTAye, MαNβTAze"
             !     "MαNβRAxe, MαNβRAye, MαNβRAze"
-            AllOuts(MNTRAe (1:3,iiNode,iMemberOutput))     = matmul(DIRCOS,m%U_full_dotdot(DOFList(1:3))) ! translational accel local ref
-            AllOuts(MNTRAe (4:6,iiNode,iMemberOutput))     = matmul(DIRCOS,m%U_full_dotdot(DOFList(4:6))) ! rotational accel  local ref
+            AllOuts(MNTRAe (1:3,iiNode,iMemberOutput))     = matmul(DIRCOS,matmul(Rg2b,m%U_full_dotdot(DOFList(1:3)))) ! translational accel local ref
+            AllOuts(MNTRAe (4:6,iiNode,iMemberOutput))     = matmul(DIRCOS,matmul(Rg2b,m%U_full_dotdot(DOFList(4:6)))) ! rotational    accel local ref
         ENDDO  ! iiNode, Loop on requested nodes for that member
      ENDDO ! iMemberOutput, Loop on member outputs
    END IF
@@ -430,10 +446,10 @@ contains
       FirstOrSecond = pLst%ElmNds(iiNode,JJ)             ! first or second node of the element to be considered
       sgn           = NodeNumber_To_Sign(FirstOrSecond) ! Assign sign depending if it's the 1st or second node
       ElemNodes     = p%Elems(iElem,2:3)                ! first and second node ID associated with element iElem
-      X_e(1:6)      = m%U_full_elast (p%NodesDOF(ElemNodes(1))%List(1:6)) 
-      X_e(7:12)     = m%U_full_elast (p%NodesDOF(ElemNodes(2))%List(1:6)) 
-      Xdd_e(1:6)    = m%U_full_dotdot(p%NodesDOF(ElemNodes(1))%List(1:6)) 
-      Xdd_e(7:12)   = m%U_full_dotdot(p%NodesDOF(ElemNodes(2))%List(1:6)) 
+      X_e(1:6)      = m%U_full_elast (p%NodesDOF(ElemNodes(1))%List(1:6))   ! For floating, m%U_full_elast is the CB+SIM elastic deformation only in the Guyan (rigid-body) frame
+      X_e(7:12)     = m%U_full_elast (p%NodesDOF(ElemNodes(2))%List(1:6))   ! No additional transformation required
+      Xdd_e(1:6)    = matmul(RRg2b,m%U_full_dotdot(p%NodesDOF(ElemNodes(1))%List(1:6)))   ! Transform acceleration to be back in the Guyan frame
+      Xdd_e(7:12)   = matmul(RRg2b,m%U_full_dotdot(p%NodesDOF(ElemNodes(2))%List(1:6)))
       if (.not. bUseInputDirCos) then
          DIRCOS=transpose(p%ElemProps(iElem)%DirCos)! global to local
       endif

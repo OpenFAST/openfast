@@ -27,7 +27,7 @@ set(MEX_LIBS
   $<TARGET_FILE:hydrodynlib>
   $<TARGET_FILE:icedynlib>
   $<TARGET_FILE:icefloelib>
-  $<TARGET_FILE:maplib>
+  $<TARGET_FILE:mappplib>
   $<TARGET_FILE:moordynlib>
   $<TARGET_FILE:orcaflexlib>
   $<TARGET_FILE:sctypeslib>
@@ -41,6 +41,8 @@ set(MEX_LIBS
   $<TARGET_FILE:versioninfolib>
   $<TARGET_FILE:nwtclibs-matlab>    # MATLAB Specific
   $<TARGET_FILE:seastlib>
+  $<TARGET_FILE:aerodisklib>
+  $<TARGET_FILE:sedlib>
 )
 
 # Build the matlab shared library (mex) using the current toolchain.

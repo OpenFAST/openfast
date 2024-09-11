@@ -10,6 +10,7 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
+
 OpenFAST v3.5.3 to OpenFAST dev
 ----------------------------------
 
@@ -17,12 +18,15 @@ The HydroDyn module was split into HydroDyn and SeaState.  This results in a
 completely new input file for SeaState, and complete revision of the HydroDyn
 input file.  See examples in the regression tests for the new formats.
 
+New modules AeroDisk (see :numref:`ADsk`) and Simplified-ElastoDyn (see :numref:`SED`).
+
 ============================================= ======= ==================== ========================================================================================================================================================================================================
 Modified in OpenFAST `dev`
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line    Flag Name            Example Value
 ============================================= ======= ==================== ========================================================================================================================================================================================================
-OpenFAST                                      15      CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 2=AeroDyn v15}
+OpenFAST                                      15      CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
+OpenFAST                                      13      CompElast            3   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades; 3=Simplified ElastoDyn}
 AeroDyn                                       40      IntegrationMethod    3   IntegrationMethod  - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2)
 AeroDyn                                       140\*   BldNd_BlOutNd        "All"  BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
 ElastoDyn blade file                          15                           Removal of the `PitchAxis` input column
@@ -47,11 +51,19 @@ FAST.Farm                                     78       WAT_k_Grad          defau
 AeroDyn                                       80\*     NacArea             0, 0, 0            NacArea            - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
 AeroDyn                                       81\*     NacCd               0, 0, 0            NacCd              - Drag coefficient for the nacelle areas defined above (-)
 AeroDyn                                       82\*     NacDragAC           0, 0, 0            NacDragAC          - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
+Subdyn                                        11       --removed--
 ============================================= ======= ==================== ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
 
-\*\* The AeroDyn 14 module has been removed.  AeroDyn15 renamed to AeroDyn
+\*\* The AeroDyn 14 module has been removed and replaced with AeroDisk.  AeroDyn15 renamed to AeroDyn
+
+New Modules
+~~~~~~~~~~~
+
+- AeroDisk             -- reduced order actuator disk model  (see :numref:`ADsk`)
+- Simplified ElastoDyn -- a reduced order structural model with only yaw and rotor speed degrees of freedom (see :numref:`SED`)
+- SeaState             -- wave dynamics calculations (previously part of HydroDyn)
 
 
 .. _api_change_ad4x:

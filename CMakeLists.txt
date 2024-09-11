@@ -189,6 +189,7 @@ set(OPENFAST_MODULES
   inflowwind
   extloads
   aerodyn
+  aerodisk
   servodyn
   elastodyn
   beamdyn
@@ -209,6 +210,7 @@ set(OPENFAST_MODULES
   supercontroller
   externalinflow
   openfast-library
+  simple-elastodyn
 )
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")

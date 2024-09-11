@@ -1,4 +1,4 @@
-!**********************************************************************************************************************************
+!*********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 ! Copyright (C) 2016-2021  Envision Energy USA, LTD
@@ -395,10 +395,10 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    do iR = 1, nRotors
       p%rotors(iR)%TFinAero         = InputFileData%rotors(iR)%TFinAero
       p%rotors(iR)%TFin%TFinMod     = InputFileData%rotors(iR)%TFin%TFinMod
-      p%rotors(iR)%TFin%TFinChord   = InputFileData%rotors(iR)%TFin%TFinChord
       p%rotors(iR)%TFin%TFinArea    = InputFileData%rotors(iR)%TFin%TFinArea
       p%rotors(iR)%TFin%TFinIndMod  = InputFileData%rotors(iR)%TFin%TFinIndMod
       p%rotors(iR)%TFin%TFinAFID    = InputFileData%rotors(iR)%TFin%TFinAFID
+      p%rotors(iR)%TFin%TFinChord   = InputFileData%rotors(iR)%TFin%TFinChord
       p%rotors(iR)%TFin%TFinKp      = InputFileData%rotors(iR)%TFin%TFinKp
       p%rotors(iR)%TFin%TFinSigma   = InputFileData%rotors(iR)%TFin%TFinSigma
       p%rotors(iR)%TFin%TFinAStar   = InputFileData%rotors(iR)%TFin%TFinAStar
@@ -1403,8 +1403,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   ! NOTE: p_AD%FlowField is set in the glue code (or ADI module); seems like FlowField should be an initialization input so that would be clearer for new developers...
-   
    p_AD%UA_Flag       = InputFileData%UA_Init%UAMod > UA_None
    p_AD%CompAeroMaps  = InitInp%CompAeroMaps
 
@@ -4958,9 +4956,9 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, RotInflow, m, y, ErrStat, ErrMsg )
       ! Unsteady aerodynamic model
 
       ! Calculate separation function (quasi-steady)
-      x1 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(1)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(1)))) 
-      x2 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(2)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(2)))) 
-      x3 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(3)*((ABS(gamma_tf)*180.0_ReKi/pi)-p%TFin%TFinAStar(3))))
+      x1 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(1)*((ABS(gamma_tf)*R2D)-p%TFin%TFinAStar(1)))) 
+      x2 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(2)*((ABS(gamma_tf)*R2D)-p%TFin%TFinAStar(2)))) 
+      x3 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(3)*((ABS(gamma_tf)*R2D)-p%TFin%TFinAStar(3))))
    
       ! Calculate unsteady force on tail fin
       force_tf(2) = 0.5_ReKi * p%AirDens * p%TFin%TFinArea * &

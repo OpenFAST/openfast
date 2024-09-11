@@ -333,6 +333,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UnSum = 0_IntKi      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
   END TYPE Morison_InitInputType
 ! =======================
 ! =========  Morison_InitOutputType  =======
@@ -416,11 +417,13 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< SeaState wave field [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
   END TYPE Morison_ParameterType
 ! =======================
 ! =========  Morison_InputType  =======
   TYPE, PUBLIC :: Morison_InputType
     TYPE(MeshType)  :: Mesh      !< Kinematics of each node input mesh [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Reference platform yaw offset [(rad)]
   END TYPE Morison_InputType
 ! =======================
 ! =========  Morison_OutputType  =======
@@ -2575,6 +2578,7 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%UnSum = SrcInitInputData%UnSum
    DstInitInputData%WaveField => SrcInitInputData%WaveField
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
+   DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
 end subroutine
 
 subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -2842,6 +2846,7 @@ subroutine Morison_PackInitInput(RF, Indata)
       end if
    end if
    call RegPack(RF, InData%VisMeshes)
+   call RegPack(RF, InData%PtfmYMod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3052,6 +3057,7 @@ subroutine Morison_UnPackInitInput(RF, OutData)
       OutData%WaveField => null()
    end if
    call RegUnpack(RF, OutData%VisMeshes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Morison_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -3958,6 +3964,7 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%WaveField => SrcParamData%WaveField
    DstParamData%VisMeshes = SrcParamData%VisMeshes
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
 end subroutine
 
 subroutine Morison_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -4112,6 +4119,7 @@ subroutine Morison_PackParam(RF, Indata)
       end if
    end if
    call RegPack(RF, InData%VisMeshes)
+   call RegPack(RF, InData%PtfmYMod)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4217,6 +4225,7 @@ subroutine Morison_UnPackParam(RF, OutData)
       OutData%WaveField => null()
    end if
    call RegUnpack(RF, OutData%VisMeshes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Morison_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -4233,6 +4242,7 @@ subroutine Morison_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
    call MeshCopy(SrcInputData%Mesh, DstInputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInputData%PtfmRefY = SrcInputData%PtfmRefY
 end subroutine
 
 subroutine Morison_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -4254,6 +4264,7 @@ subroutine Morison_PackInput(RF, Indata)
    character(*), parameter         :: RoutineName = 'Morison_PackInput'
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%Mesh) 
+   call RegPack(RF, InData%PtfmRefY)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4263,6 +4274,7 @@ subroutine Morison_UnPackInput(RF, OutData)
    character(*), parameter            :: RoutineName = 'Morison_UnPackInput'
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%Mesh) ! Mesh 
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Morison_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -4436,6 +4448,7 @@ SUBROUTINE Morison_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, Err
    
    CALL MeshExtrapInterp1(u1%Mesh, u2%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY
 END SUBROUTINE
 
 SUBROUTINE Morison_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
@@ -4493,6 +4506,7 @@ SUBROUTINE Morison_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat,
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
    CALL MeshExtrapInterp2(u1%Mesh, u2%Mesh, u3%Mesh, tin, u_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   u_out%PtfmRefY = a1*u1%PtfmRefY + a2*u2%PtfmRefY + a3*u3%PtfmRefY
 END SUBROUTINE
 
 subroutine Morison_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)

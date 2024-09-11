@@ -462,7 +462,50 @@
 		<File RelativePath="..\..\modules\aerodyn\src\BEMTUncoupled.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\DBEMT.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\mod_root1dim.f90"/>
-		<File RelativePath="..\..\modules\aerodyn\src\UnsteadyAero.f90"/></Filter></Filter>
+		<File RelativePath="..\..\modules\aerodyn\src\UnsteadyAero.f90"/></Filter>
+		<Filter Name="AeroDisk">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Registry.txt">
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk.f90"/>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_IO.f90"/>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Output_Params.f90"/></Filter></Filter>
 		<Filter Name="BeamDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\beamdyn\src\BeamDyn_Types.f90">
@@ -998,7 +1041,8 @@
 		<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2.f90"/>
-		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/></Filter>
+		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/>
+		<File RelativePath="..\..\modules\hydrodyn\src\YawOffset.f90"/></Filter>
 		<Filter Name="Ice">
 		<Filter Name="IceDyn">
 		<Filter Name="RegistryFiles">
@@ -2273,6 +2317,49 @@
 		<File RelativePath="..\..\modules\servodyn\src\StrucCtrl.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\UserSubs.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\UserVSCont_KP.f90"/></Filter>
+		<Filter Name="SimpleElastoDyn">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED.f90"/>
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED_IO.f90"/>
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED_Output_Params.f90"/></Filter>
 		<Filter Name="SubDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Registry.txt">
