@@ -19,65 +19,6 @@ public WaveField_Interp_Setup3D, WaveField_Interp_Setup4D
 CONTAINS
 
 !-------------------- Subroutine for wave elevation ------------------!
-function WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg )
-   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
-   type(SeaSt_WaveField_MiscVarType),  intent(inout) :: WaveField_m
-   real(DbKi),                         intent(in   ) :: Time
-   real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
-   integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
-   character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
-
-   real(SiKi)                                        :: WaveField_GetNodeWaveElev1
-   real(SiKi)                                        :: Zeta
-   character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveElev1'
-   integer(IntKi)                                    :: errStat2
-   character(ErrMsgLen)                              :: errMsg2
-
-   ErrStat   = ErrID_None
-   ErrMsg    = ""
-
-   IF (ALLOCATED(WaveField%WaveElev1)) THEN
-      CALL WaveField_Interp_Setup3D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Zeta = WaveField_Interp_3D( WaveField%WaveElev1, WaveField_m )
-   ELSE
-      Zeta = 0.0_SiKi
-   END IF
-
-   WaveField_GetNodeWaveElev1 = Zeta
-
-end function WaveField_GetNodeWaveElev1
-
-
-function WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg )
-   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
-   type(SeaSt_WaveField_MiscVarType),  intent(inout) :: WaveField_m
-   real(DbKi),                         intent(in   ) :: Time
-   real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
-   integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
-   character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
-
-   real(SiKi)                                        :: WaveField_GetNodeWaveElev2
-   real(SiKi)                                        :: Zeta
-   character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveElev2'
-   integer(IntKi)                                    :: errStat2
-   character(ErrMsgLen)                              :: errMsg2
-
-   ErrStat   = ErrID_None
-   ErrMsg    = ""
-
-   IF (ALLOCATED(WaveField%WaveElev2)) THEN
-      CALL WaveField_Interp_Setup3D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Zeta = WaveField_Interp_3D( WaveField%WaveElev2, WaveField_m )
-   ELSE
-      Zeta = 0.0_SiKi
-   END IF
-
-   WaveField_GetNodeWaveElev2 = Zeta
-
-end function WaveField_GetNodeWaveElev2
-
 
 FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg, Elev1, Elev2 )
    type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
