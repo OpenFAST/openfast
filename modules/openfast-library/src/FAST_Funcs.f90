@@ -24,6 +24,7 @@ module FAST_Funcs
 use FAST_Types
 use FAST_ModTypes
 use NWTC_LAPACK
+use AeroDisk
 use AeroDyn
 use BeamDyn
 use ElastoDyn
@@ -39,6 +40,7 @@ use MAP
 use MoorDyn
 use OrcaFlexInterface
 use SeaState
+use SED
 use ServoDyn
 use SubDyn
 

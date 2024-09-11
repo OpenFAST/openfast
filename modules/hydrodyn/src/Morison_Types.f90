@@ -436,9 +436,10 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: Morison_x_DummyContState         =   1 ! Morison%DummyContState
    integer(IntKi), public, parameter :: Morison_z_DummyConstrState       =   2 ! Morison%DummyConstrState
    integer(IntKi), public, parameter :: Morison_u_Mesh                   =   3 ! Morison%Mesh
-   integer(IntKi), public, parameter :: Morison_y_Mesh                   =   4 ! Morison%Mesh
-   integer(IntKi), public, parameter :: Morison_y_VisMesh                =   5 ! Morison%VisMesh
-   integer(IntKi), public, parameter :: Morison_y_WriteOutput            =   6 ! Morison%WriteOutput
+   integer(IntKi), public, parameter :: Morison_u_PtfmRefY               =   4 ! Morison%PtfmRefY
+   integer(IntKi), public, parameter :: Morison_y_Mesh                   =   5 ! Morison%Mesh
+   integer(IntKi), public, parameter :: Morison_y_VisMesh                =   6 ! Morison%VisMesh
+   integer(IntKi), public, parameter :: Morison_y_WriteOutput            =   7 ! Morison%WriteOutput
 
 contains
 
@@ -4859,6 +4860,8 @@ subroutine Morison_VarPackInput(V, u, ValAry)
       select case (DL%Num)
       case (Morison_u_Mesh)
          call MV_PackMesh(V, u%Mesh, ValAry)                                  ! Mesh
+      case (Morison_u_PtfmRefY)
+         VarVals(1) = u%PtfmRefY                                              ! Scalar
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -4883,6 +4886,8 @@ subroutine Morison_VarUnpackInput(V, ValAry, u)
       select case (DL%Num)
       case (Morison_u_Mesh)
          call MV_UnpackMesh(V, ValAry, u%Mesh)                                ! Mesh
+      case (Morison_u_PtfmRefY)
+         u%PtfmRefY = VarVals(1)                                              ! Scalar
       end select
    end associate
 end subroutine
@@ -4893,6 +4898,8 @@ function Morison_InputFieldName(DL) result(Name)
    select case (DL%Num)
    case (Morison_u_Mesh)
        Name = "u%Mesh"
+   case (Morison_u_PtfmRefY)
+       Name = "u%PtfmRefY"
    case default
        Name = "Unknown Field"
    end select

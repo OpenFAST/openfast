@@ -153,7 +153,8 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: WAMIT_z_SS_Rdtn_DummyConstrState =   5 ! WAMIT%SS_Rdtn%DummyConstrState
    integer(IntKi), public, parameter :: WAMIT_z_SS_Exctn_DummyConstrState =   6 ! WAMIT%SS_Exctn%DummyConstrState
    integer(IntKi), public, parameter :: WAMIT_u_Mesh                     =   7 ! WAMIT%Mesh
-   integer(IntKi), public, parameter :: WAMIT_y_Mesh                     =   8 ! WAMIT%Mesh
+   integer(IntKi), public, parameter :: WAMIT_u_PtfmRefY                 =   8 ! WAMIT%PtfmRefY
+   integer(IntKi), public, parameter :: WAMIT_y_Mesh                     =   9 ! WAMIT%Mesh
 
 contains
 
@@ -1674,6 +1675,8 @@ subroutine WAMIT_VarPackInput(V, u, ValAry)
       select case (DL%Num)
       case (WAMIT_u_Mesh)
          call MV_PackMesh(V, u%Mesh, ValAry)                                  ! Mesh
+      case (WAMIT_u_PtfmRefY)
+         VarVals(1) = u%PtfmRefY                                              ! Scalar
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -1698,6 +1701,8 @@ subroutine WAMIT_VarUnpackInput(V, ValAry, u)
       select case (DL%Num)
       case (WAMIT_u_Mesh)
          call MV_UnpackMesh(V, ValAry, u%Mesh)                                ! Mesh
+      case (WAMIT_u_PtfmRefY)
+         u%PtfmRefY = VarVals(1)                                              ! Scalar
       end select
    end associate
 end subroutine
@@ -1708,6 +1713,8 @@ function WAMIT_InputFieldName(DL) result(Name)
    select case (DL%Num)
    case (WAMIT_u_Mesh)
        Name = "u%Mesh"
+   case (WAMIT_u_PtfmRefY)
+       Name = "u%PtfmRefY"
    case default
        Name = "Unknown Field"
    end select

@@ -64,7 +64,7 @@ typedef  ^        InitOutputType    ReKi                 PlatformPos      {6} - 
 typedef  ^        InitOutputType    ReKi                 HubRad            -  - -   "Preconed hub radius (distance from the rotor apex to the blade root)"   m
 typedef  ^        InitOutputType    ReKi                 RotSpeed          -  - -   "Initial or fixed rotor speed"   rad/s
 typedef  ^        InitOutputType    LOGICAL              GenDOF            -  - -   "whether the generator DOF is on (true) or off (false)" -
-
+typedef  ^        InitOutputType    ModVarsType          Vars              -  - -   "Module variables" -
 
 # ..... Inputs ....................................................................................................................
 # inputs on meshes:
@@ -156,4 +156,9 @@ typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - 
 typedef  ^        MiscVarType          MeshMapType       mapHub2Root      {:} - -   "Mesh mapping from Hub to BladeRootMotion" -
 typedef  ^        MiscVarType          R8Ki              QD2T             {:} - -   "Current estimate of first derivative of QD (acceleration matrix) for each degree of freedom"
 typedef  ^        MiscVarType          ReKi              HubPt_X          {3} - -   "X orientation of hub calculated in CalcOutput -- saving so we don't recalculate a bunch of things to get it in UpdateStates"
+typedef  ^        MiscVarType          ModJacType	            Jac        -  - -   "Values corresponding to module variables"
+typedef  ^        MiscVarType          SED_ContinuousStateType  x_perturb  -  - -   "Continuous state type for linearization perturbation" -
+typedef  ^        MiscVarType          SED_ContinuousStateType  dxdt_lin   -  - -   "Continuous state type for linearization output" -
+typedef  ^        MiscVarType          SED_InputType            u_perturb  -  - -   "Input type for linearization perturbation" -
+typedef  ^        MiscVarType          SED_OutputType           y_lin      -  - -   "Output type for linearization output" -
 

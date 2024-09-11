@@ -229,15 +229,16 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState =   7 ! HydroDyn%WAMIT%SS_Exctn%DummyConstrState
    integer(IntKi), public, parameter :: HydroDyn_z_Morison_DummyConstrState =   8 ! HydroDyn%Morison%DummyConstrState
    integer(IntKi), public, parameter :: HydroDyn_u_Morison_Mesh          =   9 ! HydroDyn%Morison%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_u_WAMITMesh             =  10 ! HydroDyn%WAMITMesh
-   integer(IntKi), public, parameter :: HydroDyn_u_PRPMesh               =  11 ! HydroDyn%PRPMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_Mesh            =  12 ! HydroDyn%WAMIT(DL%i1)%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT2_Mesh           =  13 ! HydroDyn%WAMIT2(DL%i1)%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_Mesh          =  14 ! HydroDyn%Morison%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_VisMesh       =  15 ! HydroDyn%Morison%VisMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_WriteOutput   =  16 ! HydroDyn%Morison%WriteOutput
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMITMesh             =  17 ! HydroDyn%WAMITMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WriteOutput           =  18 ! HydroDyn%WriteOutput
+   integer(IntKi), public, parameter :: HydroDyn_u_Morison_PtfmRefY      =  10 ! HydroDyn%Morison%PtfmRefY
+   integer(IntKi), public, parameter :: HydroDyn_u_WAMITMesh             =  11 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_u_PRPMesh               =  12 ! HydroDyn%PRPMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_Mesh            =  13 ! HydroDyn%WAMIT(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT2_Mesh           =  14 ! HydroDyn%WAMIT2(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_Mesh          =  15 ! HydroDyn%Morison%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_VisMesh       =  16 ! HydroDyn%Morison%VisMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_WriteOutput   =  17 ! HydroDyn%Morison%WriteOutput
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMITMesh             =  18 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WriteOutput           =  19 ! HydroDyn%WriteOutput
 
 contains
 
@@ -2868,6 +2869,8 @@ subroutine HydroDyn_VarPackInput(V, u, ValAry)
       select case (DL%Num)
       case (HydroDyn_u_Morison_Mesh)
          call MV_PackMesh(V, u%Morison%Mesh, ValAry)                          ! Mesh
+      case (HydroDyn_u_Morison_PtfmRefY)
+         VarVals(1) = u%Morison%PtfmRefY                                      ! Scalar
       case (HydroDyn_u_WAMITMesh)
          call MV_PackMesh(V, u%WAMITMesh, ValAry)                             ! Mesh
       case (HydroDyn_u_PRPMesh)
@@ -2896,6 +2899,8 @@ subroutine HydroDyn_VarUnpackInput(V, ValAry, u)
       select case (DL%Num)
       case (HydroDyn_u_Morison_Mesh)
          call MV_UnpackMesh(V, ValAry, u%Morison%Mesh)                        ! Mesh
+      case (HydroDyn_u_Morison_PtfmRefY)
+         u%Morison%PtfmRefY = VarVals(1)                                      ! Scalar
       case (HydroDyn_u_WAMITMesh)
          call MV_UnpackMesh(V, ValAry, u%WAMITMesh)                           ! Mesh
       case (HydroDyn_u_PRPMesh)
@@ -2910,6 +2915,8 @@ function HydroDyn_InputFieldName(DL) result(Name)
    select case (DL%Num)
    case (HydroDyn_u_Morison_Mesh)
        Name = "u%Morison%Mesh"
+   case (HydroDyn_u_Morison_PtfmRefY)
+       Name = "u%Morison%PtfmRefY"
    case (HydroDyn_u_WAMITMesh)
        Name = "u%WAMITMesh"
    case (HydroDyn_u_PRPMesh)

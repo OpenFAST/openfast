@@ -651,18 +651,20 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: SrvD_y_BlPitchCom                =  63 ! SrvD%BlPitchCom
    integer(IntKi), public, parameter :: SrvD_y_BlAirfoilCom              =  64 ! SrvD%BlAirfoilCom
    integer(IntKi), public, parameter :: SrvD_y_YawMom                    =  65 ! SrvD%YawMom
-   integer(IntKi), public, parameter :: SrvD_y_GenTrq                    =  66 ! SrvD%GenTrq
-   integer(IntKi), public, parameter :: SrvD_y_HSSBrTrqC                 =  67 ! SrvD%HSSBrTrqC
-   integer(IntKi), public, parameter :: SrvD_y_ElecPwr                   =  68 ! SrvD%ElecPwr
-   integer(IntKi), public, parameter :: SrvD_y_TBDrCon                   =  69 ! SrvD%TBDrCon
-   integer(IntKi), public, parameter :: SrvD_y_Lidar                     =  70 ! SrvD%Lidar
-   integer(IntKi), public, parameter :: SrvD_y_CableDeltaL               =  71 ! SrvD%CableDeltaL
-   integer(IntKi), public, parameter :: SrvD_y_CableDeltaLdot            =  72 ! SrvD%CableDeltaLdot
-   integer(IntKi), public, parameter :: SrvD_y_BStCLoadMesh              =  73 ! SrvD%BStCLoadMesh(DL%i1, DL%i2)
-   integer(IntKi), public, parameter :: SrvD_y_NStCLoadMesh              =  74 ! SrvD%NStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_TStCLoadMesh              =  75 ! SrvD%TStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_SStCLoadMesh              =  76 ! SrvD%SStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_toSC                      =  77 ! SrvD%toSC
+   integer(IntKi), public, parameter :: SrvD_y_YawPosCom                 =  66 ! SrvD%YawPosCom
+   integer(IntKi), public, parameter :: SrvD_y_YawRateCom                =  67 ! SrvD%YawRateCom
+   integer(IntKi), public, parameter :: SrvD_y_GenTrq                    =  68 ! SrvD%GenTrq
+   integer(IntKi), public, parameter :: SrvD_y_HSSBrTrqC                 =  69 ! SrvD%HSSBrTrqC
+   integer(IntKi), public, parameter :: SrvD_y_ElecPwr                   =  70 ! SrvD%ElecPwr
+   integer(IntKi), public, parameter :: SrvD_y_TBDrCon                   =  71 ! SrvD%TBDrCon
+   integer(IntKi), public, parameter :: SrvD_y_Lidar                     =  72 ! SrvD%Lidar
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaL               =  73 ! SrvD%CableDeltaL
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaLdot            =  74 ! SrvD%CableDeltaLdot
+   integer(IntKi), public, parameter :: SrvD_y_BStCLoadMesh              =  75 ! SrvD%BStCLoadMesh(DL%i1, DL%i2)
+   integer(IntKi), public, parameter :: SrvD_y_NStCLoadMesh              =  76 ! SrvD%NStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_TStCLoadMesh              =  77 ! SrvD%TStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_SStCLoadMesh              =  78 ! SrvD%SStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_toSC                      =  79 ! SrvD%toSC
 
 contains
 
@@ -7837,6 +7839,10 @@ subroutine SrvD_VarPackOutput(V, y, ValAry)
          VarVals = y%BlAirfoilCom(V%iLB:V%iUB)                                ! Rank 1 Array
       case (SrvD_y_YawMom)
          VarVals(1) = y%YawMom                                                ! Scalar
+      case (SrvD_y_YawPosCom)
+         VarVals(1) = y%YawPosCom                                             ! Scalar
+      case (SrvD_y_YawRateCom)
+         VarVals(1) = y%YawRateCom                                            ! Scalar
       case (SrvD_y_GenTrq)
          VarVals(1) = y%GenTrq                                                ! Scalar
       case (SrvD_y_HSSBrTrqC)
@@ -7891,6 +7897,10 @@ subroutine SrvD_VarUnpackOutput(V, ValAry, y)
          y%BlAirfoilCom(V%iLB:V%iUB) = VarVals                                ! Rank 1 Array
       case (SrvD_y_YawMom)
          y%YawMom = VarVals(1)                                                ! Scalar
+      case (SrvD_y_YawPosCom)
+         y%YawPosCom = VarVals(1)                                             ! Scalar
+      case (SrvD_y_YawRateCom)
+         y%YawRateCom = VarVals(1)                                            ! Scalar
       case (SrvD_y_GenTrq)
          y%GenTrq = VarVals(1)                                                ! Scalar
       case (SrvD_y_HSSBrTrqC)
@@ -7931,6 +7941,10 @@ function SrvD_OutputFieldName(DL) result(Name)
        Name = "y%BlAirfoilCom"
    case (SrvD_y_YawMom)
        Name = "y%YawMom"
+   case (SrvD_y_YawPosCom)
+       Name = "y%YawPosCom"
+   case (SrvD_y_YawRateCom)
+       Name = "y%YawRateCom"
    case (SrvD_y_GenTrq)
        Name = "y%GenTrq"
    case (SrvD_y_HSSBrTrqC)

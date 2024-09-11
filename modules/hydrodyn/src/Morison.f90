@@ -2520,6 +2520,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    INTEGER                                           :: I, J
    REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
       
+   TYPE(Morison_MemberType) :: mem     ! the current member
    INTEGER                  :: N       ! Number of elements within a given member
    REAL(ReKi)               :: dl      ! Element length within a given member, m
    REAL(ReKi)               :: vec(3)  ! Vector pointing from a member's 1st node to its last node
@@ -2624,7 +2625,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    
    ! Loop through each member
    DO im = 1, p%NMembers    
-      associate (mem => p%Members(im))
+      mem = p%Members(im)
       N   = mem%NElements
       call YawMember(mem, u%PtfmRefY, ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3470,7 +3471,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       end if   ! PropPot
       !----------------------------------- external buoyancy loads: ends -----------------------------------!
 
-      end associate
    end do ! im - looping through members
     
    !---------------------------------------------------------------------------------------------------------------!

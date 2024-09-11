@@ -112,7 +112,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
 
    ! Standard Turbine initialization
    call FAST_InitializeAll(t_initial, T%m_Glue, T%p_FAST, T%y_FAST, T%m_FAST, &
-                           T%ED, T%BD, T%SrvD, T%AD, &
+                           T%ED, T%SED, T%BD, T%SrvD, T%AD, T%ADsk, &
                            T%ExtLd, T%IfW, T%ExtInfw, T%SC_DX, &
                            T%SeaSt, T%HD, T%SD, T%ExtPtfm, T%MAP, &
                            T%FEAM, T%MD, T%Orca, T%IceF, T%IceD, &
@@ -305,8 +305,8 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
 
       n_global = real(n_case, DbKi) ! n_global is double-precision so that we can reuse existing code.
 
-      call WrOutputLine(n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, T%ED%y%WriteOutput, &
-                        T%AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
+      call WrOutputLine(n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, T%ED%y%WriteOutput, UnusedAry, &
+                        T%AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
                         UnusedAry, UnusedAry, UnusedAry, UnusedAry, T%IceD%y, T%BD%y, ErrStat2, ErrMsg2)
       if (Failed()) return
 
