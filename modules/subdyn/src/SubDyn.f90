@@ -565,7 +565,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !locals
       INTEGER(IntKi)               :: I          ! Counters
       INTEGER(IntKi)               :: iSDNode
-      REAL(ReKi)                   :: rotations(3)
+      REAL(R8Ki)                   :: rotations(3)
       REAL(ReKi)                   :: Y1(6)
       REAL(ReKi)                   :: Y1_CB(6)
       REAL(ReKi)                   :: Y1_CB_L(6)
@@ -574,7 +574,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: Y1_Utp(6)
       REAL(ReKi)                   :: Y1_GuyanLoadCorrection(3) ! Lever arm moment contributions due to interface displacement
       REAL(ReKi)                   :: udotdot_TP(6)
-      REAL(ReKi)                   :: DCM(3,3)
+      REAL(R8Ki)                   :: DCM(3,3)
       REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       ! Variables for Guyan rigid body motion
       real(ReKi), dimension(3) :: Om, OmD ! Omega, OmegaDot (body rotational speed and acceleration)
@@ -596,7 +596,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --- Convert inputs to FEM DOFs and convenient 6-vector storage
       ! Compute the small rotation angles given the input direction cosine matrix
       rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat2, Errmsg2); if(Failed()) return
-      m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
+      m%u_TP       = (/u%TPMesh%TranslationDisp(:,1), rotations/)
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
@@ -3086,7 +3086,7 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
    TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
    LOGICAL,                      INTENT(IN   )  :: bGuyan      !< include Guyan Contribution
    LOGICAL,                      INTENT(IN   )  :: bElastic    !< include Elastic contribution
-   REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: DU_full     !< LeverArm in full system
+   REAL(R8Ki), DIMENSION(:),     INTENT(  OUT)  :: DU_full     !< LeverArm in full system
    !locals
    INTEGER(IntKi)               :: iSDNode
    REAL(ReKi)                   :: rotations(3)
