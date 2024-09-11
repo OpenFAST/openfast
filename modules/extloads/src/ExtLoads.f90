@@ -49,8 +49,8 @@ contains
 !! FAST)   
 subroutine ExtLd_SetInitOut(p, InitOut, errStat, errMsg)
 
-   type(ExtLd_InitOutputType),       intent(  out)  :: InitOut          ! output data
-   type(ExtLd_ParameterType),        intent(in   )  :: p                ! Parameters
+   type(ExtLd_InitOutputType),    intent(inout)  :: InitOut          ! output data
+   type(ExtLd_ParameterType),     intent(in   )  :: p                ! Parameters
    integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
    character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
 
