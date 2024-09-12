@@ -114,6 +114,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     INTEGER(IntKi)  :: numLegs = 0_IntKi      !< Number of legs on the structure [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE IceD_InitOutputType
 ! =======================
 ! =========  IceD_ContinuousStateType  =======
@@ -145,11 +146,6 @@ IMPLICIT NONE
     TYPE(IceD_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: xdot      !< previous state deriv for multi-step [m]
     INTEGER(IntKi)  :: n = 0_IntKi      !< tracks time step for which OtherState was updated [-]
   END TYPE IceD_OtherStateType
-! =======================
-! =========  IceD_MiscVarType  =======
-  TYPE, PUBLIC :: IceD_MiscVarType
-    INTEGER(IntKi)  :: DummyMiscVar = 0_IntKi      !< Remove this variable if you have misc/optimization variables [-]
-  END TYPE IceD_MiscVarType
 ! =======================
 ! =========  IceD_ParameterType  =======
   TYPE, PUBLIC :: IceD_ParameterType
@@ -223,6 +219,16 @@ IMPLICIT NONE
     TYPE(MeshType)  :: PointMesh      !< contains Ice force [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE IceD_OutputType
+! =======================
+! =========  IceD_MiscVarType  =======
+  TYPE, PUBLIC :: IceD_MiscVarType
+    INTEGER(IntKi)  :: DummyMiscVar = 0_IntKi      !< Remove this variable if you have misc/optimization variables [-]
+    TYPE(ModJacType)  :: Jac      !< Values [corresponding]
+    TYPE(IceD_ContinuousStateType)  :: x_perturb      !<  [-]
+    TYPE(IceD_ContinuousStateType)  :: dxdt_lin      !<  [-]
+    TYPE(IceD_InputType)  :: u_perturb      !<  [-]
+    TYPE(IceD_OutputType)  :: y_lin      !<  [-]
+  END TYPE IceD_MiscVarType
 ! =======================
    integer(IntKi), public, parameter :: IceD_x_q                         =   1 ! IceD%q
    integer(IntKi), public, parameter :: IceD_x_dqdt                      =   2 ! IceD%dqdt
@@ -591,6 +597,9 @@ subroutine IceD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine IceD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -610,6 +619,8 @@ subroutine IceD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine IceD_PackInitOutput(RF, Indata)
@@ -621,6 +632,7 @@ subroutine IceD_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call RegPack(RF, InData%numLegs)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -636,6 +648,7 @@ subroutine IceD_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%numLegs); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine IceD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -918,44 +931,6 @@ subroutine IceD_UnPackOtherState(RF, OutData)
       end do
    end if
    call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine IceD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(IceD_MiscVarType), intent(in) :: SrcMiscData
-   type(IceD_MiscVarType), intent(inout) :: DstMiscData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'IceD_CopyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
-end subroutine
-
-subroutine IceD_DestroyMisc(MiscData, ErrStat, ErrMsg)
-   type(IceD_MiscVarType), intent(inout) :: MiscData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'IceD_DestroyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine IceD_PackMisc(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(IceD_MiscVarType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'IceD_PackMisc'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%DummyMiscVar)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine IceD_UnPackMisc(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(IceD_MiscVarType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'IceD_UnPackMisc'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%DummyMiscVar); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -1423,6 +1398,83 @@ subroutine IceD_UnPackOutput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%PointMesh) ! PointMesh 
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine IceD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(IceD_MiscVarType), intent(inout) :: SrcMiscData
+   type(IceD_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'IceD_CopyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IceD_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IceD_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IceD_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IceD_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine IceD_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(IceD_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'IceD_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceD_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceD_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceD_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceD_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine IceD_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(IceD_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'IceD_PackMisc'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DummyMiscVar)
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call IceD_PackContState(RF, InData%x_perturb) 
+   call IceD_PackContState(RF, InData%dxdt_lin) 
+   call IceD_PackInput(RF, InData%u_perturb) 
+   call IceD_PackOutput(RF, InData%y_lin) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine IceD_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(IceD_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'IceD_UnPackMisc'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DummyMiscVar); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call IceD_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
+   call IceD_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
+   call IceD_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call IceD_UnpackOutput(RF, OutData%y_lin) ! y_lin 
 end subroutine
 
 subroutine IceD_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)

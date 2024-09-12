@@ -47,6 +47,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE IceFloe_InitOutputType
 ! =======================
 ! =========  IceFloe_ContinuousStateType  =======
@@ -68,11 +69,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: IceFloe_OtherStateType
     INTEGER(IntKi)  :: DummyOtherState = 0_IntKi      !< Remove this variable if you have other states [-]
   END TYPE IceFloe_OtherStateType
-! =======================
-! =========  IceFloe_MiscVarType  =======
-  TYPE, PUBLIC :: IceFloe_MiscVarType
-    INTEGER(IntKi)  :: DummyMiscVar = 0_IntKi      !< Remove this variable if you have misc/optimization variables [-]
-  END TYPE IceFloe_MiscVarType
 ! =======================
 ! =========  IceFloe_ParameterType  =======
   TYPE, PUBLIC :: IceFloe_ParameterType
@@ -107,6 +103,16 @@ IMPLICIT NONE
     TYPE(MeshType)  :: iceMesh      !< Horizontal forces and torsional moment(s) on support structure leg(s) at water line [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE IceFloe_OutputType
+! =======================
+! =========  IceFloe_MiscVarType  =======
+  TYPE, PUBLIC :: IceFloe_MiscVarType
+    INTEGER(IntKi)  :: DummyMiscVar = 0_IntKi      !< Remove this variable if you have misc/optimization variables [-]
+    TYPE(ModJacType)  :: Jac      !< Values [corresponding]
+    TYPE(IceFloe_ContinuousStateType)  :: x_perturb      !<  [-]
+    TYPE(IceFloe_ContinuousStateType)  :: dxdt_lin      !<  [-]
+    TYPE(IceFloe_InputType)  :: u_perturb      !<  [-]
+    TYPE(IceFloe_OutputType)  :: y_lin      !<  [-]
+  END TYPE IceFloe_MiscVarType
 ! =======================
    integer(IntKi), public, parameter :: IceFloe_x_DummyContStateVar      =   1 ! IceFloe%DummyContStateVar
    integer(IntKi), public, parameter :: IceFloe_z_DummyConstrStateVar    =   2 ! IceFloe%DummyConstrStateVar
@@ -205,6 +211,9 @@ subroutine IceFloe_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine IceFloe_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -224,6 +233,8 @@ subroutine IceFloe_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine IceFloe_PackInitOutput(RF, Indata)
@@ -234,6 +245,7 @@ subroutine IceFloe_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -248,6 +260,7 @@ subroutine IceFloe_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine IceFloe_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -400,44 +413,6 @@ subroutine IceFloe_UnPackOtherState(RF, OutData)
    character(*), parameter            :: RoutineName = 'IceFloe_UnPackOtherState'
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DummyOtherState); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine IceFloe_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(IceFloe_MiscVarType), intent(in) :: SrcMiscData
-   type(IceFloe_MiscVarType), intent(inout) :: DstMiscData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'IceFloe_CopyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
-end subroutine
-
-subroutine IceFloe_DestroyMisc(MiscData, ErrStat, ErrMsg)
-   type(IceFloe_MiscVarType), intent(inout) :: MiscData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'IceFloe_DestroyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine IceFloe_PackMisc(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(IceFloe_MiscVarType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'IceFloe_PackMisc'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%DummyMiscVar)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine IceFloe_UnPackMisc(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(IceFloe_MiscVarType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'IceFloe_UnPackMisc'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%DummyMiscVar); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -704,6 +679,83 @@ subroutine IceFloe_UnPackOutput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call MeshUnpack(RF, OutData%iceMesh) ! iceMesh 
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine IceFloe_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(IceFloe_MiscVarType), intent(inout) :: SrcMiscData
+   type(IceFloe_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'IceFloe_CopyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IceFloe_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IceFloe_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IceFloe_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IceFloe_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine IceFloe_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(IceFloe_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'IceFloe_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceFloe_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceFloe_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceFloe_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceFloe_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine IceFloe_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(IceFloe_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'IceFloe_PackMisc'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DummyMiscVar)
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call IceFloe_PackContState(RF, InData%x_perturb) 
+   call IceFloe_PackContState(RF, InData%dxdt_lin) 
+   call IceFloe_PackInput(RF, InData%u_perturb) 
+   call IceFloe_PackOutput(RF, InData%y_lin) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine IceFloe_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(IceFloe_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'IceFloe_UnPackMisc'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DummyMiscVar); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call IceFloe_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
+   call IceFloe_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
+   call IceFloe_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call IceFloe_UnpackOutput(RF, OutData%y_lin) ! y_lin 
 end subroutine
 
 subroutine IceFloe_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
