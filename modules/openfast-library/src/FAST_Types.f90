@@ -880,8 +880,6 @@ IMPLICIT NONE
 ! =========  FAST_ExternInitType  =======
   TYPE, PUBLIC :: FAST_ExternInitType
     REAL(DbKi)  :: Tmax = -1      !< External code specified Tmax [s]
-    INTEGER(IntKi)  :: SensorType = SensorType_None      !< lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file [-]
-    LOGICAL  :: LidRadialVel = .false.      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
     INTEGER(IntKi)  :: TurbIDforName = -1      !< ID number for turbine (used to create output file naming convention) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TurbinePos = 0.0_ReKi      !< Initial position of turbine base (origin used for graphics or in FAST.Farm) [m]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
@@ -15212,8 +15210,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstExternInitTypeData%Tmax = SrcExternInitTypeData%Tmax
-   DstExternInitTypeData%SensorType = SrcExternInitTypeData%SensorType
-   DstExternInitTypeData%LidRadialVel = SrcExternInitTypeData%LidRadialVel
    DstExternInitTypeData%TurbIDforName = SrcExternInitTypeData%TurbIDforName
    DstExternInitTypeData%TurbinePos = SrcExternInitTypeData%TurbinePos
    DstExternInitTypeData%WaveFieldMod = SrcExternInitTypeData%WaveFieldMod
@@ -15286,8 +15282,6 @@ subroutine FAST_PackExternInitType(RF, Indata)
    logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Tmax)
-   call RegPack(RF, InData%SensorType)
-   call RegPack(RF, InData%LidRadialVel)
    call RegPack(RF, InData%TurbIDforName)
    call RegPack(RF, InData%TurbinePos)
    call RegPack(RF, InData%WaveFieldMod)
@@ -15327,8 +15321,6 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Tmax); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SensorType); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LidRadialVel); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbIDforName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbinePos); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
