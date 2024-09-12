@@ -99,7 +99,8 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    modIDs = [(GlueModData(i)%ID, i=1, size(GlueModData))]
 
    ! Indices of all modules in Step 0 initialization order (SrvD inputs)
-   p%iModInit = [pack(modInds, ModIDs == Module_ED), &
+   p%iModInit = [pack(modInds, ModIDs == Module_SED), &
+                 pack(modInds, ModIDs == Module_ED), &
                  pack(modInds, ModIDs == Module_BD), &
                  pack(modInds, ModIDs == Module_SD), &
                  pack(modInds, ModIDs == Module_IfW), &
@@ -112,19 +113,23 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                pack(modInds, ModIDs == Module_SD)]
 
    ! Indices of Option 1 modules
-   p%iModOpt1 = [pack(modInds, ModIDs == Module_ExtPtfm), &
+   p%iModOpt1 = [pack(modInds, ModIDs == Module_SED), &
+                 pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK /= MHK_None), &
+                 pack(modInds, ModIDs == Module_ExtPtfm), &
                  pack(modInds, ModIDs == Module_HD), &
                  pack(modInds, ModIDs == Module_MD), &
                  pack(modInds, ModIDs == Module_Orca)]
 
    ! Indices of Option 2 modules
    p%iModOpt2 = [pack(modInds, ModIDs == Module_SrvD), &
+                 pack(modInds, ModIDs == Module_SED), &
                  pack(modInds, ModIDs == Module_ED), &
                  pack(modInds, ModIDs == Module_BD), &
                  pack(modInds, ModIDs == Module_SD), &
                  pack(modInds, ModIDs == Module_IfW), &
                  pack(modInds, ModIDs == Module_SeaSt), &
-                 pack(modInds, ModIDs == Module_AD), &
+                 pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK == MHK_None), &
+                 pack(modInds, ModIDs == Module_ADsk), &
                  pack(modInds, ModIDs == Module_ExtLd), &
                  pack(modInds, ModIDs == Module_FEAM), &
                  pack(modInds, ModIDs == Module_IceD), &

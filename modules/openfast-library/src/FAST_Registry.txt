@@ -472,6 +472,7 @@ typedef	^	^	SED_MiscVarType	m	-	-	-	"Misc (optimization) variables not associate
 typedef	^	^	SED_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	SED_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	SED_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	SED_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 
@@ -529,6 +530,7 @@ typedef	^	^	ADsk_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	ADsk_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
 typedef	^	^	ADsk_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	ADsk_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	ADsk_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 # ..... InflowWind data .......................................................................................................

@@ -144,6 +144,10 @@ SUBROUTINE ADsk_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Set some other stuff that the framework requires
    call Init_OtherStuff(ErrStat2,ErrMsg2);  if (Failed())  return
 
+   ! Initialize module variables
+   call ADsk_InitVars(u, p, x, y, m, InitOut%Vars, InputFileData, .false., ErrStat2, ErrMsg2)
+   if (Failed())  return
+
 contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -265,6 +269,64 @@ contains
    end subroutine Init_InitY
 END SUBROUTINE ADsk_Init
 
+subroutine ADsk_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, ErrMsg)
+   type(ADsk_InputType),            intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+   type(ADsk_ParameterType),        intent(inout)  :: p              !< Parameters
+   type(ADsk_ContinuousStateType),  intent(inout)  :: x              !< Continuous state
+   type(ADsk_OutputType),           intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
+   type(ADsk_MiscVarType),          intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+   type(ModVarsType),               intent(inout)  :: Vars           !< Module variables
+   type(ADsk_InputFile),            intent(in)     :: InputFileData  !< Input file data
+   logical,                         intent(in)     :: Linearize      !< Flag to initialize linearization variables
+   integer(IntKi),                  intent(out)    :: ErrStat        !< Error status of the operation
+   character(*),                    intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_No   ne
+
+   character(*), parameter          :: RoutineName = 'ADsk_InitVars'
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+   real(R8Ki)                       :: MaxThrust, MaxTorque, ScaleLength
+   integer(IntKi)                   :: i
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   call MV_AddMeshVar(Vars%u, "Hub", MotionFields, &
+                      DL=DatLoc(ADsk_u_HubMotion), &
+                      Mesh=u%HubMotion)
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   call MV_AddMeshVar(Vars%y, 'AeroLoads', LoadFields, &
+                      DatLoc(ADsk_y_AeroLoads), &
+                      Mesh=y%AeroLoads)
+
+   !----------------------------------------------------------------------------
+   ! Initialization dependent on linearization
+   !----------------------------------------------------------------------------
+
+   call MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call ADsk_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call ADsk_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call ADsk_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call ADsk_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.

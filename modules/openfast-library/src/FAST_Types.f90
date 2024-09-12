@@ -467,6 +467,7 @@ IMPLICIT NONE
     TYPE(SED_OutputType) , DIMENSION(:), ALLOCATABLE  :: Output      !< Array of outputs associated with CalcSteady Azimuths [-]
     TYPE(SED_OutputType)  :: y_interp      !< interpolated system outputs for CalcSteady [-]
     TYPE(SED_InputType) , DIMENSION(:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
+    TYPE(SED_InputType) , DIMENSION(:), ALLOCATABLE  :: Input_Saved      !< Backup Array of inputs associated with InputTimes [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
   END TYPE SED_Data
 ! =======================
@@ -531,6 +532,7 @@ IMPLICIT NONE
     TYPE(ADsk_OutputType) , DIMENSION(:), ALLOCATABLE  :: Output      !< Array of outputs associated with CalcSteady Azimuths [-]
     TYPE(ADsk_OutputType)  :: y_interp      !< interpolated system outputs for CalcSteady [-]
     TYPE(ADsk_InputType) , DIMENSION(:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
+    TYPE(ADsk_InputType) , DIMENSION(:), ALLOCATABLE  :: Input_Saved      !< Backup Array of inputs associated with InputTimes [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
   END TYPE AeroDisk_Data
 ! =======================
@@ -8139,6 +8141,22 @@ subroutine FAST_CopySED_Data(SrcSED_DataData, DstSED_DataData, CtrlCode, ErrStat
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   if (allocated(SrcSED_DataData%Input_Saved)) then
+      LB(1:1) = lbound(SrcSED_DataData%Input_Saved, kind=B8Ki)
+      UB(1:1) = ubound(SrcSED_DataData%Input_Saved, kind=B8Ki)
+      if (.not. allocated(DstSED_DataData%Input_Saved)) then
+         allocate(DstSED_DataData%Input_Saved(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSED_DataData%Input_Saved.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SED_CopyInput(SrcSED_DataData%Input_Saved(i1), DstSED_DataData%Input_Saved(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    if (allocated(SrcSED_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcSED_DataData%InputTimes, kind=B8Ki)
       UB(1:1) = ubound(SrcSED_DataData%InputTimes, kind=B8Ki)
@@ -8228,6 +8246,15 @@ subroutine FAST_DestroySED_Data(SED_DataData, ErrStat, ErrMsg)
       end do
       deallocate(SED_DataData%Input)
    end if
+   if (allocated(SED_DataData%Input_Saved)) then
+      LB(1:1) = lbound(SED_DataData%Input_Saved, kind=B8Ki)
+      UB(1:1) = ubound(SED_DataData%Input_Saved, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SED_DestroyInput(SED_DataData%Input_Saved(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(SED_DataData%Input_Saved)
+   end if
    if (allocated(SED_DataData%InputTimes)) then
       deallocate(SED_DataData%InputTimes)
    end if
@@ -8297,6 +8324,15 @@ subroutine FAST_PackSED_Data(RF, Indata)
       UB(1:1) = ubound(InData%Input, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call SED_PackInput(RF, InData%Input(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%Input_Saved))
+   if (allocated(InData%Input_Saved)) then
+      call RegPackBounds(RF, 1, lbound(InData%Input_Saved, kind=B8Ki), ubound(InData%Input_Saved, kind=B8Ki))
+      LB(1:1) = lbound(InData%Input_Saved, kind=B8Ki)
+      UB(1:1) = ubound(InData%Input_Saved, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call SED_PackInput(RF, InData%Input_Saved(i1)) 
       end do
    end if
    call RegPackAlloc(RF, InData%InputTimes)
@@ -8393,6 +8429,19 @@ subroutine FAST_UnPackSED_Data(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call SED_UnpackInput(RF, OutData%Input(i1)) ! Input 
+      end do
+   end if
+   if (allocated(OutData%Input_Saved)) deallocate(OutData%Input_Saved)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Input_Saved(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input_Saved.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SED_UnpackInput(RF, OutData%Input_Saved(i1)) ! Input_Saved 
       end do
    end if
    call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
@@ -9575,6 +9624,22 @@ subroutine FAST_CopyAeroDisk_Data(SrcAeroDisk_DataData, DstAeroDisk_DataData, Ct
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   if (allocated(SrcAeroDisk_DataData%Input_Saved)) then
+      LB(1:1) = lbound(SrcAeroDisk_DataData%Input_Saved, kind=B8Ki)
+      UB(1:1) = ubound(SrcAeroDisk_DataData%Input_Saved, kind=B8Ki)
+      if (.not. allocated(DstAeroDisk_DataData%Input_Saved)) then
+         allocate(DstAeroDisk_DataData%Input_Saved(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroDisk_DataData%Input_Saved.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call ADsk_CopyInput(SrcAeroDisk_DataData%Input_Saved(i1), DstAeroDisk_DataData%Input_Saved(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    if (allocated(SrcAeroDisk_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcAeroDisk_DataData%InputTimes, kind=B8Ki)
       UB(1:1) = ubound(SrcAeroDisk_DataData%InputTimes, kind=B8Ki)
@@ -9664,6 +9729,15 @@ subroutine FAST_DestroyAeroDisk_Data(AeroDisk_DataData, ErrStat, ErrMsg)
       end do
       deallocate(AeroDisk_DataData%Input)
    end if
+   if (allocated(AeroDisk_DataData%Input_Saved)) then
+      LB(1:1) = lbound(AeroDisk_DataData%Input_Saved, kind=B8Ki)
+      UB(1:1) = ubound(AeroDisk_DataData%Input_Saved, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call ADsk_DestroyInput(AeroDisk_DataData%Input_Saved(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(AeroDisk_DataData%Input_Saved)
+   end if
    if (allocated(AeroDisk_DataData%InputTimes)) then
       deallocate(AeroDisk_DataData%InputTimes)
    end if
@@ -9733,6 +9807,15 @@ subroutine FAST_PackAeroDisk_Data(RF, Indata)
       UB(1:1) = ubound(InData%Input, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call ADsk_PackInput(RF, InData%Input(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%Input_Saved))
+   if (allocated(InData%Input_Saved)) then
+      call RegPackBounds(RF, 1, lbound(InData%Input_Saved, kind=B8Ki), ubound(InData%Input_Saved, kind=B8Ki))
+      LB(1:1) = lbound(InData%Input_Saved, kind=B8Ki)
+      UB(1:1) = ubound(InData%Input_Saved, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call ADsk_PackInput(RF, InData%Input_Saved(i1)) 
       end do
    end if
    call RegPackAlloc(RF, InData%InputTimes)
@@ -9829,6 +9912,19 @@ subroutine FAST_UnPackAeroDisk_Data(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call ADsk_UnpackInput(RF, OutData%Input(i1)) ! Input 
+      end do
+   end if
+   if (allocated(OutData%Input_Saved)) deallocate(OutData%Input_Saved)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Input_Saved(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input_Saved.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call ADsk_UnpackInput(RF, OutData%Input_Saved(i1)) ! Input_Saved 
       end do
    end if
    call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return

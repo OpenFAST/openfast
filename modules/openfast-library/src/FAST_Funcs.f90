@@ -74,6 +74,13 @@ subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
       end do
       call ShiftInputTimes(T%AD%InputTimes)
 
+   case (Module_ADsk)
+      call ADsk_Input_ExtrapInterp(T%ADsk%Input(1:), T%ADsk%InputTimes, T%ADsk%Input(INPUT_TEMP), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
+         call ADsk_CopyInput(T%ADsk%Input(j), T%ADsk%Input(j + 1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
+      end do
+      call ShiftInputTimes(T%ADsk%InputTimes)
+
    case (Module_BD)
       call BD_Input_ExtrapInterp(T%BD%Input(1:, ModData%Ins), T%BD%InputTimes(:, ModData%Ins), T%BD%Input(INPUT_TEMP, ModData%Ins), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
       do j = T%p_FAST%InterpOrder, 0, -1
@@ -87,6 +94,13 @@ subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
          call ED_CopyInput(T%ED%Input(j), T%ED%Input(j + 1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
       end do
       call ShiftInputTimes(T%ED%InputTimes)
+
+   case (Module_SED)
+      call SED_Input_ExtrapInterp(T%SED%Input(1:), T%SED%InputTimes, T%SED%Input(INPUT_TEMP), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      do j = T%p_FAST%InterpOrder, 0, -1
+         call SED_CopyInput(T%SED%Input(j), T%SED%Input(j + 1), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
+      end do
+      call ShiftInputTimes(T%SED%InputTimes)
 
    case (Module_ExtInfw)
       ! Not used
@@ -165,7 +179,6 @@ subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
       call ShiftInputTimes(T%SD%InputTimes)
 
    case (Module_SeaSt)
-
       ! call SeaSt_Input_ExtrapInterp(T%SeaSt%Input(1:), T%SeaSt%InputTimes, T%SeaSt%u, t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
       ! do j = T%p_FAST%InterpOrder, 1, -1
       !    call SeaSt_CopyInput(T%SeaSt%Input(j), T%SeaSt%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -247,10 +260,14 @@ subroutine FAST_InitInputStateArrays(ModAry, ThisTime, DT, T, ErrStat, ErrMsg)
          select case (ModData%ID)
          case (Module_AD)
             T%AD%InputTimes = InputTimes
+         case (Module_ADsk)
+            T%ADsk%InputTimes = InputTimes
          case (Module_BD)
             T%BD%InputTimes(:, ModData%Ins) = InputTimes
          case (Module_ED)
             T%ED%InputTimes = InputTimes
+         case (Module_SED)
+            T%SED%InputTimes = InputTimes
          case (Module_ExtPtfm)
             T%ExtPtfm%InputTimes = InputTimes
          case (Module_FEAM)
@@ -328,11 +345,39 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
          if (Failed()) return
       end do
 
+   case (Module_ADsk)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call ADsk_UpdateStates(t_module, n_t_module, T%ADsk%Input(1:), T%ADsk%InputTimes, &
+                                T%ADsk%p, T%ADsk%x(STATE_PRED), T%ADsk%xd(STATE_PRED), &
+                                T%ADsk%z(STATE_PRED), T%ADsk%OtherSt(STATE_PRED), &
+                                T%ADsk%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
    case (Module_BD)
       ! State update is handled by tight coupling solver
 
    case (Module_ED)
       ! State update is handled by tight coupling solver
+
+   case (Module_SED)
+      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
+         call SED_UpdateStates(t_module, n_t_module, T%SED%Input(1:), T%SED%InputTimes, &
+                               T%SED%p, T%SED%x(STATE_PRED), T%SED%xd(STATE_PRED), &
+                               T%SED%z(STATE_PRED), T%SED%OtherSt(STATE_PRED), &
+                               T%SED%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
 
    case (Module_ExtLd)
       ! Not used
@@ -528,9 +573,17 @@ subroutine FAST_CalcOutput(ModData, Mappings, ThisTime, iInput, iState, T, ErrSt
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_CalcOutput(ThisTime, T%AD%Input(iInput), T%AD%p, &
-                         T%AD%x(iState), T%AD%xd(iState), T%AD%z(iState), T%AD%OtherSt(iState), &
-                         T%AD%y, T%AD%m, ErrStat2, ErrMsg2, CalcWriteOutput)
+      ! Call CalcOutput on first instance, calculation is for all rotors
+      if (ModData%Ins == 1) then
+         call AD_CalcOutput(ThisTime, T%AD%Input(iInput), T%AD%p, &
+                            T%AD%x(iState), T%AD%xd(iState), T%AD%z(iState), T%AD%OtherSt(iState), &
+                            T%AD%y, T%AD%m, ErrStat2, ErrMsg2, CalcWriteOutput)
+      end if
+
+   case (Module_ADsK)
+      call ADsK_CalcOutput(ThisTime, T%ADsK%Input(iInput), T%ADsK%p, &
+                           T%ADsK%x(iState), T%ADsK%xd(iState), T%ADsK%z(iState), T%ADsK%OtherSt(iState), &
+                           T%ADsK%y, T%ADsK%m, ErrStat2, ErrMsg2, CalcWriteOutput)
 
    case (Module_BD)
       call BD_CalcOutput(ThisTime, T%BD%Input(iInput, ModData%Ins), T%BD%p(ModData%Ins), &
@@ -542,6 +595,11 @@ subroutine FAST_CalcOutput(ModData, Mappings, ThisTime, iInput, iState, T, ErrSt
       call ED_CalcOutput(ThisTime, T%ED%Input(iInput), T%ED%p, &
                          T%ED%x(iState), T%ED%xd(iState), T%ED%z(iState), T%ED%OtherSt(iState), &
                          T%ED%y, T%ED%m, ErrStat2, ErrMsg2)
+
+   case (Module_SED)
+      call SED_CalcOutput(ThisTime, T%SED%Input(iInput), T%SED%p, &
+                          T%SED%x(iState), T%SED%xd(iState), T%SED%z(iState), T%SED%OtherSt(iState), &
+                          T%SED%y, T%SED%m, ErrStat2, ErrMsg2)
 
    case (Module_ExtInfw)
       ! Not used
@@ -670,11 +728,15 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
       case (Module_AD)
          call AD_VarsPackInput(ModData%Vars, T%AD%Input(iInput)%rotors(ModData%Ins), u_op)
          call AD_VarsPackExtInput(ModData%Vars, ThisTime, T%AD%p, u_op)
+      case (Module_ADsk)
+         call ADsk_VarsPackInput(ModData%Vars, T%ADsk%Input(iInput), u_op)
       case (Module_BD)
          call BD_VarsPackInput(ModData%Vars, T%BD%Input(iInput, ModData%Ins), u_op)
       case (Module_ED)
          call ED_VarsPackInput(ModData%Vars, T%ED%Input(iInput), u_op)
          call ED_PackExtInputAry(ModData%Vars, T%ED%Input(iInput), u_op, ErrStat2, ErrMsg2); if (Failed()) return
+      case (Module_SED)
+         call SED_VarsPackInput(ModData%Vars, T%SED%Input(iInput), u_op)
       case (Module_ExtPtfm)
          call ExtPtfm_VarsPackInput(ModData%Vars, T%ExtPtfm%Input(iInput), u_op)
       case (Module_FEAM)
@@ -725,10 +787,14 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
       select case (ModData%ID)
       case (Module_AD)
          call AD_VarsPackOutput(ModData%Vars, T%AD%y%rotors(ModData%Ins), y_op)
+      case (Module_ADsk)
+         call ADsk_VarsPackOutput(ModData%Vars, T%ADsk%y, y_op)
       case (Module_BD)
          call BD_VarsPackOutput(ModData%Vars, T%BD%y(ModData%Ins), y_op)
       case (Module_ED)
          call ED_VarsPackOutput(ModData%Vars, T%ED%y, y_op)
+      case (Module_SED)
+         call SED_VarsPackOutput(ModData%Vars, T%SED%y, y_op)
       case (Module_ExtPtfm)
          call ExtPtfm_VarsPackOutput(ModData%Vars, T%ExtPtfm%y, y_op)
       case (Module_FEAM)
@@ -778,10 +844,14 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
       select case (ModData%ID)
       case (Module_AD)
          call AD_VarsPackContState(ModData%Vars, T%AD%x(iState)%rotors(ModData%Ins), x_op)
+      case (Module_ADsk)
+         call ADsk_VarsPackContState(ModData%Vars, T%ADsk%x(iState), x_op)
       case (Module_BD)
          call BD_VarsPackContState(ModData%Vars, T%BD%x(ModData%Ins, iState), x_op)
       case (Module_ED)
          call ED_VarsPackContState(ModData%Vars, T%ED%x(iState), x_op)
+      case (Module_SED)
+         call SED_VarsPackContState(ModData%Vars, T%SED%x(iState), x_op)
       case (Module_ExtPtfm)
          call ExtPtfm_VarsPackContState(ModData%Vars, T%ExtPtfm%x(iState), x_op)
       case (Module_FEAM)
@@ -847,6 +917,13 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
          if (Failed()) return
          call AD_VarsPackContStateDeriv(ModData%Vars, T%AD%m%rotors(ModData%Ins)%dxdt_lin, dx_op)
 
+      case (Module_ADsk)
+         call ADsk_CalcContStateDeriv(ThisTime, T%ADsk%Input(iInput), T%ADsk%p, T%ADsk%x(iState), &
+                                      T%ADsk%xd(iState), T%ADsk%z(iState), T%ADsk%OtherSt(iState), &
+                                      T%ADsk%m, T%ADsk%m%dxdt_lin, ErrStat2, ErrMsg2)
+         if (Failed()) return
+         call ADsk_VarsPackContStateDeriv(ModData%Vars, T%ADsk%m%dxdt_lin, dx_op)
+
       case (Module_BD)
          call BD_CalcContStateDeriv(ThisTime, T%BD%Input(iInput, ModData%Ins), &
                                     T%BD%p(ModData%Ins), &
@@ -866,6 +943,13 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
                                     T%ED%m, T%ED%m%dxdt_lin, ErrStat2, ErrMsg2)
          if (Failed()) return
          call ED_VarsPackContStateDeriv(ModData%Vars, T%ED%m%dxdt_lin, dx_op)
+
+      case (Module_SED)
+         call SED_CalcContStateDeriv(ThisTime, T%SED%Input(iInput), T%SED%p, T%SED%x(iState), &
+                                     T%SED%xd(iState), T%SED%z(iState), T%SED%OtherSt(iState), &
+                                     T%SED%m, T%SED%m%dxdt_lin, ErrStat2, ErrMsg2)
+         if (Failed()) return
+         call SED_VarsPackContStateDeriv(ModData%Vars, T%SED%m%dxdt_lin, dx_op)
 
       case (Module_ExtPtfm)
          call ExtPtfm_CalcContStateDeriv(ThisTime, T%ExtPtfm%Input(iInput), &
@@ -952,10 +1036,14 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
       select case (ModData%ID)
       case (Module_AD)
          call AD_VarsPackConstrState(ModData%Vars, T%AD%z(iState)%rotors(ModData%Ins), z_op)
+      case (Module_ADsk)
+         call ADsk_VarsPackConstrState(ModData%Vars, T%ADsk%z(iState), z_op)
       case (Module_BD)
          call BD_VarsPackConstrState(ModData%Vars, T%BD%z(ModData%Ins, iState), z_op)
       case (Module_ED)
          call ED_VarsPackConstrState(ModData%Vars, T%ED%z(iState), z_op)
+      case (Module_SED)
+         call SED_VarsPackConstrState(ModData%Vars, T%SED%z(iState), z_op)
       case (Module_ExtPtfm)
          call ExtPtfm_VarsPackConstrState(ModData%Vars, T%ExtPtfm%z(iState), z_op)
       case (Module_FEAM)
@@ -1028,10 +1116,14 @@ subroutine FAST_SetOP(ModData, iInput, iState, T, ErrStat, ErrMsg, &
       select case (ModData%ID)
       case (Module_AD)
          call AD_VarsUnpackInput(ModData%Vars, u_op, T%AD%Input(iInput)%rotors(ModData%Ins))
+      case (Module_ADsk)
+         call ADsk_VarsUnpackInput(ModData%Vars, u_op, T%ADsk%Input(iInput))
       case (Module_BD)
          call BD_VarsUnpackInput(ModData%Vars, u_op, T%BD%Input(iInput, ModData%Ins))
       case (Module_ED)
          call ED_VarsUnpackInput(ModData%Vars, u_op, T%ED%Input(iInput))
+      case (Module_SED)
+         call SED_VarsUnpackInput(ModData%Vars, u_op, T%SED%Input(iInput))
       case (Module_ExtPtfm)
          call ExtPtfm_VarsUnpackInput(ModData%Vars, u_op, T%ExtPtfm%Input(iInput))
       case (Module_FEAM)
@@ -1075,10 +1167,14 @@ subroutine FAST_SetOP(ModData, iInput, iState, T, ErrStat, ErrMsg, &
       select case (ModData%ID)
       case (Module_AD)
          call AD_VarsUnpackContState(ModData%Vars, x_op, T%AD%x(iState)%rotors(ModData%Ins))
+      case (Module_ADsk)
+         call ADsk_VarsUnpackContState(ModData%Vars, x_op, T%ADsk%x(iState))
       case (Module_BD)
          call BD_VarsUnpackContState(ModData%Vars, x_op, T%BD%x(ModData%Ins, iState))
       case (Module_ED)
          call ED_VarsUnpackContState(ModData%Vars, x_op, T%ED%x(iState))
+      case (Module_SED)
+         call SED_VarsUnpackContState(ModData%Vars, x_op, T%SED%x(iState))
       case (Module_ExtPtfm)
          call ExtPtfm_VarsUnpackContState(ModData%Vars, x_op, T%ExtPtfm%x(iState))
       case (Module_FEAM)
@@ -1122,10 +1218,14 @@ subroutine FAST_SetOP(ModData, iInput, iState, T, ErrStat, ErrMsg, &
       select case (ModData%ID)
       case (Module_AD)
          call AD_VarsUnpackConstrState(ModData%Vars, z_op, T%AD%z(iState)%rotors(ModData%Ins))
+      case (Module_ADsk)
+         call ADsk_VarsUnpackConstrState(ModData%Vars, z_op, T%ADsk%z(iState))
       case (Module_BD)
          call BD_VarsUnpackConstrState(ModData%Vars, z_op, T%BD%z(ModData%Ins, iState))
       case (Module_ED)
          call ED_VarsUnpackConstrState(ModData%Vars, z_op, T%ED%z(iState))
+      case (Module_SED)
+         call SED_VarsUnpackConstrState(ModData%Vars, z_op, T%SED%z(iState))
       case (Module_ExtPtfm)
          call ExtPtfm_VarsUnpackConstrState(ModData%Vars, z_op, T%ExtPtfm%z(iState))
       case (Module_FEAM)
@@ -1194,6 +1294,11 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, Er
                              T%AD%z(iState), T%AD%OtherSt(iState), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
+!  case (Module_ADsk)
+!     call ADsk_JacobianPInput(ModData%Vars, ThisTime, T%ADsk%Input(iInput), T%ADsk%p, T%ADsk%x(iState), T%ADsk%xd(iState), &
+!                             T%ADsk%z(iState), T%ADsk%OtherSt(iState), T%ADsk%y, T%ADsk%m, ErrStat2, ErrMsg2, &
+!                             dYdu=dYdu, dXdu=dXdu)
+
    case (Module_BD)
       call BD_JacobianPInput(ModData%Vars, ThisTime, T%BD%Input(iInput, ModData%Ins), T%BD%p(ModData%Ins), &
                              T%BD%x(ModData%Ins, iState), T%BD%xd(ModData%Ins, iState), &
@@ -1205,6 +1310,11 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, Er
       call ED_JacobianPInput(ModData%Vars, ThisTime, T%ED%Input(iInput), T%ED%p, T%ED%x(iState), T%ED%xd(iState), &
                              T%ED%z(iState), T%ED%OtherSt(iState), T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
+
+   case (Module_SED)
+      call SED_JacobianPInput(ModData%Vars, ThisTime, T%SED%Input(iInput), T%SED%p, T%SED%x(iState), T%SED%xd(iState), &
+                              T%SED%z(iState), T%SED%OtherSt(iState), T%SED%y, T%SED%m, ErrStat2, ErrMsg2, &
+                              dYdu=dYdu, dXdu=dXdu)
 
    case (Module_ExtPtfm)
       call ExtPtfm_JacobianPInput(ModData%Vars, ThisTime, T%ExtPtfm%Input(iInput), T%ExtPtfm%p, T%ExtPtfm%x(iState), T%ExtPtfm%xd(iState), &
@@ -1292,6 +1402,8 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat
                                  T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx)
 
+!  case (Module_ADsk)
+
    case (Module_BD)
       call BD_JacobianPContState(ModData%Vars, ThisTime, T%BD%Input(iInput, ModData%Ins), T%BD%p(ModData%Ins), &
                                  T%BD%x(ModData%Ins, iState), T%BD%xd(ModData%Ins, iState), &
@@ -1305,6 +1417,8 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat
                                  T%ED%z(iState), T%ED%OtherSt(iState), &
                                  T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
                                  dYdx=dYdx, dXdx=dXdx)
+
+!  case (Module_SED)
 
    case (Module_ExtPtfm)
       call ExtPtfm_JacobianPContState(ThisTime, T%ExtPtfm%Input(iInput), T%ExtPtfm%p, &
@@ -1406,6 +1520,13 @@ subroutine FAST_CopyStates(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
       call AD_CopyConstrState(T%AD%z(iSrc), T%AD%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       call AD_CopyOtherState(T%AD%OtherSt(iSrc), T%AD%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
+   case (Module_ADsk)
+
+      call ADsk_CopyContState(T%ADsk%x(iSrc), T%ADsk%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ADsk_CopyDiscState(T%ADsk%xd(iSrc), T%ADsk%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ADsk_CopyConstrState(T%ADsk%z(iSrc), T%ADsk%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call ADsk_CopyOtherState(T%ADsk%OtherSt(iSrc), T%ADsk%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
    case (Module_BD)
 
       call BD_CopyContState(T%BD%x(ModData%Ins, iSrc), T%BD%x(ModData%Ins, iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
@@ -1419,6 +1540,13 @@ subroutine FAST_CopyStates(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
       call ED_CopyDiscState(T%ED%xd(iSrc), T%ED%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       call ED_CopyConstrState(T%ED%z(iSrc), T%ED%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
       call ED_CopyOtherState(T%ED%OtherSt(iSrc), T%ED%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+
+   case (Module_SED)
+
+      call SED_CopyContState(T%SED%x(iSrc), T%SED%x(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SED_CopyDiscState(T%SED%xd(iSrc), T%SED%xd(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SED_CopyConstrState(T%SED%z(iSrc), T%SED%z(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call SED_CopyOtherState(T%SED%OtherSt(iSrc), T%SED%OtherSt(iDst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_ExtInfw)
 
@@ -1575,6 +1703,25 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
          end select
       end select
 
+   case (Module_ADsk)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call ADsk_CopyInput(T%ADsk%Input_Saved(-iSrc), T%ADsk%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0:)
+            call ADsk_CopyInput(T%ADsk%Input_Saved(-iSrc), T%ADsk%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0:)
+         select case (iDst)
+         case (:-1)
+            call ADsk_CopyInput(T%ADsk%Input(iSrc), T%ADsk%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0:)
+            call ADsk_CopyInput(T%ADsk%Input(iSrc), T%ADsk%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
+
    case (Module_BD)
 
       select case (iSrc)
@@ -1610,6 +1757,25 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
             call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
          case (0:)
             call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      end select
+
+   case (Module_SED)
+
+      select case (iSrc)
+      case (:-1)
+         select case (iDst)
+         case (:-1)
+            call SED_CopyInput(T%SED%Input_Saved(-iSrc), T%SED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0:)
+            call SED_CopyInput(T%SED%Input_Saved(-iSrc), T%SED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+         end select
+      case (0:)
+         select case (iDst)
+         case (:-1)
+            call SED_CopyInput(T%SED%Input(iSrc), T%SED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
+         case (0:)
+            call SED_CopyInput(T%SED%Input(iSrc), T%SED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
          end select
       end select
 

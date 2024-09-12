@@ -128,9 +128,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    INTEGER(IntKi)                          :: IceDim              ! dimension we're pre-allocating for number of IceDyn legs/instances
    INTEGER(IntKi)                          :: I                   ! generic loop counter
    INTEGER(IntKi)                          :: k                   ! blade loop counter
-   INTEGER(IntKi)                          :: NumInput        ! Number of inputs in module data input arrays
-   INTEGER(IntKi)                          :: NumInputSave   ! Number of inputs in module data input saved arrays
-   INTEGER(IntKi)                          :: NumStates        ! Number of states in module data state arrays
+   INTEGER(IntKi)                          :: InputAryLB          ! Input array lower bound
+   INTEGER(IntKi)                          :: InputAryUB          ! Input array upper bound
+   INTEGER(IntKi)                          :: StateAryLB          ! States array lower bound
+   INTEGER(IntKi)                          :: StateAryUB          ! States array upper bound
    logical                                 :: CallStart
 
    REAL(R8Ki)                              :: theta(3)            ! angles for hub orientation matrix for aeromaps
@@ -239,15 +240,16 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    ! Module data arrays
    !----------------------------------------------------------------------------
 
-   ! Module data input arrays are interpolation order plus 1
-   NumInput = p_FAST%InterpOrder + 1
-
    ! Input saved arrays have storage for InputArray size + linearization
-   NumInputSave = NumInput + p_FAST%NLinTimes
+   InputAryLB = InputAryUB + p_FAST%NLinTimes
+
+   ! Module data input arrays are interpolation order plus 1
+   InputAryUB = p_FAST%InterpOrder + 1
 
    ! Module data state arrays include data at linearization times after
    ! STATE_CURR, STATE_PRED, STATE_SAVED_CURR, and STATE_SAVED_PRED
-   NumStates = NumStateTimes + p_FAST%NLinTimes
+   StateAryLB = 1
+   StateAryUB = NumStateTimes + p_FAST%NLinTimes
 
    !----------------------------------------------------------------------------
    ! Linearization
@@ -261,14 +263,15 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    select case (p_FAST%CompElast)
 
-   case (Module_SED) ! initialize Simplified-ElastoDyn (must be done first)
+   case (Module_SED) ! Simplified-ElastoDyn
 
-      allocate(SED%Input           (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("SED%Input")) return
-      allocate(SED%InputTimes      (NumInput     ), stat=ErrStat2); if (FailedAlloc("SED%InputTimes")) return
-      allocate(SED%x               (NumStates     ), stat=ErrStat2); if (FailedAlloc("SED%x")) return
-      allocate(SED%xd              (NumStates     ), stat=ErrStat2); if (FailedAlloc("SED%xd")) return
-      allocate(SED%z               (NumStates     ), stat=ErrStat2); if (FailedAlloc("SED%z")) return
-      allocate(SED%OtherSt         (NumStates     ), stat=ErrStat2); if (FailedAlloc("SED%OtherSt")) return
+      allocate(SED%Input           (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("SED%Input")) return
+      allocate(SED%InputTimes      (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("SED%InputTimes")) return
+      allocate(ED%Input_Saved      (InputAryLB     ), stat=ErrStat2); if (FailedAlloc("ED%Input_Saved")) return
+      allocate(SED%x               (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("SED%x")) return
+      allocate(SED%xd              (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("SED%xd")) return
+      allocate(SED%z               (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("SED%z")) return
+      allocate(SED%OtherSt         (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("SED%OtherSt")) return
  
       Init%InData_SED%Linearize = p_FAST%Linearize
       Init%InData_SED%InputFile = p_FAST%EDFile
@@ -276,11 +279,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    
       CALL SED_Init( Init%InData_SED, SED%Input(1), SED%p, SED%x(STATE_CURR), SED%xd(STATE_CURR), SED%z(STATE_CURR), SED%OtherSt(STATE_CURR), &
                      SED%y, SED%m, p_FAST%dt_module( MODULE_SED ), Init%OutData_SED, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   
-      
-      CALL SetModuleSubstepTime(Module_SED, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (Failed()) return
 
       ! Add module to array of modules, return if errors occurred
       CALL MV_AddModule(m_Glue%ModData, Module_SED, 'SED', 1, p_FAST%dt_module(Module_SED), p_FAST%DT, &
@@ -291,16 +290,16 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       p_FAST%ModuleInitialized(Module_SED) = .TRUE.
       
-   case (Module_ED) ! initialize ElastoDyn (must be done first)
+   case default ! ElastoDyn
       
       ! Allocate module data arrays
-      allocate(ED%Input           (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("ED%Input")) return
-      allocate(ED%InputTimes      (NumInput     ), stat=ErrStat2); if (FailedAlloc("ED%InputTimes")) return
-      allocate(ED%Input_Saved     (NumInputSave), stat=ErrStat2); if (FailedAlloc("ED%Input_Saved")) return
-      allocate(ED%x               (NumStates     ), stat=ErrStat2); if (FailedAlloc("ED%x")) return
-      allocate(ED%xd              (NumStates     ), stat=ErrStat2); if (FailedAlloc("ED%xd")) return
-      allocate(ED%z               (NumStates     ), stat=ErrStat2); if (FailedAlloc("ED%z")) return
-      allocate(ED%OtherSt         (NumStates     ), stat=ErrStat2); if (FailedAlloc("ED%OtherSt")) return
+      allocate(ED%Input           (0:InputAryUB  ), stat=ErrStat2); if (FailedAlloc("ED%Input")) return
+      allocate(ED%InputTimes      (InputAryUB    ), stat=ErrStat2); if (FailedAlloc("ED%InputTimes")) return
+      allocate(ED%Input_Saved     (InputAryLB), stat=ErrStat2); if (FailedAlloc("ED%Input_Saved")) return
+      allocate(ED%x               (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("ED%x")) return
+      allocate(ED%xd              (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("ED%xd")) return
+      allocate(ED%z               (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("ED%z")) return
+      allocate(ED%OtherSt         (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("ED%OtherSt")) return
    
       ! Set initialization input
       Init%InData_ED%Linearize = p_FAST%Linearize
@@ -318,15 +317,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL ED_Init(Init%InData_ED, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
                    ED%y, ED%m, p_FAST%dt_module(MODULE_ED), Init%OutData_ED, ErrStat2, ErrMsg2)
       if (Failed()) return
-   
-      CALL SetModuleSubstepTime(Module_ED, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
-   
+    
       ! Add module to array of modules, return if errors occurred
       CALL MV_AddModule(m_Glue%ModData, Module_ED, 'ED', 1, p_FAST%dt_module(Module_ED), p_FAST%DT, &
                         Init%OutData_ED%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
-   
+      p_FAST%ModuleInitialized(Module_ED) = .TRUE.
+
       NumBl = Init%OutData_ED%NumBl
       p_FAST%GearBox_index = Init%OutData_ED%GearBox_index
    
@@ -339,8 +336,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             p_FAST%TrimCase = TrimCase_none
          end if
       end if
-
-      p_FAST%ModuleInitialized(Module_ED) = .TRUE.
 
    end select ! SED/ED
 
@@ -360,13 +355,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    end if
 
    ! Allocate module data arrays
-   allocate(BD%Input           (0:NumInput,    p_FAST%nBeams), stat=ErrStat2); if (FailedAlloc("BD%Input")) return
-   allocate(BD%InputTimes      (NumInput,      p_FAST%nBeams), stat=ErrStat2); if (FailedAlloc("BD%InputTimes")) return
-   allocate(BD%Input_Saved     (NumInputSave, p_FAST%nBeams), stat=ErrStat2); if (FailedAlloc("BD%Input_Saved")) return
-   allocate(BD%x               (p_FAST%nBeams,     NumStates ), stat=ErrStat2); if (FailedAlloc("BD%x")) return
-   allocate(BD%xd              (p_FAST%nBeams,     NumStates ), stat=ErrStat2); if (FailedAlloc("BD%xd")) return
-   allocate(BD%z               (p_FAST%nBeams,     NumStates ), stat=ErrStat2); if (FailedAlloc("BD%z")) return
-   allocate(BD%OtherSt         (p_FAST%nBeams,     NumStates ), stat=ErrStat2); if (FailedAlloc("BD%OtherSt")) return
+   allocate(BD%Input           (0:InputAryUB,    p_FAST%nBeams), stat=ErrStat2); if (FailedAlloc("BD%Input")) return
+   allocate(BD%InputTimes      (InputAryUB,      p_FAST%nBeams), stat=ErrStat2); if (FailedAlloc("BD%InputTimes")) return
+   allocate(BD%Input_Saved     (InputAryLB, p_FAST%nBeams), stat=ErrStat2); if (FailedAlloc("BD%Input_Saved")) return
+   allocate(BD%x               (p_FAST%nBeams,     StateAryUB ), stat=ErrStat2); if (FailedAlloc("BD%x")) return
+   allocate(BD%xd              (p_FAST%nBeams,     StateAryUB ), stat=ErrStat2); if (FailedAlloc("BD%xd")) return
+   allocate(BD%z               (p_FAST%nBeams,     StateAryUB ), stat=ErrStat2); if (FailedAlloc("BD%z")) return
+   allocate(BD%OtherSt         (p_FAST%nBeams,     StateAryUB ), stat=ErrStat2); if (FailedAlloc("BD%OtherSt")) return
    allocate(BD%p               (p_FAST%nBeams                   ), stat=ErrStat2); if (FailedAlloc("BD%p")) return
    allocate(BD%u               (p_FAST%nBeams                   ), stat=ErrStat2); if (FailedAlloc("BD%u")) return
    allocate(BD%y               (p_FAST%nBeams                   ), stat=ErrStat2); if (FailedAlloc("BD%y")) return
@@ -434,13 +429,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !----------------------------------------------------------------------------
 
    ! Allocate module data arrays
-   allocate(IfW%Input           (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("IfW%Input")) return
-   allocate(IfW%InputTimes      (NumInput     ), stat=ErrStat2); if (FailedAlloc("IfW%InputTimes")) return
-   allocate(IfW%Input_Saved     (NumInputSave), stat=ErrStat2); if (FailedAlloc("IfW%Input_Saved")) return
-   allocate(IfW%x               (NumStates     ), stat=ErrStat2); if (FailedAlloc("IfW%x")) return
-   allocate(IfW%xd              (NumStates     ), stat=ErrStat2); if (FailedAlloc("IfW%xd")) return
-   allocate(IfW%z               (NumStates     ), stat=ErrStat2); if (FailedAlloc("IfW%z")) return
-   allocate(IfW%OtherSt         (NumStates     ), stat=ErrStat2); if (FailedAlloc("IfW%OtherSt")) return
+   allocate(IfW%Input           (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("IfW%Input")) return
+   allocate(IfW%InputTimes      (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("IfW%InputTimes")) return
+   allocate(IfW%Input_Saved     (InputAryLB), stat=ErrStat2); if (FailedAlloc("IfW%Input_Saved")) return
+   allocate(IfW%x               (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("IfW%x")) return
+   allocate(IfW%xd              (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("IfW%xd")) return
+   allocate(IfW%z               (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("IfW%z")) return
+   allocate(IfW%OtherSt         (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("IfW%OtherSt")) return
 
    select case(p_FAST%CompInflow)
    case (Module_IfW)
@@ -490,8 +485,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                            IfW%OtherSt(STATE_CURR), IfW%y, IfW%m, p_FAST%dt_module( MODULE_IfW ), Init%OutData_IfW, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      CALL SetModuleSubstepTime(Module_IfW, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
 
       y_FAST%Lin%WindSpeed = Init%OutData_IfW%WindFileInfo%MWS
 
@@ -499,6 +492,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL MV_AddModule(m_Glue%ModData, Module_IfW, 'IfW', 1, p_FAST%dt_module(Module_IfW), p_FAST%DT, &
                         Init%OutData_IfW%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
+      p_FAST%ModuleInitialized(Module_IfW) = .TRUE.
 
       IF ( p_FAST%CompServo == Module_SrvD ) THEN !assign the number of gates to ServD
          if (allocated(IfW%y%lidar%LidSpeed)) then    ! make sure we have the array allocated before setting it
@@ -526,8 +520,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          Init%InData_SrvD%NumPulseGate  = IfW%p%lidar%NumPulseGate
          Init%InData_SrvD%PulseSpacing  = IfW%p%lidar%PulseSpacing
       END IF
-
-      p_FAST%ModuleInitialized(Module_IfW) = .TRUE.
 
    case (Module_ExtInfw)
 
@@ -564,6 +556,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       ! set up the data structures for integration with ExternalInflow
       CALL Init_ExtInfw( Init%InData_ExtInfw, p_FAST, AirDens, AD%Input(1), Init%OutData_AD, AD%y, ExtInfw, Init%OutData_ExtInfw, ErrStat2, ErrMsg2 )
       if (Failed()) return
+      p_FAST%ModuleInitialized(Module_ExtInfw) = .TRUE.
 
       ! Add module to list of modules, return on error
       CALL MV_AddModule(m_Glue%ModData, Module_ExtInfw, 'ExtInfw', 1, p_FAST%dt_module(Module_ExtInfw), p_FAST%DT, &
@@ -576,9 +569,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       ! Set pointer to flowfield
       IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtInfw%FlowField
 
-   case default
+   case default   ! No wind
 
+      ! Set mean wind speed to zero
       Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi
+
    end select   ! CompInflow
 
    !----------------------------------------------------------------------------
@@ -586,13 +581,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !----------------------------------------------------------------------------
 
    ! Allocate module data arrays
-   allocate(SeaSt%Input           (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("SeaSt%Input")) return
-   allocate(SeaSt%InputTimes      (NumInput     ), stat=ErrStat2); if (FailedAlloc("SeaSt%InputTimes")) return
-   allocate(SeaSt%Input_Saved     (NumInputSave), stat=ErrStat2); if (FailedAlloc("SeaSt%Input_Saved")) return
-   allocate(SeaSt%x               (NumStates     ), stat=ErrStat2); if (FailedAlloc("SeaSt%x")) return
-   allocate(SeaSt%xd              (NumStates     ), stat=ErrStat2); if (FailedAlloc("SeaSt%xd")) return
-   allocate(SeaSt%z               (NumStates     ), stat=ErrStat2); if (FailedAlloc("SeaSt%z")) return
-   allocate(SeaSt%OtherSt         (NumStates     ), stat=ErrStat2); if (FailedAlloc("SeaSt%OtherSt")) return
+   allocate(SeaSt%Input           (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("SeaSt%Input")) return
+   allocate(SeaSt%InputTimes      (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("SeaSt%InputTimes")) return
+   allocate(SeaSt%Input_Saved     (InputAryLB), stat=ErrStat2); if (FailedAlloc("SeaSt%Input_Saved")) return
+   allocate(SeaSt%x               (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("SeaSt%x")) return
+   allocate(SeaSt%xd              (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("SeaSt%xd")) return
+   allocate(SeaSt%z               (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("SeaSt%z")) return
+   allocate(SeaSt%OtherSt         (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("SeaSt%OtherSt")) return
 
    if ( p_FAST%CompSeaSt == Module_SeaSt ) then
 
@@ -619,6 +614,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL SeaSt_Init(Init%InData_SeaSt, SeaSt%Input(1), SeaSt%p,  SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), &
                       SeaSt%OtherSt(STATE_CURR), SeaSt%y, SeaSt%m, p_FAST%dt_module(MODULE_SeaSt), Init%OutData_SeaSt, ErrStat2, ErrMsg2)
       if (Failed()) return
+      p_FAST%ModuleInitialized(Module_SeaSt) = .TRUE.
 
       ! Add module to array, return on error
       call MV_AddModule(m_Glue%ModData, Module_SeaSt, 'SEA', 1, p_FAST%dt_module(Module_SeaSt), p_FAST%DT, &
@@ -633,8 +629,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          p_FAST%VTK_surface%NWaveElevPts(2) = 0
       endif
 
-      p_FAST%ModuleInitialized(Module_SeaSt) = .TRUE.
-
    end if
 
    !----------------------------------------------------------------------------
@@ -646,13 +640,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    case (Module_AD, Module_ExtLd)
 
       ! Allocate module data arrays
-      allocate(AD%Input           (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("AD%Input")) return
-      allocate(AD%InputTimes      (NumInput     ), stat=ErrStat2); if (FailedAlloc("AD%InputTimes")) return
-      allocate(AD%Input_Saved     (NumInputSave), stat=ErrStat2); if (FailedAlloc("AD%Input_Saved")) return
-      allocate(AD%x               (NumStates     ), stat=ErrStat2); if (FailedAlloc("AD%x")) return
-      allocate(AD%xd              (NumStates     ), stat=ErrStat2); if (FailedAlloc("AD%xd")) return
-      allocate(AD%z               (NumStates     ), stat=ErrStat2); if (FailedAlloc("AD%z")) return
-      allocate(AD%OtherSt         (NumStates     ), stat=ErrStat2); if (FailedAlloc("AD%OtherSt")) return
+      allocate(AD%Input           (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("AD%Input")) return
+      allocate(AD%InputTimes      (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("AD%InputTimes")) return
+      allocate(AD%Input_Saved     (InputAryLB), stat=ErrStat2); if (FailedAlloc("AD%Input_Saved")) return
+      allocate(AD%x               (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("AD%x")) return
+      allocate(AD%xd              (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("AD%xd")) return
+      allocate(AD%z               (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("AD%z")) return
+      allocate(AD%OtherSt         (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("AD%OtherSt")) return
 
       allocate(Init%InData_AD%rotors(1), stat=ErrStat2); if (FailedAlloc("AD%Init%InData_AD%rotors(1)")) return
 
@@ -660,11 +654,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       if (p_FAST%CompAeroMaps) then
          CALL AllocAry( MeshMapData%HubOrient, 3, 3, Init%InData_AD%rotors(1)%NumBlades, 'Hub orientation matrix', ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            IF (ErrStat >= AbortErrLev) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
+            if (Failed()) return
 
          theta = 0.0_R8Ki
          do k=1,Init%InData_AD%rotors(1)%NumBlades
@@ -672,7 +662,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
             MeshMapData%HubOrient(:,:,k) = EulerConstruct( theta )
          end do
       end if
-
 
       ! set initialization data for AD
       call AllocAry( Init%InData_AD%rotors(1)%BladeRootPosition,      3, Init%InData_AD%rotors(1)%NumBlades, 'Init%InData_AD%rotors(1)%BladeRootPosition', errStat2, ErrMsg2)
@@ -733,9 +722,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (Failed()) return
 
       p_FAST%ModuleInitialized(Module_AD) = .TRUE.
-      CALL SetModuleSubstepTime(Module_AD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+      ! Loop through rotors and add module for each one
       do i = 1, size(Init%OutData_AD%rotors)
          CALL MV_AddModule(m_Glue%ModData, Module_AD, 'AD', i, p_FAST%dt_module(Module_AD), p_FAST%DT, &
                            Init%OutData_AD%rotors(i)%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
@@ -747,12 +735,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    case (Module_ADsk)
 
       ! Allocate module data arrays
-      allocate(ADsk%Input           (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("ADsk%Input")) return
-      allocate(ADsk%InputTimes      (NumInput     ), stat=ErrStat2); if (FailedAlloc("ADsk%InputTimes")) return
-      allocate(ADsk%x               (NumStates    ), stat=ErrStat2); if (FailedAlloc("ADsk%x")) return
-      allocate(ADsk%xd              (NumStates    ), stat=ErrStat2); if (FailedAlloc("ADsk%xd")) return
-      allocate(ADsk%z               (NumStates    ), stat=ErrStat2); if (FailedAlloc("ADsk%z")) return
-      allocate(ADsk%OtherSt         (NumStates    ), stat=ErrStat2); if (FailedAlloc("ADsk%OtherSt")) return
+      allocate(ADsk%Input           (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("ADsk%Input")) return
+      allocate(ADsk%InputTimes      (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("ADsk%InputTimes")) return
+      allocate(ADsk%Input_Saved     (InputAryLB    ), stat=ErrStat2); if (FailedAlloc("ADsk%Input_Saved")) return
+      allocate(ADsk%x               (StateAryUB    ), stat=ErrStat2); if (FailedAlloc("ADsk%x")) return
+      allocate(ADsk%xd              (StateAryUB    ), stat=ErrStat2); if (FailedAlloc("ADsk%xd")) return
+      allocate(ADsk%z               (StateAryUB    ), stat=ErrStat2); if (FailedAlloc("ADsk%z")) return
+      allocate(ADsk%OtherSt         (StateAryUB    ), stat=ErrStat2); if (FailedAlloc("ADsk%OtherSt")) return
 
       Init%InData_ADsk%InputFile       = p_FAST%AeroFile
       Init%InData_ADsk%RootName        = p_FAST%OutFileRoot
@@ -778,12 +767,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                     ADsk%OtherSt(STATE_CURR), ADsk%y, ADsk%m, p_FAST%dt_module( MODULE_ADsk ), Init%OutData_ADsk, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
+      p_FAST%ModuleInitialized(Module_ADsk) = .TRUE.
+
       ! Add module to array, return on error
       call MV_AddModule(m_Glue%ModData, Module_ADsk, 'ADsk', 1, p_FAST%dt_module(Module_ADsk), p_FAST%DT, &
-               Init%OutData_ADsk%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
+                        Init%OutData_ADsk%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
-
-      p_FAST%ModuleInitialized(Module_ADsk) = .TRUE.
 
    end select ! CompAero
 
@@ -798,6 +787,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL ExtLd_Init( Init%InData_ExtLd, ExtLd%u, ExtLd%xd(1), ExtLd%p, ExtLd%y, ExtLd%m, p_FAST%dt_module( MODULE_ExtLd ), Init%OutData_ExtLd, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
+      p_FAST%ModuleInitialized(Module_ExtLd) = .TRUE.
+
       ! Add module to list of modules, return on error
       CALL MV_AddModule(m_Glue%ModData, Module_ExtLd, 'ExtLd', 1, p_FAST%dt_module(Module_ExtLd), p_FAST%DT, &
                         Init%OutData_ExtLd%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
@@ -805,8 +796,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       AirDens = Init%OutData_ExtLd%AirDens
       AD%p%FlowField => Init%OutData_ExtLd%FlowField
-
-      p_FAST%ModuleInitialized(Module_ExtLd) = .TRUE.
 
    END IF
 
@@ -840,13 +829,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !----------------------------------------------------------------------------
 
    ! Allocate module data arrays
-   allocate(HD%Input             (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("HD%Input")) return
-   allocate(HD%InputTimes        (NumInput     ), stat=ErrStat2); if (FailedAlloc("HD%InputTimes")) return
-   allocate(HD%Input_Saved       (NumInputSave), stat=ErrStat2); if (FailedAlloc("HD%Input_Saved")) return
-   allocate(HD%x                 (NumStates     ), stat=ErrStat2); if (FailedAlloc("HD%x")) return
-   allocate(HD%xd                (NumStates     ), stat=ErrStat2); if (FailedAlloc("HD%xd")) return
-   allocate(HD%z                 (NumStates     ), stat=ErrStat2); if (FailedAlloc("HD%z")) return
-   allocate(HD%OtherSt           (NumStates     ), stat=ErrStat2); if (FailedAlloc("HD%OtherSt")) return
+   allocate(HD%Input             (0:InputAryUB  ), stat=ErrStat2); if (FailedAlloc("HD%Input")) return
+   allocate(HD%InputTimes        (InputAryUB    ), stat=ErrStat2); if (FailedAlloc("HD%InputTimes")) return
+   allocate(HD%Input_Saved       (InputAryLB), stat=ErrStat2); if (FailedAlloc("HD%Input_Saved")) return
+   allocate(HD%x                 (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("HD%x")) return
+   allocate(HD%xd                (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("HD%xd")) return
+   allocate(HD%z                 (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("HD%z")) return
+   allocate(HD%OtherSt           (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("HD%OtherSt")) return
 
    IF (p_FAST%CompHydro == Module_HD) THEN
 
@@ -865,14 +854,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                          HD%OtherSt(STATE_CURR), HD%y, HD%m, p_FAST%dt_module(MODULE_HD), Init%OutData_HD, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      CALL SetModuleSubstepTime(Module_HD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
+      p_FAST%ModuleInitialized(Module_HD) = .TRUE.
 
       CALL MV_AddModule(m_Glue%ModData, Module_HD, 'HD', 1, p_FAST%dt_module(Module_HD), p_FAST%DT, &
                         Init%OutData_HD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
-
-      p_FAST%ModuleInitialized(Module_HD) = .TRUE.
 
    END IF   ! CompHydro
 
@@ -881,22 +867,22 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !----------------------------------------------------------------------------
 
    ! Allocate module data arrays
-   allocate(SD%Input           (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("SD%Input")) return
-   allocate(SD%InputTimes      (NumInput     ), stat=ErrStat2); if (FailedAlloc("SD%InputTimes")) return
-   allocate(SD%Input_Saved     (NumInputSave), stat=ErrStat2); if (FailedAlloc("SD%Input_Saved")) return
-   allocate(SD%x               (NumStates     ), stat=ErrStat2); if (FailedAlloc("SD%x")) return
-   allocate(SD%xd              (NumStates     ), stat=ErrStat2); if (FailedAlloc("SD%xd")) return
-   allocate(SD%z               (NumStates     ), stat=ErrStat2); if (FailedAlloc("SD%z")) return
-   allocate(SD%OtherSt         (NumStates     ), stat=ErrStat2); if (FailedAlloc("SD%OtherSt")) return
+   allocate(SD%Input           (0:InputAryUB  ), stat=ErrStat2); if (FailedAlloc("SD%Input")) return
+   allocate(SD%InputTimes      (InputAryUB    ), stat=ErrStat2); if (FailedAlloc("SD%InputTimes")) return
+   allocate(SD%Input_Saved     (InputAryLB), stat=ErrStat2); if (FailedAlloc("SD%Input_Saved")) return
+   allocate(SD%x               (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("SD%x")) return
+   allocate(SD%xd              (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("SD%xd")) return
+   allocate(SD%z               (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("SD%z")) return
+   allocate(SD%OtherSt         (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("SD%OtherSt")) return
 
    ! Allocate module data arrays
-   allocate(ExtPtfm%Input              (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%Input")) return
-   allocate(ExtPtfm%InputTimes         (NumInput     ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%InputTimes")) return
-   allocate(ExtPtfm%Input_Saved        (NumInputSave), stat=ErrStat2); if (FailedAlloc("ExtPtfm%Input_Saved")) return
-   allocate(ExtPtfm%x                  (NumStates     ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%x")) return
-   allocate(ExtPtfm%xd                 (NumStates     ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%xd")) return
-   allocate(ExtPtfm%z                  (NumStates     ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%z")) return
-   allocate(ExtPtfm%OtherSt            (NumStates     ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%OtherSt")) return
+   allocate(ExtPtfm%Input      (0:InputAryUB  ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%Input")) return
+   allocate(ExtPtfm%InputTimes (InputAryUB    ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%InputTimes")) return
+   allocate(ExtPtfm%Input_Saved(InputAryLB), stat=ErrStat2); if (FailedAlloc("ExtPtfm%Input_Saved")) return
+   allocate(ExtPtfm%x          (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%x")) return
+   allocate(ExtPtfm%xd         (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%xd")) return
+   allocate(ExtPtfm%z          (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%z")) return
+   allocate(ExtPtfm%OtherSt    (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("ExtPtfm%OtherSt")) return
 
    select case (p_FAST%CompSub)
 
@@ -918,14 +904,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                     SD%OtherSt(STATE_CURR), SD%y, SD%m, p_FAST%dt_module( MODULE_SD ), Init%OutData_SD, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
-      CALL SetModuleSubstepTime(Module_SD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
+      p_FAST%ModuleInitialized(Module_SD) = .TRUE.
 
       CALL MV_AddModule(m_Glue%ModData, Module_SD, 'SD', 1, p_FAST%dt_module(Module_SD), p_FAST%DT, &
                         Init%OutData_SD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      p_FAST%ModuleInitialized(Module_SD) = .TRUE.
 
    case (Module_ExtPtfm)
 
@@ -939,14 +923,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         ExtPtfm%y, ExtPtfm%m, p_FAST%dt_module(MODULE_ExtPtfm), Init%OutData_ExtPtfm, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      CALL SetModuleSubstepTime(MODULE_ExtPtfm, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
+      p_FAST%ModuleInitialized(MODULE_ExtPtfm) = .TRUE.
    
       CALL MV_AddModule(m_Glue%ModData, MODULE_ExtPtfm, 'ExtPtfm', 1, p_FAST%dt_module(MODULE_ExtPtfm), p_FAST%DT, &
                         Init%OutData_ExtPtfm%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
-
-      p_FAST%ModuleInitialized(MODULE_ExtPtfm) = .TRUE.
 
    end select
 
@@ -955,40 +936,40 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !----------------------------------------------------------------------------
 
    ! Allocate module data arrays
-   allocate(MAPp%Input       (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("MAPp%Input")) return
-   allocate(MAPp%InputTimes  (NumInput     ), stat=ErrStat2); if (FailedAlloc("MAPp%InputTimes")) return
-   allocate(MAPp%Input_Saved (NumInputSave), stat=ErrStat2); if (FailedAlloc("MAPp%Input_Saved")) return
-   allocate(MAPp%x           (NumStates     ), stat=ErrStat2); if (FailedAlloc("MAPp%x")) return
-   allocate(MAPp%xd          (NumStates     ), stat=ErrStat2); if (FailedAlloc("MAPp%xd")) return
-   allocate(MAPp%z           (NumStates     ), stat=ErrStat2); if (FailedAlloc("MAPp%z")) return
+   allocate(MAPp%Input       (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("MAPp%Input")) return
+   allocate(MAPp%InputTimes  (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("MAPp%InputTimes")) return
+   allocate(MAPp%Input_Saved (InputAryLB), stat=ErrStat2); if (FailedAlloc("MAPp%Input_Saved")) return
+   allocate(MAPp%x           (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("MAPp%x")) return
+   allocate(MAPp%xd          (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("MAPp%xd")) return
+   allocate(MAPp%z           (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("MAPp%z")) return
    ! allocate(MAPp%OtherSt     (StateArySize     ), stat=ErrStat2); if (FailedAlloc("MAPp%OtherSt")) return
 
    ! Allocate module data arrays
-   allocate(MD%Input         (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("MD%Input")) return
-   allocate(MD%InputTimes    (NumInput     ), stat=ErrStat2); if (FailedAlloc("MD%InputTimes")) return
-   allocate(MD%Input_Saved   (NumInputSave), stat=ErrStat2); if (FailedAlloc("MD%Input_Saved")) return
-   allocate(MD%x             (NumStates     ), stat=ErrStat2); if (FailedAlloc("MD%x")) return
-   allocate(MD%xd            (NumStates     ), stat=ErrStat2); if (FailedAlloc("MD%xd")) return
-   allocate(MD%z             (NumStates     ), stat=ErrStat2); if (FailedAlloc("MD%z")) return
-   allocate(MD%OtherSt       (NumStates     ), stat=ErrStat2); if (FailedAlloc("MD%OtherSt")) return
+   allocate(MD%Input         (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("MD%Input")) return
+   allocate(MD%InputTimes    (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("MD%InputTimes")) return
+   allocate(MD%Input_Saved   (InputAryLB), stat=ErrStat2); if (FailedAlloc("MD%Input_Saved")) return
+   allocate(MD%x             (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("MD%x")) return
+   allocate(MD%xd            (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("MD%xd")) return
+   allocate(MD%z             (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("MD%z")) return
+   allocate(MD%OtherSt       (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("MD%OtherSt")) return
 
    ! Allocate module data arrays
-   allocate(FEAM%Input       (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("FEAM%Input")) return
-   allocate(FEAM%InputTimes  (NumInput     ), stat=ErrStat2); if (FailedAlloc("FEAM%InputTimes")) return
-   allocate(FEAM%Input_Saved (NumInputSave), stat=ErrStat2); if (FailedAlloc("FEAM%Input_Saved")) return
-   allocate(FEAM%x           (NumStates     ), stat=ErrStat2); if (FailedAlloc("FEAM%x")) return
-   allocate(FEAM%xd          (NumStates     ), stat=ErrStat2); if (FailedAlloc("FEAM%xd")) return
-   allocate(FEAM%z           (NumStates     ), stat=ErrStat2); if (FailedAlloc("FEAM%z")) return
-   allocate(FEAM%OtherSt     (NumStates     ), stat=ErrStat2); if (FailedAlloc("FEAM%OtherSt")) return
+   allocate(FEAM%Input       (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("FEAM%Input")) return
+   allocate(FEAM%InputTimes  (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("FEAM%InputTimes")) return
+   allocate(FEAM%Input_Saved (InputAryLB), stat=ErrStat2); if (FailedAlloc("FEAM%Input_Saved")) return
+   allocate(FEAM%x           (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("FEAM%x")) return
+   allocate(FEAM%xd          (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("FEAM%xd")) return
+   allocate(FEAM%z           (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("FEAM%z")) return
+   allocate(FEAM%OtherSt     (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("FEAM%OtherSt")) return
 
    ! Allocate module data arrays
-   allocate(Orca%Input       (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("Orca%Input")) return
-   allocate(Orca%InputTimes  (NumInput     ), stat=ErrStat2); if (FailedAlloc("Orca%InputTimes")) return
-   allocate(Orca%Input_Saved (NumInputSave), stat=ErrStat2); if (FailedAlloc("Orca%Input_Saved")) return
-   allocate(Orca%x           (NumStates     ), stat=ErrStat2); if (FailedAlloc("Orca%x")) return
-   allocate(Orca%xd          (NumStates     ), stat=ErrStat2); if (FailedAlloc("Orca%xd")) return
-   allocate(Orca%z           (NumStates     ), stat=ErrStat2); if (FailedAlloc("Orca%z")) return
-   allocate(Orca%OtherSt     (NumStates     ), stat=ErrStat2); if (FailedAlloc("Orca%OtherSt")) return
+   allocate(Orca%Input       (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("Orca%Input")) return
+   allocate(Orca%InputTimes  (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("Orca%InputTimes")) return
+   allocate(Orca%Input_Saved (InputAryLB), stat=ErrStat2); if (FailedAlloc("Orca%Input_Saved")) return
+   allocate(Orca%x           (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("Orca%x")) return
+   allocate(Orca%xd          (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("Orca%xd")) return
+   allocate(Orca%z           (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("Orca%z")) return
+   allocate(Orca%OtherSt     (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("Orca%OtherSt")) return
 
 
    select case (p_FAST%CompMooring)
@@ -1016,8 +997,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (Failed()) return
 
       p_FAST%ModuleInitialized(Module_MAP) = .TRUE.
-      CALL SetModuleSubstepTime(Module_MAP, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
 
       CALL MV_AddModule(m_Glue%ModData, Module_MAP, 'MAP', 1, p_FAST%dt_module(Module_MAP), p_FAST%DT, &
                         Init%OutData_MAP%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
@@ -1048,8 +1027,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (Failed()) return
 
       p_FAST%ModuleInitialized(Module_MD) = .TRUE.
-      CALL SetModuleSubstepTime(Module_MD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
 
       CALL MV_AddModule(m_Glue%ModData, Module_MD, 'MD', 1, p_FAST%dt_module(Module_MD), p_FAST%DT, &
                         Init%OutData_MD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
@@ -1073,8 +1050,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (Failed()) return
 
       p_FAST%ModuleInitialized(Module_FEAM) = .TRUE.
-      CALL SetModuleSubstepTime(Module_FEAM, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
 
       CALL MV_AddModule(m_Glue%ModData, Module_FEAM, 'FEAM', 1, p_FAST%dt_module(Module_FEAM), p_FAST%DT, &
                         Init%OutData_FEAM%Vars, .false., ErrStat2, ErrMsg2)
@@ -1091,8 +1066,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (Failed()) return
 
       p_FAST%ModuleInitialized(MODULE_Orca) = .TRUE.
-      CALL SetModuleSubstepTime(MODULE_Orca, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
 
       CALL MV_AddModule(m_Glue%ModData, Module_Orca, 'Orca', 1, p_FAST%dt_module(Module_Orca), p_FAST%DT, &
                         Init%OutData_Orca%Vars, .false., ErrStat2, ErrMsg2)
@@ -1109,13 +1082,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !-------------------------------------
 
    ! Allocate module data arrays
-   allocate(IceF%Input            (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("IceF%Input")) return
-   allocate(IceF%InputTimes       (NumInput     ), stat=ErrStat2); if (FailedAlloc("IceF%InputTimes")) return
-   allocate(IceF%Input_Saved      (NumInputSave), stat=ErrStat2); if (FailedAlloc("IceF%Input_Saved")) return
-   allocate(IceF%x                (NumStates     ), stat=ErrStat2); if (FailedAlloc("IceF%x")) return
-   allocate(IceF%xd               (NumStates     ), stat=ErrStat2); if (FailedAlloc("IceF%xd")) return
-   allocate(IceF%z                (NumStates     ), stat=ErrStat2); if (FailedAlloc("IceF%z")) return
-   allocate(IceF%OtherSt          (NumStates     ), stat=ErrStat2); if (FailedAlloc("IceF%OtherSt")) return
+   allocate(IceF%Input            (0:InputAryUB   ), stat=ErrStat2); if (FailedAlloc("IceF%Input")) return
+   allocate(IceF%InputTimes       (InputAryUB     ), stat=ErrStat2); if (FailedAlloc("IceF%InputTimes")) return
+   allocate(IceF%Input_Saved      (InputAryLB), stat=ErrStat2); if (FailedAlloc("IceF%Input_Saved")) return
+   allocate(IceF%x                (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("IceF%x")) return
+   allocate(IceF%xd               (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("IceF%xd")) return
+   allocate(IceF%z                (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("IceF%z")) return
+   allocate(IceF%OtherSt          (StateAryUB     ), stat=ErrStat2); if (FailedAlloc("IceF%OtherSt")) return
 
    IF (p_FAST%CompIce == Module_IceF) THEN
 
@@ -1129,15 +1102,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                          IceF%OtherSt(STATE_CURR), IceF%y, IceF%m, p_FAST%dt_module( MODULE_IceF ), Init%OutData_IceF, ErrStat2, ErrMsg2 )
       if (Failed()) return
       
-      CALL SetModuleSubstepTime(Module_IceF, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-      if (Failed()) return
+      p_FAST%ModuleInitialized(Module_IceF) = .TRUE.
 
       ! Add module to list of modules
-      ! CALL MV_AddModule(m_Glue%Modules, Module_IceD, 'IceD', 1, p_FAST%dt_module(Module_IceD), p_FAST%DT, &
-      !                   Init%OutData_IceD%Vars, ErrStat2, ErrMsg2)
-      ! if (Failed()) return
-
-      p_FAST%ModuleInitialized(Module_IceF) = .TRUE.
+      CALL MV_AddModule(m_Glue%ModData, Module_IceF, 'IceF', 1, p_FAST%dt_module(Module_IceF), p_FAST%DT, &
+                        Init%OutData_IceF%Vars, .false., ErrStat2, ErrMsg2)
+      if (Failed()) return
 
    end if
 
@@ -1151,17 +1121,17 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    IF (p_FAST%CompIce == Module_IceD) IceDim = IceD_MaxLegs
 
    ! Allocate module data arrays
-   allocate(IceD%Input       (0:NumInput,    IceDim      ), stat=ErrStat2); if (FailedAlloc("IceD%Input")) return
-   allocate(IceD%InputTimes  (NumInput,      IceDim      ), stat=ErrStat2); if (FailedAlloc("IceD%InputTimes")) return
-   allocate(IceD%Input_Saved (NumInputSave, IceDim      ), stat=ErrStat2); if (FailedAlloc("IceD%Input_Saved")) return
-   allocate(IceD%x           (IceDim,            NumStates), stat=ErrStat2); if (FailedAlloc("IceD%x")) return
-   allocate(IceD%xd          (IceDim,            NumStates), stat=ErrStat2); if (FailedAlloc("IceD%xd")) return
-   allocate(IceD%z           (IceDim,            NumStates), stat=ErrStat2); if (FailedAlloc("IceD%z")) return
-   allocate(IceD%OtherSt     (IceDim,            NumStates), stat=ErrStat2); if (FailedAlloc("IceD%OtherSt")) return
-   allocate(IceD%p           (IceDim                         ), stat=ErrStat2); if (FailedAlloc("IceD%p")) return
-   allocate(IceD%u           (IceDim                         ), stat=ErrStat2); if (FailedAlloc("IceD%u")) return
-   allocate(IceD%y           (IceDim                         ), stat=ErrStat2); if (FailedAlloc("IceD%y")) return
-   allocate(IceD%m           (IceDim                         ), stat=ErrStat2); if (FailedAlloc("IceD%m")) return
+   allocate(IceD%Input       (0:InputAryUB,   IceDim   ), stat=ErrStat2); if (FailedAlloc("IceD%Input")) return
+   allocate(IceD%InputTimes  (InputAryUB,     IceDim   ), stat=ErrStat2); if (FailedAlloc("IceD%InputTimes")) return
+   allocate(IceD%Input_Saved (InputAryLB, IceDim   ), stat=ErrStat2); if (FailedAlloc("IceD%Input_Saved")) return
+   allocate(IceD%x           (IceDim,       StateAryUB), stat=ErrStat2); if (FailedAlloc("IceD%x")) return
+   allocate(IceD%xd          (IceDim,       StateAryUB), stat=ErrStat2); if (FailedAlloc("IceD%xd")) return
+   allocate(IceD%z           (IceDim,       StateAryUB), stat=ErrStat2); if (FailedAlloc("IceD%z")) return
+   allocate(IceD%OtherSt     (IceDim,       StateAryUB), stat=ErrStat2); if (FailedAlloc("IceD%OtherSt")) return
+   allocate(IceD%p           (IceDim                 ), stat=ErrStat2); if (FailedAlloc("IceD%p")) return
+   allocate(IceD%u           (IceDim                 ), stat=ErrStat2); if (FailedAlloc("IceD%u")) return
+   allocate(IceD%y           (IceDim                 ), stat=ErrStat2); if (FailedAlloc("IceD%y")) return
+   allocate(IceD%m           (IceDim                 ), stat=ErrStat2); if (FailedAlloc("IceD%m")) return
 
    IF (p_FAST%CompIce == Module_IceD) THEN
 
@@ -1177,7 +1147,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                       IceD%OtherSt(1,STATE_CURR), IceD%y(1), IceD%m(1), p_FAST%dt_module( MODULE_IceD ), Init%OutData_IceD, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
-      CALL SetModuleSubstepTime(Module_IceD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+      p_FAST%ModuleInitialized(Module_IceD) = .TRUE.
+
+      ! Add module to list of modules
+      CALL MV_AddModule(m_Glue%ModData, Module_IceD, 'IceD', 1, p_FAST%dt_module(Module_IceD), p_FAST%DT, &
+                        Init%OutData_IceD%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
 
       ! now initialize IceD for additional legs (if necessary)
@@ -1189,7 +1163,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                            //TRIM(Num2LStr(p_FAST%numIceLegs))//' legs were specified.',ErrStat,ErrMsg,RoutineName)
       END IF
 
-
+      ! Loop through Icelegs
       DO i=2,p_FAST%numIceLegs  ! basically, we just need IceDyn to set up its meshes for inputs/outputs and possibly initial values for states
 
          Init%InData_IceD%LegNum = i
@@ -1206,12 +1180,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          END IF
 
          ! Add module to list of modules
-         ! CALL MV_AddModule(m_Glue%Modules, Module_IceD, 'IceD', 1, p_FAST%dt_module(Module_IceD), p_FAST%DT, &
-         !                   Init%OutData_IceD%Vars, ErrStat2, ErrMsg2)
-         ! if (Failed()) return
+         CALL MV_AddModule(m_Glue%ModData, Module_IceD, 'IceD', i, p_FAST%dt_module(Module_IceD), p_FAST%DT, &
+                           Init%OutData_IceD%Vars, .false., ErrStat2, ErrMsg2)
+         if (Failed()) return
       END DO
-
-      p_FAST%ModuleInitialized(Module_IceD) = .TRUE.
 
    END IF
 
@@ -1220,13 +1192,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    !----------------------------------------------------------------------------
 
    ! Allocate module data arrays
-   allocate(SrvD%Input       (0:NumInput   ), stat=ErrStat2); if (FailedAlloc("SrvD%Input")) return
-   allocate(SrvD%InputTimes  (NumInput     ), stat=ErrStat2); if (FailedAlloc("SrvD%InputTimes")) return
-   allocate(SrvD%Input_Saved (NumInputSave), stat=ErrStat2); if (FailedAlloc("SrvD%Input_Saved")) return
-   allocate(SrvD%x           (NumStates     ), stat=ErrStat2); if (FailedAlloc("SrvD%x")) return
-   allocate(SrvD%xd          (NumStates     ), stat=ErrStat2); if (FailedAlloc("SrvD%xd")) return
-   allocate(SrvD%z           (NumStates     ), stat=ErrStat2); if (FailedAlloc("SrvD%z")) return
-   allocate(SrvD%OtherSt     (NumStates     ), stat=ErrStat2); if (FailedAlloc("SrvD%OtherSt")) return
+   allocate(SrvD%Input       (0:InputAryUB  ), stat=ErrStat2); if (FailedAlloc("SrvD%Input")) return
+   allocate(SrvD%InputTimes  (InputAryUB    ), stat=ErrStat2); if (FailedAlloc("SrvD%InputTimes")) return
+   allocate(SrvD%Input_Saved (InputAryLB), stat=ErrStat2); if (FailedAlloc("SrvD%Input_Saved")) return
+   allocate(SrvD%x           (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("SrvD%x")) return
+   allocate(SrvD%xd          (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("SrvD%xd")) return
+   allocate(SrvD%z           (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("SrvD%z")) return
+   allocate(SrvD%OtherSt     (StateAryUB   ), stat=ErrStat2); if (FailedAlloc("SrvD%OtherSt")) return
 
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
 

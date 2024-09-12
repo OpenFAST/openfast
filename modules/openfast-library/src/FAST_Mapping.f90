@@ -42,11 +42,14 @@ integer(IntKi), parameter  :: Xfr_Invalid = 0, &
 
 character(24), parameter   :: Custom_ED_to_ExtLd = 'ED -> ExtLd', &
                               Custom_SrvD_to_AD = 'SrvD -> AD', &
+                              Custom_ED_to_ADsk = 'ED -> ADsk', &
+                              Custom_SED_to_ADsk = 'SED -> ADsk', &
                               Custom_ED_to_IfW = 'ED -> IfW', &
                               Custom_SrvD_to_IfW = 'SrvD -> IfW', &
                               Custom_BD_to_SrvD = 'BD -> SrvD', &
                               Custom_ED_to_SrvD = 'ED -> SrvD', &
                               Custom_SrvD_to_ED = 'SrvD -> ED', &
+                              Custom_SrvD_to_SED = 'SrvD -> SED', &
                               Custom_IfW_to_SrvD = 'IfW -> SrvD', &
                               Custom_ExtInfw_to_SrvD = 'ExtInfw -> SrvD', &
                               Custom_SrvD_to_SD = 'SrvD -> SD', &
@@ -72,10 +75,14 @@ subroutine FAST_InputMeshPointer(ModData, Turbine, MeshLoc, Mesh, iInput, ErrSta
    select case (ModData%ID)
    case (Module_AD)
       Mesh => AD_InputMeshPointer(Turbine%AD%Input(iInput)%rotors(ModData%Ins), MeshLoc)
+   case (Module_ADsk)
+      Mesh => ADsk_InputMeshPointer(Turbine%ADsk%Input(iInput), MeshLoc)
    case (Module_BD)
       Mesh => BD_InputMeshPointer(Turbine%BD%Input(iInput, ModData%Ins), MeshLoc)
    case (Module_ED)
       Mesh => ED_InputMeshPointer(Turbine%ED%Input(iInput), MeshLoc)
+   case (Module_SED)
+      Mesh => SED_InputMeshPointer(Turbine%SED%Input(iInput), MeshLoc)
    case (Module_ExtInfw)
       ! ExtInfw doesn't have the typical input structure, using u
       Mesh => ExtInfw_InputMeshPointer(Turbine%ExtInfw%u, MeshLoc)
@@ -139,10 +146,14 @@ subroutine FAST_OutputMeshPointer(ModData, Turbine, MeshLoc, Mesh, ErrStat, ErrM
    select case (ModData%ID)
    case (Module_AD)
       Mesh => AD_OutputMeshPointer(Turbine%AD%y%rotors(ModData%Ins), MeshLoc)
+   case (Module_ADsk)
+      Mesh => ADsk_OutputMeshPointer(Turbine%ADsk%y, MeshLoc)
    case (Module_BD)
       Mesh => BD_OutputMeshPointer(Turbine%BD%y(ModData%Ins), MeshLoc)
    case (Module_ED)
       Mesh => ED_OutputMeshPointer(Turbine%ED%y, MeshLoc)
+   case (Module_SED)
+      Mesh => SED_OutputMeshPointer(Turbine%SED%y, MeshLoc)
    case (Module_ExtInfw)
       Mesh => ExtInfw_OutputMeshPointer(Turbine%ExtInfw%y, MeshLoc)
    case (Module_ExtLd)
@@ -206,6 +217,8 @@ function FAST_InputFieldName(ModData, DL) result(Name)
       case (AD_u_PropagationDir)
          Name = 'AD%u%PropagationDir (Ext)'
       end select
+   case (Module_ADsk)
+      Name = trim(ModData%Abbr)//"%"//ADsk_InputFieldName(DL)
    case (Module_BD)
       Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_InputFieldName(DL)
    case (Module_ED)
@@ -215,6 +228,8 @@ function FAST_InputFieldName(ModData, DL) result(Name)
       case (ED_u_BlPitchComC)
          Name = 'ED%u%BlPitchComC (Ext)'
       end select
+   case (Module_SED)
+      Name = trim(ModData%Abbr)//"%"//SED_InputFieldName(DL)
    case (Module_ExtInfw)
       Name = trim(ModData%Abbr)//"%"//ExtInfw_InputFieldName(DL)
    case (Module_ExtLd)
@@ -281,10 +296,14 @@ function FAST_OutputFieldName(ModData, DL) result(Name)
    case (Module_AD)
       tmp = AD_OutputFieldName(DL)
       Name = trim(ModData%Abbr)//"%y%rotors("//trim(Num2LStr(ModData%Ins))//")"//tmp(2:)
+   case (Module_ADsk)
+      Name = trim(ModData%Abbr)//"%"//ADsk_OutputFieldName(DL)
    case (Module_BD)
       Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_OutputFieldName(DL)
    case (Module_ED)
       Name = trim(ModData%Abbr)//"%"//ED_OutputFieldName(DL)
+   case (Module_SED)
+      Name = trim(ModData%Abbr)//"%"//SED_OutputFieldName(DL)
    case (Module_ExtInfw)
       Name = trim(ModData%Abbr)//"%"//ExtInfw_OutputFieldName(DL)
    case (Module_ExtLd)
@@ -369,10 +388,14 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
          select case (Mods(IModDst)%ID)
          case (Module_AD)
             call InitMappings_AD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+         case (Module_ADsk)
+            call InitMappings_ADsk(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_BD)
             call InitMappings_BD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ED)
             call InitMappings_ED(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
+         case (Module_SED)
+            call InitMappings_SED(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ExtInfw)
             call InitMappings_ExtInfw(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ExtLd)
@@ -577,6 +600,54 @@ contains
    end function
 end subroutine
 
+subroutine InitMappings_ADsk(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
+   type(MappingType), allocatable         :: Mappings(:)
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
+   type(FAST_TurbineType), intent(inout)  :: Turbine
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter    :: RoutineName = 'InitMappings_ADsk'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Select based on source module identifier
+   select case (SrcMod%ID)
+
+   case (Module_ED)
+
+      ! Hub motion
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(ED_y_HubPtMotion), &        ! ED%y%HubPtMotion
+                         DstMod=DstMod, DstDL=DatLoc(ADsk_u_HubMotion), &        ! ADsk%u%HubMotion
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      if (Failed()) return
+
+      call MapCustom(Mappings, Custom_ED_to_ADsk, SrcMod, DstMod)
+
+   case (Module_SED)
+
+      ! Hub motion
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(SED_y_HubPtMotion), &       ! ED%y%HubPtMotion
+                         DstMod=DstMod, DstDL=DatLoc(ADsk_u_HubMotion), &        ! ADsk%u%HubMotion
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      if (Failed()) return
+
+      call MapCustom(Mappings, Custom_SED_to_ADsk, SrcMod, DstMod)
+
+   end select
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
 subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    type(MappingType), allocatable      :: Mappings(:)
    type(ModDataType), intent(inout)       :: SrcMod, DstMod
@@ -742,6 +813,19 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        DstDispDL=DatLoc(ED_y_TowerLn2Mesh), &  ! ED%y%TowerLn2Mesh
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                        Active=CompAeroAD .and. NotCompAeroMaps)
+      if (Failed()) return
+
+   case (Module_ADsk)
+
+      ! Hub Loads
+      call MapLoadMesh(Turbine, Mappings, &
+                       SrcMod=SrcMod, &
+                       SrcDL=DatLoc(ADsk_y_AeroLoads), &        ! ADsk%y%AeroLoads
+                       SrcDispDL=DatLoc(ADsk_u_HubMotion), &    ! ADsk%u%HubMotion
+                       DstMod=DstMod, &
+                       DstDL=DatLoc(ED_u_HubPtLoad), &          ! ED%u%HubPtLoad
+                       DstDispDL=DatLoc(ED_y_HubPtMotion), &    ! ED%y%HubPtMotion
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
    case (Module_BD)
@@ -964,6 +1048,61 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2)
          if (Failed()) return
       end do
+
+   end select
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine InitMappings_SED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
+   type(MappingType), allocatable      :: Mappings(:)
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
+   type(FAST_TurbineType), intent(inout)  :: Turbine           !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter    :: RoutineName = 'InitMappings_SED'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+   integer(IntKi)             :: i, j
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Select based on source module identifier
+   select case (SrcMod%ID)
+
+   case (Module_AD)
+
+      ! Blade Loads
+      do i = 1, size(Turbine%AD%y%rotors(SrcMod%Ins)%BladeLoad)
+         call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                          SrcDL=DatLoc(AD_y_BladeLoad, i), &            ! AD%y%rotors(SrcMod%Ins)%BladeLoad(i)
+                          SrcDispDL=DatLoc(AD_u_BladeMotion, i), &      ! AD%u%rotors(SrcMod%Ins)%BladeMotion(i)
+                          DstDL=DatLoc(SED_u_HubPtLoad), &              ! SED%u%HubPtLoad
+                          DstDispDL=DatLoc(SED_y_HubPtMotion), &        ! SED%y%HubPtMotion
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+         if (Failed()) return
+      end do
+
+   case (Module_ADsk)
+
+      ! Hub Loads
+      call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                       SrcDL=DatLoc(ADsk_y_AeroLoads), &                ! ADsk%y%AeroLoads
+                       SrcDispDL=DatLoc(ADsk_u_HubMotion), &            ! ADsk%u%HubMotion
+                       DstDL=DatLoc(ED_u_HubPtLoad), &                  ! ED%u%HubPtLoad
+                       DstDispDL=DatLoc(ED_y_HubPtMotion), &            ! ED%y%HubPtMotion
+                       ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      if (Failed()) return
+
+   case (Module_SrvD)
+
+      call MapCustom(Mappings, Custom_SrvD_to_SED, SrcMod, DstMod)
 
    end select
 
@@ -2398,10 +2537,14 @@ subroutine VarUnpackInput(ModData, Var, ValAry, T, iInput, ErrStat, ErrMsg)
    select case (ModData%ID)
    case (Module_AD)
       call AD_VarUnpackInput(Var, ValAry, T%AD%Input(iInput)%rotors(ModData%Ins))
+   case (Module_ADsk)
+      call ADsk_VarUnpackInput(Var, ValAry, T%ADsk%Input(iInput))
    case (Module_BD)
       call BD_VarUnpackInput(Var, ValAry, T%BD%Input(iInput, ModData%Ins))
    case (Module_ED)
       call ED_VarUnpackInput(Var, ValAry, T%ED%Input(iInput))
+   case (Module_SED)
+      call SED_VarUnpackInput(Var, ValAry, T%SED%Input(iInput))
    case (Module_ExtLd)
       call ExtLd_VarUnpackInput(Var, ValAry, T%ExtLd%u)
    case (Module_ExtInfw)
@@ -2447,10 +2590,14 @@ subroutine VarPackOutput(ModData, Var, ValAry, T, ErrStat, ErrMsg)
    select case (ModData%ID)
    case (Module_AD)
       call AD_VarPackOutput(Var, T%AD%y%rotors(ModData%Ins), ValAry)
+   case (Module_ADsk)
+      call ADsk_VarPackOutput(Var, T%ADsk%y, ValAry)
    case (Module_BD)
       call BD_VarPackOutput(Var, T%BD%y(ModData%Ins), ValAry)
    case (Module_ED)
       call ED_VarPackOutput(Var, T%ED%y, ValAry)
+   case (Module_SED)
+      call SED_VarPackOutput(Var, T%SED%y, ValAry)
    case (Module_ExtLd)
       call ExtLd_VarPackOutput(Var, T%ExtLd%y, ValAry)
    case (Module_ExtInfw)
@@ -2752,6 +2899,20 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       end do
 
 !-------------------------------------------------------------------------------
+! ADsk Inputs
+!-------------------------------------------------------------------------------
+
+   case (Custom_ED_to_ADsk)
+
+      T%ADsk%Input(iInput)%RotSpeed   = T%ED%y%RotSpeed
+      T%ADsk%Input(iInput)%BlPitch    = T%ED%y%BlPitch(1)   ! ADsk only uses collective blade pitch
+
+   case (Custom_SED_to_ADsk)
+
+      T%ADsk%Input(iInput)%RotSpeed   = T%SED%y%RotSpeed
+      T%ADsk%Input(iInput)%BlPitch    = T%SED%y%BlPitch(1)   ! ADsk only uses collective blade pitch
+
+!-------------------------------------------------------------------------------
 ! ElastoDyn Inputs
 !-------------------------------------------------------------------------------
 
@@ -2761,6 +2922,18 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       T%ED%Input(iInput)%HSSBrTrqC = T%SrvD%y%HSSBrTrqC
       T%ED%Input(iInput)%BlPitchCom = T%SrvD%y%BlPitchCom
       T%ED%Input(iInput)%YawMom = T%SrvD%y%YawMom
+
+!-------------------------------------------------------------------------------
+! SED Inputs
+!-------------------------------------------------------------------------------
+
+   case (Custom_SrvD_to_SED)
+
+      T%SED%Input(iInput)%GenTrq = T%SrvD%y%GenTrq
+      T%SED%Input(iInput)%HSSBrTrqC = T%SrvD%y%HSSBrTrqC
+      T%SED%Input(iInput)%BlPitchCom = T%SrvD%y%BlPitchCom
+      T%SED%Input(iInput)%YawPosCom = T%SrvD%y%YawPosCom
+      T%SED%Input(iInput)%YawRateCom = T%SrvD%y%YawRateCom
 
 !-------------------------------------------------------------------------------
 ! ExtLoads Inputs
