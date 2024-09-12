@@ -254,7 +254,7 @@ FUNCTION WrapToPiR(angle)
 
    REAL(SiKi),    INTENT(IN) :: angle
    REAL(SiKi)                :: WrapToPiR
-   WrapToPiR = modulo(angle + Pi_R4, TwoPi) - Pi_R4
+   WrapToPiR = modulo(angle + Pi_R4, TwoPi_R4) - Pi_R4
 
 END FUNCTION WrapToPiR
 
@@ -262,7 +262,7 @@ FUNCTION WrapToPiD(angle)
 
    REAL(R8Ki),    INTENT(IN) :: angle
    REAL(R8Ki)                :: WrapToPiD
-   WrapToPiD = modulo(angle + Pi_R8, TwoPi) - Pi_R8
+   WrapToPiD = modulo(angle + Pi_R8, TwoPi_R8) - Pi_R8
 
 END FUNCTION WrapToPiD
 
