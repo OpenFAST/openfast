@@ -433,7 +433,7 @@ for i, f in enumerate(localOutFiles):
     ErrorsLoc, ElemErrorsLoc = compareLin(f,ff1,ff2)
     Errors += ErrorsLoc
     if len(ElemErrorsLoc)>0:
-        Errors += ElemErrorsLoc[:3] # Just a couple of them
+        Errors += ElemErrorsLoc[:5] # Just a couple of them
 
 freqFileClose(ff1,ff2)
 
