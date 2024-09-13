@@ -49,15 +49,12 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    !----------------------------------------------------------------------------
 
    ! Generalized alpha damping coefficient
-   ! TODO: read from input file
    p%RhoInf = p_FAST%RhoInf
 
    ! Max number of convergence iterations
-   ! TODO: read from input file
    p%MaxConvIter = p_FAST%MaxConvIter
 
    ! Convergence tolerance
-   ! TODO: read from input file
    p%ConvTol = p_FAST%ConvTol
 
    ! Solver time step
@@ -114,7 +111,7 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
 
    ! Indices of Option 1 modules
    p%iModOpt1 = [pack(modInds, ModIDs == Module_SED), &
-               ! TODO: pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK /= MHK_None), &
+                 pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK /= MHK_None), &
                  pack(modInds, ModIDs == Module_ExtPtfm), &
                  pack(modInds, ModIDs == Module_HD), &
                  pack(modInds, ModIDs == Module_MD), &
@@ -128,8 +125,7 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                  pack(modInds, ModIDs == Module_SD), &
                  pack(modInds, ModIDs == Module_IfW), &
                  pack(modInds, ModIDs == Module_SeaSt), &
-               ! TODO: pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK == MHK_None), &
-                 pack(modInds, ModIDs == Module_AD), &
+                 pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK == MHK_None), &
                  pack(modInds, ModIDs == Module_ADsk), &
                  pack(modInds, ModIDs == Module_ExtLd), &
                  pack(modInds, ModIDs == Module_FEAM), &
