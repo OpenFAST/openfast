@@ -3167,7 +3167,7 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
    real(ReKi), dimension(3)   ::  rIP0 ! Vector from TP to Node (undeflected)
    real(ReKi), dimension(3)   ::  duP  ! Displacement of node due to rigid rotation
    real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global coordinates
-   real(ReKi), dimension(3,3) :: DCM
+   real(R8Ki), dimension(3,3) :: DCM
    INTEGER(IntKi)             :: ErrStat2    ! Error status of the operation (occurs after initial error)
    CHARACTER(ErrMsgLen)       :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
    ! --- Convert inputs to FEM DOFs and convenient 6-vector storage
