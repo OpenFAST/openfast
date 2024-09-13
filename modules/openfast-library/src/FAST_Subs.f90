@@ -116,6 +116,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
    TYPE(FAST_InitData)                     :: Init                !< Initialization data for all modules
 
 
+   type(MeshType)                          :: PtfmPtMesh_tmp      ! temporary mesh for initializing low-pass filter for HD
    REAL(ReKi)                              :: AirDens             ! air density for initialization/normalization of ExternalInflow data
    REAL(DbKi)                              :: dt_IceD             ! tmp dt variable to ensure IceDyn doesn't specify different dt values for different legs (IceDyn instances)
    REAL(DbKi)                              :: dt_BD               ! tmp dt variable to ensure BeamDyn doesn't specify different dt values for different instances
@@ -1662,18 +1663,26 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
    ! ----------------------------------------------------------------------------
    IF ( (p_FAST%CompHydro == Module_HD) .AND. (HD%p%PotMod == 1_IntKi) ) THEN
       IF ( HD%p%WAMIT(1)%ExctnDisp == 2_IntKi ) THEN
-         ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
-         ED%y%PlatformPtMesh%TranslationDisp(:,1) = Init%OutData_ED%PlatformPos(1:3)
+         ! Make a temporary copy of the PlatformPtMesh -- we don't want to change an output
+         ! NOTE: disposal of the temporary mesh done in Cleanup
+         call MeshCopy( ED%y%PlatformPtMesh, PtfmPtMesh_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+            call Cleanup()
+            return
+         endif
+         ! Set the initial displacement of PtfmPtMesh_tmp here to use MeshMapping
+         PtfmPtMesh_tmp%TranslationDisp(:,1) = Init%OutData_ED%PlatformPos(1:3)
          CALL SmllRotTrans( 'initial platform rotation ', &
                              REAL(Init%OutData_ED%PlatformPos(4),R8Ki), &
                              REAL(Init%OutData_ED%PlatformPos(5),R8Ki), &
                              REAL(Init%OutData_ED%PlatformPos(6),R8Ki), &
-                             ED%y%PlatformPtMesh%Orientation(:,:,1), '', ErrStat2, ErrMsg2 )
+                             PtfmPtMesh_tmp%Orientation(:,:,1), '', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         ED%y%PlatformPtMesh%TranslationDisp(1,1) = ED%y%PlatformPtMesh%TranslationDisp(1,1) + ED%y%PlatformPtMesh%Orientation(3,1,1) * ED%p%PtfmRefzt
-         ED%y%PlatformPtMesh%TranslationDisp(2,1) = ED%y%PlatformPtMesh%TranslationDisp(2,1) + ED%y%PlatformPtMesh%Orientation(3,2,1) * ED%p%PtfmRefzt
-         ED%y%PlatformPtMesh%TranslationDisp(3,1) = ED%y%PlatformPtMesh%TranslationDisp(3,1) + ED%y%PlatformPtMesh%Orientation(3,3,1) * ED%p%PtfmRefzt - ED%p%PtfmRefzt
-         CALL Transfer_PlatformMotion_to_HD( ED%y%PlatformPtMesh, HD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
+         PtfmPtMesh_tmp%TranslationDisp(1,1) = PtfmPtMesh_tmp%TranslationDisp(1,1) + PtfmPtMesh_tmp%Orientation(3,1,1) * ED%p%PtfmRefzt
+         PtfmPtMesh_tmp%TranslationDisp(2,1) = PtfmPtMesh_tmp%TranslationDisp(2,1) + PtfmPtMesh_tmp%Orientation(3,2,1) * ED%p%PtfmRefzt
+         PtfmPtMesh_tmp%TranslationDisp(3,1) = PtfmPtMesh_tmp%TranslationDisp(3,1) + PtfmPtMesh_tmp%Orientation(3,3,1) * ED%p%PtfmRefzt - ED%p%PtfmRefzt
+         CALL Transfer_PlatformMotion_to_HD( PtfmPtMesh_tmp, HD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
@@ -1794,6 +1803,8 @@ CONTAINS
       ! data that they point to:
       CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call MeshDestroy(PtfmPtMesh_tmp, ErrStat2, ErrMsg2)      ! No harm in destroying this even if never initialized
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    END SUBROUTINE Cleanup
 
