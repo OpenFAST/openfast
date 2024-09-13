@@ -2455,17 +2455,30 @@ subroutine RotCalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       ! Tower
    if ( p%NumTwrNds > 0 ) then
 
-      do j = 1,p%NumTwrNds ! loop through all nodes
-            ! Check that tower nodes do not go beneath the seabed or pierce the free surface
-         if ( u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) >= p%MSL2SWL .OR. u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) < -p%WtrDpth ) &
+      ! loop through all nodes
+      do j = 1, p%NumTwrNds 
+
+         ! Skip check for first node if this is a fixed bottom tower
+         if (j == 1 .and. p%MHK == MHK_FixedBottom) cycle
+
+         ! Check that tower nodes do not go beneath the seabed or pierce the free surface
+         if ( u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) >= p%MSL2SWL .OR. &
+              u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) < -p%WtrDpth ) then
             call SetErrStat( ErrID_Fatal, 'The tower cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
             if ( ErrStat >= AbortErrLev ) return
+         end if
       end do
 
       do j = 1,p%NumTwrNds - 1 ! loop through all nodes, except the last
             ! Global position of tower node
          TwrtmpPos = u%TowerMotion%Position(:,j) + u%TowerMotion%TranslationDisp(:,j) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
          TwrtmpPosplus = u%TowerMotion%Position(:,j+1) + u%TowerMotion%TranslationDisp(:,j+1) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
+
+         ! If base node on fixed bottom tower is below the water depth (during Jacobian perturbations),
+         ! clamp it to the water depth
+         if ((j == 1) .and. (p%MHK == MHK_FixedBottom) .and. (TwrtmpPos(3) < -p%WtrDpth)) then
+            TwrtmpPos = -p%WtrDpth
+         end if
          
             ! Heading and inclination angles of tower element
          TwrheadAng = atan2( TwrtmpPosplus(2) - TwrtmpPos(2), TwrtmpPosplus(1) - TwrtmpPos(1) )
@@ -5645,9 +5658,13 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    character(1), parameter :: UVW(3) = ['U','V','W']
    real(R8Ki)              :: Perturb, PerturbTower, PerturbBlade(MaxBl)
    integer(IntKi)          :: i, j, n, state, Flags
+   logical                 :: LinearizeLoc
 
    ErrStat = ErrID_None
    ErrMsg = ""
+
+   ! Combine linearization flags
+   LinearizeLoc = Linearize .or. CompAeroMaps .or. (p%MHK /= MHK_None)
 
    ! Allocate space for variables (deallocate if already allocated)
    if (associated(p%Vars)) deallocate(p%Vars)
@@ -5864,9 +5881,9 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    ! Initialize Variables and Linearization data
    !----------------------------------------------------------------------------
 
-   call MV_InitVarsJac(p%Vars, m%Jac, Linearize .or. CompAeroMaps, ErrStat2, ErrMsg2); if (Failed()) return
+   call MV_InitVarsJac(p%Vars, m%Jac, LinearizeLoc, ErrStat2, ErrMsg2); if (Failed()) return
 
-   if (Linearize .or. CompAeroMaps) then
+   if (LinearizeLoc) then
       call AD_CopyRotContinuousStateType(x, m%x_init, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
       call AD_CopyRotContinuousStateType(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
       call AD_CopyRotContinuousStateType(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
