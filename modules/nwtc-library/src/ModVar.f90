@@ -863,6 +863,9 @@ subroutine MV_AddMeshVar(VarAry, Name, Fields, DL, Mesh, Flags, Perturbs, Active
    ! Loop through fields in mesh
    do i = 1, size(Fields)
 
+      ! Skip fields that mesh doesn't contain
+      if (.not. Mesh%fieldmask(Fields(i))) cycle
+
       ! Add variable
       call MV_AddVar(VarAry, Name, Fields(i), &
                      DL=DL, &

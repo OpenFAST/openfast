@@ -38,11 +38,11 @@ MODULE SED
    public :: SED_CalcOutput
    public :: SED_CalcContStateDeriv
    public :: SED_JacobianPInput
-
+   public :: SED_JacobianPContState
+   
    ! Linearization is not supported by this module, so the following routines are omitted
    !public :: SED_CalcConstrStateResidual
    !public :: SED_UpdateDiscState
-   !public :: SED_JacobianPContState
    !public :: SED_JacobianPDiscState
    !public :: SED_JacobianPConstrState
 
@@ -536,13 +536,13 @@ contains
 END SUBROUTINE SED_Init
 
 subroutine SED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, ErrMsg)
-   type(SED_InputType),            intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
-   type(SED_ParameterType),        intent(inout)  :: p              !< Parameters
-   type(SED_ContinuousStateType),  intent(inout)  :: x              !< Continuous state
-   type(SED_OutputType),           intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
-   type(SED_MiscVarType),          intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+   type(SED_InputType),             intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+   type(SED_ParameterType),         intent(inout)  :: p              !< Parameters
+   type(SED_ContinuousStateType),   intent(inout)  :: x              !< Continuous state
+   type(SED_OutputType),            intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
+   type(SED_MiscVarType),           intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
    type(ModVarsType),               intent(inout)  :: Vars           !< Module variables
-   type(SED_InputFile),            intent(in)     :: InputFileData  !< Input file data
+   type(SED_InputFile),             intent(in)     :: InputFileData  !< Input file data
    logical,                         intent(in)     :: Linearize      !< Flag to initialize linearization variables
    integer(IntKi),                  intent(out)    :: ErrStat        !< Error status of the operation
    character(*),                    intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_No   ne
@@ -565,14 +565,14 @@ subroutine SED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, 
                   Flags=VF_DerivOrder2, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Variable speed generator DOF (internal DOF index = DOF_Az), rad'], &
-                  Active=InputFileData%GenDOF)
+                  Active=p%GenDOF)
 
    call MV_AddVar(Vars%x, 'GeneratorAzimuth', FieldAngularVel, &
                   DL=DatLoc(SED_x_QDT), iAry=DOF_Az, &
                   Flags=VF_DerivOrder2, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['First time derivative of Variable speed generator DOF (internal DOF index = DOF_Az), rad/s'], &
-                  Active=InputFileData%GenDOF)
+                  Active=p%GenDOF)
 
    !----------------------------------------------------------------------------
    ! Input variables
@@ -599,7 +599,7 @@ subroutine SED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, 
                   Num=p%NumBl, &
                   Flags=VF_RotFrame + VF_Linearize + VF_2PI, &
                   Perturb=2.0_R8Ki * D2R_D, &
-                  LinNames=['Blade pitch command, rad'])
+                  LinNames=[('Blade '//trim(num2lstr(i))//' pitch command, rad', i=1,p%NumBl)])
 
    call MV_AddVar(Vars%u, "YawPosCom", FieldScalar, &
                   DL=DatLoc(SED_u_YawPosCom), &
@@ -617,6 +617,10 @@ subroutine SED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, 
    ! Output variables
    !----------------------------------------------------------------------------
 
+   call MV_AddMeshVar(Vars%y, 'Hub', MotionFields, &
+                        DatLoc(SED_y_HubPtMotion), &
+                        Mesh=y%HubPtMotion)
+
    call MV_AddMeshVar(Vars%y, 'Platform', MotionFields, &
                       DatLoc(SED_y_PlatformPtMesh), &
                       Mesh=y%PlatformPtMesh, &
@@ -627,10 +631,6 @@ subroutine SED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, 
                       Mesh=y%TowerLn2Mesh, &
                       Flags=ior(VF_Line, VF_SmallAngle))
 
-   call MV_AddMeshVar(Vars%y, 'Hub', MotionFields, &
-                      DatLoc(SED_y_HubPtMotion), &
-                      Mesh=y%HubPtMotion)
-
    do i = 1, p%NumBl
       call MV_AddMeshVar(Vars%y, 'Blade root '//Num2LStr(i), MotionFields, &
                          DatLoc(SED_y_BladeRootMotion, i), &
@@ -640,6 +640,10 @@ subroutine SED_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, 
    call MV_AddMeshVar(Vars%y, 'Nacelle', MotionFields, &
                       DatLoc(SED_y_NacelleMotion), &
                       Mesh=y%NacelleMotion)
+
+   !--------------------
+   ! Non-mesh outputs
+   !--------------------
 
    call MV_AddVar(Vars%y, 'Yaw', FieldScalar, &
                   DatLoc(SED_y_Yaw), &
@@ -1521,17 +1525,17 @@ SUBROUTINE SED_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat
 
    type(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module variables
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(SED_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(SED_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(SED_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(SED_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(SED_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(SED_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(SED_OutputType),                  INTENT(INOUT)           :: y          !< Output (change to inout if a mesh copy is required);
+   TYPE(SED_InputType),                  INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(SED_ParameterType),              INTENT(IN   )           :: p          !< Parameters
+   TYPE(SED_ContinuousStateType),        INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(SED_DiscreteStateType),          INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(SED_ConstraintStateType),        INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(SED_OtherStateType),             INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(SED_OutputType),                 INTENT(INOUT)           :: y          !< Output (change to inout if a mesh copy is required);
                                                                                !!   Output fields are not used by this routine, but type is   
                                                                                !!   available here so that mesh parameter information (i.e.,  
                                                                                !!   connectivity) does not have to be recalculated for dYdu.
-   TYPE(SED_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   TYPE(SED_MiscVarType),                INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect to the inputs (u) [intent in to avoid deallocation]
@@ -1635,6 +1639,129 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function
 END SUBROUTINE SED_JacobianPInput
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
+SUBROUTINE SED_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+
+   type(ModVarsType),                    INTENT(IN   )           :: Vars       !< Module variables
+   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(SED_InputType),                  INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(SED_ParameterType),              INTENT(IN   )           :: p          !< Parameters
+   TYPE(SED_ContinuousStateType),        INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(SED_DiscreteStateType),          INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(SED_ConstraintStateType),        INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(SED_OtherStateType),             INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(SED_OutputType),                 INTENT(INOUT)           :: y          !< Output (change to inout if a mesh copy is required);
+                                                                               !!   Output fields are not used by this routine, but type is   
+                                                                               !!   available here so that mesh parameter information (i.e.,  
+                                                                               !!   connectivity) does not have to be recalculated for dYdu.
+   TYPE(SED_MiscVarType),                INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions (Y) with respect to the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the continuous states (x) [intent in to avoid deallocation]
+
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_JacobianPContState'
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   INTEGER(IntKi)                                    :: i, j, iCol
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! Copy state values
+   call SED_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call SED_VarsPackContState(Vars, x, m%Jac%x)
+
+   ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+   if (present(dYdx)) then
+
+      ! Allocate dYdx if not allocated
+      if (.not. allocated(dYdx)) then
+         call AllocAry(dYdx, m%Jac%Ny, m%Jac%Nx, 'dYdx', ErrStat2, ErrMsg2); if (Failed()) return
+      end if
+
+      ! Loop through state variables
+      do i = 1, size(Vars%x)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, Vars%x(i)%Num
+
+            ! Calculate column index
+            iCol = Vars%x(i)%iLoc(1) + j - 1
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call SED_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call SED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call SED_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call SED_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call SED_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call SED_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,iCol))
+         end do
+      end do
+            
+   end if
+
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+   if (present(dXdx) .and. (m%Jac%Nx > 0)) then
+
+      ! Allocate dXdx if not allocated
+      if (.not. allocated(dXdx)) then
+         call AllocAry(dXdx, m%Jac%Nx, m%Jac%Nx, 'dXdx', ErrStat2, ErrMsg2); if (Failed()) return
+      end if
+
+      ! Loop through state variables
+      do i = 1, size(Vars%x)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, Vars%x(i)%Num
+
+            ! Calculate column index
+            iCol = Vars%x(i)%iLoc(1) + j - 1
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call SED_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call SED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call SED_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call SED_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call SED_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call SED_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
+
+            ! Get partial derivative via central difference and store in full linearization array
+            dXdx(:,iCol) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
+         end do
+      end do
+   end if
+
+   if (present(dXddx)) then
+      if (allocated(dXddx)) deallocate(dXddx)
+   end if
+
+   if (present(dZdx)) then
+      if (allocated(dZdx)) deallocate(dZdx)
+   end if
+   
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+END SUBROUTINE SED_JacobianPContState
 
 END MODULE SED
 !**********************************************************************************************************************************

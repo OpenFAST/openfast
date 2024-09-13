@@ -23,7 +23,7 @@ public FAST_SolverInit, FAST_SolverStep0, FAST_SolverStep, CalcOutputs_And_Solve
 logical, parameter         :: DebugSolver = .false.
 integer(IntKi)             :: DebugUn = -1
 character(*), parameter    :: DebugFile = 'solver.dbg'
-logical, parameter         :: DebugJacobian = .false.
+logical, parameter         :: DebugJacobian = .true.
 integer(IntKi)             :: MatrixUn = -1
 
 contains
@@ -260,10 +260,10 @@ contains
                     DstMod => GlueModData(GlueModMaps(j)%iModDst))
 
             ! Determine if source and destination modules are in tight coupling or Option 1
-            SrcModTC = any(SrcMod%ID == TC_Modules)
-            SrcModO1 = any(SrcMod%ID == O1_Modules)
-            DstModTC = any(DstMod%ID == TC_Modules)
-            DstModO1 = any(DstMod%ID == O1_Modules)
+            SrcModTC = any(SrcMod%iMod == p%iModTC)
+            SrcModO1 = any(SrcMod%iMod == p%iModOpt1)
+            DstModTC = any(DstMod%iMod == p%iModTC)
+            DstModO1 = any(DstMod%iMod == p%iModOpt1)
 
             ! Select based on mapping type
             select case (Mapping%MapType)
@@ -320,7 +320,7 @@ contains
 
                if (DstModTC .or. DstModO1) then
 
-                  ! Add flag for destination loads
+                  ! Add flag to destination loads
                   do i = 1, size(DstMod%Vars%u)
                      associate (Var => DstMod%Vars%u(i))
                         if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
@@ -329,7 +329,7 @@ contains
                      end associate
                   end do
 
-                  ! Add flag to destination displacements for dUdy
+                  ! Add flag to destination displacements and orientations for dUdy
                   do i = 1, size(DstMod%Vars%y)
                      associate (Var => DstMod%Vars%y(i))
                         if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) then
@@ -343,7 +343,7 @@ contains
 
                   if ((SrcModTC .or. SrcModO1)) then
 
-                     ! Add flag for source loads
+                     ! Add flag to source loads
                      do i = 1, size(SrcMod%Vars%y)
                         associate (Var => SrcMod%Vars%y(i))
                            if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
@@ -352,7 +352,7 @@ contains
                         end associate
                      end do
 
-                     ! Add flag for source translation displacement for dUdu
+                     ! Add flag to source translation displacement for dUdu
                      do i = 1, size(SrcMod%Vars%u)
                         associate (Var => SrcMod%Vars%u(i))
                            if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) then

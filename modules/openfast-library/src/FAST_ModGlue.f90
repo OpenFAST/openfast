@@ -472,10 +472,16 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    modIDs = [(m%ModData(i)%ID, i=1, size(m%ModData))]
 
    ! Establish module index order for linearization
-   allocate (p%Lin%iMod(0))
-   do i = 1, size(LinMods)
-      p%Lin%iMod = [p%Lin%iMod, pack(modIdx, ModIDs == LinMods(i))]
-   end do
+   p%Lin%iMod = [pack(modIdx, ModIDs == Module_IfW), &
+                 pack(modIdx, ModIDs == Module_SeaSt), &
+                 pack(modIdx, ModIDs == Module_SrvD), &
+                 pack(modIdx, ModIDs == Module_ED), &
+                 pack(modIdx, ModIDs == Module_BD), &
+                 pack(modIdx, ModIDs == Module_AD), &
+                 pack(modIdx, ModIDs == Module_HD), &
+                 pack(modIdx, ModIDs == Module_SD), &
+                 pack(modIdx, ModIDs == Module_MAP), &
+                 pack(modIdx, ModIDs == Module_MD)]
 
    ! Loop through modules, if module is not in index, return with error
    if (p_FAST%Linearize) then
@@ -542,8 +548,8 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    ! Glue Module
    !----------------------------------------------------------------------------
 
-   ! LinFlags = VF_Linearize + VF_Mapping
-   LinFlags = VF_None
+   LinFlags = VF_Linearize + VF_Mapping
+   ! LinFlags = VF_None
    call Glue_CombineModules(m%ModGlue, m%ModData, m%Mappings, p%Lin%iMod, LinFlags, &
                             p_FAST%Linearize, ErrStat2, ErrMsg2, Name="Lin")
    if (Failed()) return

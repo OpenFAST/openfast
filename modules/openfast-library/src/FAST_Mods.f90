@@ -75,19 +75,6 @@ MODULE FAST_ModTypes
 
    LOGICAL,        PARAMETER :: BD_Solve_Option1 = .TRUE.
 
-   !< Tight coupling module IDs
-   integer(IntKi), parameter :: TC_Modules(*) = &
-      [Module_ED, Module_BD, Module_SD]   
-
-   !< Option 1 module IDs
-   integer(IntKi), parameter :: O1_Modules(*) = &
-      [Module_ExtPtfm, Module_HD, Module_MD, Module_Orca]   
-
-   !< Linearization module ID array (order determines Jacobian layout)
-   integer(IntKi), parameter :: LinMods(*) = &
-      [Module_IfW, Module_SeaSt, Module_SrvD, Module_ED, Module_BD, Module_AD, &
-       Module_HD, Module_SD, Module_MAP, Module_MD]      
-
 END MODULE FAST_ModTypes
 !=======================================================================
 

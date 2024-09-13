@@ -44,17 +44,19 @@ character(24), parameter   :: Custom_ED_to_ExtLd = 'ED -> ExtLd', &
                               Custom_SrvD_to_AD = 'SrvD -> AD', &
                               Custom_ED_to_ADsk = 'ED -> ADsk', &
                               Custom_SED_to_ADsk = 'SED -> ADsk', &
+                              Custom_SED_to_IfW = 'SED -> IfW', &
                               Custom_ED_to_IfW = 'ED -> IfW', &
                               Custom_SrvD_to_IfW = 'SrvD -> IfW', &
                               Custom_BD_to_SrvD = 'BD -> SrvD', &
                               Custom_ED_to_SrvD = 'ED -> SrvD', &
+                              Custom_SED_to_SrvD = 'SED -> SrvD', &
+                              Custom_ExtInfw_to_SrvD = 'ExtInfw -> SrvD', &
+                              Custom_ExtLd_to_SrvD = 'ExtLd -> SrvD', &
+                              Custom_IfW_to_SrvD = 'IfW -> SrvD', &
                               Custom_SrvD_to_ED = 'SrvD -> ED', &
                               Custom_SrvD_to_SED = 'SrvD -> SED', &
-                              Custom_IfW_to_SrvD = 'IfW -> SrvD', &
-                              Custom_ExtInfw_to_SrvD = 'ExtInfw -> SrvD', &
                               Custom_SrvD_to_SD = 'SrvD -> SD', &
-                              Custom_SrvD_to_MD = 'SrvD -> MD', &
-                              Custom_ExtLd_to_SrvD = 'ExtLd -> SrvD'
+                              Custom_SrvD_to_MD = 'SrvD -> MD'
 
 contains
 
@@ -562,6 +564,49 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          DstMod=DstMod, DstDL=DatLoc(AD_u_TFinMotion), &                   ! AD%u%rotors(DstMod%Ins)%TFinMotion
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                          Active=NotCompAeroMaps)
+      if (Failed()) return
+
+   
+   case (Module_SED)
+
+      ! Loop through blade root motions
+      do i = 1, size(Turbine%SED%y%BladeRootMotion)
+
+         ! Blade root motion
+         call MapMotionMesh(Turbine, Mappings, &
+                            SrcMod=SrcMod, SrcDL=DatLoc(SED_y_BladeRootMotion, i), &      ! SED%y%BladeRootMotion(i)
+                            DstMod=DstMod, DstDL=DatLoc(AD_u_BladeRootMotion, i), &       ! AD%u%rotors(DstMod%Ins)%BladeRootMotion(i)
+                            ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+         if (Failed()) return
+
+         ! Blade motion
+         call MapMotionMesh(Turbine, Mappings, &
+                            SrcMod=SrcMod, SrcDL=DatLoc(SED_y_BladeRootMotion, i), &      ! SED%y%BladeRootMotion(i)
+                            DstMod=DstMod, DstDL=DatLoc(AD_u_BladeMotion, i), &           ! AD%u%rotors(DstMod%Ins)%BladeMotion(i)
+                            ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+         if (Failed()) return
+      end do
+
+      ! Hub motion
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(SED_y_HubPtMotion), &       ! SED%y%HubPtMotion
+                         DstMod=DstMod, DstDL=DatLoc(AD_u_HubMotion), &          ! AD%u%rotors(DstMod%Ins)%HubMotion
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
+                         Active=NotCompAeroMaps)
+      if (Failed()) return
+
+      ! Tower motion
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(SED_y_TowerLn2Mesh), &      ! SED%y%TowerLn2Mesh
+                         DstMod=DstMod, DstDL=DatLoc(AD_u_TowerMotion), &        ! AD%u%rotors(DstMod%Ins)%TowerMotion
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      if (Failed()) return
+
+      ! Nacelle motion
+      call MapMotionMesh(Turbine, Mappings, &
+                         SrcMod=SrcMod, SrcDL=DatLoc(SED_y_NacelleMotion), &     ! SED%y%NacelleMotion
+                         DstMod=DstMod, DstDL=DatLoc(AD_u_NacelleMotion), &      ! AD%u%rotors(DstMod%Ins)%NacelleMotion
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
    case (Module_IfW)
@@ -1095,8 +1140,8 @@ subroutine InitMappings_SED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                        SrcDL=DatLoc(ADsk_y_AeroLoads), &                ! ADsk%y%AeroLoads
                        SrcDispDL=DatLoc(ADsk_u_HubMotion), &            ! ADsk%u%HubMotion
-                       DstDL=DatLoc(ED_u_HubPtLoad), &                  ! ED%u%HubPtLoad
-                       DstDispDL=DatLoc(ED_y_HubPtMotion), &            ! ED%y%HubPtMotion
+                       DstDL=DatLoc(SED_u_HubPtLoad), &                 ! SED%u%HubPtLoad
+                       DstDispDL=DatLoc(SED_y_HubPtMotion), &           ! SED%y%HubPtMotion
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
@@ -1492,6 +1537,8 @@ subroutine InitMappings_IfW(Mappings, SrcMod, DstMod, T, ErrStat, ErrMsg)
    ErrMsg = ''
 
    select case (SrcMod%ID)
+   case (Module_SED)
+      call MapCustom(Mappings, Custom_SED_to_IfW, SrcMod, DstMod)
    case (Module_ED)
       call MapCustom(Mappings, Custom_ED_to_IfW, SrcMod, DstMod)
    case (Module_SrvD)
@@ -1838,6 +1885,10 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                             Active=Turbine%p_FAST%CompSub /= Module_SD, &
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
+
+   case (Module_SED)
+
+      call MapCustom(Mappings, Custom_SED_to_SrvD, SrcMod=SrcMod, DstMod=DstMod)
 
    case (Module_IfW)
 
@@ -2965,6 +3016,18 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       T%IfW%Input(iInput)%lidar%HubDisplacementY = T%ED%y%HubPtMotion%TranslationDisp(2, 1)
       T%IfW%Input(iInput)%lidar%HubDisplacementZ = T%ED%y%HubPtMotion%TranslationDisp(3, 1)
 
+   case (Custom_SED_to_IfW)
+
+      ! This section should be refactored so that IfW uses a hub point mesh
+      T%IfW%Input(iInput)%HubPosition = T%SED%y%HubPtMotion%Position(:, 1) + &
+                                        T%SED%y%HubPtMotion%TranslationDisp(:, 1)
+      T%IfW%Input(iInput)%HubOrientation = T%SED%y%HubPtMotion%Orientation(:, :, 1)
+
+      ! Set Lidar position directly from hub motion mesh
+      T%IfW%Input(iInput)%lidar%HubDisplacementX = T%SED%y%HubPtMotion%TranslationDisp(1, 1)
+      T%IfW%Input(iInput)%lidar%HubDisplacementY = T%SED%y%HubPtMotion%TranslationDisp(2, 1)
+      T%IfW%Input(iInput)%lidar%HubDisplacementZ = T%SED%y%HubPtMotion%TranslationDisp(3, 1)
+
    case (Custom_SrvD_to_IfW)
 
 !-------------------------------------------------------------------------------
@@ -3038,6 +3101,46 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       T%SrvD%Input(iInput)%LSShftFxa = T%ED%y%LSShftFxa
       T%SrvD%Input(iInput)%LSShftFys = T%ED%y%LSShftFys
       T%SrvD%Input(iInput)%LSShftFzs = T%ED%y%LSShftFzs
+
+   case (Custom_SED_to_SrvD)
+
+               ! ServoDyn inputs from combination of InflowWind and ElastoDyn
+      T%SrvD%Input(iInput)%YawAngle  = T%SED%y%Yaw     !nacelle yaw (platform rigid)
+      T%SrvD%Input(iInput)%YawErr    = T%SrvD%Input(iInput)%WindDir - T%SrvD%Input(iInput)%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
+
+         ! ServoDyn inputs from Simplified-ElastoDyn
+      T%SrvD%Input(iInput)%Yaw       = T%SED%y%Yaw  !nacelle yaw
+      T%SrvD%Input(iInput)%YawRate   = T%SED%y%YawRate
+      T%SrvD%Input(iInput)%LSS_Spd   = T%SED%y%RotSpeed
+      T%SrvD%Input(iInput)%HSS_Spd   = T%SED%y%HSS_Spd
+      T%SrvD%Input(iInput)%RotSpeed  = T%SED%y%RotSpeed
+      T%SrvD%Input(iInput)%BlPitch   = T%SED%y%BlPitch
+
+         ! root moments
+      T%SrvD%Input(iInput)%RootMxc = 0.0_ReKi         ! y_ED%RootMxc ! fixed-size arrays: always size 3
+      T%SrvD%Input(iInput)%RootMyc = 0.0_ReKi         ! y_ED%RootMyc ! fixed-size arrays: always size 3
+
+      T%SrvD%Input(iInput)%YawBrTAxp = 0.0_ReKi       ! y_ED%YawBrTAxp
+      T%SrvD%Input(iInput)%YawBrTAyp = 0.0_ReKi       ! y_ED%YawBrTAyp
+      T%SrvD%Input(iInput)%LSSTipPxa = T%SED%y%LSSTipPxa
+
+      T%SrvD%Input(iInput)%LSSTipMxa = T%SED%y%RotTrq
+      T%SrvD%Input(iInput)%LSSTipMya = 0.0_ReKi       !  y_ED%LSSTipMya
+      T%SrvD%Input(iInput)%LSSTipMza = 0.0_ReKi       !  y_ED%LSSTipMza
+      T%SrvD%Input(iInput)%LSSTipMys = 0.0_ReKi       !  y_ED%LSSTipMys
+      T%SrvD%Input(iInput)%LSSTipMzs = 0.0_ReKi       !  y_ED%LSSTipMzs
+
+      T%SrvD%Input(iInput)%YawBrMyn  = 0.0_ReKi       !  y_ED%YawBrMyn
+      T%SrvD%Input(iInput)%YawBrMzn  = 0.0_ReKi       !  y_ED%YawBrMzn
+      T%SrvD%Input(iInput)%NcIMURAxs = 0.0_ReKi       !  y_ED%NcIMURAxs
+      T%SrvD%Input(iInput)%NcIMURAys = 0.0_ReKi       !  y_ED%NcIMURAys
+      T%SrvD%Input(iInput)%NcIMURAzs = 0.0_ReKi       !  y_ED%NcIMURAzs
+
+      T%SrvD%Input(iInput)%RotPwr    = T%SED%y%RotPwr
+
+      T%SrvD%Input(iInput)%LSShftFxa = 0.0_ReKi       !  y_ED%LSShftFxa
+      T%SrvD%Input(iInput)%LSShftFys = 0.0_ReKi       !  y_ED%LSShftFys
+      T%SrvD%Input(iInput)%LSShftFzs = 0.0_ReKi       !  y_ED%LSShftFzs
 
    case (Custom_IfW_to_SrvD)
 
