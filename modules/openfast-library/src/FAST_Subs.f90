@@ -240,11 +240,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    ! Module data arrays
    !----------------------------------------------------------------------------
 
-   ! Input saved arrays have storage for InputArray size + linearization
-   InputAryLB = InputAryUB + p_FAST%NLinTimes
-
    ! Module data input arrays are interpolation order plus 1
    InputAryUB = p_FAST%InterpOrder + 1
+
+   ! Input saved arrays have storage for InputArray size + linearization
+   InputAryLB = InputAryUB + p_FAST%NLinTimes
 
    ! Module data state arrays include data at linearization times after
    ! STATE_CURR, STATE_PRED, STATE_SAVED_CURR, and STATE_SAVED_PRED
