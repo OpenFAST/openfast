@@ -1671,6 +1671,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
             call Cleanup()
             return
          endif
+         !FIXME: if SD is used, need to create a temporary mapping here as it doesn't exist
+         !else, make copy of meshmapdata
+
          ! Set the initial displacement of PtfmPtMesh_tmp here to use MeshMapping
          PtfmPtMesh_tmp%TranslationDisp(:,1) = Init%OutData_ED%PlatformPos(1:3)
          CALL SmllRotTrans( 'initial platform rotation ', &
@@ -1682,7 +1685,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          PtfmPtMesh_tmp%TranslationDisp(1,1) = PtfmPtMesh_tmp%TranslationDisp(1,1) + PtfmPtMesh_tmp%Orientation(3,1,1) * ED%p%PtfmRefzt
          PtfmPtMesh_tmp%TranslationDisp(2,1) = PtfmPtMesh_tmp%TranslationDisp(2,1) + PtfmPtMesh_tmp%Orientation(3,2,1) * ED%p%PtfmRefzt
          PtfmPtMesh_tmp%TranslationDisp(3,1) = PtfmPtMesh_tmp%TranslationDisp(3,1) + PtfmPtMesh_tmp%Orientation(3,3,1) * ED%p%PtfmRefzt - ED%p%PtfmRefzt
-         CALL Transfer_PlatformMotion_to_HD( PtfmPtMesh_tmp, HD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
+
+         !FIXME: manually use a temporary mapping here instead of the call
+!         CALL Transfer_PlatformMotion_to_HD( PtfmPtMesh_tmp, HD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
+
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
