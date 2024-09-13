@@ -8,7 +8,7 @@
 
 
 #BJJ: the following three types will actually be placed in the ModMesh_Mapping.f90 file instead of NWTC_Library_Types.f90
-typedef   NWTC_Library  MapType             IntKi                    OtherMesh_Element  -        - - "Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src"
+typedef   NWTC_Library  MapType             IntKi                    OtherMesh_Element  -        - - "Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src" -
 typedef     ^             ^                 R8Ki                     distance           -        - - "Magnitude of couple_arm" m
 typedef     ^             ^                 R8Ki                     couple_arm        {3}       - - "Vector between a point and node 1 of an element (p_ODR - p_OSR)" m
 typedef     ^             ^                 R8Ki                     shape_fn          {2}       - - "shape functions: 1-D element-level location [0,1] based on closest-line projection of point" -

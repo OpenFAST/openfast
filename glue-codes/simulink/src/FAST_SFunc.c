@@ -189,9 +189,6 @@ static void mdlInitializeSizes(SimStruct *S)
              InitInputAry[i] = AdditionalInitInputs[i + 1];
           }
        }
-       else{
-          InitInputAry[0] = SensorType_None; // tell it not to use lidar (shouldn't be necessary, but we'll cover our bases)
-       }
 
        // set this before possibility of error in Fortran library:
 

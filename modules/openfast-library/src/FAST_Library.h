@@ -62,8 +62,6 @@ EXTERNAL_ROUTINE void FAST_CreateCheckpoint(int * iTurb, const char *CheckpointR
 #define ErrID_Fatal 4 
 
 
-#define SensorType_None -1
-
 // make sure these parameters match with FAST_Library.f90 and NWTC_Base.f90
 #define MAXIMUM_BLADES 3
 #define MAXIMUM_AFCTRL 3

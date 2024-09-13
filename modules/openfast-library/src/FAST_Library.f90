@@ -134,17 +134,10 @@ subroutine FAST_Sizes(iTurb_c, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, 
       ExternInitData%TurbinePos = 0.0_ReKi  ! turbine position is at the origin
       ExternInitData%NumCtrl2SC = 0
       ExternInitData%NumSC2Ctrl = 0
-      ExternInitData%SensorType = NINT(InitInpAry(1))
       ! -- MATLAB Integration --
       ! Make sure fast farm integration is false
       ExternInitData%FarmIntegration = .false.
       ExternInitData%WaveFieldMod = 0
-
-      IF ( NINT(InitInpAry(2)) == 1 ) THEN
-         ExternInitData%LidRadialVel = .true.
-      ELSE
-         ExternInitData%LidRadialVel = .false.
-      END IF
 
       CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData)
 
@@ -587,7 +580,6 @@ subroutine FAST_ExtLoads_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, Out
    ExternInitData%TMax = TMax
    ExternInitData%TurbIDforName = TurbIDforName
    ExternInitData%TurbinePos = TurbPosn
-   ExternInitData%SensorType = SensorType_None
    ExternInitData%NumSC2CtrlGlob = 0
    ExternInitData%NumCtrl2SC = 0
    ExternInitData%NumSC2Ctrl = 0
@@ -699,7 +691,6 @@ subroutine FAST_ExtInfw_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, OutF
    ExternInitData%TMax = TMax
    ExternInitData%TurbIDforName = TurbIDforName
    ExternInitData%TurbinePos = TurbPosn
-   ExternInitData%SensorType = SensorType_None
    ExternInitData%NumCtrl2SC = NumCtrl2SC
    ExternInitData%NumSC2CtrlGlob = NumSC2CtrlGlob
 

@@ -35,6 +35,10 @@ extern "C"
 {
 #endif
 
+#if defined _MSC_VER && !defined _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 // Some redefinitions from MAP_Types.h, so the API does not need to exposes the
 // internal data structures.
 typedef struct MAP_InputType* MAP_Input_t;

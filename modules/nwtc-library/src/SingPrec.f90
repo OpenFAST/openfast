@@ -56,6 +56,9 @@ INTEGER, PARAMETER              :: R8Ki     = SELECTED_REAL_KIND( 14, 300 )     
 
 #endif
 
+INTEGER, PARAMETER              :: BYTES_IN_B4Ki =  4                           !< Number of bytes per B4Ki number
+INTEGER, PARAMETER              :: BYTES_IN_B8Ki =  8                           !< Number of bytes per B8Ki number 
+
 INTEGER, PARAMETER              :: BYTES_IN_R4Ki =  4                           !< Number of bytes per R4Ki number
 INTEGER, PARAMETER              :: BYTES_IN_R8Ki =  8                           !< Number of bytes per R8Ki number 
 
@@ -64,7 +67,7 @@ INTEGER, PARAMETER              :: BYTES_IN_R8Ki =  8                           
       ! The default kinds for reals and integers, and the number of bytes they contain:
 
 INTEGER, PARAMETER              :: IntKi          = B4Ki                        !< Default kind for integers
-INTEGER, PARAMETER              :: BYTES_IN_INT   = 4                           !< Number of bytes per IntKi number    - use SIZEOF()
+INTEGER, PARAMETER              :: BYTES_IN_INT   = BYTES_IN_B4Ki               !< Number of bytes per IntKi number    - use SIZEOF()
 
 INTEGER, PARAMETER              :: SiKi           = R4Ki                        !< Default kind for single floating-point numbers
 INTEGER, PARAMETER              :: BYTES_IN_SiKi  = BYTES_IN_R4Ki               !< Number of bytes per R4Ki number     - use SIZEOF()
