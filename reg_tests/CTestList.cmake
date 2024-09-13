@@ -383,7 +383,7 @@ of_regression_linear("StC_test_OC4Semi_Linear_Tow"    ""                "openfas
 of_regression_linear("WP_Stationary_Linear"           ""                "openfast;linear;elastodyn")
 of_regression_linear("5MW_OC3Spar_Linear"             ""                "openfast;linear;map;hydrodyn")
 of_regression_linear("5MW_OC3Mnpl_Linear"             ""                "openfast;linear;hydrodyn;servodyn;moordyn")
-# of_regression_linear("MHK_RM1_Floating_Linear"        ""                "openfast;linear;elastodyn;aerodyn;hydrodyn;moordyn;mhk")
+of_regression_linear("MHK_RM1_Floating_Linear"        ""                "openfast;linear;elastodyn;aerodyn;hydrodyn;moordyn;mhk")
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)
