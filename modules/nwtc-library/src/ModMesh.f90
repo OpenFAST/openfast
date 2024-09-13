@@ -3428,7 +3428,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       endif
       if (hasMotion) then
          mesh%Orientation      = mesh%RefOrientation
-         mesh%TranslationDisp  = 0.0_ReKi
+         mesh%TranslationDisp  = 0.0_R8Ki
          mesh%TranslationVel   = 0.0_ReKi
          mesh%RotationVel      = 0.0_ReKi
       endif

@@ -140,7 +140,7 @@ typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (sw
 typedef	^	FAST_ParameterType	IntKi	CompServo	-	-	-	"Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompSeaSt   -	-	-	"Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt}"	-
 typedef	^	FAST_ParameterType	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (switch) {Module_None; Module_HD}"	-
-typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_HD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_SD, Module_ExtPtfm}"	-
 typedef	^	FAST_ParameterType	IntKi	CompMooring	-	-	-	"Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca}"	-
 typedef	^	FAST_ParameterType	IntKi	CompIce	-	-	-	"Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}"	-
 typedef	^	FAST_ParameterType	IntKi	MHK	        -	-	-	"MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}"	-
@@ -864,8 +864,6 @@ typedef   ^   FAST_InitData    IceD_InitOutputType         OutData_IceD     -  -
 
 # ..... FAST External Initialization Input data .......................................................................................................
 typedef	^	FAST_ExternInitType	DbKi	Tmax	-	-1	-	"External code specified Tmax"	s
-typedef	^	FAST_ExternInitType	IntKi	SensorType	-	SensorType_None	-	"lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file"	-
-typedef	^	FAST_ExternInitType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
 typedef	^	FAST_ExternInitType	IntKi	TurbIDforName	-	-1	-	"ID number for turbine (used to create output file naming convention)"	-
 typedef	^	FAST_ExternInitType	ReKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics or in FAST.Farm)"	m
 typedef ^   FAST_ExternInitType IntKi   WaveFieldMod -  -   -   "Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -

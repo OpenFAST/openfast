@@ -521,7 +521,7 @@ typedef	^	InputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
 typedef	^	InputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
 typedef	^	InputType	SiKi	fromSC	{:}	-	-	"A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	fromSCglob	{:}	-	-	"A swap array: used to pass global input data to the DLL controller from the supercontroller"	-
-typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-
+#typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-
 typedef	^	InputType	MeshType	PtfmMotionMesh	-	-	-	"Platform motion mesh at platform reference point" -
 typedef	^	InputType	MeshType	BStCMotionMesh	{:}{:}	-	-	"StC module blade        input motion mesh" -
 typedef	^	InputType	MeshType	NStCMotionMesh	{:}	-	-	"StC module nacelle      input motion mesh" -
@@ -547,7 +547,7 @@ typedef	^	OutputType	ReKi	GenTrq	-	-	-	"Electrical generator torque"	N-m
 typedef	^	OutputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m
 typedef	^	OutputType	ReKi	ElecPwr	-	-	-	"Electrical power"	W
 typedef	^	OutputType	ReKi	TBDrCon	{:}	-	-	"Instantaneous tip-brake drag constant, Cd*Area"
-typedef	^	OutputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the Lidar"	-
+#typedef	^	OutputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the Lidar"	-
 typedef	^	OutputType	ReKi	CableDeltaL	{:}	-	-	"Cable control -- Length change request (passed to MD or SD)"	m
 typedef	^	OutputType	ReKi	CableDeltaLdot	{:}	-	-	"Cable control -- Length change rate request (passed to MD or SD)"	m/s
 typedef	^	OutputType	MeshType	BStCLoadMesh	{:}{:}	-	-	"StC module blade        output load mesh (NumBl,NumBStC)" -
