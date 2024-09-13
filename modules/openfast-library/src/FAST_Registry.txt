@@ -890,10 +890,6 @@ typedef ^   FAST_ExternInitType DbKi    DTdriver        -    -1     -   "Externa
 typedef ^   FAST_ExternInitType Logical TwrAero         -  .false.  -   "Is Tower aerodynamics enabled for ExtLoads module?"
 typedef ^   FAST_ExternInitType ReKi    az_blend_mean   -     -     -   "Mean azimuth at which to blend the external and aerodyn loads" - 
 typedef ^   FAST_ExternInitType ReKi    az_blend_delta  -     -     -   "Mean azimuth at which to blend the external and aerodyn loads" - 
-typedef ^   FAST_ExternInitType ReKi    vel_mean        -     -     -   "Mean velocity at reference height"     m/s
-typedef ^   FAST_ExternInitType ReKi    wind_dir        -     -     -   "Wind direction in compass angle"       degrees
-typedef ^   FAST_ExternInitType ReKi    z_ref           -     -     -   "Reference height for velocity profile" m
-typedef ^   FAST_ExternInitType ReKi    shear_exp       -     -     -   "Shear exponent"                        -
 
 # ..... FAST Turbine Data (one realization) .......................................................................................................
 typedef	^	FAST_TurbineType	IntKi	TurbID	-	1	-	"Turbine ID Number"	-

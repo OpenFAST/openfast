@@ -901,10 +901,6 @@ IMPLICIT NONE
     LOGICAL  :: TwrAero = .false.      !< Is Tower aerodynamics enabled for ExtLoads module? [-]
     REAL(ReKi)  :: az_blend_mean = 0.0_ReKi      !< Mean azimuth at which to blend the external and aerodyn loads [-]
     REAL(ReKi)  :: az_blend_delta = 0.0_ReKi      !< Mean azimuth at which to blend the external and aerodyn loads [-]
-    REAL(ReKi)  :: vel_mean = 0.0_ReKi      !< Mean velocity at reference height [m/s]
-    REAL(ReKi)  :: wind_dir = 0.0_ReKi      !< Wind direction in compass angle [degrees]
-    REAL(ReKi)  :: z_ref = 0.0_ReKi      !< Reference height for velocity profile [m]
-    REAL(ReKi)  :: shear_exp = 0.0_ReKi      !< Shear exponent [-]
   END TYPE FAST_ExternInitType
 ! =======================
 ! =========  FAST_TurbineType  =======
@@ -15253,10 +15249,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
    DstExternInitTypeData%TwrAero = SrcExternInitTypeData%TwrAero
    DstExternInitTypeData%az_blend_mean = SrcExternInitTypeData%az_blend_mean
    DstExternInitTypeData%az_blend_delta = SrcExternInitTypeData%az_blend_delta
-   DstExternInitTypeData%vel_mean = SrcExternInitTypeData%vel_mean
-   DstExternInitTypeData%wind_dir = SrcExternInitTypeData%wind_dir
-   DstExternInitTypeData%z_ref = SrcExternInitTypeData%z_ref
-   DstExternInitTypeData%shear_exp = SrcExternInitTypeData%shear_exp
 end subroutine
 
 subroutine FAST_DestroyExternInitType(ExternInitTypeData, ErrStat, ErrMsg)
@@ -15303,10 +15295,6 @@ subroutine FAST_PackExternInitType(RF, Indata)
    call RegPack(RF, InData%TwrAero)
    call RegPack(RF, InData%az_blend_mean)
    call RegPack(RF, InData%az_blend_delta)
-   call RegPack(RF, InData%vel_mean)
-   call RegPack(RF, InData%wind_dir)
-   call RegPack(RF, InData%z_ref)
-   call RegPack(RF, InData%shear_exp)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -15342,10 +15330,6 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    call RegUnpack(RF, OutData%TwrAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_mean); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_delta); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%vel_mean); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%wind_dir); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%z_ref); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%shear_exp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode, ErrStat, ErrMsg)
