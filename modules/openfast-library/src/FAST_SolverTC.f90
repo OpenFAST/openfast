@@ -23,7 +23,7 @@ public FAST_SolverInit, FAST_SolverStep0, FAST_SolverStep, CalcOutputs_And_Solve
 logical, parameter         :: DebugSolver = .false.
 integer(IntKi)             :: DebugUn = -1
 character(*), parameter    :: DebugFile = 'solver.dbg'
-logical, parameter         :: DebugJacobian = .true.
+logical, parameter         :: DebugJacobian = .false.
 integer(IntKi)             :: MatrixUn = -1
 
 contains
