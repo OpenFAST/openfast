@@ -639,13 +639,13 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                ! Write the data
                   DO I = 0,p%WAMIT(j)%Conv_Rdtn%NStepRdtn-1
                      WRITE( InputFileData%UnSum, '(1X,I10,2X,E12.5,21(2X,ES16.5))' ) I, I*p%WAMIT(j)%Conv_Rdtn%RdtnDT, &
-                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,1), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,2), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,3), &
-                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,4), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,1,6), &
-                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,2), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,3), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,4), &
-                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,2,6), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,3), &
-                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,4), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,3,6), &
-                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,4,4), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,4,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,4,6), &
-                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,5,5), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,5,6), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(I,6,6)
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,1,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,2,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,3,I), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,4,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(1,6,I), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,2,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,3,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,4,I), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(2,6,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(3,3,I), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(3,4,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(3,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(3,6,I), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(4,4,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(4,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(4,6,I), &
+                        p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(5,5,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(5,6,I), p%WAMIT(j)%Conv_Rdtn%RdtnKrnl(6,6,I)
                   END DO
                end do
             end if
