@@ -26,9 +26,6 @@ module ExtLoads
 
    use NWTC_Library
    use ExtLoads_Types
-   use IfW_FlowField
-   use InflowWind_IO_Types
-   use InflowWind_IO
 
    implicit none
 
@@ -111,23 +108,6 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
 
    m%az = 0.0 
    m%phi_cfd = 0.0
-
-   ! Allocate new flow field structure (deallocate first if associated)
-   if (associated(m%FlowField)) deallocate(m%FlowField)
-   allocate(m%FlowField, stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, 'Error allocating m%FlowField', ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   ! Initialize stead flow field
-   call IfW_SteadyFlowField_Init(m%FlowField, p%z_ref, p%vel_mean, p%shear_exp, ErrStat2, ErrMsg2, &
-                                 AngleH=p%wind_dir*D2R)
-   if (Failed()) return
-
-
-   ! Set pointer to flow field in InitOut
-   InitOut%FlowField => m%FlowField
    
    !----------------------------------------------------------------------------
    ! Initialize outputs

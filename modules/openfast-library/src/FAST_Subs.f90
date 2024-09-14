@@ -791,11 +791,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       ! Add module to list of modules, return on error
       CALL MV_AddModule(m_Glue%ModData, Module_ExtLd, 'ExtLd', 1, p_FAST%dt_module(Module_ExtLd), p_FAST%DT, &
-                        Init%OutData_ExtLd%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
+                        Init%OutData_ExtLd%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
 
       AirDens = Init%OutData_ExtLd%AirDens
-      AD%p%FlowField => Init%OutData_ExtLd%FlowField
 
    END IF
 
@@ -1982,8 +1981,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
 
    ! No method at the moment for getting disk average velocity from ExtInfw
    if (p%CompAero == Module_ADsk .and. p%CompInflow == MODULE_ExtInfw) call SetErrStat( ErrID_Fatal, 'AeroDisk cannot be used with ExtInflow or the library interface', ErrStat, ErrMsg, RoutineName ) 
-
-   if ((p%CompAero == Module_ExtLd) .and. (p%CompInflow /= Module_NONE) ) call SetErrStat(ErrID_Fatal, 'Inflow module cannot be used when ExtLoads is used. Change CompAero or CompInflow in the OpenFAST input file.', ErrStat, ErrMsg, RoutineName)
 
    IF (p%CompAero == Module_ADsk .and. p%MHK /= MHK_None) CALL SetErrStat( ErrID_Fatal, 'AeroDisk cannot be used with an MHK turbine. Change CompAero or MHK in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 

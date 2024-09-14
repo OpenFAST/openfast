@@ -635,34 +635,32 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: SrvD_u_LSShftFzs                 =  49 ! SrvD%LSShftFzs
    integer(IntKi), public, parameter :: SrvD_u_fromSC                    =  50 ! SrvD%fromSC
    integer(IntKi), public, parameter :: SrvD_u_fromSCglob                =  51 ! SrvD%fromSCglob
-   integer(IntKi), public, parameter :: SrvD_u_Lidar                     =  52 ! SrvD%Lidar
-   integer(IntKi), public, parameter :: SrvD_u_PtfmMotionMesh            =  53 ! SrvD%PtfmMotionMesh
-   integer(IntKi), public, parameter :: SrvD_u_BStCMotionMesh            =  54 ! SrvD%BStCMotionMesh(DL%i1, DL%i2)
-   integer(IntKi), public, parameter :: SrvD_u_NStCMotionMesh            =  55 ! SrvD%NStCMotionMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_u_TStCMotionMesh            =  56 ! SrvD%TStCMotionMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_u_SStCMotionMesh            =  57 ! SrvD%SStCMotionMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_u_LidSpeed                  =  58 ! SrvD%LidSpeed
-   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsX             =  59 ! SrvD%MsrPositionsX
-   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsY             =  60 ! SrvD%MsrPositionsY
-   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsZ             =  61 ! SrvD%MsrPositionsZ
-   integer(IntKi), public, parameter :: SrvD_y_WriteOutput               =  62 ! SrvD%WriteOutput
-   integer(IntKi), public, parameter :: SrvD_y_BlPitchCom                =  63 ! SrvD%BlPitchCom
-   integer(IntKi), public, parameter :: SrvD_y_BlAirfoilCom              =  64 ! SrvD%BlAirfoilCom
-   integer(IntKi), public, parameter :: SrvD_y_YawMom                    =  65 ! SrvD%YawMom
-   integer(IntKi), public, parameter :: SrvD_y_YawPosCom                 =  66 ! SrvD%YawPosCom
-   integer(IntKi), public, parameter :: SrvD_y_YawRateCom                =  67 ! SrvD%YawRateCom
-   integer(IntKi), public, parameter :: SrvD_y_GenTrq                    =  68 ! SrvD%GenTrq
-   integer(IntKi), public, parameter :: SrvD_y_HSSBrTrqC                 =  69 ! SrvD%HSSBrTrqC
-   integer(IntKi), public, parameter :: SrvD_y_ElecPwr                   =  70 ! SrvD%ElecPwr
-   integer(IntKi), public, parameter :: SrvD_y_TBDrCon                   =  71 ! SrvD%TBDrCon
-   integer(IntKi), public, parameter :: SrvD_y_Lidar                     =  72 ! SrvD%Lidar
-   integer(IntKi), public, parameter :: SrvD_y_CableDeltaL               =  73 ! SrvD%CableDeltaL
-   integer(IntKi), public, parameter :: SrvD_y_CableDeltaLdot            =  74 ! SrvD%CableDeltaLdot
-   integer(IntKi), public, parameter :: SrvD_y_BStCLoadMesh              =  75 ! SrvD%BStCLoadMesh(DL%i1, DL%i2)
-   integer(IntKi), public, parameter :: SrvD_y_NStCLoadMesh              =  76 ! SrvD%NStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_TStCLoadMesh              =  77 ! SrvD%TStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_SStCLoadMesh              =  78 ! SrvD%SStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_toSC                      =  79 ! SrvD%toSC
+   integer(IntKi), public, parameter :: SrvD_u_PtfmMotionMesh            =  52 ! SrvD%PtfmMotionMesh
+   integer(IntKi), public, parameter :: SrvD_u_BStCMotionMesh            =  53 ! SrvD%BStCMotionMesh(DL%i1, DL%i2)
+   integer(IntKi), public, parameter :: SrvD_u_NStCMotionMesh            =  54 ! SrvD%NStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_TStCMotionMesh            =  55 ! SrvD%TStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_SStCMotionMesh            =  56 ! SrvD%SStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_LidSpeed                  =  57 ! SrvD%LidSpeed
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsX             =  58 ! SrvD%MsrPositionsX
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsY             =  59 ! SrvD%MsrPositionsY
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsZ             =  60 ! SrvD%MsrPositionsZ
+   integer(IntKi), public, parameter :: SrvD_y_WriteOutput               =  61 ! SrvD%WriteOutput
+   integer(IntKi), public, parameter :: SrvD_y_BlPitchCom                =  62 ! SrvD%BlPitchCom
+   integer(IntKi), public, parameter :: SrvD_y_BlAirfoilCom              =  63 ! SrvD%BlAirfoilCom
+   integer(IntKi), public, parameter :: SrvD_y_YawMom                    =  64 ! SrvD%YawMom
+   integer(IntKi), public, parameter :: SrvD_y_YawPosCom                 =  65 ! SrvD%YawPosCom
+   integer(IntKi), public, parameter :: SrvD_y_YawRateCom                =  66 ! SrvD%YawRateCom
+   integer(IntKi), public, parameter :: SrvD_y_GenTrq                    =  67 ! SrvD%GenTrq
+   integer(IntKi), public, parameter :: SrvD_y_HSSBrTrqC                 =  68 ! SrvD%HSSBrTrqC
+   integer(IntKi), public, parameter :: SrvD_y_ElecPwr                   =  69 ! SrvD%ElecPwr
+   integer(IntKi), public, parameter :: SrvD_y_TBDrCon                   =  70 ! SrvD%TBDrCon
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaL               =  71 ! SrvD%CableDeltaL
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaLdot            =  72 ! SrvD%CableDeltaLdot
+   integer(IntKi), public, parameter :: SrvD_y_BStCLoadMesh              =  73 ! SrvD%BStCLoadMesh(DL%i1, DL%i2)
+   integer(IntKi), public, parameter :: SrvD_y_NStCLoadMesh              =  74 ! SrvD%NStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_TStCLoadMesh              =  75 ! SrvD%TStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_SStCLoadMesh              =  76 ! SrvD%SStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_toSC                      =  77 ! SrvD%toSC
 
 contains
 
@@ -7508,8 +7506,6 @@ subroutine SrvD_VarPackInput(V, u, ValAry)
          VarVals = u%fromSC(V%iLB:V%iUB)                                      ! Rank 1 Array
       case (SrvD_u_fromSCglob)
          VarVals = u%fromSCglob(V%iLB:V%iUB)                                  ! Rank 1 Array
-      case (SrvD_u_Lidar)
-         VarVals = u%Lidar(V%iLB:V%iUB)                                       ! Rank 1 Array
       case (SrvD_u_PtfmMotionMesh)
          call MV_PackMesh(V, u%PtfmMotionMesh, ValAry)                        ! Mesh
       case (SrvD_u_BStCMotionMesh)
@@ -7632,8 +7628,6 @@ subroutine SrvD_VarUnpackInput(V, ValAry, u)
          u%fromSC(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
       case (SrvD_u_fromSCglob)
          u%fromSCglob(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
-      case (SrvD_u_Lidar)
-         u%Lidar(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
       case (SrvD_u_PtfmMotionMesh)
          call MV_UnpackMesh(V, ValAry, u%PtfmMotionMesh)                      ! Mesh
       case (SrvD_u_BStCMotionMesh)
@@ -7742,8 +7736,6 @@ function SrvD_InputFieldName(DL) result(Name)
        Name = "u%fromSC"
    case (SrvD_u_fromSCglob)
        Name = "u%fromSCglob"
-   case (SrvD_u_Lidar)
-       Name = "u%Lidar"
    case (SrvD_u_PtfmMotionMesh)
        Name = "u%PtfmMotionMesh"
    case (SrvD_u_BStCMotionMesh)
@@ -7803,8 +7795,6 @@ subroutine SrvD_VarPackOutput(V, y, ValAry)
          VarVals(1) = y%ElecPwr                                               ! Scalar
       case (SrvD_y_TBDrCon)
          VarVals = y%TBDrCon(V%iLB:V%iUB)                                     ! Rank 1 Array
-      case (SrvD_y_Lidar)
-         VarVals = y%Lidar(V%iLB:V%iUB)                                       ! Rank 1 Array
       case (SrvD_y_CableDeltaL)
          VarVals = y%CableDeltaL(V%iLB:V%iUB)                                 ! Rank 1 Array
       case (SrvD_y_CableDeltaLdot)
@@ -7861,8 +7851,6 @@ subroutine SrvD_VarUnpackOutput(V, ValAry, y)
          y%ElecPwr = VarVals(1)                                               ! Scalar
       case (SrvD_y_TBDrCon)
          y%TBDrCon(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
-      case (SrvD_y_Lidar)
-         y%Lidar(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
       case (SrvD_y_CableDeltaL)
          y%CableDeltaL(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
       case (SrvD_y_CableDeltaLdot)
@@ -7905,8 +7893,6 @@ function SrvD_OutputFieldName(DL) result(Name)
        Name = "y%ElecPwr"
    case (SrvD_y_TBDrCon)
        Name = "y%TBDrCon"
-   case (SrvD_y_Lidar)
-       Name = "y%Lidar"
    case (SrvD_y_CableDeltaL)
        Name = "y%CableDeltaL"
    case (SrvD_y_CableDeltaLdot)
