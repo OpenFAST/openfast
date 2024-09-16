@@ -76,7 +76,7 @@ typedef  ^                       ^                 ReKi              PulseSpacin
 typedef  ^                       ^                 ReKi              MeasurementInterval -   -    -      "Time between each measurement" s
 typedef  ^                       ^                 ReKi              URefLid           -     -     -     "Reference average wind speed for the lidar" m/s 
 typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate" - 
-typedef  ^                       ^                 IntKi             ConsiderHubMotion -     -     -     "Flag whether or not the hub motion's impact on the Lidar measurement will be considered [0 for no, 1 for yes]" -
+typedef  ^                       ^                 LOGICAL           ConsiderHubMotion -     -     -     "whether or not the hub motion's impact on the Lidar measurement will be considered" -
 typedef  ^                       ^                 Grid3D_InitInputType     FF     -     -     -     "scaling data" -
 
 

@@ -94,7 +94,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: MeasurementInterval = 0.0_ReKi      !< Time between each measurement [s]
     REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
     LOGICAL  :: LidRadialVel = .false.      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
-    INTEGER(IntKi)  :: ConsiderHubMotion = 0_IntKi      !< Flag whether or not the hub motion's impact on the Lidar measurement will be considered [0 for no, 1 for yes] [-]
+    LOGICAL  :: ConsiderHubMotion = .false.      !< whether or not the hub motion's impact on the Lidar measurement will be considered [-]
     TYPE(Grid3D_InitInputType)  :: FF      !< scaling data [-]
   END TYPE InflowWind_InputFile
 ! =======================

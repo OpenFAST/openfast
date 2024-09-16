@@ -1507,7 +1507,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
 
 
 
-      IF ( p_FAST%CompInflow == Module_IfW ) THEN !assign the number of gates to ServD
+      IF ( p_FAST%CompInflow == Module_IfW ) THEN ! assign the number of gates to ServD
          if (allocated(IfW%y%lidar%LidSpeed)) then    ! make sure we have the array allocated before setting it
             CALL AllocAry(Init%InData_SrvD%LidSpeed, size(IfW%y%lidar%LidSpeed), 'Init%InData_SrvD%LidSpeed',     errStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)

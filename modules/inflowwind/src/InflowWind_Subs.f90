@@ -1177,7 +1177,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       ! Passed variables
 
    CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list of user-requested outputs
-   TYPE(InflowWind_ParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
+   TYPE(InflowWind_ParameterType), INTENT(INOUT)  :: p                         !< The module parameters
    INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
    CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
 
@@ -1288,17 +1288,9 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput(WindAccZ) = .TRUE.
    end if
 
-   if (p%lidar%SensorType /= SensorType_None) then
-      IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
-         DO I=p%lidar%NumBeam+1,5
-            InvalidOutput( WindMeas(I) ) = .TRUE.
-         END DO
-      ELSE
-         DO I=p%lidar%NumPulseGate+1,5
-            InvalidOutput( WindMeas(I) ) = .TRUE.
-         END DO
-      END IF
-   endif
+   do I=p%lidar%NumMeasurements+1,SIZE(WindMeas)
+      InvalidOutput( WindMeas(I) ) = .TRUE.
+   end do
 
 !   ................. End of validity checking .................
 
@@ -1521,16 +1513,10 @@ SUBROUTINE SetAllOuts( p, y, m, ErrStat, ErrMsg )
    
    
       !FIXME:  Add in Wind1Dir etc.  -- although those can be derived outside of FAST.
-   if (p%lidar%SensorType /= SensorType_None) then
-      IF ( p%lidar%SensorType == SensorType_SinglePoint) THEN
-         DO I = 1,MIN(5, p%lidar%NumBeam )
-            m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
-         END DO
-      ELSE
-         DO I = 1,MIN(5, p%lidar%NumPulseGate )
-           m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
-        END DO
-      END IF
+   if (ALLOCATED(y%lidar%LidSpeed)) then
+      DO I = 1,MIN(SIZE(WindMeas), SIZE(y%lidar%LidSpeed) )
+         m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
+      END DO
    endif
 
 END SUBROUTINE SetAllOuts

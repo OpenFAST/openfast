@@ -552,36 +552,24 @@ CONTAINS
    !> Set the Lidar related sensor inputs
    !!    avrSWAP(2001:2500)
    subroutine SetEXavrSWAP_LidarSensors()
+      integer(IntKi) :: nPts
+      
          ! in case something got set wrong, don't try to write beyond array
       if (size(dll_data%avrswap) < (LidarMsr_StartIdx + LidarMsr_MaxChan - 1) ) return
-      if (p%NumBeam == 0) return ! Nothing to set
 
-      if (p%SensorType > 0) then    ! Set these here rather than overwrite every loop step in SensorType 1 or 3
+      if (p%SensorType > 0) then
          dll_data%avrswap(LidarMsr_StartIdx)        = real(p%SensorType,SiKi)    ! Sensor Type
          dll_data%avrswap(LidarMsr_StartIdx+1)      = real(p%NumBeam,SiKi)       ! Number of Beams
          dll_data%avrswap(LidarMsr_StartIdx+2)      = real(p%NumPulseGate,SiKi)  ! Number of Pulse Gates
          dll_data%avrswap(LidarMsr_StartIdx+3)      = p%URefLid                  ! Reference average wind speed for the lidar
-      endif
-      if (p%SensorType == 1) THEN
-         do I=1,min(p%NumBeam,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
+
+         nPts = SIZE(u%MsrPositionsX)
+         do I=1,min(nPts,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
             J=LidarMsr_StartIdx + 4 + (I-1)
-            dll_data%avrswap(J)                     = u%LidSpeed(I)              ! Lidar Measured Wind Speeds
-            dll_data%avrswap(J+p%NumBeam)           = u%MsrPositionsX(I)         ! Lidar Measurement Points X
-            dll_data%avrswap(J+(p%NumBeam*2))       = u%MsrPositionsY(I)         ! Lidar Measurement Points Y
-            dll_data%avrswap(J+(p%NumBeam*3))       = u%MsrPositionsZ(I)         ! Lidar Measurement Points Z
-         enddo
-      elseif (p%SensorType == 2) THEN
-         dll_data%avrswap(LidarMsr_StartIdx+4)      = u%LidSpeed(1)              ! Lidar Measured Wind Speeds
-         dll_data%avrswap(LidarMsr_StartIdx+5)      = u%MsrPositionsX(1)         ! Lidar Measurement Points X
-         dll_data%avrswap(LidarMsr_StartIdx+6)      = u%MsrPositionsY(1)         ! Lidar Measurement Points Y
-         dll_data%avrswap(LidarMsr_StartIdx+7)      = u%MsrPositionsZ(1)         ! Lidar Measurement Points Z
-      elseif (p%SensorType == 3) THEN
-         do I=1,min(p%NumPulseGate,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
-            J=LidarMsr_StartIdx + 4 + (I-1)
-            dll_data%avrswap(J)                     = u%LidSpeed(I)              ! Lidar Measured Wind Speeds
-            dll_data%avrswap(J+p%NumPulseGate)      = u%MsrPositionsX(I)         ! Lidar Measurement Points X
-            dll_data%avrswap(J+(p%NumPulseGate*2))  = u%MsrPositionsY(I)         ! Lidar Measurement Points Y
-            dll_data%avrswap(J+(p%NumPulseGate*3))  = u%MsrPositionsZ(I)         ! Lidar Measurement Points Z
+            dll_data%avrswap(J)                = u%LidSpeed(I)              ! Lidar Measured Wind Speeds
+            dll_data%avrswap(J+nPts)           = u%MsrPositionsX(I)         ! Lidar Measurement Points X
+            dll_data%avrswap(J+(nPts*2))       = u%MsrPositionsY(I)         ! Lidar Measurement Points Y
+            dll_data%avrswap(J+(nPts*3))       = u%MsrPositionsZ(I)         ! Lidar Measurement Points Z
          enddo
       endif
    end subroutine SetEXavrSWAP_LidarSensors
