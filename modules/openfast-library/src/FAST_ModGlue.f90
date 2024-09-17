@@ -763,7 +763,7 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
          error = CalcOutputErrorAtAzimuth()
 
          ! Update converged flag based on error and tolerance
-         m%CS%IsConverged = error < p_FAST%TrimTol
+         m%CS%IsConverged = (error < p_FAST%TrimTol) .and. (n_t_global > 1)
       end if
 
       ! Save interpolated outputs for this azimuth

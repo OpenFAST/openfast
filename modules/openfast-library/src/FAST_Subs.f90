@@ -3335,12 +3335,6 @@ END DO
       RETURN
    end if
 
-   ! temporary work-around for error with CalcSteady
-   if (p%CalcSteady .and. p%NLinTimes == 1 ) then
-      call SetErrStat(ErrID_Info, "Setting NLinTimes to 2 to avoid problem with CalcSteady with only one time.", ErrStat,ErrMsg,RoutineName)
-      p%NLinTimes = 2
-   end if
-
       ! LinInputs - Include inputs in linearization (switch) {0=none; 1=standard; 2=all module inputs (debug)}
    CALL ReadVar( UnIn, InputFile, p%LinInputs, "LinInputs", "Include inputs in linearization (switch) {0=none; 1=standard; 2=all module inputs (debug)}", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
