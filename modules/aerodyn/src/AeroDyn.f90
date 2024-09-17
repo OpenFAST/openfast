@@ -3179,7 +3179,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
          ! Determine current azimuth angle and pitch axis vector of blade k, element j
          call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%orientationAnnulus(:,:,:,k), elemPosRelToHub_save=elemPosRelToHub, elemPosRotorProj_save=elemPosRotorProj)
          ! Twist (aero+elastic), Toe, Cant (instantaneous and local), include elastic deformation
-         call TwistToeCant_FromLocalPolar(u%BladeMotion(k), m%orientationAnnulus(:,:,:,k), thetaBladeNds, m%Toe(:,k), m%Cant(:,k))
+         call TwistToeCant_FromLocalPolar(u%BladeMotion(k), m%orientationAnnulus(:,:,:,k), thetaBladeNds(:,k), m%Toe(:,k), m%Cant(:,k))
 
          !..........................
          ! Compute local radius
@@ -3612,7 +3612,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          elseif (p%rotors(iR)%AeroProjMod==APM_BEM_Polar) then
             do k=1,p%rotors(iR)%numBlades
                call Calculate_MeshOrientation_Rel2Hub(u(tIndx)%rotors(iR)%BladeMotion(k), u(tIndx)%rotors(iR)%HubMotion, x_hat_disk, m%rotors(iR)%orientationAnnulus(:,:,:,k))
-               call TwistToeCant_FromLocalPolar(u(tIndx)%rotors(iR)%BladeMotion(k), m%rotors(iR)%orientationAnnulus(:,:,:,k), thetaBladeNds, m%rotors(iR)%Toe(:,k), m%rotors(iR)%Cant(:,k))
+               call TwistToeCant_FromLocalPolar(u(tIndx)%rotors(iR)%BladeMotion(k), m%rotors(iR)%orientationAnnulus(:,:,:,k), thetaBladeNds(:,k), m%rotors(iR)%Toe(:,k), m%rotors(iR)%Cant(:,k))
             enddo
 
          else if (p%rotors(iR)%AeroProjMod==APM_LiftingLine) then
