@@ -762,8 +762,9 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
          ! azimuth from the previous rotation
          error = CalcOutputErrorAtAzimuth()
 
-         ! Update converged flag based on error and tolerance
-         m%CS%IsConverged = (error < p_FAST%TrimTol) .and. (n_t_global > 1)
+         ! Update converged flag based on error and tolerance and more than one rotation has occurred
+         m%CS%IsConverged = (error < p_FAST%TrimTol) .and. (m%CS%NumRotations > 0)
+
       end if
 
       ! Save interpolated outputs for this azimuth
