@@ -4285,7 +4285,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
       select case(InputFileData%DBEMT_Mod)
       case (DBEMT_None, DBEMT_frozen, DBEMT_cont_tauConst)
       case default
-         call SetErrStat( ErrID_Fatal, 'DBEMT Mod must be 0 or 3 (continuous formulation with constant tau1) for linearization. Set DBEMT_Mod=0,3.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'DBEMT_Mod must be -1 (frozen), 0 (none), or 3 (continuous formulation with constant tau1) for linearization. Set DBEMT_Mod=-1,0,3.', ErrStat, ErrMsg, RoutineName )
       end select
 
       if (InputFileData%NacelleDrag) then
