@@ -96,9 +96,9 @@ IMPLICIT NONE
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: AAoutfile      !< AAoutfile for writing output files [-]
     CHARACTER(1024)  :: FTitle      !< File Title: the 2nd line of the input file, which contains a description of its contents [-]
     REAL(DbKi)  :: AAStart = 0.0_R8Ki      !< Time after which to calculate AA [s]
+    REAL(ReKi)  :: TI = 0.0_ReKi      !< Average rotor incident turbulence intensity [-]
+    REAL(ReKi)  :: avgV = 0.0_ReKi      !< Average wind speed [-]
     REAL(ReKi)  :: Lturb = 0.0_ReKi      !< Turbulent lengthscale in Amiet model [-]
-    REAL(ReKi)  :: avgV = 0.0_ReKi      !< Average wind speed to compute incident turbulence intensity [m]
-    REAL(ReKi)  :: TI = 0.0_ReKi      !< Incident turbulence intensity [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ReListBL      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AoAListBL      !<  [deg]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Pres_DispThick      !<  [-]
@@ -209,8 +209,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: AA_Bl_Prcntge = 0_IntKi      !< The Percentage of the Blade which the noise is calculated [%]
     INTEGER(IntKi)  :: startnode = 0_IntKi      !< Corersponding node to the noise calculation percentage of the blade [-]
     REAL(ReKi)  :: Lturb = 0.0_ReKi      !< Turbulent lengthscale in Amiet model [m]
-    REAL(ReKi)  :: avgV = 0.0_ReKi      !< Average wind speed to compute incident turbulence intensity [m/s]
-    REAL(ReKi)  :: TI = 0.0_ReKi           !< Rotor incident turbulent intensity [-]
+    REAL(ReKi)  :: avgV = 0.0_ReKi      !< Average wind speed to compute incident turbulence intensity [m]
+    REAL(ReKi)  :: TI = 0.0_ReKi      !< Rotor incident turbulent intensity [-]
     CHARACTER(1024)  :: FTitle      !< File Title: the 2nd line of the input file, which contains a description of its contents [-]
     character(20)  :: outFmt      !< Format specifier [-]
     INTEGER(IntKi)  :: NrOutFile = 0_IntKi      !< Nr of output files [-]
@@ -773,9 +773,9 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    end if
    DstInputFileData%FTitle = SrcInputFileData%FTitle
    DstInputFileData%AAStart = SrcInputFileData%AAStart
-   DstInputFileData%Lturb = SrcInputFileData%Lturb
-   DstInputFileData%avgV = SrcInputFileData%avgV
    DstInputFileData%TI = SrcInputFileData%TI
+   DstInputFileData%avgV = SrcInputFileData%avgV
+   DstInputFileData%Lturb = SrcInputFileData%Lturb
    if (allocated(SrcInputFileData%ReListBL)) then
       LB(1:1) = lbound(SrcInputFileData%ReListBL, kind=B8Ki)
       UB(1:1) = ubound(SrcInputFileData%ReListBL, kind=B8Ki)
@@ -1000,9 +1000,9 @@ subroutine AA_PackInputFile(RF, Indata)
    call RegPackAlloc(RF, InData%AAoutfile)
    call RegPack(RF, InData%FTitle)
    call RegPack(RF, InData%AAStart)
-   call RegPack(RF, InData%Lturb)
    call RegPack(RF, InData%TI)
    call RegPack(RF, InData%avgV)
+   call RegPack(RF, InData%Lturb)
    call RegPackAlloc(RF, InData%ReListBL)
    call RegPackAlloc(RF, InData%AoAListBL)
    call RegPackAlloc(RF, InData%Pres_DispThick)
@@ -1060,9 +1060,9 @@ subroutine AA_UnPackInputFile(RF, OutData)
    call RegUnpackAlloc(RF, OutData%AAoutfile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FTitle); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AAStart); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Lturb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TI); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%avgV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Lturb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%ReListBL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AoAListBL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Pres_DispThick); if (RegCheckErr(RF, RoutineName)) return
@@ -1972,8 +1972,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%AA_Bl_Prcntge = SrcParamData%AA_Bl_Prcntge
    DstParamData%startnode = SrcParamData%startnode
    DstParamData%Lturb = SrcParamData%Lturb
-   DstParamData%TI = SrcParamData%TI
    DstParamData%avgV = SrcParamData%avgV
+   DstParamData%TI = SrcParamData%TI
    DstParamData%FTitle = SrcParamData%FTitle
    DstParamData%outFmt = SrcParamData%outFmt
    DstParamData%NrOutFile = SrcParamData%NrOutFile
@@ -2424,8 +2424,8 @@ subroutine AA_PackParam(RF, Indata)
    call RegPack(RF, InData%AA_Bl_Prcntge)
    call RegPack(RF, InData%startnode)
    call RegPack(RF, InData%Lturb)
-   call RegPack(RF, InData%TI)
    call RegPack(RF, InData%avgV)
+   call RegPack(RF, InData%TI)
    call RegPack(RF, InData%FTitle)
    call RegPack(RF, InData%outFmt)
    call RegPack(RF, InData%NrOutFile)
@@ -2527,8 +2527,8 @@ subroutine AA_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%AA_Bl_Prcntge); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%startnode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Lturb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TI); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%avgV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TI); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FTitle); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%outFmt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NrOutFile); if (RegCheckErr(RF, RoutineName)) return
