@@ -94,11 +94,11 @@ IMPLICIT NONE
     TYPE(AA_BladePropsType) , DIMENSION(:), ALLOCATABLE  :: BladeProps      !< blade property information from blade input files [-]
     INTEGER(IntKi)  :: NrOutFile = 0_IntKi      !< Nr of output files [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: AAoutfile      !< AAoutfile for writing output files [-]
-    CHARACTER(1024)  :: TICalcTabFile      !< Name of the file containing the table for incident turbulence intensity [-]
     CHARACTER(1024)  :: FTitle      !< File Title: the 2nd line of the input file, which contains a description of its contents [-]
     REAL(DbKi)  :: AAStart = 0.0_R8Ki      !< Time after which to calculate AA [s]
     REAL(ReKi)  :: Lturb = 0.0_ReKi      !< Turbulent lengthscale in Amiet model [-]
-    REAL(ReKi)  :: AvgV = 0.0_ReKi      !< Average wind speed to compute incident turbulence intensity [m]
+    REAL(ReKi)  :: avgV = 0.0_ReKi      !< Average wind speed to compute incident turbulence intensity [m]
+    REAL(ReKi)  :: TI = 0.0_ReKi      !< Incident turbulence intensity [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ReListBL      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AoAListBL      !<  [deg]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Pres_DispThick      !<  [-]
@@ -109,9 +109,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Suct_Cf      !<  [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Pres_EdgeVelRat      !<  [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Suct_EdgeVelRat      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI_Grid_In      !<  [-]
-    REAL(ReKi)  :: dz_turb_in = 0.0_ReKi      !<  [m]
-    REAL(ReKi)  :: dy_turb_in = 0.0_ReKi      !<  [m]
   END TYPE AA_InputFile
 ! =======================
 ! =========  AA_ContinuousStateType  =======
@@ -212,10 +209,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: AA_Bl_Prcntge = 0_IntKi      !< The Percentage of the Blade which the noise is calculated [%]
     INTEGER(IntKi)  :: startnode = 0_IntKi      !< Corersponding node to the noise calculation percentage of the blade [-]
     REAL(ReKi)  :: Lturb = 0.0_ReKi      !< Turbulent lengthscale in Amiet model [m]
-    REAL(ReKi)  :: AvgV = 0.0_ReKi      !< Average wind speed to compute incident turbulence intensity [m]
-    REAL(ReKi)  :: dz_turb_in = 0.0_ReKi      !<  [m]
-    REAL(ReKi)  :: dy_turb_in = 0.0_ReKi      !<  [m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI_Grid_In      !<  [-]
+    REAL(ReKi)  :: avgV = 0.0_ReKi      !< Average wind speed to compute incident turbulence intensity [m/s]
+    REAL(ReKi)  :: TI = 0.0_ReKi           !< Rotor incident turbulent intensity [-]
     CHARACTER(1024)  :: FTitle      !< File Title: the 2nd line of the input file, which contains a description of its contents [-]
     character(20)  :: outFmt      !< Format specifier [-]
     INTEGER(IntKi)  :: NrOutFile = 0_IntKi      !< Nr of output files [-]
@@ -776,11 +771,11 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       end if
       DstInputFileData%AAoutfile = SrcInputFileData%AAoutfile
    end if
-   DstInputFileData%TICalcTabFile = SrcInputFileData%TICalcTabFile
    DstInputFileData%FTitle = SrcInputFileData%FTitle
    DstInputFileData%AAStart = SrcInputFileData%AAStart
    DstInputFileData%Lturb = SrcInputFileData%Lturb
-   DstInputFileData%AvgV = SrcInputFileData%AvgV
+   DstInputFileData%avgV = SrcInputFileData%avgV
+   DstInputFileData%TI = SrcInputFileData%TI
    if (allocated(SrcInputFileData%ReListBL)) then
       LB(1:1) = lbound(SrcInputFileData%ReListBL, kind=B8Ki)
       UB(1:1) = ubound(SrcInputFileData%ReListBL, kind=B8Ki)
@@ -901,20 +896,6 @@ subroutine AA_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
       end if
       DstInputFileData%Suct_EdgeVelRat = SrcInputFileData%Suct_EdgeVelRat
    end if
-   if (allocated(SrcInputFileData%TI_Grid_In)) then
-      LB(1:2) = lbound(SrcInputFileData%TI_Grid_In, kind=B8Ki)
-      UB(1:2) = ubound(SrcInputFileData%TI_Grid_In, kind=B8Ki)
-      if (.not. allocated(DstInputFileData%TI_Grid_In)) then
-         allocate(DstInputFileData%TI_Grid_In(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%TI_Grid_In.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInputFileData%TI_Grid_In = SrcInputFileData%TI_Grid_In
-   end if
-   DstInputFileData%dz_turb_in = SrcInputFileData%dz_turb_in
-   DstInputFileData%dy_turb_in = SrcInputFileData%dy_turb_in
 end subroutine
 
 subroutine AA_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -979,9 +960,6 @@ subroutine AA_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    if (allocated(InputFileData%Suct_EdgeVelRat)) then
       deallocate(InputFileData%Suct_EdgeVelRat)
    end if
-   if (allocated(InputFileData%TI_Grid_In)) then
-      deallocate(InputFileData%TI_Grid_In)
-   end if
 end subroutine
 
 subroutine AA_PackInputFile(RF, Indata)
@@ -1020,11 +998,11 @@ subroutine AA_PackInputFile(RF, Indata)
    end if
    call RegPack(RF, InData%NrOutFile)
    call RegPackAlloc(RF, InData%AAoutfile)
-   call RegPack(RF, InData%TICalcTabFile)
    call RegPack(RF, InData%FTitle)
    call RegPack(RF, InData%AAStart)
    call RegPack(RF, InData%Lturb)
-   call RegPack(RF, InData%AvgV)
+   call RegPack(RF, InData%TI)
+   call RegPack(RF, InData%avgV)
    call RegPackAlloc(RF, InData%ReListBL)
    call RegPackAlloc(RF, InData%AoAListBL)
    call RegPackAlloc(RF, InData%Pres_DispThick)
@@ -1035,9 +1013,6 @@ subroutine AA_PackInputFile(RF, Indata)
    call RegPackAlloc(RF, InData%Suct_Cf)
    call RegPackAlloc(RF, InData%Pres_EdgeVelRat)
    call RegPackAlloc(RF, InData%Suct_EdgeVelRat)
-   call RegPackAlloc(RF, InData%TI_Grid_In)
-   call RegPack(RF, InData%dz_turb_in)
-   call RegPack(RF, InData%dy_turb_in)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1083,11 +1058,11 @@ subroutine AA_UnPackInputFile(RF, OutData)
    end if
    call RegUnpack(RF, OutData%NrOutFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AAoutfile); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TICalcTabFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FTitle); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AAStart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Lturb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AvgV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TI); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%avgV); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%ReListBL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AoAListBL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Pres_DispThick); if (RegCheckErr(RF, RoutineName)) return
@@ -1098,9 +1073,6 @@ subroutine AA_UnPackInputFile(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Suct_Cf); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Pres_EdgeVelRat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Suct_EdgeVelRat); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%TI_Grid_In); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%dz_turb_in); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%dy_turb_in); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AA_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -2000,21 +1972,8 @@ subroutine AA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%AA_Bl_Prcntge = SrcParamData%AA_Bl_Prcntge
    DstParamData%startnode = SrcParamData%startnode
    DstParamData%Lturb = SrcParamData%Lturb
-   DstParamData%AvgV = SrcParamData%AvgV
-   DstParamData%dz_turb_in = SrcParamData%dz_turb_in
-   DstParamData%dy_turb_in = SrcParamData%dy_turb_in
-   if (allocated(SrcParamData%TI_Grid_In)) then
-      LB(1:2) = lbound(SrcParamData%TI_Grid_In, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%TI_Grid_In, kind=B8Ki)
-      if (.not. allocated(DstParamData%TI_Grid_In)) then
-         allocate(DstParamData%TI_Grid_In(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TI_Grid_In.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%TI_Grid_In = SrcParamData%TI_Grid_In
-   end if
+   DstParamData%TI = SrcParamData%TI
+   DstParamData%avgV = SrcParamData%avgV
    DstParamData%FTitle = SrcParamData%FTitle
    DstParamData%outFmt = SrcParamData%outFmt
    DstParamData%NrOutFile = SrcParamData%NrOutFile
@@ -2340,9 +2299,6 @@ subroutine AA_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%Aweight)) then
       deallocate(ParamData%Aweight)
    end if
-   if (allocated(ParamData%TI_Grid_In)) then
-      deallocate(ParamData%TI_Grid_In)
-   end if
    if (allocated(ParamData%OutParam)) then
       LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
       UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
@@ -2468,10 +2424,8 @@ subroutine AA_PackParam(RF, Indata)
    call RegPack(RF, InData%AA_Bl_Prcntge)
    call RegPack(RF, InData%startnode)
    call RegPack(RF, InData%Lturb)
-   call RegPack(RF, InData%AvgV)
-   call RegPack(RF, InData%dz_turb_in)
-   call RegPack(RF, InData%dy_turb_in)
-   call RegPackAlloc(RF, InData%TI_Grid_In)
+   call RegPack(RF, InData%TI)
+   call RegPack(RF, InData%avgV)
    call RegPack(RF, InData%FTitle)
    call RegPack(RF, InData%outFmt)
    call RegPack(RF, InData%NrOutFile)
@@ -2573,10 +2527,8 @@ subroutine AA_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%AA_Bl_Prcntge); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%startnode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Lturb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%AvgV); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%dz_turb_in); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%dy_turb_in); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%TI_Grid_In); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TI); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%avgV); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FTitle); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%outFmt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NrOutFile); if (RegCheckErr(RF, RoutineName)) return
