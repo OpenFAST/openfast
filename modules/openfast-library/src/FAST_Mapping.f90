@@ -51,7 +51,6 @@ character(24), parameter   :: Custom_ED_to_ExtLd = 'ED -> ExtLd', &
                               Custom_ED_to_SrvD = 'ED -> SrvD', &
                               Custom_SED_to_SrvD = 'SED -> SrvD', &
                               Custom_ExtInfw_to_SrvD = 'ExtInfw -> SrvD', &
-                              Custom_ExtLd_to_SrvD = 'ExtLd -> SrvD', &
                               Custom_IfW_to_SrvD = 'IfW -> SrvD', &
                               Custom_SrvD_to_ED = 'SrvD -> ED', &
                               Custom_SrvD_to_SED = 'SrvD -> SED', &
@@ -3156,23 +3155,6 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
       T%SrvD%Input(iInput)%WindDir = ATAN2(T%ExtInfw%y%v(1), T%ExtInfw%y%u(1))
       T%SrvD%Input(iInput)%HorWindV = SQRT(T%ExtInfw%y%u(1)**2 + T%ExtInfw%y%v(1)**2)
-      if (allocated(T%SrvD%Input(iInput)%LidSpeed)) T%SrvD%Input(iInput)%LidSpeed = 0.0
-      if (allocated(T%SrvD%Input(iInput)%MsrPositionsX)) T%SrvD%Input(iInput)%MsrPositionsX = 0.0
-      if (allocated(T%SrvD%Input(iInput)%MsrPositionsY)) T%SrvD%Input(iInput)%MsrPositionsY = 0.0
-      if (allocated(T%SrvD%Input(iInput)%MsrPositionsz)) T%SrvD%Input(iInput)%MsrPositionsz = 0.0
-      
-      ! the nacelle yaw error estimate (positive about zi-axis)
-      T%SrvD%Input(iInput)%YawErr = T%SrvD%Input(iInput)%WindDir - T%SrvD%Input(iInput)%YawAngle 
-
-   case (Custom_ExtLd_to_SrvD)
-
-      pi = acos(-1.0)
-      z = T%ED%y%HubPtMotion%Position(3, 1)
-      mean_vel = T%ExtLd%p%vel_mean*((z/T%ExtLd%p%z_ref)**T%ExtLd%p%shear_exp)
-      u = -mean_vel*sin(T%ExtLd%p%wind_dir*pi/180.0)
-      v = -mean_vel*cos(T%ExtLd%p%wind_dir*pi/180.0)
-      T%SrvD%Input(iInput)%HorWindV = mean_vel
-      T%SrvD%Input(iInput)%WindDir = atan2(v, u)
       if (allocated(T%SrvD%Input(iInput)%LidSpeed)) T%SrvD%Input(iInput)%LidSpeed = 0.0
       if (allocated(T%SrvD%Input(iInput)%MsrPositionsX)) T%SrvD%Input(iInput)%MsrPositionsX = 0.0
       if (allocated(T%SrvD%Input(iInput)%MsrPositionsY)) T%SrvD%Input(iInput)%MsrPositionsY = 0.0
