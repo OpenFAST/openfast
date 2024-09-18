@@ -292,9 +292,6 @@ try:
             # Loop through elements where Mloc is not within tolerance of Mbas
             # Retest to get error message
             for n, (i,j) in enumerate(zip(*np.where(M_in_tol == False)), 1):
-                # Skip comparisons of really small numbers
-                if np.abs(Mloc[i,j]) < 5e-5 and np.abs(Mloc[i,j]) < 5e-5:
-                    continue
                 try:
                     np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
                 except Exception as e:
