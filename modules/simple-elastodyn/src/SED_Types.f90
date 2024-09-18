@@ -78,7 +78,7 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of blades on the turbine [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitch      !< Initial blade pitch angles [radians]
-    REAL(ReKi)  :: BladeLength = 0.0_ReKi      !< Blade length (for AeroDyn) [meters]
+    REAL(ReKi)  :: BladeLength = 0.0_ReKi      !< Blade length (for AeroDsk) [meters]
     REAL(ReKi)  :: TowerHt = 0.0_ReKi      !< Tower Height [meters]
     REAL(ReKi)  :: HubHt = 0.0_ReKi      !< Height of the hub [meters]
     REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos = 0.0_ReKi      !< Initial platform position (6 DOFs) [-]
@@ -90,7 +90,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SED_InputType  =======
   TYPE, PUBLIC :: SED_InputType
-    TYPE(MeshType)  :: HubPtLoad      !< AeroDisk maps load to hub [-]
+    TYPE(MeshType)  :: HubPtLoad      !< AeroDyn/AeroDisk maps load to hub [-]
     REAL(ReKi)  :: HSSBrTrqC = 0.0_ReKi      !< Commanded HSS brake torque [N-m]
     REAL(ReKi)  :: GenTrq = 0.0_ReKi      !< Electrical generator torque [N-m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitchCom      !< Commanded blade pitch angles [radians]
@@ -100,11 +100,11 @@ IMPLICIT NONE
 ! =======================
 ! =========  SED_OutputType  =======
   TYPE, PUBLIC :: SED_OutputType
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootMotion      !< For AeroDyn/BeamDyn: motions at the blade roots [-]
-    TYPE(MeshType)  :: HubPtMotion      !< For AeroDyn and Lidar(InflowWind): motions of the hub [-]
-    TYPE(MeshType)  :: NacelleMotion      !< For AeroDyn14 & ServoDyn/TMD: motions of the nacelle. [-]
-    TYPE(MeshType)  :: TowerLn2Mesh      !< Tower line2 mesh with positions/orientations/velocities/accelerations [-]
-    TYPE(MeshType)  :: PlatformPtMesh      !< Platform reference point positions/orientations/velocities/accelerations [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootMotion      !< For AeroDyn: motions at the blade roots [-]
+    TYPE(MeshType)  :: HubPtMotion      !< For AeroDyn/AeroDisk: motions of the hub [-]
+    TYPE(MeshType)  :: NacelleMotion      !< For AeroDyn: for aero effects in AD (aero nacelle loads ignored) [-]
+    TYPE(MeshType)  :: TowerLn2Mesh      !< Tower line2 mesh for visualization / Aero tower effects [-]
+    TYPE(MeshType)  :: PlatformPtMesh      !< Platform reference point for visualization [-]
     REAL(ReKi)  :: LSSTipPxa = 0.0_ReKi      !< Rotor azimuth angle (position) [radians]
     REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Rotor azimuth angular speed [rad/s]
     REAL(ReKi)  :: RotPwr = 0.0_ReKi      !< Rotor power [W]
@@ -140,7 +140,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: HSSBrTrq = 0.0_ReKi      !< HSSBrTrq from update states; a hack to get this working with a single integrator [-]
     REAL(ReKi)  :: HSSBrTrqC = 0.0_ReKi      !< Commanded HSS brake torque (adjusted for sign) [N-m]
     INTEGER(IntKi)  :: SgnPrvLSTQ = 0_IntKi      !< The sign of the low-speed shaft torque from the previous call to RtHS(). NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run! [-]
-    INTEGER(IntKi) , DIMENSION(1:SED_NMX)  :: SgnLSTQ = 0_IntKi      !< history of sign of LSTQ [-]
+    INTEGER(IntKi) , DIMENSION(1:SED_NMX)  :: SgnLSTQ = 0_IntKi      !< history of sign of LSTQ (for HSS brake) [-]
   END TYPE SED_OtherStateType
 ! =======================
 ! =========  SED_ParameterType  =======
@@ -175,8 +175,8 @@ IMPLICIT NONE
 ! =========  SED_MiscVarType  =======
   TYPE, PUBLIC :: SED_MiscVarType
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< Array of all outputs [-]
-    TYPE(MeshMapType)  :: mapNac2Hub      !< Mesh mapping from Nacelle to Hub [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: mapHub2Root      !< Mesh mapping from Hub to BladeRootMotion [-]
+    TYPE(MeshMapType)  :: mapNac2Hub      !< Mesh mapping from Nacelle to Hub (hub rotation overwritten in calc) [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: mapHub2Root      !< Mesh mapping from Hub to BladeRootMotion (blade pitch overwritten in calc) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QD2T      !< Current estimate of first derivative of QD (acceleration matrix) for each degree of freedom [-]
     REAL(ReKi) , DIMENSION(1:3)  :: HubPt_X = 0.0_ReKi      !< X orientation of hub calculated in CalcOutput -- saving so we don't recalculate a bunch of things to get it in UpdateStates [-]
     TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]

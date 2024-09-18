@@ -78,7 +78,7 @@ typedef  ^        InputType         ReKi                 BlPitch           -  - 
 
 # ..... Outputs ...................................................................................................................
 # outputs on meshes:
-typedef  ^        OutputType        MeshType             AeroLoads         -  - -   "Mesh containing the forces and moments from the aero loading" -
+typedef  ^        OutputType        MeshType             AeroLoads         -  - -   "Mesh containing the forces and moments from the aero loading (at HubMotion mesh)" -
 #TODO: any mesh for visualization of blades/rotor disk?
 # outputs not on meshes:
 typedef  ^        OutputType        ReKi                 YawErr            -  - -   "Nacelle-yaw error, i.e., the angle about positive Z from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambient + rotor  motion), both projected onto the horizontal plane" rad

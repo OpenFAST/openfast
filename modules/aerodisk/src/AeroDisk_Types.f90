@@ -98,7 +98,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  ADsk_OutputType  =======
   TYPE, PUBLIC :: ADsk_OutputType
-    TYPE(MeshType)  :: AeroLoads      !< Mesh containing the forces and moments from the aero loading [-]
+    TYPE(MeshType)  :: AeroLoads      !< Mesh containing the forces and moments from the aero loading (at HubMotion mesh) [-]
     REAL(ReKi)  :: YawErr = 0.0_ReKi      !< Nacelle-yaw error, i.e., the angle about positive Z from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambient + rotor  motion), both projected onto the horizontal plane [rad]
     REAL(ReKi)  :: PsiSkew = 0.0_ReKi      !< Azimuth angle (from the nominally vertical axis in the disk plane, Z_disk ) to the vector about which the inflow skew angle is defined, i.e., the angle about positive X_disk  from Z_disk  to the vector about which the positive inflow skew angle is defined  [rad]
     REAL(ReKi)  :: ChiSkew = 0.0_ReKi      !< Inflow skew angle [rad]

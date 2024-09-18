@@ -69,11 +69,13 @@
 #  define map_snprintf _snprintf
 #  define map_strcat(a,b,c) strcat_s(a,b,c)
 #  define MAP_STRCPY(a,b,c) strcpy_s(a,b,c)
+#  define MAP_STRNCPY(a,b,c) strncpy_s(a,c,b,c)
 #else
 #  include <stdbool.h>
 #  define map_snprintf snprintf
 #  define map_strcat(a,b,c) strncat(a,c,b)
 #  define MAP_STRCPY(a,b,c) strcpy(a,c)
+#  define MAP_STRNCPY(a,b,c) strncpy(a,b,c)
 #endif
 
 

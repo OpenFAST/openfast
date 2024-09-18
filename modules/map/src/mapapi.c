@@ -1164,7 +1164,7 @@ MAP_EXTERNCALL void map_set_gravity(MAP_ParameterType_t* p_type, const double gr
 
 MAP_EXTERNCALL void map_set_input_text(MAP_InitInputType_t* init_type, const char* input_txt_line)
 {
-  strncpy(init_type->library_input_str, input_txt_line, 254);
+  MAP_STRNCPY(init_type->library_input_str, input_txt_line, 254);
   init_type->library_input_str[254] = '\0';
 }
 

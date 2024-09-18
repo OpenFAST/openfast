@@ -1954,6 +1954,8 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    ! No method at the moment for getting disk average velocity from ExtInfw
    if (p%CompAero == Module_ADsk .and. p%CompInflow == MODULE_ExtInfw) call SetErrStat( ErrID_Fatal, 'AeroDisk cannot be used with ExtInflow or the library interface', ErrStat, ErrMsg, RoutineName ) 
 
+   if ((p%CompAero == Module_ExtLd) .and. (p%CompInflow /= Module_IfW) ) call SetErrStat(ErrID_Fatal, 'Inflow module must be used when ExtLoads is used. Change CompAero or CompInflow in the OpenFAST input file.', ErrStat, ErrMsg, RoutineName)
+
    IF (p%CompAero == Module_ADsk .and. p%MHK /= MHK_None) CALL SetErrStat( ErrID_Fatal, 'AeroDisk cannot be used with an MHK turbine. Change CompAero or MHK in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%MHK /= MHK_None .and. p%MHK /= MHK_FixedBottom .and. p%MHK /= MHK_Floating) CALL SetErrStat( ErrID_Fatal, 'MHK switch is invalid. Set MHK to 0, 1, or 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
@@ -4449,18 +4451,14 @@ SUBROUTINE ExtLd_SetInitInput(InitInData_ExtLd, InitOutData_ED, y_ED, InitOutDat
 
    end if
 
-   InitInData_ExtLd%HubPos             = y_ED%HubPtMotion%Position(:,1)
-   InitInData_ExtLd%HubOrient          = y_ED%HubPtMotion%RefOrientation(:,:,1)
+   InitInData_ExtLd%HubPos         = y_ED%HubPtMotion%Position(:,1)
+   InitInData_ExtLd%HubOrient      = y_ED%HubPtMotion%RefOrientation(:,:,1)
 
-   InitInData_ExtLd%NacellePos         = y_ED%NacelleMotion%Position(:,1)
-   InitInData_ExtLd%NacelleOrient      = y_ED%NacelleMotion%RefOrientation(:,:,1)
+   InitInData_ExtLd%NacellePos     = y_ED%NacelleMotion%Position(:,1)
+   InitInData_ExtLd%NacelleOrient  = y_ED%NacelleMotion%RefOrientation(:,:,1)
 
-   InitInData_ExtLd%az_blend_mean = ExternInitData%az_blend_mean
+   InitInData_ExtLd%az_blend_mean  = ExternInitData%az_blend_mean
    InitInData_ExtLd%az_blend_delta = ExternInitData%az_blend_delta
-   InitInData_ExtLd%vel_mean = ExternInitData%vel_mean
-   InitInData_ExtLd%wind_dir = ExternInitData%wind_dir
-   InitInData_ExtLd%z_ref = ExternInitData%z_ref
-   InitInData_ExtLd%shear_exp = ExternInitData%shear_exp
 
    !Interpolate chord from AeroDyn to nodes of the ExtLoads module
    IF (.NOT. ALLOCATED( InitInData_ExtLd%BldChord) ) THEN

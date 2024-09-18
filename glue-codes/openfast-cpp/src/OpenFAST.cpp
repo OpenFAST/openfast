@@ -774,10 +774,6 @@ void fast::OpenFAST::init() {
                         &turbineData[iTurb].numBlades,
                         &turbineData[iTurb].azBlendMean,
                         &turbineData[iTurb].azBlendDelta,
-                        &turbineData[iTurb].velMean,
-                        &turbineData[iTurb].windDir,
-                        &turbineData[iTurb].zRef,
-                        &turbineData[iTurb].shearExp,
                         &extld_i_f_FAST[iTurb],
                         &extld_p_f_FAST[iTurb],
                         &extld_o_t_FAST[iTurb],
@@ -1664,10 +1660,6 @@ void fast::OpenFAST::get_turbineParams(int iTurbGlob, turbineDataType & turbData
     turbData.nBRfsiPtsTwr = turbineData[iTurbLoc].nBRfsiPtsTwr;
     turbData.azBlendMean = turbineData[iTurbLoc].azBlendMean;
     turbData.azBlendDelta = turbineData[iTurbLoc].azBlendDelta;
-    turbData.velMean = turbineData[iTurbLoc].velMean;
-    turbData.windDir = turbineData[iTurbLoc].windDir;
-    turbData.zRef = turbineData[iTurbLoc].zRef;
-    turbData.shearExp = turbineData[iTurbLoc].shearExp;
 
 }
 
@@ -2075,10 +2067,6 @@ void fast::OpenFAST::allocateMemory_preInit() {
         turbineData[iTurb].numForcePtsTwr = globTurbineData[iTurbGlob].numForcePtsTwr;
         turbineData[iTurb].azBlendMean = globTurbineData[iTurbGlob].azBlendMean;
         turbineData[iTurb].azBlendDelta = globTurbineData[iTurbGlob].azBlendDelta;
-        turbineData[iTurb].velMean = globTurbineData[iTurbGlob].velMean;
-        turbineData[iTurb].windDir = globTurbineData[iTurbGlob].windDir;
-        turbineData[iTurb].zRef = globTurbineData[iTurbGlob].zRef;
-        turbineData[iTurb].shearExp = globTurbineData[iTurbGlob].shearExp;
 
         velForceNodeData[iTurb].resize(4); // To hold data for 4 time steps
         brFSIData[iTurb].resize(4);

@@ -42,6 +42,36 @@ module ExtLoads
    public :: ExtLd_ConvertInpDataForExtProg        ! Routine to convert Input data for external programs
 
 contains    
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
+!! FAST)   
+subroutine ExtLd_SetInitOut(p, InitOut, errStat, errMsg)
+
+   type(ExtLd_InitOutputType),    intent(inout)  :: InitOut          ! output data
+   type(ExtLd_ParameterType),     intent(in   )  :: p                ! Parameters
+   integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
+   character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
+
+
+      ! Local variables
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'ExtLd_SetInitOut'
+   
+   
+   
+   integer(IntKi)                               :: i, j, k, f
+   integer(IntKi)                               :: NumCoords
+#ifdef DBG_OUTS
+   integer(IntKi)                               :: m
+   character(5)                                 ::chanPrefix
+#endif   
+      ! Initialize variables for this routine
+
+   errStat = ErrID_None
+   errMsg  = ""
+   
+end subroutine ExtLd_SetInitOut
 
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine is called at the start of the simulation to perform initialization steps.
@@ -90,17 +120,16 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
 
    p%az_blend_mean = InitInp%az_blend_mean
    p%az_blend_delta = InitInp%az_blend_delta
-   p%vel_mean = InitInp%vel_mean
-   p%wind_dir = InitInp%wind_dir
-   p%z_ref = InitInp%z_ref
-   p%shear_exp = InitInp%shear_exp
    
-   !----------------------------------------------------------------------------
-   ! Define and initialize inputs 
-   !----------------------------------------------------------------------------
+      !............................................................................................
+      ! Define and initialize inputs here 
+      !............................................................................................
 
-   call Init_u( u, p, InitInp, ErrStat2, ErrMsg2 ) 
-   if (Failed()) return
+   write(*,*) 'Initializing U '
+   
+   call Init_u( u, p, InitInp, errStat2, errMsg2 ) 
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      if (ErrStat >= AbortErrLev) return
 
    !----------------------------------------------------------------------------
    ! Initialize misc vars states
@@ -108,96 +137,23 @@ subroutine ExtLd_Init( InitInp, u, xd, p, y, m, interval, InitOut, ErrStat, ErrM
 
    m%az = 0.0 
    m%phi_cfd = 0.0
+
+   write(*,*) 'Initializing y '
+
+      !............................................................................................
+      ! Define outputs here
+      !............................................................................................
+   call Init_y(y, u, m, p, errStat2, errMsg2) ! do this after input meshes have been initialized
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      if (ErrStat >= AbortErrLev) return
    
-   !----------------------------------------------------------------------------
-   ! Initialize outputs
-   !----------------------------------------------------------------------------
-
-   ! Initialize outputs after input meshes have been initialized
-   call Init_y(y, u, m, p, ErrStat2, ErrMsg2) 
-   if (Failed()) return
+      
+      !............................................................................................
+      ! Define initialization output here
+      !............................................................................................
+   call ExtLd_SetInitOut(p, InitOut, errStat2, errMsg2)
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    
-   !----------------------------------------------------------------------------
-   ! Initialize Module Variables
-   !----------------------------------------------------------------------------
-
-   call ExtLd_InitVars(u, p, y, m, InitOut, .false., ErrStat2, ErrMsg2)
-   if (Failed()) return
-
-contains
-   logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function Failed
-end subroutine ExtLd_Init
-
-!----------------------------------------------------------------------------------------------------------------------------------   
-subroutine ExtLd_InitVars(u, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
-   type(ExtLd_InputType),          intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
-   type(ExtLd_ParameterType),      intent(inout)  :: p           !< Parameters
-   type(ExtLd_OutputType),         intent(inout)  :: y           !< Initial system outputs (outputs are not calculated;
-   type(ExtLd_MiscVarType),        intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
-   type(ExtLd_InitOutputType),     intent(inout)  :: InitOut     !< Output for initialization routine
-   logical,                        intent(in   )  :: Linearize   !< Flag to initialize linearization variables
-   integer(IntKi),                 intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                   intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-   character(*), parameter :: RoutineName = 'ExtLd_InitVars'
-   INTEGER(IntKi)          :: ErrStat2
-   CHARACTER(ErrMsgLen)    :: ErrMsg2
-
-   integer(IntKi)          :: i
-
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-   ! Allocate space for variables (deallocate if already allocated)
-   if (associated(p%Vars)) deallocate(p%Vars)
-   allocate(p%Vars, stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   ! Add pointers to vars to initialization output
-   InitOut%Vars => p%Vars
-
-   !----------------------------------------------------------------------------
-   ! Continuous State Variables
-   !----------------------------------------------------------------------------
-
-   !----------------------------------------------------------------------------
-   ! Input variables
-   !----------------------------------------------------------------------------
-
-   call MV_AddMeshVar(p%Vars%u, "TowerMotion", MotionFields, DatLoc(ExtLd_u_TowerMotion), Mesh=u%TowerMotion) 
-   call MV_AddMeshVar(p%Vars%u, "HubMotion", MotionFields, DatLoc(ExtLd_u_HubMotion), Mesh=u%HubMotion) 
-   call MV_AddMeshVar(p%Vars%u, "NacelleMotion", MotionFields, DatLoc(ExtLd_u_NacelleMotion), Mesh=u%NacelleMotion)
-   do i = 1, size(u%BladeRootMotion)
-      call MV_AddMeshVar(p%Vars%u, "BladeRootMotion"//IdxStr(i), MotionFields, DatLoc(ExtLd_u_BladeRootMotion, i), Mesh=u%BladeRootMotion(i)) 
-   end do
-   do i = 1, size(u%BladeRootMotion)
-      call MV_AddMeshVar(p%Vars%u, "BladeMotion"//IdxStr(i), MotionFields, DatLoc(ExtLd_u_BladeMotion, i), Mesh=u%BladeMotion(i)) 
-   end do
-   call MV_AddMeshVar(p%Vars%u, 'TowerLoadAD', LoadFields, DatLoc(ExtLd_u_TowerLoadAD), Mesh=u%TowerLoadAD)
-   do i = 1, size(u%BladeLoadAD)
-      call MV_AddMeshVar(p%Vars%u, 'BladeLoadAD'//IdxStr(i), LoadFields, DatLoc(ExtLd_u_BladeLoadAD, i), Mesh=u%BladeLoadAD(i))
-   end do
-
-   !----------------------------------------------------------------------------
-   ! Output variables
-   !----------------------------------------------------------------------------
-
-   call MV_AddMeshVar(p%Vars%y, 'TowerLoad', LoadFields, DatLoc(ExtLd_y_TowerLoad), Mesh=y%TowerLoad)
-   do i = 1, size(y%BladeLoad)
-      call MV_AddMeshVar(p%Vars%y, 'BladeLoad'//IdxStr(i), LoadFields, DatLoc(ExtLd_y_BladeLoad, i), Mesh=y%BladeLoad(i))
-   end do
-
-   !----------------------------------------------------------------------------
-   ! Initialize Variables and Values
-   !----------------------------------------------------------------------------
-
-   CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
 contains
    logical function Failed()
