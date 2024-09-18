@@ -636,7 +636,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    if (errStat >= AbortErrLev) return
 
    InitInp_DBEMT%DBEMT_Mod = p%DBEMT_Mod
-   if ( p%DBEMT_Mod > DBEMT_none ) then
+   if ( p%DBEMT_Mod > DBEMT_none .or. p%DBEMT_Mod == DBEMT_Frozen  ) then
       InitInp_DBEMT%DBEMT_Mod  = p%DBEMT_Mod
       InitInp_DBEMT%numBlades  = p%numBlades 
       InitInp_DBEMT%numNodes   = p%numBladeNodes
