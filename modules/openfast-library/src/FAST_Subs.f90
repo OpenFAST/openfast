@@ -244,12 +244,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    InputAryUB = p_FAST%InterpOrder + 1
 
    ! Input saved arrays have storage for InputArray size + linearization
-   InputAryLB = InputAryUB + p_FAST%NLinTimes
+   InputAryLB = InputAryUB + max(p_FAST%NLinTimes, 2)
 
    ! Module data state arrays include data at linearization times after
    ! STATE_CURR, STATE_PRED, STATE_SAVED_CURR, and STATE_SAVED_PRED
    StateAryLB = 1
-   StateAryUB = NumStateTimes + p_FAST%NLinTimes
+   StateAryUB = NumStateTimes + max(p_FAST%NLinTimes, 2)
 
    !----------------------------------------------------------------------------
    ! Linearization
@@ -6733,11 +6733,11 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
          ! If linearization was forced, only linearize at first time
          if (Turbine%m_Glue%CS%ForceLin) then
-            Turbine%p_Glue%Lin%NumTimes = 1
+            Turbine%p_FAST%NLinTimes = 1
          endif
 
          ! Loop through linearization times
-         do iLinTime = 1, Turbine%p_Glue%Lin%NumTimes
+         do iLinTime = 1, Turbine%p_FAST%NLinTimes
 
             ! Set global time to saved linearization time
             t_global = Turbine%y_Glue%Lin%Times(iLinTime)

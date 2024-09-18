@@ -562,7 +562,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
    if (p_FAST%Linearize) then
 
       ! Copy linearization parameters
-      p%Lin%NumTimes = p_FAST%NLinTimes
+      p%Lin%NumTimes = max(p_FAST%NLinTimes, 2)
       p%Lin%InterpOrder = p_FAST%InterpOrder
       if (allocated(m_FAST%Lin%LinTimes)) then
          y%Lin%Times = m_FAST%Lin%LinTimes
@@ -693,7 +693,8 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
          if (size(ModData%Vars%y) == 0) cycle
 
          ! Get outputs
-         call FAST_GetOP(ModData, t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, y_op=m%ModGlue%Lin%y, y_glue=m%ModGlue%Lin%y)
+         call FAST_GetOP(ModData, t_global, INPUT_CURR, STATE_CURR, T, ErrStat2, ErrMsg2, &
+                         y_op=m%ModGlue%Lin%y, y_glue=m%ModGlue%Lin%y)
          if (Failed()) return
 
       end associate
@@ -706,7 +707,7 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
    if (n_t_global == 0) then
 
       ! Initialize azimuth targets
-      do i = 1, p%Lin%NumTimes
+      do i = 1, size(m%CS%AzimuthTarget)
          m%CS%AzimuthTarget(i) = (i - 1)*m%CS%AzimuthDelta + psi
          call Zero2TwoPi(m%CS%AzimuthTarget(i))
       end do
@@ -762,8 +763,8 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
          ! azimuth from the previous rotation
          error = CalcOutputErrorAtAzimuth()
 
-         ! Update converged flag based on error and tolerance and more than one rotation has occurred
-         m%CS%IsConverged = (error < p_FAST%TrimTol) .and. (m%CS%NumRotations > 0)
+         ! Update converged flag based on error and tolerance
+         m%CS%IsConverged = (error < p_FAST%TrimTol)
 
       end if
 
