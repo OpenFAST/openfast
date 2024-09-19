@@ -73,6 +73,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MapType = 0      !< Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Variable, 4=Custom) [-]
     INTEGER(IntKi)  :: XfrType = 0      !< Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L) [-]
     INTEGER(IntKi)  :: XfrTypeAux = 0      !< Integer denoting transfer type to auxiliary mesh (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L) [-]
+    INTEGER(IntKi)  :: i = 0      !< Integer for custom mapping index [-]
     LOGICAL  :: Ready = .false.      !< Flag indicating source data is ready to be transferred [-]
     LOGICAL  :: DstUsesSibling = .false.      !< Flag indicating the destination displacement mesh is a sibling of the source destination load mesh [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: TmpMatrix      !< Temporary matrix for performing transfer for destination load meshes without sibling motion meshes [-]
@@ -498,6 +499,7 @@ subroutine Glue_CopyMappingType(SrcMappingTypeData, DstMappingTypeData, CtrlCode
    DstMappingTypeData%MapType = SrcMappingTypeData%MapType
    DstMappingTypeData%XfrType = SrcMappingTypeData%XfrType
    DstMappingTypeData%XfrTypeAux = SrcMappingTypeData%XfrTypeAux
+   DstMappingTypeData%i = SrcMappingTypeData%i
    DstMappingTypeData%Ready = SrcMappingTypeData%Ready
    DstMappingTypeData%DstUsesSibling = SrcMappingTypeData%DstUsesSibling
    if (allocated(SrcMappingTypeData%TmpMatrix)) then
@@ -600,6 +602,7 @@ subroutine Glue_PackMappingType(RF, Indata)
    call RegPack(RF, InData%MapType)
    call RegPack(RF, InData%XfrType)
    call RegPack(RF, InData%XfrTypeAux)
+   call RegPack(RF, InData%i)
    call RegPack(RF, InData%Ready)
    call RegPack(RF, InData%DstUsesSibling)
    call RegPackAlloc(RF, InData%TmpMatrix)
@@ -635,6 +638,7 @@ subroutine Glue_UnPackMappingType(RF, OutData)
    call RegUnpack(RF, OutData%MapType); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%XfrType); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%XfrTypeAux); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%i); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Ready); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DstUsesSibling); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TmpMatrix); if (RegCheckErr(RF, RoutineName)) return

@@ -48,6 +48,7 @@ typedef ^ ^                 DatLoc              DstDispDL               -  -  - 
 typedef ^ ^                 IntKi               MapType                 -  0  -     "Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Variable, 4=Custom)" -
 typedef ^ ^                 IntKi               XfrType                 -  0  -     "Integer denoting transfer type (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
 typedef ^ ^                 IntKi               XfrTypeAux              -  0  -     "Integer denoting transfer type to auxiliary mesh (1=P-to-P, 2=L-to-P, 3=P-to-L, 4=L-to-L)" -
+typedef ^ ^                 IntKi               i                       -  0  -     "Integer for custom mapping index" -
 typedef ^ ^                 logical             Ready                   -  F  -     "Flag indicating source data is ready to be transferred" -
 typedef ^ ^                 logical             DstUsesSibling          -  F  -     "Flag indicating the destination displacement mesh is a sibling of the source destination load mesh" -
 typedef ^ ^                 R8Ki                TmpMatrix               :: -  -     "Temporary matrix for performing transfer for destination load meshes without sibling motion meshes" -

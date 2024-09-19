@@ -55,7 +55,10 @@ character(24), parameter   :: Custom_ED_to_ExtLd = 'ED -> ExtLd', &
                               Custom_SrvD_to_ED = 'SrvD -> ED', &
                               Custom_SrvD_to_SED = 'SrvD -> SED', &
                               Custom_SrvD_to_SD = 'SrvD -> SD', &
-                              Custom_SrvD_to_MD = 'SrvD -> MD'
+                              Custom_SrvD_to_MD = 'SrvD -> MD', &
+                              Custom_ED_Tower_Damping = 'ED Tower Damping', &
+                              Custom_ED_Blade_Damping = 'ED Blade Damping', &
+                              Custom_BD_Blade_Damping = 'BD Blade Damping'
 
 contains
 
@@ -381,12 +384,29 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
       return
    end if
 
-   ! Loop through module pairings
-   do iModSrc = 1, size(Mods)
-      do iModDst = 1, size(Mods)
+   ! Loop through destination modules
+   do iModDst = 1, size(Mods)
+
+      ! Add mappings within module
+      select case (Mods(iModDst)%ID)
+      case (Module_ED)
+         call MapCustom(MappingsTmp, Custom_ED_Tower_Damping, Mods(iModDst), Mods(iModDst), &
+                        Active=Turbine%p_FAST%CalcSteady)
+         do i = 1, Turbine%ED%p%NumBl
+            call MapCustom(MappingsTmp, Custom_ED_Blade_Damping, Mods(iModDst), Mods(iModDst), &
+                           i=i, Active=Turbine%p_FAST%CalcSteady .and. (Turbine%p_FAST%CompElast == Module_ED))
+         end do
+                        
+      case (Module_BD)
+         call MapCustom(MappingsTmp, Custom_BD_Blade_Damping, Mods(iModDst), Mods(iModDst), &
+                        Active=Turbine%p_FAST%CalcSteady)
+      end select
+
+      ! Loop through source modules
+      do iModSrc = 1, size(Mods)
 
          ! Switch by destination module (inputs)
-         select case (Mods(IModDst)%ID)
+         select case (Mods(iModDst)%ID)
          case (Module_AD)
             call InitMappings_AD(MappingsTmp, Mods(iModSrc), Mods(iModDst), Turbine, ErrStat2, ErrMsg2)
          case (Module_ADsk)
@@ -465,6 +485,83 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
 
          write (*, *) "Mapping: ", Mappings(iMap)%Desc
 
+      end associate
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Initialize mappings used to apply damping
+   !----------------------------------------------------------------------------
+
+   ! Loop through mappings
+   do i = 1, size(Mappings)
+      associate(Mapping => Mappings(i))
+
+         ! Select based on mapping description
+         select case (Mapping%Desc)
+         case (Custom_ED_Tower_Damping)
+
+            ! Create temporary motion mesh as cousin of load mesh, to compute get
+            ! velocities at load locations for computing damping forces
+            call MeshCopy(SrcMesh=Turbine%ED%Input(INPUT_CURR)%TowerPtLoads, &
+                          DestMesh=Mapping%TmpMotionMesh, &
+                          CtrlCode=MESH_COUSIN, &
+                          IOS=COMPONENT_OUTPUT, &
+                          TranslationDisp=.true., &
+                          TranslationVel=.true., &
+                          ErrStat=ErrStat2, &
+                          ErrMess=ErrMsg2)
+            if (Failed()) return
+
+            ! Create motion mapping from original motion mesh to temporary motion mesh
+            call MeshMapCreate(Turbine%ED%y%TowerLn2Mesh, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
+            if (Failed()) return
+
+            ! Determine mesh transfer type and save to mapping
+            Mapping%XfrType = MeshTransferType(Turbine%ED%y%TowerLn2Mesh, Mapping%TmpMotionMesh)
+
+         case (Custom_ED_Blade_Damping)
+
+            ! Create temporary motion mesh as cousin of load mesh, to compute get
+            ! velocities at load locations for computing damping forces
+            call MeshCopy(SrcMesh=Turbine%ED%Input(INPUT_CURR)%BladePtLoads(Mapping%i), &
+                          DestMesh=Mapping%TmpMotionMesh, &
+                          CtrlCode=MESH_COUSIN, &
+                          IOS=COMPONENT_OUTPUT, &
+                          TranslationDisp=.true., &
+                          TranslationVel=.true., &
+                          ErrStat=ErrStat2, &
+                          ErrMess=ErrMsg2)
+            if (Failed()) return
+
+            ! Create motion mapping from original motion mesh to temporary motion mesh
+            call MeshMapCreate(Turbine%ED%y%BladeLn2Mesh(Mapping%i), Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
+            if (Failed()) return
+
+            ! Determine mesh transfer type and save to mapping
+            Mapping%XfrType = MeshTransferType(Turbine%ED%y%BladeLn2Mesh(Mapping%i), Mapping%TmpMotionMesh)
+
+         case (Custom_BD_Blade_Damping)
+
+            ! Create temporary motion mesh as cousin of load mesh, to compute get
+            ! velocities at load locations for computing damping forces
+            call MeshCopy(SrcMesh=Turbine%BD%Input(INPUT_CURR, Mapping%DstIns)%DistrLoad, &
+                          DestMesh=Mapping%TmpMotionMesh, &
+                          CtrlCode=MESH_COUSIN, &
+                          IOS=COMPONENT_OUTPUT, &
+                          TranslationDisp=.true., &
+                          TranslationVel=.true., &
+                          ErrStat=ErrStat2, &
+                          ErrMess=ErrMsg2)
+            if (Failed()) return
+
+            ! Create motion mapping from original motion mesh to temporary motion mesh
+            call MeshMapCreate(Turbine%BD%y(Mapping%DstIns)%BldMotion, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
+            if (Failed()) return
+
+            ! Determine mesh transfer type and save to mapping
+            Mapping%XfrType = MeshTransferType(Turbine%BD%y(Mapping%DstIns)%BldMotion, Mapping%TmpMotionMesh)
+
+         end select
       end associate
    end do
 
@@ -2205,12 +2302,13 @@ end subroutine
 
 !> MapCustom creates a custom mapping that is not included in linearization.
 !! Each custom mapping needs an entry in FAST_InputSolve to actually perform the transfer.
-subroutine MapCustom(Maps, Desc, SrcMod, DstMod, Active)
-   type(MappingType), allocatable   :: Maps(:)
-   character(*), intent(in)         :: Desc
-   type(ModDataType), intent(inout) :: SrcMod, DstMod
-   logical, optional, intent(in)    :: Active
-   type(MappingType)                :: Mapping
+subroutine MapCustom(Maps, Desc, SrcMod, DstMod, i, Active)
+   type(MappingType), allocatable         :: Maps(:)
+   character(*), intent(in)               :: Desc
+   type(ModDataType), intent(inout)       :: SrcMod, DstMod
+   integer(IntKi), optional, intent(in)   :: i
+   logical, optional, intent(in)          :: Active
+   type(MappingType)                      :: Mapping
 
    if (present(Active)) then
       if (.not. Active) return
@@ -2225,6 +2323,7 @@ subroutine MapCustom(Maps, Desc, SrcMod, DstMod, Active)
    Mapping%DstModID = DstMod%ID
    Mapping%SrcIns = SrcMod%Ins
    Mapping%DstIns = DstMod%Ins
+   if (present(i)) Mapping%i = i
 
    Maps = [Maps, Mapping]
 end subroutine
@@ -2912,7 +3011,7 @@ subroutine TransferMesh(Typ, Src, Dst, MeshMap, SrcDisp, DstDisp, ErrStat, ErrMs
 end subroutine
 
 subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg)
-   type(MappingType), intent(in)          :: Mapping
+   type(MappingType), intent(inout)       :: Mapping
    type(ModDataType), intent(in)          :: ModSrc, ModDst
    integer(IntKi), intent(in)             :: iInput
    type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
@@ -2923,8 +3022,11 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    integer(IntKi)                         :: i, j, k
-   real(ReKi)                             :: z, u, v, mean_vel
-
+   
+   real(R8Ki)                             :: omega_c(3)
+   real(R8Ki)                             :: r(3), r_hub(3)
+   real(R8Ki)                             :: Vrot(3)
+   
    ErrStat = ErrID_None
    ErrMsg = ''
 
@@ -2963,6 +3065,30 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       T%ADsk%Input(iInput)%BlPitch    = T%SED%y%BlPitch(1)   ! ADsk only uses collective blade pitch
 
 !-------------------------------------------------------------------------------
+! BeamDyn Inputs
+!-------------------------------------------------------------------------------
+
+   case (Custom_BD_Blade_Damping)
+
+      ! Get rotational velocity and current hub position
+      omega_c = T%ED%y%RotSpeed * T%ED%y%HubPtMotion%Orientation(1,:,1)
+      r_hub   = T%ED%y%HubPtMotion%Position(:,1) + T%ED%y%HubPtMotion%TranslationDisp(:,1)
+
+      ! Get blade velocities at load mesh locations
+      call TransferMesh(Mapping%XfrType, T%BD%y(Mapping%DstIns)%BldMotion, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      if (Failed()) return
+
+      ! Remove rotor rotational velocity from node velocity
+      do i = 1, Mapping%TmpMotionMesh%Nnodes
+         r = Mapping%TmpMotionMesh%Position(:,i) +  Mapping%TmpMotionMesh%TranslationDisp(:,i) - r_hub
+         Vrot = cross_product(omega_c, r)
+         Mapping%TmpMotionMesh%TranslationVel(:,i) = Mapping%TmpMotionMesh%TranslationVel(:,i) - Vrot
+      end do
+
+      ! Apply damping force as Bld_Kdmp*(node velocity)
+      T%BD%Input(iInput, Mapping%DstIns)%DistrLoad%Force = T%BD%Input(iInput, Mapping%DstIns)%DistrLoad%Force - T%p_FAST%Bld_Kdmp * Mapping%TmpMotionMesh%TranslationVel
+
+!-------------------------------------------------------------------------------
 ! ElastoDyn Inputs
 !-------------------------------------------------------------------------------
 
@@ -2972,6 +3098,35 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       T%ED%Input(iInput)%HSSBrTrqC = T%SrvD%y%HSSBrTrqC
       T%ED%Input(iInput)%BlPitchCom = T%SrvD%y%BlPitchCom
       T%ED%Input(iInput)%YawMom = T%SrvD%y%YawMom
+
+   case (Custom_ED_Tower_Damping)
+
+      ! Get tower velocities at load mesh locations
+      call TransferMesh(Mapping%XfrType, T%ED%y%TowerLn2Mesh, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      if (Failed()) return
+
+      ! Apply damping force as Twr_Kdmp*(node velocity)
+      T%ED%Input(iInput)%TowerPtLoads%Force = T%ED%Input(iInput)%TowerPtLoads%Force - T%p_FAST%Twr_Kdmp * Mapping%TmpMotionMesh%TranslationVel
+
+   case (Custom_ED_Blade_Damping)
+
+      ! Get rotational velocity and current hub position
+      omega_c = T%ED%y%RotSpeed * T%ED%y%HubPtMotion%Orientation(1,:,1)
+      r_hub   = T%ED%y%HubPtMotion%Position(:,1) + T%ED%y%HubPtMotion%TranslationDisp(:,1)
+
+      ! Get blade velocities at load mesh locations
+      call TransferMesh(Mapping%XfrType, T%ED%y%BladeLn2Mesh(Mapping%i), Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      if (Failed()) return
+
+      ! Remove rotor rotational velocity from node velocity
+      do i = 1, Mapping%TmpMotionMesh%Nnodes
+         r = Mapping%TmpMotionMesh%Position(:,i) +  Mapping%TmpMotionMesh%TranslationDisp(:,i) - r_hub
+         Vrot = cross_product(omega_c, r)
+         Mapping%TmpMotionMesh%TranslationVel(:,i) = Mapping%TmpMotionMesh%TranslationVel(:,i) - Vrot
+      end do
+
+      ! Apply damping force as Bld_Kdmp*(node velocity)
+      T%ED%Input(iInput)%BladePtLoads(Mapping%i)%Force = T%ED%Input(iInput)%BladePtLoads(Mapping%i)%Force - T%p_FAST%Bld_Kdmp * Mapping%TmpMotionMesh%TranslationVel
 
 !-------------------------------------------------------------------------------
 ! SED Inputs
@@ -3174,6 +3329,11 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    end select
 
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
 end subroutine
 
 subroutine FAST_ResetRemapFlags(Mods, Maps, T, ErrStat, ErrMsg)
