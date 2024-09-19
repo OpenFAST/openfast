@@ -64,11 +64,9 @@ subroutine DBEMT_ValidateInitInp(interval, InitInp, errStat, errMsg)
    errMsg  = ""
    
    if ( interval <= sqrt(epsilon(1.0_ReKi)) ) call SetErrStat( ErrID_Fatal, " The timestep size for DBEMT (interval) must be larger than sqrt(epsilon).", ErrStat, ErrMsg, RoutineName)
-   select case(InitInp%DBEMT_Mod)
-   case (DBEMT_frozen, DBEMT_tauConst, DBEMT_tauVaries, DBEMT_cont_tauConst)
-   case default
-      call SetErrStat( ErrID_Fatal, " DBEMT_Mod must be set to -1, 1, 2, or 3.", ErrStat, ErrMsg, RoutineName)
-   end select
+   if ( (InitInp%DBEMT_Mod .ne. DBEMT_tauConst) .and. (InitInp%DBEMT_Mod .ne. DBEMT_tauVaries) .and. (InitInp%DBEMT_Mod .ne. DBEMT_cont_tauConst)) then
+      call SetErrStat( ErrID_Fatal, " DBEMT_Mod must be set to 1, 2, or 3.", ErrStat, ErrMsg, RoutineName)
+   end if
    
    if (InitInp%numBlades < 1) call SetErrStat( ErrID_Fatal, " InitInp%numBlades must set to 1 or more.", ErrStat, ErrMsg, RoutineName)
    if (InitInp%numNodes < 2) call SetErrStat( ErrID_Fatal, " InitInp%numNodes must set to 2 or more.", ErrStat, ErrMsg, RoutineName)

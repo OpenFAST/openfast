@@ -636,7 +636,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    if (errStat >= AbortErrLev) return
 
    InitInp_DBEMT%DBEMT_Mod = p%DBEMT_Mod
-   if ( p%DBEMT_Mod > DBEMT_none .or. p%DBEMT_Mod == DBEMT_Frozen  ) then
+   if ( p%DBEMT_Mod > DBEMT_none ) then
       InitInp_DBEMT%DBEMT_Mod  = p%DBEMT_Mod
       InitInp_DBEMT%numBlades  = p%numBlades 
       InitInp_DBEMT%numNodes   = p%numBladeNodes
@@ -929,7 +929,7 @@ subroutine BEMT_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, 
    !...............................................................................................................................
    !  update DBEMT states to step n+1
    !...............................................................................................................................
-   if (p%DBEMT_Mod /= DBEMT_none) then
+   if (p%DBEMT_Mod > DBEMT_none) then
 
       !........................
       ! update DBEMT states to t+dt
@@ -956,7 +956,7 @@ subroutine BEMT_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, 
             !............................................
             ! apply DBEMT correction to axInduction and tanInduction:
             !............................................
-            if (p%DBEMT_Mod /= DBEMT_none) then
+            if (p%DBEMT_Mod > DBEMT_none) then
                call calculate_Inductions_from_DBEMT_AllNodes(TimeIndex_t_plus_dt, uTimes(TimeIndex_t_plus_dt), u(TimeIndex_t_plus_dt), p, x, OtherState, m, m%axInduction, m%tanInduction)
             end if
          
