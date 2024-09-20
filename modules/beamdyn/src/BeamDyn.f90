@@ -2360,8 +2360,8 @@ SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
-   INTEGER(IntKi)                :: ErrStat           !< index to current element
-   CHARACTER(ErrMsgLen)          :: ErrMsg            !< index to current element
+   INTEGER(IntKi)                :: ErrStat           !< Ignored error handling for LAPACK_GEMM
+   CHARACTER(ErrMsgLen)          :: ErrMsg            !< Ignored error handling for LAPACK_GEMM
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
 
@@ -2387,8 +2387,9 @@ SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
    elem_start = p%node_elem_idx(nelem,1)
 
    ! Use matrix multiplication to interpolate position and position derivative to quadrature points
-   call LAPACK_DGEMM('N','N', 1.0_BDKi, x%q(1:3,elem_start:elem_start+p%nodes_per_elem-1), p%Shp, 0.0_BDKi,  m%qp%uuu(1:3,:,nelem), ErrStat, ErrMsg)
-   call LAPACK_DGEMM('N','N', 1.0_BDKi, x%q(1:3,elem_start:elem_start+p%nodes_per_elem-1), p%ShpDer, 0.0_BDKi,  m%qp%uup(1:3,:,nelem), ErrStat, ErrMsg)
+   ! NOTE: errors from LAPACK_GEMM can only be due to matrix size mismatch, so they can be safely ignored if matrices are correct size
+   call LAPACK_GEMM('N','N', 1.0_BDKi, x%q(1:3,elem_start:elem_start+p%nodes_per_elem-1), p%Shp, 0.0_BDKi,  m%qp%uuu(1:3,:,nelem), ErrStat, ErrMsg)
+   call LAPACK_GEMM('N','N', 1.0_BDKi, x%q(1:3,elem_start:elem_start+p%nodes_per_elem-1), p%ShpDer, 0.0_BDKi,  m%qp%uup(1:3,:,nelem), ErrStat, ErrMsg)
 
    ! Apply Jacobian to get position derivative with respect to X-axis
    do idx_qp = 1, p%nqp
@@ -2414,8 +2415,8 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
-   INTEGER(IntKi)                :: ErrStat           !< index to current element
-   CHARACTER(ErrMsgLen)          :: ErrMsg            !< index to current element
+   INTEGER(IntKi)                :: ErrStat           !< Ignored error handling for LAPACK_GEMM
+   CHARACTER(ErrMsgLen)          :: ErrMsg            !< Ignored error handling for LAPACK_GEMM
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
    INTEGER(IntKi)                :: idx_node          !< index to current GLL point in element
@@ -2480,8 +2481,9 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
 
       ! Use matrix multiplication to interpolate rotation and rotation derivative to quadrature points
       ! These rotations do not include the root node rotation at this point (added later in function)
-   call LAPACK_DGEMM('N','N', 1.0_BDKi, m%Nrrr(:,:,nelem), p%Shp, 0.0_BDKi, m%qp%uuu(4:6,:,nelem), ErrStat, ErrMsg)
-   call LAPACK_DGEMM('N','N', 1.0_BDKi, m%Nrrr(:,:,nelem), p%ShpDer, 0.0_BDKi, m%qp%uup(4:6,:,nelem), ErrStat, ErrMsg)
+      ! NOTE: errors from LAPACK_GEMM can only be due to matrix size mismatch, so they can be safely ignored if matrices are correct size
+   call LAPACK_GEMM('N','N', 1.0_BDKi, m%Nrrr(:,:,nelem), p%Shp, 0.0_BDKi, m%qp%uuu(4:6,:,nelem), ErrStat, ErrMsg)
+   call LAPACK_GEMM('N','N', 1.0_BDKi, m%Nrrr(:,:,nelem), p%ShpDer, 0.0_BDKi, m%qp%uup(4:6,:,nelem), ErrStat, ErrMsg)
 
       ! Apply Jacobian to get rotation derivative with respect to X-axis
    do idx_qp = 1, p%nqp
@@ -2950,8 +2952,8 @@ SUBROUTINE BD_QPDataVelocity( p, x, m )
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< Misc/optimization variables
 
-   INTEGER(IntKi)                               :: ErrStat           !< index to current element
-   CHARACTER(ErrMsgLen)                         :: ErrMsg            !< index to current element
+   INTEGER(IntKi)                               :: ErrStat           !< Ignored error handling for LAPACK_GEMM
+   CHARACTER(ErrMsgLen)                         :: ErrMsg            !< Ignored error handling for LAPACK_GEMM
    INTEGER(IntKi)                               :: nelem             !< index to current element
    INTEGER(IntKi)                               :: idx_qp            !< index to quadrature point
    INTEGER(IntKi)                               :: elem_start        !< Starting quadrature point of current element
@@ -2965,8 +2967,9 @@ SUBROUTINE BD_QPDataVelocity( p, x, m )
       elem_start = p%node_elem_idx(nelem,1)
 
       ! Use matrix multiplication to interpolate velocity and velocity derivative to quadrature points
-      call LAPACK_DGEMM('N','N', 1.0_BDKi, x%dqdt(:,elem_start:elem_start+p%nodes_per_elem-1), p%Shp, 0.0_BDKi, m%qp%vvv(:,:,nelem), ErrStat, ErrMsg)
-      call LAPACK_DGEMM('N','N', 1.0_BDKi, x%dqdt(:,elem_start:elem_start+p%nodes_per_elem-1), p%ShpDer, 0.0_BDKi, m%qp%vvp(:,:,nelem), ErrStat, ErrMsg)
+      ! NOTE: errors from LAPACK_GEMM can only be due to matrix size mismatch, so they can be safely ignored if matrices are correct size
+      call LAPACK_GEMM('N','N', 1.0_BDKi, x%dqdt(:,elem_start:elem_start+p%nodes_per_elem-1), p%Shp, 0.0_BDKi, m%qp%vvv(:,:,nelem), ErrStat, ErrMsg)
+      call LAPACK_GEMM('N','N', 1.0_BDKi, x%dqdt(:,elem_start:elem_start+p%nodes_per_elem-1), p%ShpDer, 0.0_BDKi, m%qp%vvp(:,:,nelem), ErrStat, ErrMsg)
 
       ! Apply Jacobian to get velocity derivative with respect to X-axis
       do idx_qp = 1, p%nqp
@@ -2992,8 +2995,8 @@ SUBROUTINE BD_QPDataAcceleration( p, OtherState, m )
    TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState        !< Other states at t on input; at t+dt on outputs
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< Misc/optimization variables
 
-   INTEGER(IntKi)                               :: ErrStat           !< index to current element
-   CHARACTER(ErrMsgLen)                         :: ErrMsg           !< index to current element
+   INTEGER(IntKi)                               :: ErrStat           !< Ignored error handling for LAPACK_GEMM
+   CHARACTER(ErrMsgLen)                         :: ErrMsg            !< Ignored error handling for LAPACK_GEMM
    INTEGER(IntKi)                               :: nelem             !< index of current element
    INTEGER(IntKi)                               :: idx_qp            !< index of current quadrature point
    INTEGER(IntKi)                               :: idx_node
@@ -3005,7 +3008,8 @@ SUBROUTINE BD_QPDataAcceleration( p, OtherState, m )
       elem_start = p%node_elem_idx(nelem,1)
 
       ! Interpolate the acceleration term at t+dt (OtherState%acc is at t+dt) to quadrature points
-      call LAPACK_DGEMM('N','N', 1.0_BDKi, OtherState%acc(:,elem_start:elem_start+p%nodes_per_elem-1), p%Shp, 0.0_BDKi,  m%qp%aaa(:,:,nelem), ErrStat, ErrMsg)
+      ! NOTE: errors from LAPACK_GEMM can only be due to matrix size mismatch, so they can be safely ignored if matrices are correct size
+      call LAPACK_GEMM('N','N', 1.0_BDKi, OtherState%acc(:,elem_start:elem_start+p%nodes_per_elem-1), p%Shp, 0.0_BDKi,  m%qp%aaa(:,:,nelem), ErrStat, ErrMsg)
       
    end do
 
