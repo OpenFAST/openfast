@@ -134,17 +134,10 @@ subroutine FAST_Sizes(iTurb_c, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, 
       ExternInitData%TurbinePos = 0.0_ReKi  ! turbine position is at the origin
       ExternInitData%NumCtrl2SC = 0
       ExternInitData%NumSC2Ctrl = 0
-      ExternInitData%SensorType = NINT(InitInpAry(1))
       ! -- MATLAB Integration --
       ! Make sure fast farm integration is false
       ExternInitData%FarmIntegration = .false.
       ExternInitData%WaveFieldMod = 0
-
-      IF ( NINT(InitInpAry(2)) == 1 ) THEN
-         ExternInitData%LidRadialVel = .true.
-      ELSE
-         ExternInitData%LidRadialVel = .false.
-      END IF
 
       CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData)
 
@@ -536,7 +529,7 @@ end subroutine FAST_Restart
 
 !==================================================================================================================================
 subroutine FAST_ExtLoads_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, OutFileRoot_c, TurbPosn, AbortErrLev_c, dtDriver_c, dt_c, NumBl_c, &
-     az_blend_mean_c, az_blend_delta_c, vel_mean_c, wind_dir_c, z_ref_c, shear_exp_c, &
+     az_blend_mean_c, az_blend_delta_c, &
      ExtLd_Input_from_FAST, ExtLd_Parameter_from_FAST, ExtLd_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtLoads_Init')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
@@ -552,10 +545,6 @@ subroutine FAST_ExtLoads_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, Out
    REAL(C_DOUBLE),         INTENT(IN   ) :: dtDriver_c
    REAL(C_DOUBLE),         INTENT(IN   ) :: az_blend_mean_c
    REAL(C_DOUBLE),         INTENT(IN   ) :: az_blend_delta_c
-   REAL(C_DOUBLE),         INTENT(IN   ) :: vel_mean_c
-   REAL(C_DOUBLE),         INTENT(IN   ) :: wind_dir_c
-   REAL(C_DOUBLE),         INTENT(IN   ) :: z_ref_c
-   REAL(C_DOUBLE),         INTENT(IN   ) :: shear_exp_c
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c
    INTEGER(C_INT),         INTENT(  OUT) :: NumBl_c
@@ -591,17 +580,12 @@ subroutine FAST_ExtLoads_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, Out
    ExternInitData%TMax = TMax
    ExternInitData%TurbIDforName = TurbIDforName
    ExternInitData%TurbinePos = TurbPosn
-   ExternInitData%SensorType = SensorType_None
    ExternInitData%NumSC2CtrlGlob = 0
    ExternInitData%NumCtrl2SC = 0
    ExternInitData%NumSC2Ctrl = 0
    ExternInitData%DTdriver = dtDriver_c
    ExternInitData%az_blend_mean = az_blend_mean_c
    ExternInitData%az_blend_delta = az_blend_delta_c
-   ExternInitData%vel_mean = vel_mean_c
-   ExternInitData%wind_dir = wind_dir_c
-   ExternInitData%z_ref = z_ref_c
-   ExternInitData%shear_exp = shear_exp_c
 
    CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
 
@@ -707,7 +691,6 @@ subroutine FAST_ExtInfw_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, OutF
    ExternInitData%TMax = TMax
    ExternInitData%TurbIDforName = TurbIDforName
    ExternInitData%TurbinePos = TurbPosn
-   ExternInitData%SensorType = SensorType_None
    ExternInitData%NumCtrl2SC = NumCtrl2SC
    ExternInitData%NumSC2CtrlGlob = NumSC2CtrlGlob
 

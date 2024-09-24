@@ -84,10 +84,6 @@ void readTurbineData(int iTurb, fast::fastInputs & fi, YAML::Node turbNode) {
 
       get_if_present(turbNode, "az_blend_mean", fi.globTurbineData[iTurb].azBlendMean, 20*360.0*M_PI/180.0); //20 revs
       get_if_present(turbNode, "az_blend_delta", fi.globTurbineData[iTurb].azBlendDelta, 3.0*360.0*M_PI/180.0);  // 3 rev
-      get_required(turbNode, "vel_mean", fi.globTurbineData[iTurb].velMean);
-      get_required(turbNode, "wind_dir", fi.globTurbineData[iTurb].windDir);
-      get_required(turbNode, "z_ref", fi.globTurbineData[iTurb].zRef);
-      get_required(turbNode, "shear_exp", fi.globTurbineData[iTurb].shearExp);
 
   }
 
