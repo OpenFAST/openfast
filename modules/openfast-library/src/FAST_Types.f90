@@ -153,7 +153,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: CompServo = 0_IntKi      !< Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD} [-]
     INTEGER(IntKi)  :: CompSeaSt = 0_IntKi      !< Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt} [-]
     INTEGER(IntKi)  :: CompHydro = 0_IntKi      !< Compute hydrodynamic loads (switch) {Module_None; Module_HD} [-]
-    INTEGER(IntKi)  :: CompSub = 0_IntKi      !< Compute sub-structural dynamics (switch) {Module_None; Module_HD} [-]
+    INTEGER(IntKi)  :: CompSub = 0_IntKi      !< Compute sub-structural dynamics (switch) {Module_None; Module_SD, Module_ExtPtfm} [-]
     INTEGER(IntKi)  :: CompMooring = 0_IntKi      !< Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca} [-]
     INTEGER(IntKi)  :: CompIce = 0_IntKi      !< Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD} [-]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine} [-]
@@ -880,8 +880,6 @@ IMPLICIT NONE
 ! =========  FAST_ExternInitType  =======
   TYPE, PUBLIC :: FAST_ExternInitType
     REAL(DbKi)  :: Tmax = -1      !< External code specified Tmax [s]
-    INTEGER(IntKi)  :: SensorType = SensorType_None      !< lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file [-]
-    LOGICAL  :: LidRadialVel = .false.      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
     INTEGER(IntKi)  :: TurbIDforName = -1      !< ID number for turbine (used to create output file naming convention) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TurbinePos = 0.0_ReKi      !< Initial position of turbine base (origin used for graphics or in FAST.Farm) [m]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
@@ -903,10 +901,6 @@ IMPLICIT NONE
     LOGICAL  :: TwrAero = .false.      !< Is Tower aerodynamics enabled for ExtLoads module? [-]
     REAL(ReKi)  :: az_blend_mean = 0.0_ReKi      !< Mean azimuth at which to blend the external and aerodyn loads [-]
     REAL(ReKi)  :: az_blend_delta = 0.0_ReKi      !< Mean azimuth at which to blend the external and aerodyn loads [-]
-    REAL(ReKi)  :: vel_mean = 0.0_ReKi      !< Mean velocity at reference height [m/s]
-    REAL(ReKi)  :: wind_dir = 0.0_ReKi      !< Wind direction in compass angle [degrees]
-    REAL(ReKi)  :: z_ref = 0.0_ReKi      !< Reference height for velocity profile [m]
-    REAL(ReKi)  :: shear_exp = 0.0_ReKi      !< Shear exponent [-]
   END TYPE FAST_ExternInitType
 ! =======================
 ! =========  FAST_TurbineType  =======
@@ -15212,8 +15206,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstExternInitTypeData%Tmax = SrcExternInitTypeData%Tmax
-   DstExternInitTypeData%SensorType = SrcExternInitTypeData%SensorType
-   DstExternInitTypeData%LidRadialVel = SrcExternInitTypeData%LidRadialVel
    DstExternInitTypeData%TurbIDforName = SrcExternInitTypeData%TurbIDforName
    DstExternInitTypeData%TurbinePos = SrcExternInitTypeData%TurbinePos
    DstExternInitTypeData%WaveFieldMod = SrcExternInitTypeData%WaveFieldMod
@@ -15257,10 +15249,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
    DstExternInitTypeData%TwrAero = SrcExternInitTypeData%TwrAero
    DstExternInitTypeData%az_blend_mean = SrcExternInitTypeData%az_blend_mean
    DstExternInitTypeData%az_blend_delta = SrcExternInitTypeData%az_blend_delta
-   DstExternInitTypeData%vel_mean = SrcExternInitTypeData%vel_mean
-   DstExternInitTypeData%wind_dir = SrcExternInitTypeData%wind_dir
-   DstExternInitTypeData%z_ref = SrcExternInitTypeData%z_ref
-   DstExternInitTypeData%shear_exp = SrcExternInitTypeData%shear_exp
 end subroutine
 
 subroutine FAST_DestroyExternInitType(ExternInitTypeData, ErrStat, ErrMsg)
@@ -15286,8 +15274,6 @@ subroutine FAST_PackExternInitType(RF, Indata)
    logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Tmax)
-   call RegPack(RF, InData%SensorType)
-   call RegPack(RF, InData%LidRadialVel)
    call RegPack(RF, InData%TurbIDforName)
    call RegPack(RF, InData%TurbinePos)
    call RegPack(RF, InData%WaveFieldMod)
@@ -15309,10 +15295,6 @@ subroutine FAST_PackExternInitType(RF, Indata)
    call RegPack(RF, InData%TwrAero)
    call RegPack(RF, InData%az_blend_mean)
    call RegPack(RF, InData%az_blend_delta)
-   call RegPack(RF, InData%vel_mean)
-   call RegPack(RF, InData%wind_dir)
-   call RegPack(RF, InData%z_ref)
-   call RegPack(RF, InData%shear_exp)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -15327,8 +15309,6 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Tmax); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SensorType); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LidRadialVel); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbIDforName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbinePos); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
@@ -15350,10 +15330,6 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    call RegUnpack(RF, OutData%TwrAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_mean); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_delta); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%vel_mean); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%wind_dir); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%z_ref); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%shear_exp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode, ErrStat, ErrMsg)

@@ -547,34 +547,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          RETURN
       END IF
 
-      IF ( p_FAST%CompServo == Module_SrvD ) THEN !assign the number of gates to ServD
-         if (allocated(IfW%y%lidar%LidSpeed)) then    ! make sure we have the array allocated before setting it
-            CALL AllocAry(Init%InData_SrvD%LidSpeed, size(IfW%y%lidar%LidSpeed), 'Init%InData_SrvD%LidSpeed',     errStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            Init%InData_SrvD%LidSpeed = IfW%y%lidar%LidSpeed
-         endif
-         if (allocated(IfW%y%lidar%MsrPositionsX)) then    ! make sure we have the array allocated before setting it
-            CALL AllocAry(Init%InData_SrvD%MsrPositionsX, size(IfW%y%lidar%MsrPositionsX), 'Init%InData_SrvD%MsrPositionsX',     errStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            Init%InData_SrvD%MsrPositionsX = IfW%y%lidar%MsrPositionsX
-         endif
-         if (allocated(IfW%y%lidar%MsrPositionsY)) then    ! make sure we have the array allocated before setting it
-            CALL AllocAry(Init%InData_SrvD%MsrPositionsY, size(IfW%y%lidar%MsrPositionsY), 'Init%InData_SrvD%MsrPositionsY',     errStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            Init%InData_SrvD%MsrPositionsY = IfW%y%lidar%MsrPositionsY
-         endif
-         if (allocated(IfW%y%lidar%MsrPositionsZ)) then    ! make sure we have the array allocated before setting it
-            CALL AllocAry(Init%InData_SrvD%MsrPositionsZ, size(IfW%y%lidar%MsrPositionsZ), 'Init%InData_SrvD%MsrPositionsZ',     errStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            Init%InData_SrvD%MsrPositionsZ = IfW%y%lidar%MsrPositionsZ
-         endif
-         Init%InData_SrvD%SensorType    = IfW%p%lidar%SensorType
-         Init%InData_SrvD%NumBeam       = IfW%p%lidar%NumBeam
-         Init%InData_SrvD%NumPulseGate  = IfW%p%lidar%NumPulseGate
-         Init%InData_SrvD%PulseSpacing  = IfW%p%lidar%PulseSpacing
-      END IF
-
-
    ELSEIF ( p_FAST%CompInflow == Module_ExtInfw ) THEN
 
       IF ( PRESENT(ExternInitData) ) THEN
@@ -1572,6 +1544,34 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          Init%InData_SrvD%NumCtrl2SC = 0
       END IF
 
+      IF ( p_FAST%CompInflow == Module_IfW ) THEN !assign the number of gates to ServD
+         if (allocated(IfW%y%lidar%LidSpeed)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%LidSpeed, size(IfW%y%lidar%LidSpeed), 'Init%InData_SrvD%LidSpeed',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%LidSpeed = IfW%y%lidar%LidSpeed
+         endif
+         if (allocated(IfW%y%lidar%MsrPositionsX)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%MsrPositionsX, size(IfW%y%lidar%MsrPositionsX), 'Init%InData_SrvD%MsrPositionsX',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%MsrPositionsX = IfW%y%lidar%MsrPositionsX
+         endif
+         if (allocated(IfW%y%lidar%MsrPositionsY)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%MsrPositionsY, size(IfW%y%lidar%MsrPositionsY), 'Init%InData_SrvD%MsrPositionsY',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%MsrPositionsY = IfW%y%lidar%MsrPositionsY
+         endif
+         if (allocated(IfW%y%lidar%MsrPositionsZ)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%MsrPositionsZ, size(IfW%y%lidar%MsrPositionsZ), 'Init%InData_SrvD%MsrPositionsZ',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%MsrPositionsZ = IfW%y%lidar%MsrPositionsZ
+         endif
+         Init%InData_SrvD%SensorType    = IfW%p%lidar%SensorType
+         Init%InData_SrvD%NumBeam       = IfW%p%lidar%NumBeam
+         Init%InData_SrvD%NumPulseGate  = IfW%p%lidar%NumPulseGate
+         Init%InData_SrvD%PulseSpacing  = IfW%p%lidar%PulseSpacing
+      END IF
+
+      
       ! Set cable controls inputs (if requested by other modules)  -- There is probably a nicer way to do this, but this will work for now.
       call SetSrvDCableControls()
 
@@ -2265,7 +2265,7 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    ! No method at the moment for getting disk average velocity from ExtInfw
    if (p%CompAero == Module_ADsk .and. p%CompInflow == MODULE_ExtInfw) call SetErrStat( ErrID_Fatal, 'AeroDisk cannot be used with ExtInflow or the library interface', ErrStat, ErrMsg, RoutineName ) 
 
-   if ((p%CompAero == Module_ExtLd) .and. (p%CompInflow /= Module_NONE) ) call SetErrStat(ErrID_Fatal, 'Inflow module cannot be used when ExtLoads is used. Change CompAero or CompInflow in the OpenFAST input file.', ErrStat, ErrMsg, RoutineName)
+   if ((p%CompAero == Module_ExtLd) .and. (p%CompInflow /= Module_IfW) ) call SetErrStat(ErrID_Fatal, 'Inflow module must be used when ExtLoads is used. Change CompAero or CompInflow in the OpenFAST input file.', ErrStat, ErrMsg, RoutineName)
 
    IF (p%CompAero == Module_ADsk .and. p%MHK /= MHK_None) CALL SetErrStat( ErrID_Fatal, 'AeroDisk cannot be used with an MHK turbine. Change CompAero or MHK in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
@@ -4736,18 +4736,14 @@ SUBROUTINE ExtLd_SetInitInput(InitInData_ExtLd, InitOutData_ED, y_ED, InitOutDat
 
    end if
 
-   InitInData_ExtLd%HubPos             = y_ED%HubPtMotion%Position(:,1)
-   InitInData_ExtLd%HubOrient          = y_ED%HubPtMotion%RefOrientation(:,:,1)
+   InitInData_ExtLd%HubPos         = y_ED%HubPtMotion%Position(:,1)
+   InitInData_ExtLd%HubOrient      = y_ED%HubPtMotion%RefOrientation(:,:,1)
 
-   InitInData_ExtLd%NacellePos         = y_ED%NacelleMotion%Position(:,1)
-   InitInData_ExtLd%NacelleOrient      = y_ED%NacelleMotion%RefOrientation(:,:,1)
+   InitInData_ExtLd%NacellePos     = y_ED%NacelleMotion%Position(:,1)
+   InitInData_ExtLd%NacelleOrient  = y_ED%NacelleMotion%RefOrientation(:,:,1)
 
-   InitInData_ExtLd%az_blend_mean = ExternInitData%az_blend_mean
+   InitInData_ExtLd%az_blend_mean  = ExternInitData%az_blend_mean
    InitInData_ExtLd%az_blend_delta = ExternInitData%az_blend_delta
-   InitInData_ExtLd%vel_mean = ExternInitData%vel_mean
-   InitInData_ExtLd%wind_dir = ExternInitData%wind_dir
-   InitInData_ExtLd%z_ref = ExternInitData%z_ref
-   InitInData_ExtLd%shear_exp = ExternInitData%shear_exp
 
    !Interpolate chord from AeroDyn to nodes of the ExtLoads module
    IF (.NOT. ALLOCATED( InitInData_ExtLd%BldChord) ) THEN

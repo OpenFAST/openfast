@@ -57,7 +57,7 @@ typedef  ^        InitOutputType    CHARACTER(ChanLen)   WriteOutputUnt   {:} - 
 typedef  ^        InitOutputType    ProgDesc             Ver               -  - -   "This module's name, version, and date"   -
 typedef  ^        InitOutputType    IntKi                NumBl             -  - -   "Number of blades on the turbine"   -
 typedef  ^        InitOutputType    ReKi                 BlPitch          {:} - -   "Initial blade pitch angles"   radians
-typedef  ^        InitOutputType    ReKi                 BladeLength       -  - -   "Blade length (for AeroDyn)"   meters
+typedef  ^        InitOutputType    ReKi                 BladeLength       -  - -   "Blade length (for AeroDsk)"   meters
 typedef  ^        InitOutputType    ReKi                 TowerHt           -  - -   "Tower Height"   meters
 typedef  ^        InitOutputType    ReKi                 HubHt             -  - -   "Height of the hub"   meters
 typedef  ^        InitOutputType    ReKi                 PlatformPos      {6} - -   "Initial platform position (6 DOFs)"
@@ -68,7 +68,7 @@ typedef  ^        InitOutputType    LOGICAL              GenDOF            -  - 
 
 # ..... Inputs ....................................................................................................................
 # inputs on meshes:
-typedef  ^        InputType         MeshType             HubPtLoad         -  - -   "AeroDisk maps load to hub" -
+typedef  ^        InputType         MeshType             HubPtLoad         -  - -   "AeroDyn/AeroDisk maps load to hub" -
 # inputs not on meshes:
 typedef  ^        InputType         ReKi                 HSSBrTrqC         -  - -   "Commanded HSS brake torque"     N-m
 typedef  ^        InputType         ReKi                 GenTrq            -  - -   "Electrical generator torque"    N-m
@@ -79,11 +79,11 @@ typedef  ^        InputType         ReKi                 YawRateCom        -  - 
 
 # ..... Outputs ...................................................................................................................
 # outputs on meshes:
-typedef  ^        OutputType        MeshType             BladeRootMotion  {:} - -   "For AeroDyn/BeamDyn: motions at the blade roots" -
-typedef  ^        OutputType        MeshType             HubPtMotion       -  - -   "For AeroDyn and Lidar(InflowWind): motions of the hub" -
-typedef  ^        OutputType        MeshType             NacelleMotion     -  - -   "For AeroDyn14 & ServoDyn/TMD: motions of the nacelle." -
-typedef  ^        OutputType        MeshType             TowerLn2Mesh      -  - -   "Tower line2 mesh with positions/orientations/velocities/accelerations"   -
-typedef  ^        OutputType        MeshType             PlatformPtMesh    -  - -   "Platform reference point positions/orientations/velocities/accelerations"   -
+typedef  ^        OutputType        MeshType             BladeRootMotion  {:} - -   "For AeroDyn: motions at the blade roots" -
+typedef  ^        OutputType        MeshType             HubPtMotion       -  - -   "For AeroDyn/AeroDisk: motions of the hub" -
+typedef  ^        OutputType        MeshType             NacelleMotion     -  - -   "For AeroDyn: for aero effects in AD (aero nacelle loads ignored)" -
+typedef  ^        OutputType        MeshType             TowerLn2Mesh      -  - -   "Tower line2 mesh for visualization / Aero tower effects"   -
+typedef  ^        OutputType        MeshType             PlatformPtMesh    -  - -   "Platform reference point for visualization"   -
 #TODO: any mesh for visualization of blades/rotor disk?
 # outputs not on meshes:
 typedef  ^        OutputType        ReKi                 LSSTipPxa         -  - 2pi "Rotor azimuth angle (position)"   radians
@@ -104,7 +104,7 @@ typedef  ^       ContinuousStateType   R8Ki              QT               {:} - 
 typedef  ^       ContinuousStateType   ^                 QDT              {:} - -   "Current estimate of QD (velocity matrix) for each degree of freedom"
 
 # Define discrete (nondifferentiable) states here:
-typedef  ^       DiscreteStateType     ReKi             DummyDiscreteState -  - -   "" -
+typedef  ^       DiscreteStateType     ReKi              DummyDiscreteState - - -   "" -
 
 # Define constraint states here:
 typedef  ^       ConstraintStateType   ReKi              DummyConstrState  -  - -   "" -
@@ -116,7 +116,7 @@ typedef  ^        OtherStateType       IntKi             IC         {SED_NMX} - 
 typedef  ^        OtherStateType       ReKi              HSSBrTrq          -  - -   "HSSBrTrq from update states; a hack to get this working with a single integrator"   -
 typedef  ^        OtherStateType       ReKi              HSSBrTrqC         -  - -   "Commanded HSS brake torque (adjusted for sign)"   N-m
 typedef  ^        OtherStateType       IntKi             SgnPrvLSTQ        -  - -   "The sign of the low-speed shaft torque from the previous call to RtHS(). NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run!"   -
-typedef  ^        OtherStateType       IntKi             SgnLSTQ    {SED_NMX} - -   "history of sign of LSTQ"
+typedef  ^        OtherStateType       IntKi             SgnLSTQ    {SED_NMX} - -   "history of sign of LSTQ (for HSS brake)"
 
 
 
@@ -150,10 +150,8 @@ typedef  ^        ParameterType        OutParmType       OutParam         {:} - 
 
 # ..... Misc/Optimization variables.................................................................................................
 typedef  ^        MiscVarType          ReKi              AllOuts          {:} - -   "Array of all outputs"                             -
-#typedef  ^        MiscVarType          MeshMapType       mapPtf2Twr        -  - -   "Mesh mapping from Ptfm to Tower line" -
-#typedef  ^        MiscVarType          MeshMapType       mapTwr2Nac        -  - -   "Mesh mapping from Tower to Nacelle" -
-typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub" -
-typedef  ^        MiscVarType          MeshMapType       mapHub2Root      {:} - -   "Mesh mapping from Hub to BladeRootMotion" -
+typedef  ^        MiscVarType          MeshMapType       mapNac2Hub        -  - -   "Mesh mapping from Nacelle to Hub (hub rotation overwritten in calc)" -
+typedef  ^        MiscVarType          MeshMapType       mapHub2Root      {:} - -   "Mesh mapping from Hub to BladeRootMotion (blade pitch overwritten in calc)" -
 typedef  ^        MiscVarType          R8Ki              QD2T             {:} - -   "Current estimate of first derivative of QD (acceleration matrix) for each degree of freedom"
 typedef  ^        MiscVarType          ReKi              HubPt_X          {3} - -   "X orientation of hub calculated in CalcOutput -- saving so we don't recalculate a bunch of things to get it in UpdateStates"
 
