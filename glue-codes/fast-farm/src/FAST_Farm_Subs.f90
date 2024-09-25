@@ -1841,7 +1841,7 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    
       !--------------
       ! 6. End farm-level MoorDyn
-   if (farm%p%MooringMod == 3) then
+   if (farm%p%MooringMod == 3 .and. allocated(farm%MD%Input)) then
       call MD_End(farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       !TODO: any related items need to be cleared?
