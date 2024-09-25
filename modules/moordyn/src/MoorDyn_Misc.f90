@@ -1283,7 +1283,7 @@ CONTAINS
       INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat             ! Error status of the operation
       CHARACTER(*),            INTENT(  OUT)  :: ErrMsg              ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(IntKi)                   :: I, iIn, ix, iy, iz
+      INTEGER(IntKi)                   :: I, iIn, ix, iy, iz, numHdrLn
       INTEGER(IntKi)                   :: ntIn   ! number of time series inputs from file      
       INTEGER(IntKi)                   :: UnIn   ! unit number for coefficient input file
       INTEGER(IntKi)                   :: UnEcho       
@@ -1302,6 +1302,7 @@ CONTAINS
       CHARACTER(120)                   :: Line
       CHARACTER(4096)                  :: entries2  
       INTEGER(IntKi)                   :: coordtype
+      LOGICAL                          :: dataBegin
    
       INTEGER(IntKi)                   :: NStepWave    ! 
       INTEGER(IntKi)                   :: NStepWave2   ! 
@@ -1313,7 +1314,7 @@ CONTAINS
       REAL(SiKi),  ALLOCATABLE         :: TmpFFTWaveElev(:)     ! Data for the FFT calculation
       TYPE(FFT_DataType)               :: FFT_Data              ! the instance of the FFT module we're using
       
-      
+      REAL(SiKi)                       :: tmpReal            ! A temporary real number
       COMPLEX(SiKi),ALLOCATABLE        :: tmpComplex(:)      ! A temporary array (0:NStepWave2-1) for FFT use. 
    
       REAL(SiKi)                       :: Omega                 ! Wave frequency (rad/s)
@@ -1469,17 +1470,28 @@ CONTAINS
          call WrScr( 'Reading wave elevation data from '//trim(WaveKinFile) )
          
          ! Read through length of file to find its length
-         i = 1  ! start counter
+         i         = 0 ! start line counter
+         numHdrLn  = 0 ! start header-line counter
+         dataBegin = .FALSE. ! started reading the data section
          DO
             READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     !read into a line
             IF (ErrStat2 /= 0) EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
             i = i+1
+            READ(Line,*,IOSTAT=ErrStatTmp) tmpReal
+            IF (ErrStatTmp/=0) THEN  ! Not a number
+               IF (dataBegin) THEN
+                  CALL SetErrStat( ErrID_Fatal,'Non-data line detected in WaveKinFile past the header lines.',ErrStat, ErrMsg, RoutineName); return
+               END IF
+               numHdrLn = numHdrLn + 1
+            ELSE
+               dataBegin = .TRUE.
+            END IF
          END DO
 
          ! rewind to start of input file to re-read things now that we know how long it is
          REWIND(UnElev)      
 
-         ntIn = i-3     ! save number of lines of file
+         ntIn = i-numHdrLn     ! save number of lines of file
          
 
          ! allocate space for input wave elevation array (including time column)
@@ -1487,8 +1499,9 @@ CONTAINS
          CALL AllocAry(WaveElevIn,  ntIn, 'WaveElevIn', ErrStat2, ErrMsg2 ); if(Failed()) return
 
          ! read the data in from the file
-         READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     ! skip the first two lines as headers
-         READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     !
+         DO i = 1, numHdrLn
+            READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     ! skip header lines
+         END DO
          
          DO i = 1, ntIn
             READ (UnElev, *, IOSTAT=ErrStat2) WaveTimeIn(i), WaveElevIn(i)
