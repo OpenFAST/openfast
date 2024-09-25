@@ -1480,7 +1480,7 @@ CONTAINS
             READ(Line,*,IOSTAT=ErrStatTmp) tmpReal
             IF (ErrStatTmp/=0) THEN  ! Not a number
                IF (dataBegin) THEN
-                  CALL SetErrStat( ErrID_Fatal,'Non-data line detected in WaveKinFile past the header lines.',ErrStat, ErrMsg, RoutineName); return
+                  CALL SetErrStat( ErrID_Fatal,' Non-data line detected in WaveKinFile past the header lines.',ErrStat, ErrMsg, RoutineName); return
                END IF
                numHdrLn = numHdrLn + 1
             ELSE
@@ -1515,7 +1515,7 @@ CONTAINS
          CLOSE ( UnElev ) 
 
          IF (WaveTimeIn(1) .NE. 0.0) THEN
-            CALL SetErrStat( ErrID_Warn, ' MoorDyn WaveElev time series should start at t = 0 seconds. First two lines are read as headers.',ErrStat, ErrMsg, RoutineName); return
+            CALL SetErrStat( ErrID_Fatal, ' MoorDyn WaveElev time series should start at t = 0 seconds.',ErrStat, ErrMsg, RoutineName); return
          ENDIF
          
          call WrScr( "Read "//trim(num2lstr(ntIn))//" time steps from input file." )
