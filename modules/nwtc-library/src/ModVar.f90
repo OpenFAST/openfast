@@ -619,13 +619,13 @@ subroutine MV_ExtrapInterp(VarAry, y, tin, y_out, tin_out, ErrStat, ErrMsg)
    ErrMsg = ''
 
    ! Check that array sizes match
-   if (size(t) /= size(y, 2)) then
-      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(y)', ErrStat, ErrMsg, RoutineName)
+   if (size(tin) /= size(y, 2)) then
+      call SetErrStat(ErrID_Fatal, 'size(tin) must equal size(y)', ErrStat, ErrMsg, RoutineName)
       return
    end if
 
    ! Calculate interpolation order
-   InterpOrder = size(t) - 1
+   InterpOrder = size(tin) - 1
 
    ! Switch based on interpolation order
    select case (InterpOrder)

@@ -755,6 +755,7 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
       ! Interpolate outputs to target azimuth
       call MV_ExtrapInterp(m%ModGlue%Vars%y, m%CS%y_buffer, m%CS%psi_buffer, &
                            m%CS%y_interp, AzimuthTarget, ErrStat2, ErrMsg2)
+      if (Failed()) return
 
       ! If converged
       if (m%CS%IsConverged) then
