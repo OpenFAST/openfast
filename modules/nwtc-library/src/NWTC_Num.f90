@@ -103,6 +103,7 @@ MODULE NWTC_Num
    END INTERFACE
 
    INTERFACE EulerConstructZYX
+      MODULE PROCEDURE EulerConstructZYXR4
       MODULE PROCEDURE EulerConstructZYXR8
    END INTERFACE
    
@@ -110,6 +111,17 @@ MODULE NWTC_Num
    INTERFACE EulerExtract
       MODULE PROCEDURE EulerExtractR4
       MODULE PROCEDURE EulerExtractR8
+   END INTERFACE
+
+   INTERFACE EulerExtractZYX
+      MODULE PROCEDURE EulerExtractZYXR4
+      MODULE PROCEDURE EulerExtractZYXR8
+   END INTERFACE
+
+      !> \copydoc nwtc_num::fzero_r4()
+   INTERFACE fZeros
+      MODULE PROCEDURE fzero_r4
+      MODULE PROCEDURE fzero_r8
    END INTERFACE
 
       !> \copydoc nwtc_num::taitbryanyxzextractr4()
@@ -2044,6 +2056,245 @@ CONTAINS
       M(3,3) =  cx*cy
    
    END FUNCTION EulerConstructZYXR8
+
+!=======================================================================
+!> 
+   FUNCTION EulerConstructZYXR4(theta) result(M)
+   
+      ! this function creates a rotation matrix, M, from a 3-2-1 rotation
+      ! sequence of the 3 Euler angles, theta_z, theta_y, and theta_x, in radians.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). 
+      !
+      REAL(SiKi)             :: M(3,3)    ! rotation matrix M 
+      REAL(SiKi), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(SiKi)             :: cx        ! cos(theta_x)
+      REAL(SiKi)             :: sx        ! sin(theta_x)
+      REAL(SiKi)             :: cy        ! cos(theta_y)
+      REAL(SiKi)             :: sy        ! sin(theta_y)
+      REAL(SiKi)             :: cz        ! cos(theta_z)
+      REAL(SiKi)             :: sz        ! sin(theta_z)
+   
+
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
+      
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz            
+      M(2,1) =  sx*sy*cz - sz*cx
+      M(3,1) =  sx*sz + sy*cx*cz
+      
+      M(1,2) =  sz*cy
+      M(2,2) =  sx*sy*sz + cx*cz
+      M(3,2) =  -sx*cz + sy*sz*cx
+      
+      M(1,3) =  -sy
+      M(2,3) =  sx*cy
+      M(3,3) =  cx*cy
+   
+   END FUNCTION EulerConstructZYXR4
+
+
+!=======================================================================
+!> 
+   FUNCTION EulerExtractZYXR8(M) result(theta)
+   
+      ! if M is a rotation matrix from a 3-2-1 rotation sequence, this function returns 
+      ! the 3 Euler angles, theta_x, theta_y, and theta_z (in radians), that formed 
+      ! the matrix. M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). M is the inverse of EulerConstruct().
+      !
+      ! M = R(theta_x) * R(theta_y) * R(theta_z)
+      !   = [ 1   0   0 |   [ cy  0 -sy |   [ cz sz 0 |
+      !     | 0  cx  sx | * |  0  1   0 | * |-sz cz 0 |
+      !     | 0 -sx  cx ]   | sy  0  cy ]   |  0  0 1 ]
+      !   = [cy*cz            sz*cy                -sy|
+      !     |sx*sy*cz-sz*cx   sx*sy*sz+cx*cz     sx*cy|
+      !     |sx*sz+sy*cx*cz  -sx*cz+sy*sz*cx     cx*cy]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+      ! 
+      ! returned angles are in the range [-pi, pi]
+   
+      REAL(R8Ki), INTENT(IN) :: M(3,3)    ! rotation matrix M 
+      REAL(R8Ki)             :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(R8Ki)             :: cx        ! cos(theta_x)
+      REAL(R8Ki)             :: sx        ! sin(theta_x)
+      REAL(R8Ki)             :: cy        ! cos(theta_y)
+!     REAL(R8Ki)             :: sy        ! sin(theta_y)
+      REAL(R8Ki)             :: cz        ! cos(theta_z)
+      REAL(R8Ki)             :: sz        ! sin(theta_z)
+   
+         ! use trig identity sz**2 + cz**2 = 1 to get abs(cy):
+      cy = sqrt( m(1,1)**2 + m(1,2)**2 ) 
+!      cy = sqrt( m(3,3)**2 + m(2,3)**2 ) 
+            
+      if ( EqualRealNos(cy,0.0_R8Ki) ) then
+      !if ( cy < 16*epsilon(0.0_ReKi) ) then
+         
+         theta(2) = atan2( -m(1,3), cy )               ! theta_y
+         
+         ! cy = 0 -> sy = +/-1
+         ! M  = [0                0              +/-1|
+         !      |+/-sx*cz-sz*cx  +/-sx*sz+cx*cz     0|
+         !      |sx*sz+/-cx*cz   -sx*cz+/-sz*cx     0]
+         
+         ! gimbal lock allows us to choose theta_z = 0
+         theta(3) = 0.0_R8Ki                          ! theta_z
+         
+         ! which reduces the matrix to 
+         ! M  = [0       0  +/-1|
+         !      |+/-sx  cx     0|
+         !      |+/-cx -sx     0]
+         
+         theta(1) = atan2( -m(3,2), m(2,2) )          ! theta_x
+         
+      else
+         ! atan2( cy*sz, cy*cz )
+         theta(3) = atan2( m(1,2), m(1,1) )          ! theta_z         
+         cz       = cos( theta(3) )
+         sz       = sin( theta(3) )
+
+            ! get the appropriate sign for cy:
+         if ( EqualRealNos(cz, 0.0_R8Ki) ) then
+            cy = sign( cy, m(1,2)/sz )
+            !cy = m(1,2)/sz
+         else
+            cy = sign( cy, m(1,1)/cz )
+            !cy = m(1,1)/cz
+         end if
+         theta(2) = atan2( -m(1,3), cy )               ! theta_y
+         
+        !theta(1) = atan2( m(2,3), m(3,3) )          ! theta_x
+         
+         ! for numerical reasons, we're going to get theta_x using
+         ! M' = M * (R(theta_y)*R(theta_z))^T = R(theta_x)
+         !    =     [ cz -sz 0 |   [ cy  0  sy |   [ 1   0   0 |
+         !      M * | sz  cz 0 | * |  0  1   0 | = | 0  cx  sx |
+         !          |  0   0 1 ]   |-sy  0  cy ]   | 0 -sx  cx ]
+         !    =     [ cy*cz  -sz  sy*cz |   [ 1   0   0 |
+         !      M * | cy*sz   cz  sy*sz | = | 0  cx  sx |
+         !          |  -sy     0     cy ]   | 0 -sx  cx ]
+         ! taking M'(2,2) and M'(2,3) , we get cx and sx:
+         ! -sz*m(2,1) + cz*m(2,2) =  cx
+         ! -sz*m(3,1) + cz*m(3,2) = -sx
+
+         cz = cos( theta(3) )
+         sz = sin( theta(3) )
+         
+         cx = -sz*m(2,1) + cz*m(2,2)
+         sx =  sz*m(3,1) - cz*m(3,2)
+         
+         theta(1) = atan2( sx, cx )
+         
+      end if
+            
+      
+   END FUNCTION EulerExtractZYXR8
+
+!=======================================================================
+!> 
+   FUNCTION EulerExtractZYXR4(M) result(theta)
+   
+      ! if M is a rotation matrix from a 3-2-1 rotation sequence, this function returns 
+      ! the 3 Euler angles, theta_x, theta_y, and theta_z (in radians), that formed 
+      ! the matrix. M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). M is the inverse of EulerConstruct().
+      !
+      ! M = R(theta_x) * R(theta_y) * R(theta_z)
+      !   = [ 1   0   0 |   [ cy  0 -sy |   [ cz sz 0 |
+      !     | 0  cx  sx | * |  0  1   0 | * |-sz cz 0 |
+      !     | 0 -sx  cx ]   | sy  0  cy ]   |  0  0 1 ]
+      !   = [cy*cz            sz*cy                -sy|
+      !     |sx*sy*cz-sz*cx   sx*sy*sz+cx*cz     sx*cy|
+      !     |sx*sz+sy*cx*cz  -sx*cz+sy*sz*cx     cx*cy]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+      ! 
+      ! returned angles are in the range [-pi, pi]
+   
+      REAL(SiKi), INTENT(IN) :: M(3,3)    ! rotation matrix M 
+      REAL(SiKi)             :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(SiKi)             :: cx        ! cos(theta_x)
+      REAL(SiKi)             :: sx        ! sin(theta_x)
+      REAL(SiKi)             :: cy        ! cos(theta_y)
+!     REAL(SiKi)             :: sy        ! sin(theta_y)
+      REAL(SiKi)             :: cz        ! cos(theta_z)
+      REAL(SiKi)             :: sz        ! sin(theta_z)
+   
+         ! use trig identity sz**2 + cz**2 = 1 to get abs(cy):
+      cy = sqrt( m(1,1)**2 + m(1,2)**2 ) 
+!      cy = sqrt( m(3,3)**2 + m(2,3)**2 ) 
+            
+      if ( EqualRealNos(cy,0.0_SiKi) ) then
+      !if ( cy < 16*epsilon(0.0_ReKi) ) then
+         
+         theta(2) = atan2( -m(1,3), cy )               ! theta_y
+         
+         ! cy = 0 -> sy = +/-1
+         ! M  = [0                0              +/-1|
+         !      |+/-sx*cz-sz*cx  +/-sx*sz+cx*cz     0|
+         !      |sx*sz+/-cx*cz   -sx*cz+/-sz*cx     0]
+         
+         ! gimbal lock allows us to choose theta_z = 0
+         theta(3) = 0.0_SiKi                          ! theta_z
+         
+         ! which reduces the matrix to 
+         ! M  = [0       0  +/-1|
+         !      |+/-sx  cx     0|
+         !      |+/-cx -sx     0]
+         
+         theta(1) = atan2( -m(3,2), m(2,2) )          ! theta_x
+         
+      else
+         ! atan2( cy*sz, cy*cz )
+         theta(3) = atan2( m(1,2), m(1,1) )          ! theta_z         
+         cz       = cos( theta(3) )
+         sz       = sin( theta(3) )
+
+            ! get the appropriate sign for cy:
+         if ( EqualRealNos(cz, 0.0_SiKi) ) then
+            cy = sign( cy, m(1,2)/sz )
+            !cy = m(1,2)/sz
+         else
+            cy = sign( cy, m(1,1)/cz )
+            !cy = m(1,1)/cz
+         end if
+         theta(2) = atan2( -m(1,3), cy )               ! theta_y
+         
+        !theta(1) = atan2( m(2,3), m(3,3) )          ! theta_x
+         
+         ! for numerical reasons, we're going to get theta_x using
+         ! M' = M * (R(theta_y)*R(theta_z))^T = R(theta_x)
+         !    =     [ cz -sz 0 |   [ cy  0  sy |   [ 1   0   0 |
+         !      M * | sz  cz 0 | * |  0  1   0 | = | 0  cx  sx |
+         !          |  0   0 1 ]   |-sy  0  cy ]   | 0 -sx  cx ]
+         !    =     [ cy*cz  -sz  sy*cz |   [ 1   0   0 |
+         !      M * | cy*sz   cz  sy*sz | = | 0  cx  sx |
+         !          |  -sy     0     cy ]   | 0 -sx  cx ]
+         ! taking M'(2,2) and M'(2,3) , we get cx and sx:
+         ! -sz*m(2,1) + cz*m(2,2) =  cx
+         ! -sz*m(3,1) + cz*m(3,2) = -sx
+
+         cz = cos( theta(3) )
+         sz = sin( theta(3) )
+         
+         cx = -sz*m(2,1) + cz*m(2,2)
+         sx =  sz*m(3,1) - cz*m(3,2)
+         
+         theta(1) = atan2( sx, cx )
+         
+      end if
+            
+      
+   END FUNCTION EulerExtractZYXR4
+
 !=======================================================================
 !> This routine sets the matrices in the first two dimensions of A equal 
 !! to the identity matrix (all zeros, with ones on the diagonal).
@@ -3006,7 +3257,75 @@ END FUNCTION FindValidChannelIndx
 
    RETURN
    END FUNCTION InterpStpComp8
+!=======================================================================
+!> Routine to interpolate and/or extrapolate
+   FUNCTION InterpExtrapStp( XVal, XAry, YAry, Ind, AryLen ) RESULT(InterpExtrap)
 
+      ! Function declaration.
+
+   REAL(ReKi)                   :: InterpExtrap                                     !< The interpolated or extrapolated value of Y at XVal
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+
+
+      ! Let's check the limits first.
+   IF (AryLen < 2) THEN
+      Ind = 1
+      InterpExtrap = YAry(1)
+      RETURN
+   END IF
+   
+   IF ( XVal <= XAry(1) )  THEN
+      Ind            = 1
+      InterpExtrap = GetLinearVal()  ! extrapolate (using slope of x(1) and x(2))
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      Ind            = MAX(AryLen - 1, 1)
+      InterpExtrap = GetLinearVal()  ! extrapolate (using slope of x(AryLen-1) and x(AryLen))
+      RETURN
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+
+         InterpExtrap = GetLinearVal()
+         RETURN
+
+      END IF
+
+   END DO
+
+
+   RETURN
+   
+   contains
+      real(ReKi) function GetLinearVal()
+         GetLinearVal = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
+      end function GetLinearVal
+   END FUNCTION InterpExtrapStp
 !=======================================================================
 !> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpReal4( XVal, XAry, YAry, Ind, AryLen )
@@ -6163,22 +6482,21 @@ end function Rad2M180to180Deg
 
       
    END FUNCTION TaitBryanYXZExtractR8
-
-
-      FUNCTION TaitBryanYXZConstructR4(theta) result(M)
-            ! this function creates a rotation matrix, M, from a 1-2-3 rotation
-      ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
-      ! M represents a change of basis (from global to local coordinates; 
-      ! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
-      ! 
-      ! M = R(theta_z) * R(theta_x) * R(theta_y)
-      !   = [ cz sz 0 |  [ 1   0   0 |    [ cy  0 -sy | 
-      !     |-sz cz 0 |* | 0  cx  sx |  * |  0  1   0 | 
-      !     |  0  0 1 ]  | 0 -sx  cx ]    | sy  0  cy ] 
-      !   = [ cy*cz+sy*sx*sz   cx*sz    cy*sx*sz-cz*sy |
-      !     |cz*sy*sx-cy*sz   cx*cz    cy*cz*sx+sy*sz |
-      !     |cx*sy           -sx             cx*cy    ]
-      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+!=======================================================================
+!> this function creates a rotation matrix, M, from a 1-2-3 rotation
+!! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
+!! M represents a change of basis (from global to local coordinates; 
+!! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
+!! 
+!! M = R(theta_z) * R(theta_x) * R(theta_y)
+!!   = [ cz sz 0 |  [ 1   0   0 |    [ cy  0 -sy | 
+!!     |-sz cz 0 |* | 0  cx  sx |  * |  0  1   0 | 
+!!     |  0  0 1 ]  | 0 -sx  cx ]    | sy  0  cy ] 
+!!   = [ cy*cz+sy*sx*sz   cx*sz    cy*sx*sz-cz*sy |
+!!     |cz*sy*sx-cy*sz   cx*cz    cy*cz*sx+sy*sz |
+!!     |cx*sy           -sx             cx*cy    ]
+!! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+   PURE FUNCTION TaitBryanYXZConstructR4(theta) result(M)
    
       REAL(SiKi)             :: M(3,3)    !< rotation matrix, M 
       REAL(SiKi), INTENT(IN) :: theta(3)  !< the 3 rotation angles: \f$\theta_x, \theta_y, \theta_z\f$
@@ -6212,8 +6530,8 @@ end function Rad2M180to180Deg
       M(3,3) =   cy*cx   
 
    END FUNCTION TaitBryanYXZConstructR4
-   
-   FUNCTION TaitBryanYXZConstructR8(theta) result(M)
+!=======================================================================
+   PURE FUNCTION TaitBryanYXZConstructR8(theta) result(M)
    
       ! this function creates a rotation matrix, M, from a 1-2-3 rotation
       ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
@@ -6261,7 +6579,6 @@ end function Rad2M180to180Deg
       M(3,3) =   cy*cx               
    
    END FUNCTION TaitBryanYXZConstructR8
-   
 
 !=======================================================================
 !> This routine takes an array of time values such as that returned from
@@ -6880,4 +7197,78 @@ end function Rad2M180to180Deg
       
    END SUBROUTINE Angles_ExtrapInterp2_R8R
 !=======================================================================  
+   SUBROUTINE fZero_R4(x, f, roots, nZeros, Period)
+      REAL(R4Ki),           intent(in)    :: x(:) ! assumed to be monotonic increasing: x(1) < x(2) < ... < x(n)
+      REAL(R4Ki),           intent(in)    :: f(:) ! f(x)
+      REAL(R4Ki),           intent(inout) :: roots(:)
+      INTEGER(IntKi),       intent(  out) :: nZeros
+      REAL(R4Ki), OPTIONAL, intent(in)    :: Period   ! if this is provided, the function f is assumed to be periodic with f(x(j)) = f(x(j)+Period)
+      
+      integer(IntKi)                :: n, j
+      real(R4Ki)                    :: dx, df, m ! help to find zero crossing
+      
+      n = size(f)
+      
+      nZeros = 0
+      do j=2,n
+         if ((f(j-1) < 0 .and. f(j) >= 0) .or. (f(j-1) >= 0 .and. f(j) < 0)) then !this is a zero-crossing, so a root is located here
+            nZeros = nZeros + 1
+            
+            df = f(j) - f(j-1)
+            dx = x(j) - x(j-1)
+            
+            roots( min(nZeros,size(roots)) ) = x(j) - f(j) * dx / df
+         end if
+      end do
+            
+      if (present(Period)) then
+         if ((f(n) < 0 .and. f(1) >= 0) .or. (f(n) >= 0 .and. f(1) < 0)) then !this is a zero-crossing, so a root is located here
+            nZeros = nZeros + 1
+            
+            df = f(1) - f(n)
+            dx = x(1) - x(n) + Period
+            
+            roots( min(nZeros,size(roots)) ) = x(1) - f(1) * dx / df
+         end if
+      end if
+   
+   END SUBROUTINE fZero_R4
+!=======================================================================
+   SUBROUTINE fZero_R8(x, f, roots, nZeros, Period)
+      REAL(R8Ki),           intent(in)    :: x(:) ! assumed to be monotonic increasing: x(1) < x(2) < ... < x(n)
+      REAL(R8Ki),           intent(in)    :: f(:) ! f(x)
+      REAL(R8Ki),           intent(inout) :: roots(:)
+      INTEGER(IntKi),       intent(  out) :: nZeros
+      REAL(R8Ki), OPTIONAL, intent(in)    :: Period   ! if this is provided, the function f is assumed to be periodic with f(x(j)) = f(x(j)+Period)
+      
+      integer(IntKi)                :: n, j
+      real(R8Ki)                    :: dx, df, m ! help to find zero crossing
+      
+      n = size(f)
+      
+      nZeros = 0
+      do j=2,n
+         if ((f(j-1) < 0 .and. f(j) >= 0) .or. (f(j-1) >= 0 .and. f(j) < 0)) then !this is a zero-crossing, so a root is located here
+            nZeros = nZeros + 1
+            
+            df = f(j) - f(j-1)
+            dx = x(j) - x(j-1)
+            
+            roots( min(nZeros,size(roots)) ) = x(j) - f(j) * dx / df
+         end if
+      end do
+            
+      if (present(Period)) then
+         if ((f(n) < 0 .and. f(1) >= 0) .or. (f(n) >= 0 .and. f(1) < 0)) then !this is a zero-crossing, so a root is located here
+            nZeros = nZeros + 1
+            
+            df = f(1) - f(n)
+            dx = x(1) - x(n) + Period
+            
+            roots( min(nZeros,size(roots)) ) = x(1) - f(1) * dx / df
+         end if
+      end if
+   
+   END SUBROUTINE fZero_R8
+!=======================================================================
 END MODULE NWTC_Num

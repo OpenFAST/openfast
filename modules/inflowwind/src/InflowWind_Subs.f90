@@ -490,22 +490,18 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
   
       ! LIDAR Sensor Type
    CALL ParseVar( InFileInfo, CurLine, "SensorType", InputFileData%SensorType, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
 
      ! Number of Range Gates
    CALL ParseVar( InFileInfo, CurLine, "NumPulseGate", InputFileData%NumPulseGate, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
      
      ! Pulse Gate Spacing
    CALL ParseVar( InFileInfo, CurLine, "PulseSpacing", InputFileData%PulseSpacing, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
 
      ! NumBeam: Number of points to output the lidar measured wind velocity (1 to 5)
    CALL ParseVar( InFileInfo, CurLine, "NumBeam", InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
 
      ! Before proceeding, make sure that NumBeam makes sense
@@ -515,53 +511,42 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
       RETURN   
    ELSE   
             ! Allocate space for the output location arrays:
-      CALL AllocAry( InputFileData%FocalDistanceX, InputFileData%NumBeam, 'NumBeam', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry( InputFileData%FocalDistanceY, InputFileData%NumBeam, 'NumBeam', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry( InputFileData%FocalDistanceZ, InputFileData%NumBeam, 'NumBeam', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry( InputFileData%FocalDistanceX, InputFileData%NumBeam, 'FocalDistanceX', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry( InputFileData%FocalDistanceY, InputFileData%NumBeam, 'FocalDistanceY', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry( InputFileData%FocalDistanceZ, InputFileData%NumBeam, 'FocalDistanceZ', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
       if (Failed()) return
    ENDIF
     
     ! Focal Distance X
    CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceX', InputFileData%FocalDistanceX, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
  
     ! Focal Distance Y
    CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceY', InputFileData%FocalDistanceY, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
 
     ! Focal Distance Z
    CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceZ', InputFileData%FocalDistanceZ, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
 
     ! Rotor Apex Offset Position
-   CALL ParseAry( InFileInfo, CurLine, "RotorApexOffsetPos", InputFileData%RotorApexOffsetPos, 1, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   CALL ParseAry( InFileInfo, CurLine, "RotorApexOffsetPos", InputFileData%RotorApexOffsetPos, size(InputFileData%RotorApexOffsetPos), TmpErrStat, TmpErrMsg, UnEc )
    IF (Failed()) RETURN
    
     ! URefIni
    CALL ParseVar( InFileInfo, CurLine, "URefLid", InputFileData%URefLid, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN 
  
     ! Measurement Interval
    CALL ParseVar( InFileInfo, CurLine, "MeasurementInterval", InputFileData%MeasurementInterval, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
    
     ! Lidar Radial Vel
-   CALL ParseLoVar( InFileInfo, CurLine, "LidRadialVel", InputFileData%LidRadialVel, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   CALL ParseVar( InFileInfo, CurLine, "LidRadialVel", InputFileData%LidRadialVel, TmpErrStat, TmpErrMsg, UnEc )
    IF (Failed()) RETURN
      
     ! Consider Hub Motion
    CALL ParseVar( InFileInfo, CurLine, "ConsiderHubMotion", InputFileData%ConsiderHubMotion, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
    
 
@@ -1658,6 +1643,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
 END SUBROUTINE CalculateOutput
                       
 !====================================================================================================
+!FIXME: is this routine necessary anymore?
 !> this routine calculates a rotor-averaged mean velocity, DiskVel 
 SUBROUTINE InflowWind_GetRotorSpatialAverage( Time, InputData, p, x, xd, z, OtherStates, m, MeanVelocity, ErrStat, ErrMsg )
 

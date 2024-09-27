@@ -25,6 +25,36 @@
 #define _MAPAPI_H
 
 
+// MAP_EXTERNCALL
+#include "mapsys.h"
+// MAP_ERROR_CODE
+#include "maperror.h"
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#if defined _MSC_VER && !defined _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+// Some redefinitions from MAP_Types.h, so the API does not need to exposes the
+// internal data structures.
+typedef struct MAP_InputType* MAP_Input_t;
+typedef struct MAP_ParameterType* MAP_Parameter_t;
+typedef struct MAP_ContinuousStateType* MAP_ContinuousState_t;
+typedef struct MAP_DiscreteStateType* MAP_DiscreteState_t;
+typedef struct MAP_ConstraintStateType* MAP_ConstraintState_t;
+typedef struct MAP_OtherStateType* MAP_OtherState_t;
+typedef struct MAP_OutputType* MAP_Output_t;
+typedef struct MAP_InitOutputType* MAP_InitOutput_t;
+typedef struct MAP_InitInputType* MAP_InitInput_t;
+// Same with map.h
+typedef struct InitializationData_t* MAP_InitializationData_t;
+typedef struct Domain_t* MAP_Domain_t;
+
+
 /**
  * @brief   Initalizes all MAP base types (including some internal state)
  * @details The idea is to set variables to zero and null to prevent seg-faults in the case of 
@@ -34,25 +64,26 @@
  * @see     map_init()
  * @return  Size of CableLibrary structure
  */
-MAP_EXTERNCALL void map_initialize_msqs_base(MAP_InputType_t* u_type, MAP_ParameterType_t* p_type, MAP_ContinuousStateType_t* x_type, MAP_ConstraintStateType_t* z_type, MAP_OtherStateType_t* other_type, MAP_OutputType_t* y_type, MAP_InitOutputType_t* io_type);
+MAP_EXTERNCALL void map_initialize_msqs_base(MAP_Input_t u_type, MAP_Parameter_t p_type, MAP_ContinuousState_t x_type, MAP_ConstraintState_t z_type, MAP_OtherState_t other_type, MAP_Output_t y_type, MAP_InitOutput_t io_type);
 
 
-MAP_EXTERNCALL void set_init_to_null(MAP_InitInputType_t* init_type, char* map_msg, MAP_ERROR_CODE* ierr);
-MAP_EXTERNCALL void map_add_cable_library_input_text(MAP_InitInputType_t* init_type);
-MAP_EXTERNCALL void map_add_node_input_text(MAP_InitInputType_t* init_type);
-MAP_EXTERNCALL void map_add_line_input_text(MAP_InitInputType_t* init_type);
-MAP_EXTERNCALL void map_add_options_input_text(MAP_InitInputType_t* init_type);
-MAP_EXTERNCALL double* map_plot_x_array(MAP_OtherStateType_t* other_type, int i, int num_points, char* map_msg, MAP_ERROR_CODE* ierr);
-MAP_EXTERNCALL double* map_plot_y_array(MAP_OtherStateType_t* other_type, int i, int num_points, char* map_msg, MAP_ERROR_CODE* ierr);
-MAP_EXTERNCALL double* map_plot_z_array(MAP_OtherStateType_t* other_type, int i, int num_points, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL void set_init_to_null(MAP_InitInput_t init_type, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL void map_set_input_text(MAP_InitInput_t init_type, const char* input_txt_line);
+MAP_EXTERNCALL void map_add_cable_library_input_text(MAP_InitInput_t init_type);
+MAP_EXTERNCALL void map_add_node_input_text(MAP_InitInput_t init_type);
+MAP_EXTERNCALL void map_add_line_input_text(MAP_InitInput_t init_type);
+MAP_EXTERNCALL void map_add_options_input_text(MAP_InitInput_t init_type);
+MAP_EXTERNCALL double* map_plot_x_array(MAP_OtherState_t other_type, int i, int num_points, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL double* map_plot_y_array(MAP_OtherState_t other_type, int i, int num_points, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL double* map_plot_z_array(MAP_OtherState_t other_type, int i, int num_points, char* map_msg, MAP_ERROR_CODE* ierr);
 MAP_EXTERNCALL void map_plot_array_free(double* array) ;
-MAP_EXTERNCALL double map_residual_function_length(MAP_OtherStateType_t* other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
-MAP_EXTERNCALL double map_residual_function_height(MAP_OtherStateType_t* other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
-MAP_EXTERNCALL double map_jacobian_dxdh(MAP_OtherStateType_t* other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
-MAP_EXTERNCALL double map_jacobian_dxdv(MAP_OtherStateType_t* other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
-MAP_EXTERNCALL double map_jacobian_dzdh(MAP_OtherStateType_t* other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
-MAP_EXTERNCALL double map_jacobian_dzdv(MAP_OtherStateType_t* other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
-MAP_EXTERNCALL int map_size_lines(MAP_OtherStateType_t* other_type, MAP_ERROR_CODE* ierr, char* map_msg);
+MAP_EXTERNCALL double map_residual_function_length(MAP_OtherState_t other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL double map_residual_function_height(MAP_OtherState_t other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL double map_jacobian_dxdh(MAP_OtherState_t other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL double map_jacobian_dxdv(MAP_OtherState_t other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL double map_jacobian_dzdh(MAP_OtherState_t other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL double map_jacobian_dzdv(MAP_OtherState_t other_type, int i, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL int map_size_lines(MAP_OtherState_t other_type, MAP_ERROR_CODE* ierr, char* map_msg);
 
 
 /**
@@ -63,7 +94,7 @@ MAP_EXTERNCALL int map_size_lines(MAP_OtherStateType_t* other_type, MAP_ERROR_CO
  * @return    MAP_SAFE if it completes successfully
  * @see       {@link map_init()}
  */
-MAP_EXTERNCALL int free_init_data (InitializationData* init, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL int free_init_data (MAP_InitializationData_t init, char* map_msg, MAP_ERROR_CODE* ierr);
 
 /**
  * @brief Set the water depth. Should be called before {@link map_init()}
@@ -87,7 +118,7 @@ MAP_EXTERNCALL int free_init_data (InitializationData* init, char* map_msg, MAP_
  * CALL mapextern_set_depth(p%C_obj, depth)
  * @endcode
  */
-MAP_EXTERNCALL void map_set_sea_depth(MAP_ParameterType_t* p_type, const double depth);
+MAP_EXTERNCALL void map_set_sea_depth(MAP_Parameter_t p_type, const double depth);
 
 
 /**
@@ -112,7 +143,7 @@ MAP_EXTERNCALL void map_set_sea_depth(MAP_ParameterType_t* p_type, const double 
  * CALL mapextern_set_density(p%C_obj, rho)
  * @endcode
  */
-MAP_EXTERNCALL void map_set_sea_density(MAP_ParameterType_t* p_type, const double rho);
+MAP_EXTERNCALL void map_set_sea_density(MAP_Parameter_t p_type, const double rho);
 
 
 /**
@@ -137,7 +168,7 @@ MAP_EXTERNCALL void map_set_sea_density(MAP_ParameterType_t* p_type, const doubl
  * CALL mapextern_map_set_gravity(p%C_obj, g)
  * @endcode
  */
-MAP_EXTERNCALL void map_set_gravity(MAP_ParameterType_t* p_type, const double gravity);
+MAP_EXTERNCALL void map_set_gravity(MAP_Parameter_t p_type, const double gravity);
 
 
 /**
@@ -151,7 +182,7 @@ MAP_EXTERNCALL void map_set_gravity(MAP_ParameterType_t* p_type, const double gr
  * @param   ierr, error code
  * @see     
  */
-MAP_EXTERNCALL void map_get_fairlead_force_2d(double* H, double* V, MAP_OtherStateType_t* other_type, int index, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL void map_get_fairlead_force_2d(double* H, double* V, MAP_OtherState_t other_type, int index, char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -166,7 +197,7 @@ MAP_EXTERNCALL void map_get_fairlead_force_2d(double* H, double* V, MAP_OtherSta
  * @param   ierr, error code
  * @see     
  */
-MAP_EXTERNCALL void map_get_fairlead_force_3d(double* fx, double* fy, double* fz, MAP_OtherStateType_t* other_type, int index, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL void map_get_fairlead_force_3d(double* fx, double* fy, double* fz, MAP_OtherState_t other_type, int index, char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -192,13 +223,13 @@ MAP_EXTERNCALL void map_get_fairlead_force_3d(double* fx, double* fy, double* fz
  *      global     |
  *               local
  */
-MAP_EXTERNCALL void map_offset_vessel(MAP_OtherStateType_t* other_type, MAP_InputType_t* u_type, double x, double y, double z, double phi, double the, double psi, char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL void map_offset_vessel(MAP_OtherState_t other_type, MAP_Input_t u_type, double x, double y, double z, double phi, double the, double psi, char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
  * lib.linearize_matrix.argtypes = [MapInput_Type, MapData_Type, MapOutnput_Type, c_double, c_char_p, POINTER(c_int)]        
  */
-MAP_EXTERNCALL double** map_linearize_matrix(MAP_InputType_t* u_type, MAP_ParameterType_t* p_type, MAP_OtherStateType_t* other_type, MAP_OutputType_t* y_type, MAP_ConstraintStateType_t* z_type, double epsilon, MAP_ERROR_CODE* ierr, char* map_msg);
+MAP_EXTERNCALL double** map_linearize_matrix(MAP_Input_t u_type, MAP_Parameter_t p_type, MAP_OtherState_t other_type, MAP_Output_t y_type, MAP_ConstraintState_t z_type, double epsilon, MAP_ERROR_CODE* ierr, char* map_msg);
 
 
 /**
@@ -209,7 +240,7 @@ MAP_EXTERNCALL void map_free_linearize_matrix(double** array);
 /**
  * lib.map_f_op.argtypes = [MapInput_Type, MapData_Type, MapOutnput_Type, c_double, c_char_p, POINTER(c_int)]        
  */
-MAP_EXTERNCALL double* map_f_op(MAP_InputType_t* u_type, MAP_ParameterType_t* p_type, MAP_OtherStateType_t* other_type, MAP_OutputType_t* y_type, MAP_ConstraintStateType_t* z_type, MAP_ERROR_CODE* ierr, char* map_msg);
+MAP_EXTERNCALL double* map_f_op(MAP_Input_t u_type, MAP_Parameter_t p_type, MAP_OtherState_t other_type, MAP_Output_t y_type, MAP_ConstraintState_t z_type, MAP_ERROR_CODE* ierr, char* map_msg);
 
 /**
  * lib.map_free_f_op.argtypes = [POINTER(c_double)]
@@ -232,15 +263,15 @@ MAP_EXTERNCALL void map_free_f_op(double* array);
  * @param     ierr error code
  * @param     map_msg error string
  */
-MAP_EXTERNCALL void map_init(MAP_InitInputType_t* init_type, 
-                             MAP_InputType_t* u_type,
-                             MAP_ParameterType_t* p_type,
-                             MAP_ContinuousStateType_t* x_type,
-                             MAP_DiscreteStateType_t* xd_type,
-                             MAP_ConstraintStateType_t* z_type,
-                             MAP_OtherStateType_t* other_type,
-                             MAP_OutputType_t* y_type,
-                             MAP_InitOutputType_t* ioType,
+MAP_EXTERNCALL void map_init(MAP_InitInput_t init_type, 
+                             MAP_Input_t u_type,
+                             MAP_Parameter_t p_type,
+                             MAP_ContinuousState_t x_type,
+                             MAP_DiscreteState_t xd_type,
+                             MAP_ConstraintState_t z_type,
+                             MAP_OtherState_t other_type,
+                             MAP_Output_t y_type,
+                             MAP_InitOutput_t ioType,
                              MAP_ERROR_CODE* ierr,
                              char* map_msg);
 
@@ -270,12 +301,12 @@ MAP_EXTERNCALL void map_init(MAP_InitInputType_t* init_type,
  */
 MAP_EXTERNCALL void map_update_states(float t,
                                       int interval,
-                                      MAP_InputType_t* u_type,
-                                      MAP_ParameterType_t* p_type,
-                                      MAP_ContinuousStateType_t* x_type,
-                                      MAP_DiscreteStateType_t* xd_type,
-                                      MAP_ConstraintStateType_t* z_type,
-                                      MAP_OtherStateType_t* other_type,
+                                      MAP_Input_t u_type,
+                                      MAP_Parameter_t p_type,
+                                      MAP_ContinuousState_t x_type,
+                                      MAP_DiscreteState_t xd_type,
+                                      MAP_ConstraintState_t z_type,
+                                      MAP_OtherState_t other_type,
                                       MAP_ERROR_CODE* ierr,
                                       char* map_msg);
 
@@ -296,13 +327,13 @@ MAP_EXTERNCALL void map_update_states(float t,
  * @see       {@link map_update_states()}
  */
 MAP_EXTERNCALL void map_calc_output(float t,
-                                    MAP_InputType_t* u_type,
-                                    MAP_ParameterType_t* p_type,
-                                    MAP_ContinuousStateType_t* x_type,
-                                    MAP_DiscreteStateType_t* xd_type,
-                                    MAP_ConstraintStateType_t* z_type,
-                                    MAP_OtherStateType_t* other_type,
-                                    MAP_OutputType_t* y_type,
+                                    MAP_Input_t u_type,
+                                    MAP_Parameter_t p_type,
+                                    MAP_ContinuousState_t x_type,
+                                    MAP_DiscreteState_t xd_type,
+                                    MAP_ConstraintState_t z_type,
+                                    MAP_OtherState_t other_type,
+                                    MAP_Output_t y_type,
                                     MAP_ERROR_CODE* ierr,
                                     char* map_msg);
 
@@ -320,13 +351,13 @@ MAP_EXTERNCALL void map_calc_output(float t,
  * @param     map_msg error string
  * @see       {@link map_update_states()}
  */
-MAP_EXTERNCALL void map_end(MAP_InputType_t* u_type,
-                            MAP_ParameterType_t* p_type,
-                            MAP_ContinuousStateType_t* x_type,
-                            MAP_DiscreteStateType_t* xd_type,
-                            MAP_ConstraintStateType_t* z_type,
-                            MAP_OtherStateType_t* other_type,
-                            MAP_OutputType_t* y_type,                                                                           
+MAP_EXTERNCALL void map_end(MAP_Input_t u_type,
+                            MAP_Parameter_t p_type,
+                            MAP_ContinuousState_t x_type,
+                            MAP_DiscreteState_t xd_type,
+                            MAP_ConstraintState_t z_type,
+                            MAP_OtherState_t other_type,
+                            MAP_Output_t y_type,
                             MAP_ERROR_CODE* ierr,
                             char* map_msg);
 
@@ -357,7 +388,7 @@ MAP_EXTERNCALL void map_end(MAP_InputType_t* u_type,
  * @endcode
  * @todo: need to free summary_file_name. This is done in delete_all_init_data(...), should be called in Fortran routines
  */
-MAP_EXTERNCALL void map_set_summary_file_name(MAP_InitInputType_t* init_type, char* map_msg, MAP_ERROR_CODE* ierr); 
+MAP_EXTERNCALL void map_set_summary_file_name(MAP_InitInput_t init_type, char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -390,7 +421,7 @@ MAP_EXTERNCALL void map_set_summary_file_name(MAP_InitInputType_t* init_type, ch
  * @endcode
  * @todo this should raise and error when count!=n
  */
-MAP_EXTERNCALL void map_get_header_string(int* n, char** str_array, MAP_OtherStateType_t* other_type);
+MAP_EXTERNCALL void map_get_header_string(int* n, char** str_array, MAP_OtherState_t other_type);
 
 
 /**
@@ -421,7 +452,7 @@ MAP_EXTERNCALL void map_get_header_string(int* n, char** str_array, MAP_OtherSta
  * @endcode
  * @todo this should raise and error when count!=n
  */
-MAP_EXTERNCALL void map_get_unit_string(int* n, char** str_array ,MAP_OtherStateType_t* other_type);
+MAP_EXTERNCALL void map_get_unit_string(int* n, char** str_array ,MAP_OtherState_t other_type);
 
 
 /**
@@ -438,7 +469,7 @@ MAP_EXTERNCALL void map_get_unit_string(int* n, char** str_array ,MAP_OtherState
  * @param   ierr, error code
  * @return  instance of the packed initialization strings (different from the FAST-required derived types)  
  */
-MAP_EXTERNCALL InitializationData* MAP_InitInput_Create(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_InitializationData_t MAP_InitInput_Create(char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -453,7 +484,7 @@ MAP_EXTERNCALL InitializationData* MAP_InitInput_Create(char* map_msg, MAP_ERROR
  * @param   ierr, error code
  * @return  initialization input type (equivalent C binding struct)  
  */
-MAP_EXTERNCALL MAP_InitInputType_t* map_create_init_type(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_InitInput_t map_create_init_type(char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -470,7 +501,7 @@ MAP_EXTERNCALL MAP_InitInputType_t* map_create_init_type(char* map_msg, MAP_ERRO
  * @see     map_create_other_type()
  * @return  instance of the interal model struct (different from the FAST-required derived types)  
  */
-MAP_EXTERNCALL Domain* MAP_OtherState_Create(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_Domain_t MAP_OtherState_Create(char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -482,7 +513,7 @@ MAP_EXTERNCALL Domain* MAP_OtherState_Create(char* map_msg, MAP_ERROR_CODE* ierr
  * @param   ierr, error code
  * @return  other state type (equivalent C binding struct)  
  */
-MAP_EXTERNCALL MAP_OtherStateType_t* map_create_other_type(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_OtherState_t map_create_other_type(char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -496,7 +527,7 @@ MAP_EXTERNCALL MAP_OtherStateType_t* map_create_other_type(char* map_msg, MAP_ER
  * @param   ierr, error code
  * @return  initialization output type (equivalent C binding struct)  
  */
-MAP_EXTERNCALL MAP_InitOutputType_t* map_create_initout_type(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_InitOutput_t map_create_initout_type(char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -510,7 +541,7 @@ MAP_EXTERNCALL MAP_InitOutputType_t* map_create_initout_type(char* map_msg, MAP_
  * @param   ierr, error code
  * @return  input type (equivalent C binding struct)  
  */
-MAP_EXTERNCALL MAP_InputType_t* map_create_input_type(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_Input_t map_create_input_type(char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -524,7 +555,7 @@ MAP_EXTERNCALL MAP_InputType_t* map_create_input_type(char* map_msg, MAP_ERROR_C
  * @param   ierr, error code
  * @return  parameter type (equivalent C binding struct)  
  */
-MAP_EXTERNCALL MAP_ParameterType_t* map_create_parameter_type(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_Parameter_t map_create_parameter_type(char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -538,7 +569,7 @@ MAP_EXTERNCALL MAP_ParameterType_t* map_create_parameter_type(char* map_msg, MAP
  * @param   ierr, error code
  * @return  constraint type (equivalent C binding struct)  
  */
-MAP_EXTERNCALL MAP_ConstraintStateType_t* map_create_constraint_type(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_ConstraintState_t map_create_constraint_type(char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -552,7 +583,7 @@ MAP_EXTERNCALL MAP_ConstraintStateType_t* map_create_constraint_type(char* map_m
  * @param   ierr, error code
  * @return  output type (equivalent C binding struct)  
  */
-MAP_EXTERNCALL MAP_OutputType_t* map_create_output_type(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_Output_t map_create_output_type(char* map_msg, MAP_ERROR_CODE* ierr);
 
 
 /**
@@ -563,7 +594,10 @@ MAP_EXTERNCALL MAP_OutputType_t* map_create_output_type(char* map_msg, MAP_ERROR
  * @param   ierr, error code
  * @return  continuous type (equivalent C binding struct)  
  */
-MAP_EXTERNCALL MAP_ContinuousStateType_t* map_create_continuous_type(char* map_msg, MAP_ERROR_CODE* ierr);
+MAP_EXTERNCALL MAP_ContinuousState_t map_create_continuous_type(char* map_msg, MAP_ERROR_CODE* ierr);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _MAPAPI_H */

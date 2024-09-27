@@ -43,6 +43,7 @@ add_library(openfast_prelib STATIC
 target_link_libraries(openfast_prelib 
   nwtclibs
   versioninfolib
+  aerodisklib
   aerodynlib
   extloadslib
   beamdynlib
@@ -54,11 +55,12 @@ target_link_libraries(openfast_prelib
   icedynlib
   icefloelib
   ifwlib
-  maplib
+  mappplib
   moordynlib
   orcaflexlib
   sctypeslib
   seastlib
+  sedlib
   servodynlib
   subdynlib
 )

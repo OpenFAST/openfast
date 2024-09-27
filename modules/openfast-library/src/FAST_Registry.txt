@@ -12,10 +12,12 @@
 # ...... Include files (definitions from NWTC Library and module components) ............................................................................
 include	Registry_NWTC_Library.txt
 usefrom	ElastoDyn_Registry.txt
+usefrom	SED_Registry.txt
 usefrom	Registry_BeamDyn.txt
 usefrom	ServoDyn_Registry.txt
 usefrom	AeroDyn_Registry.txt
-usefrom ExtLoads_Registry.txt
+usefrom	AeroDisk_Registry.txt
+usefrom  ExtLoads_Registry.txt
 usefrom	SubDyn_Registry.txt
 usefrom	SeaState.txt
 usefrom	HydroDyn.txt
@@ -55,7 +57,9 @@ param	^	-	INTEGER	Module_MD	-	16	-	"MoorDyn"	-
 param	^	-	INTEGER	Module_Orca	-	17	-	"OrcaFlex integration (HD/Mooring)"	-
 param	^	-	INTEGER	Module_IceF	-	18	-	"IceFloe"	-
 param	^	-	INTEGER	Module_IceD	-	19	-	"IceDyn"	-
-param	^	-	INTEGER	NumModules	-	19	-	"The number of modules available in FAST"	-
+param	^	-	INTEGER	Module_ADsk	-	20	-	"AeroDisk"	-
+param	^	-	INTEGER	Module_SED 	-	21	-	"Simplified-ElastoDyn" -
+param	^	-	INTEGER	NumModules	-	21	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
@@ -125,13 +129,13 @@ typedef	^	FAST_ParameterType	Reki	UJacSclFact	-	-	-	"Scaling factor used to get 
 typedef	^	FAST_ParameterType	IntKi	SizeJac_Opt1	{9}	-	-	"(1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion;"	-
 typedef	^	FAST_ParameterType	IntKi	SolveOption	-	-	-	"Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc)"	-
 # Feature switches and flags:
-typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD; Module_SED}"	-
 typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_ExtInfw}"	-
-typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_ADsk; Module_AD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompServo	-	-	-	"Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompSeaSt   -	-	-	"Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt}"	-
 typedef	^	FAST_ParameterType	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (switch) {Module_None; Module_HD}"	-
-typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_HD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_SD, Module_ExtPtfm}"	-
 typedef	^	FAST_ParameterType	IntKi	CompMooring	-	-	-	"Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca}"	-
 typedef	^	FAST_ParameterType	IntKi	CompIce	-	-	-	"Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}"	-
 typedef	^	FAST_ParameterType	IntKi	MHK	        -	-	-	"MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}"	-
@@ -151,7 +155,7 @@ typedef ^   FAST_ParameterType  ReKi    Pvap        -   -   -   "Vapour pressure
 typedef ^   FAST_ParameterType  ReKi    WtrDpth     -   -   -   "Water depth" m
 typedef ^   FAST_ParameterType  ReKi    MSL2SWL     -   -   -   "Offset between still-water level and mean sea level" m
 # Input file names:
-typedef	^	FAST_ParameterType	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn input file"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn/Simplified-ElastoDyn input file"	-
 typedef	^	FAST_ParameterType	CHARACTER(1024)	BDBldFile	{MaxNBlades}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
 typedef	^	FAST_ParameterType	CHARACTER(1024)	InflowFile	-	-	-	"Name of file containing inflow wind input parameters"	-
 typedef	^	FAST_ParameterType	CHARACTER(1024)	AeroFile	-	-	-	"Name of file containing aerodynamic input parameters"	-
@@ -245,6 +249,7 @@ typedef   ^      ^                   ED_DiscreteStateType                  xd_ED
 typedef   ^      ^                   ED_ConstraintStateType                 z_ED      {:}    -   -   "Constraint states"
 typedef   ^      ^                   ED_OtherStateType                OtherSt_ED      {:}    -   -   "Other states"
 typedef   ^      ^                   ED_InputType                           u_ED      {:}    -   -   "System inputs"
+# ..... No Simplified-ElastoDyn data ...........................................................................................
 # ..... ServoDyn OP data .......................................................................................................
 typedef   FAST   FAST_LinStateSave   SrvD_ContinuousStateType               x_SrvD    {:}    -   -   "Continuous states"
 typedef   ^      ^                   SrvD_DiscreteStateType                xd_SrvD    {:}    -   -   "Discrete states"
@@ -257,7 +262,8 @@ typedef   ^      ^                   AD_DiscreteStateType                  xd_AD
 typedef   ^      ^                   AD_ConstraintStateType                 z_AD      {:}    -   -   "Constraint states"
 typedef   ^      ^                   AD_OtherStateType                OtherSt_AD      {:}    -   -   "Other states"
 typedef   ^      ^                   AD_InputType                           u_AD      {:}    -   -   "System inputs"
-# ..... InflowWind OP data .......................................................................................................
+# ..... No AeroDisk data ......................................................................................................
+# ..... InflowWind OP data ....................................................................................................
 typedef   FAST   FAST_LinStateSave   InflowWind_ContinuousStateType         x_IfW     {:}    -   -   "Continuous states"
 typedef   ^      ^                   InflowWind_DiscreteStateType          xd_IfW     {:}    -   -   "Discrete states"
 typedef   ^      ^                   InflowWind_ConstraintStateType         z_IfW     {:}    -   -   "Constraint states"
@@ -452,6 +458,21 @@ typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 
+# ..... Simplified-ElastoDyn data ............................................................................................
+typedef	FAST	SED_Data	SED_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	^	^	SED_DiscreteStateType	xd	{2}	-	-	"Discrete states"
+typedef	^	^	SED_ConstraintStateType	z	{2}	-	-	"Constraint states"
+typedef	^	^	SED_OtherStateType	OtherSt	{2}	-	-	"Other states"
+typedef	^	^	SED_ParameterType	p	-	-	-	"Parameters"
+typedef	^	^	SED_InputType	u	-	-	-	"System inputs"
+typedef	^	^	SED_OutputType	y	-	-	-	"System outputs"
+typedef	^	^	SED_MiscVarType	m	-	-	-	"Misc (optimization) variables not associated with time"
+typedef	^	^	SED_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
+typedef	^	^	SED_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
+typedef	^	^	SED_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
+
+
 # ..... ServoDyn data .......................................................................................................
 typedef	FAST	ServoDyn_Data	SrvD_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
 typedef	^	^	SrvD_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
@@ -494,6 +515,20 @@ typedef	^	^	ExtLd_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	ExtLd_InputType	u	-	-	-	"System inputs"
 typedef	^	^	ExtLd_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	ExtLd_MiscVarType	m	-	-	-	"Misc/optimization variables"
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
+
+# ..... AeroDisk data .......................................................................................................
+typedef	FAST	AeroDisk_Data	ADsk_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	^	^	ADsk_DiscreteStateType	xd	{2}	-	-	"Discrete states"
+typedef	^	^	ADsk_ConstraintStateType	z	{2}	-	-	"Constraint states"
+typedef	^	^	ADsk_OtherStateType	OtherSt	{2}	-	-	"Other states"
+typedef	^	^	ADsk_ParameterType	p	-	-	-	"Parameters"
+typedef	^	^	ADsk_InputType	u	-	-	-	"System inputs"
+typedef	^	^	ADsk_OutputType	y	-	-	-	"System outputs"
+typedef	^	^	ADsk_MiscVarType	m	-	-	-	"Misc/optimization variables"
+typedef	^	^	ADsk_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
+typedef	^	^	ADsk_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
+typedef	^	^	ADsk_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 # ..... InflowWind data .......................................................................................................
@@ -690,11 +725,14 @@ typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_BD_P_B 	{:}{:}	-	-	"Map ServoD
 typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_SubStructure	{:}	-	-	"Map ServoDyn/SStC platform point mesh load   to SubDyn/ElastoDyn  point load mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SubStructure_2_SStC_P_P	{:}	-	-	"Map SubDyn y3mesh or ED platform mesh motion to ServoDyn/SStC point mesh"
 # ED --> SrvD -- PlatformPtMesh motion to SrvD%PtfmMotionMesh for passing to DLL
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	-   	-	-	"Map ElastoDyn     platform point mesh motion to ServoDyn      point mesh -- for passing to controller"
-# ED/BD <-> AD (blades)
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	-   	-	-	"Map ElastoDyn/Simplified-ElastoDyn platform point mesh motion to ServoDyn      point mesh -- for passing to controller"
+# ED/BD/SED <-> AD (blades)
 typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_BDED_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BD_L	{:}	-	-	"Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations"
+typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_L_B	{:}	-	-	"Map Simplified-ElastoDyn BladeRoot point meshes to rigid AeroDyn BladeMotion line2 meshes"
+typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_R	{:}	-	-	"Map Simplified-ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
+typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_SED_P	{:}	-	-	"Map AeroDyn blade load output mesh to Simplified-ElastoDyn Hub point mesh"
 # ED <-> AD (nacelle, tower, hub, blade root, tailfin)
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_N	-	-	-	"Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
@@ -704,6 +742,16 @@ typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn Towe
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_P_T	-	-	-	"Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
+# ED <-> ADsk (hub)
+typedef	^	FAST_ModuleMapType	MeshMapType	ADsk_P_2_ED_P_H	-	-	-	"Map AeroDisk point load mesh to ElastoDyn hub point load mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_ADsk_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh"
+# SED <-> AD (nacelle, tower, hub, blade root)
+typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_N	-	-	-	"Map Simplified-ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SED_L_2_AD_L_T	-	-	-	"Map Simplified-ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn TowerMotion line2 mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_H	-	-	-	"Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
+# SED <-> ADsk (hub)
+typedef	^	FAST_ModuleMapType	MeshMapType	ADsk_P_2_SED_P_H	-	-	-	"Map AeroDisk point load mesh to Simplfied-ElastoDyn hub point load mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_ADsk_P_H	-	-	-	"Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_H	-	-	-	"Map AeroDyn HubLoad point mesh to ElastoDyn HubPtLoad point mesh"
 # ED/BD <-> ExtLd (blades)
 typedef  ^  FAST_ModuleMapType   MeshMapType BDED_L_2_ExtLd_P_B  {:}  -  -  "Map ElastoDyn/BeamDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to ExtLoads point meshes"
@@ -746,6 +794,7 @@ typedef	^	FAST_ModuleMapType	MeshType	y_BD_BldMotion_4Loads	{:}	-	-	"BD blade mo
 typedef	^	FAST_ModuleMapType	MeshType	u_BD_Distrload	{:}	-	-	"copy of BD DistrLoad input meshes"
 typedef	^	FAST_ModuleMapType	MeshType	u_Orca_PtfmMesh	-	-	-	"copy of Orca PtfmMesh input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ExtPtfm_PtfmMesh	-	-	-	"copy of ExtPtfm_MCKF PtfmMesh input mesh"
+typedef	^	FAST_ModuleMapType	MeshType	u_SED_HubPtLoad	-	-	-	"copy of  SED input mesh"
 #typedef	^	FAST_ModuleMapType	MeshType	u_FarmMD_CoupledLoads -	-	-	"FAST-internal copy of MoorDyn's CoupledLoads output mesh for use with shared moorings in FAST.Farm"
 # for steady-state solve (convert 1 blade to all blades)
 typedef	^	FAST_ModuleMapType	R8Ki	HubOrient	{:}{:}{:}	-	-	"Orientation matrix to translate results from blade 1 to remaining blades in aeromaps"	"(-)"
@@ -780,12 +829,16 @@ typedef	^	FAST_MiscVarType	FAST_MiscLinType	Lin	-	-	-	"misc data for linearizati
 # ..... FAST_InitData data .......................................................................................................
 typedef   ^   FAST_InitData    ED_InitInputType             InData_ED       -  -  -  "ED Initialization input data"
 typedef   ^   FAST_InitData    ED_InitOutputType           OutData_ED       -  -  -  "ED Initialization output data"
+typedef   ^   FAST_InitData    SED_InitInputType            InData_SED      -  -  -  "SED Initialization input data"
+typedef   ^   FAST_InitData    SED_InitOutputType          OutData_SED      -  -  -  "SED Initialization output data"
 typedef   ^   FAST_InitData    BD_InitInputType             InData_BD       -  -  -  "BD Initialization input data"
 typedef   ^   FAST_InitData    BD_InitOutputType           OutData_BD       :  -  -  "BD Initialization output data"
 typedef   ^   FAST_InitData    SrvD_InitInputType           InData_SrvD     -  -  -  "SrvD Initialization input data"
 typedef   ^   FAST_InitData    SrvD_InitOutputType         OutData_SrvD     -  -  -  "SrvD Initialization output data"
 typedef   ^   FAST_InitData    AD_InitInputType             InData_AD       -  -  -  "AD Initialization input data"
 typedef   ^   FAST_InitData    AD_InitOutputType           OutData_AD       -  -  -  "AD Initialization output data"
+typedef   ^   FAST_InitData    ADsk_InitInputType           InData_ADsk     -  -  -  "ADsk Initialization input data"
+typedef   ^   FAST_InitData    ADsk_InitOutputType         OutData_ADsk     -  -  -  "ADsk Initialization output data"
 typedef   ^   FAST_InitData    ExtLd_InitInputType          InData_ExtLd     -  -  - "ExtLd Initialization input data"
 typedef   ^   FAST_InitData    ExtLd_InitOutputType        OutData_ExtLd     -  -  - "ExtLd Initialization output data"
 typedef   ^   FAST_InitData    InflowWind_InitInputType     InData_IfW      -  -  -  "IfW Initialization input data"
@@ -816,8 +869,6 @@ typedef   ^   FAST_InitData    IceD_InitOutputType         OutData_IceD     -  -
 
 # ..... FAST External Initialization Input data .......................................................................................................
 typedef	^	FAST_ExternInitType	DbKi	Tmax	-	-1	-	"External code specified Tmax"	s
-typedef	^	FAST_ExternInitType	IntKi	SensorType	-	SensorType_None	-	"lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file"	-
-typedef	^	FAST_ExternInitType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
 typedef	^	FAST_ExternInitType	IntKi	TurbIDforName	-	-1	-	"ID number for turbine (used to create output file naming convention)"	-
 typedef	^	FAST_ExternInitType	ReKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics or in FAST.Farm)"	m
 typedef ^   FAST_ExternInitType IntKi   WaveFieldMod -  -   -   "Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
@@ -839,10 +890,6 @@ typedef ^   FAST_ExternInitType DbKi    DTdriver        -    -1     -   "Externa
 typedef ^   FAST_ExternInitType Logical TwrAero         -  .false.  -   "Is Tower aerodynamics enabled for ExtLoads module?"
 typedef ^   FAST_ExternInitType ReKi    az_blend_mean   -     -     -   "Mean azimuth at which to blend the external and aerodyn loads" - 
 typedef ^   FAST_ExternInitType ReKi    az_blend_delta  -     -     -   "Mean azimuth at which to blend the external and aerodyn loads" - 
-typedef ^   FAST_ExternInitType ReKi    vel_mean        -     -     -   "Mean velocity at reference height"     m/s
-typedef ^   FAST_ExternInitType ReKi    wind_dir        -     -     -   "Wind direction in compass angle"       degrees
-typedef ^   FAST_ExternInitType ReKi    z_ref           -     -     -   "Reference height for velocity profile" m
-typedef ^   FAST_ExternInitType ReKi    shear_exp       -     -     -   "Shear exponent"                        -
 
 # ..... FAST Turbine Data (one realization) .......................................................................................................
 typedef	^	FAST_TurbineType	IntKi	TurbID	-	1	-	"Turbine ID Number"	-
@@ -851,9 +898,11 @@ typedef	^	FAST_TurbineType	FAST_OutputFileType	y_FAST	-	-	-	"Output variables fo
 typedef	^	FAST_TurbineType	FAST_MiscVarType	m_FAST	-	-	-	"Miscellaneous variables"	-
 typedef	^	FAST_TurbineType	FAST_ModuleMapType	MeshMapData	-	-	-	"Data for mapping between modules"	-
 typedef	^	FAST_TurbineType	ElastoDyn_Data	ED	-	-	-	"Data for the ElastoDyn module"	-
+typedef	^	FAST_TurbineType	SED_Data	SED	-	-	-	"Data for the Simplified-ElastoDyn module"	-
 typedef	^	FAST_TurbineType	BeamDyn_Data	BD	-	-	-	"Data for the BeamDyn module"	-
 typedef	^	FAST_TurbineType	ServoDyn_Data	SrvD	-	-	-	"Data for the ServoDyn module"	-
 typedef	^	FAST_TurbineType	AeroDyn_Data	AD	-	-	-	"Data for the AeroDyn module"	-
+typedef	^	FAST_TurbineType	AeroDisk_Data	ADsk	-	-	-	"Data for the AeroDisk module"	-
 typedef	^	FAST_TurbineType	ExtLoads_Data	ExtLd	-	-	-	"Data for the External loads module"	-
 typedef	^	FAST_TurbineType	InflowWind_Data	IfW	-	-	-	"Data for InflowWind module"	-
 typedef	^	FAST_TurbineType	ExternalInflow_Data	ExtInfw	-	-	-	"Data for ExternalInflow integration module"	-

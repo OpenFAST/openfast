@@ -1107,6 +1107,56 @@ subroutine limitInductionFactors(a,ap)
    
 end subroutine limitInductionFactors
 !-----------------------------------------------------------------------------------------
+!> This function returns a smoothstep function
+!>    See: https://en.wikipedia.org/wiki/Smoothstep
+real(reKi) function smoothStep( xIN, order, x1, f1, x2, f2 ) result(f)
+! SMOOTHSTEP  Blending function.
+!
+!  f = SMOOTHSTEP( x, order, x1, f1, x2, f2 )
+!   x: input vector
+!   order: polynomial order of smoothstep (3, 5, 7 are supported)
+!   x1: "left edge" x value of the smoothstep
+!   f1: "left edge" functional value of the smoothstep
+!   x2: "right edge" x value of the smoothstep
+!   f2: "right edge" functional value of the smoothstep
+!
+!  https://en.wikipedia.org/wiki/Smoothstep
+
+   implicit none
+   
+   real(ReKi), intent(in) :: xIN
+   INTEGER,    intent(in) :: order
+   real(ReKi), intent(in) :: x1
+   real(ReKi), intent(in) :: f1
+   real(ReKi), intent(in) :: x2
+   real(ReKi), intent(in) :: f2
+   real(ReKi) :: x
+
+   x = (xIN-x1)/(x2-x1)
+   x = min( max( x, 0.0_ReKi ), 1.0_ReKi )
+
+   select case (order)
+   case (3)
+      ! 3rd order
+      !  f' = 0 at x=0 and x=1
+      f = -2.0_ReKi*x**3 + 3.0_ReKi*x**2
+   case (5)
+      ! f' = f'' = 0 at x=0 and x=1
+      f = 6.0_ReKi*x**5 - 15.0_ReKi*x**4 + 10.0_ReKi*x**3;
+   case (7)
+      ! f' = f'' = f''' = 0 at x=0 and x=1
+      f = -20.0_ReKi*x**7 + 70.0_ReKi*x**6 - 84.0_ReKi*x**5 + 35.0_ReKi*x**4;
+   case default
+      ! an error?
+      call WrScr('Programming error in smoothStep. Invalid order specified.')
+      f = x
+   end select
+
+   ! Scale f from [0,1] to [f1,f2]
+   f = (f2-f1)*f+f1
+   
+end function smoothStep
+!-----------------------------------------------------------------------------------------
 subroutine sortRoots(a)
 ! Sort the roots
     complex(R8Ki), intent(inout) :: a(4)

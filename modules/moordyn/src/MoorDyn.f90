@@ -2092,9 +2092,10 @@ CONTAINS
       DO iTurb = 1,p%nTurbines
 
          ! calculate rotation matrix OrMat for the initial orientation provided for this turbine
-         CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb), OrMat, '', ErrStat2, ErrMsg2)
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
+         ! CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb), OrMat, '', ErrStat2, ErrMsg2)
+         ! CALL CheckError( ErrStat2, ErrMsg2 )
+         ! IF (ErrStat >= AbortErrLev) RETURN
+         OrMat = EulerConstructZYX((/InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb)/))
          
          ! count number of coupling nodes needed for the mesh of this turbine
          K = p%nCpldBodies(iTurb) + p%nCpldRods(iTurb) + p%nCpldPoints(iTurb)
@@ -2127,7 +2128,7 @@ CONTAINS
             J = J + 1
          
             rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6  ! set reference position as per input file
-            OrMatRef = ( m%RodList(m%CpldBodyIs(l,iTurb))%OrMat )  ! set reference orientation as per input file
+            OrMatRef = ( m%BodyList(m%CpldBodyIs(l,iTurb))%OrMat )  ! set reference orientation as per input file
             CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2, OrMatRef)
 
             ! set absolute initial positions in MoorDyn 
@@ -2139,7 +2140,7 @@ CONTAINS
             u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
             u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
             m%BodyList(m%CpldBodyIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract(OrMat2)     ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
+            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract( TRANSPOSE(OrMat2) )   ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
 
             CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
             
@@ -3344,8 +3345,7 @@ CONTAINS
          DO l = 1,p%nCpldBodies(iTurb)
             J = J + 1
             r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
-            !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics(iTurb)%Orientation(:,:,J) ) )
-            r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! <<< changing back
+            r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! No Transpose becasue these are extrinsic
             v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
             v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
             a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
@@ -4675,7 +4675,7 @@ SUBROUTINE MD_Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1)
       u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) = u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2)
-      CALL PerturbOrientationMatrix( u%CoupledKinematics(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+      CALL PerturbOrientationMatrix( u%CoupledKinematics(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.false. )
    CASE ( 3)
       u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) = u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4)
