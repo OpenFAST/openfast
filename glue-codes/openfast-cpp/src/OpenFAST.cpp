@@ -452,7 +452,7 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
         ncOutVarIDs_["bld_ld"] = tmpVarID;
         ierr = nc_def_var(ncid, "bld_ld_loc", NC_DOUBLE, 4, bldDataDims.data(), &tmpVarID);
         ncOutVarIDs_["bld_ld_loc"] = tmpVarID;
-        ierr = nc_def_var(ncid, "hub_ref_pos", NC_DOUBLE, 2, ptRefDataDims.data(), &tmpVarID);
+        ierr = nc_def_var(ncid, "hub_ref_pos", NC_DOUBLE, 1, ptRefDataDims.data(), &tmpVarID);
         ncOutVarIDs_["hub_ref_pos"] = tmpVarID;
         ierr = nc_def_var(ncid, "hub_disp", NC_DOUBLE, 2, ptDataDims.data(), &tmpVarID);
         ncOutVarIDs_["hub_disp"] = tmpVarID;
@@ -461,7 +461,7 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
         ierr = nc_def_var(ncid, "hub_rotvel", NC_DOUBLE, 2, ptDataDims.data(), &tmpVarID);
         ncOutVarIDs_["hub_rotvel"] = tmpVarID;
 
-        ierr = nc_def_var(ncid, "nac_ref_pos", NC_DOUBLE, 2, ptRefDataDims.data(), &tmpVarID);
+        ierr = nc_def_var(ncid, "nac_ref_pos", NC_DOUBLE, 1, ptRefDataDims.data(), &tmpVarID);
         ncOutVarIDs_["nac_ref_pos"] = tmpVarID;
         ierr = nc_def_var(ncid, "nac_disp", NC_DOUBLE, 2, ptDataDims.data(), &tmpVarID);
         ncOutVarIDs_["nac_disp"] = tmpVarID;
