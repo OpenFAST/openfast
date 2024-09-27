@@ -164,7 +164,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       REAL(ReKi), ALLOCATABLE                :: WAMITPer  (:)                        ! Period         components as ordered in the WAMIT output files (sec    )
       REAL(ReKi), ALLOCATABLE                :: WAMITWvDir(:)                        ! Wave direction components as ordered in the WAMIT output files (degrees)
 
-      INTEGER                                :: I,iGrid,iX,iY,iHdg,iBdy              ! Generic index
+      INTEGER                                :: I,iGrid,iX,iY,iHdg,iBdy,iStp         ! Generic index
       INTEGER                                :: InsertInd                            ! The lowest sorted index whose associated frequency component is higher than the current frequency component -- this is to sort the frequency components from lowest to highest
       INTEGER                                :: J                                    ! Generic index
       INTEGER                                :: K                                    ! Generic index
@@ -190,6 +190,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       TYPE(FFT_DataType)                     :: FFT_Data                             ! the instance of the FFT module we're using
       integer(IntKi)                         :: iSub, jSub                           ! indices into the 6x6 sub-matrices used to redimensionalize the WAMIT data (Needed because NBodyMod=1 could have WAMIT matrices which are 6N x 6N)
       integer(IntKi)                         :: iBody                                ! WAMIT body index
+      real(ReKi)                             :: BdyPos0(3)                           ! Initial translational displacement of the WAMIT body
       real(R8Ki)                             :: orientation(3,3)                     ! Initial orientation of the WAMIT body 
       real(R8Ki)                             :: theta(3)                             ! Euler angle rotations of the WAMIT body
       real(ReKi)                             :: WaveNmbr                             ! Frequency-dependent wave number
@@ -1371,7 +1372,7 @@ end if
                   end if   
             end if
             
-            IF ( (p%ExctnMod>0) .AND. (p%ExctnDisp==2) ) THEN ! Allocate array for filtered potential-flow body positions
+            IF ( (p%ExctnMod>0) .AND. (p%ExctnDisp==2) ) THEN ! Allocate and initialize array for filtered potential-flow body positions
                p%ExctnFiltConst = exp(-2.0*Pi*p%ExctnCutOff * Interval)
                ALLOCATE ( xd%BdyPosFilt(1:2, 1:p%NBody, 1:3) , STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 )  THEN
@@ -1379,7 +1380,16 @@ end if
                   CALL Cleanup()
                   RETURN            
                END IF
-               xd%BdyPosFilt = 0.0_ReKi
+               orientation  = EulerConstructZYX(InitInp%PlatformPos(4:6));
+               DO iBdy = 1,p%NBody
+                  ! Initial WAMIT body position
+                  BdyPos0 = InitInp%PlatformPos(1:3) &
+                            + matmul((/InitInp%PtfmRefxt(iBdy),InitInp%PtfmRefyt(iBdy),InitInp%PtfmRefzt(iBdy)/),orientation) &
+                            - (/InitInp%PtfmRefxt(iBdy),InitInp%PtfmRefyt(iBdy),InitInp%PtfmRefzt(iBdy)/)
+                  DO iStp = 1,3
+                     xd%BdyPosFilt(1:2,iBdy,iStp) = BdyPos0(1:2)
+                  END DO
+               END DO
             END IF
 
          ENDSELECT   

@@ -94,6 +94,7 @@ IMPLICIT NONE
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos = 0.0_ReKi      !< Initial platform position (6 DOFs) [-]
   END TYPE HydroDyn_InitInputType
 ! =======================
 ! =========  HydroDyn_InitOutputType  =======
@@ -594,7 +595,7 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(0), UB(0)
+   integer(B8Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyInitInput'
@@ -612,6 +613,7 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
    DstInitInputData%WaveField => SrcInitInputData%WaveField
+   DstInitInputData%PlatformPos = SrcInitInputData%PlatformPos
 end subroutine
 
 subroutine HydroDyn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -650,6 +652,7 @@ subroutine HydroDyn_PackInitInput(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PlatformPos)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -657,7 +660,7 @@ subroutine HydroDyn_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(HydroDyn_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackInitInput'
-   integer(B8Ki)   :: LB(0), UB(0)
+   integer(B8Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -690,6 +693,7 @@ subroutine HydroDyn_UnPackInitInput(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PlatformPos); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
