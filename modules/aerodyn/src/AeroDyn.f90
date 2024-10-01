@@ -2159,7 +2159,7 @@ subroutine RotWriteOutputs( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m
 
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
-   character(*), parameter                      :: RoutineName = 'RotCalcOutput'
+   character(*), parameter                      :: RoutineName = 'RotWriteOutputs'
    real(R8Ki)                                   :: x_hat_disk(3)
 !   LOGICAL                                      :: CalcWriteOutput   
    !-------------------------------------------------------   
