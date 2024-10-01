@@ -42,13 +42,13 @@ add_library(mappplib STATIC
 target_sources(
   mappplib
   PUBLIC
-    $<INSTALL_INTERFACE:MAP_Types.h>
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/mappp/MAP_Types.h>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/MAP_Types.h>
-    $<INSTALL_INTERFACE:mapsys.h>
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/mappp/mapsys.h>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/mapsys.h>
-    $<INSTALL_INTERFACE:maperror.h>
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/mappp/maperror.h>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/maperror.h>
-    $<INSTALL_INTERFACE:mapapi.h>
+    $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include/mappp/mapapi.h>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/mapapi.h>
 )
 target_link_libraries(mappplib nwtclibs)
