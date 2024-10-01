@@ -76,7 +76,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SensorType = 0_IntKi      !< Lidar sensor type [-]
     INTEGER(IntKi)  :: NumBeam = 0_IntKi      !< Number of beams [-]
     INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< Number of pulse gates [-]
-    REAL(ReKi)  :: PulseSpacing = 0.0_ReKi      !< Distance between range gates [-]
     REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
   END TYPE SrvD_InitInputType
 ! =======================
@@ -249,7 +248,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SensorType = 0_IntKi      !< Lidar sensor type [-]
     INTEGER(IntKi)  :: NumBeam = 0_IntKi      !< Number of beams [-]
     INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< Number of pulse gates [-]
-    INTEGER(IntKi)  :: PulseSpacing = 0_IntKi      !< Distance between range gates [-]
     INTEGER(IntKi)  :: URefLid = 0_IntKi      !< Reference average wind speed for the lidar [m/s]
     REAL(DbKi)  :: DLL_DT = 0.0_R8Ki      !< interval for calling DLL (integer multiple number of DT) [s]
     CHARACTER(1024)  :: DLL_InFile      !< Name of input file used in DLL [-]
@@ -491,8 +489,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SensorType = 0_IntKi      !< Lidar sensor type [-]
     INTEGER(IntKi)  :: NumBeam = 0_IntKi      !< Number of beams [-]
     INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< Number of pulse gates [-]
-    REAL(ReKi)  :: PulseSpacing = 0.0_ReKi      !< Distance between range gates [m]
-    REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
+    REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar - bjj: not sure why we have this variable [m/s]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -733,7 +730,6 @@ subroutine SrvD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    DstInitInputData%SensorType = SrcInitInputData%SensorType
    DstInitInputData%NumBeam = SrcInitInputData%NumBeam
    DstInitInputData%NumPulseGate = SrcInitInputData%NumPulseGate
-   DstInitInputData%PulseSpacing = SrcInitInputData%PulseSpacing
    DstInitInputData%URefLid = SrcInitInputData%URefLid
 end subroutine
 
@@ -825,7 +821,6 @@ subroutine SrvD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%SensorType)
    call RegPack(RF, InData%NumBeam)
    call RegPack(RF, InData%NumPulseGate)
-   call RegPack(RF, InData%PulseSpacing)
    call RegPack(RF, InData%URefLid)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -878,7 +873,6 @@ subroutine SrvD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%SensorType); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBeam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumPulseGate); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%PulseSpacing); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%URefLid); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1671,7 +1665,6 @@ subroutine SrvD_CopyBladedDLLType(SrcBladedDLLTypeData, DstBladedDLLTypeData, Ct
    DstBladedDLLTypeData%SensorType = SrcBladedDLLTypeData%SensorType
    DstBladedDLLTypeData%NumBeam = SrcBladedDLLTypeData%NumBeam
    DstBladedDLLTypeData%NumPulseGate = SrcBladedDLLTypeData%NumPulseGate
-   DstBladedDLLTypeData%PulseSpacing = SrcBladedDLLTypeData%PulseSpacing
    DstBladedDLLTypeData%URefLid = SrcBladedDLLTypeData%URefLid
    DstBladedDLLTypeData%DLL_DT = SrcBladedDLLTypeData%DLL_DT
    DstBladedDLLTypeData%DLL_InFile = SrcBladedDLLTypeData%DLL_InFile
@@ -2049,7 +2042,6 @@ subroutine SrvD_PackBladedDLLType(RF, Indata)
    call RegPack(RF, InData%SensorType)
    call RegPack(RF, InData%NumBeam)
    call RegPack(RF, InData%NumPulseGate)
-   call RegPack(RF, InData%PulseSpacing)
    call RegPack(RF, InData%URefLid)
    call RegPack(RF, InData%DLL_DT)
    call RegPack(RF, InData%DLL_InFile)
@@ -2167,7 +2159,6 @@ subroutine SrvD_UnPackBladedDLLType(RF, OutData)
    call RegUnpack(RF, OutData%SensorType); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBeam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumPulseGate); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%PulseSpacing); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%URefLid); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DLL_DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DLL_InFile); if (RegCheckErr(RF, RoutineName)) return
@@ -4861,7 +4852,6 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%SensorType = SrcParamData%SensorType
    DstParamData%NumBeam = SrcParamData%NumBeam
    DstParamData%NumPulseGate = SrcParamData%NumPulseGate
-   DstParamData%PulseSpacing = SrcParamData%PulseSpacing
    DstParamData%URefLid = SrcParamData%URefLid
 end subroutine
 
@@ -5159,7 +5149,6 @@ subroutine SrvD_PackParam(RF, Indata)
    call RegPack(RF, InData%SensorType)
    call RegPack(RF, InData%NumBeam)
    call RegPack(RF, InData%NumPulseGate)
-   call RegPack(RF, InData%PulseSpacing)
    call RegPack(RF, InData%URefLid)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -5354,7 +5343,6 @@ subroutine SrvD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%SensorType); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBeam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumPulseGate); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%PulseSpacing); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%URefLid); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 

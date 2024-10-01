@@ -14,16 +14,6 @@ param	Lidar	-	IntKi	SensorType_SinglePoint	    -	1	-		-
 param	^	-	IntKi	SensorType_ContinuousLidar  -	2	-		-
 param	^	-	IntKi	SensorType_PulsedLidar      -	3	-		-
 
-# ..... LIDAR_InitInputType data .......................................................................................................
-typedef	^	Lidar_InitInputType	IntKi	SensorType	     -	SensorType_None	- "SensorType_* parameter"	-
-typedef	^	Lidar_InitInputType	DbKi	Tmax	             -	    -	   -	"the length of the simulation" "s"
-typedef	^	Lidar_InitInputType	ReKi	RotorApexOffsetPos  {3}     -	   -	"position of the lidar unit relative to the rotor apex of rotation" "m"
-typedef	^	Lidar_InitInputType	ReKi	HubPosition	    {3}     -	   -	"initial position of the hub (lidar mounted on hub) [0,0,HubHeight]" "m"
-typedef	^	Lidar_InitInputType	IntKi	NumPulseGate	     -	    -	   -	"the number of range gates to return wind speeds at"	-
-typedef	^	Lidar_InitInputType	LOGICAL	LidRadialVel	     -	    -	   -	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
-
-# ..... LIDAR_InitInputType data .......................................................................................................
-typedef	^	Lidar_InitOutputType	ReKi	DummyInitOut	     -
 
 # ..... LIDAR_ParameterType data .......................................................................................................
 typedef	^	Lidar_ParameterType	IntKi	NumPulseGate	     -      -	   -	"the number of range gates to return wind speeds at; pulsed lidar only"	-
@@ -46,7 +36,7 @@ typedef	^	Lidar_ParameterType	ReKi	FocalDistanceZ       :      -      -   "LIDAR
 typedef	^	Lidar_ParameterType	ReKi	MsrPosition      {:}{:}     -      -	"Position of the desired wind measurement, per beam (was XMsrPt, YMsrPt, ZMsrPt)"	"m"
 typedef	^	Lidar_ParameterType	ReKi	PulseSpacing         -      -      -   "Distance between range gates" "m"
 typedef	^	Lidar_ParameterType	ReKi	URefLid		     -      -      -	"Reference average wind speed for the lidar" "m/s"
-typedef	^	Lidar_ParameterType	LOGICAL	ConsiderHubMotion    -      -      -	"Whether to consider the hub motion's impact on the Lidar measurement"	-
+typedef	^	Lidar_ParameterType	IntKi	ConsiderHubMotion    -      -      -	"Whether to consider the hub motion's impact on the Lidar measurement"	-
 typedef	^	Lidar_ParameterType	ReKi	MeasurementInterval  -      -      -	"Time steps between lidar measurements" "s"
 typedef	^	Lidar_ParameterType	ReKi	LidPosition	    {3}     -	   -	"Position of the Lidar unit (was XLidPt, YLidPt, ZLidPt)" "m"
 typedef	^	Lidar_ParameterType	IntKi	NumMeasurements              -      0      -   "Number of measurements output"	-

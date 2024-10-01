@@ -504,18 +504,14 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    CALL ParseVar( InFileInfo, CurLine, "NumBeam", InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
    if (Failed()) return
 
-     ! Before proceeding, make sure that NumBeam makes sense
-   IF ((InputFileData%SensorType == 1) .and. (InputFileData%NumBeam < 1 .OR. InputFileData%NumBeam > 5)) THEN
-      CALL SetErrStat( ErrID_Fatal, 'NumBeam must be greater than or equal to one and less than 6.', &
-                        ErrStat, ErrMsg, RoutineName )
-      RETURN   
-   ELSE   
-            ! Allocate space for the output location arrays:
-      CALL AllocAry( InputFileData%FocalDistanceX, InputFileData%NumBeam, 'FocalDistanceX', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry( InputFileData%FocalDistanceY, InputFileData%NumBeam, 'FocalDistanceY', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry( InputFileData%FocalDistanceZ, InputFileData%NumBeam, 'FocalDistanceZ', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      if (Failed()) return
-   ENDIF
+     ! Before proceeding, make sure that NumBeam makes sense for array allocation
+   InputFileData%NumBeam = MAX(InputFileData%NumBeam, 1)
+   
+      ! Allocate space for the output location arrays:
+   CALL AllocAry( InputFileData%FocalDistanceX, InputFileData%NumBeam, 'FocalDistanceX', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( InputFileData%FocalDistanceY, InputFileData%NumBeam, 'FocalDistanceY', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( InputFileData%FocalDistanceZ, InputFileData%NumBeam, 'FocalDistanceZ', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return
     
     ! Focal Distance X
    CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceX', InputFileData%FocalDistanceX, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
@@ -647,7 +643,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
          return
       end if
       
-      if (InitInp%lidar%SensorType /= SensorType_None) then
+      if (InputFileData%SensorType /= SensorType_None) then
          call SetErrStat(ErrID_Fatal, 'InflowWind can not perform linearization with the lidar module enabled.', ErrStat, ErrMsg, RoutineName)
          return
       end if

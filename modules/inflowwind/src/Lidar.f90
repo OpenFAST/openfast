@@ -62,9 +62,10 @@ CONTAINS
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
 !! note that we're calling this with the InflowWind data types, so that data is INOUT instead of OUT
-SUBROUTINE Lidar_Init( InitInp, u, p, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Lidar_Init( InitInp, InputFileData, u, p, y, m, Interval,  ErrStat, ErrMsg )
 
    TYPE(InflowWind_InitInputType),        INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(InflowWind_InputFile),            INTENT(INOUT)  :: InputFileData !< Data from input file
    TYPE(InflowWind_InputType),            INTENT(INOUT)  :: u           !< An initial guess for the input; input mesh must be defined
    TYPE(InflowWind_ParameterType),        INTENT(INOUT)  :: p           !< Parameters
    TYPE(InflowWind_MiscVarType),          INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
@@ -76,16 +77,15 @@ SUBROUTINE Lidar_Init( InitInp, u, p, y, m, Interval, InitOut, ErrStat, ErrMsg )
                                                                         !!   Input is the suggested time from the glue code;
                                                                         !!   Output is the actual coupling interval that will be used
                                                                         !!   by the glue code.
-   TYPE(InflowWind_InitOutputType),       INTENT(INOUT)  :: InitOut     !< Output for initialization routine
    INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
                                           
       ! Temporary variables for error handling
-    INTEGER(IntKi)                                          ::  TmpErrStat          !< temporary error message
-    CHARACTER(ErrMsgLen)                                    ::  TmpErrMsg                                          
+    INTEGER(IntKi)                                       ::  TmpErrStat          !< temporary error message
+    CHARACTER(ErrMsgLen)                                 ::  TmpErrMsg
                                           
       ! local variables                   
-   INTEGER(IntKi)                                        :: IBeam                                        
+   INTEGER(IntKi)                                        :: IBeam
    INTEGER(IntKi)                                        :: ErrStat2    ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                                  :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
                                           
@@ -98,56 +98,73 @@ SUBROUTINE Lidar_Init( InitInp, u, p, y, m, Interval, InitOut, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-    if (p%lidar%SensorType == SensorType_None) then
+   p%lidar%SensorType = InputFileData%SensorType
+   if (p%lidar%SensorType == SensorType_None) then
       p%lidar%NumPulseGate = 0
       p%lidar%NumBeam      = 0
       return
-   elseif (p%lidar%SensorType == SensorType_SinglePoint) then
-      p%lidar%NumPulseGate = 1
-    
-      if (p%lidar%NumBeam < 1) then
-         call SetErrStat( ErrID_Fatal, 'NumBeam must be greater than 0 for single-point beams.', ErrStat, ErrMsg, RoutineName )
-         return
-      end if
    else
-      
-          ! Make sure that multiple beams are only used when using single-point beams
-      if ( p%lidar%NumBeam > 1 ) then
-         call SetErrStat( ErrID_Fatal, 'Multiple beams can only be used with single point lidar', ErrStat, ErrMsg, RoutineName )
-         return
-      endif
-      p%lidar%NumBeam      = 1
-    
-         ! variables for both pulsed and continuous-wave lidars
-      p%lidar%SpatialRes     =  0.5_ReKi*p%lidar%URefLid*Interval
-      p%lidar%RayRangeSq     =  (Pi*(BeamRad**2)/LsrWavLen)**2
-      
-      if (p%lidar%SensorType == SensorType_ContinuousLidar) then
+      p%lidar%NumBeam            = InputFileData%NumBeam
+      p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
+      p%lidar%LidRadialVel       = InputFileData%LidRadialVel
+      p%lidar%NumPulseGate       = InputFileData%NumPulseGate
+      call move_alloc(InputFileData%FocalDistanceX, p%lidar%FocalDistanceX)
+      call move_alloc(InputFileData%FocalDistanceY, p%lidar%FocalDistanceY)
+      call move_alloc(InputFileData%FocalDistanceZ, p%lidar%FocalDistanceZ)
+      p%lidar%MeasurementInterval= InputFileData%MeasurementInterval
+      p%lidar%PulseSpacing       = InputFileData%PulseSpacing
+      p%lidar%URefLid            = InputFileData%URefLid
+      p%lidar%ConsiderHubMotion  = InputFileData%ConsiderHubMotion
+
+      if (p%lidar%SensorType == SensorType_SinglePoint) then
          p%lidar%NumPulseGate = 1
-         p%lidar%WtFnTrunc    = 0.02_ReKi
-      elseif (p%lidar%SensorType == SensorType_PulsedLidar) then
-      
-            ! Make sure that NumPulseGate makes sense
-         if ( (p%lidar%NumPulseGate < 1 .OR. p%lidar%NumPulseGate > 5) ) then
-            call SetErrStat( ErrID_Fatal, 'NumPulseGate must be greater than zero and less than 6.', ErrStat, ErrMsg, RoutineName )
+
+         if ( (p%lidar%NumBeam < 1 .OR. p%lidar%NumBeam > 5) ) then
+            call SetErrStat( ErrID_Fatal, 'NumBeam must be greater than zero and less than 6.', ErrStat, ErrMsg, RoutineName )
             return
          endif
-         p%lidar%WtFnTrunc    = 0.01_ReKi
-         
-            ! values for the WindCube
-         p%lidar%DeltaR        = 30.0_ReKi
-        ! p%lidar%PulseRangeOne = 50.0 ReKi   ! Replaced by the focal distance; bjj: it's used in an IF statement, so initializing below:
-         p%lidar%PulseRangeOne = 0.0_ReKi
-            
-         p%lidar%r_p           = p%lidar%DeltaR/(2.0_ReKi*SQRT(LOG(2.0_ReKi)))
-         
-      else
-         call SetErrStat(ErrID_Fatal, "Invalid sensor type.", ErrStat, ErrMsg, RoutineName)
-         return
-      end if
-   endif
 
-   p%lidar%LidPosition = InitInp%lidar%HubPosition
+      else
+      
+             ! Make sure that multiple beams are only used when using single-point beams
+         if ( p%lidar%NumBeam > 1 ) then
+            call SetErrStat( ErrID_Fatal, 'Multiple beams can only be used with single point lidar', ErrStat, ErrMsg, RoutineName )
+            return
+         endif
+         p%lidar%NumBeam      = 1
+    
+            ! variables for both pulsed and continuous-wave lidars
+         p%lidar%SpatialRes     =  0.5_ReKi*p%lidar%URefLid*Interval
+         p%lidar%RayRangeSq     =  (Pi*(BeamRad**2)/LsrWavLen)**2
+      
+         if (p%lidar%SensorType == SensorType_ContinuousLidar) then
+            p%lidar%NumPulseGate = 1
+            p%lidar%WtFnTrunc    = 0.02_ReKi
+         elseif (p%lidar%SensorType == SensorType_PulsedLidar) then
+      
+               ! Make sure that NumPulseGate makes sense
+            if ( (p%lidar%NumPulseGate < 1 .OR. p%lidar%NumPulseGate > 5) ) then
+               call SetErrStat( ErrID_Fatal, 'NumPulseGate must be greater than zero and less than 6.', ErrStat, ErrMsg, RoutineName )
+               return
+            endif
+            p%lidar%WtFnTrunc    = 0.01_ReKi
+         
+               ! values for the WindCube
+            p%lidar%DeltaR        = 30.0_ReKi
+           ! p%lidar%PulseRangeOne = 50.0 ReKi   ! Replaced by the focal distance; bjj: it's used in an IF statement, so initializing below:
+            p%lidar%PulseRangeOne = 0.0_ReKi
+            
+            p%lidar%r_p           = p%lidar%DeltaR/(2.0_ReKi*SQRT(LOG(2.0_ReKi)))
+         
+         else
+            call SetErrStat(ErrID_Fatal, "Invalid sensor type.", ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+   end if ! no lidar
+
+
+   p%lidar%LidPosition = InitInp%HubPosition
    p%lidar%NumMeasurements = MAX(p%lidar%NumBeam,p%lidar%NumPulseGate) !note, this is at least 1 for every case (except SensorType_None, which cannot get to this place)
 
    CALL AllocAry(p%lidar%MsrPosition , 3, p%lidar%NumBeam, 'Array for measurement coordinates (per beam)', TmpErrStat, TmpErrMsg )
@@ -306,7 +323,7 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, y, m, ErrStat, ErrMsg )
    ENDIF
 
    LidPosition = p%lidar%LidPosition + p%lidar%RotorApexOffsetPos ! lidar offset-from-rotor-apex position
-   IF (p%lidar%ConsiderHubMotion) THEN
+   IF (p%lidar%ConsiderHubMotion /= 0) THEN
       LidPosition = LidPosition + (/ u%lidar%HubDisplacementX, u%lidar%HubDisplacementY, u%lidar%HubDisplacementZ /)  ! rotor apex position (absolute)
    END IF
 
@@ -452,21 +469,24 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, y, m, ErrStat, ErrMsg )
    ELSE !p%SensorType == SensorType_PulsedLidar
       IBeam = 1
       
+      !bjj: note that u%lidar%PulseLidEl and u%lidar%PulseLidAz are not set in the calling code, so they are always 0
       LidDirUnVec(1) = -1*COS(u%lidar%PulseLidEl)
       LidDirUnVec(2) = SIN(u%lidar%PulseLidEl)*SIN(u%lidar%PulseLidAz)
       LidDirUnVec(3) = SIN(u%lidar%PulseLidEl)*COS(u%lidar%PulseLidAz)
    
       DO IRangeGt = 1,p%lidar%NumPulseGate
    
+            !bjj: do the y- and z- components of PositionXYZ make sense here? It looks like they assume p%lidar%MsrPosition(2:3,IBeam) are zero
+
           LidPosition(2) = LidPosition(2) + p%lidar%MsrPosition(2,IBeam)
           LidPosition(3) = LidPosition(3) + p%lidar%MsrPosition(3,IBeam)
    
-         !get lidar speed at the focal point to see if it is out of bounds
-         PositionXYZ(:,1) = LidPosition + LidDirUnVec*(-p%lidar%MsrPosition(1,IBeam) - (IRangeGt-1)*p%lidar%PulseSpacing)  
+         !get lidar speed at the focal point to see if it is out of bounds; bjj: this equation looks strange to me. Note how the X component is used to modify Y and Z.
+         PositionXYZ(:,1) = LidPosition + LidDirUnVec*(-p%lidar%MsrPosition(1,IBeam) - (IRangeGt-1)*p%lidar%PulseSpacing)
       
          !bjj: I don't think this makes any sense in the Y and Z components. Will modify MsrPositionsY and MsrPositionsZ
          y%lidar%MsrPositionsX(IRangeGt) = PositionXYZ(1,1)
-         y%lidar%MsrPositionsY(IRangeGt) = PositionXYZ(2,1) ! was LidPosition(2) + p%lidar%MsrPosition(2,IBeam)
+         y%lidar%MsrPositionsY(IRangeGt) = PositionXYZ(2,1) ! was LidPosition(2) + p%lidar%MsrPosition(2,IBeam), adding p%lidar%MsrPosition(2,IBeam) to the position AGAIN
          y%lidar%MsrPositionsZ(IRangeGt) = PositionXYZ(3,1) ! was LidPosition(3) + p%lidar%MsrPosition(3,IBeam)
       
          CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, t, PositionXYZ(:,1:1), VelocityUVW(:,1:1), AccelUVW, ErrStat2, ErrMsg2, BoxExceedAllow=.true.)

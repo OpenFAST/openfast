@@ -474,8 +474,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%SensorType   = InitInp%SensorType
       p%NumBeam      = InitInp%NumBeam
       p%NumPulseGate = InitInp%NumPulseGate
-      p%PulseSpacing = InitInp%PulseSpacing
-      p%URefLid      = InitInp%URefLid
+      p%URefLid      = InitInp%URefLid !bjj: not sure why you would need to store this variable in SeroDyn or why the controller would use it
       
       CALL BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_CtrlChanInitInfo, UnSum, ErrStat2, ErrMsg2 )
          if (Failed())  return;

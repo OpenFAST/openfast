@@ -186,26 +186,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    endif
 
    ! initialize sensor data:
-   p%lidar%SensorType = InputFileData%SensorType
-   IF (InputFileData%SensorType == SensorType_None) THEN
-      p%lidar%NumBeam            = 0
-      p%lidar%NumPulseGate       = 0
-   ELSE
-      p%lidar%NumBeam            = InputFileData%NumBeam
-      p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
-      p%lidar%LidRadialVel       = InputFileData%LidRadialVel
-      p%lidar%NumPulseGate       = InputFileData%NumPulseGate
-      call move_alloc(InputFileData%FocalDistanceX, p%lidar%FocalDistanceX)
-      call move_alloc(InputFileData%FocalDistanceY, p%lidar%FocalDistanceY)
-      call move_alloc(InputFileData%FocalDistanceZ, p%lidar%FocalDistanceZ)
-      p%lidar%MeasurementInterval= InputFileData%MeasurementInterval
-      p%lidar%PulseSpacing       = InputFileData%PulseSpacing
-      p%lidar%URefLid            = InputFileData%URefLid
-      p%lidar%ConsiderHubMotion  = InputFileData%ConsiderHubMotion
-
-      CALL Lidar_Init( InitInp, InputGuess, p, y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
-        if (Failed()) return
-   endif
+   CALL Lidar_Init( InitInp, InputFileData, InputGuess, p, y, m, TimeInterval, TmpErrStat, TmpErrMsg )
+      if (Failed()) return
 
       ! If a summary file was requested, open it.
    IF ( InputFileData%SumPrint ) THEN
@@ -219,7 +201,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    ! Allocate the array for passing points
    CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg ); if (Failed()) return
    InputGuess%PositionXYZ = 0.0_ReKi
-   InputGuess%HubPosition = 0.0_ReKi
+   InputGuess%HubPosition = InitInp%HubPosition
    CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg); if (Failed()) return
 
    ! Allocate the array for passing velocities out
