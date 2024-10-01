@@ -815,7 +815,10 @@ SUBROUTINE BladedInterface_End(u, p, m, xd, ErrStat, ErrMsg)
    INTEGER(IntKi)                                 :: ErrStat2    ! The error status code
    CHARACTER(ErrMsgLen)                           :: ErrMsg2     ! The error message, if an error occurred
 
-      ! call DLL final time, but skip if we've never called it
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! call DLL final time, but skip if we've never called it
    if (allocated(m%dll_data%avrSWAP)) then
       IF ( m%dll_data%SimStatus /= GH_DISCON_STATUS_INITIALISING ) THEN
          m%dll_data%SimStatus = GH_DISCON_STATUS_FINALISING
@@ -825,10 +828,7 @@ SUBROUTINE BladedInterface_End(u, p, m, xd, ErrStat, ErrMsg)
    end if
 
    CALL FreeDynamicLib( p%DLL_Trgt, ErrStat2, ErrMsg2 )  ! this doesn't do anything #ifdef STATIC_DLL_LOAD  because p%DLL_Trgt is 0 (NULL)
-   IF (ErrStat2 /= ErrID_None) THEN
-      ErrStat = MAX(ErrStat, ErrStat2)
-      ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
-   END IF
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'BladedInterface_End')
 
 END SUBROUTINE BladedInterface_End
 !==================================================================================================================================

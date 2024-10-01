@@ -52,14 +52,9 @@ typedef	^	InitInputType	CHARACTER(64)	CableControlRequestor	{:}	-	-	"Array with 
 typedef	^	InitInputType	IntKi	InterpOrder	-	-	-	"Interpolation order from glue code -- required to set m%u_xStC sizes" -
 #ADD in the TMD submodule input file passing here
 #initial inputs of lidar parameters
-typedef	^	InitInputType	ReKi	LidSpeed     	{:}  -	-	"Number of Lidar measurement distances"	-
-typedef	^	InitInputType	ReKi	MsrPositionsX	{:}  -	-	"Lidar X direction measurement points" m
-typedef	^	InitInputType	ReKi	MsrPositionsY	{:}  -	-	"Lidar Y direction measurement points" m
-typedef	^	InitInputType	ReKi	MsrPositionsZ	{:}  -	-	"Lidar Z direction measurement points" m
 typedef	^	InitInputType	IntKi	SensorType   	 -   -	-	"Lidar sensor type" -
 typedef	^	InitInputType	IntKi	NumBeam     	 -   -	-	"Number of beams" -
 typedef	^	InitInputType	IntKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
-typedef	^	InitInputType	ReKi	URefLid      	 -   -	-	"Reference average wind speed for the lidar"  m/s
 
 # Define outputs from the initialization routine here:
 typedef  ^  InitOutputType    CHARACTER(ChanLen)      WriteOutputHdr    {:} - -  "Names of the output-to-file channels"   -
@@ -235,7 +230,6 @@ typedef	^	BladedDLLType	ReKi	MsrPositionsZ  {:}      -	-	"Lidar Z direction meas
 typedef	^	BladedDLLType	IntKi	SensorType      -       -	-	"Lidar sensor type" -
 typedef	^	BladedDLLType	IntKi	NumBeam     	-       -	-	"Number of beams" -
 typedef	^	BladedDLLType	IntKi	NumPulseGate	-       -	-	"Number of pulse gates" -
-typedef	^	BladedDLLType	IntKi	URefLid         -       -	-	"Reference average wind speed for the lidar"  m/s
 ## these are PARAMETERS sent to the DLL (THEIR VALUES SHOULD NOT CHANGE DURING SIMULATION):
 typedef	^	BladedDLLType	DbKi	DLL_DT	-	-	-	"interval for calling DLL (integer multiple number of DT)"	s
 typedef	^	BladedDLLType	CHARACTER(1024)	DLL_InFile	-	-	-	"Name of input file used in DLL"	-
@@ -483,7 +477,6 @@ typedef  ^  ParameterType  Integer  Jac_Idx_SStC_y {:}{:}    - -  "the start and
 typedef	^	ParameterType	IntKi	SensorType  	 -   -	-	"Lidar sensor type" -
 typedef	^	ParameterType	IntKi	NumBeam     	 -   -	-	"Number of beams" -
 typedef	^	ParameterType	IntKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
-typedef	^	ParameterType	ReKi	URefLid     	 -   -	-	"Reference average wind speed for the lidar - bjj: not sure why we have this variable"  m/s
 
 
 
