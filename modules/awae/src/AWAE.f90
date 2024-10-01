@@ -909,9 +909,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       IfW_InitInp%RootName          = TRIM(p%OutFileRoot)//'.IfW'
       IfW_InitInp%FilePassingMethod = 0_IntKi      ! Read IfW input file from disk
       IfW_InitInp%InputFileName     = InitInp%InputFileData%InflowFile
-      IfW_InitInp%lidar%Tmax        = 0.0_ReKi
-      IfW_InitInp%lidar%HubPosition = 0.0_ReKi
-      IfW_InitInp%lidar%SensorType  = SensorType_None
+      IfW_InitInp%HubPosition       = 0.0_ReKi
       IfW_InitInp%Use4Dext          = .false.
       IfW_InitInp%MHK               = MHK_None
       IfW_InitInp%WtrDpth           = 0.0_ReKi
