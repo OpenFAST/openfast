@@ -1044,7 +1044,8 @@ CONTAINS
       Real(DbKi)                       :: Yi             ! used in interpolating from lookup table
       Real(DbKi)                       :: dl             ! stretch of a segment [m]
       Real(DbKi)                       :: ld_1           ! rate of change of static stiffness portion of segment [m/s]
-      Real(DbKi)                       :: EA_1           ! stiffness of 'static stiffness' portion of segment, combines with dynamic stiffness to give static stiffnes [m/s]
+      Real(DbKi)                       :: EA_1           ! stiffness of 'slow' portion of segment, combines with dynamic stiffness to give static stiffnes [m/s]
+      Real(DbKi)                       :: EA_D           ! stiffness of 'fast' portion of segment, combines with EA_1 stiffness to give static stiffnes [m/s]
 
       REAL(DbKi)                       :: surface_height ! Average the surface heights at the two nodes
       REAL(DbKi)                       :: firstNodeZ     ! Difference of first node depth from surface height
@@ -1268,21 +1269,42 @@ CONTAINS
             else
                MagT = 0.0_DbKi                              ! cable can't "push"
             end if
+
             ! line internal damping force based on line-specific BA value, including possibility of dynamic length changes in l and ld terms
             MagTd = Line%BA* ( Line%lstrd(I) -  Line%lstr(I)*Line%ld(I)/Line%l(I) )/Line%l(I)
          
-         ! viscoelastic model
-         else if (Line%ElasticMod == 2) then
+         ! viscoelastic model from https://asmedigitalcollection.asme.org/OMAE/proceedings/IOWTC2023/87578/V001T01A029/1195018 
+         else if (Line%ElasticMod > 1) then
+
+            if (Line%ElasticMod == 3) then
+               if (Line%dl_1(I) >= 0.0) then
+                  ! Mean load dependent dynamic stiffness: from combining eqn. 2 and eqn. 10 from paper, taking mean load = k1 delta_L1 / MBL, and solving for k_D using WolframAlpha with following conditions: k_D > k_s, (MBL,alpha,beta,unstrLen,delta_L1) > 0
+                  EA_D = ((Line%EA_Dc) + (Line%EA_D_Lm*Line%dl_1(I)*Line%EA) + (Line%l(I)*Line%EA) + sqrt((Line%EA_Dc * Line%EA_Dc) + (2*Line%EA_Dc*Line%EA * (Line%EA_D_Lm*Line%dl_1(I) - Line%l(I))) + (Line%EA*Line%EA * (Line%EA_D_Lm*Line%dl_1(I) + Line%l(I))*(Line%EA_D_Lm*Line%dl_1(I) + Line%l(I))))) / (2*Line%l(I))
+               else
+                  EA_D = Line%EA_Dc ! mean load is considered to be 0 in this case. The second term in the above equation is not valid for delta_L1 < 0.
+               endif
+
+            else if (Line%ElasticMod == 2) then
+               ! constant dynamic stiffness
+               EA_D = Line%EA_D
+            ! else 
+            !    ErrStat = ErrID_Fatal
+            !    Errmsg = ' Line%ElasticMod > 3 for line '//trim(num2lstr(Line%IdNum))//' viscoelstic model.' ! TODO: make sure this is the right error level
+            endif
          
-            EA_1 = Line%EA_D*Line%EA/(Line%EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S
+            EA_1 = EA_D*Line%EA/(EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S
          
             dl = Line%lstr(I) - Line%l(I) ! delta l of this segment
          
-            ld_1 = (Line%EA_D*dl - (Line%EA_D + EA_1)*Line%dl_1(I) + Line%BA_D*Line%lstrd(I)) /( Line%BA_D + Line%BA) ! rate of change of static stiffness portion [m/s]
-            
-            !MagT = (Line%EA*Line%dl_S(I) + Line%BA*ld_S)/ Line%l(I)   ! compute tension based on static portion (dynamic portion would give same)
-            MagT  = EA_1*Line%dl_1(I)/ Line%l(I)  
-            MagTd = Line%BA*ld_1        / Line%l(I)  
+            ld_1 = (EA_D*dl - (EA_D + EA_1)*Line%dl_1(I) + Line%BA_D*Line%lstrd(I)) /( Line%BA_D + Line%BA) ! rate of change of static stiffness portion [m/s]
+
+            if (dl >= 0.0) then ! if both spring 1 (the spring dashpot in parallel) and the whole segment are not in compression
+               MagT  = EA_1*Line%dl_1(I) / Line%l(I)  ! compute tension based on static portion (dynamic portion would give same). See eqn. 14 in paper
+            else 
+               MagT = 0.0_DbKi ! cable can't "push"
+            endif
+
+            MagTd = Line%BA*ld_1 / Line%l(I) ! compute tension based on static portion (dynamic portion would give same). See eqn. 14 in paper
             
             ! update state derivative for static stiffness stretch (last N entries in the state vector)
             Xd( 6*N-6 + I) = ld_1

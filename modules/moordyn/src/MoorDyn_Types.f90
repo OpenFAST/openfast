@@ -68,6 +68,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: w = 0.0_R8Ki      !< per-length weight in air [[kg/m]]
     REAL(DbKi)  :: EA = 0.0_R8Ki      !< axial stiffness [[N]]
     REAL(DbKi)  :: EA_D = 0.0_R8Ki      !< axial stiffness [[N]]
+    REAL(DbKi)  :: EA_Dc = 0.0_R8Ki      !< dynamic stiffness constant: Krd alpha term x MBL [[N]]
+    REAL(DbKi)  :: EA_D_Lm = 0.0_R8Ki      !< dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load) [[N]]
     REAL(DbKi)  :: BA = 0.0_R8Ki      !< internal damping coefficient times area [[N-s]]
     REAL(DbKi)  :: BA_D = 0.0_R8Ki      !< internal damping coefficient times area [[N-s]]
     REAL(DbKi)  :: EI = 0.0_R8Ki      !< bending stiffness [[N-m]]
@@ -75,14 +77,14 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cat = 0.0_R8Ki      !< tangential added mass coefficient [-]
     REAL(DbKi)  :: Cdn = 0.0_R8Ki      !< transverse drag coefficient [-]
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !< tangential drag coefficient [-]
-    INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
-    INTEGER(IntKi)  :: nEApoints = 0      !< number of values in stress-strain lookup table (0 means using constant E) [-]
+    INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {1 basic, 2 viscoelastic, 3 viscoelastic+meanload}  [-]
+    INTEGER(IntKi)  :: nEApoints = 0_IntKi      !< number of values in stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
-    INTEGER(IntKi)  :: nBApoints = 0      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
+    INTEGER(IntKi)  :: nBApoints = 0_IntKi      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: dampXs = 0.0_R8Ki      !< x array for stress-strainrate lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table [-]
-    INTEGER(IntKi)  :: nEIpoints = 0      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
+    INTEGER(IntKi)  :: nEIpoints = 0_IntKi      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: bstiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: bstiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
   END TYPE MD_LineProp
@@ -109,8 +111,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0_IntKi      !< list of IdNums of points attached to this body [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR = 0_IntKi      !< list of IdNums of rods attached to this body [-]
-    INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached points [-]
-    INTEGER(IntKi)  :: nAttachedR = 0      !< number of attached rods [-]
+    INTEGER(IntKi)  :: nAttachedC = 0_IntKi      !< number of attached points [-]
+    INTEGER(IntKi)  :: nAttachedR = 0_IntKi      !< number of attached rods [-]
     REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel = 0.0_R8Ki      !< relative position of point on body [-]
     REAL(DbKi) , DIMENSION(1:6,1:30)  :: r6RodRel = 0.0_R8Ki      !< relative position and orientation of rod on body [-]
     REAL(DbKi)  :: bodyM = 0.0_R8Ki      !< body mass (seperate from attached objects) [[kg]]
@@ -140,7 +142,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  1=fixed, -1=coupled, 0=free [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Attached = 0_IntKi      !< list of IdNums of lines attached to this point node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
-    INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
+    INTEGER(IntKi)  :: nAttached = 0_IntKi      !< number of attached lines [-]
     REAL(DbKi)  :: pointM = 0.0_R8Ki      !< point mass [[kg]]
     REAL(DbKi)  :: pointV = 0.0_R8Ki      !< point volume [[m^3]]
     REAL(DbKi)  :: pointFX = 0.0_R8Ki      !<  [-]
@@ -170,8 +172,8 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB = 0_IntKi      !< list of IdNums of lines attached to end B [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: TopA = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: TopB = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
-    INTEGER(IntKi)  :: nAttachedA = 0      !< number of attached lines to Rod end A [-]
-    INTEGER(IntKi)  :: nAttachedB = 0      !< number of attached lines to Rod end B [-]
+    INTEGER(IntKi)  :: nAttachedA = 0_IntKi      !< number of attached lines to Rod end A [-]
+    INTEGER(IntKi)  :: nAttachedB = 0_IntKi      !< number of attached lines to Rod end B [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: N = 0_IntKi      !< The number of elements in the line [-]
     INTEGER(IntKi)  :: endTypeA = 0_IntKi      !< type of point at end A: 0=pinned to Point, 1=cantilevered to Rod. [-]
@@ -231,7 +233,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: PropsIdNum = 0_IntKi      !< the IdNum of the associated line properties [-]
     INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
-    INTEGER(IntKi)  :: CtrlChan = 0      !< index of control channel that will drive line active tensioning (0 for none) [-]
+    INTEGER(IntKi)  :: CtrlChan = 0_IntKi      !< index of control channel that will drive line active tensioning (0 for none) [-]
     INTEGER(IntKi)  :: FairPoint = 0_IntKi      !< IdNum of Point at fairlead [-]
     INTEGER(IntKi)  :: AnchPoint = 0_IntKi      !< IdNum of Point at anchor [-]
     INTEGER(IntKi)  :: N = 0_IntKi      !< The number of elements in the line [-]
@@ -240,22 +242,24 @@ IMPLICIT NONE
     REAL(DbKi)  :: UnstrLen = 0.0_R8Ki      !< unstretched length of the line [-]
     REAL(DbKi)  :: rho = 0.0_R8Ki      !< density [[kg/m3]]
     REAL(DbKi)  :: d = 0.0_R8Ki      !< volume-equivalent diameter [[m]]
-    REAL(DbKi)  :: EA = 0      !< stiffness [[N]]
-    REAL(DbKi)  :: EA_D = 0      !< dynamic stiffness when using viscoelastic model [[N]]
-    REAL(DbKi)  :: BA = 0      !< internal damping coefficient times area for this line only [[N-s]]
-    REAL(DbKi)  :: BA_D = 0      !< dynamic internal damping coefficient times area when using viscoelastic model [[N-s]]
-    REAL(DbKi)  :: EI = 0      !< bending stiffness [[N-m]]
+    REAL(DbKi)  :: EA = 0.0_R8Ki      !< stiffness [[N]]
+    REAL(DbKi)  :: EA_D = 0.0_R8Ki      !< constant dynamic stiffness when using viscoelastic model [[N]]
+    REAL(DbKi)  :: EA_Dc = 0.0_R8Ki      !< load dependent dynamic stiffness constant: Krd alpha term x MBL [[N]]
+    REAL(DbKi)  :: EA_D_Lm = 0.0_R8Ki      !< load dependent dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load) [[N]]
+    REAL(DbKi)  :: BA = 0.0_R8Ki      !< internal damping coefficient times area for this line only [[N-s]]
+    REAL(DbKi)  :: BA_D = 0.0_R8Ki      !< dynamic internal damping coefficient times area when using viscoelastic model [[N-s]]
+    REAL(DbKi)  :: EI = 0.0_R8Ki      !< bending stiffness [[N-m]]
     REAL(DbKi)  :: Can = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: Cat = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: Cdn = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !<  [[-]]
-    INTEGER(IntKi)  :: nEApoints = 0      !< number of values in stress-strain lookup table (0 means using constant E) [-]
+    INTEGER(IntKi)  :: nEApoints = 0_IntKi      !< number of values in stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
-    INTEGER(IntKi)  :: nBApoints = 0      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
+    INTEGER(IntKi)  :: nBApoints = 0_IntKi      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: dampXs = 0.0_R8Ki      !< x array for stress-strainrate lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table [-]
-    INTEGER(IntKi)  :: nEIpoints = 0      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
+    INTEGER(IntKi)  :: nEIpoints = 0_IntKi      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: bstiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: bstiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
     REAL(DbKi)  :: time = 0.0_R8Ki      !< current time [[s]]
@@ -688,6 +692,8 @@ subroutine MD_CopyLineProp(SrcLinePropData, DstLinePropData, CtrlCode, ErrStat, 
    DstLinePropData%w = SrcLinePropData%w
    DstLinePropData%EA = SrcLinePropData%EA
    DstLinePropData%EA_D = SrcLinePropData%EA_D
+   DstLinePropData%EA_Dc = SrcLinePropData%EA_Dc
+   DstLinePropData%EA_D_Lm = SrcLinePropData%EA_D_Lm
    DstLinePropData%BA = SrcLinePropData%BA
    DstLinePropData%BA_D = SrcLinePropData%BA_D
    DstLinePropData%EI = SrcLinePropData%EI
@@ -727,6 +733,8 @@ subroutine MD_PackLineProp(RF, Indata)
    call RegPack(RF, InData%w)
    call RegPack(RF, InData%EA)
    call RegPack(RF, InData%EA_D)
+   call RegPack(RF, InData%EA_Dc)
+   call RegPack(RF, InData%EA_D_Lm)
    call RegPack(RF, InData%BA)
    call RegPack(RF, InData%BA_D)
    call RegPack(RF, InData%EI)
@@ -758,6 +766,8 @@ subroutine MD_UnPackLineProp(RF, OutData)
    call RegUnpack(RF, OutData%w); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA_D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EA_Dc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EA_D_Lm); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA_D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EI); if (RegCheckErr(RF, RoutineName)) return
@@ -1599,6 +1609,8 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
    DstLineData%d = SrcLineData%d
    DstLineData%EA = SrcLineData%EA
    DstLineData%EA_D = SrcLineData%EA_D
+   DstLineData%EA_Dc = SrcLineData%EA_Dc
+   DstLineData%EA_D_Lm = SrcLineData%EA_D_Lm
    DstLineData%BA = SrcLineData%BA
    DstLineData%BA_D = SrcLineData%BA_D
    DstLineData%EI = SrcLineData%EI
@@ -2085,6 +2097,8 @@ subroutine MD_PackLine(RF, Indata)
    call RegPack(RF, InData%d)
    call RegPack(RF, InData%EA)
    call RegPack(RF, InData%EA_D)
+   call RegPack(RF, InData%EA_Dc)
+   call RegPack(RF, InData%EA_D_Lm)
    call RegPack(RF, InData%BA)
    call RegPack(RF, InData%BA_D)
    call RegPack(RF, InData%EI)
@@ -2160,6 +2174,8 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpack(RF, OutData%d); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA_D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EA_Dc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EA_D_Lm); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA_D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EI); if (RegCheckErr(RF, RoutineName)) return

@@ -167,7 +167,7 @@ CONTAINS
       InitOut%Ver = MD_ProgDesc
 
       CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')
-      CALL DispCopyrightLicense( MD_ProgDesc%Name, 'Copyright (C) 2019 Matt Hall' )
+      CALL DispCopyrightLicense( MD_ProgDesc%Name)
 
 
       !---------------------------------------------------------------------------------------------
@@ -638,10 +638,14 @@ CONTAINS
                    
                    ! process stiffness coefficients
                    CALL SplitByBars(tempString1, N, tempStrings)
-                   if (N > 2) then
-                      CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 2 (comma-separated) values.', ErrStat, ErrMsg, RoutineName )
+                   if (N > 3) then
+                      CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 3 (bar-separated) values.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
-                   else if (N==2) then                               ! visco-elastic case!
+                   else if (N==3) then                               ! visco-elastic case, load dependent dynamic stiffness!
+                      m%LineTypeList(l)%ElasticMod = 2
+                      read(tempStrings(2), *) m%LineTypeList(l)%EA_Dc
+                      read(tempStrings(3), *) m%LineTypeList(l)%EA_D_Lm
+                   else if (N==2) then                               ! visco-elastic case, constant dynamic stiffness!
                       m%LineTypeList(l)%ElasticMod = 2
                       read(tempStrings(2), *) m%LineTypeList(l)%EA_D 
                    else
