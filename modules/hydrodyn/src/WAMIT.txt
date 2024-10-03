@@ -41,6 +41,7 @@ typedef   ^                            ^                             Conv_Rdtn_I
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -        -         "Pointer to wave field"
 typedef   ^                            ^                             INTEGER                  PtfmYMod                        -          -        -         "Large yaw model" -
 typedef   ^                            ^                             ReKi                     PtfmRefY                        -          -        -         "Initial reference yaw offset" (rad)
+typedef   ^                            ^                             ReKi                     PlatformPos                     {6}        -        -         "Initial platform position (6 DOFs)"
 #
 #
 # Define outputs from the initialization routine here:

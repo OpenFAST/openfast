@@ -61,6 +61,7 @@ IMPLICIT NONE
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
     INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
     REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [(rad)]
+    REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos = 0.0_ReKi      !< Initial platform position (6 DOFs) [-]
   END TYPE WAMIT_InitInputType
 ! =======================
 ! =========  WAMIT_ContinuousStateType  =======
@@ -262,6 +263,7 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WaveField => SrcInitInputData%WaveField
    DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
    DstInitInputData%PtfmRefY = SrcInitInputData%PtfmRefY
+   DstInitInputData%PlatformPos = SrcInitInputData%PlatformPos
 end subroutine
 
 subroutine WAMIT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -334,6 +336,7 @@ subroutine WAMIT_PackInitInput(RF, Indata)
    end if
    call RegPack(RF, InData%PtfmYMod)
    call RegPack(RF, InData%PtfmRefY)
+   call RegPack(RF, InData%PlatformPos)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -387,6 +390,7 @@ subroutine WAMIT_UnPackInitInput(RF, OutData)
    end if
    call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PlatformPos); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
