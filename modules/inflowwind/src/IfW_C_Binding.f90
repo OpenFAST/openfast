@@ -121,12 +121,12 @@ SUBROUTINE IfW_C_Init(InputFileString_C, InputFileStringLength_C, InputUniformSt
    CALL C_F_pointer(InputUniformString_C, UniformFileString)
 
    ! Store string-inputs as type FileInfoType within InflowWind_InitInputType
-   CALL InitFileInfo(InputFileString, InitInp%PassedFileData, ErrStat2, ErrMsg2);   if (Failed())  return
-   InitInp%UseInputFile          = .FALSE.
+   CALL InitFileInfo(InputFileString, InitInp%PassedFileInfo, ErrStat2, ErrMsg2);   if (Failed())  return
+   InitInp%FilePassingMethod     =  1_IntKi                 ! read file and pass as FileInfoType structure
 
    ! store Uniform File strings if they are non-zero sized
    if (len(UniformFileString) > 1) then 
-      CALL InitFileInfo(UniformFileString, InitInp%WindType2Data, ErrStat2, ErrMsg2);  if (Failed())  return
+      CALL InitFileInfo(UniformFileString, InitInp%WindType2Info, ErrStat2, ErrMsg2);  if (Failed())  return
       InitInp%WindType2UseInputFile = .FALSE.
    else  ! Default to reading from disk
       InitInp%WindType2UseInputFile = .TRUE.

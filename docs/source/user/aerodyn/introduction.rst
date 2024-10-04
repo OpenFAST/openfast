@@ -69,7 +69,7 @@ driver code, without aero-elastic coupling.
 
 AeroDyn consists of six submodels: (1) rotor wake/induction, (2) blade
 airfoil aerodynamics, (3) tower influence on the fluid local to the
-blade nodes, (4) tower drag, (5) aeroacoustics,
+blade nodes, (4) tower and nacelle drag, (5) aeroacoustics,
 and (6) buoyancy on the blades, hub, nacelle, and tower (for MHK turbines). 
 Nacelle, hub, and tail-vane fluid influence and loading (with the exception
 of nacelle and hub buoyant loads) and wake and array effects between 
@@ -179,9 +179,15 @@ structural motion, depending on features enabled). The tower drag load
 calculation is quasi-steady and independent from the tower influence on
 flow models.
 
+Similarly, the aerodynamics drag loads on the nacelle is calculated using the 
+nacelle geometry, drag coefficients, and the local relative fluid 
+velocity between the freestream (undisturbed) flow and nacelle. The 
+nacelle drag load calculation is quasi-steady and independent from the 
+rotors influence on flow models.
+
 The primary AeroDyn input file defines modeling options, environmental
 conditions (except freestream flow), airfoils, tower nodal
-discretization and properties, tower, hub, and nacelle buoyancy properties,
+discretization and properties, tower, hub, and nacelle properties,
 as well as output file specifications. Airfoil data properties are read from
 dedicated inputs files (one for each airfoil) and include coefficients of 
 lift force, drag force, and optional pitching moment and minimum pressure 

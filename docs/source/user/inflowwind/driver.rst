@@ -166,7 +166,7 @@ Purpose
 When InflowWind is coupled to OpenFAST, wind points corresponding to the free
 vortex wake module (OLAF) in AeroDyn 15 and LidarSim module may be outside the
 full-field wind data.  No other wind data points may be outside the grid
-(AeroDyn15 blades must be within the wind box).  The wake from OLAF may over
+(AeroDyn blades must be within the wind box).  The wake from OLAF may over
 time stray outside the full-field wind box, in which case it should be
 sufficiently far from the turbine that any inacuracies in the reported wind
 value should have little to no effect on the turbine.  The method employed here

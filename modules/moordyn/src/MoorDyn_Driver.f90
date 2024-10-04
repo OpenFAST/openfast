@@ -632,7 +632,19 @@ PROGRAM MoorDyn_Driver
       end if   ! InputsMod == 1 
       
       ! >>> otherwise, mesh kinematics should all still be zero ... maybe worth checking <<<
-      
+
+      ! ! set free body state for kinematics debugging
+      ! if (i==1) then
+      !    DO l = 1,MD_p%nFreeBodies
+      !       IF (l==1) THEN 
+      !          MD_x%states(MD_m%BodyStateIs1(l):MD_m%BodyStateIsN(l)) = [0.0, 0.0, 0.0, 0.2, 0.0, 0.0,  0.0, 0.0, -2.0, 0.0, 0.0, 0.0]
+      !          print*, "vel set for body1"
+      !       ELSEIF (l==2) THEN
+      !          MD_x%states(MD_m%BodyStateIs1(l):MD_m%BodyStateIsN(l)) = [0.0, 0.0, 10.0*0.2, 0.2, 0.0, 0.0,  0.0, 10.0, -2.0, 0.0, 0.0, 0.0]
+      !          print*, "vel set for body2"
+      !       ENDIF
+      !    ENDDO
+      ! endif
       
       ! --------------------------------- update states ---------------------------------
       CALL MD_UpdateStates( t, nt, MD_u, MD_uTimes, MD_p, MD_x, MD_xd, MD_xc, MD_xo, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()

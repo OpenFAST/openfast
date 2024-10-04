@@ -9,7 +9,7 @@ State, Constraint, Input, and Output Variables
 ----------------------------------------------
 
 The OLAF module has been integrated into the latest version of OpenFAST via
-*AeroDyn15*, following the OpenFAST modularization
+*AeroDyn*, following the OpenFAST modularization
 framework (:cite:`olaf-Jonkman13_1,olaf-Sprague15_1`). To follow the OpenFAST framework,
 the vortex code is written as a module, and its formulation comprises state,
 constraint, and output equations. The data manipulated by the module include the
@@ -151,25 +151,25 @@ diffusion is performed *a posteriori*. The velocity function,
       \vec{y}_2&=\vec{r}_{r}
    \end{aligned}
 
-Integration with AeroDyn15
---------------------------
+Integration with AeroDyn
+------------------------
 
 The vortex code has been integrated as a submodule of the aerodynamic module of
-OpenFAST, *AeroDyn15*. The data workflow between the different modules and
-submodules of OpenFAST is illustrated in :numref:`AD15-OLAF`. 
+OpenFAST, *AeroDyn*. The data workflow between the different modules and
+submodules of OpenFAST is illustrated in :numref:`AeroDyn-OLAF`. 
 AeroDyn inputs such as BEM options (e.g., tip-loss factor), skew model, and
 dynamic inflow are discarded when the vortex code is used. The environmental
 conditions, tower shadow, and dynamic stall model options are used. This
-integration required a restructuring of the *AeroDyn15* module to isolate the
+integration required a restructuring of the *AeroDyn* module to isolate the
 parts of the code related to tower shadow modeling, induction computation,
 lifting-line-forces computations, and dynamic stall. The dynamic stall model is
 adapted when used in conjunction with the vortex code to ensure the effect of
-shed vorticity is not accounted for twice. The interface between *AeroDyn15* and
+shed vorticity is not accounted for twice. The interface between *AeroDyn* and
 the inflow module, *InflowWind*, was accommodated to include the additionally
 requested points by the vortex code.
 
 
-..   _AD15-OLAF:
+..   _AeroDyn-OLAF:
 
 .. figure:: Schematics/VortexCodeWorkFlow.png
    :alt: OpenFAST-FVW code integration workflow

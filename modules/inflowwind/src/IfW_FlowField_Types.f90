@@ -885,7 +885,7 @@ subroutine IfW_FlowField_UnPackGrid4DFieldType(RF, OutData)
    call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%delta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%pZero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackPtr(RF, OutData%Vel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Vel, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TimeStart); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RefHeight); if (RegCheckErr(RF, RoutineName)) return
 end subroutine

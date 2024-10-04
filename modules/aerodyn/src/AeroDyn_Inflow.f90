@@ -378,10 +378,12 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       ! Initialze InflowWind module
       InitInData%InputFileName    = i_IW%InputFile
       InitInData%Linearize        = i_IW%Linearize
-      InitInData%UseInputFile     = i_IW%UseInputFile
+      InitInData%FilePassingMethod= i_IW%FilePassingMethod
       InitInData%NumWindPoints = 1
-      if (.not. i_IW%UseInputFile) then
-         call NWTC_Library_Copyfileinfotype( i_IW%PassedFileData, InitInData%PassedFileData, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
+      if (i_IW%FilePassingMethod == 1_IntKi) then     ! passing input file as an FileInfoType structure
+         call NWTC_Library_Copyfileinfotype( i_IW%PassedFileInfo, InitInData%PassedFileInfo, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
+      elseif (i_IW%FilePassingMethod == 2_IntKi) then ! passing input file as an IfW_InputFile structure
+         call InflowWind_CopyInputFile( i_IW%PassedFileData, InitInData%PassedFileData, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
       endif
       InitInData%RootName         = trim(Root)//'.IfW'
       InitInData%MHK              = i_IW%MHK
@@ -556,7 +558,7 @@ subroutine Init_MeshMap_For_ADI(FED, p, uAD, errStat, errMsg)
             pos         = y_ED%TwrPtMesh%Position(:,1)
             orientation = y_ED%TwrPtMesh%RefOrientation(:,:,1)
             call Eye(orientation, errStat2, errMsg2)
-            call CreatePointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
+            call CreateInputPointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
 
             ! TowerBase to AD tower base
             call MeshMapCreate(y_ED%TwrPtMesh, y_ED%TwrPtMeshAD, y_ED%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return

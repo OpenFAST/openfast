@@ -199,7 +199,11 @@ Mass and Inertia
 
 **PtfmYIner**   - Platform inertia for yaw rotation about the platform CM (kg m^2)
 
+**PtfmXYIner**  - Platform roll-pitch moment of inertia (*Ixy=-∫xydm*) about the platform CM (kg m^2)
 
+**PtfmYZIner**  - Platform pitch-yaw moment of inertia (*Iyz=-∫yzdm*) about the platform CM (kg m^2)
+
+**PtfmXZIner**  - Platform roll-yaw moment of inertia (*Ixz=-∫xzdm*) about the platform CM (kg m^2)
 
 Blade
 ~~~~~

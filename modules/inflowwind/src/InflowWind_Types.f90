@@ -106,11 +106,12 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumWindPoints = 0_IntKi      !< Number of wind velocity points expected [-]
     INTEGER(IntKi)  :: TurbineID = 0      !< Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm) [-]
     LOGICAL  :: FixedWindFileRootName = .FALSE.      !< Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm) [-]
-    LOGICAL  :: UseInputFile = .TRUE.      !< Should we read everthing from an input file, or do we get it some other way [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
-    TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
+    INTEGER(IntKi)  :: FilePassingMethod = 0      !< Method for file passing {0: None (read from file), 1: as FileInfoType to parse, 2: as InputFileType already parsed} [-]
+    TYPE(FileInfoType)  :: PassedFileInfo      !< If we don't use the input file, pass everything through this [FilePassingMethod = 1] [-]
+    TYPE(InflowWind_InputFile)  :: PassedFileData      !< If we don't use the input file, pass everything through this [FilePassingMethod = 2] [-]
     LOGICAL  :: WindType2UseInputFile = .TRUE.      !< Flag for toggling file based IO in wind type 2. [-]
-    TYPE(FileInfoType)  :: WindType2Data      !< Optional slot for wind type 2 data if file IO is not used. [-]
+    TYPE(FileInfoType)  :: WindType2Info      !< Optional slot for wind type 2 data if file IO is not used. [-]
     LOGICAL  :: OutputAccel = .FALSE.      !< Flag to output wind acceleration [-]
     TYPE(Lidar_InitInputType)  :: lidar      !< InitInput for lidar data [-]
     TYPE(Grid4D_InitInputType)  :: FDext      !< InitInput for 4D external wind data [-]
@@ -502,13 +503,16 @@ subroutine InflowWind_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode
    DstInitInputData%NumWindPoints = SrcInitInputData%NumWindPoints
    DstInitInputData%TurbineID = SrcInitInputData%TurbineID
    DstInitInputData%FixedWindFileRootName = SrcInitInputData%FixedWindFileRootName
-   DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
    DstInitInputData%RootName = SrcInitInputData%RootName
-   call NWTC_Library_CopyFileInfoType(SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
+   DstInitInputData%FilePassingMethod = SrcInitInputData%FilePassingMethod
+   call NWTC_Library_CopyFileInfoType(SrcInitInputData%PassedFileInfo, DstInitInputData%PassedFileInfo, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call InflowWind_CopyInputFile(SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitInputData%WindType2UseInputFile = SrcInitInputData%WindType2UseInputFile
-   call NWTC_Library_CopyFileInfoType(SrcInitInputData%WindType2Data, DstInitInputData%WindType2Data, CtrlCode, ErrStat2, ErrMsg2)
+   call NWTC_Library_CopyFileInfoType(SrcInitInputData%WindType2Info, DstInitInputData%WindType2Info, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitInputData%OutputAccel = SrcInitInputData%OutputAccel
@@ -534,9 +538,11 @@ subroutine InflowWind_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'InflowWind_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
+   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileInfo, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyFileInfoType(InitInputData%WindType2Data, ErrStat2, ErrMsg2)
+   call InflowWind_DestroyInputFile(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyFileInfoType(InitInputData%WindType2Info, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Lidar_DestroyInitInput(InitInputData%lidar, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -555,11 +561,12 @@ subroutine InflowWind_PackInitInput(RF, Indata)
    call RegPack(RF, InData%NumWindPoints)
    call RegPack(RF, InData%TurbineID)
    call RegPack(RF, InData%FixedWindFileRootName)
-   call RegPack(RF, InData%UseInputFile)
    call RegPack(RF, InData%RootName)
-   call NWTC_Library_PackFileInfoType(RF, InData%PassedFileData) 
+   call RegPack(RF, InData%FilePassingMethod)
+   call NWTC_Library_PackFileInfoType(RF, InData%PassedFileInfo) 
+   call InflowWind_PackInputFile(RF, InData%PassedFileData) 
    call RegPack(RF, InData%WindType2UseInputFile)
-   call NWTC_Library_PackFileInfoType(RF, InData%WindType2Data) 
+   call NWTC_Library_PackFileInfoType(RF, InData%WindType2Info) 
    call RegPack(RF, InData%OutputAccel)
    call Lidar_PackInitInput(RF, InData%lidar) 
    call InflowWind_IO_PackGrid4D_InitInputType(RF, InData%FDext) 
@@ -582,11 +589,12 @@ subroutine InflowWind_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%NumWindPoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbineID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FixedWindFileRootName); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UseInputFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
-   call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileData) ! PassedFileData 
+   call RegUnpack(RF, OutData%FilePassingMethod); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileInfo) ! PassedFileInfo 
+   call InflowWind_UnpackInputFile(RF, OutData%PassedFileData) ! PassedFileData 
    call RegUnpack(RF, OutData%WindType2UseInputFile); if (RegCheckErr(RF, RoutineName)) return
-   call NWTC_Library_UnpackFileInfoType(RF, OutData%WindType2Data) ! WindType2Data 
+   call NWTC_Library_UnpackFileInfoType(RF, OutData%WindType2Info) ! WindType2Info 
    call RegUnpack(RF, OutData%OutputAccel); if (RegCheckErr(RF, RoutineName)) return
    call Lidar_UnpackInitInput(RF, OutData%lidar) ! lidar 
    call InflowWind_IO_UnpackGrid4D_InitInputType(RF, OutData%FDext) ! FDext 

@@ -336,10 +336,9 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
                                                        
    REAL(ReKi)                                            :: Distance(3)          ! distance vector between input measurement and lidar positions
    
-   REAL(ReKi)                                            ::  LidPosition(3)      ! Lidar Position 
-   REAL(ReKi)                                            ::  LidPosition_N(3)    !Transformed Lidar Position
-   REAL(ReKi)                                            ::  LidarMsrPosition(3)    !Transformed Lidar Position
-   REAL(ReKi)                                            ::  MeasurementCurrentStep
+   REAL(ReKi)                                            :: LidPosition(3)      ! Lidar Position 
+   REAL(ReKi)                                            :: LidarMsrPosition(3)    !Transformed Lidar Position
+   REAL(ReKi)                                            :: MeasurementCurrentStep
   
    
    REAL(ReKi)                                            :: PositionXYZ(3,2)
@@ -366,13 +365,9 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
       RETURN
    ENDIF
    
+   LidPosition = p%lidar%LidPosition + p%lidar%RotorApexOffsetPos ! lidar offset-from-rotor-apex position
    IF (p%lidar%ConsiderHubMotion == 1) THEN
-      LidPosition_N =  (/ u%lidar%HubDisplacementX, u%lidar%HubDisplacementY, u%lidar%HubDisplacementZ /) & ! rotor apex position (absolute)
-                                                + p%lidar%RotorApexOffsetPos            ! lidar offset-from-rotor-apex position
-      LidPosition   =  p%lidar%LidPosition + LidPosition_N
-   ELSE 
-      LidPosition_N =  p%lidar%RotorApexOffsetPos
-      LidPosition   =  p%lidar%LidPosition + LidPosition_N
+      LidPosition = LidPosition + (/ u%lidar%HubDisplacementX, u%lidar%HubDisplacementY, u%lidar%HubDisplacementZ /)  ! rotor apex position (absolute)
    END IF
 
    IF (p%lidar%SensorType == SensorType_None) RETURN

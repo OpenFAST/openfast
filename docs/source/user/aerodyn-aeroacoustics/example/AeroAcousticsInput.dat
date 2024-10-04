@@ -8,8 +8,9 @@ False        Echo         - Echo the input to "<rootname>.AD.NN.ech"?  (flag)
 ======  Aeroacoustic Models  ============================================================================
 2            TIMod        - Turbulent Inflow noise model  {0: none, 1: Amiet 2: Amiet + Simplified Guidati} (switch) 
 1            TICalcMeth   - Method to estimate turbulence intensity incident to the profile {1: given table, 2: computed on the fly} (switch) [Only used if TIMod!=0]
-"TIGrid_InVerify.txt"   TICalcTabFile - Name of the file containing the table for incident turbulence intensity (-) [Only used if TiCalcMeth == 1]
-0.5          SurfRoughness- Surface roughness value used to estimate the turbulent length scale in Amiet model (m)
+0.1          TI           - Rotor-incident wind turbulence intensity (-) [Only used if TiCalcMeth == 1]
+8            avgV         - Average wind speed used to compute the section-incident turbulence intensity (m/s) [Only used if TiCalcMeth == 1]
+40           Lturb        - Turbulent length scale in Amiet model (m) [Only used if TIMod!=0]
 1            TBLTEMod     - Turbulent Boundary Layer-Trailing Edge noise calculation {0: none, 1:BPM, 2: TNO} (switch)
 1            BLMod        - Calculation method for boundary layer properties,  {1: BPM, 2: Pretabulated} (switch)
 1            TripMod      - Boundary layer trip model {0:no trip, 1: heavy trip, 2: light trip} (switch) [Only used if BLMod=1]
@@ -18,9 +19,6 @@ False        Echo         - Echo the input to "<rootname>.AD.NN.ech"?  (flag)
 True         RoundedTip   - Logical indicating rounded tip (flag) [Only used if TipMod=1]
 1.0          Alprat       - Tip lift curve slope (Default = 1.0) [Only used if TipMod=1]
 0            BluntMod     - Trailing-edge-bluntness – Vortex-shedding model {0:none, 1: BPM}  (switch)
-"AABlade1.dat"    AABlFile(1)   - Name of file containing distributed aerodynamic properties for Blade #1 (-)
-"AABlade1.dat"    AABlFile(2)   - Name of file containing distributed aerodynamic properties for Blade #2 (-)
-"AABlade1.dat"    AABlFile(3)   - Name of file containing distributed aerodynamic properties for Blade #3 (-)
 ======  Observer Input  ===================================================================
 "AA_ObserverLocations.dat"    ObserverLocations        - Name of file containing all observer locations X Y Z (-)
 ======  Outputs  ====================================================================================

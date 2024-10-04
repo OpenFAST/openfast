@@ -1139,20 +1139,21 @@ SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
    K(1:12,1:12)=0.0_FEKi
 
    ! Note: only translational DOF involved (1-3, 7-9)
-   K(1,1)= EE
-   K(2,2)= EE
+   !   Comment out geometric stiffness from pre-tension to avoid unphysical results
+   ! K(1,1)= EE
+   ! K(2,2)= EE
    K(3,3)= EAL0
 
-   K(1,7)= -EE
-   K(2,8)= -EE
+   ! K(1,7)= -EE
+   ! K(2,8)= -EE
    K(3,9)= -EAL0
 
-   K(7,1)= -EE
-   K(8,2)= -EE
+   ! K(7,1)= -EE
+   ! K(8,2)= -EE
    K(9,3)= -EAL0
 
-   K(7,7)= EE
-   K(8,8)= EE
+   ! K(7,7)= EE
+   ! K(8,8)= EE
    K(9,9)= EAL0
 
 

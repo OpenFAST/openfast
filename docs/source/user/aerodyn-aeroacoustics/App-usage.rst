@@ -5,7 +5,7 @@ Using the Aeroacoustics Model in AeroDyn
 
 A live version of this documentation is available at
 https://openfast.readthedocs.io/. To run the aeroacoustics model, the
-flag **CompAA** needs to be set to **True** at line 14 of the AeroDyn15 main
+flag **CompAA** needs to be set to **True** at line 14 of the AeroDyn main
 input file in the inputs block **General Options**. When the flag is set to
 **True**, the following line must include the name of the file containing
 the inputs to the aeroacoustics model, which is discussed in
@@ -14,9 +14,9 @@ turbine.
 
 
 .. container::
-   :name: aa-tab:AD15
+   :name: aa-tab:AeroDyn
 
-   .. literalinclude:: example/AD15.ipt
+   .. literalinclude:: example/AeroDyn.ipt
       :linenos:
       :language: none
 
@@ -56,12 +56,14 @@ models:
 
 -  **TICalcMeth** – Integer 1/2: flag to set the calculation method for the
    incident turbulence intensity. When set to 1, incident turbulence intensity is
-   defined in a user-defined grid; see :numref:`aa-sec-TIgrid`. When set to
-   2, incident turbulence intensity is estimated from the time history of the
-   incident flow.
+   user-defined. When set to 2, incident turbulence intensity is 
+   estimated from the time history of the incident flow.
 
--  **TICalcTabFile** – String: name of the text file with the user-defined
-   turbulence intensity grid; see :numref:`aa-sec-TIgrid`.
+-  **TI** – Float: user-defined value of :math:`TI`, which is the rotor-incident
+   turbulence intensity used in the Amiet model.
+
+-  **avgV** – Float: value of the average wind speed used to scale :math:`TI`
+   and convert it to a blade section incident turbulence intensity.
 
 -  **Lturb** – Float: value of :math:`L_{turb}` used to estimate the turbulent
    lengthscale used in the Amiet model.
@@ -251,33 +253,6 @@ is shown here:
    :name: aa-tab:observer
 
    .. literalinclude:: example/Observer.txt
-      :linenos:
-      :language: none
-
-
-.. _aa-sec-TIgrid:
-
-Turbulence Grid
----------------
-
-When the flag **TICalcMeth** is set equal to 1, the grid of turbulence
-intensity of the wind :math:`TI` must be defined by the user. This is
-done by creating a file called **TIGrid_In.txt**, which mimics a TurbSim
-output file and contains a grid of turbulence intensity, which is
-defined as a fraction value. The file defines a grid centered at hub
-height and oriented with the OpenFAST global inertial frame coordinate
-system; see :numref:`aa-fig:ObsRefSys`. A user-defined number of lateral and vertical
-points equally spaced by a user-defined number of meters must be
-specified. Note that an average wind speed must be defined to convert
-the turbulence intensity of the wind to the incident turbulent intensity :math:`I_{1}`.
-An example file for a 160 (lateral) by 180 (vertical) meters
-grid looks like the following:
-
-
-.. container::
-   :name: aa-tab:TIgrid
-
-   .. literalinclude:: example/TIGrid.txt
       :linenos:
       :language: none
 

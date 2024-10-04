@@ -466,15 +466,18 @@ def gen_unpack_ptr(w, dt, decl, rank):
    dt_size = int(dt[-1])
    name = f'UnpackPtr_{dt}' if rank == 0 else f'UnpackPtr_{dt}_Rank{rank}'
    w.write(f'\n')
-   w.write(f'\n   subroutine {name}(RF, Data)')
+   if rank == 0:
+      w.write(f'\n   subroutine {name}(RF, Data)')
+   else:
+      w.write(f'\n   subroutine {name}(RF, Data, LB, UB)')
    w.write(f'\n      type(RegFile), intent(inout)          :: RF')
    w.write(f'\n      {decl+", pointer, intent(out)":<36s}  :: Data{dims}')
+   if rank > 0:
+      w.write(f'\n      integer(B8Ki), intent(out)            :: LB(:), UB(:)')
    w.write(f'\n      integer(IntKi)                        :: stat')
    w.write(f'\n      integer(B8Ki)                         :: PtrIdx')
    w.write(f'\n      logical                               :: IsAssociated')
    w.write(f'\n      type(c_ptr)                           :: Ptr')
-   if rank > 0:
-      w.write(f'\n      integer(B8Ki)                        :: LB({rank}), UB({rank})')
    w.write(f'\n')
    w.write(f'\n      ! If error, return')
    w.write(f'\n      if (RF%ErrStat /= ErrID_None) return')

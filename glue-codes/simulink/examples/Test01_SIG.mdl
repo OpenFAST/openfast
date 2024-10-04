@@ -1828,7 +1828,7 @@ Model {
       ZOrder		      -3
       BlockMirror	      on
       NameLocation	      "top"
-      Expr		      "u(strmatch('LSSGagVxa',OutList))"
+      Expr		      "u(strcmpi('LSSGagVxa',OutList))"
     }
     Block {
       BlockType		      SubSystem

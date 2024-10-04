@@ -81,7 +81,7 @@ PROGRAM HydroDynDriver
    real(DbKi)                                         :: TiLstPrn             ! The simulation time of the last print
    integer                                            :: n_SttsTime           ! Number of time steps between screen status messages (-)
 
-   
+   integer                                            :: i                    ! Loop counter
    
    logical                                            :: SeaState_Initialized, HydroDyn_Initialized
    ! For testing
@@ -172,7 +172,8 @@ PROGRAM HydroDynDriver
    InitInData_SeaSt%OutRootName  = trim(drvrData%OutRootName)//'.SEA'
    InitInData_SeaSt%TMax         = drvrData%TMax
    InitInData_SeaSt%Linearize    = drvrData%Linearize
-   
+
+      ! Initialize the HydroDyn module
    Interval = drvrData%TimeInterval
    
    call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
@@ -230,10 +231,14 @@ PROGRAM HydroDynDriver
          CALL CheckError()
       end if
    END IF
-   
-   
-   ! Set any steady-state inputs, once before the time-stepping loop (these don't change, so we don't need to update them in the time-marching simulation)
-   CALL SetHDInputs_Constant(u(1), mappingData, drvrData, ErrStat, ErrMsg);       CALL CheckError()
+
+   ! Set initial inputs at t = 0
+   IF (( drvrData%PRPInputsMod /= 2 ) .AND. ( drvrData%PRPInputsMod >= 0 )) THEN
+      ! Set any steady-state inputs, once before the time-stepping loop (these don't change, so we don't need to update them in the time-marching simulation)
+      CALL SetHDInputs_Constant(u(1), mappingData, drvrData, ErrStat, ErrMsg);       CALL CheckError()
+   ELSE
+      CALL SetHDInputs(0.0_R8Ki, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);   CALL CheckError()
+   END IF
 
    !...............................................................................................................................
    ! --- Linearization
@@ -242,10 +247,10 @@ PROGRAM HydroDynDriver
       ! --- Creating useful EDRPtMesh
 
       call Eye(dcm, ErrStat, ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%EDRPt_Loads,     (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%EDRPt_Motion,    (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%ZZZPtMeshMotion, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%ZZZPtMeshLoads , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%EDRPt_Loads,     (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%EDRPt_Motion,    (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%ZZZPtMeshMotion, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreateInputPointMesh(mappingData%ZZZPtMeshLoads , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
 
       CALL MeshMapCreate( u(1)%PRPMesh,             mappingData%EDRPt_Motion,   mappingData%HD_Ref_2_ED_Ref,       ErrStat, ErrMsg );    CALL CheckError()
       CALL MeshMapCreate( mappingData%EDRPt_Motion, u(1)%PRPMesh,               mappingData%ED_Ref_2_HD_Ref,       ErrStat, ErrMsg );    CALL CheckError()
@@ -270,10 +275,11 @@ PROGRAM HydroDynDriver
       Time = (n-1) * drvrData%TimeInterval
       InputTime(1) = Time
 
+      IF (( drvrData%PRPInputsMod == 2 ) .OR. ( drvrData%PRPInputsMod < 0 )) THEN
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
-      call SetHDInputs(Time, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
-      ! SeaState has no inputs, so no need to set them.
-      
+         call SetHDInputs(Time, n, u(1), mappingData, drvrData, ErrStat, ErrMsg);  CALL CheckError()
+         ! SeaState has no inputs, so no need to set them.
+      END IF
      
       if (n==1 .and. drvrData%Linearize) then
          ! we set u(1)%PRPMesh motions, so we should assume that EDRP changed similarly: 
@@ -300,7 +306,6 @@ PROGRAM HydroDynDriver
 
       CALL HydroDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, m, ErrStat, ErrMsg ); CALL CheckError()
       
-   
       IF ( MOD( n + 1, n_SttsTime ) == 0 ) THEN
          CALL SimStatus( TiLstPrn, PrevClockTime, time, drvrData%TMax )
       ENDIF   
@@ -325,6 +330,12 @@ subroutine SetHD_InitInputs()
    InitInData_HD%InvalidWithSSExctn     =  InitOutData_SeaSt%InvalidWithSSExctn
 
    InitInData_HD%WaveField => InitOutData_SeaSt%WaveField
+
+   IF (( drvrData%PRPInputsMod /= 2 ) .AND. ( drvrData%PRPInputsMod >= 0 )) THEN
+      InitInData_HD%PlatformPos  = drvrData%uPRPInSteady
+   ELSE
+      InitInData_HD%PlatformPos  = drvrData%PRPin(1,1:6)
+   END IF
 
 end subroutine SetHD_InitInputs
 !----------------------------------------------------------------------------------------------------------------------------------

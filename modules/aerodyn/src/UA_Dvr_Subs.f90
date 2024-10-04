@@ -395,13 +395,14 @@ subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, 
    integer, allocatable   , intent(out) :: AFIndx(:,:)
    integer(IntKi),          intent(out) :: errStat                       ! Error status.
    character(*),            intent(out) :: errMsg                        ! Error message.
-   logical                 :: UA_f_cn ! Should the separation function be computed using Cn or Cl
    character(1024)         :: afNames(NumAFfiles)
    integer(IntKi)          :: errStat2    ! Status of error message
    character(1024)         :: errMsg2     ! Error message if ErrStat /= ErrID_None
    character(*), parameter  :: RoutineName = 'driverInputsToUAInitData'
+   
    errStat     = ErrID_None
    errMsg      = ''
+   
    InitInData%UA_OUTS = 1  ! 0=None, 1=Write Outputs, 2=Separate File
 #ifdef ADD_UA_OUTS
    InitInData%UA_OUTS = 2 ! Compiler Flag Override,  2=Write a separate file
@@ -421,6 +422,7 @@ subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, 
    InitInData%a_s          = p%SpdSound
    InitInData%c(1,1)       = p%Chord
    InitInData%UAMod        = p%UAMod 
+   InitInData%IntegrationMethod = UA_Method_ABM4
    InitInData%Flookup      = p%Flookup
    InitInData%OutRootName  = trim(p%OutRootName)//'.UA'
    InitInData%WrSum        = p%SumPrint 
@@ -434,13 +436,11 @@ subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, 
    end if
    AFIndx(1,1) = 1
 
-   UA_f_cn  = (InitInData%UAMod /= UA_HGM).and.(InitInData%UAMod /= UA_OYE)  ! HGM and OYE use the separation function based on cl instead of cn
-
    afNames(1)  = p%AirFoil1 ! All nodes/blades are using the same 2D airfoil
-   call Init_AFI( InitInData%UAMod, NumAFfiles, afNames, p%UseCm, UA_f_cn, AFI_Params, errStat2, errMsg2); if(Failed()) return
+   call Init_AFI( InitInData%UAMod, NumAFfiles, afNames, p%UseCm, AFI_Params, errStat2, errMsg2); if(Failed()) return
 
    if (p%WrAFITables) then
-      call WriteAFITables(AFI_Params(1), p%OutRootName, p%UseCm, UA_f_cn)
+      call AFI_WrTables(AFI_Params(1), InitInData%UAMod, p%OutRootName)
    endif
 contains
    logical function Failed()
@@ -449,12 +449,11 @@ contains
    end function Failed
 endsubroutine driverInputsToUAInitData
 !--------------------------------------------------------------------------------------------------------------
-subroutine Init_AFI(UAMod, NumAFfiles, afNames, UseCm, UA_f_cn, AFI_Params, ErrStat, ErrMsg)
+subroutine Init_AFI(UAMod, NumAFfiles, afNames, UseCm, AFI_Params, ErrStat, ErrMsg)
    integer,             intent(in   )  :: UAMod
    integer,             intent(in   )  :: NumAFfiles
    CHARACTER(1024),     intent(in   )  :: afNames(NumAFfiles)
    logical,             intent(in   )  :: UseCm
-   logical,             intent(in   )  :: UA_f_cn
    type(AFI_ParameterType), intent(  out)  :: AFI_Params(NumAFfiles)
    integer(IntKi),      intent(  out)  :: ErrStat                       ! Error status.
    character(*),        intent(  out)  :: ErrMsg                        ! Error message.
@@ -485,8 +484,8 @@ subroutine Init_AFI(UAMod, NumAFfiles, afNames, UseCm, UA_f_cn, AFI_Params, ErrS
 
    AFI_InitInputs%InCol_Cpmin = 0
    AFI_InitInputs%AFTabMod    = AFITable_1 ! 1D-interpolation (on AoA only)
-   AFI_InitInputs%UA_f_cn     = UA_f_cn
-
+   AFI_InitInputs%UAMod  = UAMod  ! We calculate some of the UA coefficients based on UA Model
+   
    do i=1,NumAFfiles
       AFI_InitInputs%FileName = afNames(i) !InitInp%AF_File(i)
       
@@ -662,7 +661,6 @@ subroutine setUAinputsAlphaSim(n, u, t, p, m, errStat, errMsg)
    type(Dvr_Misc      ),   intent(inout)           :: m           ! Initialization data for the driver program
    integer,                intent(out)             :: errStat
    character(len=*),       intent(out)             :: errMsg
-   integer    :: indx
    real(ReKi) :: phase
    real(ReKi) :: d_ref2AC
    real(ReKi) :: alpha_ref
@@ -697,11 +695,11 @@ subroutine setUAinputsAlphaSim(n, u, t, p, m, errStat, errMsg)
       u%v_ac(1) = v_ref(1) + u%omega * d_ref2AC* p%Chord
       u%v_ac(2) = v_ref(2)
 
-      v_34(1) = u%v_ac(1) + u%omega * 0.5* p%Chord
-      v_34(2) = u%v_ac(2)
-
       u%alpha = atan2(u%v_ac(1), u%v_ac(2) )  ! 
       if (VelocityAt34) then
+         v_34(1) = u%v_ac(1) + u%omega * 0.5* p%Chord
+         v_34(2) = u%v_ac(2)
+
          u%U =  sqrt(v_34(1)**2 + v_34(2)**2) ! Using U at 3/4
       else
          u%U =  sqrt(u%v_ac(1)**2 + u%v_ac(2)**2) ! Using U at 1/4
@@ -1014,113 +1012,6 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
       !out%storage(1:nDV+nAD+nIW, nt) = out%outLine(1:nDV+nAD+nIW)
    endif
 end subroutine Dvr_WriteOutputs
-! 
 
-
-subroutine WriteAFITables(AFI_Params, OutRootName, UseCm, UA_f_cn)
-
-   type(AFI_ParameterType), intent(in), target  :: AFI_Params
-   character(len=*)       , intent(in)          :: OutRootName
-   logical                , intent(in)          :: UseCm
-   logical                , intent(in)          :: UA_f_cn
-   
-   integer(IntKi)                               :: unOutFile
-   integer(IntKi)                               :: ErrStat
-   character(ErrMsgLen)                         :: ErrMsg
-   
-   Real(ReKi), allocatable  :: cl_smooth(:)
-   Real(ReKi), allocatable  :: cn_smooth(:)
-   Real(ReKi), allocatable  :: cn(:)
-   Real(ReKi), allocatable  :: cl_lin(:)
-   Real(ReKi), allocatable  :: cn_lin(:)
-   character(len=3) :: Prefix
-   character(len=11) :: sFullyAtt
-   character(len=8) :: sCm
-   integer :: iTab, iRow, iStartUA
-   type(AFI_Table_Type), pointer :: tab !< Alias
-
-   if (UA_f_cn) then
-      Prefix='Cn_'
-      sFullyAtt='Cn_FullyAtt'
-   else
-      Prefix='Cl_'
-      sFullyAtt='Dummy'
-   endif
-   if (UseCm) then
-      sCm='Cm'
-   else
-      sCm='Cm_Dummy'
-   endif
-
-
-   ! Loop on tables, write a different file for each table.
-   do iTab = 1, size(AFI_Params%Table)
-      tab => AFI_Params%Table(iTab)
-
-      ! Compute derived parameters from cl and cd, and UA_BL
-      if(allocated(cl_smooth)) deallocate(cl_smooth)
-      if(allocated(cn_smooth)) deallocate(cn_smooth)
-      if(allocated(cn       )) deallocate(cn       )
-      if(allocated(cl_lin   )) deallocate(cl_lin   )
-      if(allocated(cn_lin   )) deallocate(cn_lin   )
-      allocate(cl_smooth(tab%NumAlf))
-      allocate(cn_smooth(tab%NumAlf))
-      allocate(cn       (tab%NumAlf))
-      allocate(cl_lin   (tab%NumAlf))
-      allocate(cn_lin   (tab%NumAlf))
-
-   
-      cn     = tab%Coefs(:,AFI_Params%ColCl) * cos(tab%alpha) + (tab%Coefs(:,AFI_Params%ColCd) - tab%UA_BL%Cd0) * sin(tab%alpha);
-      cn_lin = tab%UA_BL%C_nalpha * (tab%alpha - tab%UA_BL%alpha0)
-      cl_lin = tab%UA_BL%C_lalpha * (tab%alpha - tab%UA_BL%alpha0)
-
-      do iRow = 1, tab%NumAlf
-         if ((tab%alpha(iRow)<tab%UA_BL%alphaLowerWrap).or. tab%alpha(iRow)>tab%UA_BL%alphaUpperWrap) then
-            cl_lin(iRow) =0.0_ReKi
-            cn_lin(iRow) =0.0_ReKi
-         endif
-      enddo
-
-      ! Smoothing (used priot to compute slope in CalculateUACoeffs)
-      call kernelSmoothing(tab%alpha, cn                           , kernelType_TRIWEIGHT, 2.0_ReKi*D2R, cn_smooth)
-      call kernelSmoothing(tab%alpha, tab%Coefs(:,AFI_Params%ColCl), kernelType_TRIWEIGHT, 2.0_ReKi*D2R, cl_smooth)
-
-      ! Write to file
-
-      CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-
-      CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.Coefs.'//trim(num2lstr(iTab))//'.out', ErrStat, ErrMsg )
-         if (ErrStat >= AbortErrLev) then
-            call WrScr(Trim(ErrMsg))
-            return
-         end if
-   
-      WRITE (unOutFile,'(/,A/)') 'These predictions were generated by UnsteadyAero Driver on '//CurDate()//' at '//CurTime()//'.'
-      WRITE (unOutFile,'(/,A/)')  ' '
-
-      WRITE(unOutFile, '(20(A20,1x))') 'Alpha', 'Cl',  'Cd',  sCm,  'Cn', 'f_st', Prefix//'FullySep', sFullyAtt , 'Cl_lin','Cn_lin','Cl_smooth', 'Cn_smooth'
-      WRITE(unOutFile, '(20(A20,1x))') '(deg)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)'             , '(-)'     ,  '(-)'  , '(-)'  , '(-)'    ,'(-)'
-
-      ! TODO, we could do something with ColCpmim and ColUAf
-      if (UseCm) then
-         iStartUA = 4
-         do iRow=1,size(tab%Alpha)
-            WRITE(unOutFile, '(20(F20.6,1x))') tab%Alpha(iRow)*R2D, tab%Coefs(iRow,AFI_Params%ColCl), tab%Coefs(iRow,AFI_Params%ColCd), tab%Coefs(iRow,AFI_Params%ColCm), &
-                                           cn(iRow),  tab%Coefs(iRow,iStartUA:), cl_lin(iRow), cn_lin(iRow), cl_smooth(iRow), cn_smooth(iRow)
-         end do
-      else
-         iStartUA = 3
-         do iRow=1,size(tab%Alpha)
-            WRITE(unOutFile, '(20(F20.6,1x))') tab%Alpha(iRow)*R2D, tab%Coefs(iRow,AFI_Params%ColCl), tab%Coefs(iRow,AFI_Params%ColCd), 0.0_ReKi, &
-                                           cn(iRow), tab%Coefs(iRow,iStartUA:), cl_lin(iRow), cn_lin(iRow), cl_smooth(iRow), cn_smooth(iRow)
-         end do
-      endif
-      
-      CLOSE(unOutFile)
-   enddo
-   
-end subroutine WriteAFITables
-   
 end module UA_Dvr_Subs
    

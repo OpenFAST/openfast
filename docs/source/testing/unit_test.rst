@@ -8,10 +8,8 @@ tests. Through robust testing practices, the entire OpenFAST community can
 understand the intention behind code blocks and debug or expand functionality
 quicker and with more confidence and stability.
 
-Unit testing in OpenFAST modules is accomplished through `pFUnit <https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git>`__.
-This framework provides a Fortran abstraction to the popular
-`xUnit <https://en.wikipedia.org/wiki/XUnit>`__ structure. pFUnit is compiled
-along with OpenFAST through CMake when the CMake variable ``BUILD_TESTING`` is
+Unit testing in OpenFAST modules is accomplished through `test-drive <https://github.com/fortran-lang/test-drive>`__.
+test-drive is compiled along with OpenFAST through CMake when the CMake variable ``BUILD_TESTING`` is
 turned on (default off) and the CMake variable ``BUILD_UNIT_TESTING`` is on
 (turned on by default when ``BUILD_TEST`` is on).
 
@@ -22,9 +20,8 @@ Dependencies
 ------------
 The following packages are required for unit testing:
 
-- Python 3.7+, <3.12
 - CMake
-- pFUnit - Included in OpenFAST repo through a git-submodule
+- test-drive - Included in OpenFAST repo in unit_test/test-drive
 
 Compiling
 ---------
@@ -39,7 +36,7 @@ framework named ``[module]_utest``. Then, ``make`` the target to test:
     make beamdyn_utest
 
 This creates a unit test executable at
-``openfast/build/unit_tests/beamdyn/beamdyn_utest``.
+``openfast/build/unit_tests/beamdyn_utest``.
 
 Executing
 ---------
@@ -47,43 +44,34 @@ To execute a module's unit test, simply run the unit test binary. For example:
 
 .. code-block:: bash
 
-    >>>$ ./openfast/build/unit_tests/beamdyn/beamdyn_utest
-    .............
-    Time:         0.018 seconds
+    >>>$ ./openfast/build/unit_tests/beamdyn_utest
+    All tests PASSED
 
-     OK
-     (14 tests)
-
-pFUnit will display a ``.`` for each unit test successfully completed
-and a ``F`` for each failing test. If any tests do fail, the failure
-criteria will be displayed listing which particular value caused
-the failure. Failure cases display the following output:
+the pass or fail status is provided for each test as it's run. An error message is output when the test fails.
+Failure cases display the following output:
 
 .. code-block:: bash
 
-    >>>$ ./unit_tests/beamdyn/beamdyn_utest
-    .....F.......
-    Time:         0.008 seconds
-
-    Failure
-    in:
-    test_BD_CrvMatrixH_suite.test_BD_CrvMatrixH
-        Location:
-    [test_BD_CrvMatrixH.F90:48]
-    simple rotation with known parameters: Pi on xaxis expected +0.5000000 but found: +0.4554637;  difference: |+0.4453627E-01| > tolerance:+0.1000000E-13;  first difference at element [1, 1].
-
-    FAILURES!!!
-    Tests run: 13, Failures: 1, Errors: 0
+    >>>$ ./unit_tests/beamdyn_utest
+    # Testing: Crv
+    Starting test_BD_CheckRotMat ... (1/6)
+        ... test_BD_CheckRotMat [PASSED]
+    Starting test_BD_ComputeIniNodalCrv ... (2/6)
+        ... test_BD_ComputeIniNodalCrv [PASSED]
+    Starting test_BD_CrvCompose ... (3/6)
+        ... test_BD_CrvCompose [PASSED]
+    Starting test_BD_CrvExtractCrv ... (4/6)
+        ... test_BD_CrvExtractCrv [PASSED]
+    Starting test_BD_CrvMatrixH ... (5/6)
+    [Fatal] Uncaught error
+    Code: 1 Message: A(1,1) simple rotation with known parameters: Pi on xaxis:
     Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
-    ERROR STOP *** Encountered 1 or more failures/errors during testing. ***
+    ERROR STOP 
 
     Error termination. Backtrace:
-    #0  0x1073b958c
-    #1  0x1073ba295
-    #2  0x1073bb1b6
-    #3  0x106ecdd4f
-    #4  0x1063fabee
-    #5  0x10706691e
+    #0  0xffff9f70d08b in ???
+    #1  0xffff9f70ddb3 in ???
+    #2  0xffff9f70f333 in ???
 
 Adding unit tests
 -----------------
@@ -104,31 +92,22 @@ structured as
             │   ├── SampleDyn.f90
             │   └── SampleDyn_Subs.f90
             └── tests/
-                ├── test_SampleDyn_Subroutine1.F90
-                ├── test_SampleDyn_Subroutine2.F90
-                └── test_SampleDyn_Subroutine3.F90
+                ├── sampledyn_utest.F90
+                ├── test_SampleDyn_Feature1.F90
+                ├── test_SampleDyn_Feature2.F90
+                └── test_SampleDyn_Feature3.F90
 
-Each unit test must be contained in a unique file called
-``test_[SUBROUTINE].F90`` where ``[SUBROUTINE]`` is the code block being
-tested. The new files should contain a Fortran `module` which itself
-contains a Fortran `subroutine` for each specific test case. Generally,
-multiple tests will be required to fully test one subroutine.
+Each unit test file must contain a module that exports a function which populates
+a list of unit tests in accordance with the ``test-drive`` documentation. These modules
+contain subroutines which take an ``error`` argument that is populated by the ``check`` 
+subroutine provided by ``test-drive``. The ``sampledyn_utest.F90`` collects all of the
+unit tests lists from the adjacent modules and runs them. These programs are compiled
+via the ``unit_tests/CMakeLists.txt`` file so all relevant modules and programs are 
+specified there. 
 
-Finally, update the CMake configuration for building a module's unit
-test executable by copying an existing unit test CMake configuration
-into a new module directory:
-
-.. code-block:: bash
-
-    cp -r openfast/unit_tests/beamdyn openfast/unit_tests/[module]
-
-Then, modify the new ``CMakeLists.txt`` with the appropriate list of test
-subroutines and module name variables.
-
-For reference, a template unit test file is included at
-``openfast/unit_tests/test_SUBROUTINE.F90``. Each unit test should fully test
-the target code block. If full test coverage is not easily achievable, it may
-be an indication that refactoring would be beneficial.
+Refer to existing unit tests for the ``BeamDyn`` or ``NWTC Library`` unit tests for examples
+of how to structure and build the unit test drivers. Also review the ``test-drive`` documentation at
+`test-drive <https://github.com/fortran-lang/test-drive>`__.
 
 Some useful topics to consider when developing and testing for OpenFAST are:
 

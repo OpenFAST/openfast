@@ -28,7 +28,7 @@ EXTERNAL_ROUTINE void FAST_ExtInfw_Init(int * iTurb, double *TMax, const char *I
                                         int *ErrStat, char *ErrMsg);
 
 EXTERNAL_ROUTINE void FAST_ExtLoads_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, double * dt, int * NumBl, int * n_t_global, ExtLdDX_InputType_t* ExtLdDX_Input, ExtLdDX_ParameterType_t* ExtLdDX_Parameter, ExtLdDX_OutputType_t* ExtLdDX_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output, int *ErrStat, char *ErrMsg);
-EXTERNAL_ROUTINE void FAST_ExtLoads_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbineID, char *OutFileRoot, float * TurbinePosition, int *AbortErrLev, double * dtDriver, double * dt, int * NumBl, double * az_blend_mean, double * az_blend_delta, double * vel_mean, double * wind_dir, double * z_ref, double * shear_exp, ExtLdDX_InputType_t* ExtLdDX_Input, ExtLdDX_ParameterType_t* ExtLdDX_Parameter, ExtLdDX_OutputType_t* ExtLdDX_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output, int *ErrStat, char *ErrMsg);
+EXTERNAL_ROUTINE void FAST_ExtLoads_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbineID, char *OutFileRoot, float * TurbinePosition, int *AbortErrLev, double * dtDriver, double * dt, int * NumBl, double * az_blend_mean, double * az_blend_delta, ExtLdDX_InputType_t* ExtLdDX_Input, ExtLdDX_ParameterType_t* ExtLdDX_Parameter, ExtLdDX_OutputType_t* ExtLdDX_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_Solution0(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_InitIOarrays_SubStep(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_Prework(int * iTurb, int *ErrStat, char *ErrMsg);
@@ -61,8 +61,6 @@ EXTERNAL_ROUTINE void FAST_CreateCheckpoint(int * iTurb, const char *CheckpointR
 #define ErrID_Severe 3 
 #define ErrID_Fatal 4 
 
-
-#define SensorType_None -1
 
 // make sure these parameters match with FAST_Library.f90 and NWTC_Base.f90
 #define MAXIMUM_BLADES 3
