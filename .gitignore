@@ -61,3 +61,4 @@ varcache
 
 # Python cache files
 openfast_io/dist/
+openfast_io/openfast_io/_version.py

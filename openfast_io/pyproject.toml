@@ -9,12 +9,10 @@ version = "4.0.0.a1"
 description = "Readers and writers for OpenFAST files."
 license = {file = "../LICENSE"}
 authors = [
+    {name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"      },
+    {name = "Andy Platt", email = "andy.platt@nrel.gov"            },
+    {name = "Derek Slaughter", email = "derek.slaughter@nrel.gov"  },
     { name = "NREL WISDEM Team", email = "systems.engineering@nrel.gov"    },
-    { name = "Daniel Zalkind", email = "daniel.zalkind@nrel.gov"           },
-    { name = "Garrett Barter", email = "garrett.barter@nrel.gov"           },
-    { name = "Pietro Bortolotti", email = "pietro.bortolotti@nrel.gov"     },
-    { name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"             },
-    { name = "John Jasa"                                          },
 ]
 maintainers = [
     {name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"      },

@@ -236,7 +236,6 @@ class InputWriter_OpenFAST(object):
 
     def write_MainInput(self):
         # Main FAST Input File
-        # Currently no differences between FASTv8.16 and OpenFAST.
 
         self.FAST_InputFileOut = os.path.join(self.FAST_runDirectory, self.FAST_namingOut+'.fst')
 
