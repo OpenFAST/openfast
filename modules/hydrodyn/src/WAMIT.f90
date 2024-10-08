@@ -1026,7 +1026,7 @@ end if
                   END DO
                ELSE IF ( InitInp%PtfmYMod == 1 ) THEN
                   IF ( (.not. EqualRealNos( HdroWvDir(1),REAL(-180,SiKi))) .OR. (.not. EqualRealNos( HdroWvDir(NInpWvDir),REAL(180,SiKi))) )  THEN
-                     ErrMsg2  = 'With PtfmYMod=1 in ElastoDyn or HydroDyn driver, we need the lowest and highest wave headings to be exactly -180 deg and 180 deg, respectively, in "' &
+                     ErrMsg2  = 'With PtfmYMod=1, we need the lowest and highest wave headings to be exactly -180 deg and 180 deg, respectively, in "' &
                                     //TRIM(InitInp%WAMITFile)//'.3" (inclusive).'
                      CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                      CALL Cleanup()
@@ -1995,7 +1995,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          END IF
          IF ( (ABS( WrapToPi(rotDisp(3)-u%PtfmRefY) ) > LrgAngle) .AND. FrstWarn_LrgY ) THEN
             ErrStat2 = ErrID_Severe
-            ErrMsg2  = 'Yaw angle of a potential-flow body relative to the reference yaw position (PtfmRefY) violated the small angle assumption. The solution might be inaccurate. Consider using PtfmYMod=1 and adjust PtfmYCutoff in ElastoDyn. Simulation continuing, but future warnings will be suppressed.'
+            ErrMsg2  = 'Yaw angle of a potential-flow body relative to the reference yaw position (PtfmRefY) violated the small angle assumption. The solution might be inaccurate. Consider using PtfmYMod=1 and adjust PtfmYCutoff. Simulation continuing, but future warnings will be suppressed.'
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             FrstWarn_LrgY = .FALSE.
          END IF
