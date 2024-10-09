@@ -256,10 +256,13 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Elems      !< Element nodes connections [-]
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FC      !< Initial cable force T0, not reduced [N]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector (with initial cable force T0), not reduced [N]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector, not reduced [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: rPG      !< Vector from TP to rigid-body CoG in the Guyan (rigid-body) frame, used for Floating Rigid Body Motion [m]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NodeID2JointID      !< Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: CMassNode      !< Node indices for concentrated masses [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMassWeight      !< Weight of concentrated masses [N]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CMassOffset      !< Concentrated mass CoG offset from attached nodes [m]
     LOGICAL  :: reduced = .false.      !< True if system has been reduced to account for constraints [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: T_red_T      !< Transpose of T_red [-]
@@ -2637,6 +2640,42 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%NodeID2JointID = SrcParamData%NodeID2JointID
    end if
+   if (allocated(SrcParamData%CMassNode)) then
+      LB(1:1) = lbound(SrcParamData%CMassNode, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%CMassNode, kind=B8Ki)
+      if (.not. allocated(DstParamData%CMassNode)) then
+         allocate(DstParamData%CMassNode(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%CMassNode.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%CMassNode = SrcParamData%CMassNode
+   end if
+   if (allocated(SrcParamData%CMassWeight)) then
+      LB(1:1) = lbound(SrcParamData%CMassWeight, kind=B8Ki)
+      UB(1:1) = ubound(SrcParamData%CMassWeight, kind=B8Ki)
+      if (.not. allocated(DstParamData%CMassWeight)) then
+         allocate(DstParamData%CMassWeight(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%CMassWeight.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%CMassWeight = SrcParamData%CMassWeight
+   end if
+   if (allocated(SrcParamData%CMassOffset)) then
+      LB(1:2) = lbound(SrcParamData%CMassOffset, kind=B8Ki)
+      UB(1:2) = ubound(SrcParamData%CMassOffset, kind=B8Ki)
+      if (.not. allocated(DstParamData%CMassOffset)) then
+         allocate(DstParamData%CMassOffset(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%CMassOffset.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%CMassOffset = SrcParamData%CMassOffset
+   end if
    DstParamData%reduced = SrcParamData%reduced
    if (allocated(SrcParamData%T_red)) then
       LB(1:2) = lbound(SrcParamData%T_red, kind=B8Ki)
@@ -3388,6 +3427,15 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%NodeID2JointID)) then
       deallocate(ParamData%NodeID2JointID)
    end if
+   if (allocated(ParamData%CMassNode)) then
+      deallocate(ParamData%CMassNode)
+   end if
+   if (allocated(ParamData%CMassWeight)) then
+      deallocate(ParamData%CMassWeight)
+   end if
+   if (allocated(ParamData%CMassOffset)) then
+      deallocate(ParamData%CMassOffset)
+   end if
    if (allocated(ParamData%T_red)) then
       deallocate(ParamData%T_red)
    end if
@@ -3616,6 +3664,9 @@ subroutine SD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%DP0)
    call RegPackAlloc(RF, InData%rPG)
    call RegPackAlloc(RF, InData%NodeID2JointID)
+   call RegPackAlloc(RF, InData%CMassNode)
+   call RegPackAlloc(RF, InData%CMassWeight)
+   call RegPackAlloc(RF, InData%CMassOffset)
    call RegPack(RF, InData%reduced)
    call RegPackAlloc(RF, InData%T_red)
    call RegPackAlloc(RF, InData%T_red_T)
@@ -3794,6 +3845,9 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%DP0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%rPG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%NodeID2JointID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CMassNode); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CMassWeight); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CMassOffset); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%reduced); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%T_red); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%T_red_T); if (RegCheckErr(RF, RoutineName)) return
