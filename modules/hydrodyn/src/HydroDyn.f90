@@ -293,6 +293,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             p%vecMultiplier          = InputFileData%vecMultiplier  ! Multiply all vectors and matrices row/column lengths by NBody
             InputFileData%WAMIT%NBodyMod = InputFileData%NBodyMod
             InputFileData%WAMIT%Gravity  = InitInp%Gravity
+            InputFileData%WAMIT%PlatformPos = InitInp%PlatformPos   ! Initial platform/HD origin position
             p%NBody                  = InputFileData%NBody
             p%NBodyMod               = InputFileData%NBodyMod
             call AllocAry( m%F_PtfmAdd, 6*InputFileData%NBody, "m%F_PtfmAdd", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
