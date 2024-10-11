@@ -3502,7 +3502,10 @@ CONTAINS
          
       ! calculate line dynamics (and calculate line forces and masses attributed to points)
       DO l = 1,p%nLines
-         CALL Line_GetStateDeriv(m%LineList(l), dxdt%states(m%LineStateIs1(l):m%LineStateIsN(l)), m, p)  !dt might also be passed for fancy friction models
+         CALL Line_GetStateDeriv(m%LineList(l), dxdt%states(m%LineStateIs1(l):m%LineStateIsN(l)), m, p, ErrStat, ErrMsg)  !dt might also be passed for fancy friction models
+         if (ErrStat == ErrID_Fatal) then
+            return
+         endif
       END DO
       
       ! calculate point dynamics (including contributions from attached lines

@@ -84,6 +84,12 @@ CONTAINS
       
       ! copy over elasticity data
       Line%ElasticMod = LineProp%ElasticMod
+
+      if (Line%ElasticMod > 3) then
+         ErrStat = ErrID_Fatal
+         ErrMsg = "Line ElasticMod > 3. This is not possible."
+         RETURN
+      endif
       
       Line%nEApoints = LineProp%nEApoints
       DO I = 1,Line%nEApoints
@@ -1003,12 +1009,15 @@ CONTAINS
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Line_GetStateDeriv(Line, Xd, m, p)  !, FairFtot, FairMtot, AnchFtot, AnchMtot)
+   SUBROUTINE Line_GetStateDeriv(Line, Xd, m, p, ErrStat, ErrMsg)  !, FairFtot, FairMtot, AnchFtot, AnchMtot)
 
       TYPE(MD_Line),          INTENT(INOUT) :: Line    ! the current Line object
       Real(DbKi),             INTENT(INOUT) :: Xd(:)   ! state derivative vector section for this line
       TYPE(MD_MiscVarType),   INTENT(INOUT) :: m       ! passing along all mooring objects
       TYPE(MD_ParameterType), INTENT(IN   ) :: p       ! Parameters
+      INTEGER(IntKi),         INTENT(  OUT) :: ErrStat ! Error status of the operation
+      CHARACTER(*),           INTENT(  OUT) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
+
       
       !   Real(DbKi), INTENT( IN )      :: X(:)           ! state vector, provided
       !   Real(DbKi), INTENT( INOUT )   :: Xd(:)          ! derivative of state vector, returned ! cahnged to INOUT
@@ -1280,10 +1289,8 @@ CONTAINS
 
             if (Line%ElasticMod == 3) then
                if (Line%dl_1(I) >= 0.0) then
-                  ! Mean load dependent dynamic stiffness: from combining eqn. 2 and eqn. 10 from paper, taking mean load = k1 delta_L1 / MBL, and solving for k_D using WolframAlpha with following conditions: k_D > k_s, (MBL,alpha,beta,unstrLen,delta_L1) > 0
+                  ! Mean load dependent dynamic stiffness: from combining eqn. 2 and eqn. 10 from original MD viscoelastic paper, taking mean load = k1 delta_L1 / MBL, and solving for k_D using WolframAlpha with following conditions: k_D > k_s, (MBL,alpha,beta,unstrLen,delta_L1) > 0
                   EA_D = 0.5 * ((Line%alphaMBL) + (Line%vbeta*Line%dl_1(I)*(Line%EA / Line%l(I))) + Line%EA + sqrt((Line%alphaMBL * Line%alphaMBL) + (2*Line%alphaMBL*(Line%EA / Line%l(I)) * (Line%vbeta*Line%dl_1(I) - Line%l(I))) + ((Line%EA / Line%l(I))*(Line%EA / Line%l(I)) * (Line%vbeta*Line%dl_1(I) + Line%l(I))*(Line%vbeta*Line%dl_1(I) + Line%l(I)))))
-                  ! print*, "Delta L1:", Line%dl_1(I)
-                  ! print*, "EA_D calc:", EA_D
                else
                   EA_D = Line%alphaMBL ! mean load is considered to be 0 in this case. The second term in the above equation is not valid for delta_L1 < 0.
                endif
@@ -1291,12 +1298,19 @@ CONTAINS
             else if (Line%ElasticMod == 2) then
                ! constant dynamic stiffness
                EA_D = Line%EA_D
-            ! else 
-            !    ErrStat = ErrID_Fatal
-            !    Errmsg = ' Line%ElasticMod > 3 for line '//trim(num2lstr(Line%IdNum))//' viscoelstic model.' ! TODO: make sure this is the right error level. Do this for every if (Line%ElasticMod > 1) to make sure its never 4
+            endif
+
+            if (EA_D == 0.0) then ! Make sure EA != EA_D or else nans, also make sure EA_D != 0  or else nans. 
+               ErrStat = ErrID_Fatal
+               ErrMsg = "Viscoelastic model: Dynamic stiffness cannot equal zero"
+               return
+            else if (EA_D == Line%EA) then
+               ErrStat = ErrID_Fatal
+               ErrMsg = "Viscoelastic model: Dynamic stiffness cannot equal static stiffness"
+               return
             endif
          
-            EA_1 = EA_D*Line%EA/(EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S. TODO: Make sure EA != EA_D or else nans, also make sure EA_D != 0  or else nans. 
+            EA_1 = EA_D*Line%EA/(EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S. 
          
             dl = Line%lstr(I) - Line%l(I) ! delta l of this segment
          
@@ -1307,12 +1321,6 @@ CONTAINS
             else 
                MagT = 0.0_DbKi ! cable can't "push"
             endif
-
-            ! print*, "alphaMBL:", Line%alphaMBL
-            ! print*, "EA_D:", EA_D
-            ! print*, "EA:", Line%EA
-            ! print*, "EA_1:", EA_1
-            ! print*, "MagT:", MagT
 
             MagTd = Line%BA*ld_1 / Line%l(I) ! compute tension based on static portion (dynamic portion would give same). See eqn. 14 in paper
             
