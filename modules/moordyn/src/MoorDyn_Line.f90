@@ -72,8 +72,8 @@ CONTAINS
       Line%EA      = LineProp%EA
       ! note: Line%BA is set later
       Line%EA_D    = LineProp%EA_D
-      Line%EA_Dc   = LineProp%EA_Dc
-      Line%EA_D_Lm = LineProp%EA_D_Lm
+      Line%alphaMBL   = LineProp%alphaMBL
+      Line%vbeta = LineProp%vbeta
       Line%BA_D    = LineProp%BA_D
       Line%EI      = LineProp%EI  !<<< for bending stiffness
       
@@ -1281,9 +1281,11 @@ CONTAINS
             if (Line%ElasticMod == 3) then
                if (Line%dl_1(I) >= 0.0) then
                   ! Mean load dependent dynamic stiffness: from combining eqn. 2 and eqn. 10 from paper, taking mean load = k1 delta_L1 / MBL, and solving for k_D using WolframAlpha with following conditions: k_D > k_s, (MBL,alpha,beta,unstrLen,delta_L1) > 0
-                  EA_D = ((Line%EA_Dc) + (Line%EA_D_Lm*Line%dl_1(I)*Line%EA) + (Line%l(I)*Line%EA) + sqrt((Line%EA_Dc * Line%EA_Dc) + (2*Line%EA_Dc*Line%EA * (Line%EA_D_Lm*Line%dl_1(I) - Line%l(I))) + (Line%EA*Line%EA * (Line%EA_D_Lm*Line%dl_1(I) + Line%l(I))*(Line%EA_D_Lm*Line%dl_1(I) + Line%l(I))))) / (2*Line%l(I))
+                  EA_D = 0.5 * ((Line%alphaMBL) + (Line%vbeta*Line%dl_1(I)*(Line%EA / Line%l(I))) + Line%EA + sqrt((Line%alphaMBL * Line%alphaMBL) + (2*Line%alphaMBL*(Line%EA / Line%l(I)) * (Line%vbeta*Line%dl_1(I) - Line%l(I))) + ((Line%EA / Line%l(I))*(Line%EA / Line%l(I)) * (Line%vbeta*Line%dl_1(I) + Line%l(I))*(Line%vbeta*Line%dl_1(I) + Line%l(I)))))
+                  ! print*, "Delta L1:", Line%dl_1(I)
+                  ! print*, "EA_D calc:", EA_D
                else
-                  EA_D = Line%EA_Dc ! mean load is considered to be 0 in this case. The second term in the above equation is not valid for delta_L1 < 0.
+                  EA_D = Line%alphaMBL ! mean load is considered to be 0 in this case. The second term in the above equation is not valid for delta_L1 < 0.
                endif
 
             else if (Line%ElasticMod == 2) then
@@ -1305,6 +1307,12 @@ CONTAINS
             else 
                MagT = 0.0_DbKi ! cable can't "push"
             endif
+
+            ! print*, "alphaMBL:", Line%alphaMBL
+            ! print*, "EA_D:", EA_D
+            ! print*, "EA:", Line%EA
+            ! print*, "EA_1:", EA_1
+            ! print*, "MagT:", MagT
 
             MagTd = Line%BA*ld_1 / Line%l(I) ! compute tension based on static portion (dynamic portion would give same). See eqn. 14 in paper
             

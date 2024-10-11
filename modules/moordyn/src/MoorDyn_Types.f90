@@ -68,8 +68,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: w = 0.0_R8Ki      !< per-length weight in air [[kg/m]]
     REAL(DbKi)  :: EA = 0.0_R8Ki      !< axial stiffness [[N]]
     REAL(DbKi)  :: EA_D = 0.0_R8Ki      !< axial stiffness [[N]]
-    REAL(DbKi)  :: EA_Dc = 0.0_R8Ki      !< dynamic stiffness constant: Krd alpha term x MBL [[N]]
-    REAL(DbKi)  :: EA_D_Lm = 0.0_R8Ki      !< dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load) [[N]]
+    REAL(DbKi)  :: alphaMBL = 0.0_R8Ki      !< dynamic stiffness constant: Krd alpha term x MBL [[N]]
+    REAL(DbKi)  :: vbeta = 0.0_R8Ki      !< dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load) [[N]]
     REAL(DbKi)  :: BA = 0.0_R8Ki      !< internal damping coefficient times area [[N-s]]
     REAL(DbKi)  :: BA_D = 0.0_R8Ki      !< internal damping coefficient times area [[N-s]]
     REAL(DbKi)  :: EI = 0.0_R8Ki      !< bending stiffness [[N-m]]
@@ -244,8 +244,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: d = 0.0_R8Ki      !< volume-equivalent diameter [[m]]
     REAL(DbKi)  :: EA = 0.0_R8Ki      !< stiffness [[N]]
     REAL(DbKi)  :: EA_D = 0.0_R8Ki      !< constant dynamic stiffness when using viscoelastic model [[N]]
-    REAL(DbKi)  :: EA_Dc = 0.0_R8Ki      !< load dependent dynamic stiffness constant: Krd alpha term x MBL [[N]]
-    REAL(DbKi)  :: EA_D_Lm = 0.0_R8Ki      !< load dependent dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load) [[N]]
+    REAL(DbKi)  :: alphaMBL = 0.0_R8Ki      !< load dependent dynamic stiffness constant: Krd alpha term x MBL [[N]]
+    REAL(DbKi)  :: vbeta = 0.0_R8Ki      !< load dependent dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load) [[N]]
     REAL(DbKi)  :: BA = 0.0_R8Ki      !< internal damping coefficient times area for this line only [[N-s]]
     REAL(DbKi)  :: BA_D = 0.0_R8Ki      !< dynamic internal damping coefficient times area when using viscoelastic model [[N-s]]
     REAL(DbKi)  :: EI = 0.0_R8Ki      !< bending stiffness [[N-m]]
@@ -692,8 +692,8 @@ subroutine MD_CopyLineProp(SrcLinePropData, DstLinePropData, CtrlCode, ErrStat, 
    DstLinePropData%w = SrcLinePropData%w
    DstLinePropData%EA = SrcLinePropData%EA
    DstLinePropData%EA_D = SrcLinePropData%EA_D
-   DstLinePropData%EA_Dc = SrcLinePropData%EA_Dc
-   DstLinePropData%EA_D_Lm = SrcLinePropData%EA_D_Lm
+   DstLinePropData%alphaMBL = SrcLinePropData%alphaMBL
+   DstLinePropData%vbeta = SrcLinePropData%vbeta
    DstLinePropData%BA = SrcLinePropData%BA
    DstLinePropData%BA_D = SrcLinePropData%BA_D
    DstLinePropData%EI = SrcLinePropData%EI
@@ -733,8 +733,8 @@ subroutine MD_PackLineProp(RF, Indata)
    call RegPack(RF, InData%w)
    call RegPack(RF, InData%EA)
    call RegPack(RF, InData%EA_D)
-   call RegPack(RF, InData%EA_Dc)
-   call RegPack(RF, InData%EA_D_Lm)
+   call RegPack(RF, InData%alphaMBL)
+   call RegPack(RF, InData%vbeta)
    call RegPack(RF, InData%BA)
    call RegPack(RF, InData%BA_D)
    call RegPack(RF, InData%EI)
@@ -766,8 +766,8 @@ subroutine MD_UnPackLineProp(RF, OutData)
    call RegUnpack(RF, OutData%w); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA_D); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%EA_Dc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%EA_D_Lm); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alphaMBL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vbeta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA_D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EI); if (RegCheckErr(RF, RoutineName)) return
@@ -1609,8 +1609,8 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
    DstLineData%d = SrcLineData%d
    DstLineData%EA = SrcLineData%EA
    DstLineData%EA_D = SrcLineData%EA_D
-   DstLineData%EA_Dc = SrcLineData%EA_Dc
-   DstLineData%EA_D_Lm = SrcLineData%EA_D_Lm
+   DstLineData%alphaMBL = SrcLineData%alphaMBL
+   DstLineData%vbeta = SrcLineData%vbeta
    DstLineData%BA = SrcLineData%BA
    DstLineData%BA_D = SrcLineData%BA_D
    DstLineData%EI = SrcLineData%EI
@@ -2097,8 +2097,8 @@ subroutine MD_PackLine(RF, Indata)
    call RegPack(RF, InData%d)
    call RegPack(RF, InData%EA)
    call RegPack(RF, InData%EA_D)
-   call RegPack(RF, InData%EA_Dc)
-   call RegPack(RF, InData%EA_D_Lm)
+   call RegPack(RF, InData%alphaMBL)
+   call RegPack(RF, InData%vbeta)
    call RegPack(RF, InData%BA)
    call RegPack(RF, InData%BA_D)
    call RegPack(RF, InData%EI)
@@ -2174,8 +2174,8 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpack(RF, OutData%d); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA_D); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%EA_Dc); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%EA_D_Lm); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alphaMBL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vbeta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA_D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EI); if (RegCheckErr(RF, RoutineName)) return

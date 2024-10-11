@@ -643,8 +643,8 @@ CONTAINS
                       CALL CleanUp()
                    else if (N==3) then                               ! visco-elastic case, load dependent dynamic stiffness!
                       m%LineTypeList(l)%ElasticMod = 3
-                      read(tempStrings(2), *) m%LineTypeList(l)%EA_Dc
-                      read(tempStrings(3), *) m%LineTypeList(l)%EA_D_Lm
+                      read(tempStrings(2), *) m%LineTypeList(l)%alphaMBL
+                      read(tempStrings(3), *) m%LineTypeList(l)%vbeta
                    else if (N==2) then                               ! visco-elastic case, constant dynamic stiffness!
                       m%LineTypeList(l)%ElasticMod = 2
                       read(tempStrings(2), *) m%LineTypeList(l)%EA_D 
