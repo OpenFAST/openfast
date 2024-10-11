@@ -69,11 +69,13 @@ CONTAINS
       Line%d   = LineProp%d
       Line%rho = LineProp%w/(Pi/4.0 * Line%d * Line%d)
       
-      Line%EA   = LineProp%EA
+      Line%EA      = LineProp%EA
       ! note: Line%BA is set later
-      Line%EA_D = LineProp%EA_D
-      Line%BA_D = LineProp%BA_D
-      Line%EI   = LineProp%EI  !<<< for bending stiffness
+      Line%EA_D    = LineProp%EA_D
+      Line%EA_Dc   = LineProp%EA_Dc
+      Line%EA_D_Lm = LineProp%EA_D_Lm
+      Line%BA_D    = LineProp%BA_D
+      Line%EI      = LineProp%EI  !<<< for bending stiffness
       
       Line%Can   = LineProp%Can
       Line%Cat   = LineProp%Cat
@@ -141,7 +143,7 @@ CONTAINS
       END IF
       
       ! if using viscoelastic model, allocate additional state quantities
-      if (Line%ElasticMod == 2) then
+      if (Line%ElasticMod > 1) then
          ALLOCATE ( Line%dl_1(N), STAT = ErrStat )
          IF ( ErrStat /= ErrID_None ) THEN
             ErrMsg  = ' Error allocating dl_1 array.'
@@ -991,7 +993,7 @@ CONTAINS
       END DO
       
       ! if using viscoelastic model, also set the static stiffness stretch
-      if (Line%ElasticMod == 2) then
+      if (Line%ElasticMod > 1) then
          do I=1,Line%N
             Line%dl_1(I) = X( 6*Line%N-6 + I)   ! these will be the last N entries in the state vector
          end do
@@ -1289,10 +1291,10 @@ CONTAINS
                EA_D = Line%EA_D
             ! else 
             !    ErrStat = ErrID_Fatal
-            !    Errmsg = ' Line%ElasticMod > 3 for line '//trim(num2lstr(Line%IdNum))//' viscoelstic model.' ! TODO: make sure this is the right error level
+            !    Errmsg = ' Line%ElasticMod > 3 for line '//trim(num2lstr(Line%IdNum))//' viscoelstic model.' ! TODO: make sure this is the right error level. Do this for every if (Line%ElasticMod > 1) to make sure its never 4
             endif
          
-            EA_1 = EA_D*Line%EA/(EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S
+            EA_1 = EA_D*Line%EA/(EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S. TODO: Make sure EA != EA_D or else nans, also make sure EA_D != 0  or else nans. 
          
             dl = Line%lstr(I) - Line%l(I) ! delta l of this segment
          

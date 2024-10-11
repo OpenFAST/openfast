@@ -642,7 +642,7 @@ CONTAINS
                       CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 3 (bar-separated) values.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
                    else if (N==3) then                               ! visco-elastic case, load dependent dynamic stiffness!
-                      m%LineTypeList(l)%ElasticMod = 2
+                      m%LineTypeList(l)%ElasticMod = 3
                       read(tempStrings(2), *) m%LineTypeList(l)%EA_Dc
                       read(tempStrings(3), *) m%LineTypeList(l)%EA_D_Lm
                    else if (N==2) then                               ! visco-elastic case, constant dynamic stiffness!
@@ -665,7 +665,7 @@ CONTAINS
                       CALL CleanUp()
                    else if (N==2) then                               ! visco-elastic case when two BA values provided
                       read(tempStrings(2), *) m%LineTypeList(l)%BA_D 
-                   else if (m%LineTypeList(l)%ElasticMod == 2) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
+                   else if (m%LineTypeList(l)%ElasticMod > 1) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
                       CALL WrScr("Warning, viscoelastic model being used with zero damping on the dynamic stiffness.")
                       if (p%writeLog > 0) then
                         write(p%UnLog,'(A)') "Warning, viscoelastic model being used with zero damping on the dynamic stiffness."
@@ -1442,7 +1442,7 @@ CONTAINS
                   
                   ! account for states of line
                   m%LineStateIs1(l) = Nx + 1
-                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%ElasticMod == 2) then
+                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%ElasticMod > 1) then ! todo add an error check here? or change to 2 or 3?
                      Nx = Nx + 7*m%LineList(l)%N - 6       ! if using viscoelastic model, need one more state per segment
                      m%LineStateIsN(l) = Nx          
                   else
