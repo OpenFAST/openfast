@@ -254,6 +254,7 @@ this requirement is not met at any point during the simulation, while
 still allowing the simulation to continue if possible. 
 
 With **PtfmYMod** = 1, HydroDyn requires the first- and second-order 
+(mean- or slow-drift loads from Newman's approximation only) 
 potential-flow wave excitation input file(s) to cover the full range 
 of possible wave headings with the first (smallest) wave heading being 
 exactly -180 deg and the last (largest) wave heading being exactly 
