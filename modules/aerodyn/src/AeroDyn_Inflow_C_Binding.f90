@@ -936,7 +936,6 @@ CONTAINS
             ! blades
             call MeshMapCreate( BldStrMotionMesh(iWT)%Mesh(iBlade),      ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(iBlade, iWT),   ErrStat2, ErrMsg2 ); if(Failed()) return
             call MeshMapCreate( ADI%y%AD%rotors(iWT)%BladeLoad(iBlade), BldStrLoadMesh(iWT)%Mesh(iBlade),             Map_AD_BldLoad_P_2_BldStrLoad(iBlade, iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
-            ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBlade)%RemapFlag = .false.
          enddo ! iBlade
       enddo ! iWT
 
