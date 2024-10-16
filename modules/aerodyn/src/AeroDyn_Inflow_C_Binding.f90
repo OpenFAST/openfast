@@ -936,6 +936,7 @@ CONTAINS
             ! blades
             call MeshMapCreate( BldStrMotionMesh(iWT)%Mesh(iBlade),      ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(iBlade, iWT),   ErrStat2, ErrMsg2 ); if(Failed()) return
             call MeshMapCreate( ADI%y%AD%rotors(iWT)%BladeLoad(iBlade), BldStrLoadMesh(iWT)%Mesh(iBlade),             Map_AD_BldLoad_P_2_BldStrLoad(iBlade, iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
+            ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBlade)%RemapFlag = .false.
          enddo ! iBlade
       enddo ! iWT
 
@@ -2010,7 +2011,11 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
    do iBlade=1,Sim%WT(iWT)%numBlades
       n_elems = size(BldStrMotionMesh(iWT)%Mesh(iBlade)%Position, 2)
       if (( u_local%AD%rotors(iWT)%BladeMotion(iBlade)%Committed ) .and. (n_elems > 0)) then
-         call Transfer_Point_to_Line2( BldStrMotionMesh(iWT)%Mesh(iBlade), u_local%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(i,iWT), ErrStat, ErrMsg )
+         if (PointLoadOutput) then
+            call Transfer_Point_to_Line2(BldStrMotionMesh(iWT)%Mesh(iBlade), u_local%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(i,iWT), ErrStat, ErrMsg)
+         else
+            call Transfer_Line2_to_Line2(BldStrMotionMesh(iWT)%Mesh(iBlade), u_local%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(i,iWT), ErrStat, ErrMsg)
+         end if
          if (ErrStat >= AbortErrLev)  return
       endif
    enddo
