@@ -2,7 +2,7 @@
 # LICENSING
 # Copyright (C) 2021 National Renewable Energy Laboratory
 #
-# This file is part of InflowWind.
+# This file is part of AeroDyn.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -101,6 +101,7 @@ class AeroDynInflowLib(CDLL):
         # flags
         self.storeHHVel  = 1          # 0=false, 1=true
         self.transposeDCM= 1          # 0=false, 1=true
+        self.pointLoadOut= 1          # 0=false, 1=true
         self.debuglevel  = 0          # 0-4 levels
 
         # VTK
@@ -162,6 +163,7 @@ class AeroDynInflowLib(CDLL):
         self.ADI_C_PreInit.argtypes = [
             POINTER(c_int),                     # numTurbines
             POINTER(c_int),                     # transposeDCM
+            POINTER(c_int),                     # pointLoadOutput
             POINTER(c_int),                     # debuglevel
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
@@ -258,6 +260,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # iturb
             POINTER(c_int),                     # numMeshPts
             POINTER(c_float),                   # meshFrc -- mesh forces/moments in flat array of 6*numMeshPts
+            POINTER(c_float),                   # hhVel -- wind speed at hub height in flat array of 3
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
@@ -295,6 +298,7 @@ class AeroDynInflowLib(CDLL):
         self.ADI_C_PreInit(
             byref(c_int(self.numTurbines)),         # IN: numTurbines
             byref(c_int(self.transposeDCM)),        # IN: transposeDCM
+            byref(c_int(self.pointLoadOut)),        # IN: pointLoadOut
             byref(c_int(self.debuglevel)),          # IN: debuglevel
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
@@ -487,15 +491,17 @@ class AeroDynInflowLib(CDLL):
 
 
     # adi_calcOutput ------------------------------------------------------------------------------------------------------------
-    def adi_getrotorloads(self, iturb, meshFrcMom):
+    def adi_getrotorloads(self, iturb, meshFrcMom, hhVel=None):
         # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
         _meshFrc_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
+        _hhVel_flat_c = (c_float * 3)(0.0,)
 
         # Run ADI_C_GetRotorLoads
         self.ADI_C_GetRotorLoads(
             c_int(iturb),                           # IN: iturb -- current turbine number
             byref(c_int(self.numMeshPts)),          # IN: number of attachment points expected (where motions are transferred into HD)
             _meshFrc_flat_c,                        # OUT: resulting forces/moments array
+            _hhVel_flat_c,                          # OUT: hub height velocity [Vx, Vy, Vz]
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
         )
@@ -513,6 +519,11 @@ class AeroDynInflowLib(CDLL):
             meshFrcMom[j,5] = _meshFrc_flat_c[count+5]
             count = count + 6
 
+        ## Hub height wind speed
+        if self.storeHHVel and hhVel != None:
+            hhVel[0] = _hhVel_flat_c[0]
+            hhVel[1] = _hhVel_flat_c[1]
+            hhVel[2] = _hhVel_flat_c[2]
 
     # adi_calcOutput ------------------------------------------------------------------------------------------------------------
     def adi_calcOutput(self, time, outputChannelValues):
