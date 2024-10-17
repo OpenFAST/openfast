@@ -45,7 +45,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    type(ProgDesc), parameter              :: version   = ProgDesc( 'AeroDyn-Inflow library', '', '' )
 
    !------------------------------------------------------------------------------------
-   !  Debugging: DebugVerbose -- passed at PreInit
+   !  Debugging: DebugLevel -- passed at PreInit
    !     0  - none
    !     1  - some summary info
    !     2  - above + all position/orientation info
@@ -1631,7 +1631,7 @@ contains
 !
 !     ! For checking the mesh, uncomment this.
 !     !     note: CU is is output unit (platform dependent).
-!     if (debugverbose >= 4)  call MeshPrintInfo( CU, NacMotionMesh(iWT), MeshName='NacMotionMesh'//trim(Num2LStr(iWT)) )
+!     if (DebugLevel >= 4)  call MeshPrintInfo( CU, NacMotionMesh(iWT), MeshName='NacMotionMesh'//trim(Num2LStr(iWT)) )
 
    end subroutine SetupMotionMesh
 end subroutine ADI_C_SetupRotor
@@ -2014,6 +2014,7 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
             call Transfer_Point_to_Line2(BldStrMotionMesh(iWT)%Mesh(iBlade), u_local%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(i,iWT), ErrStat, ErrMsg)
          else
             call Transfer_Line2_to_Line2(BldStrMotionMesh(iWT)%Mesh(iBlade), u_local%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(i,iWT), ErrStat, ErrMsg)
+            u_local%AD%rotors(iWT)%BladeMotion(iBlade)%RemapFlag = .false.
          end if
          if (ErrStat >= AbortErrLev)  return
       endif
@@ -2051,6 +2052,7 @@ subroutine AD_TransferLoads( iWT, u_local, y_local, ErrStat3, ErrMsg3 )
             else
                call Transfer_Line2_to_Line2(ADI%y%AD%rotors(iWT)%BladeLoad(iBlade), BldStrLoadMesh_tmp(iWT)%Mesh(iBlade), Map_AD_BldLoad_P_2_BldStrLoad(iBlade,iWT), &
                                             ErrStat3, ErrMsg3, u_local%AD%rotors(iWT)%BladeMotion(iBlade), BldStrMotionMesh(iWT)%Mesh(iBlade))
+               ADI%y%AD%rotors(iWT)%BladeLoad(iBlade)%RemapFlag = .false.
             end if
             if (ErrStat3 >= AbortErrLev)  return
             BldStrLoadMesh(iWT)%Mesh(iBlade)%Force  = BldStrLoadMesh(iWT)%Mesh(iBlade)%Force  + BldStrLoadMesh_tmp(iWT)%Mesh(iBlade)%Force
