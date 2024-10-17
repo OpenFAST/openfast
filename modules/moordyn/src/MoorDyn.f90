@@ -661,7 +661,7 @@ CONTAINS
                    ! process damping coefficients 
                    CALL SplitByBars(tempString2, N, tempStrings)
                    if (N > m%LineTypeList(l)%ElasticMod) then
-                      CALL SetErrStat( ErrID_Fatal, 'A line type BA entry cannot have more (comma-separated) values its EA entry.', ErrStat, ErrMsg, RoutineName )
+                      CALL SetErrStat( ErrID_Fatal, 'A line type BA entry cannot have more (bar-separated) values its EA entry.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
                    else if (N==2) then                               ! visco-elastic case when two BA values provided
                       read(tempStrings(2), *) m%LineTypeList(l)%BA_D 
