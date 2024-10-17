@@ -69,11 +69,13 @@ CONTAINS
       Line%d   = LineProp%d
       Line%rho = LineProp%w/(Pi/4.0 * Line%d * Line%d)
       
-      Line%EA   = LineProp%EA
+      Line%EA      = LineProp%EA
       ! note: Line%BA is set later
-      Line%EA_D = LineProp%EA_D
-      Line%BA_D = LineProp%BA_D
-      Line%EI   = LineProp%EI  !<<< for bending stiffness
+      Line%EA_D    = LineProp%EA_D
+      Line%alphaMBL   = LineProp%alphaMBL
+      Line%vbeta = LineProp%vbeta
+      Line%BA_D    = LineProp%BA_D
+      Line%EI      = LineProp%EI  !<<< for bending stiffness
       
       Line%Can   = LineProp%Can
       Line%Cat   = LineProp%Cat
@@ -82,6 +84,12 @@ CONTAINS
       
       ! copy over elasticity data
       Line%ElasticMod = LineProp%ElasticMod
+
+      if (Line%ElasticMod > 3) then
+         ErrStat = ErrID_Fatal
+         ErrMsg = "Line ElasticMod > 3. This is not possible."
+         RETURN
+      endif
       
       Line%nEApoints = LineProp%nEApoints
       DO I = 1,Line%nEApoints
@@ -141,7 +149,7 @@ CONTAINS
       END IF
       
       ! if using viscoelastic model, allocate additional state quantities
-      if (Line%ElasticMod == 2) then
+      if (Line%ElasticMod > 1) then
          ALLOCATE ( Line%dl_1(N), STAT = ErrStat )
          IF ( ErrStat /= ErrID_None ) THEN
             ErrMsg  = ' Error allocating dl_1 array.'
@@ -991,7 +999,7 @@ CONTAINS
       END DO
       
       ! if using viscoelastic model, also set the static stiffness stretch
-      if (Line%ElasticMod == 2) then
+      if (Line%ElasticMod > 1) then
          do I=1,Line%N
             Line%dl_1(I) = X( 6*Line%N-6 + I)   ! these will be the last N entries in the state vector
          end do
@@ -1001,12 +1009,15 @@ CONTAINS
    !--------------------------------------------------------------
 
    !--------------------------------------------------------------
-   SUBROUTINE Line_GetStateDeriv(Line, Xd, m, p)  !, FairFtot, FairMtot, AnchFtot, AnchMtot)
+   SUBROUTINE Line_GetStateDeriv(Line, Xd, m, p, ErrStat, ErrMsg)  !, FairFtot, FairMtot, AnchFtot, AnchMtot)
 
       TYPE(MD_Line),          INTENT(INOUT) :: Line    ! the current Line object
       Real(DbKi),             INTENT(INOUT) :: Xd(:)   ! state derivative vector section for this line
       TYPE(MD_MiscVarType),   INTENT(INOUT) :: m       ! passing along all mooring objects
       TYPE(MD_ParameterType), INTENT(IN   ) :: p       ! Parameters
+      INTEGER(IntKi),         INTENT(  OUT) :: ErrStat ! Error status of the operation
+      CHARACTER(*),           INTENT(  OUT) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
+
       
       !   Real(DbKi), INTENT( IN )      :: X(:)           ! state vector, provided
       !   Real(DbKi), INTENT( INOUT )   :: Xd(:)          ! derivative of state vector, returned ! cahnged to INOUT
@@ -1044,7 +1055,8 @@ CONTAINS
       Real(DbKi)                       :: Yi             ! used in interpolating from lookup table
       Real(DbKi)                       :: dl             ! stretch of a segment [m]
       Real(DbKi)                       :: ld_1           ! rate of change of static stiffness portion of segment [m/s]
-      Real(DbKi)                       :: EA_1           ! stiffness of 'static stiffness' portion of segment, combines with dynamic stiffness to give static stiffnes [m/s]
+      Real(DbKi)                       :: EA_1           ! stiffness of 'slow' portion of segment, combines with dynamic stiffness to give static stiffnes [m/s]
+      Real(DbKi)                       :: EA_D           ! stiffness of 'fast' portion of segment, combines with EA_1 stiffness to give static stiffnes [m/s]
 
       REAL(DbKi)                       :: surface_height ! Average the surface heights at the two nodes
       REAL(DbKi)                       :: firstNodeZ     ! Difference of first node depth from surface height
@@ -1268,21 +1280,49 @@ CONTAINS
             else
                MagT = 0.0_DbKi                              ! cable can't "push"
             end if
+
             ! line internal damping force based on line-specific BA value, including possibility of dynamic length changes in l and ld terms
             MagTd = Line%BA* ( Line%lstrd(I) -  Line%lstr(I)*Line%ld(I)/Line%l(I) )/Line%l(I)
          
-         ! viscoelastic model
-         else if (Line%ElasticMod == 2) then
+         ! viscoelastic model from https://asmedigitalcollection.asme.org/OMAE/proceedings/IOWTC2023/87578/V001T01A029/1195018 
+         else if (Line%ElasticMod > 1) then
+
+            if (Line%ElasticMod == 3) then
+               if (Line%dl_1(I) >= 0.0) then
+                  ! Mean load dependent dynamic stiffness: from combining eqn. 2 and eqn. 10 from original MD viscoelastic paper, taking mean load = k1 delta_L1 / MBL, and solving for k_D using WolframAlpha with following conditions: k_D > k_s, (MBL,alpha,beta,unstrLen,delta_L1) > 0
+                  EA_D = 0.5 * ((Line%alphaMBL) + (Line%vbeta*Line%dl_1(I)*(Line%EA / Line%l(I))) + Line%EA + sqrt((Line%alphaMBL * Line%alphaMBL) + (2*Line%alphaMBL*(Line%EA / Line%l(I)) * (Line%vbeta*Line%dl_1(I) - Line%l(I))) + ((Line%EA / Line%l(I))*(Line%EA / Line%l(I)) * (Line%vbeta*Line%dl_1(I) + Line%l(I))*(Line%vbeta*Line%dl_1(I) + Line%l(I)))))
+               else
+                  EA_D = Line%alphaMBL ! mean load is considered to be 0 in this case. The second term in the above equation is not valid for delta_L1 < 0.
+               endif
+
+            else if (Line%ElasticMod == 2) then
+               ! constant dynamic stiffness
+               EA_D = Line%EA_D
+            endif
+
+            if (EA_D == 0.0) then ! Make sure EA != EA_D or else nans, also make sure EA_D != 0  or else nans. 
+               ErrStat = ErrID_Fatal
+               ErrMsg = "Viscoelastic model: Dynamic stiffness cannot equal zero"
+               return
+            else if (EA_D == Line%EA) then
+               ErrStat = ErrID_Fatal
+               ErrMsg = "Viscoelastic model: Dynamic stiffness cannot equal static stiffness"
+               return
+            endif
          
-            EA_1 = Line%EA_D*Line%EA/(Line%EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S
+            EA_1 = EA_D*Line%EA/(EA_D - Line%EA)! calculated EA_1 which is the stiffness in series with EA_D that will result in the desired static stiffness of EA_S. 
          
             dl = Line%lstr(I) - Line%l(I) ! delta l of this segment
          
-            ld_1 = (Line%EA_D*dl - (Line%EA_D + EA_1)*Line%dl_1(I) + Line%BA_D*Line%lstrd(I)) /( Line%BA_D + Line%BA) ! rate of change of static stiffness portion [m/s]
-            
-            !MagT = (Line%EA*Line%dl_S(I) + Line%BA*ld_S)/ Line%l(I)   ! compute tension based on static portion (dynamic portion would give same)
-            MagT  = EA_1*Line%dl_1(I)/ Line%l(I)  
-            MagTd = Line%BA*ld_1        / Line%l(I)  
+            ld_1 = (EA_D*dl - (EA_D + EA_1)*Line%dl_1(I) + Line%BA_D*Line%lstrd(I)) /( Line%BA_D + Line%BA) ! rate of change of static stiffness portion [m/s]
+
+            if (dl >= 0.0) then ! if both spring 1 (the spring dashpot in parallel) and the whole segment are not in compression
+               MagT  = EA_1*Line%dl_1(I) / Line%l(I)  ! compute tension based on static portion (dynamic portion would give same). See eqn. 14 in paper
+            else 
+               MagT = 0.0_DbKi ! cable can't "push"
+            endif
+
+            MagTd = Line%BA*ld_1 / Line%l(I) ! compute tension based on static portion (dynamic portion would give same). See eqn. 14 in paper
             
             ! update state derivative for static stiffness stretch (last N entries in the state vector)
             Xd( 6*N-6 + I) = ld_1
