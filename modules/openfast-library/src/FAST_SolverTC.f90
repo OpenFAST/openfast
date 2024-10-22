@@ -1269,7 +1269,8 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
                call SetErrStat(ErrID_Warn, "Failed to converge in "//trim(Num2LStr(p%MaxConvIter))// &
                                " iterations on step "//trim(Num2LStr(n_t_global_next))// &
                                " (error="//trim(Num2LStr(ConvError))// &
-                               ", tolerance="//trim(Num2LStr(p%ConvTol))//").", &
+                               ", tolerance="//trim(Num2LStr(p%ConvTol))//"). "// &
+                               "Solution will continue but may be invalid.", &
                                ErrStat, ErrMsg, RoutineName)
             end if
 
