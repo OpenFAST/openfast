@@ -766,6 +766,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          RETURN
       END IF
 
+      ! AeroDyn may override the AirDens value.  Store this to inform other modules
       AirDens = Init%OutData_AD%rotors(1)%AirDens
 
    ELSEIF ( p_FAST%CompAero == Module_ADsk ) THEN
@@ -795,6 +796,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
       CALL SetModuleSubstepTime(Module_ADsk, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+      ! AeroDisk may override the AirDens value.  Store this to inform other modules
+      AirDens = Init%OutData_ADsk%AirDens
+
    END IF ! CompAero
 
    IF ( p_FAST%CompAero == Module_ExtLd ) THEN
@@ -815,6 +819,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
             RETURN
          END IF
 
+         ! ExtLd may override the AirDens value.  Store this to inform other modules
          AirDens = Init%OutData_ExtLd%AirDens
 
       END IF
@@ -824,8 +829,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
    ! ........................
    ! No aero of any sort
    ! ........................
-   IF ( (p_FAST%CompAero /= Module_AD) .and. (p_FAST%CompAero /= Module_ExtLd) ) THEN
-   ELSE
+   IF ( (p_FAST%CompAero == Module_None) .or. (p_FAST%CompAero == Module_Unknown)) THEN
       AirDens = 0.0_ReKi
    ENDIF
 

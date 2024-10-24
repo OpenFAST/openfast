@@ -86,6 +86,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density [kg/m^3]
   END TYPE ADsk_InitOutputType
 ! =======================
 ! =========  ADsk_InputType  =======
@@ -634,6 +635,7 @@ subroutine ADsk_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%AirDens = SrcInitOutputData%AirDens
 end subroutine
 
 subroutine ADsk_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -663,6 +665,7 @@ subroutine ADsk_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPack(RF, InData%AirDens)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -677,6 +680,7 @@ subroutine ADsk_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ADsk_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
