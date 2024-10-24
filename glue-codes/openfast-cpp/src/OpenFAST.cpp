@@ -2367,8 +2367,8 @@ void fast::OpenFAST::get_data_from_openfast(timeStep t) {
             if (turbineData[iTurb].inflowType == 2) {
                 int nvelpts = get_numVelPtsLoc(iTurb);
                 int nfpts = get_numForcePtsLoc(iTurb);
-                std::cerr << "nvelpts = " << nvelpts << std::endl;
-                std::cerr << "nfpts = " << nfpts << "  " << get_numForcePtsBladeLoc(iTurb) << " " << get_numForcePtsTwrLoc(iTurb) << std::endl;
+                // std::cerr << "nvelpts = " << nvelpts << std::endl;
+                // std::cerr << "nfpts = " << nfpts << "  " << get_numForcePtsBladeLoc(iTurb) << " " << get_numForcePtsTwrLoc(iTurb) << std::endl;
                 for (int i=0; i<nvelpts; i++) {
                     velForceNodeData[iTurb][t].x_vel_resid += (velForceNodeData[iTurb][t].x_vel[i*3+0] - extinfw_i_f_FAST[iTurb].pxVel[i])*(velForceNodeData[iTurb][t].x_vel[i*3+0] - extinfw_i_f_FAST[iTurb].pxVel[i]);
                     velForceNodeData[iTurb][t].x_vel[i*3+0] = extinfw_i_f_FAST[iTurb].pxVel[i];
