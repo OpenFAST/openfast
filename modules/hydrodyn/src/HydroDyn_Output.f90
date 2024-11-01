@@ -855,7 +855,7 @@ SUBROUTINE HDOut_MapOutputs( p, y, m_WAMIT, m_WAMIT2, F_Add, F_Waves, F_Hydro, P
    ! Need to use individual components of force for output reporting, the y%mesh data has total forces from all contributions
    if ( p%potMod == 1 ) then
       if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
-         do iBody = 1,p%NBody
+         do iBody = 1,min(p%NBody,9) ! Can only output the first 9 bodies for now
             startIndx = 6*(iBody-1) + 1
             endIndx   = startIndx + 5
             AllOuts(FWaves1  (:,iBody)) = m_WAMIT(1)%F_Waves1(startIndx:endIndx)
@@ -873,7 +873,7 @@ SUBROUTINE HDOut_MapOutputs( p, y, m_WAMIT, m_WAMIT2, F_Add, F_Waves, F_Hydro, P
          ! This happens when NBodyMod > 1, in which case, each WAMIT object is for a single body, but there may be multiple bodies in the HydroDyn model, 
          !   so we need to use BodyID to determine the index into the complete HydroDyn list of WAMIT bodies
       
-         do iBody = 1,p%NBody
+         do iBody = 1,min(p%NBody,9) ! Can only output the first 9 bodies for now
             startIndx = 6*(iBody-1) + 1
             endIndx   = startIndx + 5
             AllOuts(FWaves1  (:,iBody)) = m_WAMIT(iBody)%F_Waves1
