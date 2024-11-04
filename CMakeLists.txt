@@ -232,8 +232,8 @@ endforeach(IDIR IN ITEMS ${OPENFAST_MODULES})
 add_subdirectory(glue-codes)
 
 # Install fortran .mod files also to installation directory
-install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/openfast/
+install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}
+  DESTINATION include/openfast/
   FILES_MATCHING PATTERN "*.mod"
 )
 
