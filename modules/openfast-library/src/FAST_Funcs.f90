@@ -1690,99 +1690,19 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
    select case (ModData%ID)
 
    case (Module_AD)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call AD_CopyInput(T%AD%Input_Saved(-iSrc), T%AD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call AD_CopyInput(T%AD%Input_Saved(-iSrc), T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_ADsk)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call ADsk_CopyInput(T%ADsk%Input_Saved(-iSrc), T%ADsk%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call ADsk_CopyInput(T%ADsk%Input_Saved(-iSrc), T%ADsk%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call ADsk_CopyInput(T%ADsk%Input(iSrc), T%ADsk%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call ADsk_CopyInput(T%ADsk%Input(iSrc), T%ADsk%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call ADsk_CopyInput(T%ADsk%Input(iSrc), T%ADsk%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_BD)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call BD_CopyInput(T%BD%Input_Saved(-iSrc, ModData%Ins), T%BD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call BD_CopyInput(T%BD%Input_Saved(-iSrc, ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call BD_CopyInput(T%BD%Input(iSrc, ModData%Ins), T%BD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_ED)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call ED_CopyInput(T%ED%Input_Saved(-iSrc), T%ED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call ED_CopyInput(T%ED%Input_Saved(-iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call ED_CopyInput(T%ED%Input(iSrc), T%ED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_SED)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call SED_CopyInput(T%SED%Input_Saved(-iSrc), T%SED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call SED_CopyInput(T%SED%Input_Saved(-iSrc), T%SED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call SED_CopyInput(T%SED%Input(iSrc), T%SED%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call SED_CopyInput(T%SED%Input(iSrc), T%SED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call SED_CopyInput(T%SED%Input(iSrc), T%SED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_ExtLd)
       ! ExtLd only has u
@@ -1790,234 +1710,42 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
       ErrMsg2 = ''
 
    case (Module_ExtPtfm)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call ExtPtfm_CopyInput(T%ExtPtfm%Input_Saved(-iSrc), T%ExtPtfm%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call ExtPtfm_CopyInput(T%ExtPtfm%Input_Saved(-iSrc), T%ExtPtfm%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call ExtPtfm_CopyInput(T%ExtPtfm%Input(iSrc), T%ExtPtfm%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call ExtPtfm_CopyInput(T%ExtPtfm%Input(iSrc), T%ExtPtfm%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call ExtPtfm_CopyInput(T%ExtPtfm%Input(iSrc), T%ExtPtfm%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_FEAM)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call FEAM_CopyInput(T%FEAM%Input_Saved(-iSrc), T%FEAM%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call FEAM_CopyInput(T%FEAM%Input_Saved(-iSrc), T%FEAM%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call FEAM_CopyInput(T%FEAM%Input(iSrc), T%FEAM%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call FEAM_CopyInput(T%FEAM%Input(iSrc), T%FEAM%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call FEAM_CopyInput(T%FEAM%Input(iSrc), T%FEAM%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_HD)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call HydroDyn_CopyInput(T%HD%Input_Saved(-iSrc), T%HD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call HydroDyn_CopyInput(T%HD%Input_Saved(-iSrc), T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call HydroDyn_CopyInput(T%HD%Input(iSrc), T%HD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_IceD)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call IceD_CopyInput(T%IceD%Input_Saved(-iSrc, ModData%Ins), T%IceD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call IceD_CopyInput(T%IceD%Input_Saved(-iSrc, ModData%Ins), T%IceD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call IceD_CopyInput(T%IceD%Input(iSrc, ModData%Ins), T%IceD%Input_Saved(-iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call IceD_CopyInput(T%IceD%Input(iSrc, ModData%Ins), T%IceD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call IceD_CopyInput(T%IceD%Input(iSrc, ModData%Ins), T%IceD%Input(iDst, ModData%Ins), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_IceF)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call IceFloe_CopyInput(T%IceF%Input_Saved(-iSrc), T%IceF%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call IceFloe_CopyInput(T%IceF%Input_Saved(-iSrc), T%IceF%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call IceFloe_CopyInput(T%IceF%Input(iSrc), T%IceF%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call IceFloe_CopyInput(T%IceF%Input(iSrc), T%IceF%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call IceFloe_CopyInput(T%IceF%Input(iSrc), T%IceF%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_IfW)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call InflowWind_CopyInput(T%IfW%Input_Saved(-iSrc), T%IfW%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call InflowWind_CopyInput(T%IfW%Input_Saved(-iSrc), T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call InflowWind_CopyInput(T%IfW%Input(iSrc), T%IfW%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_MAP)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call MAP_CopyInput(T%MAP%Input_Saved(-iSrc), T%MAP%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call MAP_CopyInput(T%MAP%Input_Saved(-iSrc), T%MAP%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call MAP_CopyInput(T%MAP%Input(iSrc), T%MAP%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call MAP_CopyInput(T%MAP%Input(iSrc), T%MAP%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call MAP_CopyInput(T%MAP%Input(iSrc), T%MAP%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_MD)
+      call MD_CopyInput(T%MD%Input(iSrc), T%MD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call MD_CopyInput(T%MD%Input_Saved(-iSrc), T%MD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call MD_CopyInput(T%MD%Input_Saved(-iSrc), T%MD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call MD_CopyInput(T%MD%Input(iSrc), T%MD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call MD_CopyInput(T%MD%Input(iSrc), T%MD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
-
-      ! case (Module_ExtInfw)
+!  case (Module_ExtInfw)
 
    case (Module_Orca)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call Orca_CopyInput(T%Orca%Input_Saved(-iSrc), T%Orca%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call Orca_CopyInput(T%Orca%Input_Saved(-iSrc), T%Orca%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call Orca_CopyInput(T%Orca%Input(iSrc), T%Orca%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call Orca_CopyInput(T%Orca%Input(iSrc), T%Orca%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call Orca_CopyInput(T%Orca%Input(iSrc), T%Orca%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_SD)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call SD_CopyInput(T%SD%Input_Saved(-iSrc), T%SD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call SD_CopyInput(T%SD%Input_Saved(-iSrc), T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call SD_CopyInput(T%SD%Input(iSrc), T%SD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call SD_CopyInput(T%SD%Input(iSrc), T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call SD_CopyInput(T%SD%Input(iSrc), T%SD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_SeaSt)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call SeaSt_CopyInput(T%SeaSt%Input_Saved(-iSrc), T%SeaSt%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call SeaSt_CopyInput(T%SeaSt%Input_Saved(-iSrc), T%SeaSt%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case (Module_SrvD)
-
-      select case (iSrc)
-      case (:-1)
-         select case (iDst)
-         case (:-1)
-            call SrvD_CopyInput(T%SrvD%Input_Saved(-iSrc), T%SrvD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call SrvD_CopyInput(T%SrvD%Input_Saved(-iSrc), T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      case (0:)
-         select case (iDst)
-         case (:-1)
-            call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input_Saved(-iDst), CtrlCode, Errstat2, ErrMsg2)
-         case (0:)
-            call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
-         end select
-      end select
+      call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
 
    case default
       ErrStat2 = ErrID_Fatal
