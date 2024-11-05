@@ -360,7 +360,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(BD%z            (p_FAST%nBeams,         StateAryUB   ), stat=ErrStat2); if (FailedAlloc("BD%z")) return
    allocate(BD%OtherSt      (p_FAST%nBeams,         StateAryUB   ), stat=ErrStat2); if (FailedAlloc("BD%OtherSt")) return
    allocate(BD%p            (p_FAST%nBeams                       ), stat=ErrStat2); if (FailedAlloc("BD%p")) return
-   allocate(BD%u            (p_FAST%nBeams                       ), stat=ErrStat2); if (FailedAlloc("BD%u")) return
    allocate(BD%y            (p_FAST%nBeams                       ), stat=ErrStat2); if (FailedAlloc("BD%y")) return
    allocate(BD%m            (p_FAST%nBeams                       ), stat=ErrStat2); if (FailedAlloc("BD%m")) return
 
@@ -1112,7 +1111,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    allocate(IceD%z           (IceDim,                StateAryUB), stat=ErrStat2); if (FailedAlloc("IceD%z")) return
    allocate(IceD%OtherSt     (IceDim,                StateAryUB), stat=ErrStat2); if (FailedAlloc("IceD%OtherSt")) return
    allocate(IceD%p           (IceDim                           ), stat=ErrStat2); if (FailedAlloc("IceD%p")) return
-   allocate(IceD%u           (IceDim                           ), stat=ErrStat2); if (FailedAlloc("IceD%u")) return
    allocate(IceD%y           (IceDim                           ), stat=ErrStat2); if (FailedAlloc("IceD%y")) return
    allocate(IceD%m           (IceDim                           ), stat=ErrStat2); if (FailedAlloc("IceD%m")) return
 
