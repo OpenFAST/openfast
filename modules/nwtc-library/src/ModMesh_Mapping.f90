@@ -3263,38 +3263,28 @@ FUNCTION GetLoadsScaleFactor( Src )
    
    ! LOCAL:
    INTEGER                                         :: I, j
-   REAL(ReKi)                                      :: MaxLoad
+   REAL(ReKi)                                      :: MaxLoad, MaxForce, MaxMoment
 
+   IF ( Src%FIELDMASK( MASKID_FORCE ) ) then
+      MaxForce = maxval(abs(src%Force))
+   else
+      MaxForce  = 0.0_ReKi
+   end if
    
-   GetLoadsScaleFactor = 1.0
-   MaxLoad             = 0.0
-   
-   IF ( Src%FIELDMASK( MASKID_FORCE ) ) THEN
-      
-      DO I=1,Src%Nnodes
-         DO J=1,3
-            MaxLoad = MAX(MaxLoad, ABS(Src%Force(j,I) ) )
-         END DO                  
-      END DO
-      
-   END IF
-   
+   IF ( Src%FIELDMASK( MASKID_MOMENT ) ) then
+      MaxMoment = maxval(abs(src%Moment))
+   else
+      MaxMoment = 0.0_ReKi
+   end if
 
-   IF ( Src%FIELDMASK( MASKID_MOMENT ) ) THEN
-      
-      DO I=1,Src%Nnodes
-         DO J=1,3
-            MaxLoad = MAX(MaxLoad, ABS(Src%Moment(j,I) ) )
-         END DO                  
-      END DO
-      
-   END IF
-   
+   MaxLoad = max(MaxForce, MaxMoment)
+
    IF ( MaxLoad > 10. ) THEN
       GetLoadsScaleFactor = 10**MIN( NINT(log10(MaxLoad)), 15 )  ! Let's not get carried away and cause overflow; 10E15 is as far as we'll go
+   else
+      GetLoadsScaleFactor = 1.0_ReKi
    END IF
    
-
 END FUNCTION GetLoadsScaleFactor
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE CreateLoadMap_P_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )

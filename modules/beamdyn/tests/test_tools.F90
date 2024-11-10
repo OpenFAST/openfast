@@ -286,7 +286,7 @@ type(BD_MiscVarType) function simpleMiscVarType(nqp, dof_node, elem_total, nodes
    call AllocAry(m%DistrLoad_QP, 6, nqp, elem_total, 'DistrLoad_QP', ErrStat, ErrMsg)
 
    call AllocAry(m%qp%uuu, dof_node, nqp, elem_total, 'm%qp%uuu displacement at quadrature point', ErrStat, ErrMsg)
-   call AllocAry(m%qp%uup, dof_node / 2, nqp, elem_total, 'm%qp%uup displacement prime at quadrature point', ErrStat, ErrMsg)
+   call AllocAry(m%qp%uup, dof_node, nqp, elem_total, 'm%qp%uup displacement prime at quadrature point', ErrStat, ErrMsg)
 
    ! E1, kappa -- used in force calculations
    call AllocAry(m%qp%E1, dof_node / 2, nqp, elem_total, 'm%qp%E1    at quadrature point', ErrStat, ErrMsg)

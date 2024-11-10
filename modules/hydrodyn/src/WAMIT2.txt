@@ -33,7 +33,7 @@ typedef     ^                 ^                 ReKi                 Gravity    
 typedef     ^                 ^                 SeaSt_WaveFieldType *WaveField         -        -        -        "Pointer to wave field"
 typedef     ^                 ^                 INTEGER              PtfmYMod          -        -        -         "Large yaw model" -
 typedef     ^                 ^                 ReKi                 PtfmRefY          -        -        -         "Initial reference yaw offset" (rad)
-typedef     ^                 ^                 IntKi                NExctnHdg         -        -        -         "Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1 in the HydroDyn driver or in ElastoDyn]"
+typedef     ^                 ^                 IntKi                NExctnHdg         -        -        -         "Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1]"
 
 #[note: only one of MnDriff / NewmanApp / DiffQTF can be non-zero
 typedef     ^                 ^                 INTEGER              MnDrift           -        -        -        "Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use}"    -
@@ -74,7 +74,7 @@ typedef     ^                 ^                 LOGICAL              NewmanAppF 
 typedef     ^                 ^                 LOGICAL              DiffQTFF          -        -        -        "Flag indicating the full difference QTF should be calculated" -
 typedef     ^                 ^                 LOGICAL              SumQTFF           -        -        -        "Flag indicating the full    sum     QTF should be calculated" -
 typedef     ^                 ^                 INTEGER              PtfmYMod          -        -        -        "Large yaw model" -
-typedef     ^                 ^                 INTEGER              NExctnHdg         -        -        -        "Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1 in the HydroDyn driver or in ElastoDyn]"
+typedef     ^                 ^                 INTEGER              NExctnHdg         -        -        -        "Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1]"
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:

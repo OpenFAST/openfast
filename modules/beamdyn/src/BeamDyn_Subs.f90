@@ -242,32 +242,31 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
    REAL(BDKi),    INTENT(  OUT):: rr(3)     !< Composed rotation
    REAL(BDKi),    INTENT(IN   ):: pp(3)     !< Input rotation 1
    REAL(BDKi),    INTENT(IN   ):: qq(3)     !< Input rotation 2
-   INTEGER       ,INTENT(IN   ):: flag      !< Option flag
+   INTEGER,       INTENT(IN   ):: flag      !< Option flag
 
-   REAL(BDKi)                  :: pp0
-   REAL(BDKi)                  :: p(3)
-   REAL(BDKi)                  :: qq0
-   REAL(BDKi)                  :: q(3)
+   REAL(BDKi)                  :: pp0, p(3)
+   REAL(BDKi)                  :: qq0, q(3)
    REAL(BDKi)                  :: tr1
-   REAL(BDKi)                  :: Delta1
-   REAL(BDKi)                  :: Delta2
+   REAL(BDKi)                  :: Delta1, Delta2
    REAL(BDKi)                  :: dd1
    REAL(BDKi)                  :: dd2
 
 
-      ! Set the local values pp and qq allowing for the transpose
-
-   IF(flag==FLAG_R1TR2 .OR. flag==FLAG_R1TR2T) THEN ! "transpose" (negative) of first rotation parameter
-       p = -pp
-   ELSE
-       p = pp
-   ENDIF
-
-   IF(flag==FLAG_R1R2T .OR. flag==FLAG_R1TR2T) THEN ! "transpose" (negative) of second rotation parameter
-       q = -qq
-   ELSE
-       q = qq
-   ENDIF
+   ! Set the local values pp (R1) and qq (R2) and apply transpose based on flag value
+   select case (flag)
+   case (FLAG_R1R2)
+      p = pp   ! R1
+      q = qq   ! R2
+   case (FLAG_R1R2T)
+      p = pp   ! R1
+      q = -qq  ! R2^T
+   case (FLAG_R1TR2)
+      p = -pp  ! R1^T
+      q = qq   ! R2
+   case (FLAG_R1TR2T)
+      p = -pp  ! R1^T
+      q = -qq  ! R2^T
+   end select
 
       !> ## Composing the resulting Wiener-Milenkovic parameter
       !!
@@ -289,7 +288,6 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
       !!
       !!
 
-
       ! Calculate pp0 and qq0. See Bauchau for the mathematics here (equations 8 to 9 and interviening text)
 
    pp0 = 2.0_BDKi - dot_product(p,p) / 8.0_BDKi   ! p_0
@@ -297,19 +295,16 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
 
    Delta1 = (4.0_BDKi - pp0) * (4.0_BDKi - qq0)   ! Delta_1 in Bauchau
    Delta2 = pp0 * qq0 - dot_product(p,q)          ! Delta_2 in Bauchau
-   dd1 = Delta1 + Delta2                          ! Denomimator term for \Delta_2 >= 0
-   dd2 = Delta1 - Delta2                          ! Denomimator term for \Delta_2 <  0
 
-      ! Rescaling to remove singularities at +/- 2 \pi
-      ! Note: changed this to test on \Delta_2 (instead of dd1 > dd2) for better consistency with documentation.
-   IF ( Delta2 >= 0.0_BDKi ) THEN
-       tr1 = 4.0_BDKi / dd1
+   ! Rescaling to remove singularities at +/- 2 \pi
+   ! Note: changed this to test on \Delta_2 (instead of dd1 > dd2) for better consistency with documentation.
+   IF (Delta2 >= 0.0_BDKi) THEN
+       tr1 = 4.0_BDKi / (Delta1 + Delta2)
    ELSE
-       tr1 = -4.0_BDKi / dd2
+       tr1 = -4.0_BDKi / (Delta1 - Delta2)
    ENDIF
 
-   rr = tr1 * (qq0*p + pp0*q + cross_product(p,q))
-
+   rr = tr1 * (qq0*p + pp0*q + Cross_Product(p,q))
 
 END SUBROUTINE BD_CrvCompose
 

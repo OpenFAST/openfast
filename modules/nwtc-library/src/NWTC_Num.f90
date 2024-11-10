@@ -504,7 +504,7 @@ CONTAINS
 !> This function computes the cross product of two 3-element arrays (resulting in a vector): \n
 !! cross_product = Vector1 \f$\times\f$ Vector2 \n
 !! Use cross_product (nwtc_num::cross_product) instead of directly calling a specific routine in the generic interface.
-   FUNCTION Cross_ProductR4(Vector1, Vector2) result(CProd)
+   PURE FUNCTION Cross_ProductR4(Vector1, Vector2) result(CProd)
 
       ! Argument declarations.
 
@@ -524,7 +524,7 @@ CONTAINS
    END FUNCTION Cross_ProductR4
 !=======================================================================
 !> \copydoc nwtc_num::cross_productr4
-   FUNCTION Cross_ProductR4R8(Vector1, Vector2) result(CProd)
+   PURE FUNCTION Cross_ProductR4R8(Vector1, Vector2) result(CProd)
 
       ! Argument declarations.
 
@@ -544,7 +544,7 @@ CONTAINS
    END FUNCTION Cross_ProductR4R8
 !=======================================================================
 !> \copydoc nwtc_num::cross_productr4
-   FUNCTION Cross_ProductR8(Vector1, Vector2) result(CProd)
+   PURE FUNCTION Cross_ProductR8(Vector1, Vector2) result(CProd)
 
       ! Argument declarations.
 
@@ -564,7 +564,7 @@ CONTAINS
    END FUNCTION Cross_ProductR8
 !=======================================================================
 !> \copydoc nwtc_num::cross_productr4
-   FUNCTION Cross_ProductR8R4(Vector1, Vector2) result(CProd)
+   PURE FUNCTION Cross_ProductR8R4(Vector1, Vector2) result(CProd)
 
       ! Argument declarations.
 

@@ -452,7 +452,7 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
         ncOutVarIDs_["bld_ld"] = tmpVarID;
         ierr = nc_def_var(ncid, "bld_ld_loc", NC_DOUBLE, 4, bldDataDims.data(), &tmpVarID);
         ncOutVarIDs_["bld_ld_loc"] = tmpVarID;
-        ierr = nc_def_var(ncid, "hub_ref_pos", NC_DOUBLE, 2, ptRefDataDims.data(), &tmpVarID);
+        ierr = nc_def_var(ncid, "hub_ref_pos", NC_DOUBLE, 1, ptRefDataDims.data(), &tmpVarID);
         ncOutVarIDs_["hub_ref_pos"] = tmpVarID;
         ierr = nc_def_var(ncid, "hub_disp", NC_DOUBLE, 2, ptDataDims.data(), &tmpVarID);
         ncOutVarIDs_["hub_disp"] = tmpVarID;
@@ -461,7 +461,7 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
         ierr = nc_def_var(ncid, "hub_rotvel", NC_DOUBLE, 2, ptDataDims.data(), &tmpVarID);
         ncOutVarIDs_["hub_rotvel"] = tmpVarID;
 
-        ierr = nc_def_var(ncid, "nac_ref_pos", NC_DOUBLE, 2, ptRefDataDims.data(), &tmpVarID);
+        ierr = nc_def_var(ncid, "nac_ref_pos", NC_DOUBLE, 1, ptRefDataDims.data(), &tmpVarID);
         ncOutVarIDs_["nac_ref_pos"] = tmpVarID;
         ierr = nc_def_var(ncid, "nac_disp", NC_DOUBLE, 2, ptDataDims.data(), &tmpVarID);
         ncOutVarIDs_["nac_disp"] = tmpVarID;
@@ -611,17 +611,6 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
                                           param_count_dim.data(), tmpArray.data());
             }
         }
-
-        ierr = nc_put_var_double(ncid, ncOutVarIDs_["nac_ref_pos"],
-                                 &brFSIData[iTurbLoc][3].nac_ref_pos[0]);
-        ierr = nc_put_var_double(ncid, ncOutVarIDs_["nac_ref_orient"],
-                                 &brFSIData[iTurbLoc][3].nac_ref_pos[3]);
-
-        ierr = nc_put_var_double(ncid, ncOutVarIDs_["hub_ref_pos"],
-                                 &brFSIData[iTurbLoc][3].hub_ref_pos[0]);
-        ierr = nc_put_var_double(ncid, ncOutVarIDs_["hub_ref_orient"],
-                                 &brFSIData[iTurbLoc][3].hub_ref_pos[3]);
-
     }
 
     ierr = nc_close(ncid);
@@ -2378,8 +2367,8 @@ void fast::OpenFAST::get_data_from_openfast(timeStep t) {
             if (turbineData[iTurb].inflowType == 2) {
                 int nvelpts = get_numVelPtsLoc(iTurb);
                 int nfpts = get_numForcePtsLoc(iTurb);
-                std::cerr << "nvelpts = " << nvelpts << std::endl;
-                std::cerr << "nfpts = " << nfpts << "  " << get_numForcePtsBladeLoc(iTurb) << " " << get_numForcePtsTwrLoc(iTurb) << std::endl;
+                // std::cerr << "nvelpts = " << nvelpts << std::endl;
+                // std::cerr << "nfpts = " << nfpts << "  " << get_numForcePtsBladeLoc(iTurb) << " " << get_numForcePtsTwrLoc(iTurb) << std::endl;
                 for (int i=0; i<nvelpts; i++) {
                     velForceNodeData[iTurb][t].x_vel_resid += (velForceNodeData[iTurb][t].x_vel[i*3+0] - extinfw_i_f_FAST[iTurb].pxVel[i])*(velForceNodeData[iTurb][t].x_vel[i*3+0] - extinfw_i_f_FAST[iTurb].pxVel[i]);
                     velForceNodeData[iTurb][t].x_vel[i*3+0] = extinfw_i_f_FAST[iTurb].pxVel[i];
