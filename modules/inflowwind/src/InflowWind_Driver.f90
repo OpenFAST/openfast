@@ -116,8 +116,23 @@ PROGRAM InflowWind_Driver
    CALL CPU_TIME( Timer(1) )
 
       ! Set some CLSettings to null/default values
-    CLSettings%ProgInfo = ProgInfo       
-    Settings%ProgInfo   = ProgInfo
+   CLSettings%ProgInfo = ProgInfo
+   Settings%ProgInfo   = ProgInfo
+      ! Set the filenames to empty strings -- otherwise prints garbage with the -vv option
+   CLSettings%DvrIptFileName        = ''
+   CLSettings%IfWIptFileName        = ''
+   CLSettings%SummaryFileName       = ''
+   CLSettings%PointsFileName        = ''
+   CLSettings%WindGridOutput%Name   = ''
+   CLSettings%FFTOutput%Name        = ''
+   CLSettings%PointsVelOutput%Name  = ''
+   Settings%DvrIptFileName          = ''
+   Settings%IfWIptFileName          = ''
+   Settings%SummaryFileName         = ''
+   Settings%PointsFileName          = ''
+   Settings%WindGridOutput%Name     = ''
+   Settings%FFTOutput%Name          = ''
+   Settings%PointsVelOutput%Name    = ''
 
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Parse the command line inputs -=-=-
@@ -421,10 +436,6 @@ PROGRAM InflowWind_Driver
 
    call CheckCallErr('InflowWind_Init')
 
-
-
-      ! Let user know we returned from the InflowWind code if verbose
-   IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr(NewLine//'InflowWind_Init CALL returned without errors.'//NewLine)
 
 
       ! Convert InflowWind file to HAWC format
