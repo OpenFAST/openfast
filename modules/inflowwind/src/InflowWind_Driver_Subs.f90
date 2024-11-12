@@ -2376,18 +2376,19 @@ subroutine IfW_WriteVTK(FF, FileRootName, ErrStat, ErrMsg)
 end subroutine IfW_WriteVTK
 
 
-subroutine IfW_WriteXYslice(FF, FileRootName, XYslice_height, ErrStat, ErrMsg)
-   type(FlowFieldType), intent(in)  :: FF             !< Parameters
-   character(*), intent(in)         :: FileRootName   !< RootName for output files
-   real(ReKi),    intent(in)           :: XYslice_height
-   integer(IntKi), intent(out)      :: ErrStat        !< Error status of the operation
-   character(*), intent(out)        :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+subroutine IfW_WriteXYslice(FF, FileRootName, vtk_dir, XYslice_height, ErrStat, ErrMsg)
+   type(FlowFieldType), intent(in   )  :: FF             !< Parameters
+   character(*),        intent(in   )  :: FileRootName   !< RootName for output files
+   character(*),        intent(in   )  :: vtk_dir        !< Directory for vtk slice outputs
+   real(ReKi),          intent(in   )  :: XYslice_height
+   integer(IntKi),      intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),        intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
-   character(*), parameter          :: RoutineName = "IfW_WriteXYslice"
-   type(Grid3DFieldType)            :: G3D
-   integer(IntKi)                   :: unit
-   integer(IntKi)                   :: ErrStat2
-   character(ErrMsgLen)             :: ErrMsg2
+   character(*), parameter             :: RoutineName = "IfW_WriteXYslice"
+   type(Grid3DFieldType)               :: G3D
+   integer(IntKi)                      :: unit
+   integer(IntKi)                      :: ErrStat2
+   character(ErrMsgLen)                :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -2404,12 +2405,12 @@ subroutine IfW_WriteXYslice(FF, FileRootName, XYslice_height, ErrStat, ErrMsg)
       call Uniform_to_Grid3D(FF%Uniform, FF%VelInterpCubic, G3D, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat < AbortErrLev) then
-         call Grid3D_WriteVTKsliceXY(G3D, FileRootName, XYslice_height, unit, ErrStat2, ErrMsg2)
+         call Grid3D_WriteVTKsliceXY(G3D, FileRootName, vtk_dir, XYslice_height, unit, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
 
    case (Grid3D_FieldType)
-      call Grid3D_WriteVTKsliceXY(FF%Grid3D, FileRootName, XYslice_height, unit, ErrStat, ErrMsg)
+      call Grid3D_WriteVTKsliceXY(FF%Grid3D, FileRootName, vtk_dir, XYslice_height, unit, ErrStat, ErrMsg)
 
    case default
       ErrStat = ErrID_Warn

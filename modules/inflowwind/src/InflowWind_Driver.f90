@@ -39,6 +39,9 @@ PROGRAM InflowWind_Driver
    TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","","")
    INTEGER(IntKi)                                     :: IfWDriver_Verbose =  5  ! Verbose level.  0 = none, 5 = some, 10 = lots
 
+      ! output paths hard coded
+   CHARACTER(*), PARAMETER                            :: VTKsliceDir = "vtk"     ! Directory to place the output VTK slices
+
       ! Types needed here (from InflowWind module)
    TYPE(InflowWind_InitInputType)                     :: InflowWind_InitInp      ! Data for initialization -- this is where the input info goes
    TYPE(InflowWind_InputType)                         :: InflowWind_u1           ! input     -- contains xyz coords of interest -- set 1
@@ -466,7 +469,7 @@ PROGRAM InflowWind_Driver
 
    IF (Settings%NOutWindXY>0) THEN
       do i=1,Settings%NOutWindXY
-         CALL IfW_WriteXYslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, Settings%OutWindZ(i), ErrStat, ErrMsg )
+         CALL IfW_WriteXYslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, VTKsliceDir, Settings%OutWindZ(i), ErrStat, ErrMsg )
          call CheckCallErr('IfW_WriteXYslice'//trim(Num2LStr(i)))
       enddo
    END IF
@@ -474,7 +477,7 @@ PROGRAM InflowWind_Driver
 
    IF (Settings%NOutWindXZ>0) THEN
       do i=1,Settings%NOutWindXZ
-!         CALL IfW_WriteXZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, Settings%OutWindY(i), ErrStat, ErrMsg )
+!         CALL IfW_WriteXZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, VTKsliceDir, Settings%OutWindY(i), ErrStat, ErrMsg )
 !         call CheckCallErr('IfW_WriteXZslice'//trim(Num2LStr(i)))
       enddo
    END IF
@@ -482,7 +485,7 @@ PROGRAM InflowWind_Driver
 
    IF (Settings%NOutWindYZ>0) THEN
       do i=1,Settings%NOutWindYZ
-!         CALL IfW_WriteYZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, Settings%OutWindX(i), ErrStat, ErrMsg )
+!         CALL IfW_WriteYZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, VTKsliceDir, Settings%OutWindX(i), ErrStat, ErrMsg )
 !         call CheckCallErr('IfW_WriteYZslice'//trim(Num2LStr(i)))
       enddo
    END IF

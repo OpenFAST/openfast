@@ -2945,23 +2945,23 @@ subroutine Grid3D_WriteHAWC(G3D, FileRootName, unit, ErrStat, ErrMsg)
 end subroutine Grid3D_WriteHAWC
 
 
-subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, XYslice_height, unit, ErrStat, ErrMsg)
-
-   type(Grid3DFieldType), intent(in)   :: G3D            !< Parameters
-   character(*), intent(in)            :: FileRootName   !< RootName for output files
-   real(ReKi),    intent(in)           :: XYslice_height
-   integer(IntKi), intent(in)           :: unit           !< Error status of the operation
-   integer(IntKi), intent(out)          :: ErrStat        !< Error status of the operation
-   character(*), intent(out)            :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+!> This subroutine writes a VTK slice in the XY plane at a designated height (rounds to nearest point)
+!! This feature is mostly useful for testing when a grid is needed for comparison elsewhere
+subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, vtk_dir, XYslice_height, unit, ErrStat, ErrMsg)
+   type(Grid3DFieldType),  intent(in   )  :: G3D            !< Parameters
+   character(*),           intent(in   )  :: FileRootName   !< RootName for output files
+   character(*),           intent(in   )  :: vtk_dir        !< directory for vtk file for output files
+   real(ReKi),             intent(in   )  :: XYslice_height
+   integer(IntKi),         intent(in   )  :: unit           !< Error status of the operation
+   integer(IntKi),         intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),           intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
    character(*), parameter                :: RoutineName = 'Grid3D_WriteVTKsliceXY'
    character(1024)                        :: RootPathName
    character(1024)                        :: FileName
    character(3)                           :: ht_str
-   integer                                :: it          !< time index for slice
-   integer                                :: ix
-   integer                                :: iy
-   integer                                :: iz
+   character(8)                           :: t_str, t_fmt
+   integer                                :: it, ix, iy, iz, twidth
    real(ReKi)                             :: time        !< time for this slice
    real(ReKi)                             :: ht          !< nearest grid slice elevation
    integer(IntKi)                         :: ErrStat2
@@ -2971,13 +2971,17 @@ subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, XYslice_height, unit, ErrSt
    ErrMsg  = ""
 
    call GetPath(FileRootName, RootPathName)
-   RootPathName = trim(RootPathName)//PathSep//"vtk"
+   RootPathName = trim(RootPathName)//PathSep//vtk_dir
    call MkDir(trim(RootPathName))  ! make this directory if it doesn't already exist
 
    ! get indices for this slice
    iz    = nint((G3D%GridBase + XYslice_height)*G3D%InvDZ)
    ht    = real(iz,ReKi) / G3D%InvDZ + G3D%GridBase         ! nearest height index
-   write(ht_str,'(i3)') nint(ht)
+   write(ht_str,'(i0.3)') nint(ht)
+
+   ! get width of string for time
+   twidth=ceiling(log10(real(G3D%NSteps)))
+   t_fmt='(i0.'//trim(Num2LStr(twidth))//')'
 
    ! check for errors in slice height
    if (iz <= 0_IntKi .or. iz > G3D%NZGrids) then
@@ -2987,11 +2991,13 @@ subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, XYslice_height, unit, ErrSt
 
    ! Loop through time steps
    do it = 1, G3D%NSteps
-
       time  = real(it - 1, ReKi)*G3D%DTime
 
+      ! time string
+      write(t_str,t_fmt) it
+
       ! Create the output vtk file with naming <WindFilePath>/vtk/DisYZ.t<i>.vtk
-      FileName = trim(RootPathName)//PathSep//"DisXY.Z"//ht_str//".t"//trim(num2lstr(it))//".vtp"
+      FileName = trim(RootPathName)//PathSep//"DisXY.Z"//ht_str//".t"//trim(t_str)//".vtp"
  
       ! see WrVTK_SP_header
       call OpenFOutFile(unit, TRIM(FileName), ErrStat2, ErrMsg2)
@@ -3019,7 +3025,6 @@ subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, XYslice_height, unit, ErrSt
 
       close (unit)
    enddo
-
 end subroutine Grid3D_WriteVTKsliceXY
 
 end module InflowWind_IO
