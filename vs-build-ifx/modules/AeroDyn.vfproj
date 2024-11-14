@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectType="typeStaticLibrary" ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{5ADBD025-C654-42C2-BA7C-10F3C3CEEB0E}">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/>
+	</Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" UseCompiler="ifortCompiler" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Release|Win32" UseCompiler="ifortCompiler" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Release|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" RuntimeLibrary="rtMultiThreadedDLL"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+			<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics_IO.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics_Registry.txt"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics_TNO.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics_Types.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroDyn.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_AllBldNdOuts_IO.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_IO.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_IO_Params.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Registry.txt"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Types.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AirfoilInfo.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AirfoilInfo_Registry.txt"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AirfoilInfo_Types.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\BEMT.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\BEMT_Registry.txt"/>
+			<File RelativePath="..\..\modules\aerodyn\src\BEMT_Types.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\BEMTUncoupled.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\DBEMT.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\DBEMT_Registry.txt"/>
+			<File RelativePath="..\..\modules\aerodyn\src\DBEMT_Types.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\FVW.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\FVW_BiotSavart.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\FVW_IO.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\FVW_Registry.txt"/>
+			<File RelativePath="..\..\modules\aerodyn\src\FVW_Subs.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\FVW_Tests.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\FVW_Types.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\FVW_VortexTools.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\FVW_Wings.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\mod_root1dim.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\UnsteadyAero.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\UnsteadyAero_Registry.txt"/>
+			<File RelativePath="..\..\modules\aerodyn\src\UnsteadyAero_Types.f90"/>
+		</Filter>
+	</Files>
+	<Globals/>
+</VisualStudioProject>

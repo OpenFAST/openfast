@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{EAF5E602-E6CD-4194-8CCA-0827AA4CCEC9}">
+	<Platforms>
+		<Platform Name="x64"/>
+	</Platforms>
+	<Configurations>
+		<Configuration Name="Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="$(IntDir)" PreprocessorDefinitions="HAS_FORTRAN2008_FEATURES" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" UseMkl="mklSequential"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Debug-Double|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="$(IntDir)" PreprocessorDefinitions="HAS_FORTRAN2008_FEATURES" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" UseMkl="mklSequential"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Release|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" AdditionalIncludeDirectories="$(IntDir)" PreprocessorDefinitions="HAS_FORTRAN2008_FEATURES" RuntimeLibrary="rtMultiThreadedDLL" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Release-Double|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" AdditionalIncludeDirectories="$(IntDir)" PreprocessorDefinitions="HAS_FORTRAN2008_FEATURES" UseMkl="mklSequential"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+			<Filter Name="NetLib">
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\aaaaaa.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\d1mach.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\Dierckx_FitPack\dierckx_fitpack.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\dlasrt2.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\dqk61.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\fdump.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\i1mach.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\j4save.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\NWTC_FFTPACK.f90"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\Dierckx_FitPack\NWTC_FitPack.f90"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\NWTC_ScaLAPACK.f90"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\NWTC_SLATEC.f90"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\qk61.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\r1mach.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\slasrt2.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xercnt.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xerhlt.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xermsg.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xerprn.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xersve.f"/>
+				<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xgetua.f"/>
+			</Filter>
+			<Filter Name="Polynomial">
+				<File RelativePath="..\..\modules\nwtc-library\src\Polynomial\quartic.f90"/>
+			</Filter>
+			<Filter Name="ranlux">
+				<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/>
+			</Filter>
+			<File RelativePath="..\..\modules\nwtc-library\src\JSON.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\ModReg.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\ModVar.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_IncSubs.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Str.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
+			<File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/>
+		</Filter>
+	</Files>
+	<Globals/>
+</VisualStudioProject>

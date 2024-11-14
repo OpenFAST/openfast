@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectType="typeStaticLibrary" ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{5ADBD025-C654-42C2-BA7C-10F3C3CEEB0E}">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/>
+	</Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" UseCompiler="ifortCompiler" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Release|Win32" UseCompiler="ifortCompiler" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration Name="Release|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" RuntimeLibrary="rtMultiThreadedDLL"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+			<File RelativePath="..\..\modules\hydrodyn\src\Conv_Radiation.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\Conv_Radiation.txt"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn.txt"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn_Input.f90">
+			</File>
+			<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn_Output.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\Morison.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\Morison.txt"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\Morison_Output.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.txt"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.txt"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\WAMIT.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\WAMIT.txt"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2.txt"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/>
+			<File RelativePath="..\..\modules\hydrodyn\src\YawOffset.f90"/>
+		</Filter>
+	</Files>
+	<Globals/>
+</VisualStudioProject>
