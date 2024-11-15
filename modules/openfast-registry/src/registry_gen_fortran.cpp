@@ -713,12 +713,12 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
             {
                 w << indent << "call RegPackBounds(RF, " << field.rank << ", lbound(" << var << "), ubound(" << var << "))";
             }
-        }
-        if (field.is_pointer)
-        {
-            w << indent << "call RegPackPointer(RF, c_loc(" << var << "), PtrInIndex)";
-            w << indent << "if (.not. PtrInIndex) then";
-            indent += "   ";
+            if (field.is_pointer)
+            {
+                w << indent << "call RegPackPointer(RF, c_loc(" << var << "), PtrInIndex)";
+                w << indent << "if (.not. PtrInIndex) then";
+                indent += "   ";
+            }
         }
 
         //  call individual routines to pack data from subtypes:
@@ -843,13 +843,13 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
         {
             if (field.is_pointer)
             {
-                w << indent << "call RegUnpackPtr(RF, " << var << ")"
+                w << indent << "call RegUnpackPtr(RF, " << var << ", LB, UB)"
                   << "; if (RegCheckErr(RF, RoutineName)) return";
 
                 // If C code is generated, output code to initialize C object
                 if (gen_c_code)
                 {
-                    w << indent << "if (associated("<< var <<")) then";
+                    w << indent << "if (associated(" << var << ")) then";
                     w << indent << "   " << var_c << "_Len = size(" << var << ")";
                     w << indent << "   " << "if (" << var_c << "_Len > 0) " << var_c << " = c_loc(" << var << "(";
                     for (int d = 1; d <= field.rank; d++)

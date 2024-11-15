@@ -697,7 +697,7 @@ subroutine InflowWind_IO_UnPackGrid4D_InitInputType(RF, OutData)
    call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%delta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%pZero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackPtr(RF, OutData%Vel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Vel, LB, UB); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_IO_CopyPoints_InitInputType(SrcPoints_InitInputTypeData, DstPoints_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)

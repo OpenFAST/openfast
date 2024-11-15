@@ -1226,10 +1226,12 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( p%FG,   p%nDOF,          'p%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( p%FG,   p%nDOF,          'p%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector with line pretension
+   CALL AllocAry( p%FC,   p%nDOF,          'p%FC'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! line pretension only
    Init%K  = 0.0_FEKi
    Init%M  = 0.0_FEKi
    p%FG    = 0.0_FEKi
+   p%FC    = 0.0_FEKi
 
    ! loop over all elements, compute element matrices and assemble into global matrices
    DO i = 1, Init%NElem
@@ -1240,12 +1242,16 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
       ! --- Assembly in global unconstrained system
       IDOF = p%ElemsDOF(1:12, i)
-      p%FG     ( IDOF )  = p%FG( IDOF )   + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
+      p%FC     ( IDOF )  = p%FC( IDOF ) + FCe(1:12)             ! Note: Pretension cable forces only
+      p%FG     ( IDOF )  = p%FG( IDOF ) + FGe(1:12)             ! Note: Gravity forces only
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO
       
    ! Add concentrated mass to mass matrix
+   CALL AllocAry( p%CMassNode,   Init%nCMass,    'p%CMassNode',   ErrStat2, ErrMsg2); if(Failed()) return;
+   CALL AllocAry( p%CMassWeight, Init%nCMass,    'p%CMassWeight', ErrStat2, ErrMsg2); if(Failed()) return;
+   CALL AllocAry( p%CMassOffset, Init%nCMass, 3, 'p%CMassOffset', ErrStat2, ErrMsg2); if(Failed()) return;
    DO I = 1, Init%nCMass
       iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
       ! Safety check (otherwise we might have more than 6 DOF)
@@ -1268,14 +1274,20 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
             Init%M(jGlob, kGlob) = Init%M(jGlob, kGlob) + M66(J,K)
          ENDDO
       ENDDO
-   ENDDO ! Loop on concentrated mass
 
-   ! Add concentrated mass induced gravity force
-   DO I = 1, Init%nCMass
-       iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
-       iGlob = p%NodesDOF(iNode)%List(3) ! uz
-       p%FG(iGlob) = p%FG(iGlob) - Init%CMass(I, 2)*Init%g 
-   ENDDO
+      ! Add concentrated mass contribution to gravity force and moment
+      iGlob = p%NodesDOF(iNode)%List(3); p%FG(iGlob) = p%FG(iGlob) - m*Init%g     ! uz: -mg
+      iGlob = p%NodesDOF(iNode)%List(4); p%FG(iGlob) = p%FG(iGlob) - m*Init%g * y ! tx: -mgy
+      iGlob = p%NodesDOF(iNode)%List(5); p%FG(iGlob) = p%FG(iGlob) + m*Init%g * x ! ty:  mgx
+
+      ! Save concentrated mass information for GuyanLoadCorrection
+      p%CMassNode(I)     = iNode
+      p%CMassWeight(I)   = m*Init%g
+      p%CMassOffset(I,1) = x
+      p%CMassOffset(I,2) = y
+      p%CMassOffset(I,3) = z
+
+   ENDDO ! Loop on concentrated mass
 
    CALL CleanUp_AssembleKM()
    

@@ -299,9 +299,10 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
 
    ! --- Set outputs
    !TODO: this assumes one rotor!!!
-   associate(AD_NumOuts => p%AD%rotors(1)%NumOuts + p%AD%rotors(1)%BldNd_TotNumOuts)
-      y%WriteOutput(1:AD_NumOuts) = y%AD%rotors(1)%WriteOutput(1:AD_NumOuts)
-      y%WriteOutput(AD_NumOuts+1:p%NumOuts) = y%IW_WriteOutput(1:m%IW%p%NumOuts)
+   associate(AD_NumOuts => p%AD%rotors(1)%NumOuts + p%AD%rotors(1)%BldNd_TotNumOuts, &
+             IW_NumOuts => m%IW%p%NumOuts)
+      y%WriteOutput(1:IW_NumOuts) = y%IW_WriteOutput(1:IW_NumOuts)
+      y%WriteOutput(IW_NumOuts+1:p%NumOuts) = y%AD%rotors(1)%WriteOutput(1:AD_NumOuts)
    end associate
 
    !----------------------------------------------------------------------------
@@ -558,7 +559,7 @@ subroutine Init_MeshMap_For_ADI(FED, p, uAD, errStat, errMsg)
             pos         = y_ED%TwrPtMesh%Position(:,1)
             orientation = y_ED%TwrPtMesh%RefOrientation(:,:,1)
             call Eye(orientation, errStat2, errMsg2)
-            call CreatePointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
+            call CreateInputPointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
 
             ! TowerBase to AD tower base
             call MeshMapCreate(y_ED%TwrPtMesh, y_ED%TwrPtMeshAD, y_ED%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return

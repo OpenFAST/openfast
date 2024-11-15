@@ -38,8 +38,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ED_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
-    CHARACTER(1024)  :: ADInputFile      !< Name of the AeroDyn input file (in this verison, that is where we'll get the blade mesh info [-]
     LOGICAL  :: CompElast = .false.      !< flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false) [-]
+    LOGICAL  :: RigidAero = .false.      !< flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration [m/s^2]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
@@ -175,6 +175,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmRIner = 0.0_ReKi      !< Platform inertia for roll tilt rotation about the platform CM [kg m^2]
     REAL(ReKi)  :: PtfmPIner = 0.0_ReKi      !< Platform inertia for pitch tilt rotation about the platform CM [kg m^2]
     REAL(ReKi)  :: PtfmYIner = 0.0_ReKi      !< Platform inertia for yaw rotation about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmXYIner = 0.0_ReKi      !< Platform xy inertia about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmYZIner = 0.0_ReKi      !< Platform yz inertia about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmXZIner = 0.0_ReKi      !< Platform xz inertia about the platform CM [kg m^2]
     REAL(ReKi)  :: BldNodes = 0.0_ReKi      !< Number of blade nodes (per blade) used for analysis [-]
     TYPE(ED_BladeMeshInputData) , DIMENSION(:), ALLOCATABLE  :: InpBlMesh      !< Input data for blade discretizations (could be on each blade) [see BladeMeshInputData]
     TYPE(BladeInputData) , DIMENSION(:), ALLOCATABLE  :: InpBl      !< Input data for individual blades [see BladeInputData type]
@@ -272,6 +275,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  ED_CoordSys  =======
   TYPE, PUBLIC :: ED_CoordSys
+    REAL(R8Ki) , DIMENSION(1:3)  :: alpha1 = 0.0_R8Ki      !< Vector / direction alpha1 after ptfm yaw rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: alpha2 = 0.0_R8Ki      !< Vector / direction alpha2 after ptfm yaw rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: alpha3 = 0.0_R8Ki      !< Vector / direction alpha3 after ptfm yaw rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: beta1 = 0.0_R8Ki      !< Vector / direction beta1 after ptfm yaw and pitch rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: beta2 = 0.0_R8Ki      !< Vector / direction beta2 after ptfm yaw and pitch rotation [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: beta3 = 0.0_R8Ki      !< Vector / direction beta3 after ptfm yaw and pitch rotation [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: a1 = 0.0_R8Ki      !< Vector / direction a1 (=  xt from the IEC coord. system) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: a2 = 0.0_R8Ki      !< Vector / direction a2 (=  zt from the IEC coord. system) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: a3 = 0.0_R8Ki      !< Vector / direction a3 (= -yt from the IEC coord. system) [-]
@@ -688,6 +697,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmPIner = 0.0_ReKi      !< Platform inertia for pitch tilt rotation about the platform CM. [-]
     REAL(ReKi)  :: PtfmRIner = 0.0_ReKi      !< Platform inertia for roll tilt rotation about the platform CM. [-]
     REAL(ReKi)  :: PtfmYIner = 0.0_ReKi      !< Platform inertia for yaw rotation about the platform CM. [-]
+    REAL(ReKi)  :: PtfmXYIner = 0.0_ReKi      !< Platform xy inertia about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmYZIner = 0.0_ReKi      !< Platform yz inertia about the platform CM [kg m^2]
+    REAL(ReKi)  :: PtfmXZIner = 0.0_ReKi      !< Platform xz inertia about the platform CM [kg m^2]
     REAL(ReKi)  :: RFrlMass = 0.0_ReKi      !< Rotor-furl mass [-]
     REAL(ReKi)  :: RotIner = 0.0_ReKi      !< Inertia of rotor about its centerline [-]
     REAL(ReKi)  :: RotMass = 0.0_ReKi      !< Rotor mass (blades, tips, and hub) [-]
@@ -780,7 +792,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmCMxt = 0.0_ReKi      !< Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
     REAL(ReKi)  :: PtfmCMyt = 0.0_ReKi      !< Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
     LOGICAL  :: BD4Blades = .false.      !< flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false) [-]
-    LOGICAL  :: UseAD14 = .false.      !< flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14. [-]
+    LOGICAL  :: RigidAero = .false.      !< flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used [-]
     INTEGER(IntKi)  :: YawFrctMod = 0_IntKi      !< Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], or 2 [does use Fz at bearing] [-]
     REAL(R8Ki)  :: M_CD = 0.0_R8Ki      !< Dynamic friction moment at null yaw rate [N-m]
     REAL(R8Ki)  :: M_CSMAX = 0.0_R8Ki      !< Maximum Coulomb friction torque [N-m]
@@ -824,13 +836,9 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeLn2Mesh      !< A mesh on each blade, containing positions and orientations of the blade elements [-]
     TYPE(MeshType)  :: PlatformPtMesh      !< Platform reference point positions/orientations/velocities/accelerations [-]
     TYPE(MeshType)  :: TowerLn2Mesh      !< Tower line2 mesh with positions/orientations/velocities/accelerations [-]
-    TYPE(MeshType)  :: HubPtMotion14      !< For AeroDyn v14: motions of the hub [-]
     TYPE(MeshType)  :: HubPtMotion      !< For AeroDyn and Lidar(InflowWind): motions of the hub [-]
-    TYPE(MeshType)  :: BladeRootMotion14      !< For AeroDyn v14: motions of the blade roots [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootMotion      !< For AeroDyn/BeamDyn: motions at the blade roots [-]
-    TYPE(MeshType)  :: RotorFurlMotion14      !< For AeroDyn14: motions of the rotor furl point. [-]
-    TYPE(MeshType)  :: NacelleMotion      !< For AeroDyn14 & ServoDyn/TMD: motions of the nacelle. [-]
-    TYPE(MeshType)  :: TowerBaseMotion14      !< For AeroDyn 14: motions of the tower base [-]
+    TYPE(MeshType)  :: NacelleMotion      !< For AeroDyn & ServoDyn/TMD: motions of the nacelle. [-]
     TYPE(MeshType)  :: TFinCMMotion      !< For AeroDyn: motions of the tail find CM point (point J) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitch      !< Current blade pitch angles [radians]
@@ -875,8 +883,8 @@ subroutine ED_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    ErrMsg  = ''
    DstInitInputData%InputFile = SrcInitInputData%InputFile
    DstInitInputData%Linearize = SrcInitInputData%Linearize
-   DstInitInputData%ADInputFile = SrcInitInputData%ADInputFile
    DstInitInputData%CompElast = SrcInitInputData%CompElast
+   DstInitInputData%RigidAero = SrcInitInputData%RigidAero
    DstInitInputData%RootName = SrcInitInputData%RootName
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%MHK = SrcInitInputData%MHK
@@ -901,8 +909,8 @@ subroutine ED_PackInitInput(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%InputFile)
    call RegPack(RF, InData%Linearize)
-   call RegPack(RF, InData%ADInputFile)
    call RegPack(RF, InData%CompElast)
+   call RegPack(RF, InData%RigidAero)
    call RegPack(RF, InData%RootName)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%MHK)
@@ -919,8 +927,8 @@ subroutine ED_UnPackInitInput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%InputFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%ADInputFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompElast); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RigidAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
@@ -1655,6 +1663,9 @@ subroutine ED_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%PtfmRIner = SrcInputFileData%PtfmRIner
    DstInputFileData%PtfmPIner = SrcInputFileData%PtfmPIner
    DstInputFileData%PtfmYIner = SrcInputFileData%PtfmYIner
+   DstInputFileData%PtfmXYIner = SrcInputFileData%PtfmXYIner
+   DstInputFileData%PtfmYZIner = SrcInputFileData%PtfmYZIner
+   DstInputFileData%PtfmXZIner = SrcInputFileData%PtfmXZIner
    DstInputFileData%BldNodes = SrcInputFileData%BldNodes
    if (allocated(SrcInputFileData%InpBlMesh)) then
       LB(1:1) = lbound(SrcInputFileData%InpBlMesh)
@@ -2035,6 +2046,9 @@ subroutine ED_PackInputFile(RF, Indata)
    call RegPack(RF, InData%PtfmRIner)
    call RegPack(RF, InData%PtfmPIner)
    call RegPack(RF, InData%PtfmYIner)
+   call RegPack(RF, InData%PtfmXYIner)
+   call RegPack(RF, InData%PtfmYZIner)
+   call RegPack(RF, InData%PtfmXZIner)
    call RegPack(RF, InData%BldNodes)
    call RegPack(RF, allocated(InData%InpBlMesh))
    if (allocated(InData%InpBlMesh)) then
@@ -2224,6 +2238,9 @@ subroutine ED_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%PtfmRIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmPIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmYIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmXYIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYZIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmXZIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldNodes); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%InpBlMesh)) deallocate(OutData%InpBlMesh)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -2354,6 +2371,12 @@ subroutine ED_CopyCoordSys(SrcCoordSysData, DstCoordSysData, CtrlCode, ErrStat, 
    character(*), parameter        :: RoutineName = 'ED_CopyCoordSys'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   DstCoordSysData%alpha1 = SrcCoordSysData%alpha1
+   DstCoordSysData%alpha2 = SrcCoordSysData%alpha2
+   DstCoordSysData%alpha3 = SrcCoordSysData%alpha3
+   DstCoordSysData%beta1 = SrcCoordSysData%beta1
+   DstCoordSysData%beta2 = SrcCoordSysData%beta2
+   DstCoordSysData%beta3 = SrcCoordSysData%beta3
    DstCoordSysData%a1 = SrcCoordSysData%a1
    DstCoordSysData%a2 = SrcCoordSysData%a2
    DstCoordSysData%a3 = SrcCoordSysData%a3
@@ -2672,6 +2695,12 @@ subroutine ED_PackCoordSys(RF, Indata)
    type(ED_CoordSys), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ED_PackCoordSys'
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%alpha1)
+   call RegPack(RF, InData%alpha2)
+   call RegPack(RF, InData%alpha3)
+   call RegPack(RF, InData%beta1)
+   call RegPack(RF, InData%beta2)
+   call RegPack(RF, InData%beta3)
    call RegPack(RF, InData%a1)
    call RegPack(RF, InData%a2)
    call RegPack(RF, InData%a3)
@@ -2733,6 +2762,12 @@ subroutine ED_UnPackCoordSys(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%alpha1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alpha2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alpha3); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%beta1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%beta2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%beta3); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%a3); if (RegCheckErr(RF, RoutineName)) return
@@ -5478,6 +5513,9 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%PtfmPIner = SrcParamData%PtfmPIner
    DstParamData%PtfmRIner = SrcParamData%PtfmRIner
    DstParamData%PtfmYIner = SrcParamData%PtfmYIner
+   DstParamData%PtfmXYIner = SrcParamData%PtfmXYIner
+   DstParamData%PtfmYZIner = SrcParamData%PtfmYZIner
+   DstParamData%PtfmXZIner = SrcParamData%PtfmXZIner
    DstParamData%RFrlMass = SrcParamData%RFrlMass
    DstParamData%RotIner = SrcParamData%RotIner
    DstParamData%RotMass = SrcParamData%RotMass
@@ -5944,7 +5982,7 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%PtfmCMxt = SrcParamData%PtfmCMxt
    DstParamData%PtfmCMyt = SrcParamData%PtfmCMyt
    DstParamData%BD4Blades = SrcParamData%BD4Blades
-   DstParamData%UseAD14 = SrcParamData%UseAD14
+   DstParamData%RigidAero = SrcParamData%RigidAero
    DstParamData%YawFrctMod = SrcParamData%YawFrctMod
    DstParamData%M_CD = SrcParamData%M_CD
    DstParamData%M_CSMAX = SrcParamData%M_CSMAX
@@ -6356,6 +6394,9 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%PtfmPIner)
    call RegPack(RF, InData%PtfmRIner)
    call RegPack(RF, InData%PtfmYIner)
+   call RegPack(RF, InData%PtfmXYIner)
+   call RegPack(RF, InData%PtfmYZIner)
+   call RegPack(RF, InData%PtfmXZIner)
    call RegPack(RF, InData%RFrlMass)
    call RegPack(RF, InData%RotIner)
    call RegPack(RF, InData%RotMass)
@@ -6448,7 +6489,7 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%PtfmCMxt)
    call RegPack(RF, InData%PtfmCMyt)
    call RegPack(RF, InData%BD4Blades)
-   call RegPack(RF, InData%UseAD14)
+   call RegPack(RF, InData%RigidAero)
    call RegPack(RF, InData%YawFrctMod)
    call RegPack(RF, InData%M_CD)
    call RegPack(RF, InData%M_CSMAX)
@@ -6618,6 +6659,9 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%PtfmPIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmRIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmYIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmXYIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYZIner); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmXZIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RFrlMass); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotIner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotMass); if (RegCheckErr(RF, RoutineName)) return
@@ -6710,7 +6754,7 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%PtfmCMxt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmCMyt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BD4Blades); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UseAD14); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RigidAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%YawFrctMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_CD); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_CSMAX); if (RegCheckErr(RF, RoutineName)) return
@@ -6957,13 +7001,7 @@ subroutine ED_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    call MeshCopy(SrcOutputData%TowerLn2Mesh, DstOutputData%TowerLn2Mesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcOutputData%HubPtMotion14, DstOutputData%HubPtMotion14, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    call MeshCopy(SrcOutputData%HubPtMotion, DstOutputData%HubPtMotion, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcOutputData%BladeRootMotion14, DstOutputData%BladeRootMotion14, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%BladeRootMotion)) then
@@ -6982,13 +7020,7 @@ subroutine ED_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   call MeshCopy(SrcOutputData%RotorFurlMotion14, DstOutputData%RotorFurlMotion14, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    call MeshCopy(SrcOutputData%NacelleMotion, DstOutputData%NacelleMotion, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcOutputData%TowerBaseMotion14, DstOutputData%TowerBaseMotion14, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call MeshCopy(SrcOutputData%TFinCMMotion, DstOutputData%TFinCMMotion, CtrlCode, ErrStat2, ErrMsg2 )
@@ -7070,11 +7102,7 @@ subroutine ED_DestroyOutput(OutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( OutputData%TowerLn2Mesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( OutputData%HubPtMotion14, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( OutputData%HubPtMotion, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( OutputData%BladeRootMotion14, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%BladeRootMotion)) then
       LB(1:1) = lbound(OutputData%BladeRootMotion)
@@ -7085,11 +7113,7 @@ subroutine ED_DestroyOutput(OutputData, ErrStat, ErrMsg)
       end do
       deallocate(OutputData%BladeRootMotion)
    end if
-   call MeshDestroy( OutputData%RotorFurlMotion14, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( OutputData%NacelleMotion, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( OutputData%TowerBaseMotion14, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( OutputData%TFinCMMotion, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -7119,9 +7143,7 @@ subroutine ED_PackOutput(RF, Indata)
    end if
    call MeshPack(RF, InData%PlatformPtMesh) 
    call MeshPack(RF, InData%TowerLn2Mesh) 
-   call MeshPack(RF, InData%HubPtMotion14) 
    call MeshPack(RF, InData%HubPtMotion) 
-   call MeshPack(RF, InData%BladeRootMotion14) 
    call RegPack(RF, allocated(InData%BladeRootMotion))
    if (allocated(InData%BladeRootMotion)) then
       call RegPackBounds(RF, 1, lbound(InData%BladeRootMotion), ubound(InData%BladeRootMotion))
@@ -7131,9 +7153,7 @@ subroutine ED_PackOutput(RF, Indata)
          call MeshPack(RF, InData%BladeRootMotion(i1)) 
       end do
    end if
-   call MeshPack(RF, InData%RotorFurlMotion14) 
    call MeshPack(RF, InData%NacelleMotion) 
-   call MeshPack(RF, InData%TowerBaseMotion14) 
    call MeshPack(RF, InData%TFinCMMotion) 
    call RegPackAlloc(RF, InData%WriteOutput)
    call RegPackAlloc(RF, InData%BlPitch)
@@ -7190,9 +7210,7 @@ subroutine ED_UnPackOutput(RF, OutData)
    end if
    call MeshUnpack(RF, OutData%PlatformPtMesh) ! PlatformPtMesh 
    call MeshUnpack(RF, OutData%TowerLn2Mesh) ! TowerLn2Mesh 
-   call MeshUnpack(RF, OutData%HubPtMotion14) ! HubPtMotion14 
    call MeshUnpack(RF, OutData%HubPtMotion) ! HubPtMotion 
-   call MeshUnpack(RF, OutData%BladeRootMotion14) ! BladeRootMotion14 
    if (allocated(OutData%BladeRootMotion)) deallocate(OutData%BladeRootMotion)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -7206,9 +7224,7 @@ subroutine ED_UnPackOutput(RF, OutData)
          call MeshUnpack(RF, OutData%BladeRootMotion(i1)) ! BladeRootMotion 
       end do
    end if
-   call MeshUnpack(RF, OutData%RotorFurlMotion14) ! RotorFurlMotion14 
    call MeshUnpack(RF, OutData%NacelleMotion) ! NacelleMotion 
-   call MeshUnpack(RF, OutData%TowerBaseMotion14) ! TowerBaseMotion14 
    call MeshUnpack(RF, OutData%TFinCMMotion) ! TFinCMMotion 
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlPitch); if (RegCheckErr(RF, RoutineName)) return
@@ -7567,11 +7583,7 @@ SUBROUTINE ED_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg 
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp1(y1%TowerLn2Mesh, y2%TowerLn2Mesh, tin, y_out%TowerLn2Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp1(y1%HubPtMotion14, y2%HubPtMotion14, tin, y_out%HubPtMotion14, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp1(y1%HubPtMotion, y2%HubPtMotion, tin, y_out%HubPtMotion, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp1(y1%BladeRootMotion14, y2%BladeRootMotion14, tin, y_out%BladeRootMotion14, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%BladeRootMotion) .AND. ALLOCATED(y1%BladeRootMotion)) THEN
       do i1 = lbound(y_out%BladeRootMotion,1),ubound(y_out%BladeRootMotion,1)
@@ -7579,11 +7591,7 @@ SUBROUTINE ED_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg 
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
-   CALL MeshExtrapInterp1(y1%RotorFurlMotion14, y2%RotorFurlMotion14, tin, y_out%RotorFurlMotion14, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp1(y1%NacelleMotion, y2%NacelleMotion, tin, y_out%NacelleMotion, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp1(y1%TowerBaseMotion14, y2%TowerBaseMotion14, tin, y_out%TowerBaseMotion14, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp1(y1%TFinCMMotion, y2%TFinCMMotion, tin, y_out%TFinCMMotion, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
@@ -7688,11 +7696,7 @@ SUBROUTINE ED_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp2(y1%TowerLn2Mesh, y2%TowerLn2Mesh, y3%TowerLn2Mesh, tin, y_out%TowerLn2Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp2(y1%HubPtMotion14, y2%HubPtMotion14, y3%HubPtMotion14, tin, y_out%HubPtMotion14, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp2(y1%HubPtMotion, y2%HubPtMotion, y3%HubPtMotion, tin, y_out%HubPtMotion, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp2(y1%BladeRootMotion14, y2%BladeRootMotion14, y3%BladeRootMotion14, tin, y_out%BladeRootMotion14, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%BladeRootMotion) .AND. ALLOCATED(y1%BladeRootMotion)) THEN
       do i1 = lbound(y_out%BladeRootMotion,1),ubound(y_out%BladeRootMotion,1)
@@ -7700,11 +7704,7 @@ SUBROUTINE ED_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
-   CALL MeshExtrapInterp2(y1%RotorFurlMotion14, y2%RotorFurlMotion14, y3%RotorFurlMotion14, tin, y_out%RotorFurlMotion14, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp2(y1%NacelleMotion, y2%NacelleMotion, y3%NacelleMotion, tin, y_out%NacelleMotion, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   CALL MeshExtrapInterp2(y1%TowerBaseMotion14, y2%TowerBaseMotion14, y3%TowerBaseMotion14, tin, y_out%TowerBaseMotion14, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp2(y1%TFinCMMotion, y2%TFinCMMotion, y3%TFinCMMotion, tin, y_out%TFinCMMotion, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)

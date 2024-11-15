@@ -55,6 +55,8 @@ typedef  ^            ^                DbKi               d              -      
 typedef  ^            ^                DbKi               w              -       -  -   "per-length weight in air"  "[kg/m]"
 typedef  ^            ^                DbKi               EA             -       -  -   "axial stiffness"   "[N]"
 typedef  ^            ^                DbKi               EA_D           -       -  -   "axial stiffness"   "[N]"
+typedef  ^            ^                DbKi               alphaMBL          -       -  -   "dynamic stiffness constant: Krd alpha term x MBL"   "[N]"
+typedef  ^            ^                DbKi               vbeta        -       -  -   "dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load)"   "[N]"
 typedef  ^            ^                DbKi               BA             -       -  -   "internal damping coefficient times area"  "[N-s]"
 typedef  ^            ^                DbKi               BA_D           -       -  -   "internal damping coefficient times area"  "[N-s]"
 typedef  ^            ^                DbKi               EI             -       -  -   "bending stiffness"  "[N-m]"
@@ -62,14 +64,14 @@ typedef  ^            ^                DbKi               Can            -      
 typedef  ^            ^                DbKi               Cat            -       -  -   "tangential added mass coefficient"
 typedef  ^            ^                DbKi               Cdn            -       -  -   "transverse drag coefficient"
 typedef  ^            ^                DbKi               Cdt            -       -  -   "tangential drag coefficient"
-typedef  ^            ^                IntKi              ElasticMod     -       -  -   "Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM} "     -
-typedef  ^            ^                IntKi              nEApoints      -       0  -   "number of values in stress-strain lookup table (0 means using constant E)"
+typedef  ^            ^                IntKi              ElasticMod     -       -  -   "Which elasticity model to use: {1 basic, 2 viscoelastic, 3 viscoelastic+meanload} "     -
+typedef  ^            ^                IntKi              nEApoints      -       -  -   "number of values in stress-strain lookup table (0 means using constant E)"
 typedef  ^            ^                DbKi               stiffXs        {30}    -  -   "x array for stress-strain lookup table (up to nCoef)"
 typedef  ^            ^                DbKi               stiffYs        {30}    -  -   "y array for stress-strain lookup table"
-typedef  ^            ^                IntKi              nBApoints      -       0  -   "number of values in stress-strainrate lookup table (0 means using constant c)"
+typedef  ^            ^                IntKi              nBApoints      -       -  -   "number of values in stress-strainrate lookup table (0 means using constant c)"
 typedef  ^            ^                DbKi               dampXs         {30}     -  -   "x array for stress-strainrate lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               dampYs         {30}     -  -   "y array for stress-strainrate lookup table	"
-typedef  ^            ^                IntKi              nEIpoints      -       0  -   "number of values in bending stress-strain lookup table (0 means using constant E)"
+typedef  ^            ^                DbKi               dampYs         {30}     -  -   "y array for stress-strainrate lookup table"
+typedef  ^            ^                IntKi              nEIpoints      -       -  -   "number of values in bending stress-strain lookup table (0 means using constant E)"
 typedef  ^            ^                DbKi               bstiffXs       {30}    -  -   "x array for stress-strain lookup table (up to nCoef)"
 typedef  ^            ^                DbKi               bstiffYs       {30}    -  -   "y array for stress-strain lookup table"
 
@@ -84,14 +86,16 @@ typedef  ^            ^                DbKi               Cdn            -      
 typedef  ^            ^                DbKi               Cdt            -       -  -   "tangential drag coefficient"
 typedef  ^            ^                DbKi               CdEnd          -       -  -   "drag coefficient for rod end"  "[-]"
 typedef  ^            ^                DbKi               CaEnd          -       -  -   "added mass coefficient for rod end"  "[-]"
+typedef  ^            ^                DbKi               LinDamp        -       -  -   "Linear damping, transverse damping for body element" "[N/(m/s)/m]"
+typedef  ^            ^                LOGICAL            isLinDamp      -       -  -   "Linear damping, transverse damping for body element is used" "-"
 
 # this is the Body type, which holds data for each body object
 typedef  ^            MD_Body          IntKi              IdNum          -       -  -   "integer identifier of this Point"
 typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned"
 typedef  ^            ^                IntKi              AttachedC      {30}    -  -   "list of IdNums of points attached to this body"
 typedef  ^            ^                IntKi              AttachedR      {30}    -  -   "list of IdNums of rods attached to this body"
-typedef  ^            ^                IntKi              nAttachedC     -       0  -   "number of attached points"
-typedef  ^            ^                IntKi              nAttachedR     -       0  -   "number of attached rods"
+typedef  ^            ^                IntKi              nAttachedC     -       -  -   "number of attached points"
+typedef  ^            ^                IntKi              nAttachedR     -       -  -   "number of attached rods"
 typedef  ^            ^                DbKi               rPointRel    {3}{30}     -  -   "relative position of point on body"
 typedef  ^            ^                DbKi               r6RodRel       {6}{30}     -  -   "relative position and orientation of rod on body"
 typedef  ^            ^                DbKi               bodyM          -       -  -   "body mass (seperate from attached objects)" "[kg]"
@@ -119,7 +123,7 @@ typedef  ^            ^                CHARACTER(10)      type           -      
 typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  1=fixed, -1=coupled, 0=free"
 typedef  ^            ^                IntKi              Attached       {10}    -  -   "list of IdNums of lines attached to this point node"
 typedef  ^            ^                IntKi              Top            {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
-typedef  ^            ^                IntKi              nAttached      -       0  -   "number of attached lines"
+typedef  ^            ^                IntKi              nAttached      -       -  -   "number of attached lines"
 typedef  ^            ^                DbKi               pointM           -       -  -   "point mass" "[kg]"
 typedef  ^            ^                DbKi               pointV           -       -  -   "point volume" "[m^3]"
 typedef  ^            ^                DbKi               pointFX          -       -  -   ""
@@ -147,8 +151,8 @@ typedef  ^            ^                IntKi              AttachedA      {10}   
 typedef  ^            ^                IntKi              AttachedB      {10}    -  -   "list of IdNums of lines attached to end B"
 typedef  ^            ^                IntKi              TopA           {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
 typedef  ^            ^                IntKi              TopB           {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
-typedef  ^            ^                IntKi              nAttachedA     -       0  -   "number of attached lines to Rod end A"
-typedef  ^            ^                IntKi              nAttachedB     -       0  -   "number of attached lines to Rod end B"
+typedef  ^            ^                IntKi              nAttachedA     -       -  -   "number of attached lines to Rod end A"
+typedef  ^            ^                IntKi              nAttachedB     -       -  -   "number of attached lines to Rod end B"
 typedef  ^            ^                IntKi              OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
 typedef  ^            ^                IntKi              N             -        -  -   "The number of elements in the line"              -
 typedef  ^            ^                IntKi              endTypeA      -        -  -   "type of point at end A: 0=pinned to Point, 1=cantilevered to Rod."  -
@@ -163,6 +167,8 @@ typedef  ^            ^                DbKi               Cdn            -      
 typedef  ^            ^                DbKi               Cdt            -        -  -   ""  "[-]"
 typedef  ^            ^                DbKi               CdEnd          -       -  -   "drag coefficient for rod end"  "[-]"
 typedef  ^            ^                DbKi               CaEnd          -       -  -   "added mass coefficient for rod end"  "[-]"
+typedef  ^            ^                DbKi               LinDamp        -       -  -   "Linear damping, transverse damping for rod element" "[N/(m/s)/m]"
+typedef  ^            ^                LOGICAL            isLinDamp      -       -  -   "Linear damping, transverse damping for rod element is used" "-"
 typedef  ^            ^                DbKi               time           -       -  -   "current time"         "[s]"
 typedef  ^            ^                DbKi               roll           -       -  -   "roll relative to vertical"         "[rad]"
 typedef  ^            ^                DbKi               pitch          -       -  -   "pitch relative to vertical"        "[rad]"
@@ -194,6 +200,7 @@ typedef  ^            ^                DbKi               v6           {6}      
 typedef  ^            ^                DbKi               a6           {6}       -  -   "6 DOF acceleration vector (only used for coupled Rods)" -
 typedef  ^            ^                DbKi               F6net        {6}       -  -   "total force and moment about end A (excluding inertial loads) that Rod may exert on whatever it's attached to"
 typedef  ^            ^                DbKi               M6net        {6}{6}    -  -   "total mass matrix about end A of Rod and any attached Points"
+typedef  ^            ^                DbKi               Imat         {3}{3}    -  -   "inertia about CG in global frame"     
 typedef  ^            ^                DbKi               OrMat        {3}{3}    -  -   "DCM for body orientation"
 typedef  ^            ^                IntKi              RodUnOut      -        -  -   "unit number of rod output file"
 typedef  ^            ^                DbKi               RodWrOutput  {:}       -  -   "one row of output data for this rod"
@@ -205,7 +212,7 @@ typedef  ^            MD_Line          IntKi              IdNum         -       
 typedef  ^            ^                IntKi              PropsIdNum    -        -  -   "the IdNum of the associated line properties"     -
 typedef  ^            ^                IntKi              ElasticMod    -        -  -   "Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM} "     -
 typedef  ^            ^                IntKi              OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
-typedef  ^            ^                IntKi              CtrlChan      -        0  -   "index of control channel that will drive line active tensioning (0 for none)"   -
+typedef  ^            ^                IntKi              CtrlChan      -        -  -   "index of control channel that will drive line active tensioning (0 for none)"   -
 typedef  ^            ^                IntKi              FairPoint   -        -  -   "IdNum of Point at fairlead"
 typedef  ^            ^                IntKi              AnchPoint   -        -  -   "IdNum of Point at anchor"
 typedef  ^            ^                IntKi              N             -        -  -   "The number of elements in the line"              -
@@ -214,22 +221,24 @@ typedef  ^            ^                IntKi              endTypeB      -       
 typedef  ^            ^                DbKi               UnstrLen      -        -  -   "unstretched length of the line"   -
 typedef  ^            ^                DbKi               rho           -        -  -   "density"   "[kg/m3]"
 typedef  ^            ^                DbKi               d             -        -  -   "volume-equivalent diameter"   "[m]"
-typedef  ^            ^                DbKi               EA            -        0  -   "stiffness"  "[N]"
-typedef  ^            ^                DbKi               EA_D          -        0  -   "dynamic stiffness when using viscoelastic model"  "[N]"
-typedef  ^            ^                DbKi               BA            -        0  -   "internal damping coefficient times area for this line only"  "[N-s]"
-typedef  ^            ^                DbKi               BA_D          -        0  -   "dynamic internal damping coefficient times area when using viscoelastic model"  "[N-s]"
-typedef  ^            ^                DbKi               EI            -        0  -   "bending stiffness"  "[N-m]"
+typedef  ^            ^                DbKi               EA            -        -  -   "stiffness"  "[N]"
+typedef  ^            ^                DbKi               EA_D          -        -  -   "constant dynamic stiffness when using viscoelastic model"  "[N]"
+typedef  ^            ^                DbKi               alphaMBL         -        -  -   "load dependent dynamic stiffness constant: Krd alpha term x MBL"   "[N]"
+typedef  ^            ^                DbKi               vbeta       -        -  -   "load dependent dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load)"   "[N]"
+typedef  ^            ^                DbKi               BA            -        -  -   "internal damping coefficient times area for this line only"  "[N-s]"
+typedef  ^            ^                DbKi               BA_D          -        -  -   "dynamic internal damping coefficient times area when using viscoelastic model"  "[N-s]"
+typedef  ^            ^                DbKi               EI            -        -  -   "bending stiffness"  "[N-m]"
 typedef  ^            ^                DbKi               Can            -        -  -   ""  "[-]"
 typedef  ^            ^                DbKi               Cat            -        -  -   ""  "[-]"
 typedef  ^            ^                DbKi               Cdn            -        -  -   ""  "[-]"
 typedef  ^            ^                DbKi               Cdt            -        -  -   ""  "[-]"
-typedef  ^            ^                IntKi              nEApoints     -        0  -   "number of values in stress-strain lookup table (0 means using constant E)"
+typedef  ^            ^                IntKi              nEApoints     -        -  -   "number of values in stress-strain lookup table (0 means using constant E)"
 typedef  ^            ^                DbKi               stiffXs       {30}     -  -   "x array for stress-strain lookup table (up to nCoef)"
 typedef  ^            ^                DbKi               stiffYs       {30}     -  -   "y array for stress-strain lookup table"
-typedef  ^            ^                IntKi              nBApoints     -        0  -   "number of values in stress-strainrate lookup table (0 means using constant c)"
+typedef  ^            ^                IntKi              nBApoints     -        -  -   "number of values in stress-strainrate lookup table (0 means using constant c)"
 typedef  ^            ^                DbKi               dampXs        {30}     -  -   "x array for stress-strainrate lookup table (up to nCoef)"
-typedef  ^            ^                DbKi               dampYs        {30}     -  -   "y array for stress-strainrate lookup table	"
-typedef  ^            ^                IntKi              nEIpoints     -        0  -   "number of values in bending stress-strain lookup table (0 means using constant E)"
+typedef  ^            ^                DbKi               dampYs        {30}     -  -   "y array for stress-strainrate lookup table"
+typedef  ^            ^                IntKi              nEIpoints     -        -  -   "number of values in bending stress-strain lookup table (0 means using constant E)"
 typedef  ^            ^                DbKi               bstiffXs      {30}     -  -   "x array for stress-strain lookup table (up to nCoef)"
 typedef  ^            ^                DbKi               bstiffYs      {30}     -  -   "y array for stress-strain lookup table"
 typedef  ^            ^                DbKi               time           -       -  -   "current time"         "[s]"
@@ -244,6 +253,7 @@ typedef  ^            ^                DbKi               lstrd        {:}      
 typedef  ^            ^                DbKi               Kurv         {:}       -  -   "curvature at each node point"  "[1/m]"
 typedef  ^            ^                DbKi               dl_1         {:}       -  -   "segment stretch attributed to static stiffness portion"  "[m]"
 typedef  ^            ^                DbKi               V            {:}       -  -   "segment volume"  "[m^3]"
+typedef  ^            ^                DbKi               F            {:}       -  -   "VOF scalar for each segment (1 = fully submerged, 0 = out of water)"
 typedef  ^            ^                DbKi               U            {:}{:}    -  -   "water velocity at node"  "[m/s]"
 typedef  ^            ^                DbKi               Ud           {:}{:}    -  -   "water acceleration at node"  "[m/s^2]"
 typedef  ^            ^                DbKi               zeta         {:}       -  -   "water surface elevation above node"  "[m]"
@@ -398,7 +408,8 @@ typedef   ^       ^                    DbKi                mu_kT          -     
 typedef   ^       ^                    DbKi                mu_kA          -     -    -   "axial kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                mc             -     -    -   "ratio of the static friction coefficient to the kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                cv             -     -    -   "saturated damping coefficient" "(-)"
-typedef   ^       ^                    IntKi        inertialF            -           0  -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no" - 
+typedef   ^       ^                    IntKi        inertialF             -     0    -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 0: no, 1: yes, 2: yes with ramp to inertialF_rampT" - 
+typedef   ^       ^                    R8Ki         inertialF_rampT       -    30    -   "Ramp time for inertial forces" - 
 # --- parameters for wave and current ---
 typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -
 typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -

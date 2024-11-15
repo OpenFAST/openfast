@@ -45,7 +45,7 @@ AeroDyn Primary Input File
  
 The primary AeroDyn input file defines modeling options, environmental
 conditions (except freestream flow), airfoils, tower nodal
-discretization and properties, tower, hub, and nacelle buoyancy properties,
+discretization and properties, tower, hub, and nacelle properties,
 as well as output file specifications.
 
 The file is organized into several functional sections. Each section
@@ -91,7 +91,7 @@ When ``Wake_Mod`` is set to 3, the free vortex wake model is used, also referred
 
 .. note::
     Link to old inputs: The previous input `WakeMod` is removed, `WakeMod=2` used to mean DBEMT, but this now controlled using `DBEMT_Mod`. 
-    `WakeMod=2` is a placeholder for future induction calculation method. 
+    `Wake_Mod=2` is a placeholder for future induction calculation method. 
 
 
 **~~AFAeroMod~~**
@@ -116,7 +116,7 @@ Set the ``TwrAero`` flag to TRUE to calculate fluid drag loads on the
 tower or FALSE to disable these effects. 
 
 During linearization analyses
-with AeroDyn coupled OpenFAST and BEM enabled (``WakeMod = 1``), set the
+with AeroDyn coupled OpenFAST and BEM enabled (``Wake_Mod = 1``), set the
 ``DBEMT_Mod=-1`` to employ frozen-wake assumptions 
 (i.e. to fix the axial and tangential induces velocities, and, at their operating-point values during linearization)
 or 
@@ -133,6 +133,9 @@ Set the ``Buoyancy`` flag to TRUE to calculate buoyant loads on the blades,
 tower, nacelle, and hub of an MHK turbine or FALSE to disable this calculation.
 If ``Buoyancy`` is TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver 
 input file must be set to 1 or 2 to indicate an MHK turbine is being modeled.
+
+Set the ``NacelleDrag`` flag to TRUE to calculate the drag loads on the nacelle
+or FALSE to disable this calculation. 
 
 Set the ``CompAA`` flag to TRUE to run aero-acoustic calculations.  This
 option is only available for ``Wake_Mod = 1`` and is not available for
@@ -186,7 +189,7 @@ Determines the kind of BEM algorithm to use.
 
     ``BEM_Mod`` currently governs the coordinate system used for "ill-defined" outputs (outputs that don't have a specified coordinate system) such as the ones that ends with "x" and "y". Other ill-defined outputs are the typical BEM quantities such as "AxInd", "TnInd", "Phi", etc. These are defined in a different coordinate system depending on `BEM_Mod`. For consistency accross differents `Wake_Mod` (even when `Wake_Mod/=1`), we use `BEM_Mod` to determine the coordinate system of the ill-defined outputs. 
 
-The following inputs in this section are only used when ``WakeMod = 1``.
+The following inputs in this section are only used when ``Wake_Mod = 1``.
 
 
 
@@ -306,7 +309,7 @@ Only the options ``DBEMT_Mod={-1,3}`` can be used for linearization.
 OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are used only when ``WakeMod = 3``.
+The input parameters in this section are used only when ``Wake_Mod = 3``.
 
 The settings for the free vortex wake model are set in the OLAF input file
 described in :numref:`OLAF-Input-Files`.  ``OLAFInputFileName`` is the filename
@@ -451,13 +454,18 @@ Since the hub and blades are joined elements, hub buoyancy should be turned on i
 
 Nacelle Properties
 ~~~~~~~~~~~~~~~~~~
-The input parameters in this section pertain to the calculation of buoyant loads
-on the nacelle and are only used when ``Buoyancy = TRUE``.
+The input parameters in this section pertain to the calculation of buoyant and drag loads
+on the nacelle and are only used when ``Buoyancy = TRUE`` or ``NacelleDrag = TRUE``.
 
 ``VolNac`` is the volume of the nacelle and ``NacCenB``` is the 
 position (x,y,z vector) of the nacelle center of buoyancy from
 the yaw bearing in local nacelle coordinates. To neglect buoyant 
-loads on the nacelle, set ``VolNac`` to 0.
+loads on the nacelle, set ``VolNac`` to 0. Only used when ``Buoyancy = TRUE``.
+
+``NacArea`` are the projected areas (Ax,Ay,Az vector) of the nacelle in the nacelle coordinate system, 
+``NacCd`` are the drag coefficients (Cdx, Cdy, Cdz vector) for the three nacelle areas defined by ``NacArea``and ``NacDragAC`` is the 
+position (x,y,z vector) of the nacelle aerodynamic center from
+the yaw bearing in local nacelle coordinates.  Only used when ``NacelleDrag = TRUE``.
 
 Tail fin AeroDynamics
 ~~~~~~~~~~~~~~~~~~~~~
@@ -523,7 +531,7 @@ file with name ``<OutFileRoot>.AD.sum``. ``<OutFileRoot>`` is either
 specified in the I/O SETTINGS section of the driver input file when
 running AeroDyn standalone, or by the OpenFAST program when running a
 coupled simulation. See :numref:`sec:ad_SumFile` for summary file details.
-If ``AFAeroMod=2``, the unsteady aero module will also generate a file
+If ``UAMod>0``, the unsteady aero module will also generate a file
 called ``<OutFileRoot>.UA.sum`` that will list all of the UA parameters
 used in the airfoil tables. This allows the user to check what values
 are being used in case the code has computed the parameters
@@ -989,19 +997,19 @@ An example of tail fin input file is given below:
     Comment
     ======  General inputs =============================================================
     1         TFinMod     - Tail fin aerodynamics model {0: none, 1: polar-based, 2: USB-based} (switch)
-    0.5       TFinChord   - Tail fin chord (m) [used only when TFinMod=1]
-    0.3       TFinArea    - Tail fin planform area (m^2) [used only when TFinMod=1]
+    0.3       TFinArea    - Tail fin planform area (m^2)
     10.,0.,0. TFinRefP_n  - Undeflected position of the tail fin reference point wrt the tower top (m)
     0.,0.,0.  TFinAngles  - Tail fin chordline skew, tilt, and bank angles about the reference point (degrees)
     0         TFinIndMod  - Model for induced velocity calculation {0: none, 1:rotor-average} (switch)
     ====== Polar-based model ================================ [used only when TFinMod=1] 
-    1        TFinAFID - Index of Tail fin airfoil number [1 to NumAFfiles]
+    1         TFinAFID - Index of Tail fin airfoil number [1 to NumAFfiles]
+    0.5       TFinChord   - Tail fin chord (m)
     ====== Unsteady slender body model  ===================== [used only when TFinMod=2]
-    0.9           TFinKp        - Tail fin moment of area about reference point
-    0.3,0.1,0.1   TFinSigma     - Tail fin empirical constant for vortex separation functions
+    0.9           TFinKp        - Tail fin potential flow coefficient (-)
+    0.3,0.1,0.1   TFinSigma     - Tail fin empirical constant for vortex separation functions (1/deg)
     40,60,60      TFinAStar     - Tail fin initial angles for vortex separation functions (deg)
-    3.1416        TFinKv        - Tail fin vortex lift coefficient
-    1.3           TFinCDc       - Tail fin drag coefficient
+    3.1416        TFinKv        - Tail fin vortex lift coefficient (-)
+    1.3           TFinCDc       - Tail fin drag coefficient (-)
 
 General inputs
 ~~~~~~~~~~~~~~

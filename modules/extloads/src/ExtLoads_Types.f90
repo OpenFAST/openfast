@@ -53,10 +53,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: TwrOrient      !< DCM reference orientation of tower (3x3 x NumTowerNodes) [-]
     REAL(ReKi)  :: az_blend_mean = 0.0_ReKi      !< Mean azimuth at which to blend the external and aerodyn loads [-]
     REAL(ReKi)  :: az_blend_delta = 0.0_ReKi      !< The width of the tanh function over which to blend the external and aerodyn loads [-]
-    REAL(ReKi)  :: vel_mean = 0.0_ReKi      !< Mean velocity at reference height [m/s]
-    REAL(ReKi)  :: wind_dir = 0.0_ReKi      !< Wind direction [degrees]
-    REAL(ReKi)  :: z_ref = 0.0_ReKi      !< Reference height for velocity profile [m]
-    REAL(ReKi)  :: shear_exp = 0.0_ReKi      !< Shear exponent [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BldChord      !< Blade chord  (NumBladeNodesMax x NumBlades) [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BldRloc      !< Radial location of each node along the blade [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrDia      !< Tower diameter (NumTwrNodes) [m]
@@ -70,7 +66,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density [kg/m^3]
-    TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of flow field data type [-]
   END TYPE ExtLd_InitOutputType
 ! =======================
 ! =========  ExtLd_ContinuousStateType  =======
@@ -110,10 +105,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumTwrNds = 0_IntKi      !< Number of tower nodes [-]
     REAL(ReKi)  :: az_blend_mean = 0.0_ReKi      !< Mean azimuth at which to blend the external and aerodyn loads [-]
     REAL(ReKi)  :: az_blend_delta = 0.0_ReKi      !< The width of the tanh function over which to blend the external and aerodyn loads [-]
-    REAL(ReKi)  :: vel_mean = 0.0_ReKi      !< Mean velocity at reference height [m/s]
-    REAL(ReKi)  :: wind_dir = 0.0_ReKi      !< Wind direction [m]
-    REAL(ReKi)  :: z_ref = 0.0_ReKi      !< Reference height for velocity profile [degrees]
-    REAL(ReKi)  :: shear_exp = 0.0_ReKi      !< Shear exponent [-]
   END TYPE ExtLd_ParameterType
 ! =======================
 ! =========  ExtLd_InputType  =======
@@ -242,10 +233,6 @@ subroutine ExtLd_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    end if
    DstInitInputData%az_blend_mean = SrcInitInputData%az_blend_mean
    DstInitInputData%az_blend_delta = SrcInitInputData%az_blend_delta
-   DstInitInputData%vel_mean = SrcInitInputData%vel_mean
-   DstInitInputData%wind_dir = SrcInitInputData%wind_dir
-   DstInitInputData%z_ref = SrcInitInputData%z_ref
-   DstInitInputData%shear_exp = SrcInitInputData%shear_exp
    if (allocated(SrcInitInputData%BldChord)) then
       LB(1:2) = lbound(SrcInitInputData%BldChord)
       UB(1:2) = ubound(SrcInitInputData%BldChord)
@@ -360,10 +347,6 @@ subroutine ExtLd_PackInitInput(RF, Indata)
    call RegPackAlloc(RF, InData%TwrOrient)
    call RegPack(RF, InData%az_blend_mean)
    call RegPack(RF, InData%az_blend_delta)
-   call RegPack(RF, InData%vel_mean)
-   call RegPack(RF, InData%wind_dir)
-   call RegPack(RF, InData%z_ref)
-   call RegPack(RF, InData%shear_exp)
    call RegPackAlloc(RF, InData%BldChord)
    call RegPackAlloc(RF, InData%BldRloc)
    call RegPackAlloc(RF, InData%TwrDia)
@@ -396,10 +379,6 @@ subroutine ExtLd_UnPackInitInput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%TwrOrient); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_mean); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_delta); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%vel_mean); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%wind_dir); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%z_ref); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%shear_exp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BldChord); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BldRloc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrDia); if (RegCheckErr(RF, RoutineName)) return
@@ -447,7 +426,6 @@ subroutine ExtLd_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%AirDens = SrcInitOutputData%AirDens
-   DstInitOutputData%FlowField => SrcInitOutputData%FlowField
 end subroutine
 
 subroutine ExtLd_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -467,26 +445,17 @@ subroutine ExtLd_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   nullify(InitOutputData%FlowField)
 end subroutine
 
 subroutine ExtLd_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ExtLd_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtLd_PackInitOutput'
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call RegPack(RF, InData%AirDens)
-   call RegPack(RF, associated(InData%FlowField))
-   if (associated(InData%FlowField)) then
-      call RegPackPointer(RF, c_loc(InData%FlowField), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call IfW_FlowField_PackFlowFieldType(RF, InData%FlowField) 
-      end if
-   end if
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -497,31 +466,11 @@ subroutine ExtLd_UnPackInitOutput(RF, OutData)
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
-   if (associated(OutData%FlowField)) deallocate(OutData%FlowField)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%FlowField)
-      else
-         allocate(OutData%FlowField,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FlowField.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%FlowField)
-         call IfW_FlowField_UnpackFlowFieldType(RF, OutData%FlowField) ! FlowField 
-      end if
-   else
-      OutData%FlowField => null()
-   end if
 end subroutine
 
 subroutine ExtLd_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -804,10 +753,6 @@ subroutine ExtLd_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    DstParamData%NumTwrNds = SrcParamData%NumTwrNds
    DstParamData%az_blend_mean = SrcParamData%az_blend_mean
    DstParamData%az_blend_delta = SrcParamData%az_blend_delta
-   DstParamData%vel_mean = SrcParamData%vel_mean
-   DstParamData%wind_dir = SrcParamData%wind_dir
-   DstParamData%z_ref = SrcParamData%z_ref
-   DstParamData%shear_exp = SrcParamData%shear_exp
 end subroutine
 
 subroutine ExtLd_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -839,10 +784,6 @@ subroutine ExtLd_PackParam(RF, Indata)
    call RegPack(RF, InData%NumTwrNds)
    call RegPack(RF, InData%az_blend_mean)
    call RegPack(RF, InData%az_blend_delta)
-   call RegPack(RF, InData%vel_mean)
-   call RegPack(RF, InData%wind_dir)
-   call RegPack(RF, InData%z_ref)
-   call RegPack(RF, InData%shear_exp)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -862,10 +803,6 @@ subroutine ExtLd_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumTwrNds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_mean); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_delta); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%vel_mean); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%wind_dir); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%z_ref); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%shear_exp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtLd_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

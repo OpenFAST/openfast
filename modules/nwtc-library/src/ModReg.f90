@@ -644,14 +644,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_C1_Rank1")) return
    end subroutine
 
-   subroutine UnpackPtr_C1_Rank1(RF, Data)
+   subroutine UnpackPtr_C1_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -805,14 +805,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_C1_Rank2")) return
    end subroutine
 
-   subroutine UnpackPtr_C1_Rank2(RF, Data)
+   subroutine UnpackPtr_C1_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -966,14 +966,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_C1_Rank3")) return
    end subroutine
 
-   subroutine UnpackPtr_C1_Rank3(RF, Data)
+   subroutine UnpackPtr_C1_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1127,14 +1127,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_C1_Rank4")) return
    end subroutine
 
-   subroutine UnpackPtr_C1_Rank4(RF, Data)
+   subroutine UnpackPtr_C1_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1288,14 +1288,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_C1_Rank5")) return
    end subroutine
 
-   subroutine UnpackPtr_C1_Rank5(RF, Data)
+   subroutine UnpackPtr_C1_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:,:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1595,14 +1595,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_L1_Rank1")) return
    end subroutine
 
-   subroutine UnpackPtr_L1_Rank1(RF, Data)
+   subroutine UnpackPtr_L1_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1756,14 +1756,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_L1_Rank2")) return
    end subroutine
 
-   subroutine UnpackPtr_L1_Rank2(RF, Data)
+   subroutine UnpackPtr_L1_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1917,14 +1917,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_L1_Rank3")) return
    end subroutine
 
-   subroutine UnpackPtr_L1_Rank3(RF, Data)
+   subroutine UnpackPtr_L1_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2078,14 +2078,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_L1_Rank4")) return
    end subroutine
 
-   subroutine UnpackPtr_L1_Rank4(RF, Data)
+   subroutine UnpackPtr_L1_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2239,14 +2239,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_L1_Rank5")) return
    end subroutine
 
-   subroutine UnpackPtr_L1_Rank5(RF, Data)
+   subroutine UnpackPtr_L1_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:,:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2546,14 +2546,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I4_Rank1")) return
    end subroutine
 
-   subroutine UnpackPtr_I4_Rank1(RF, Data)
+   subroutine UnpackPtr_I4_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2707,14 +2707,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I4_Rank2")) return
    end subroutine
 
-   subroutine UnpackPtr_I4_Rank2(RF, Data)
+   subroutine UnpackPtr_I4_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2868,14 +2868,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I4_Rank3")) return
    end subroutine
 
-   subroutine UnpackPtr_I4_Rank3(RF, Data)
+   subroutine UnpackPtr_I4_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3029,14 +3029,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I4_Rank4")) return
    end subroutine
 
-   subroutine UnpackPtr_I4_Rank4(RF, Data)
+   subroutine UnpackPtr_I4_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3190,14 +3190,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I4_Rank5")) return
    end subroutine
 
-   subroutine UnpackPtr_I4_Rank5(RF, Data)
+   subroutine UnpackPtr_I4_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:,:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3497,14 +3497,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I8_Rank1")) return
    end subroutine
 
-   subroutine UnpackPtr_I8_Rank1(RF, Data)
+   subroutine UnpackPtr_I8_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3658,14 +3658,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I8_Rank2")) return
    end subroutine
 
-   subroutine UnpackPtr_I8_Rank2(RF, Data)
+   subroutine UnpackPtr_I8_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3819,14 +3819,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I8_Rank3")) return
    end subroutine
 
-   subroutine UnpackPtr_I8_Rank3(RF, Data)
+   subroutine UnpackPtr_I8_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3980,14 +3980,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I8_Rank4")) return
    end subroutine
 
-   subroutine UnpackPtr_I8_Rank4(RF, Data)
+   subroutine UnpackPtr_I8_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4141,14 +4141,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_I8_Rank5")) return
    end subroutine
 
-   subroutine UnpackPtr_I8_Rank5(RF, Data)
+   subroutine UnpackPtr_I8_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:,:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4448,14 +4448,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R4_Rank1")) return
    end subroutine
 
-   subroutine UnpackPtr_R4_Rank1(RF, Data)
+   subroutine UnpackPtr_R4_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4609,14 +4609,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R4_Rank2")) return
    end subroutine
 
-   subroutine UnpackPtr_R4_Rank2(RF, Data)
+   subroutine UnpackPtr_R4_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4770,14 +4770,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R4_Rank3")) return
    end subroutine
 
-   subroutine UnpackPtr_R4_Rank3(RF, Data)
+   subroutine UnpackPtr_R4_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4931,14 +4931,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R4_Rank4")) return
    end subroutine
 
-   subroutine UnpackPtr_R4_Rank4(RF, Data)
+   subroutine UnpackPtr_R4_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5092,14 +5092,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R4_Rank5")) return
    end subroutine
 
-   subroutine UnpackPtr_R4_Rank5(RF, Data)
+   subroutine UnpackPtr_R4_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:,:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5399,14 +5399,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R8_Rank1")) return
    end subroutine
 
-   subroutine UnpackPtr_R8_Rank1(RF, Data)
+   subroutine UnpackPtr_R8_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5560,14 +5560,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R8_Rank2")) return
    end subroutine
 
-   subroutine UnpackPtr_R8_Rank2(RF, Data)
+   subroutine UnpackPtr_R8_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5721,14 +5721,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R8_Rank3")) return
    end subroutine
 
-   subroutine UnpackPtr_R8_Rank3(RF, Data)
+   subroutine UnpackPtr_R8_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5882,14 +5882,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R8_Rank4")) return
    end subroutine
 
-   subroutine UnpackPtr_R8_Rank4(RF, Data)
+   subroutine UnpackPtr_R8_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -6043,14 +6043,14 @@ contains
       if (RegCheckErr(RF, "PackPtr_R8_Rank5")) return
    end subroutine
 
-   subroutine UnpackPtr_R8_Rank5(RF, Data)
+   subroutine UnpackPtr_R8_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:,:,:,:,:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
       type(c_ptr)                           :: Ptr
-      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return

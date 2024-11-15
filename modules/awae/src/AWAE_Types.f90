@@ -312,7 +312,7 @@ subroutine AWAE_UnPackHighWindGrid(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%data); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%data, LB, UB); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AWAE_CopyHighWindGridPtr(SrcHighWindGridPtrData, DstHighWindGridPtrData, CtrlCode, ErrStat, ErrMsg)
@@ -359,7 +359,7 @@ subroutine AWAE_UnPackHighWindGridPtr(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackPtr(RF, OutData%data); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%data, LB, UB); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, CtrlCode, ErrStat, ErrMsg)

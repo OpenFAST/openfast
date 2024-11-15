@@ -112,7 +112,7 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
 !..................................................................................................................................
    type(BEMT_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine
    real(DbKi),                     intent(in   )  :: interval    ! time interval  
-   type(UA_InitInputType),         intent(  out)  :: Init_UA_Data           ! Parameters
+   type(UA_InitInputType),         intent(inout)  :: Init_UA_Data           ! Parameters
    integer(IntKi),                 intent(  out)  :: errStat     ! Error status of the operation
    character(*),                   intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -137,24 +137,14 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
       end do
    end do
    
-   call move_alloc(InitInp%UAOff_innerNode, Init_UA_Data%UAOff_innerNode)
-   call move_alloc(InitInp%UAOff_outerNode, Init_UA_Data%UAOff_outerNode)
-   
-   Init_UA_Data%dt              = interval          
+   Init_UA_Data%dt              = interval
    Init_UA_Data%OutRootName     = trim(InitInp%RootName)//'.UA'
                
    Init_UA_Data%numBlades       = InitInp%numBlades 
    Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes
-                                  
-   Init_UA_Data%UAMod           = InitInp%UAMod  
-   Init_UA_Data%Flookup         = InitInp%Flookup
-   Init_UA_Data%a_s             = InitInp%a_s ! m/s  
+   
    Init_UA_Data%ShedEffect      = .true. ! This should be true when coupled to BEM
-   Init_UA_Data%WrSum           = InitInp%SumPrint
-   
-   Init_UA_Data%UA_OUTS         = 0
-   Init_UA_Data%d_34_to_ac      = 0.5_ReKi
-   
+
 end subroutine BEMT_Set_UA_InitData
 
    
@@ -173,7 +163,10 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
    character(*), parameter                       :: RoutineName = 'BEMT_SetParameters'
    integer(IntKi)                                :: i, j
-
+   
+   ! variables for computing weights:
+   real(ReKi)                                    :: u(InitInp%numBladeNodes)
+   real(ReKi)                                    :: k_sum
    real(ReKi), parameter                         :: FractionMax    = 0.7   ! fraction of rotor disk where weighted average should be maximum
    real(ReKi), parameter                         :: FractionRadius = 0.1   ! radius of smoothing (fraction of rotor disk around FractionMax)
    ! constants for kernelType_TRIWEIGHT:
@@ -234,6 +227,13 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
       return
    end if
    
+   allocate ( p%IntegrateWeight(p%numBladeNodes, p%numBlades), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for p%IntegrateWeight.', errStat, errMsg, RoutineName )
+      return
+   end if
+   
+   
    p%AFindx = InitInp%AFindx 
    
       ! Compute the tip and hub loss constants using the distances along the blade (provided as input for now) 
@@ -279,6 +279,36 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    end do
    
    p%rTipFixMax = maxval(InitInp%rTipFix)
+   
+   
+   !......................................................
+   ! compute the weights for averaging the axial induction
+   ! compare with kernelSmoothing()
+   ! note: we should probably add some additional factors to 
+   ! account for non-uniform spacing of nodes.
+   !......................................................
+   
+   do j=1,p%numBlades
+
+      u = (InitInp%rlocal(:,j)/ maxval(InitInp%rlocal) - FractionMax) / FractionRadius ! whole array operation
+      do i=1,p%numBladeNodes
+         u(i) = min( 1.0_ReKi, max( -1.0_ReKi, u(i) ) )
+      end do
+
+      k_sum   = 0.0_ReKi
+      do i=1,p%numBladeNodes
+         p%IntegrateWeight(i,j) = w*(1.0_ReKi-abs(u(i))**Exp1)**Exp2;
+         k_sum = k_sum + p%IntegrateWeight(i,j)
+      end do
+      if (k_sum > 0.0_ReKi) then
+         p%IntegrateWeight(:,j) = p%IntegrateWeight(:,j) / k_sum
+      end if
+      
+   end do ! j (each blade)
+   p%IntegrateWeight = p%IntegrateWeight/p%numBlades
+      
+      
+   
 end subroutine BEMT_SetParameters
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -564,12 +594,12 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    character(ErrMsgLen)                           :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                 :: errStat2    ! temporary Error status of the operation
    character(*), parameter                        :: RoutineName = 'BEMT_Init'
-   type(UA_InitInputType)                         :: Init_UA_Data
    type(UA_InitOutputType)                        :: InitOutData_UA
 
    type(DBEMT_InitInputType)                      :: InitInp_DBEMT
    type(DBEMT_InitOutputType)                     :: InitOut_DBEMT
 
+   
       ! Initialize variables for this routine
    errStat = ErrID_None
    errMsg  = ""
@@ -642,14 +672,14 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
       end if
    
    if ( p%UA_Flag ) then
-      call BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat2, errMsg2 )
+      call BEMT_Set_UA_InitData( InitInp, interval, InitInp%UA_Init, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
          if (errStat >= AbortErrLev) then
             call cleanup()
             return
          end if
       
-      call UA_Init( Init_UA_Data, misc%u_UA(1,1,1), p%UA, x%UA, xd%UA, OtherState%UA, misc%y_UA, misc%UA, interval, AFInfo, p%AFIndx, InitOutData_UA, errStat2, errMsg2 )       
+      call UA_Init( InitInp%UA_Init, misc%u_UA(1,1,1), p%UA, x%UA, xd%UA, OtherState%UA, misc%y_UA, misc%UA, interval, AFInfo, p%AFIndx, InitOutData_UA, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
          if (errStat >= AbortErrLev) then
             call cleanup()
@@ -708,7 +738,6 @@ CONTAINS
    ! This subroutine cleans up local variables that may have allocatable arrays
    !...............................................................................................................................
 
-   call UA_DestroyInitInput( Init_UA_Data, ErrStat2, ErrMsg2 )
    call UA_DestroyInitOutput( InitOutData_UA, ErrStat2, ErrMsg2 )
 
    END SUBROUTINE Cleanup
@@ -900,7 +929,7 @@ subroutine BEMT_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, 
    !...............................................................................................................................
    !  update DBEMT states to step n+1
    !...............................................................................................................................
-   if (p%DBEMT_Mod /= DBEMT_none) then
+   if (p%DBEMT_Mod > DBEMT_none) then
 
       !........................
       ! update DBEMT states to t+dt
@@ -927,7 +956,7 @@ subroutine BEMT_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, 
             !............................................
             ! apply DBEMT correction to axInduction and tanInduction:
             !............................................
-            if (p%DBEMT_Mod /= DBEMT_none) then
+            if (p%DBEMT_Mod > DBEMT_none) then
                call calculate_Inductions_from_DBEMT_AllNodes(TimeIndex_t_plus_dt, uTimes(TimeIndex_t_plus_dt), u(TimeIndex_t_plus_dt), p, x, OtherState, m, m%axInduction, m%tanInduction)
             end if
          
@@ -983,13 +1012,13 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
       !.............................
    u_DBEMT%R_disk     = maxval( Rtip )               ! Locate the maximum rlocal value for all blades.
    u_DBEMT%Un_disk    = u%Un_disk
+   !u_DBEMT%AxInd_disk = sum(axInduction) / size(axInduction) ! needed only if p%DBEMT_Mod == DBEMT_tauVaries
    u_DBEMT%AxInd_disk = 0.0_ReKi
    do j = 1,p%numBlades
       do i = 1,p%numBladeNodes
-         u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk + axInduction(i,j)
+         u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk + axInduction(i,j) * p%IntegrateWeight(i,j)
       end do
    end do
-   u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk / (p%numBladeNodes*p%numBlades)
    
       !.............................
       ! calculate element-level inputs
@@ -2477,7 +2506,7 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
       do ii = 1, numPhi
 
          ! nonlinear mapping of ii --> phi
-         phi = smoothStep( real(ii,ReKi), 1.0, -pi+BEMT_epsilon2, real(numPhi,ReKi)/2.0, 0.0_ReKi ) + smoothStep( real(ii,ReKi), real(numPhi,ReKi)/2.0, 0.0_ReKi, real(numPhi,ReKi), pi-BEMT_epsilon2 )
+         phi = smoothStep( real(ii,ReKi), 3, 1.0_ReKi, -pi+BEMT_epsilon2, real(numPhi,ReKi)/2.0, 0.0_ReKi ) + smoothStep( real(ii,ReKi), 3, real(numPhi,ReKi)/2.0, 0.0_ReKi, real(numPhi,ReKi), pi-BEMT_epsilon2 )
       
          fzero = BEMTU_InductionWithResidual(p, u, DEBUG_BLADENODE, DEBUG_BLADE, phi, AFInfo(p%AFIndx(DEBUG_BLADENODE,DEBUG_BLADE)), ValidPhi, errStat, errMsg, a=axInd, ap=tnInd )
          if (ValidPhi) then

@@ -32,10 +32,11 @@
 MODULE FAST_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE ElastoDyn_Types
+USE SED_Types
 USE BeamDyn_Types
 USE ServoDyn_Types
-USE AeroDyn14_Types
 USE AeroDyn_Types
+USE AeroDisk_Types
 USE ExtLoads_Types
 USE SubDyn_Types
 USE SeaState_Types
@@ -58,7 +59,6 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtInfw = 3      ! ExternalInflow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ED = 4      ! ElastoDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_BD = 5      ! BeamDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_AD14 = 6      ! AeroDyn14 [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_AD = 7      ! AeroDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtLd = 8      ! ExternalLoads [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SrvD = 9      ! ServoDyn [-]
@@ -72,7 +72,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Orca = 17      ! OrcaFlex integration (HD/Mooring) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IceF = 18      ! IceFloe [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IceD = 19      ! IceDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules = 19      ! The number of modules available in FAST [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ADsk = 20      ! AeroDisk [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SED = 21      ! Simplified-ElastoDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules = 21      ! The number of modules available in FAST [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxNBlades = 3      ! Maximum number of blades allowed on a turbine [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Pitch = 1      ! pitch [-]
@@ -145,13 +147,13 @@ IMPLICIT NONE
     REAL(ReKi)  :: UJacSclFact = 0.0_ReKi      !< Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians [-]
     INTEGER(IntKi) , DIMENSION(1:9)  :: SizeJac_Opt1 = 0_IntKi      !< (1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion; [-]
     INTEGER(IntKi)  :: SolveOption = 0_IntKi      !< Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc) [-]
-    INTEGER(IntKi)  :: CompElast = 0_IntKi      !< Compute blade loads (switch) {Module_ED; Module_BD} [-]
+    INTEGER(IntKi)  :: CompElast = 0_IntKi      !< Compute blade loads (switch) {Module_ED; Module_BD; Module_SED} [-]
     INTEGER(IntKi)  :: CompInflow = 0_IntKi      !< Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_ExtInfw} [-]
-    INTEGER(IntKi)  :: CompAero = 0_IntKi      !< Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD} [-]
+    INTEGER(IntKi)  :: CompAero = 0_IntKi      !< Compute aerodynamic loads (switch) {Module_None; Module_ADsk; Module_AD} [-]
     INTEGER(IntKi)  :: CompServo = 0_IntKi      !< Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD} [-]
     INTEGER(IntKi)  :: CompSeaSt = 0_IntKi      !< Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt} [-]
     INTEGER(IntKi)  :: CompHydro = 0_IntKi      !< Compute hydrodynamic loads (switch) {Module_None; Module_HD} [-]
-    INTEGER(IntKi)  :: CompSub = 0_IntKi      !< Compute sub-structural dynamics (switch) {Module_None; Module_HD} [-]
+    INTEGER(IntKi)  :: CompSub = 0_IntKi      !< Compute sub-structural dynamics (switch) {Module_None; Module_SD, Module_ExtPtfm} [-]
     INTEGER(IntKi)  :: CompMooring = 0_IntKi      !< Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca} [-]
     INTEGER(IntKi)  :: CompIce = 0_IntKi      !< Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD} [-]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine} [-]
@@ -169,7 +171,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Pvap = 0.0_ReKi      !< Vapour pressure of working fluid [Pa]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
-    CHARACTER(1024)  :: EDFile      !< The name of the ElastoDyn input file [-]
+    CHARACTER(1024)  :: EDFile      !< The name of the ElastoDyn/Simplified-ElastoDyn input file [-]
     CHARACTER(1024) , DIMENSION(1:MaxNBlades)  :: BDBldFile      !< Name of files containing BeamDyn inputs for each blade [-]
     CHARACTER(1024)  :: InflowFile      !< Name of file containing inflow wind input parameters [-]
     CHARACTER(1024)  :: AeroFile      !< Name of file containing aerodynamic input parameters [-]
@@ -451,6 +453,22 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes_Saved      !< Backup Array of times associated with Input Array [-]
   END TYPE ElastoDyn_Data
 ! =======================
+! =========  SED_Data  =======
+  TYPE, PUBLIC :: SED_Data
+    TYPE(SED_ContinuousStateType) , DIMENSION(1:2)  :: x      !< Continuous states [-]
+    TYPE(SED_DiscreteStateType) , DIMENSION(1:2)  :: xd      !< Discrete states [-]
+    TYPE(SED_ConstraintStateType) , DIMENSION(1:2)  :: z      !< Constraint states [-]
+    TYPE(SED_OtherStateType) , DIMENSION(1:2)  :: OtherSt      !< Other states [-]
+    TYPE(SED_ParameterType)  :: p      !< Parameters [-]
+    TYPE(SED_InputType)  :: u      !< System inputs [-]
+    TYPE(SED_OutputType)  :: y      !< System outputs [-]
+    TYPE(SED_MiscVarType)  :: m      !< Misc (optimization) variables not associated with time [-]
+    TYPE(SED_OutputType) , DIMENSION(:), ALLOCATABLE  :: Output      !< Array of outputs associated with CalcSteady Azimuths [-]
+    TYPE(SED_OutputType)  :: y_interp      !< interpolated system outputs for CalcSteady [-]
+    TYPE(SED_InputType) , DIMENSION(:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
+  END TYPE SED_Data
+! =======================
 ! =========  ServoDyn_Data  =======
   TYPE, PUBLIC :: ServoDyn_Data
     TYPE(SrvD_ContinuousStateType) , DIMENSION(1:NumStateTimes)  :: x      !< Continuous states [-]
@@ -469,22 +487,6 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes_Saved      !< Backup Array of times associated with Input Array [-]
   END TYPE ServoDyn_Data
-! =======================
-! =========  AeroDyn14_Data  =======
-  TYPE, PUBLIC :: AeroDyn14_Data
-    TYPE(AD14_ContinuousStateType) , DIMENSION(1:NumStateTimes)  :: x      !< Continuous states [-]
-    TYPE(AD14_DiscreteStateType) , DIMENSION(1:NumStateTimes)  :: xd      !< Discrete states [-]
-    TYPE(AD14_ConstraintStateType) , DIMENSION(1:NumStateTimes)  :: z      !< Constraint states [-]
-    TYPE(AD14_OtherStateType) , DIMENSION(1:NumStateTimes)  :: OtherSt      !< Other states [-]
-    TYPE(AD14_ParameterType)  :: p      !< Parameters [-]
-    TYPE(AD14_InputType)  :: u      !< System inputs [-]
-    TYPE(AD14_OutputType)  :: y      !< System outputs [-]
-    TYPE(AD14_MiscVarType)  :: m      !< Misc/optimization variables [-]
-    TYPE(AD14_InputType) , DIMENSION(:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
-    TYPE(AD14_InputType) , DIMENSION(:), ALLOCATABLE  :: Input_Saved      !< Backup Array of inputs associated with InputTimes [-]
-    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
-    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes_Saved      !< Backup Array of times associated with Input Array [-]
-  END TYPE AeroDyn14_Data
 ! =======================
 ! =========  AeroDyn_Data  =======
   TYPE, PUBLIC :: AeroDyn_Data
@@ -516,6 +518,22 @@ IMPLICIT NONE
     TYPE(ExtLd_MiscVarType)  :: m      !< Misc/optimization variables [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
   END TYPE ExtLoads_Data
+! =======================
+! =========  AeroDisk_Data  =======
+  TYPE, PUBLIC :: AeroDisk_Data
+    TYPE(ADsk_ContinuousStateType) , DIMENSION(1:2)  :: x      !< Continuous states [-]
+    TYPE(ADsk_DiscreteStateType) , DIMENSION(1:2)  :: xd      !< Discrete states [-]
+    TYPE(ADsk_ConstraintStateType) , DIMENSION(1:2)  :: z      !< Constraint states [-]
+    TYPE(ADsk_OtherStateType) , DIMENSION(1:2)  :: OtherSt      !< Other states [-]
+    TYPE(ADsk_ParameterType)  :: p      !< Parameters [-]
+    TYPE(ADsk_InputType)  :: u      !< System inputs [-]
+    TYPE(ADsk_OutputType)  :: y      !< System outputs [-]
+    TYPE(ADsk_MiscVarType)  :: m      !< Misc/optimization variables [-]
+    TYPE(ADsk_OutputType) , DIMENSION(:), ALLOCATABLE  :: Output      !< Array of outputs associated with CalcSteady Azimuths [-]
+    TYPE(ADsk_OutputType)  :: y_interp      !< interpolated system outputs for CalcSteady [-]
+    TYPE(ADsk_InputType) , DIMENSION(:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
+  END TYPE AeroDisk_Data
 ! =======================
 ! =========  InflowWind_Data  =======
   TYPE, PUBLIC :: InflowWind_Data
@@ -728,10 +746,13 @@ IMPLICIT NONE
     TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: BStC_P_2_BD_P_B      !< Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SStC_P_P_2_SubStructure      !< Map ServoDyn/SStC platform point mesh load   to SubDyn/ElastoDyn  point load mesh [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SubStructure_2_SStC_P_P      !< Map SubDyn y3mesh or ED platform mesh motion to ServoDyn/SStC point mesh [-]
-    TYPE(MeshMapType)  :: ED_P_2_SrvD_P_P      !< Map ElastoDyn     platform point mesh motion to ServoDyn      point mesh -- for passing to controller [-]
+    TYPE(MeshMapType)  :: ED_P_2_SrvD_P_P      !< Map ElastoDyn/Simplified-ElastoDyn platform point mesh motion to ServoDyn      point mesh -- for passing to controller [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BDED_L_2_AD_L_B      !< Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: AD_L_2_BDED_B      !< Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BD_L_2_BD_L      !< Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SED_P_2_AD_L_B      !< Map Simplified-ElastoDyn BladeRoot point meshes to rigid AeroDyn BladeMotion line2 meshes [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SED_P_2_AD_P_R      !< Map Simplified-ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes [-]
+    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: AD_L_2_SED_P      !< Map AeroDyn blade load output mesh to Simplified-ElastoDyn Hub point mesh [-]
     TYPE(MeshMapType)  :: ED_P_2_AD_P_N      !< Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh [-]
     TYPE(MeshMapType)  :: AD_P_2_ED_P_N      !< Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh [-]
     TYPE(MeshMapType)  :: ED_P_2_AD_P_TF      !< Map ElastoDyn TailFin CM point motion mesh to AeroDyn TailFin ref point motion mesh [-]
@@ -740,6 +761,13 @@ IMPLICIT NONE
     TYPE(MeshMapType)  :: AD_L_2_ED_P_T      !< Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_P_2_AD_P_R      !< Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes [-]
     TYPE(MeshMapType)  :: ED_P_2_AD_P_H      !< Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh [-]
+    TYPE(MeshMapType)  :: ADsk_P_2_ED_P_H      !< Map AeroDisk point load mesh to ElastoDyn hub point load mesh [-]
+    TYPE(MeshMapType)  :: ED_P_2_ADsk_P_H      !< Map ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh [-]
+    TYPE(MeshMapType)  :: SED_P_2_AD_P_N      !< Map Simplified-ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh [-]
+    TYPE(MeshMapType)  :: SED_L_2_AD_L_T      !< Map Simplified-ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn TowerMotion line2 mesh [-]
+    TYPE(MeshMapType)  :: SED_P_2_AD_P_H      !< Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh [-]
+    TYPE(MeshMapType)  :: ADsk_P_2_SED_P_H      !< Map AeroDisk point load mesh to Simplfied-ElastoDyn hub point load mesh [-]
+    TYPE(MeshMapType)  :: SED_P_2_ADsk_P_H      !< Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh [-]
     TYPE(MeshMapType)  :: AD_P_2_ED_P_H      !< Map AeroDyn HubLoad point mesh to ElastoDyn HubPtLoad point mesh [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BDED_L_2_ExtLd_P_B      !< Map ElastoDyn/BeamDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to ExtLoads point meshes [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ExtLd_P_2_BDED_B      !< Map ExtLoads at points to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes [-]
@@ -774,6 +802,7 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: u_BD_Distrload      !< copy of BD DistrLoad input meshes [-]
     TYPE(MeshType)  :: u_Orca_PtfmMesh      !< copy of Orca PtfmMesh input mesh [-]
     TYPE(MeshType)  :: u_ExtPtfm_PtfmMesh      !< copy of ExtPtfm_MCKF PtfmMesh input mesh [-]
+    TYPE(MeshType)  :: u_SED_HubPtLoad      !< copy of  SED input mesh [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: HubOrient      !< Orientation matrix to translate results from blade 1 to remaining blades in aeromaps [(-)]
   END TYPE FAST_ModuleMapType
 ! =======================
@@ -810,14 +839,16 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FAST_InitData
     TYPE(ED_InitInputType)  :: InData_ED      !< ED Initialization input data [-]
     TYPE(ED_InitOutputType)  :: OutData_ED      !< ED Initialization output data [-]
+    TYPE(SED_InitInputType)  :: InData_SED      !< SED Initialization input data [-]
+    TYPE(SED_InitOutputType)  :: OutData_SED      !< SED Initialization output data [-]
     TYPE(BD_InitInputType)  :: InData_BD      !< BD Initialization input data [-]
     TYPE(BD_InitOutputType) , DIMENSION(:), ALLOCATABLE  :: OutData_BD      !< BD Initialization output data [-]
     TYPE(SrvD_InitInputType)  :: InData_SrvD      !< SrvD Initialization input data [-]
     TYPE(SrvD_InitOutputType)  :: OutData_SrvD      !< SrvD Initialization output data [-]
-    TYPE(AD14_InitInputType)  :: InData_AD14      !< AD14 Initialization input data [-]
-    TYPE(AD14_InitOutputType)  :: OutData_AD14      !< AD14 Initialization output data [-]
     TYPE(AD_InitInputType)  :: InData_AD      !< AD Initialization input data [-]
     TYPE(AD_InitOutputType)  :: OutData_AD      !< AD Initialization output data [-]
+    TYPE(ADsk_InitInputType)  :: InData_ADsk      !< ADsk Initialization input data [-]
+    TYPE(ADsk_InitOutputType)  :: OutData_ADsk      !< ADsk Initialization output data [-]
     TYPE(ExtLd_InitInputType)  :: InData_ExtLd      !< ExtLd Initialization input data [-]
     TYPE(ExtLd_InitOutputType)  :: OutData_ExtLd      !< ExtLd Initialization output data [-]
     TYPE(InflowWind_InitInputType)  :: InData_IfW      !< IfW Initialization input data [-]
@@ -849,8 +880,6 @@ IMPLICIT NONE
 ! =========  FAST_ExternInitType  =======
   TYPE, PUBLIC :: FAST_ExternInitType
     REAL(DbKi)  :: Tmax = -1      !< External code specified Tmax [s]
-    INTEGER(IntKi)  :: SensorType = SensorType_None      !< lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file [-]
-    LOGICAL  :: LidRadialVel = .false.      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
     INTEGER(IntKi)  :: TurbIDforName = -1      !< ID number for turbine (used to create output file naming convention) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TurbinePos = 0.0_ReKi      !< Initial position of turbine base (origin used for graphics or in FAST.Farm) [m]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
@@ -872,10 +901,6 @@ IMPLICIT NONE
     LOGICAL  :: TwrAero = .false.      !< Is Tower aerodynamics enabled for ExtLoads module? [-]
     REAL(ReKi)  :: az_blend_mean = 0.0_ReKi      !< Mean azimuth at which to blend the external and aerodyn loads [-]
     REAL(ReKi)  :: az_blend_delta = 0.0_ReKi      !< Mean azimuth at which to blend the external and aerodyn loads [-]
-    REAL(ReKi)  :: vel_mean = 0.0_ReKi      !< Mean velocity at reference height [m/s]
-    REAL(ReKi)  :: wind_dir = 0.0_ReKi      !< Wind direction in compass angle [degrees]
-    REAL(ReKi)  :: z_ref = 0.0_ReKi      !< Reference height for velocity profile [m]
-    REAL(ReKi)  :: shear_exp = 0.0_ReKi      !< Shear exponent [-]
   END TYPE FAST_ExternInitType
 ! =======================
 ! =========  FAST_TurbineType  =======
@@ -886,10 +911,11 @@ IMPLICIT NONE
     TYPE(FAST_MiscVarType)  :: m_FAST      !< Miscellaneous variables [-]
     TYPE(FAST_ModuleMapType)  :: MeshMapData      !< Data for mapping between modules [-]
     TYPE(ElastoDyn_Data)  :: ED      !< Data for the ElastoDyn module [-]
+    TYPE(SED_Data)  :: SED      !< Data for the Simplified-ElastoDyn module [-]
     TYPE(BeamDyn_Data)  :: BD      !< Data for the BeamDyn module [-]
     TYPE(ServoDyn_Data)  :: SrvD      !< Data for the ServoDyn module [-]
     TYPE(AeroDyn_Data)  :: AD      !< Data for the AeroDyn module [-]
-    TYPE(AeroDyn14_Data)  :: AD14      !< Data for the AeroDyn14 module [-]
+    TYPE(AeroDisk_Data)  :: ADsk      !< Data for the AeroDisk module [-]
     TYPE(ExtLoads_Data)  :: ExtLd      !< Data for the External loads module [-]
     TYPE(InflowWind_Data)  :: IfW      !< Data for InflowWind module [-]
     TYPE(ExternalInflow_Data)  :: ExtInfw      !< Data for ExternalInflow integration module [-]
@@ -7913,6 +7939,293 @@ subroutine FAST_UnPackElastoDyn_Data(RF, OutData)
    call RegUnpackAlloc(RF, OutData%InputTimes_Saved); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine FAST_CopySED_Data(SrcSED_DataData, DstSED_DataData, CtrlCode, ErrStat, ErrMsg)
+   type(SED_Data), intent(inout) :: SrcSED_DataData
+   type(SED_Data), intent(inout) :: DstSED_DataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_CopySED_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   LB(1:1) = lbound(SrcSED_DataData%x)
+   UB(1:1) = ubound(SrcSED_DataData%x)
+   do i1 = LB(1), UB(1)
+      call SED_CopyContState(SrcSED_DataData%x(i1), DstSED_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+   LB(1:1) = lbound(SrcSED_DataData%xd)
+   UB(1:1) = ubound(SrcSED_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call SED_CopyDiscState(SrcSED_DataData%xd(i1), DstSED_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+   LB(1:1) = lbound(SrcSED_DataData%z)
+   UB(1:1) = ubound(SrcSED_DataData%z)
+   do i1 = LB(1), UB(1)
+      call SED_CopyConstrState(SrcSED_DataData%z(i1), DstSED_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+   LB(1:1) = lbound(SrcSED_DataData%OtherSt)
+   UB(1:1) = ubound(SrcSED_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call SED_CopyOtherState(SrcSED_DataData%OtherSt(i1), DstSED_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+   call SED_CopyParam(SrcSED_DataData%p, DstSED_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SED_CopyInput(SrcSED_DataData%u, DstSED_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SED_CopyOutput(SrcSED_DataData%y, DstSED_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SED_CopyMisc(SrcSED_DataData%m, DstSED_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcSED_DataData%Output)) then
+      LB(1:1) = lbound(SrcSED_DataData%Output)
+      UB(1:1) = ubound(SrcSED_DataData%Output)
+      if (.not. allocated(DstSED_DataData%Output)) then
+         allocate(DstSED_DataData%Output(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSED_DataData%Output.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SED_CopyOutput(SrcSED_DataData%Output(i1), DstSED_DataData%Output(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   call SED_CopyOutput(SrcSED_DataData%y_interp, DstSED_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcSED_DataData%Input)) then
+      LB(1:1) = lbound(SrcSED_DataData%Input)
+      UB(1:1) = ubound(SrcSED_DataData%Input)
+      if (.not. allocated(DstSED_DataData%Input)) then
+         allocate(DstSED_DataData%Input(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSED_DataData%Input.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SED_CopyInput(SrcSED_DataData%Input(i1), DstSED_DataData%Input(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcSED_DataData%InputTimes)) then
+      LB(1:1) = lbound(SrcSED_DataData%InputTimes)
+      UB(1:1) = ubound(SrcSED_DataData%InputTimes)
+      if (.not. allocated(DstSED_DataData%InputTimes)) then
+         allocate(DstSED_DataData%InputTimes(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSED_DataData%InputTimes.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSED_DataData%InputTimes = SrcSED_DataData%InputTimes
+   end if
+end subroutine
+
+subroutine FAST_DestroySED_Data(SED_DataData, ErrStat, ErrMsg)
+   type(SED_Data), intent(inout) :: SED_DataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_DestroySED_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   LB(1:1) = lbound(SED_DataData%x)
+   UB(1:1) = ubound(SED_DataData%x)
+   do i1 = LB(1), UB(1)
+      call SED_DestroyContState(SED_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(SED_DataData%xd)
+   UB(1:1) = ubound(SED_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call SED_DestroyDiscState(SED_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(SED_DataData%z)
+   UB(1:1) = ubound(SED_DataData%z)
+   do i1 = LB(1), UB(1)
+      call SED_DestroyConstrState(SED_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(SED_DataData%OtherSt)
+   UB(1:1) = ubound(SED_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call SED_DestroyOtherState(SED_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call SED_DestroyParam(SED_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SED_DestroyInput(SED_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SED_DestroyOutput(SED_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SED_DestroyMisc(SED_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(SED_DataData%Output)) then
+      LB(1:1) = lbound(SED_DataData%Output)
+      UB(1:1) = ubound(SED_DataData%Output)
+      do i1 = LB(1), UB(1)
+         call SED_DestroyOutput(SED_DataData%Output(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(SED_DataData%Output)
+   end if
+   call SED_DestroyOutput(SED_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(SED_DataData%Input)) then
+      LB(1:1) = lbound(SED_DataData%Input)
+      UB(1:1) = ubound(SED_DataData%Input)
+      do i1 = LB(1), UB(1)
+         call SED_DestroyInput(SED_DataData%Input(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(SED_DataData%Input)
+   end if
+   if (allocated(SED_DataData%InputTimes)) then
+      deallocate(SED_DataData%InputTimes)
+   end if
+end subroutine
+
+subroutine FAST_PackSED_Data(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(SED_Data), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'FAST_PackSED_Data'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   LB(1:1) = lbound(InData%x)
+   UB(1:1) = ubound(InData%x)
+   do i1 = LB(1), UB(1)
+      call SED_PackContState(RF, InData%x(i1)) 
+   end do
+   LB(1:1) = lbound(InData%xd)
+   UB(1:1) = ubound(InData%xd)
+   do i1 = LB(1), UB(1)
+      call SED_PackDiscState(RF, InData%xd(i1)) 
+   end do
+   LB(1:1) = lbound(InData%z)
+   UB(1:1) = ubound(InData%z)
+   do i1 = LB(1), UB(1)
+      call SED_PackConstrState(RF, InData%z(i1)) 
+   end do
+   LB(1:1) = lbound(InData%OtherSt)
+   UB(1:1) = ubound(InData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call SED_PackOtherState(RF, InData%OtherSt(i1)) 
+   end do
+   call SED_PackParam(RF, InData%p) 
+   call SED_PackInput(RF, InData%u) 
+   call SED_PackOutput(RF, InData%y) 
+   call SED_PackMisc(RF, InData%m) 
+   call RegPack(RF, allocated(InData%Output))
+   if (allocated(InData%Output)) then
+      call RegPackBounds(RF, 1, lbound(InData%Output), ubound(InData%Output))
+      LB(1:1) = lbound(InData%Output)
+      UB(1:1) = ubound(InData%Output)
+      do i1 = LB(1), UB(1)
+         call SED_PackOutput(RF, InData%Output(i1)) 
+      end do
+   end if
+   call SED_PackOutput(RF, InData%y_interp) 
+   call RegPack(RF, allocated(InData%Input))
+   if (allocated(InData%Input)) then
+      call RegPackBounds(RF, 1, lbound(InData%Input), ubound(InData%Input))
+      LB(1:1) = lbound(InData%Input)
+      UB(1:1) = ubound(InData%Input)
+      do i1 = LB(1), UB(1)
+         call SED_PackInput(RF, InData%Input(i1)) 
+      end do
+   end if
+   call RegPackAlloc(RF, InData%InputTimes)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine FAST_UnPackSED_Data(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(SED_Data), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'FAST_UnPackSED_Data'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   LB(1:1) = lbound(OutData%x)
+   UB(1:1) = ubound(OutData%x)
+   do i1 = LB(1), UB(1)
+      call SED_UnpackContState(RF, OutData%x(i1)) ! x 
+   end do
+   LB(1:1) = lbound(OutData%xd)
+   UB(1:1) = ubound(OutData%xd)
+   do i1 = LB(1), UB(1)
+      call SED_UnpackDiscState(RF, OutData%xd(i1)) ! xd 
+   end do
+   LB(1:1) = lbound(OutData%z)
+   UB(1:1) = ubound(OutData%z)
+   do i1 = LB(1), UB(1)
+      call SED_UnpackConstrState(RF, OutData%z(i1)) ! z 
+   end do
+   LB(1:1) = lbound(OutData%OtherSt)
+   UB(1:1) = ubound(OutData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call SED_UnpackOtherState(RF, OutData%OtherSt(i1)) ! OtherSt 
+   end do
+   call SED_UnpackParam(RF, OutData%p) ! p 
+   call SED_UnpackInput(RF, OutData%u) ! u 
+   call SED_UnpackOutput(RF, OutData%y) ! y 
+   call SED_UnpackMisc(RF, OutData%m) ! m 
+   if (allocated(OutData%Output)) deallocate(OutData%Output)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Output(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Output.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SED_UnpackOutput(RF, OutData%Output(i1)) ! Output 
+      end do
+   end if
+   call SED_UnpackOutput(RF, OutData%y_interp) ! y_interp 
+   if (allocated(OutData%Input)) deallocate(OutData%Input)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Input(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SED_UnpackInput(RF, OutData%Input(i1)) ! Input 
+      end do
+   end if
+   call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine FAST_CopyServoDyn_Data(SrcServoDyn_DataData, DstServoDyn_DataData, CtrlCode, ErrStat, ErrMsg)
    type(ServoDyn_Data), intent(inout) :: SrcServoDyn_DataData
    type(ServoDyn_Data), intent(inout) :: DstServoDyn_DataData
@@ -8265,303 +8578,6 @@ subroutine FAST_UnPackServoDyn_Data(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call SrvD_UnpackInput(RF, OutData%Input_Saved(i1)) ! Input_Saved 
-      end do
-   end if
-   call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%InputTimes_Saved); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_CopyAeroDyn14_Data(SrcAeroDyn14_DataData, DstAeroDyn14_DataData, CtrlCode, ErrStat, ErrMsg)
-   type(AeroDyn14_Data), intent(inout) :: SrcAeroDyn14_DataData
-   type(AeroDyn14_Data), intent(inout) :: DstAeroDyn14_DataData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)                  :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_CopyAeroDyn14_Data'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   LB(1:1) = lbound(SrcAeroDyn14_DataData%x)
-   UB(1:1) = ubound(SrcAeroDyn14_DataData%x)
-   do i1 = LB(1), UB(1)
-      call AD14_CopyContState(SrcAeroDyn14_DataData%x(i1), DstAeroDyn14_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end do
-   LB(1:1) = lbound(SrcAeroDyn14_DataData%xd)
-   UB(1:1) = ubound(SrcAeroDyn14_DataData%xd)
-   do i1 = LB(1), UB(1)
-      call AD14_CopyDiscState(SrcAeroDyn14_DataData%xd(i1), DstAeroDyn14_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end do
-   LB(1:1) = lbound(SrcAeroDyn14_DataData%z)
-   UB(1:1) = ubound(SrcAeroDyn14_DataData%z)
-   do i1 = LB(1), UB(1)
-      call AD14_CopyConstrState(SrcAeroDyn14_DataData%z(i1), DstAeroDyn14_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end do
-   LB(1:1) = lbound(SrcAeroDyn14_DataData%OtherSt)
-   UB(1:1) = ubound(SrcAeroDyn14_DataData%OtherSt)
-   do i1 = LB(1), UB(1)
-      call AD14_CopyOtherState(SrcAeroDyn14_DataData%OtherSt(i1), DstAeroDyn14_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end do
-   call AD14_CopyParam(SrcAeroDyn14_DataData%p, DstAeroDyn14_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call AD14_CopyInput(SrcAeroDyn14_DataData%u, DstAeroDyn14_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call AD14_CopyOutput(SrcAeroDyn14_DataData%y, DstAeroDyn14_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call AD14_CopyMisc(SrcAeroDyn14_DataData%m, DstAeroDyn14_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcAeroDyn14_DataData%Input)) then
-      LB(1:1) = lbound(SrcAeroDyn14_DataData%Input)
-      UB(1:1) = ubound(SrcAeroDyn14_DataData%Input)
-      if (.not. allocated(DstAeroDyn14_DataData%Input)) then
-         allocate(DstAeroDyn14_DataData%Input(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroDyn14_DataData%Input.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call AD14_CopyInput(SrcAeroDyn14_DataData%Input(i1), DstAeroDyn14_DataData%Input(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcAeroDyn14_DataData%Input_Saved)) then
-      LB(1:1) = lbound(SrcAeroDyn14_DataData%Input_Saved)
-      UB(1:1) = ubound(SrcAeroDyn14_DataData%Input_Saved)
-      if (.not. allocated(DstAeroDyn14_DataData%Input_Saved)) then
-         allocate(DstAeroDyn14_DataData%Input_Saved(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroDyn14_DataData%Input_Saved.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call AD14_CopyInput(SrcAeroDyn14_DataData%Input_Saved(i1), DstAeroDyn14_DataData%Input_Saved(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcAeroDyn14_DataData%InputTimes)) then
-      LB(1:1) = lbound(SrcAeroDyn14_DataData%InputTimes)
-      UB(1:1) = ubound(SrcAeroDyn14_DataData%InputTimes)
-      if (.not. allocated(DstAeroDyn14_DataData%InputTimes)) then
-         allocate(DstAeroDyn14_DataData%InputTimes(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroDyn14_DataData%InputTimes.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstAeroDyn14_DataData%InputTimes = SrcAeroDyn14_DataData%InputTimes
-   end if
-   if (allocated(SrcAeroDyn14_DataData%InputTimes_Saved)) then
-      LB(1:1) = lbound(SrcAeroDyn14_DataData%InputTimes_Saved)
-      UB(1:1) = ubound(SrcAeroDyn14_DataData%InputTimes_Saved)
-      if (.not. allocated(DstAeroDyn14_DataData%InputTimes_Saved)) then
-         allocate(DstAeroDyn14_DataData%InputTimes_Saved(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroDyn14_DataData%InputTimes_Saved.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstAeroDyn14_DataData%InputTimes_Saved = SrcAeroDyn14_DataData%InputTimes_Saved
-   end if
-end subroutine
-
-subroutine FAST_DestroyAeroDyn14_Data(AeroDyn14_DataData, ErrStat, ErrMsg)
-   type(AeroDyn14_Data), intent(inout) :: AeroDyn14_DataData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_DestroyAeroDyn14_Data'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   LB(1:1) = lbound(AeroDyn14_DataData%x)
-   UB(1:1) = ubound(AeroDyn14_DataData%x)
-   do i1 = LB(1), UB(1)
-      call AD14_DestroyContState(AeroDyn14_DataData%x(i1), ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end do
-   LB(1:1) = lbound(AeroDyn14_DataData%xd)
-   UB(1:1) = ubound(AeroDyn14_DataData%xd)
-   do i1 = LB(1), UB(1)
-      call AD14_DestroyDiscState(AeroDyn14_DataData%xd(i1), ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end do
-   LB(1:1) = lbound(AeroDyn14_DataData%z)
-   UB(1:1) = ubound(AeroDyn14_DataData%z)
-   do i1 = LB(1), UB(1)
-      call AD14_DestroyConstrState(AeroDyn14_DataData%z(i1), ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end do
-   LB(1:1) = lbound(AeroDyn14_DataData%OtherSt)
-   UB(1:1) = ubound(AeroDyn14_DataData%OtherSt)
-   do i1 = LB(1), UB(1)
-      call AD14_DestroyOtherState(AeroDyn14_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end do
-   call AD14_DestroyParam(AeroDyn14_DataData%p, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AD14_DestroyInput(AeroDyn14_DataData%u, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AD14_DestroyOutput(AeroDyn14_DataData%y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AD14_DestroyMisc(AeroDyn14_DataData%m, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(AeroDyn14_DataData%Input)) then
-      LB(1:1) = lbound(AeroDyn14_DataData%Input)
-      UB(1:1) = ubound(AeroDyn14_DataData%Input)
-      do i1 = LB(1), UB(1)
-         call AD14_DestroyInput(AeroDyn14_DataData%Input(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(AeroDyn14_DataData%Input)
-   end if
-   if (allocated(AeroDyn14_DataData%Input_Saved)) then
-      LB(1:1) = lbound(AeroDyn14_DataData%Input_Saved)
-      UB(1:1) = ubound(AeroDyn14_DataData%Input_Saved)
-      do i1 = LB(1), UB(1)
-         call AD14_DestroyInput(AeroDyn14_DataData%Input_Saved(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(AeroDyn14_DataData%Input_Saved)
-   end if
-   if (allocated(AeroDyn14_DataData%InputTimes)) then
-      deallocate(AeroDyn14_DataData%InputTimes)
-   end if
-   if (allocated(AeroDyn14_DataData%InputTimes_Saved)) then
-      deallocate(AeroDyn14_DataData%InputTimes_Saved)
-   end if
-end subroutine
-
-subroutine FAST_PackAeroDyn14_Data(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(AeroDyn14_Data), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackAeroDyn14_Data'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   if (RF%ErrStat >= AbortErrLev) return
-   LB(1:1) = lbound(InData%x)
-   UB(1:1) = ubound(InData%x)
-   do i1 = LB(1), UB(1)
-      call AD14_PackContState(RF, InData%x(i1)) 
-   end do
-   LB(1:1) = lbound(InData%xd)
-   UB(1:1) = ubound(InData%xd)
-   do i1 = LB(1), UB(1)
-      call AD14_PackDiscState(RF, InData%xd(i1)) 
-   end do
-   LB(1:1) = lbound(InData%z)
-   UB(1:1) = ubound(InData%z)
-   do i1 = LB(1), UB(1)
-      call AD14_PackConstrState(RF, InData%z(i1)) 
-   end do
-   LB(1:1) = lbound(InData%OtherSt)
-   UB(1:1) = ubound(InData%OtherSt)
-   do i1 = LB(1), UB(1)
-      call AD14_PackOtherState(RF, InData%OtherSt(i1)) 
-   end do
-   call AD14_PackParam(RF, InData%p) 
-   call AD14_PackInput(RF, InData%u) 
-   call AD14_PackOutput(RF, InData%y) 
-   call AD14_PackMisc(RF, InData%m) 
-   call RegPack(RF, allocated(InData%Input))
-   if (allocated(InData%Input)) then
-      call RegPackBounds(RF, 1, lbound(InData%Input), ubound(InData%Input))
-      LB(1:1) = lbound(InData%Input)
-      UB(1:1) = ubound(InData%Input)
-      do i1 = LB(1), UB(1)
-         call AD14_PackInput(RF, InData%Input(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%Input_Saved))
-   if (allocated(InData%Input_Saved)) then
-      call RegPackBounds(RF, 1, lbound(InData%Input_Saved), ubound(InData%Input_Saved))
-      LB(1:1) = lbound(InData%Input_Saved)
-      UB(1:1) = ubound(InData%Input_Saved)
-      do i1 = LB(1), UB(1)
-         call AD14_PackInput(RF, InData%Input_Saved(i1)) 
-      end do
-   end if
-   call RegPackAlloc(RF, InData%InputTimes)
-   call RegPackAlloc(RF, InData%InputTimes_Saved)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_UnPackAeroDyn14_Data(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(AeroDyn14_Data), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackAeroDyn14_Data'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   LB(1:1) = lbound(OutData%x)
-   UB(1:1) = ubound(OutData%x)
-   do i1 = LB(1), UB(1)
-      call AD14_UnpackContState(RF, OutData%x(i1)) ! x 
-   end do
-   LB(1:1) = lbound(OutData%xd)
-   UB(1:1) = ubound(OutData%xd)
-   do i1 = LB(1), UB(1)
-      call AD14_UnpackDiscState(RF, OutData%xd(i1)) ! xd 
-   end do
-   LB(1:1) = lbound(OutData%z)
-   UB(1:1) = ubound(OutData%z)
-   do i1 = LB(1), UB(1)
-      call AD14_UnpackConstrState(RF, OutData%z(i1)) ! z 
-   end do
-   LB(1:1) = lbound(OutData%OtherSt)
-   UB(1:1) = ubound(OutData%OtherSt)
-   do i1 = LB(1), UB(1)
-      call AD14_UnpackOtherState(RF, OutData%OtherSt(i1)) ! OtherSt 
-   end do
-   call AD14_UnpackParam(RF, OutData%p) ! p 
-   call AD14_UnpackInput(RF, OutData%u) ! u 
-   call AD14_UnpackOutput(RF, OutData%y) ! y 
-   call AD14_UnpackMisc(RF, OutData%m) ! m 
-   if (allocated(OutData%Input)) deallocate(OutData%Input)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%Input(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call AD14_UnpackInput(RF, OutData%Input(i1)) ! Input 
-      end do
-   end if
-   if (allocated(OutData%Input_Saved)) deallocate(OutData%Input_Saved)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%Input_Saved(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input_Saved.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call AD14_UnpackInput(RF, OutData%Input_Saved(i1)) ! Input_Saved 
       end do
    end if
    call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
@@ -9102,6 +9118,293 @@ subroutine FAST_UnPackExtLoads_Data(RF, OutData)
    call ExtLd_UnpackInput(RF, OutData%u) ! u 
    call ExtLd_UnpackOutput(RF, OutData%y) ! y 
    call ExtLd_UnpackMisc(RF, OutData%m) ! m 
+   call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine FAST_CopyAeroDisk_Data(SrcAeroDisk_DataData, DstAeroDisk_DataData, CtrlCode, ErrStat, ErrMsg)
+   type(AeroDisk_Data), intent(inout) :: SrcAeroDisk_DataData
+   type(AeroDisk_Data), intent(inout) :: DstAeroDisk_DataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_CopyAeroDisk_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   LB(1:1) = lbound(SrcAeroDisk_DataData%x)
+   UB(1:1) = ubound(SrcAeroDisk_DataData%x)
+   do i1 = LB(1), UB(1)
+      call ADsk_CopyContState(SrcAeroDisk_DataData%x(i1), DstAeroDisk_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+   LB(1:1) = lbound(SrcAeroDisk_DataData%xd)
+   UB(1:1) = ubound(SrcAeroDisk_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call ADsk_CopyDiscState(SrcAeroDisk_DataData%xd(i1), DstAeroDisk_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+   LB(1:1) = lbound(SrcAeroDisk_DataData%z)
+   UB(1:1) = ubound(SrcAeroDisk_DataData%z)
+   do i1 = LB(1), UB(1)
+      call ADsk_CopyConstrState(SrcAeroDisk_DataData%z(i1), DstAeroDisk_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+   LB(1:1) = lbound(SrcAeroDisk_DataData%OtherSt)
+   UB(1:1) = ubound(SrcAeroDisk_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call ADsk_CopyOtherState(SrcAeroDisk_DataData%OtherSt(i1), DstAeroDisk_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+   call ADsk_CopyParam(SrcAeroDisk_DataData%p, DstAeroDisk_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ADsk_CopyInput(SrcAeroDisk_DataData%u, DstAeroDisk_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ADsk_CopyOutput(SrcAeroDisk_DataData%y, DstAeroDisk_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ADsk_CopyMisc(SrcAeroDisk_DataData%m, DstAeroDisk_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcAeroDisk_DataData%Output)) then
+      LB(1:1) = lbound(SrcAeroDisk_DataData%Output)
+      UB(1:1) = ubound(SrcAeroDisk_DataData%Output)
+      if (.not. allocated(DstAeroDisk_DataData%Output)) then
+         allocate(DstAeroDisk_DataData%Output(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroDisk_DataData%Output.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call ADsk_CopyOutput(SrcAeroDisk_DataData%Output(i1), DstAeroDisk_DataData%Output(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   call ADsk_CopyOutput(SrcAeroDisk_DataData%y_interp, DstAeroDisk_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcAeroDisk_DataData%Input)) then
+      LB(1:1) = lbound(SrcAeroDisk_DataData%Input)
+      UB(1:1) = ubound(SrcAeroDisk_DataData%Input)
+      if (.not. allocated(DstAeroDisk_DataData%Input)) then
+         allocate(DstAeroDisk_DataData%Input(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroDisk_DataData%Input.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call ADsk_CopyInput(SrcAeroDisk_DataData%Input(i1), DstAeroDisk_DataData%Input(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcAeroDisk_DataData%InputTimes)) then
+      LB(1:1) = lbound(SrcAeroDisk_DataData%InputTimes)
+      UB(1:1) = ubound(SrcAeroDisk_DataData%InputTimes)
+      if (.not. allocated(DstAeroDisk_DataData%InputTimes)) then
+         allocate(DstAeroDisk_DataData%InputTimes(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstAeroDisk_DataData%InputTimes.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstAeroDisk_DataData%InputTimes = SrcAeroDisk_DataData%InputTimes
+   end if
+end subroutine
+
+subroutine FAST_DestroyAeroDisk_Data(AeroDisk_DataData, ErrStat, ErrMsg)
+   type(AeroDisk_Data), intent(inout) :: AeroDisk_DataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_DestroyAeroDisk_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   LB(1:1) = lbound(AeroDisk_DataData%x)
+   UB(1:1) = ubound(AeroDisk_DataData%x)
+   do i1 = LB(1), UB(1)
+      call ADsk_DestroyContState(AeroDisk_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(AeroDisk_DataData%xd)
+   UB(1:1) = ubound(AeroDisk_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call ADsk_DestroyDiscState(AeroDisk_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(AeroDisk_DataData%z)
+   UB(1:1) = ubound(AeroDisk_DataData%z)
+   do i1 = LB(1), UB(1)
+      call ADsk_DestroyConstrState(AeroDisk_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(AeroDisk_DataData%OtherSt)
+   UB(1:1) = ubound(AeroDisk_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call ADsk_DestroyOtherState(AeroDisk_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call ADsk_DestroyParam(AeroDisk_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADsk_DestroyInput(AeroDisk_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADsk_DestroyOutput(AeroDisk_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADsk_DestroyMisc(AeroDisk_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(AeroDisk_DataData%Output)) then
+      LB(1:1) = lbound(AeroDisk_DataData%Output)
+      UB(1:1) = ubound(AeroDisk_DataData%Output)
+      do i1 = LB(1), UB(1)
+         call ADsk_DestroyOutput(AeroDisk_DataData%Output(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(AeroDisk_DataData%Output)
+   end if
+   call ADsk_DestroyOutput(AeroDisk_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(AeroDisk_DataData%Input)) then
+      LB(1:1) = lbound(AeroDisk_DataData%Input)
+      UB(1:1) = ubound(AeroDisk_DataData%Input)
+      do i1 = LB(1), UB(1)
+         call ADsk_DestroyInput(AeroDisk_DataData%Input(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(AeroDisk_DataData%Input)
+   end if
+   if (allocated(AeroDisk_DataData%InputTimes)) then
+      deallocate(AeroDisk_DataData%InputTimes)
+   end if
+end subroutine
+
+subroutine FAST_PackAeroDisk_Data(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(AeroDisk_Data), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'FAST_PackAeroDisk_Data'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   LB(1:1) = lbound(InData%x)
+   UB(1:1) = ubound(InData%x)
+   do i1 = LB(1), UB(1)
+      call ADsk_PackContState(RF, InData%x(i1)) 
+   end do
+   LB(1:1) = lbound(InData%xd)
+   UB(1:1) = ubound(InData%xd)
+   do i1 = LB(1), UB(1)
+      call ADsk_PackDiscState(RF, InData%xd(i1)) 
+   end do
+   LB(1:1) = lbound(InData%z)
+   UB(1:1) = ubound(InData%z)
+   do i1 = LB(1), UB(1)
+      call ADsk_PackConstrState(RF, InData%z(i1)) 
+   end do
+   LB(1:1) = lbound(InData%OtherSt)
+   UB(1:1) = ubound(InData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call ADsk_PackOtherState(RF, InData%OtherSt(i1)) 
+   end do
+   call ADsk_PackParam(RF, InData%p) 
+   call ADsk_PackInput(RF, InData%u) 
+   call ADsk_PackOutput(RF, InData%y) 
+   call ADsk_PackMisc(RF, InData%m) 
+   call RegPack(RF, allocated(InData%Output))
+   if (allocated(InData%Output)) then
+      call RegPackBounds(RF, 1, lbound(InData%Output), ubound(InData%Output))
+      LB(1:1) = lbound(InData%Output)
+      UB(1:1) = ubound(InData%Output)
+      do i1 = LB(1), UB(1)
+         call ADsk_PackOutput(RF, InData%Output(i1)) 
+      end do
+   end if
+   call ADsk_PackOutput(RF, InData%y_interp) 
+   call RegPack(RF, allocated(InData%Input))
+   if (allocated(InData%Input)) then
+      call RegPackBounds(RF, 1, lbound(InData%Input), ubound(InData%Input))
+      LB(1:1) = lbound(InData%Input)
+      UB(1:1) = ubound(InData%Input)
+      do i1 = LB(1), UB(1)
+         call ADsk_PackInput(RF, InData%Input(i1)) 
+      end do
+   end if
+   call RegPackAlloc(RF, InData%InputTimes)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine FAST_UnPackAeroDisk_Data(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(AeroDisk_Data), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'FAST_UnPackAeroDisk_Data'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   LB(1:1) = lbound(OutData%x)
+   UB(1:1) = ubound(OutData%x)
+   do i1 = LB(1), UB(1)
+      call ADsk_UnpackContState(RF, OutData%x(i1)) ! x 
+   end do
+   LB(1:1) = lbound(OutData%xd)
+   UB(1:1) = ubound(OutData%xd)
+   do i1 = LB(1), UB(1)
+      call ADsk_UnpackDiscState(RF, OutData%xd(i1)) ! xd 
+   end do
+   LB(1:1) = lbound(OutData%z)
+   UB(1:1) = ubound(OutData%z)
+   do i1 = LB(1), UB(1)
+      call ADsk_UnpackConstrState(RF, OutData%z(i1)) ! z 
+   end do
+   LB(1:1) = lbound(OutData%OtherSt)
+   UB(1:1) = ubound(OutData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call ADsk_UnpackOtherState(RF, OutData%OtherSt(i1)) ! OtherSt 
+   end do
+   call ADsk_UnpackParam(RF, OutData%p) ! p 
+   call ADsk_UnpackInput(RF, OutData%u) ! u 
+   call ADsk_UnpackOutput(RF, OutData%y) ! y 
+   call ADsk_UnpackMisc(RF, OutData%m) ! m 
+   if (allocated(OutData%Output)) deallocate(OutData%Output)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Output(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Output.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call ADsk_UnpackOutput(RF, OutData%Output(i1)) ! Output 
+      end do
+   end if
+   call ADsk_UnpackOutput(RF, OutData%y_interp) ! y_interp 
+   if (allocated(OutData%Input)) deallocate(OutData%Input)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Input(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call ADsk_UnpackInput(RF, OutData%Input(i1)) ! Input 
+      end do
+   end if
    call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -12817,6 +13120,54 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   if (allocated(SrcModuleMapTypeData%SED_P_2_AD_L_B)) then
+      LB(1:1) = lbound(SrcModuleMapTypeData%SED_P_2_AD_L_B)
+      UB(1:1) = ubound(SrcModuleMapTypeData%SED_P_2_AD_L_B)
+      if (.not. allocated(DstModuleMapTypeData%SED_P_2_AD_L_B)) then
+         allocate(DstModuleMapTypeData%SED_P_2_AD_L_B(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SED_P_2_AD_L_B.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_AD_L_B(i1), DstModuleMapTypeData%SED_P_2_AD_L_B(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcModuleMapTypeData%SED_P_2_AD_P_R)) then
+      LB(1:1) = lbound(SrcModuleMapTypeData%SED_P_2_AD_P_R)
+      UB(1:1) = ubound(SrcModuleMapTypeData%SED_P_2_AD_P_R)
+      if (.not. allocated(DstModuleMapTypeData%SED_P_2_AD_P_R)) then
+         allocate(DstModuleMapTypeData%SED_P_2_AD_P_R(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SED_P_2_AD_P_R.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_AD_P_R(i1), DstModuleMapTypeData%SED_P_2_AD_P_R(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcModuleMapTypeData%AD_L_2_SED_P)) then
+      LB(1:1) = lbound(SrcModuleMapTypeData%AD_L_2_SED_P)
+      UB(1:1) = ubound(SrcModuleMapTypeData%AD_L_2_SED_P)
+      if (.not. allocated(DstModuleMapTypeData%AD_L_2_SED_P)) then
+         allocate(DstModuleMapTypeData%AD_L_2_SED_P(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%AD_L_2_SED_P.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_L_2_SED_P(i1), DstModuleMapTypeData%AD_L_2_SED_P(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_AD_P_N, DstModuleMapTypeData%ED_P_2_AD_P_N, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -12852,6 +13203,27 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
       end do
    end if
    call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_AD_P_H, DstModuleMapTypeData%ED_P_2_AD_P_H, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ADsk_P_2_ED_P_H, DstModuleMapTypeData%ADsk_P_2_ED_P_H, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_ADsk_P_H, DstModuleMapTypeData%ED_P_2_ADsk_P_H, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_AD_P_N, DstModuleMapTypeData%SED_P_2_AD_P_N, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_L_2_AD_L_T, DstModuleMapTypeData%SED_L_2_AD_L_T, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_AD_P_H, DstModuleMapTypeData%SED_P_2_AD_P_H, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ADsk_P_2_SED_P_H, DstModuleMapTypeData%ADsk_P_2_SED_P_H, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_ADsk_P_H, DstModuleMapTypeData%SED_P_2_ADsk_P_H, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_P_2_ED_P_H, DstModuleMapTypeData%AD_P_2_ED_P_H, CtrlCode, ErrStat2, ErrMsg2)
@@ -13113,6 +13485,9 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
    call MeshCopy(SrcModuleMapTypeData%u_ExtPtfm_PtfmMesh, DstModuleMapTypeData%u_ExtPtfm_PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcModuleMapTypeData%u_SED_HubPtLoad, DstModuleMapTypeData%u_SED_HubPtLoad, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcModuleMapTypeData%HubOrient)) then
       LB(1:3) = lbound(SrcModuleMapTypeData%HubOrient)
       UB(1:3) = ubound(SrcModuleMapTypeData%HubOrient)
@@ -13310,6 +13685,33 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
       end do
       deallocate(ModuleMapTypeData%BD_L_2_BD_L)
    end if
+   if (allocated(ModuleMapTypeData%SED_P_2_AD_L_B)) then
+      LB(1:1) = lbound(ModuleMapTypeData%SED_P_2_AD_L_B)
+      UB(1:1) = ubound(ModuleMapTypeData%SED_P_2_AD_L_B)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_AD_L_B(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ModuleMapTypeData%SED_P_2_AD_L_B)
+   end if
+   if (allocated(ModuleMapTypeData%SED_P_2_AD_P_R)) then
+      LB(1:1) = lbound(ModuleMapTypeData%SED_P_2_AD_P_R)
+      UB(1:1) = ubound(ModuleMapTypeData%SED_P_2_AD_P_R)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_AD_P_R(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ModuleMapTypeData%SED_P_2_AD_P_R)
+   end if
+   if (allocated(ModuleMapTypeData%AD_L_2_SED_P)) then
+      LB(1:1) = lbound(ModuleMapTypeData%AD_L_2_SED_P)
+      UB(1:1) = ubound(ModuleMapTypeData%AD_L_2_SED_P)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_L_2_SED_P(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ModuleMapTypeData%AD_L_2_SED_P)
+   end if
    call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_P_2_ED_P_N, ErrStat2, ErrMsg2)
@@ -13332,6 +13734,20 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
       deallocate(ModuleMapTypeData%ED_P_2_AD_P_R)
    end if
    call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ADsk_P_2_ED_P_H, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_ADsk_P_H, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_AD_P_N, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_L_2_AD_L_T, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_AD_P_H, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ADsk_P_2_SED_P_H, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_ADsk_P_H, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_P_2_ED_P_H, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -13473,6 +13889,8 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
    call MeshDestroy( ModuleMapTypeData%u_Orca_PtfmMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( ModuleMapTypeData%u_ExtPtfm_PtfmMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%u_SED_HubPtLoad, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModuleMapTypeData%HubOrient)) then
       deallocate(ModuleMapTypeData%HubOrient)
@@ -13648,6 +14066,33 @@ subroutine FAST_PackModuleMapType(RF, Indata)
          call NWTC_Library_PackMeshMapType(RF, InData%BD_L_2_BD_L(i1)) 
       end do
    end if
+   call RegPack(RF, allocated(InData%SED_P_2_AD_L_B))
+   if (allocated(InData%SED_P_2_AD_L_B)) then
+      call RegPackBounds(RF, 1, lbound(InData%SED_P_2_AD_L_B), ubound(InData%SED_P_2_AD_L_B))
+      LB(1:1) = lbound(InData%SED_P_2_AD_L_B)
+      UB(1:1) = ubound(InData%SED_P_2_AD_L_B)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_AD_L_B(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%SED_P_2_AD_P_R))
+   if (allocated(InData%SED_P_2_AD_P_R)) then
+      call RegPackBounds(RF, 1, lbound(InData%SED_P_2_AD_P_R), ubound(InData%SED_P_2_AD_P_R))
+      LB(1:1) = lbound(InData%SED_P_2_AD_P_R)
+      UB(1:1) = ubound(InData%SED_P_2_AD_P_R)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_AD_P_R(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%AD_L_2_SED_P))
+   if (allocated(InData%AD_L_2_SED_P)) then
+      call RegPackBounds(RF, 1, lbound(InData%AD_L_2_SED_P), ubound(InData%AD_L_2_SED_P))
+      LB(1:1) = lbound(InData%AD_L_2_SED_P)
+      UB(1:1) = ubound(InData%AD_L_2_SED_P)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackMeshMapType(RF, InData%AD_L_2_SED_P(i1)) 
+      end do
+   end if
    call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_AD_P_N) 
    call NWTC_Library_PackMeshMapType(RF, InData%AD_P_2_ED_P_N) 
    call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_AD_P_TF) 
@@ -13664,6 +14109,13 @@ subroutine FAST_PackModuleMapType(RF, Indata)
       end do
    end if
    call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_AD_P_H) 
+   call NWTC_Library_PackMeshMapType(RF, InData%ADsk_P_2_ED_P_H) 
+   call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_ADsk_P_H) 
+   call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_AD_P_N) 
+   call NWTC_Library_PackMeshMapType(RF, InData%SED_L_2_AD_L_T) 
+   call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_AD_P_H) 
+   call NWTC_Library_PackMeshMapType(RF, InData%ADsk_P_2_SED_P_H) 
+   call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_ADsk_P_H) 
    call NWTC_Library_PackMeshMapType(RF, InData%AD_P_2_ED_P_H) 
    call RegPack(RF, allocated(InData%BDED_L_2_ExtLd_P_B))
    if (allocated(InData%BDED_L_2_ExtLd_P_B)) then
@@ -13778,6 +14230,7 @@ subroutine FAST_PackModuleMapType(RF, Indata)
    end if
    call MeshPack(RF, InData%u_Orca_PtfmMesh) 
    call MeshPack(RF, InData%u_ExtPtfm_PtfmMesh) 
+   call MeshPack(RF, InData%u_SED_HubPtLoad) 
    call RegPackAlloc(RF, InData%HubOrient)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -14017,6 +14470,45 @@ subroutine FAST_UnPackModuleMapType(RF, OutData)
          call NWTC_Library_UnpackMeshMapType(RF, OutData%BD_L_2_BD_L(i1)) ! BD_L_2_BD_L 
       end do
    end if
+   if (allocated(OutData%SED_P_2_AD_L_B)) deallocate(OutData%SED_P_2_AD_L_B)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%SED_P_2_AD_L_B(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SED_P_2_AD_L_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_AD_L_B(i1)) ! SED_P_2_AD_L_B 
+      end do
+   end if
+   if (allocated(OutData%SED_P_2_AD_P_R)) deallocate(OutData%SED_P_2_AD_P_R)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%SED_P_2_AD_P_R(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SED_P_2_AD_P_R.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_AD_P_R(i1)) ! SED_P_2_AD_P_R 
+      end do
+   end if
+   if (allocated(OutData%AD_L_2_SED_P)) deallocate(OutData%AD_L_2_SED_P)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%AD_L_2_SED_P(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AD_L_2_SED_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_L_2_SED_P(i1)) ! AD_L_2_SED_P 
+      end do
+   end if
    call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_AD_P_N) ! ED_P_2_AD_P_N 
    call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_P_2_ED_P_N) ! AD_P_2_ED_P_N 
    call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_AD_P_TF) ! ED_P_2_AD_P_TF 
@@ -14037,6 +14529,13 @@ subroutine FAST_UnPackModuleMapType(RF, OutData)
       end do
    end if
    call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_AD_P_H) ! ED_P_2_AD_P_H 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%ADsk_P_2_ED_P_H) ! ADsk_P_2_ED_P_H 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_ADsk_P_H) ! ED_P_2_ADsk_P_H 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_AD_P_N) ! SED_P_2_AD_P_N 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_L_2_AD_L_T) ! SED_L_2_AD_L_T 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_AD_P_H) ! SED_P_2_AD_P_H 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%ADsk_P_2_SED_P_H) ! ADsk_P_2_SED_P_H 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_ADsk_P_H) ! SED_P_2_ADsk_P_H 
    call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_P_2_ED_P_H) ! AD_P_2_ED_P_H 
    if (allocated(OutData%BDED_L_2_ExtLd_P_B)) deallocate(OutData%BDED_L_2_ExtLd_P_B)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -14191,6 +14690,7 @@ subroutine FAST_UnPackModuleMapType(RF, OutData)
    end if
    call MeshUnpack(RF, OutData%u_Orca_PtfmMesh) ! u_Orca_PtfmMesh 
    call MeshUnpack(RF, OutData%u_ExtPtfm_PtfmMesh) ! u_ExtPtfm_PtfmMesh 
+   call MeshUnpack(RF, OutData%u_SED_HubPtLoad) ! u_SED_HubPtLoad 
    call RegUnpackAlloc(RF, OutData%HubOrient); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -14358,6 +14858,12 @@ subroutine FAST_CopyInitData(SrcInitDataData, DstInitDataData, CtrlCode, ErrStat
    call ED_CopyInitOutput(SrcInitDataData%OutData_ED, DstInitDataData%OutData_ED, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call SED_CopyInitInput(SrcInitDataData%InData_SED, DstInitDataData%InData_SED, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SED_CopyInitOutput(SrcInitDataData%OutData_SED, DstInitDataData%OutData_SED, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    call BD_CopyInitInput(SrcInitDataData%InData_BD, DstInitDataData%InData_BD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -14383,16 +14889,16 @@ subroutine FAST_CopyInitData(SrcInitDataData, DstInitDataData, CtrlCode, ErrStat
    call SrvD_CopyInitOutput(SrcInitDataData%OutData_SrvD, DstInitDataData%OutData_SrvD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call AD14_CopyInitInput(SrcInitDataData%InData_AD14, DstInitDataData%InData_AD14, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call AD14_CopyInitOutput(SrcInitDataData%OutData_AD14, DstInitDataData%OutData_AD14, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    call AD_CopyInitInput(SrcInitDataData%InData_AD, DstInitDataData%InData_AD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call AD_CopyInitOutput(SrcInitDataData%OutData_AD, DstInitDataData%OutData_AD, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ADsk_CopyInitInput(SrcInitDataData%InData_ADsk, DstInitDataData%InData_ADsk, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ADsk_CopyInitOutput(SrcInitDataData%OutData_ADsk, DstInitDataData%OutData_ADsk, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call ExtLd_CopyInitInput(SrcInitDataData%InData_ExtLd, DstInitDataData%InData_ExtLd, CtrlCode, ErrStat2, ErrMsg2)
@@ -14490,6 +14996,10 @@ subroutine FAST_DestroyInitData(InitDataData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call ED_DestroyInitOutput(InitDataData%OutData_ED, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SED_DestroyInitInput(InitDataData%InData_SED, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SED_DestroyInitOutput(InitDataData%OutData_SED, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call BD_DestroyInitInput(InitDataData%InData_BD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitDataData%OutData_BD)) then
@@ -14505,13 +15015,13 @@ subroutine FAST_DestroyInitData(InitDataData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call SrvD_DestroyInitOutput(InitDataData%OutData_SrvD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AD14_DestroyInitInput(InitDataData%InData_AD14, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AD14_DestroyInitOutput(InitDataData%OutData_AD14, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AD_DestroyInitInput(InitDataData%InData_AD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AD_DestroyInitOutput(InitDataData%OutData_AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADsk_DestroyInitInput(InitDataData%InData_ADsk, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADsk_DestroyInitOutput(InitDataData%OutData_ADsk, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call ExtLd_DestroyInitInput(InitDataData%InData_ExtLd, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -14576,6 +15086,8 @@ subroutine FAST_PackInitData(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call ED_PackInitInput(RF, InData%InData_ED) 
    call ED_PackInitOutput(RF, InData%OutData_ED) 
+   call SED_PackInitInput(RF, InData%InData_SED) 
+   call SED_PackInitOutput(RF, InData%OutData_SED) 
    call BD_PackInitInput(RF, InData%InData_BD) 
    call RegPack(RF, allocated(InData%OutData_BD))
    if (allocated(InData%OutData_BD)) then
@@ -14588,10 +15100,10 @@ subroutine FAST_PackInitData(RF, Indata)
    end if
    call SrvD_PackInitInput(RF, InData%InData_SrvD) 
    call SrvD_PackInitOutput(RF, InData%OutData_SrvD) 
-   call AD14_PackInitInput(RF, InData%InData_AD14) 
-   call AD14_PackInitOutput(RF, InData%OutData_AD14) 
    call AD_PackInitInput(RF, InData%InData_AD) 
    call AD_PackInitOutput(RF, InData%OutData_AD) 
+   call ADsk_PackInitInput(RF, InData%InData_ADsk) 
+   call ADsk_PackInitOutput(RF, InData%OutData_ADsk) 
    call ExtLd_PackInitInput(RF, InData%InData_ExtLd) 
    call ExtLd_PackInitOutput(RF, InData%OutData_ExtLd) 
    call InflowWind_PackInitInput(RF, InData%InData_IfW) 
@@ -14632,6 +15144,8 @@ subroutine FAST_UnPackInitData(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call ED_UnpackInitInput(RF, OutData%InData_ED) ! InData_ED 
    call ED_UnpackInitOutput(RF, OutData%OutData_ED) ! OutData_ED 
+   call SED_UnpackInitInput(RF, OutData%InData_SED) ! InData_SED 
+   call SED_UnpackInitOutput(RF, OutData%OutData_SED) ! OutData_SED 
    call BD_UnpackInitInput(RF, OutData%InData_BD) ! InData_BD 
    if (allocated(OutData%OutData_BD)) deallocate(OutData%OutData_BD)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -14648,10 +15162,10 @@ subroutine FAST_UnPackInitData(RF, OutData)
    end if
    call SrvD_UnpackInitInput(RF, OutData%InData_SrvD) ! InData_SrvD 
    call SrvD_UnpackInitOutput(RF, OutData%OutData_SrvD) ! OutData_SrvD 
-   call AD14_UnpackInitInput(RF, OutData%InData_AD14) ! InData_AD14 
-   call AD14_UnpackInitOutput(RF, OutData%OutData_AD14) ! OutData_AD14 
    call AD_UnpackInitInput(RF, OutData%InData_AD) ! InData_AD 
    call AD_UnpackInitOutput(RF, OutData%OutData_AD) ! OutData_AD 
+   call ADsk_UnpackInitInput(RF, OutData%InData_ADsk) ! InData_ADsk 
+   call ADsk_UnpackInitOutput(RF, OutData%OutData_ADsk) ! OutData_ADsk 
    call ExtLd_UnpackInitInput(RF, OutData%InData_ExtLd) ! InData_ExtLd 
    call ExtLd_UnpackInitOutput(RF, OutData%OutData_ExtLd) ! OutData_ExtLd 
    call InflowWind_UnpackInitInput(RF, OutData%InData_IfW) ! InData_IfW 
@@ -14692,8 +15206,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstExternInitTypeData%Tmax = SrcExternInitTypeData%Tmax
-   DstExternInitTypeData%SensorType = SrcExternInitTypeData%SensorType
-   DstExternInitTypeData%LidRadialVel = SrcExternInitTypeData%LidRadialVel
    DstExternInitTypeData%TurbIDforName = SrcExternInitTypeData%TurbIDforName
    DstExternInitTypeData%TurbinePos = SrcExternInitTypeData%TurbinePos
    DstExternInitTypeData%WaveFieldMod = SrcExternInitTypeData%WaveFieldMod
@@ -14737,10 +15249,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
    DstExternInitTypeData%TwrAero = SrcExternInitTypeData%TwrAero
    DstExternInitTypeData%az_blend_mean = SrcExternInitTypeData%az_blend_mean
    DstExternInitTypeData%az_blend_delta = SrcExternInitTypeData%az_blend_delta
-   DstExternInitTypeData%vel_mean = SrcExternInitTypeData%vel_mean
-   DstExternInitTypeData%wind_dir = SrcExternInitTypeData%wind_dir
-   DstExternInitTypeData%z_ref = SrcExternInitTypeData%z_ref
-   DstExternInitTypeData%shear_exp = SrcExternInitTypeData%shear_exp
 end subroutine
 
 subroutine FAST_DestroyExternInitType(ExternInitTypeData, ErrStat, ErrMsg)
@@ -14766,8 +15274,6 @@ subroutine FAST_PackExternInitType(RF, Indata)
    logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Tmax)
-   call RegPack(RF, InData%SensorType)
-   call RegPack(RF, InData%LidRadialVel)
    call RegPack(RF, InData%TurbIDforName)
    call RegPack(RF, InData%TurbinePos)
    call RegPack(RF, InData%WaveFieldMod)
@@ -14789,10 +15295,6 @@ subroutine FAST_PackExternInitType(RF, Indata)
    call RegPack(RF, InData%TwrAero)
    call RegPack(RF, InData%az_blend_mean)
    call RegPack(RF, InData%az_blend_delta)
-   call RegPack(RF, InData%vel_mean)
-   call RegPack(RF, InData%wind_dir)
-   call RegPack(RF, InData%z_ref)
-   call RegPack(RF, InData%shear_exp)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -14807,8 +15309,6 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%Tmax); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SensorType); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LidRadialVel); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbIDforName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbinePos); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
@@ -14821,7 +15321,7 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    call RegUnpack(RF, OutData%windGrid_n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%windGrid_delta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%windGrid_pZero); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackPtr(RF, OutData%windGrid_data); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%windGrid_data, LB, UB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumActForcePtsBlade); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumActForcePtsTower); if (RegCheckErr(RF, RoutineName)) return
@@ -14830,10 +15330,6 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    call RegUnpack(RF, OutData%TwrAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_mean); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%az_blend_delta); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%vel_mean); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%wind_dir); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%z_ref); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%shear_exp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -14863,6 +15359,9 @@ subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode
    call FAST_CopyElastoDyn_Data(SrcTurbineTypeData%ED, DstTurbineTypeData%ED, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call FAST_CopySED_Data(SrcTurbineTypeData%SED, DstTurbineTypeData%SED, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    call FAST_CopyBeamDyn_Data(SrcTurbineTypeData%BD, DstTurbineTypeData%BD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -14872,7 +15371,7 @@ subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode
    call FAST_CopyAeroDyn_Data(SrcTurbineTypeData%AD, DstTurbineTypeData%AD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call FAST_CopyAeroDyn14_Data(SrcTurbineTypeData%AD14, DstTurbineTypeData%AD14, CtrlCode, ErrStat2, ErrMsg2)
+   call FAST_CopyAeroDisk_Data(SrcTurbineTypeData%ADsk, DstTurbineTypeData%ADsk, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call FAST_CopyExtLoads_Data(SrcTurbineTypeData%ExtLd, DstTurbineTypeData%ExtLd, CtrlCode, ErrStat2, ErrMsg2)
@@ -14938,13 +15437,15 @@ subroutine FAST_DestroyTurbineType(TurbineTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyElastoDyn_Data(TurbineTypeData%ED, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroySED_Data(TurbineTypeData%SED, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyBeamDyn_Data(TurbineTypeData%BD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyServoDyn_Data(TurbineTypeData%SrvD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyAeroDyn_Data(TurbineTypeData%AD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FAST_DestroyAeroDyn14_Data(TurbineTypeData%AD14, ErrStat2, ErrMsg2)
+   call FAST_DestroyAeroDisk_Data(TurbineTypeData%ADsk, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyExtLoads_Data(TurbineTypeData%ExtLd, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -14987,10 +15488,11 @@ subroutine FAST_PackTurbineType(RF, Indata)
    call FAST_PackMisc(RF, InData%m_FAST) 
    call FAST_PackModuleMapType(RF, InData%MeshMapData) 
    call FAST_PackElastoDyn_Data(RF, InData%ED) 
+   call FAST_PackSED_Data(RF, InData%SED) 
    call FAST_PackBeamDyn_Data(RF, InData%BD) 
    call FAST_PackServoDyn_Data(RF, InData%SrvD) 
    call FAST_PackAeroDyn_Data(RF, InData%AD) 
-   call FAST_PackAeroDyn14_Data(RF, InData%AD14) 
+   call FAST_PackAeroDisk_Data(RF, InData%ADsk) 
    call FAST_PackExtLoads_Data(RF, InData%ExtLd) 
    call FAST_PackInflowWind_Data(RF, InData%IfW) 
    call FAST_PackExternalInflow_Data(RF, InData%ExtInfw) 
@@ -15019,10 +15521,11 @@ subroutine FAST_UnPackTurbineType(RF, OutData)
    call FAST_UnpackMisc(RF, OutData%m_FAST) ! m_FAST 
    call FAST_UnpackModuleMapType(RF, OutData%MeshMapData) ! MeshMapData 
    call FAST_UnpackElastoDyn_Data(RF, OutData%ED) ! ED 
+   call FAST_UnpackSED_Data(RF, OutData%SED) ! SED 
    call FAST_UnpackBeamDyn_Data(RF, OutData%BD) ! BD 
    call FAST_UnpackServoDyn_Data(RF, OutData%SrvD) ! SrvD 
    call FAST_UnpackAeroDyn_Data(RF, OutData%AD) ! AD 
-   call FAST_UnpackAeroDyn14_Data(RF, OutData%AD14) ! AD14 
+   call FAST_UnpackAeroDisk_Data(RF, OutData%ADsk) ! ADsk 
    call FAST_UnpackExtLoads_Data(RF, OutData%ExtLd) ! ExtLd 
    call FAST_UnpackInflowWind_Data(RF, OutData%IfW) ! IfW 
    call FAST_UnpackExternalInflow_Data(RF, OutData%ExtInfw) ! ExtInfw 

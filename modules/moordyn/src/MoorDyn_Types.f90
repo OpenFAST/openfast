@@ -68,6 +68,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: w = 0.0_R8Ki      !< per-length weight in air [[kg/m]]
     REAL(DbKi)  :: EA = 0.0_R8Ki      !< axial stiffness [[N]]
     REAL(DbKi)  :: EA_D = 0.0_R8Ki      !< axial stiffness [[N]]
+    REAL(DbKi)  :: alphaMBL = 0.0_R8Ki      !< dynamic stiffness constant: Krd alpha term x MBL [[N]]
+    REAL(DbKi)  :: vbeta = 0.0_R8Ki      !< dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load) [[N]]
     REAL(DbKi)  :: BA = 0.0_R8Ki      !< internal damping coefficient times area [[N-s]]
     REAL(DbKi)  :: BA_D = 0.0_R8Ki      !< internal damping coefficient times area [[N-s]]
     REAL(DbKi)  :: EI = 0.0_R8Ki      !< bending stiffness [[N-m]]
@@ -75,14 +77,14 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cat = 0.0_R8Ki      !< tangential added mass coefficient [-]
     REAL(DbKi)  :: Cdn = 0.0_R8Ki      !< transverse drag coefficient [-]
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !< tangential drag coefficient [-]
-    INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
-    INTEGER(IntKi)  :: nEApoints = 0      !< number of values in stress-strain lookup table (0 means using constant E) [-]
+    INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {1 basic, 2 viscoelastic, 3 viscoelastic+meanload}  [-]
+    INTEGER(IntKi)  :: nEApoints = 0_IntKi      !< number of values in stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
-    INTEGER(IntKi)  :: nBApoints = 0      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
+    INTEGER(IntKi)  :: nBApoints = 0_IntKi      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: dampXs = 0.0_R8Ki      !< x array for stress-strainrate lookup table (up to nCoef) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table	 [-]
-    INTEGER(IntKi)  :: nEIpoints = 0      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
+    REAL(DbKi) , DIMENSION(1:30)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table [-]
+    INTEGER(IntKi)  :: nEIpoints = 0_IntKi      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: bstiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: bstiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
   END TYPE MD_LineProp
@@ -99,6 +101,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !< tangential drag coefficient [-]
     REAL(DbKi)  :: CdEnd = 0.0_R8Ki      !< drag coefficient for rod end [[-]]
     REAL(DbKi)  :: CaEnd = 0.0_R8Ki      !< added mass coefficient for rod end [[-]]
+    REAL(DbKi)  :: LinDamp = 0.0_R8Ki      !< Linear damping, transverse damping for body element [[N/(m/s)/m]]
+    LOGICAL  :: isLinDamp = .false.      !< Linear damping, transverse damping for body element is used [-]
   END TYPE MD_RodProp
 ! =======================
 ! =========  MD_Body  =======
@@ -107,8 +111,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0_IntKi      !< list of IdNums of points attached to this body [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR = 0_IntKi      !< list of IdNums of rods attached to this body [-]
-    INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached points [-]
-    INTEGER(IntKi)  :: nAttachedR = 0      !< number of attached rods [-]
+    INTEGER(IntKi)  :: nAttachedC = 0_IntKi      !< number of attached points [-]
+    INTEGER(IntKi)  :: nAttachedR = 0_IntKi      !< number of attached rods [-]
     REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel = 0.0_R8Ki      !< relative position of point on body [-]
     REAL(DbKi) , DIMENSION(1:6,1:30)  :: r6RodRel = 0.0_R8Ki      !< relative position and orientation of rod on body [-]
     REAL(DbKi)  :: bodyM = 0.0_R8Ki      !< body mass (seperate from attached objects) [[kg]]
@@ -138,7 +142,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  1=fixed, -1=coupled, 0=free [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Attached = 0_IntKi      !< list of IdNums of lines attached to this point node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
-    INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
+    INTEGER(IntKi)  :: nAttached = 0_IntKi      !< number of attached lines [-]
     REAL(DbKi)  :: pointM = 0.0_R8Ki      !< point mass [[kg]]
     REAL(DbKi)  :: pointV = 0.0_R8Ki      !< point volume [[m^3]]
     REAL(DbKi)  :: pointFX = 0.0_R8Ki      !<  [-]
@@ -168,8 +172,8 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB = 0_IntKi      !< list of IdNums of lines attached to end B [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: TopA = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: TopB = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
-    INTEGER(IntKi)  :: nAttachedA = 0      !< number of attached lines to Rod end A [-]
-    INTEGER(IntKi)  :: nAttachedB = 0      !< number of attached lines to Rod end B [-]
+    INTEGER(IntKi)  :: nAttachedA = 0_IntKi      !< number of attached lines to Rod end A [-]
+    INTEGER(IntKi)  :: nAttachedB = 0_IntKi      !< number of attached lines to Rod end B [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: N = 0_IntKi      !< The number of elements in the line [-]
     INTEGER(IntKi)  :: endTypeA = 0_IntKi      !< type of point at end A: 0=pinned to Point, 1=cantilevered to Rod. [-]
@@ -184,6 +188,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: CdEnd = 0.0_R8Ki      !< drag coefficient for rod end [[-]]
     REAL(DbKi)  :: CaEnd = 0.0_R8Ki      !< added mass coefficient for rod end [[-]]
+    REAL(DbKi)  :: LinDamp = 0.0_R8Ki      !< Linear damping, transverse damping for rod element [[N/(m/s)/m]]
+    LOGICAL  :: isLinDamp = .false.      !< Linear damping, transverse damping for rod element is used [-]
     REAL(DbKi)  :: time = 0.0_R8Ki      !< current time [[s]]
     REAL(DbKi)  :: roll = 0.0_R8Ki      !< roll relative to vertical [[rad]]
     REAL(DbKi)  :: pitch = 0.0_R8Ki      !< pitch relative to vertical [[rad]]
@@ -215,6 +221,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:6)  :: a6 = 0.0_R8Ki      !< 6 DOF acceleration vector (only used for coupled Rods) [-]
     REAL(DbKi) , DIMENSION(1:6)  :: F6net = 0.0_R8Ki      !< total force and moment about end A (excluding inertial loads) that Rod may exert on whatever it's attached to [-]
     REAL(DbKi) , DIMENSION(1:6,1:6)  :: M6net = 0.0_R8Ki      !< total mass matrix about end A of Rod and any attached Points [-]
+    REAL(DbKi) , DIMENSION(1:3,1:3)  :: Imat = 0.0_R8Ki      !< inertia about CG in global frame [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: OrMat = 0.0_R8Ki      !< DCM for body orientation [-]
     INTEGER(IntKi)  :: RodUnOut = 0_IntKi      !< unit number of rod output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: RodWrOutput      !< one row of output data for this rod [-]
@@ -226,7 +233,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: PropsIdNum = 0_IntKi      !< the IdNum of the associated line properties [-]
     INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
-    INTEGER(IntKi)  :: CtrlChan = 0      !< index of control channel that will drive line active tensioning (0 for none) [-]
+    INTEGER(IntKi)  :: CtrlChan = 0_IntKi      !< index of control channel that will drive line active tensioning (0 for none) [-]
     INTEGER(IntKi)  :: FairPoint = 0_IntKi      !< IdNum of Point at fairlead [-]
     INTEGER(IntKi)  :: AnchPoint = 0_IntKi      !< IdNum of Point at anchor [-]
     INTEGER(IntKi)  :: N = 0_IntKi      !< The number of elements in the line [-]
@@ -235,22 +242,24 @@ IMPLICIT NONE
     REAL(DbKi)  :: UnstrLen = 0.0_R8Ki      !< unstretched length of the line [-]
     REAL(DbKi)  :: rho = 0.0_R8Ki      !< density [[kg/m3]]
     REAL(DbKi)  :: d = 0.0_R8Ki      !< volume-equivalent diameter [[m]]
-    REAL(DbKi)  :: EA = 0      !< stiffness [[N]]
-    REAL(DbKi)  :: EA_D = 0      !< dynamic stiffness when using viscoelastic model [[N]]
-    REAL(DbKi)  :: BA = 0      !< internal damping coefficient times area for this line only [[N-s]]
-    REAL(DbKi)  :: BA_D = 0      !< dynamic internal damping coefficient times area when using viscoelastic model [[N-s]]
-    REAL(DbKi)  :: EI = 0      !< bending stiffness [[N-m]]
+    REAL(DbKi)  :: EA = 0.0_R8Ki      !< stiffness [[N]]
+    REAL(DbKi)  :: EA_D = 0.0_R8Ki      !< constant dynamic stiffness when using viscoelastic model [[N]]
+    REAL(DbKi)  :: alphaMBL = 0.0_R8Ki      !< load dependent dynamic stiffness constant: Krd alpha term x MBL [[N]]
+    REAL(DbKi)  :: vbeta = 0.0_R8Ki      !< load dependent dynamic stiffness Lm slope: Krd beta term (to be multiplied by mean load) [[N]]
+    REAL(DbKi)  :: BA = 0.0_R8Ki      !< internal damping coefficient times area for this line only [[N-s]]
+    REAL(DbKi)  :: BA_D = 0.0_R8Ki      !< dynamic internal damping coefficient times area when using viscoelastic model [[N-s]]
+    REAL(DbKi)  :: EI = 0.0_R8Ki      !< bending stiffness [[N-m]]
     REAL(DbKi)  :: Can = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: Cat = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: Cdn = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !<  [[-]]
-    INTEGER(IntKi)  :: nEApoints = 0      !< number of values in stress-strain lookup table (0 means using constant E) [-]
+    INTEGER(IntKi)  :: nEApoints = 0_IntKi      !< number of values in stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
-    INTEGER(IntKi)  :: nBApoints = 0      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
+    INTEGER(IntKi)  :: nBApoints = 0_IntKi      !< number of values in stress-strainrate lookup table (0 means using constant c) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: dampXs = 0.0_R8Ki      !< x array for stress-strainrate lookup table (up to nCoef) [-]
-    REAL(DbKi) , DIMENSION(1:30)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table	 [-]
-    INTEGER(IntKi)  :: nEIpoints = 0      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
+    REAL(DbKi) , DIMENSION(1:30)  :: dampYs = 0.0_R8Ki      !< y array for stress-strainrate lookup table [-]
+    INTEGER(IntKi)  :: nEIpoints = 0_IntKi      !< number of values in bending stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: bstiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: bstiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
     REAL(DbKi)  :: time = 0.0_R8Ki      !< current time [[s]]
@@ -265,6 +274,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: Kurv      !< curvature at each node point [[1/m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: dl_1      !< segment stretch attributed to static stiffness portion [[m]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: V      !< segment volume [[m^3]]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: F      !< VOF scalar for each segment (1 = fully submerged, 0 = out of water) [-]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: U      !< water velocity at node [[m/s]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Ud      !< water acceleration at node [[m/s^2]]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: zeta      !< water surface elevation above node [[m]]
@@ -434,7 +444,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: mu_kA = 0.0_R8Ki      !< axial kinetic friction coefficient [(-)]
     REAL(DbKi)  :: mc = 0.0_R8Ki      !< ratio of the static friction coefficient to the kinetic friction coefficient [(-)]
     REAL(DbKi)  :: cv = 0.0_R8Ki      !< saturated damping coefficient [(-)]
-    INTEGER(IntKi)  :: inertialF = 0      !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 1 if yes, 0 if no [-]
+    INTEGER(IntKi)  :: inertialF = 0      !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 0: no, 1: yes, 2: yes with ramp to inertialF_rampT [-]
+    REAL(R8Ki)  :: inertialF_rampT = 30      !< Ramp time for inertial forces [-]
     INTEGER(IntKi)  :: nxWave = 0_IntKi      !< number of x wave grid points [-]
     INTEGER(IntKi)  :: nyWave = 0_IntKi      !< number of y wave grid points [-]
     INTEGER(IntKi)  :: nzWave = 0_IntKi      !< number of z wave grid points [-]
@@ -681,6 +692,8 @@ subroutine MD_CopyLineProp(SrcLinePropData, DstLinePropData, CtrlCode, ErrStat, 
    DstLinePropData%w = SrcLinePropData%w
    DstLinePropData%EA = SrcLinePropData%EA
    DstLinePropData%EA_D = SrcLinePropData%EA_D
+   DstLinePropData%alphaMBL = SrcLinePropData%alphaMBL
+   DstLinePropData%vbeta = SrcLinePropData%vbeta
    DstLinePropData%BA = SrcLinePropData%BA
    DstLinePropData%BA_D = SrcLinePropData%BA_D
    DstLinePropData%EI = SrcLinePropData%EI
@@ -720,6 +733,8 @@ subroutine MD_PackLineProp(RF, Indata)
    call RegPack(RF, InData%w)
    call RegPack(RF, InData%EA)
    call RegPack(RF, InData%EA_D)
+   call RegPack(RF, InData%alphaMBL)
+   call RegPack(RF, InData%vbeta)
    call RegPack(RF, InData%BA)
    call RegPack(RF, InData%BA_D)
    call RegPack(RF, InData%EI)
@@ -751,6 +766,8 @@ subroutine MD_UnPackLineProp(RF, OutData)
    call RegUnpack(RF, OutData%w); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA_D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alphaMBL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vbeta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA_D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EI); if (RegCheckErr(RF, RoutineName)) return
@@ -789,6 +806,8 @@ subroutine MD_CopyRodProp(SrcRodPropData, DstRodPropData, CtrlCode, ErrStat, Err
    DstRodPropData%Cdt = SrcRodPropData%Cdt
    DstRodPropData%CdEnd = SrcRodPropData%CdEnd
    DstRodPropData%CaEnd = SrcRodPropData%CaEnd
+   DstRodPropData%LinDamp = SrcRodPropData%LinDamp
+   DstRodPropData%isLinDamp = SrcRodPropData%isLinDamp
 end subroutine
 
 subroutine MD_DestroyRodProp(RodPropData, ErrStat, ErrMsg)
@@ -815,6 +834,8 @@ subroutine MD_PackRodProp(RF, Indata)
    call RegPack(RF, InData%Cdt)
    call RegPack(RF, InData%CdEnd)
    call RegPack(RF, InData%CaEnd)
+   call RegPack(RF, InData%LinDamp)
+   call RegPack(RF, InData%isLinDamp)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -833,6 +854,8 @@ subroutine MD_UnPackRodProp(RF, OutData)
    call RegUnpack(RF, OutData%Cdt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CdEnd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CaEnd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LinDamp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%isLinDamp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
@@ -1106,6 +1129,8 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
    DstRodData%Cdt = SrcRodData%Cdt
    DstRodData%CdEnd = SrcRodData%CdEnd
    DstRodData%CaEnd = SrcRodData%CaEnd
+   DstRodData%LinDamp = SrcRodData%LinDamp
+   DstRodData%isLinDamp = SrcRodData%isLinDamp
    DstRodData%time = SrcRodData%time
    DstRodData%roll = SrcRodData%roll
    DstRodData%pitch = SrcRodData%pitch
@@ -1335,6 +1360,7 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
    DstRodData%a6 = SrcRodData%a6
    DstRodData%F6net = SrcRodData%F6net
    DstRodData%M6net = SrcRodData%M6net
+   DstRodData%Imat = SrcRodData%Imat
    DstRodData%OrMat = SrcRodData%OrMat
    DstRodData%RodUnOut = SrcRodData%RodUnOut
    if (allocated(SrcRodData%RodWrOutput)) then
@@ -1446,6 +1472,8 @@ subroutine MD_PackRod(RF, Indata)
    call RegPack(RF, InData%Cdt)
    call RegPack(RF, InData%CdEnd)
    call RegPack(RF, InData%CaEnd)
+   call RegPack(RF, InData%LinDamp)
+   call RegPack(RF, InData%isLinDamp)
    call RegPack(RF, InData%time)
    call RegPack(RF, InData%roll)
    call RegPack(RF, InData%pitch)
@@ -1477,6 +1505,7 @@ subroutine MD_PackRod(RF, Indata)
    call RegPack(RF, InData%a6)
    call RegPack(RF, InData%F6net)
    call RegPack(RF, InData%M6net)
+   call RegPack(RF, InData%Imat)
    call RegPack(RF, InData%OrMat)
    call RegPack(RF, InData%RodUnOut)
    call RegPackAlloc(RF, InData%RodWrOutput)
@@ -1515,6 +1544,8 @@ subroutine MD_UnPackRod(RF, OutData)
    call RegUnpack(RF, OutData%Cdt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CdEnd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CaEnd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LinDamp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%isLinDamp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%time); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%roll); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%pitch); if (RegCheckErr(RF, RoutineName)) return
@@ -1546,6 +1577,7 @@ subroutine MD_UnPackRod(RF, OutData)
    call RegUnpack(RF, OutData%a6); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%F6net); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M6net); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Imat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OrMat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RodUnOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%RodWrOutput); if (RegCheckErr(RF, RoutineName)) return
@@ -1577,6 +1609,8 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
    DstLineData%d = SrcLineData%d
    DstLineData%EA = SrcLineData%EA
    DstLineData%EA_D = SrcLineData%EA_D
+   DstLineData%alphaMBL = SrcLineData%alphaMBL
+   DstLineData%vbeta = SrcLineData%vbeta
    DstLineData%BA = SrcLineData%BA
    DstLineData%BA_D = SrcLineData%BA_D
    DstLineData%EI = SrcLineData%EI
@@ -1725,6 +1759,18 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%V = SrcLineData%V
+   end if
+   if (allocated(SrcLineData%F)) then
+      LB(1:1) = lbound(SrcLineData%F)
+      UB(1:1) = ubound(SrcLineData%F)
+      if (.not. allocated(DstLineData%F)) then
+         allocate(DstLineData%F(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%F.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%F = SrcLineData%F
    end if
    if (allocated(SrcLineData%U)) then
       LB(1:2) = lbound(SrcLineData%U)
@@ -1975,6 +2021,9 @@ subroutine MD_DestroyLine(LineData, ErrStat, ErrMsg)
    if (allocated(LineData%V)) then
       deallocate(LineData%V)
    end if
+   if (allocated(LineData%F)) then
+      deallocate(LineData%F)
+   end if
    if (allocated(LineData%U)) then
       deallocate(LineData%U)
    end if
@@ -2048,6 +2097,8 @@ subroutine MD_PackLine(RF, Indata)
    call RegPack(RF, InData%d)
    call RegPack(RF, InData%EA)
    call RegPack(RF, InData%EA_D)
+   call RegPack(RF, InData%alphaMBL)
+   call RegPack(RF, InData%vbeta)
    call RegPack(RF, InData%BA)
    call RegPack(RF, InData%BA_D)
    call RegPack(RF, InData%EI)
@@ -2076,6 +2127,7 @@ subroutine MD_PackLine(RF, Indata)
    call RegPackAlloc(RF, InData%Kurv)
    call RegPackAlloc(RF, InData%dl_1)
    call RegPackAlloc(RF, InData%V)
+   call RegPackAlloc(RF, InData%F)
    call RegPackAlloc(RF, InData%U)
    call RegPackAlloc(RF, InData%Ud)
    call RegPackAlloc(RF, InData%zeta)
@@ -2122,6 +2174,8 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpack(RF, OutData%d); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EA_D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%alphaMBL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vbeta); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BA_D); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EI); if (RegCheckErr(RF, RoutineName)) return
@@ -2150,6 +2204,7 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Kurv); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dl_1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%V); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%U); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Ud); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%zeta); if (RegCheckErr(RF, RoutineName)) return
@@ -3607,6 +3662,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%mc = SrcParamData%mc
    DstParamData%cv = SrcParamData%cv
    DstParamData%inertialF = SrcParamData%inertialF
+   DstParamData%inertialF_rampT = SrcParamData%inertialF_rampT
    DstParamData%nxWave = SrcParamData%nxWave
    DstParamData%nyWave = SrcParamData%nyWave
    DstParamData%nzWave = SrcParamData%nzWave
@@ -4006,6 +4062,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%mc)
    call RegPack(RF, InData%cv)
    call RegPack(RF, InData%inertialF)
+   call RegPack(RF, InData%inertialF_rampT)
    call RegPack(RF, InData%nxWave)
    call RegPack(RF, InData%nyWave)
    call RegPack(RF, InData%nzWave)
@@ -4110,6 +4167,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%mc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%cv); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%inertialF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%inertialF_rampT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nxWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nyWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nzWave); if (RegCheckErr(RF, RoutineName)) return

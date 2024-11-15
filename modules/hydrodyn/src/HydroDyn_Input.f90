@@ -144,6 +144,24 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseVar( FileInfo_In, CurLine, 'ExctnCutOff', InputFileData%WAMIT%ExctnCutOff, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
+      ! PtfmYMod - Model for large platform yaw offset {0: Static reference yaw offset based on PtfmRefY, 1: dynamic reference yaw offset based on low-pass filtering the PRP yaw motion with cutoff frequency PtfmYCutOff} (switch)
+   call ParseVar( FileInfo_In, CurLine, 'PtfmYMod', InputFileData%PtfmYMod, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! PtfmRefY - Constant or initial platform reference yaw offset (deg)
+   call ParseVar( FileInfo_In, CurLine, 'PtfmRefY', InputFileData%PtfmRefY, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+   InputFileData%PtfmRefY = InputFileData%PtfmRefY * D2R
+
+      ! PtfmYCutOff - Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [unused when PtfmYMod=0] (Hz)
+   call ParseVar( FileInfo_In, CurLine, 'PtfmYCutOff', InputFileData%PtfmYCutOff, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+
+      ! NExctnHdg  - Number of PRP headings/yaw offset evenly distributed in the range of [-180, 180) deg to precompute [used only when PtfmYMod = 1]
+   call ParseVar( FileInfo_In, CurLine, 'NExctnHdg', InputFileData%WAMIT%NExctnHdg, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return;
+   InputFileData%WAMIT2%NExctnHdg = InputFileData%WAMIT%NExctnHdg
+
       ! RdtnMod  - Radiation memory-effect model {1: convolution, 2: state-space} (switch)
       ! [STATE-SPACE REQUIRES *.ss INPUT FILE]
    call ParseVar( FileInfo_In, CurLine, 'RdtnMod', InputFileData%WAMIT%RdtnMod, ErrStat2, ErrMsg2, UnEc )
@@ -367,11 +385,11 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
          ! read the table entries AxCoefID, AxCd, AxCa, AxCp, AxFdMod, AxVnCOff, AxFDLoFSc in the HydroDyn input file
          ! Try reading in 7 entries first
          call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
-         if ( ErrStat2 /= 0 ) then ! Try reading in 5 entries
+         if ( ErrStat2 /= ErrID_None ) then ! Try reading in 5 entries
             tmpReArray(6) = -1.0  ! AxVnCoff
             tmpReArray(7) =  1.0  ! AxFDLoFSc
             call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray(1:5), 5, ErrStat2, ErrMsg2, UnEc )
-            if ( ErrStat2 /= 0 ) then ! Try reading in 4 entries
+            if ( ErrStat2 /= ErrID_None ) then ! Try reading in 4 entries
                tmpReArray(5) =  0.0  ! AxFdMod
                call ParseAry( FileInfo_In, CurLine, ' axial coefficients line '//trim( Int2LStr(I)), tmpReArray(1:4), 4, ErrStat2, ErrMsg2, UnEc )
                if (Failed())  return;
@@ -1467,7 +1485,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       if ( InitInp%InvalidWithSSExctn ) then
          call SetErrStat( ErrID_Fatal, 'Given SeaState conditions cannot be used with state-space wave excitations. In SeaState, WaveMod cannot be 6; WaveDirMod must be 0; WvDiffQTF must be FALSE; and WvSumQTF must be FALSE. Or in HydroDyn set ExctnMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
       end if
-      
 
       if ( InputFileData%PotMod /= 1 ) then
          call SetErrStat( ErrID_Fatal, 'Potential-flow model via WAMIT must be used with state-space wave excitations. Set PotMod= 1.', ErrStat, ErrMsg, RoutineName )
@@ -1538,6 +1555,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       CALL SetErrStat( ErrID_Fatal,'AMMod must be 0 or 1',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
+  
 
    !-------------------------------------------------------------------------------------------------
    ! Member Joints Section
@@ -2195,6 +2213,35 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
    END IF
 
+
+   !-------------------------------------------------------------------------------------------------
+   ! Large yaw offset
+   !-------------------------------------------------------------------------------------------------
+   if (InputFileData%PtfmYMod /= 0 .AND. InputFileData%PtfmYMod /= 1) then
+      call SetErrStat( ErrID_Fatal,'PtfmYMod must be 0 (static platform reference yaw offset) or 1 (dynamic platform reference yaw offset).',ErrStat,ErrMsg,RoutineName)
+      return
+   end if
+   IF ( InputFileData%PtfmYMod .EQ. 1_IntKi ) THEN
+      if ( InputFileData%PtfmYCutOff <= 0.0_ReKi ) then
+         CALL SetErrStat( ErrID_Fatal, 'PtfmYCutOff must be greater than 0 Hz.',ErrStat,ErrMsg,RoutineName)
+      end if
+      if ( InputFileData%Morison%WaveDisp == 0 .AND. InputFileData%Morison%NMembers > 0 ) then
+         call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with WaveDisp=0. Set WaveDisp=1.',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
+      if ( InputFileData%PotMod > 0 .AND. InputFileData%WAMIT%ExctnMod == 2 ) then
+         call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with state-space wave excitations. Set ExctnMod=0 or 1.', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      if ( InputFileData%PotMod > 0 .AND. InputFileData%WAMIT%NExctnHdg < 2 ) then
+         call SetErrStat( ErrID_Fatal, 'NExctnHdg must be greater than or equal to 2.', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      if ( InputFileData%WAMIT2%SumQTFF .OR. InputFileData%WAMIT2%DiffQTFF ) then
+         call SetErrStat( ErrID_Fatal, 'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with full sum-frequency or difference-frequency QTFs. Set SumQTF and DiffQTF to 0.', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+   END IF
 
    !-------------------------------------------------------------------------------------------------
    ! Member Output List Section

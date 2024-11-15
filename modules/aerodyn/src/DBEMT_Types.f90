@@ -109,7 +109,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: DBEMT_InputType
     REAL(ReKi)  :: AxInd_disk = 0.0_ReKi      !< Disk-averaged axial induction (for time-varying tau) [-]
     REAL(ReKi)  :: Un_disk = 0.0_ReKi      !< Disk-averaged normal relative inflow velocity (for time-varying tau) [m/s]
-    REAL(ReKi)  :: R_disk = 0.0_ReKi      !< Disk-averaged rotor radius (for time-varying tau) [m]
+    REAL(ReKi)  :: R_disk = 0.0_ReKi      !< Disk-maximum rotor radius (for time-varying tau) [m]
     TYPE(DBEMT_ElementInputType) , DIMENSION(:,:), ALLOCATABLE  :: element      !< The element-level inputs at each blade node [-]
   END TYPE DBEMT_InputType
 ! =======================

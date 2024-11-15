@@ -48,6 +48,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: WAMITULEN = 0.0_ReKi      !< WAMIT unit length scale [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [(rad)]
+    INTEGER(IntKi)  :: NExctnHdg = 0_IntKi      !< Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1] [-]
     INTEGER(IntKi)  :: MnDrift = 0_IntKi      !< Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: NewmanApp = 0_IntKi      !< Slow drift forces computed with Newman approximation from WAMIT file:{0: No slow drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: DiffQTF = 0_IntKi      !< Full Difference-Frequency forces computed with full QTF's from WAMIT file: {0: No diff-QTF; [10,11, or 12]: WAMIT file to use} [-]
@@ -62,13 +65,15 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WAMIT2_MiscVarType
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LastIndWave      !< Index for last interpolation step of 2nd order forces [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_Waves2      !< 2nd order force from this timestep [-]
+    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
   END TYPE WAMIT2_MiscVarType
 ! =======================
 ! =========  WAMIT2_ParameterType  =======
   TYPE, PUBLIC :: WAMIT2_ParameterType
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod = 0_IntKi      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
-    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveExctn2      !< Time series of the resulting 2nd order force (first index is timestep, second index is load component) [(N)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveExctn2Grid      !< Grid of time series of the resulting 2nd order force (Index 1: Time, Index 2: x, Index 3: y, Index 4: platform heading, and Index 5: load component) [(N)]
+    TYPE(SeaSt_WaveField_ParameterType)  :: Exctn2GridParams      !< Parameters of WaveExctn2Grid [-]
     LOGICAL , DIMENSION(1:6)  :: MnDriftDims = .false.      !< Flags for which dimensions to calculate in MnDrift   calculations [-]
     LOGICAL , DIMENSION(1:6)  :: NewmanAppDims = .false.      !< Flags for which dimensions to calculate in NewmanApp calculations [-]
     LOGICAL , DIMENSION(1:6)  :: DiffQTFDims = .false.      !< Flags for which dimensions to calculate in DiffQTF   calculations [-]
@@ -77,6 +82,8 @@ IMPLICIT NONE
     LOGICAL  :: NewmanAppF = .false.      !< Flag indicating Newman approximation should be calculated [-]
     LOGICAL  :: DiffQTFF = .false.      !< Flag indicating the full difference QTF should be calculated [-]
     LOGICAL  :: SumQTFF = .false.      !< Flag indicating the full    sum     QTF should be calculated [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    INTEGER(IntKi)  :: NExctnHdg = 0_IntKi      !< Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1] [-]
   END TYPE WAMIT2_ParameterType
 ! =======================
 ! =========  WAMIT2_OutputType  =======
@@ -153,6 +160,9 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WaveField => SrcInitInputData%WaveField
+   DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
+   DstInitInputData%PtfmRefY = SrcInitInputData%PtfmRefY
+   DstInitInputData%NExctnHdg = SrcInitInputData%NExctnHdg
    DstInitInputData%MnDrift = SrcInitInputData%MnDrift
    DstInitInputData%NewmanApp = SrcInitInputData%NewmanApp
    DstInitInputData%DiffQTF = SrcInitInputData%DiffQTF
@@ -210,6 +220,9 @@ subroutine WAMIT2_PackInitInput(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%PtfmRefY)
+   call RegPack(RF, InData%NExctnHdg)
    call RegPack(RF, InData%MnDrift)
    call RegPack(RF, InData%NewmanApp)
    call RegPack(RF, InData%DiffQTF)
@@ -259,6 +272,9 @@ subroutine WAMIT2_UnPackInitInput(RF, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NExctnHdg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MnDrift); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NewmanApp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DiffQTF); if (RegCheckErr(RF, RoutineName)) return
@@ -277,6 +293,7 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*),    intent(  out) :: ErrMsg
    integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -304,12 +321,17 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%F_Waves2 = SrcMiscData%F_Waves2
    end if
+   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine WAMIT2_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(WAMIT2_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -319,6 +341,8 @@ subroutine WAMIT2_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%F_Waves2)) then
       deallocate(MiscData%F_Waves2)
    end if
+   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT2_PackMisc(RF, Indata)
@@ -328,6 +352,7 @@ subroutine WAMIT2_PackMisc(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%LastIndWave)
    call RegPackAlloc(RF, InData%F_Waves2)
+   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -341,6 +366,7 @@ subroutine WAMIT2_UnPackMisc(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_Waves2); if (RegCheckErr(RF, RoutineName)) return
+   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
 
 subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -349,25 +375,29 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstParamData%NBody = SrcParamData%NBody
    DstParamData%NBodyMod = SrcParamData%NBodyMod
-   if (allocated(SrcParamData%WaveExctn2)) then
-      LB(1:2) = lbound(SrcParamData%WaveExctn2)
-      UB(1:2) = ubound(SrcParamData%WaveExctn2)
-      if (.not. allocated(DstParamData%WaveExctn2)) then
-         allocate(DstParamData%WaveExctn2(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcParamData%WaveExctn2Grid)) then
+      LB(1:5) = lbound(SrcParamData%WaveExctn2Grid)
+      UB(1:5) = ubound(SrcParamData%WaveExctn2Grid)
+      if (.not. allocated(DstParamData%WaveExctn2Grid)) then
+         allocate(DstParamData%WaveExctn2Grid(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctn2.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctn2Grid.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%WaveExctn2 = SrcParamData%WaveExctn2
+      DstParamData%WaveExctn2Grid = SrcParamData%WaveExctn2Grid
    end if
+   call SeaSt_WaveField_CopyParam(SrcParamData%Exctn2GridParams, DstParamData%Exctn2GridParams, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstParamData%MnDriftDims = SrcParamData%MnDriftDims
    DstParamData%NewmanAppDims = SrcParamData%NewmanAppDims
    DstParamData%DiffQTFDims = SrcParamData%DiffQTFDims
@@ -376,18 +406,24 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    DstParamData%NewmanAppF = SrcParamData%NewmanAppF
    DstParamData%DiffQTFF = SrcParamData%DiffQTFF
    DstParamData%SumQTFF = SrcParamData%SumQTFF
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
+   DstParamData%NExctnHdg = SrcParamData%NExctnHdg
 end subroutine
 
 subroutine WAMIT2_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(WAMIT2_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ParamData%WaveExctn2)) then
-      deallocate(ParamData%WaveExctn2)
+   if (allocated(ParamData%WaveExctn2Grid)) then
+      deallocate(ParamData%WaveExctn2Grid)
    end if
+   call SeaSt_WaveField_DestroyParam(ParamData%Exctn2GridParams, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT2_PackParam(RF, Indata)
@@ -397,7 +433,8 @@ subroutine WAMIT2_PackParam(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%NBody)
    call RegPack(RF, InData%NBodyMod)
-   call RegPackAlloc(RF, InData%WaveExctn2)
+   call RegPackAlloc(RF, InData%WaveExctn2Grid)
+   call SeaSt_WaveField_PackParam(RF, InData%Exctn2GridParams) 
    call RegPack(RF, InData%MnDriftDims)
    call RegPack(RF, InData%NewmanAppDims)
    call RegPack(RF, InData%DiffQTFDims)
@@ -406,6 +443,8 @@ subroutine WAMIT2_PackParam(RF, Indata)
    call RegPack(RF, InData%NewmanAppF)
    call RegPack(RF, InData%DiffQTFF)
    call RegPack(RF, InData%SumQTFF)
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%NExctnHdg)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -413,13 +452,14 @@ subroutine WAMIT2_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(WAMIT2_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackParam'
-   integer(B4Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%WaveExctn2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveExctn2Grid); if (RegCheckErr(RF, RoutineName)) return
+   call SeaSt_WaveField_UnpackParam(RF, OutData%Exctn2GridParams) ! Exctn2GridParams 
    call RegUnpack(RF, OutData%MnDriftDims); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NewmanAppDims); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DiffQTFDims); if (RegCheckErr(RF, RoutineName)) return
@@ -428,6 +468,8 @@ subroutine WAMIT2_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NewmanAppF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DiffQTFF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SumQTFF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NExctnHdg); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT2_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)

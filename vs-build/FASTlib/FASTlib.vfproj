@@ -23,7 +23,7 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="call ..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" HeapArrays="1000" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -32,7 +32,7 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="call ..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" HeapArrays="1000" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -50,7 +50,7 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="call ..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release_Matlab|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Matlab" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" HeapArrays="1000" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -68,7 +68,7 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="call ..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug_Matlab|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug_Matlab" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="CONSOLE_FILE;COMPILE_SIMULINK;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" HeapArrays="1000" Preprocess="preprocessYes" PreprocessorDefinitions="CONSOLE_FILE;COMPILE_SIMULINK;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -86,7 +86,7 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="call ..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release_Double|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Double" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;OPENFAST_DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" RealKIND="realKIND8" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" HeapArrays="1000" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;OPENFAST_DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" RealKIND="realKIND8" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -104,7 +104,7 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="call ..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug_Double|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug_Double" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;OPENFAST_DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" RealKIND="realKIND8" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" HeapArrays="1000" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;OPENFAST_DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" RealKIND="realKIND8" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -122,7 +122,7 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release_OpenMP|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" HeapArrays="1000" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -463,10 +463,9 @@
 		<File RelativePath="..\..\modules\aerodyn\src\DBEMT.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\mod_root1dim.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\UnsteadyAero.f90"/></Filter>
-		<Filter Name="AeroDyn14">
-		<Filter Name="DWM">
+		<Filter Name="AeroDisk">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\aerodyn14\src\DWM_Types.f90">
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -475,79 +474,77 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\aerodyn14\src\Registry-DWM.txt">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Registry.txt">
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\modules\aerodyn14\src\DWM_Types.f90"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\aerodyn14\src\DWM.f90"/>
-		<File RelativePath="..\..\modules\aerodyn14\src\DWM_Wake_Sub_ver2.f90"/></Filter>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDisk" Description="Running Registry for AeroDisk" Outputs="..\..\modules\aerodisk\src\AeroDisk_Types.f90"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk.f90"/>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_IO.f90"/>
+		<File RelativePath="..\..\modules\aerodisk\src\AeroDisk_Output_Params.f90"/></Filter>
+		<Filter Name="ExtLoads">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90">
+		<File RelativePath="..\..\modules\extloads\src\ExtLoads_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\aerodyn14\src\Registry-AD14.txt">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\modules\aerodyn14\src\AeroDyn14_Types.f90"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\aerodyn14\src\AeroDyn14.f90"/>
-		<File RelativePath="..\..\modules\aerodyn14\src\AeroSubs.f90"/>
-		<File RelativePath="..\..\modules\aerodyn14\src\GenSubs.f90"/></Filter></Filter>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\extloads\src\ExtLoads_Types.f90"/>
+		<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Registry.txt">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoadsDX" Description="Running Registry for ExtLoadsDX" Outputs="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoadsDX" Description="Running Registry for ExtLoadsDX" Outputs="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></Filter>
+		<File RelativePath="..\..\modules\extloads\src\ExtLoads.f90"/></Filter></Filter>
 		<Filter Name="BeamDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\beamdyn\src\BeamDyn_Types.f90">
@@ -636,128 +633,6 @@
 		<File RelativePath="..\..\modules\elastodyn\src\ElastoDyn.f90"/>
 		<File RelativePath="..\..\modules\elastodyn\src\ElastoDyn_AllBldNdOuts_IO.f90"/>
 		<File RelativePath="..\..\modules\elastodyn\src\ElastoDyn_IO.f90"/></Filter>
-		<Filter Name="External Platform">
-		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF_Registry.txt">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF.f90"/>
-		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF_IO.f90"/></Filter>
-		<Filter Name="ExternalInflow Integration">
-		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\externalinflow\src\ExternalInflow_Registry.txt">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\externalinflow\src\ExternalInflow_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\externalinflow\src\ExternalInflow.f90"/></Filter>
-		<Filter Name="ExtLoads">
-		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\extloads\src\ExtLoads_Registry.txt">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\extloads\src\ExtLoads_Types.f90"/>
-		<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Registry.txt">
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoadsDX" Description="Running Registry for ExtLoadsDX" Outputs="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoadsDX" Description="Running Registry for ExtLoadsDX" Outputs="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></Filter>
-		<File RelativePath="..\..\modules\extloads\src\ExtLoads.f90"/></Filter>
 		<Filter Name="FAST">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\openfast-library\src\FAST_Registry.txt">
@@ -1083,7 +958,8 @@
 		<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT.f90"/>
 		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2.f90"/>
-		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/></Filter>
+		<File RelativePath="..\..\modules\hydrodyn\src\WAMIT_Interp.f90"/>
+		<File RelativePath="..\..\modules\hydrodyn\src\YawOffset.f90"/></Filter>
 		<Filter Name="Ice">
 		<Filter Name="IceDyn">
 		<Filter Name="RegistryFiles">
@@ -1179,6 +1055,48 @@
 		<File RelativePath="..\..\modules\icefloe\src\icefloe\intermittentCrushing.F90"/>
 		<File RelativePath="..\..\modules\icefloe\src\icefloe\lockInISO.F90"/>
 		<File RelativePath="..\..\modules\icefloe\src\icefloe\randomCrushing.F90"/></Filter></Filter>
+		<Filter Name="Inflow">
+		<Filter Name="ExternalInflow Integration">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\externalinflow\src\ExternalInflow_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExternalInflow" Description="Running Registry for ExternalInflow" Outputs="..\..\modules\externalinflow\src\ExternalInflow_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\externalinflow\src\ExternalInflow_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\externalinflow\src\ExternalInflow.f90"/></Filter>
 		<Filter Name="InflowWind">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_FlowField.txt">
@@ -1337,7 +1255,7 @@
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_IO.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_Subs.f90"/>
-		<File RelativePath="..\..\modules\inflowwind\src\Lidar.f90"/></Filter>
+		<File RelativePath="..\..\modules\inflowwind\src\Lidar.f90"/></Filter></Filter>
 		<Filter Name="Mooring Lines">
 		<Filter Name="FEAMooring">
 		<Filter Name="RegistryFiles">
@@ -2055,7 +1973,6 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModReg.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\ModVar.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
@@ -2359,6 +2276,92 @@
 		<File RelativePath="..\..\modules\servodyn\src\StrucCtrl.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\UserSubs.f90"/>
 		<File RelativePath="..\..\modules\servodyn\src\UserVSCont_KP.f90"/></Filter>
+		<Filter Name="SimpleElastoDyn">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SimpleElastoDyn" Description="Running Registry for SimpleElastoDyn" Outputs="..\..\modules\simple-elastodyn\src\SED_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED.f90"/>
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED_IO.f90"/>
+		<File RelativePath="..\..\modules\simple-elastodyn\src\SED_Output_Params.f90"/></Filter>
+		<Filter Name="Substructure">
+		<Filter Name="External Platform">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF.f90"/>
+		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF_IO.f90"/></Filter>
 		<Filter Name="SubDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Registry.txt">
@@ -2405,7 +2408,7 @@
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Output.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Output_Params.f90"/>
-		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Tests.f90"/></Filter>
+		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Tests.f90"/></Filter></Filter>
 		<Filter Name="SuperController_DX">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\supercontroller\src\SC_DataEx_Registry.txt">

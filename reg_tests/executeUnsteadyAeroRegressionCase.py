@@ -117,7 +117,7 @@ if not noExec:
 for dvrf in dvrFiles:
     simName = os.path.splitext(os.path.basename(dvrf))[0]
     localOutFile    = os.path.join(testBuildDirectory, simName + '.outb')
-    baselineOutFile = os.path.join(inputsDirectory,    simName + '.out')  # TODO TODO
+    baselineOutFile = os.path.join(inputsDirectory,    simName + '.outb')  # TODO TODO
 
     if not os.path.exists(localOutFile):
         Error('File does not exist: {}'.format(localOutFile))

@@ -266,7 +266,8 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\SS_Radiation.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT2.f90"/>
-		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT_Interp.f90"/></Filter>
+		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT_Interp.f90"/>
+		<File RelativePath="..\..\modules\hydrodyn\src\YawOffset.f90"/></Filter>
 		<Filter Name="NetLib">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -368,7 +369,6 @@
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModReg.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\ModVar.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
