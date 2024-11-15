@@ -1911,19 +1911,19 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCa1 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCa1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCa1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCa2 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCa2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCa2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCaMG1 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCaMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCaMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCaMG2 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberCb1 < 0 ) THEN
