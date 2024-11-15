@@ -34,6 +34,8 @@ MODULE Morison_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MSecGeom_Cyl = 1      ! MSecGeom = 1   [circular member cross section] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MSecGeom_Rec = 2      ! MSecGeom = 2   [rectangular member cross section] [-]
 ! =========  Morison_JointType  =======
   TYPE, PUBLIC :: Morison_JointType
     INTEGER(IntKi)  :: JointID = 0_IntKi      !< User-specified integer ID for the given joint [-]
@@ -51,6 +53,14 @@ IMPLICIT NONE
     REAL(ReKi)  :: PropD = 0.0_ReKi      !< Diameter [m]
     REAL(ReKi)  :: PropThck = 0.0_ReKi      !< Wall thickness [m]
   END TYPE Morison_MemberPropType
+! =======================
+! =========  Morison_RecMemberPropType  =======
+  TYPE, PUBLIC :: Morison_RecMemberPropType
+    INTEGER(IntKi)  :: PropSetID = 0_IntKi      !< User-specified integer ID for this group of properties [-]
+    REAL(ReKi)  :: PropA = 0.0_ReKi      !< Length of side A [m]
+    REAL(ReKi)  :: PropB = 0.0_ReKi      !< Length of side B [m]
+    REAL(ReKi)  :: PropThck = 0.0_ReKi      !< Wall thickness [m]
+  END TYPE Morison_RecMemberPropType
 ! =======================
 ! =========  Morison_FilledGroupType  =======
   TYPE, PUBLIC :: Morison_FilledGroupType
@@ -81,6 +91,30 @@ IMPLICIT NONE
     LOGICAL  :: DpthMCF = .false.      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
   END TYPE Morison_CoefDpths
 ! =======================
+! =========  Morison_RecCoefDpths  =======
+  TYPE, PUBLIC :: Morison_RecCoefDpths
+    REAL(ReKi)  :: Dpth = 0.0_ReKi      !< Depth location for these depth-based hydrodynamic coefs [m]
+    REAL(ReKi)  :: DpthCdA = 0.0_ReKi      !< Depth-based drag coef [-]
+    REAL(ReKi)  :: DpthCdAMG = 0.0_ReKi      !< Depth-based drag coef for marine growth [-]
+    REAL(ReKi)  :: DpthCdB = 0.0_ReKi      !< Depth-based drag coef [-]
+    REAL(ReKi)  :: DpthCdBMG = 0.0_ReKi      !< Depth-based drag coef for marine growth [-]
+    REAL(ReKi)  :: DpthCaA = 0.0_ReKi      !< Depth-based Ca [-]
+    REAL(ReKi)  :: DpthCaAMG = 0.0_ReKi      !< Depth-based Ca for marine growth [-]
+    REAL(ReKi)  :: DpthCaB = 0.0_ReKi      !< Depth-based Ca [-]
+    REAL(ReKi)  :: DpthCaBMG = 0.0_ReKi      !< Depth-based Ca for marine growth [-]
+    REAL(ReKi)  :: DpthCp = 0.0_ReKi      !< Depth-based Cp [-]
+    REAL(ReKi)  :: DpthCpMG = 0.0_ReKi      !< Depth-based Cp for marine growth [-]
+    REAL(ReKi)  :: DpthAxCd = 0.0_ReKi      !< Depth-based Axial Cd [-]
+    REAL(ReKi)  :: DpthAxCdMG = 0.0_ReKi      !< Depth-based Axial Cd for marine growth [-]
+    REAL(ReKi)  :: DpthAxCa = 0.0_ReKi      !< Depth-based Axial Ca [-]
+    REAL(ReKi)  :: DpthAxCaMG = 0.0_ReKi      !< Depth-based Axial Ca for marine growth [-]
+    REAL(ReKi)  :: DpthAxCp = 0.0_ReKi      !< Depth-based Axial Cp [-]
+    REAL(ReKi)  :: DpthAxCpMG = 0.0_ReKi      !< Depth-based Axial Cp for marine growth [-]
+    REAL(ReKi)  :: DpthCb = 0.0_ReKi      !< Simple model hydrostatic/buoyancy load coefficient [-]
+    REAL(ReKi)  :: DpthCbMg = 0.0_ReKi      !< Simple model hydrostatic/buoyancy load coefficient for marine growth [-]
+    LOGICAL  :: DpthMCF = .false.      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
+  END TYPE Morison_RecCoefDpths
+! =======================
 ! =========  Morison_AxialCoefType  =======
   TYPE, PUBLIC :: Morison_AxialCoefType
     INTEGER(IntKi)  :: AxCoefID = 0_IntKi      !< User-supplied integer ID for this set of Axial coefs [-]
@@ -104,6 +138,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MPropSetID2 = 0_IntKi      !< Property set ID for the end of this member [-]
     INTEGER(IntKi)  :: MPropSetID1Indx = 0_IntKi      !< Index into the Property table for the start of this member [-]
     INTEGER(IntKi)  :: MPropSetID2Indx = 0_IntKi      !< Index into the Property table for the end of this member [-]
+    INTEGER(IntKi)  :: MSecGeom = 0_IntKi      !< Member cross section geometry. 1: Circular. 2: Rectangular [-]
+    REAL(ReKi)  :: MSpinOrient = 0.0_ReKi      !< Member orientation in terms of rotation angle about the member axis [rad]
     REAL(ReKi)  :: MDivSize = 0.0_ReKi      !< User-specified desired member discretization size for the final element [m]
     INTEGER(IntKi)  :: MCoefMod = 0_IntKi      !< Which coef. model is being used for this member [1=simple, 2=depth-based, 3=member-based] [-]
     INTEGER(IntKi)  :: MHstLMod = 0_IntKi      !< Which hydrostatic model is being used for this member [1=column-type, 2=ship-type] [-]
@@ -150,11 +186,25 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RMG      !< radius at each node including marine growth [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RMGB      !< radius at each node including marine growth scaled by sqrt(Cb) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Rin      !< inner member radius at node, equivalent to radius of water ballast at this node if filled [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Sa      !< outer member side A length at each node [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: SaMG      !< side A length with marine growth at each node [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: SaMGB      !< side A length with marine growth scaled by sqrt(Cb) [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Sain      !< inner member side A length at node, equivalent to width of water ballast at this node if filled [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Sb      !< outer member side B length at each node [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: SbMG      !< side B length with marine growth at each node [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: SbMGB      !< side B length with marine growth scaled by sqrt(Cb) [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Sbin      !< inner member side B length at node, equivalent to width of water ballast at this node if filled [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: tMG      !< Nodal thickness with marine growth (of member at node location) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MGdensity      !< Nodal density of marine growth [kg/m^3]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dRdl_mg      !< taper dr/dl of outer surface including marine growth of each element [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dRdl_mg_b      !< taper dr/dl of outer surface including marine growth of each element with scaling of sqrt(Cb) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dRdl_in      !< taper dr/dl of interior surface of each element [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dSadl_mg      !< taper dSa/dl of outer surface including marine growth of each element [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dSadl_mg_b      !< taper dSa/dl of outer surface including marine growth of each element with scaling of sqrt(Cb) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dSadl_in      !< taper dSa/dl of interior surface of each element [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dSbdl_mg      !< taper dSb/dl of outer surface including marine growth of each element [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dSbdl_mg_b      !< taper dSb/dl of outer surface including marine growth of each element with scaling of sqrt(Cb) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dSbdl_in      !< taper dSb/dl of interior surface of each element [-]
     REAL(ReKi)  :: Vinner = 0.0_ReKi      !< Member volume without marine growth [m^3]
     REAL(ReKi)  :: Vouter = 0.0_ReKi      !< Member volume including marine growth [m^3]
     REAL(ReKi)  :: Vballast = 0.0_ReKi      !< Member ballast volume [m^3]
@@ -172,6 +222,10 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: alpha_fb_star      !< load distribution factor for each element after adjusting alpha_fb for node reference depths [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cd      !< Member Cd at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Ca      !< Member Ca at each node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CdA      !< Member Cd normal to side A at each node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CaA      !< Member Ca normal to side A at each node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CdB      !< Member Cd normal to side B at each node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CaB      !< Member Ca normal to side B at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cp      !< Member Cp at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AxCd      !< Member axial Cd at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AxCa      !< Member axial Ca at each node [-]
@@ -185,6 +239,10 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_lfb_u      !< axial moment of inertia of flooded ballast in upper portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_rfb_l      !< radial moment of inertia of flooded ballast in lower portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_rfb_u      !< radial moment of inertia of flooded ballast in upper portion of each element [kg-m^2]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_xfb_l      !< element local x-moment of inertia of flooded ballast in lower portion of each element [kg-m^2]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_xfb_u      !< element local x-moment of inertia of flooded ballast in upper portion of each element [kg-m^2]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_yfb_l      !< element local y-moment of inertia of flooded ballast in lower portion of each element [kg-m^2]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_yfb_u      !< element local y-moment of inertia of flooded ballast in upper portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m_mg_l      !< mass of marine growth in lower portion of each element [kg]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m_mg_u      !< mass of marine growth in upper portion of each element [kg]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: h_cmg_l      !< distance to marine growth centroid from node point in lower portion of each element [m]
@@ -193,10 +251,18 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_lmg_u      !< axial moment of inertia of marine growth in upper portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_rmg_l      !< radial moment of inertia of marine growth in lower portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_rmg_u      !< radial moment of inertia of flooded ballast in upper portion of each element [kg-m^2]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_xmg_l      !< element local x-moment of inertia of marine growth in lower portion of each element [kg-m^2]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_xmg_u      !< element local x-moment of inertia of marine growth in upper portion of each element [kg-m^2]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_ymg_l      !< element local y-moment of inertia of marine growth in lower portion of each element [kg-m^2]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_ymg_u      !< element local y-moment of inertia of marine growth in upper portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cfl_fb      !< axial force constant due to flooded ballast, for each element [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cfr_fb      !< radial force constant due to flooded ballast, for each element [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cfx_fb      !< element local x-force constant due to flooded ballast, for each element [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cfy_fb      !< element local y-force constant due to flooded ballast, for each element [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CM0_fb      !< moment constant due to flooded ballast, for each element about lower node [Nm]
     REAL(ReKi)  :: MGvolume = 0.0_ReKi      !< Volume of marine growth material for this member/element [m^3]
+    INTEGER(IntKi)  :: MSecGeom = 0_IntKi      !< Member cross section geometry. 1: Circular. 2: Rectangular [-]
+    REAL(ReKi)  :: MSpinOrient = 0.0_ReKi      !< Member orientation in terms of rotation angle about the member axis [rad]
     REAL(ReKi)  :: MDivSize = 0.0_ReKi      !< User-requested final element length (actual length may vary from this request) [m]
     INTEGER(IntKi)  :: MCoefMod = 0_IntKi      !< Coefs model for member: 1 = simple, 2 =depth, 3 = member-based  [-]
     INTEGER(IntKi)  :: MmbrCoefIDIndx = 0_IntKi      !< If MCoefMod=3, then this is the index for the member's coefs in the master Member Coefs Table [-]
@@ -227,36 +293,78 @@ IMPLICIT NONE
 ! =========  Morison_CoefMembers  =======
   TYPE, PUBLIC :: Morison_CoefMembers
     INTEGER(IntKi)  :: MemberID = 0_IntKi      !< User-specified integer id for the Member-based coefs [-]
-    REAL(ReKi)  :: MemberCd1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCd2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCdMG1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCdMG2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCa1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCa2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCaMG1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCaMG2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCp1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCp2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCpMG1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCpMG2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCd1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCd2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCdMG1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCdMG2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCa1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCa2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCaMG1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCaMG2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCp1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCp2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCpMG1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberAxCpMG2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCb1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCb2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCbMG1 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    REAL(ReKi)  :: MemberCbMG2 = 0.0_ReKi      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
-    LOGICAL  :: MemberMCF = .false.      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
+    REAL(ReKi)  :: MemberCd1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCd2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCdMG1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCdMG2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCa1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCa2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaMG1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaMG2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCp1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCp2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCpMG1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCpMG2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCd1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCd2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCdMG1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCdMG2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCa1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCa2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCaMG1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCaMG2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCp1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCp2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCpMG1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCpMG2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCb1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCb2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCbMG1 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCbMG2 = 0.0_ReKi      !< Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    LOGICAL  :: MemberMCF = .false.      !< Flag T/F for whether the cylindrical member is modeled with the MacCamy-Fuchs diffraction model [-]
   END TYPE Morison_CoefMembers
+! =======================
+! =========  Morison_RecCoefMembers  =======
+  TYPE, PUBLIC :: Morison_RecCoefMembers
+    INTEGER(IntKi)  :: MemberID = 0_IntKi      !< User-specified integer id for the Member-based coefs [-]
+    REAL(ReKi)  :: MemberCdA1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCdA2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCdAMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCdAMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCdB1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCdB2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCdBMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCdBMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaA1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaA2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaAMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaAMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaB1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaB2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaBMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCaBMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCp1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCp2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCpMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCpMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCd1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCd2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCdMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCdMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCa1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCa2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCaMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCaMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCp1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCp2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCpMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberAxCpMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCb1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCb2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCbMG1 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCbMG2 = 0.0_ReKi      !< Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    LOGICAL  :: MemberMCF = .false.      !< Flag T/F for whether the rectangular member is modeled with the MacCamy-Fuchs diffraction model [-]
+  END TYPE Morison_RecCoefMembers
 ! =======================
 ! =========  Morison_MGDepthsType  =======
   TYPE, PUBLIC :: Morison_MGDepthsType
@@ -295,27 +403,52 @@ IMPLICIT NONE
     TYPE(Morison_NodeType) , DIMENSION(:), ALLOCATABLE  :: Nodes      !< Array of simulation node (some correspond to user-specified joints, others are created by software) [-]
     INTEGER(IntKi)  :: NAxCoefs = 0_IntKi      !< Number of axial Coefs entries in input file table [-]
     TYPE(Morison_AxialCoefType) , DIMENSION(:), ALLOCATABLE  :: AxialCoefs      !< List of axial coefs [-]
-    INTEGER(IntKi)  :: NPropSets = 0_IntKi      !< Number of member property sets [-]
-    TYPE(Morison_MemberPropType) , DIMENSION(:), ALLOCATABLE  :: MPropSets      !< List of Member property sets [-]
-    REAL(ReKi)  :: SimplCd = 0.0_ReKi      !< Simple model drag coef [-]
-    REAL(ReKi)  :: SimplCdMG = 0.0_ReKi      !< Simple model drag coef for marine growth [-]
-    REAL(ReKi)  :: SimplCa = 0.0_ReKi      !< Simple model Ca [-]
-    REAL(ReKi)  :: SimplCaMG = 0.0_ReKi      !< Simple model Ca for marine growth [-]
-    REAL(ReKi)  :: SimplCp = 0.0_ReKi      !< Simple model Cp [-]
-    REAL(ReKi)  :: SimplCpMG = 0.0_ReKi      !< Simple model Cp for marine growth [-]
-    REAL(ReKi)  :: SimplAxCd = 0.0_ReKi      !< Simple model Axial Cd [-]
-    REAL(ReKi)  :: SimplAxCdMG = 0.0_ReKi      !< Simple model Axial Cd for marine growth [-]
-    REAL(ReKi)  :: SimplAxCa = 0.0_ReKi      !< Simple model Axial Ca [-]
-    REAL(ReKi)  :: SimplAxCaMG = 0.0_ReKi      !< Simple model Axial Ca for marine growth [-]
-    REAL(ReKi)  :: SimplAxCp = 0.0_ReKi      !< Simple model Axial Cp [-]
-    REAL(ReKi)  :: SimplAxCpMG = 0.0_ReKi      !< Simple model Axial Cp for marine growth [-]
-    REAL(ReKi)  :: SimplCb = 0.0_ReKi      !< Simple model hydrostatic/buoyancy load coefficient [-]
-    REAL(ReKi)  :: SimplCbMg = 0.0_ReKi      !< Simple model hydrostatic/buoyancy load coefficient for marine growth [-]
-    LOGICAL  :: SimplMCF = .false.      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
+    INTEGER(IntKi)  :: NPropSets = 0_IntKi      !< Number of cylindrical member property sets [-]
+    TYPE(Morison_MemberPropType) , DIMENSION(:), ALLOCATABLE  :: MPropSets      !< List of cylindrical member property sets [-]
+    INTEGER(IntKi)  :: NRecPropSets = 0_IntKi      !< Number of rectangular member property sets [-]
+    TYPE(Morison_RecMemberPropType) , DIMENSION(:), ALLOCATABLE  :: MRecPropSets      !< List of rectangular member property sets [-]
+    REAL(ReKi)  :: SimplCd = 0.0_ReKi      !< Simple model drag coef for cylindrical members [-]
+    REAL(ReKi)  :: SimplCdMG = 0.0_ReKi      !< Simple model drag coef for cylindrical members with marine growth [-]
+    REAL(ReKi)  :: SimplCa = 0.0_ReKi      !< Simple model Ca for cylindrical members [-]
+    REAL(ReKi)  :: SimplCaMG = 0.0_ReKi      !< Simple model Ca for cylindrical members with marine growth [-]
+    REAL(ReKi)  :: SimplCp = 0.0_ReKi      !< Simple model Cp for cylindrical members [-]
+    REAL(ReKi)  :: SimplCpMG = 0.0_ReKi      !< Simple model Cp for cylindrical members with marine growth [-]
+    REAL(ReKi)  :: SimplAxCd = 0.0_ReKi      !< Simple model Axial Cd for cylindrical members [-]
+    REAL(ReKi)  :: SimplAxCdMG = 0.0_ReKi      !< Simple model Axial Cd for cylindrical members with marine growth [-]
+    REAL(ReKi)  :: SimplAxCa = 0.0_ReKi      !< Simple model Axial Ca for cylindrical members [-]
+    REAL(ReKi)  :: SimplAxCaMG = 0.0_ReKi      !< Simple model Axial Ca for cylindrical members with marine growth [-]
+    REAL(ReKi)  :: SimplAxCp = 0.0_ReKi      !< Simple model Axial Cp for cylindrical members [-]
+    REAL(ReKi)  :: SimplAxCpMG = 0.0_ReKi      !< Simple model Axial Cp for cylindrical members with marine growth [-]
+    REAL(ReKi)  :: SimplCb = 0.0_ReKi      !< Simple model hydrostatic/buoyancy load coefficient for cylindrical members [-]
+    REAL(ReKi)  :: SimplCbMg = 0.0_ReKi      !< Simple model hydrostatic/buoyancy load coefficient for cylindrical members with marine growth [-]
+    LOGICAL  :: SimplMCF = .false.      !< Flag T/F for whether the cylindrical member is modeled with the MacCamy-Fuchs diffraction model [-]
+    REAL(ReKi)  :: SimplRecCdA = 0.0_ReKi      !< Simple model drag coef for rectangular members normal to side A [-]
+    REAL(ReKi)  :: SimplRecCdAMG = 0.0_ReKi      !< Simple model drag coef for rectangular members normal to side A with marine growth [-]
+    REAL(ReKi)  :: SimplRecCdB = 0.0_ReKi      !< Simple model drag coef for rectangular members normal to side B [-]
+    REAL(ReKi)  :: SimplRecCdBMG = 0.0_ReKi      !< Simple model drag coef for rectangular members normal to side B with marine growth [-]
+    REAL(ReKi)  :: SimplRecCaA = 0.0_ReKi      !< Simple model Ca for rectangular members normal to side A [-]
+    REAL(ReKi)  :: SimplRecCaAMG = 0.0_ReKi      !< Simple model Ca for rectangular members normal to side A with marine growth [-]
+    REAL(ReKi)  :: SimplRecCaB = 0.0_ReKi      !< Simple model Ca for rectangular members normal to side B [-]
+    REAL(ReKi)  :: SimplRecCaBMG = 0.0_ReKi      !< Simple model Ca for rectangular members normal to side B with marine growth [-]
+    REAL(ReKi)  :: SimplRecCp = 0.0_ReKi      !< Simple model Cp for rectangular members [-]
+    REAL(ReKi)  :: SimplRecCpMG = 0.0_ReKi      !< Simple model Cp for rectangular members with marine growth [-]
+    REAL(ReKi)  :: SimplRecAxCd = 0.0_ReKi      !< Simple model Axial Cd for rectangular members [-]
+    REAL(ReKi)  :: SimplRecAxCdMG = 0.0_ReKi      !< Simple model Axial Cd for rectangular members with marine growth [-]
+    REAL(ReKi)  :: SimplRecAxCa = 0.0_ReKi      !< Simple model Axial Ca for rectangular members [-]
+    REAL(ReKi)  :: SimplRecAxCaMG = 0.0_ReKi      !< Simple model Axial Ca for rectangular members with marine growth [-]
+    REAL(ReKi)  :: SimplRecAxCp = 0.0_ReKi      !< Simple model Axial Cp for rectangular members [-]
+    REAL(ReKi)  :: SimplRecAxCpMG = 0.0_ReKi      !< Simple model Axial Cp for rectangular members with marine growth [-]
+    REAL(ReKi)  :: SimplRecCb = 0.0_ReKi      !< Simple model hydrostatic/buoyancy load coefficient for rectangular members [-]
+    REAL(ReKi)  :: SimplRecCbMg = 0.0_ReKi      !< Simple model hydrostatic/buoyancy load coefficient for rectangular members with marine growth [-]
+    LOGICAL  :: SimplRecMCF = .false.      !< Flag T/F for whether the rectangular member is modeled with the MacCamy-Fuchs diffraction model [-]
     INTEGER(IntKi)  :: NCoefDpth = 0_IntKi      !<  [-]
     TYPE(Morison_CoefDpths) , DIMENSION(:), ALLOCATABLE  :: CoefDpths      !<  [-]
+    INTEGER(IntKi)  :: NRecCoefDpth = 0_IntKi      !<  [-]
+    TYPE(Morison_RecCoefDpths) , DIMENSION(:), ALLOCATABLE  :: RecCoefDpths      !<  [-]
     INTEGER(IntKi)  :: NCoefMembers = 0_IntKi      !<  [-]
     TYPE(Morison_CoefMembers) , DIMENSION(:), ALLOCATABLE  :: CoefMembers      !<  [-]
+    INTEGER(IntKi)  :: NRecCoefMembers = 0_IntKi      !<  [-]
+    TYPE(Morison_RecCoefMembers) , DIMENSION(:), ALLOCATABLE  :: RecCoefMembers      !<  [-]
     INTEGER(IntKi)  :: NMembers = 0_IntKi      !< Number of user-specified members in the input file [-]
     TYPE(Morison_MemberInputType) , DIMENSION(:), ALLOCATABLE  :: InpMembers      !< Array of user-specified members [-]
     INTEGER(IntKi)  :: NFillGroups = 0_IntKi      !<  [-]
@@ -535,6 +668,53 @@ subroutine Morison_UnPackMemberPropType(RF, OutData)
    call RegUnpack(RF, OutData%PropThck); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine Morison_CopyRecMemberPropType(SrcRecMemberPropTypeData, DstRecMemberPropTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Morison_RecMemberPropType), intent(in) :: SrcRecMemberPropTypeData
+   type(Morison_RecMemberPropType), intent(inout) :: DstRecMemberPropTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Morison_CopyRecMemberPropType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstRecMemberPropTypeData%PropSetID = SrcRecMemberPropTypeData%PropSetID
+   DstRecMemberPropTypeData%PropA = SrcRecMemberPropTypeData%PropA
+   DstRecMemberPropTypeData%PropB = SrcRecMemberPropTypeData%PropB
+   DstRecMemberPropTypeData%PropThck = SrcRecMemberPropTypeData%PropThck
+end subroutine
+
+subroutine Morison_DestroyRecMemberPropType(RecMemberPropTypeData, ErrStat, ErrMsg)
+   type(Morison_RecMemberPropType), intent(inout) :: RecMemberPropTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Morison_DestroyRecMemberPropType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine Morison_PackRecMemberPropType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Morison_RecMemberPropType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Morison_PackRecMemberPropType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%PropSetID)
+   call RegPack(RF, InData%PropA)
+   call RegPack(RF, InData%PropB)
+   call RegPack(RF, InData%PropThck)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Morison_UnPackRecMemberPropType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Morison_RecMemberPropType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Morison_UnPackRecMemberPropType'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%PropSetID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PropA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PropB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PropThck); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine Morison_CopyFilledGroupType(SrcFilledGroupTypeData, DstFilledGroupTypeData, CtrlCode, ErrStat, ErrMsg)
    type(Morison_FilledGroupType), intent(in) :: SrcFilledGroupTypeData
    type(Morison_FilledGroupType), intent(inout) :: DstFilledGroupTypeData
@@ -687,6 +867,101 @@ subroutine Morison_UnPackCoefDpths(RF, OutData)
    call RegUnpack(RF, OutData%DpthMCF); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine Morison_CopyRecCoefDpths(SrcRecCoefDpthsData, DstRecCoefDpthsData, CtrlCode, ErrStat, ErrMsg)
+   type(Morison_RecCoefDpths), intent(in) :: SrcRecCoefDpthsData
+   type(Morison_RecCoefDpths), intent(inout) :: DstRecCoefDpthsData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Morison_CopyRecCoefDpths'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstRecCoefDpthsData%Dpth = SrcRecCoefDpthsData%Dpth
+   DstRecCoefDpthsData%DpthCdA = SrcRecCoefDpthsData%DpthCdA
+   DstRecCoefDpthsData%DpthCdAMG = SrcRecCoefDpthsData%DpthCdAMG
+   DstRecCoefDpthsData%DpthCdB = SrcRecCoefDpthsData%DpthCdB
+   DstRecCoefDpthsData%DpthCdBMG = SrcRecCoefDpthsData%DpthCdBMG
+   DstRecCoefDpthsData%DpthCaA = SrcRecCoefDpthsData%DpthCaA
+   DstRecCoefDpthsData%DpthCaAMG = SrcRecCoefDpthsData%DpthCaAMG
+   DstRecCoefDpthsData%DpthCaB = SrcRecCoefDpthsData%DpthCaB
+   DstRecCoefDpthsData%DpthCaBMG = SrcRecCoefDpthsData%DpthCaBMG
+   DstRecCoefDpthsData%DpthCp = SrcRecCoefDpthsData%DpthCp
+   DstRecCoefDpthsData%DpthCpMG = SrcRecCoefDpthsData%DpthCpMG
+   DstRecCoefDpthsData%DpthAxCd = SrcRecCoefDpthsData%DpthAxCd
+   DstRecCoefDpthsData%DpthAxCdMG = SrcRecCoefDpthsData%DpthAxCdMG
+   DstRecCoefDpthsData%DpthAxCa = SrcRecCoefDpthsData%DpthAxCa
+   DstRecCoefDpthsData%DpthAxCaMG = SrcRecCoefDpthsData%DpthAxCaMG
+   DstRecCoefDpthsData%DpthAxCp = SrcRecCoefDpthsData%DpthAxCp
+   DstRecCoefDpthsData%DpthAxCpMG = SrcRecCoefDpthsData%DpthAxCpMG
+   DstRecCoefDpthsData%DpthCb = SrcRecCoefDpthsData%DpthCb
+   DstRecCoefDpthsData%DpthCbMg = SrcRecCoefDpthsData%DpthCbMg
+   DstRecCoefDpthsData%DpthMCF = SrcRecCoefDpthsData%DpthMCF
+end subroutine
+
+subroutine Morison_DestroyRecCoefDpths(RecCoefDpthsData, ErrStat, ErrMsg)
+   type(Morison_RecCoefDpths), intent(inout) :: RecCoefDpthsData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Morison_DestroyRecCoefDpths'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine Morison_PackRecCoefDpths(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Morison_RecCoefDpths), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Morison_PackRecCoefDpths'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%Dpth)
+   call RegPack(RF, InData%DpthCdA)
+   call RegPack(RF, InData%DpthCdAMG)
+   call RegPack(RF, InData%DpthCdB)
+   call RegPack(RF, InData%DpthCdBMG)
+   call RegPack(RF, InData%DpthCaA)
+   call RegPack(RF, InData%DpthCaAMG)
+   call RegPack(RF, InData%DpthCaB)
+   call RegPack(RF, InData%DpthCaBMG)
+   call RegPack(RF, InData%DpthCp)
+   call RegPack(RF, InData%DpthCpMG)
+   call RegPack(RF, InData%DpthAxCd)
+   call RegPack(RF, InData%DpthAxCdMG)
+   call RegPack(RF, InData%DpthAxCa)
+   call RegPack(RF, InData%DpthAxCaMG)
+   call RegPack(RF, InData%DpthAxCp)
+   call RegPack(RF, InData%DpthAxCpMG)
+   call RegPack(RF, InData%DpthCb)
+   call RegPack(RF, InData%DpthCbMg)
+   call RegPack(RF, InData%DpthMCF)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Morison_UnPackRecCoefDpths(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Morison_RecCoefDpths), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Morison_UnPackRecCoefDpths'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Dpth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCdA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCdAMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCdB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCdBMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCaA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCaAMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCaB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCaBMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCpMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthAxCd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthAxCdMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthAxCa); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthAxCaMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthAxCp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthAxCpMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthCbMg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DpthMCF); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine Morison_CopyAxialCoefType(SrcAxialCoefTypeData, DstAxialCoefTypeData, CtrlCode, ErrStat, ErrMsg)
    type(Morison_AxialCoefType), intent(in) :: SrcAxialCoefTypeData
    type(Morison_AxialCoefType), intent(inout) :: DstAxialCoefTypeData
@@ -775,6 +1050,8 @@ subroutine Morison_CopyMemberInputType(SrcMemberInputTypeData, DstMemberInputTyp
    DstMemberInputTypeData%MPropSetID2 = SrcMemberInputTypeData%MPropSetID2
    DstMemberInputTypeData%MPropSetID1Indx = SrcMemberInputTypeData%MPropSetID1Indx
    DstMemberInputTypeData%MPropSetID2Indx = SrcMemberInputTypeData%MPropSetID2Indx
+   DstMemberInputTypeData%MSecGeom = SrcMemberInputTypeData%MSecGeom
+   DstMemberInputTypeData%MSpinOrient = SrcMemberInputTypeData%MSpinOrient
    DstMemberInputTypeData%MDivSize = SrcMemberInputTypeData%MDivSize
    DstMemberInputTypeData%MCoefMod = SrcMemberInputTypeData%MCoefMod
    DstMemberInputTypeData%MHstLMod = SrcMemberInputTypeData%MHstLMod
@@ -814,6 +1091,8 @@ subroutine Morison_PackMemberInputType(RF, Indata)
    call RegPack(RF, InData%MPropSetID2)
    call RegPack(RF, InData%MPropSetID1Indx)
    call RegPack(RF, InData%MPropSetID2Indx)
+   call RegPack(RF, InData%MSecGeom)
+   call RegPack(RF, InData%MSpinOrient)
    call RegPack(RF, InData%MDivSize)
    call RegPack(RF, InData%MCoefMod)
    call RegPack(RF, InData%MHstLMod)
@@ -845,6 +1124,8 @@ subroutine Morison_UnPackMemberInputType(RF, OutData)
    call RegUnpack(RF, OutData%MPropSetID2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MPropSetID1Indx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MPropSetID2Indx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MSecGeom); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MSpinOrient); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MDivSize); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MCoefMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHstLMod); if (RegCheckErr(RF, RoutineName)) return
@@ -1016,6 +1297,102 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       end if
       DstMemberTypeData%Rin = SrcMemberTypeData%Rin
    end if
+   if (allocated(SrcMemberTypeData%Sa)) then
+      LB(1:1) = lbound(SrcMemberTypeData%Sa, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Sa, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%Sa)) then
+         allocate(DstMemberTypeData%Sa(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Sa.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%Sa = SrcMemberTypeData%Sa
+   end if
+   if (allocated(SrcMemberTypeData%SaMG)) then
+      LB(1:1) = lbound(SrcMemberTypeData%SaMG, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%SaMG, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%SaMG)) then
+         allocate(DstMemberTypeData%SaMG(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%SaMG.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%SaMG = SrcMemberTypeData%SaMG
+   end if
+   if (allocated(SrcMemberTypeData%SaMGB)) then
+      LB(1:1) = lbound(SrcMemberTypeData%SaMGB, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%SaMGB, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%SaMGB)) then
+         allocate(DstMemberTypeData%SaMGB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%SaMGB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%SaMGB = SrcMemberTypeData%SaMGB
+   end if
+   if (allocated(SrcMemberTypeData%Sain)) then
+      LB(1:1) = lbound(SrcMemberTypeData%Sain, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Sain, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%Sain)) then
+         allocate(DstMemberTypeData%Sain(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Sain.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%Sain = SrcMemberTypeData%Sain
+   end if
+   if (allocated(SrcMemberTypeData%Sb)) then
+      LB(1:1) = lbound(SrcMemberTypeData%Sb, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Sb, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%Sb)) then
+         allocate(DstMemberTypeData%Sb(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Sb.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%Sb = SrcMemberTypeData%Sb
+   end if
+   if (allocated(SrcMemberTypeData%SbMG)) then
+      LB(1:1) = lbound(SrcMemberTypeData%SbMG, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%SbMG, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%SbMG)) then
+         allocate(DstMemberTypeData%SbMG(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%SbMG.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%SbMG = SrcMemberTypeData%SbMG
+   end if
+   if (allocated(SrcMemberTypeData%SbMGB)) then
+      LB(1:1) = lbound(SrcMemberTypeData%SbMGB, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%SbMGB, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%SbMGB)) then
+         allocate(DstMemberTypeData%SbMGB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%SbMGB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%SbMGB = SrcMemberTypeData%SbMGB
+   end if
+   if (allocated(SrcMemberTypeData%Sbin)) then
+      LB(1:1) = lbound(SrcMemberTypeData%Sbin, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Sbin, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%Sbin)) then
+         allocate(DstMemberTypeData%Sbin(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Sbin.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%Sbin = SrcMemberTypeData%Sbin
+   end if
    if (allocated(SrcMemberTypeData%tMG)) then
       LB(1:1) = lbound(SrcMemberTypeData%tMG, kind=B8Ki)
       UB(1:1) = ubound(SrcMemberTypeData%tMG, kind=B8Ki)
@@ -1075,6 +1452,78 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%dRdl_in = SrcMemberTypeData%dRdl_in
+   end if
+   if (allocated(SrcMemberTypeData%dSadl_mg)) then
+      LB(1:1) = lbound(SrcMemberTypeData%dSadl_mg, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%dSadl_mg, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%dSadl_mg)) then
+         allocate(DstMemberTypeData%dSadl_mg(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%dSadl_mg.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%dSadl_mg = SrcMemberTypeData%dSadl_mg
+   end if
+   if (allocated(SrcMemberTypeData%dSadl_mg_b)) then
+      LB(1:1) = lbound(SrcMemberTypeData%dSadl_mg_b, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%dSadl_mg_b, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%dSadl_mg_b)) then
+         allocate(DstMemberTypeData%dSadl_mg_b(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%dSadl_mg_b.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%dSadl_mg_b = SrcMemberTypeData%dSadl_mg_b
+   end if
+   if (allocated(SrcMemberTypeData%dSadl_in)) then
+      LB(1:1) = lbound(SrcMemberTypeData%dSadl_in, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%dSadl_in, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%dSadl_in)) then
+         allocate(DstMemberTypeData%dSadl_in(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%dSadl_in.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%dSadl_in = SrcMemberTypeData%dSadl_in
+   end if
+   if (allocated(SrcMemberTypeData%dSbdl_mg)) then
+      LB(1:1) = lbound(SrcMemberTypeData%dSbdl_mg, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%dSbdl_mg, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%dSbdl_mg)) then
+         allocate(DstMemberTypeData%dSbdl_mg(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%dSbdl_mg.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%dSbdl_mg = SrcMemberTypeData%dSbdl_mg
+   end if
+   if (allocated(SrcMemberTypeData%dSbdl_mg_b)) then
+      LB(1:1) = lbound(SrcMemberTypeData%dSbdl_mg_b, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%dSbdl_mg_b, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%dSbdl_mg_b)) then
+         allocate(DstMemberTypeData%dSbdl_mg_b(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%dSbdl_mg_b.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%dSbdl_mg_b = SrcMemberTypeData%dSbdl_mg_b
+   end if
+   if (allocated(SrcMemberTypeData%dSbdl_in)) then
+      LB(1:1) = lbound(SrcMemberTypeData%dSbdl_in, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%dSbdl_in, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%dSbdl_in)) then
+         allocate(DstMemberTypeData%dSbdl_in(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%dSbdl_in.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%dSbdl_in = SrcMemberTypeData%dSbdl_in
    end if
    DstMemberTypeData%Vinner = SrcMemberTypeData%Vinner
    DstMemberTypeData%Vouter = SrcMemberTypeData%Vouter
@@ -1158,6 +1607,54 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%Ca = SrcMemberTypeData%Ca
+   end if
+   if (allocated(SrcMemberTypeData%CdA)) then
+      LB(1:1) = lbound(SrcMemberTypeData%CdA, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%CdA, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%CdA)) then
+         allocate(DstMemberTypeData%CdA(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%CdA.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%CdA = SrcMemberTypeData%CdA
+   end if
+   if (allocated(SrcMemberTypeData%CaA)) then
+      LB(1:1) = lbound(SrcMemberTypeData%CaA, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%CaA, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%CaA)) then
+         allocate(DstMemberTypeData%CaA(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%CaA.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%CaA = SrcMemberTypeData%CaA
+   end if
+   if (allocated(SrcMemberTypeData%CdB)) then
+      LB(1:1) = lbound(SrcMemberTypeData%CdB, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%CdB, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%CdB)) then
+         allocate(DstMemberTypeData%CdB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%CdB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%CdB = SrcMemberTypeData%CdB
+   end if
+   if (allocated(SrcMemberTypeData%CaB)) then
+      LB(1:1) = lbound(SrcMemberTypeData%CaB, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%CaB, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%CaB)) then
+         allocate(DstMemberTypeData%CaB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%CaB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%CaB = SrcMemberTypeData%CaB
    end if
    if (allocated(SrcMemberTypeData%Cp)) then
       LB(1:1) = lbound(SrcMemberTypeData%Cp, kind=B8Ki)
@@ -1315,6 +1812,54 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       end if
       DstMemberTypeData%I_rfb_u = SrcMemberTypeData%I_rfb_u
    end if
+   if (allocated(SrcMemberTypeData%I_xfb_l)) then
+      LB(1:1) = lbound(SrcMemberTypeData%I_xfb_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_xfb_l, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%I_xfb_l)) then
+         allocate(DstMemberTypeData%I_xfb_l(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%I_xfb_l.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%I_xfb_l = SrcMemberTypeData%I_xfb_l
+   end if
+   if (allocated(SrcMemberTypeData%I_xfb_u)) then
+      LB(1:1) = lbound(SrcMemberTypeData%I_xfb_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_xfb_u, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%I_xfb_u)) then
+         allocate(DstMemberTypeData%I_xfb_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%I_xfb_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%I_xfb_u = SrcMemberTypeData%I_xfb_u
+   end if
+   if (allocated(SrcMemberTypeData%I_yfb_l)) then
+      LB(1:1) = lbound(SrcMemberTypeData%I_yfb_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_yfb_l, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%I_yfb_l)) then
+         allocate(DstMemberTypeData%I_yfb_l(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%I_yfb_l.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%I_yfb_l = SrcMemberTypeData%I_yfb_l
+   end if
+   if (allocated(SrcMemberTypeData%I_yfb_u)) then
+      LB(1:1) = lbound(SrcMemberTypeData%I_yfb_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_yfb_u, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%I_yfb_u)) then
+         allocate(DstMemberTypeData%I_yfb_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%I_yfb_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%I_yfb_u = SrcMemberTypeData%I_yfb_u
+   end if
    if (allocated(SrcMemberTypeData%m_mg_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%m_mg_l, kind=B8Ki)
       UB(1:1) = ubound(SrcMemberTypeData%m_mg_l, kind=B8Ki)
@@ -1411,6 +1956,54 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       end if
       DstMemberTypeData%I_rmg_u = SrcMemberTypeData%I_rmg_u
    end if
+   if (allocated(SrcMemberTypeData%I_xmg_l)) then
+      LB(1:1) = lbound(SrcMemberTypeData%I_xmg_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_xmg_l, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%I_xmg_l)) then
+         allocate(DstMemberTypeData%I_xmg_l(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%I_xmg_l.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%I_xmg_l = SrcMemberTypeData%I_xmg_l
+   end if
+   if (allocated(SrcMemberTypeData%I_xmg_u)) then
+      LB(1:1) = lbound(SrcMemberTypeData%I_xmg_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_xmg_u, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%I_xmg_u)) then
+         allocate(DstMemberTypeData%I_xmg_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%I_xmg_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%I_xmg_u = SrcMemberTypeData%I_xmg_u
+   end if
+   if (allocated(SrcMemberTypeData%I_ymg_l)) then
+      LB(1:1) = lbound(SrcMemberTypeData%I_ymg_l, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_ymg_l, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%I_ymg_l)) then
+         allocate(DstMemberTypeData%I_ymg_l(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%I_ymg_l.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%I_ymg_l = SrcMemberTypeData%I_ymg_l
+   end if
+   if (allocated(SrcMemberTypeData%I_ymg_u)) then
+      LB(1:1) = lbound(SrcMemberTypeData%I_ymg_u, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%I_ymg_u, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%I_ymg_u)) then
+         allocate(DstMemberTypeData%I_ymg_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%I_ymg_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%I_ymg_u = SrcMemberTypeData%I_ymg_u
+   end if
    if (allocated(SrcMemberTypeData%Cfl_fb)) then
       LB(1:1) = lbound(SrcMemberTypeData%Cfl_fb, kind=B8Ki)
       UB(1:1) = ubound(SrcMemberTypeData%Cfl_fb, kind=B8Ki)
@@ -1435,6 +2028,30 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       end if
       DstMemberTypeData%Cfr_fb = SrcMemberTypeData%Cfr_fb
    end if
+   if (allocated(SrcMemberTypeData%Cfx_fb)) then
+      LB(1:1) = lbound(SrcMemberTypeData%Cfx_fb, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Cfx_fb, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%Cfx_fb)) then
+         allocate(DstMemberTypeData%Cfx_fb(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Cfx_fb.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%Cfx_fb = SrcMemberTypeData%Cfx_fb
+   end if
+   if (allocated(SrcMemberTypeData%Cfy_fb)) then
+      LB(1:1) = lbound(SrcMemberTypeData%Cfy_fb, kind=B8Ki)
+      UB(1:1) = ubound(SrcMemberTypeData%Cfy_fb, kind=B8Ki)
+      if (.not. allocated(DstMemberTypeData%Cfy_fb)) then
+         allocate(DstMemberTypeData%Cfy_fb(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Cfy_fb.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMemberTypeData%Cfy_fb = SrcMemberTypeData%Cfy_fb
+   end if
    if (allocated(SrcMemberTypeData%CM0_fb)) then
       LB(1:1) = lbound(SrcMemberTypeData%CM0_fb, kind=B8Ki)
       UB(1:1) = ubound(SrcMemberTypeData%CM0_fb, kind=B8Ki)
@@ -1448,6 +2065,8 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       DstMemberTypeData%CM0_fb = SrcMemberTypeData%CM0_fb
    end if
    DstMemberTypeData%MGvolume = SrcMemberTypeData%MGvolume
+   DstMemberTypeData%MSecGeom = SrcMemberTypeData%MSecGeom
+   DstMemberTypeData%MSpinOrient = SrcMemberTypeData%MSpinOrient
    DstMemberTypeData%MDivSize = SrcMemberTypeData%MDivSize
    DstMemberTypeData%MCoefMod = SrcMemberTypeData%MCoefMod
    DstMemberTypeData%MmbrCoefIDIndx = SrcMemberTypeData%MmbrCoefIDIndx
@@ -1482,6 +2101,30 @@ subroutine Morison_DestroyMemberType(MemberTypeData, ErrStat, ErrMsg)
    if (allocated(MemberTypeData%Rin)) then
       deallocate(MemberTypeData%Rin)
    end if
+   if (allocated(MemberTypeData%Sa)) then
+      deallocate(MemberTypeData%Sa)
+   end if
+   if (allocated(MemberTypeData%SaMG)) then
+      deallocate(MemberTypeData%SaMG)
+   end if
+   if (allocated(MemberTypeData%SaMGB)) then
+      deallocate(MemberTypeData%SaMGB)
+   end if
+   if (allocated(MemberTypeData%Sain)) then
+      deallocate(MemberTypeData%Sain)
+   end if
+   if (allocated(MemberTypeData%Sb)) then
+      deallocate(MemberTypeData%Sb)
+   end if
+   if (allocated(MemberTypeData%SbMG)) then
+      deallocate(MemberTypeData%SbMG)
+   end if
+   if (allocated(MemberTypeData%SbMGB)) then
+      deallocate(MemberTypeData%SbMGB)
+   end if
+   if (allocated(MemberTypeData%Sbin)) then
+      deallocate(MemberTypeData%Sbin)
+   end if
    if (allocated(MemberTypeData%tMG)) then
       deallocate(MemberTypeData%tMG)
    end if
@@ -1496,6 +2139,24 @@ subroutine Morison_DestroyMemberType(MemberTypeData, ErrStat, ErrMsg)
    end if
    if (allocated(MemberTypeData%dRdl_in)) then
       deallocate(MemberTypeData%dRdl_in)
+   end if
+   if (allocated(MemberTypeData%dSadl_mg)) then
+      deallocate(MemberTypeData%dSadl_mg)
+   end if
+   if (allocated(MemberTypeData%dSadl_mg_b)) then
+      deallocate(MemberTypeData%dSadl_mg_b)
+   end if
+   if (allocated(MemberTypeData%dSadl_in)) then
+      deallocate(MemberTypeData%dSadl_in)
+   end if
+   if (allocated(MemberTypeData%dSbdl_mg)) then
+      deallocate(MemberTypeData%dSbdl_mg)
+   end if
+   if (allocated(MemberTypeData%dSbdl_mg_b)) then
+      deallocate(MemberTypeData%dSbdl_mg_b)
+   end if
+   if (allocated(MemberTypeData%dSbdl_in)) then
+      deallocate(MemberTypeData%dSbdl_in)
    end if
    if (allocated(MemberTypeData%floodstatus)) then
       deallocate(MemberTypeData%floodstatus)
@@ -1514,6 +2175,18 @@ subroutine Morison_DestroyMemberType(MemberTypeData, ErrStat, ErrMsg)
    end if
    if (allocated(MemberTypeData%Ca)) then
       deallocate(MemberTypeData%Ca)
+   end if
+   if (allocated(MemberTypeData%CdA)) then
+      deallocate(MemberTypeData%CdA)
+   end if
+   if (allocated(MemberTypeData%CaA)) then
+      deallocate(MemberTypeData%CaA)
+   end if
+   if (allocated(MemberTypeData%CdB)) then
+      deallocate(MemberTypeData%CdB)
+   end if
+   if (allocated(MemberTypeData%CaB)) then
+      deallocate(MemberTypeData%CaB)
    end if
    if (allocated(MemberTypeData%Cp)) then
       deallocate(MemberTypeData%Cp)
@@ -1554,6 +2227,18 @@ subroutine Morison_DestroyMemberType(MemberTypeData, ErrStat, ErrMsg)
    if (allocated(MemberTypeData%I_rfb_u)) then
       deallocate(MemberTypeData%I_rfb_u)
    end if
+   if (allocated(MemberTypeData%I_xfb_l)) then
+      deallocate(MemberTypeData%I_xfb_l)
+   end if
+   if (allocated(MemberTypeData%I_xfb_u)) then
+      deallocate(MemberTypeData%I_xfb_u)
+   end if
+   if (allocated(MemberTypeData%I_yfb_l)) then
+      deallocate(MemberTypeData%I_yfb_l)
+   end if
+   if (allocated(MemberTypeData%I_yfb_u)) then
+      deallocate(MemberTypeData%I_yfb_u)
+   end if
    if (allocated(MemberTypeData%m_mg_l)) then
       deallocate(MemberTypeData%m_mg_l)
    end if
@@ -1578,11 +2263,29 @@ subroutine Morison_DestroyMemberType(MemberTypeData, ErrStat, ErrMsg)
    if (allocated(MemberTypeData%I_rmg_u)) then
       deallocate(MemberTypeData%I_rmg_u)
    end if
+   if (allocated(MemberTypeData%I_xmg_l)) then
+      deallocate(MemberTypeData%I_xmg_l)
+   end if
+   if (allocated(MemberTypeData%I_xmg_u)) then
+      deallocate(MemberTypeData%I_xmg_u)
+   end if
+   if (allocated(MemberTypeData%I_ymg_l)) then
+      deallocate(MemberTypeData%I_ymg_l)
+   end if
+   if (allocated(MemberTypeData%I_ymg_u)) then
+      deallocate(MemberTypeData%I_ymg_u)
+   end if
    if (allocated(MemberTypeData%Cfl_fb)) then
       deallocate(MemberTypeData%Cfl_fb)
    end if
    if (allocated(MemberTypeData%Cfr_fb)) then
       deallocate(MemberTypeData%Cfr_fb)
+   end if
+   if (allocated(MemberTypeData%Cfx_fb)) then
+      deallocate(MemberTypeData%Cfx_fb)
+   end if
+   if (allocated(MemberTypeData%Cfy_fb)) then
+      deallocate(MemberTypeData%Cfy_fb)
    end if
    if (allocated(MemberTypeData%CM0_fb)) then
       deallocate(MemberTypeData%CM0_fb)
@@ -1607,11 +2310,25 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPackAlloc(RF, InData%RMG)
    call RegPackAlloc(RF, InData%RMGB)
    call RegPackAlloc(RF, InData%Rin)
+   call RegPackAlloc(RF, InData%Sa)
+   call RegPackAlloc(RF, InData%SaMG)
+   call RegPackAlloc(RF, InData%SaMGB)
+   call RegPackAlloc(RF, InData%Sain)
+   call RegPackAlloc(RF, InData%Sb)
+   call RegPackAlloc(RF, InData%SbMG)
+   call RegPackAlloc(RF, InData%SbMGB)
+   call RegPackAlloc(RF, InData%Sbin)
    call RegPackAlloc(RF, InData%tMG)
    call RegPackAlloc(RF, InData%MGdensity)
    call RegPackAlloc(RF, InData%dRdl_mg)
    call RegPackAlloc(RF, InData%dRdl_mg_b)
    call RegPackAlloc(RF, InData%dRdl_in)
+   call RegPackAlloc(RF, InData%dSadl_mg)
+   call RegPackAlloc(RF, InData%dSadl_mg_b)
+   call RegPackAlloc(RF, InData%dSadl_in)
+   call RegPackAlloc(RF, InData%dSbdl_mg)
+   call RegPackAlloc(RF, InData%dSbdl_mg_b)
+   call RegPackAlloc(RF, InData%dSbdl_in)
    call RegPack(RF, InData%Vinner)
    call RegPack(RF, InData%Vouter)
    call RegPack(RF, InData%Vballast)
@@ -1629,6 +2346,10 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPackAlloc(RF, InData%alpha_fb_star)
    call RegPackAlloc(RF, InData%Cd)
    call RegPackAlloc(RF, InData%Ca)
+   call RegPackAlloc(RF, InData%CdA)
+   call RegPackAlloc(RF, InData%CaA)
+   call RegPackAlloc(RF, InData%CdB)
+   call RegPackAlloc(RF, InData%CaB)
    call RegPackAlloc(RF, InData%Cp)
    call RegPackAlloc(RF, InData%AxCd)
    call RegPackAlloc(RF, InData%AxCa)
@@ -1642,6 +2363,10 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPackAlloc(RF, InData%I_lfb_u)
    call RegPackAlloc(RF, InData%I_rfb_l)
    call RegPackAlloc(RF, InData%I_rfb_u)
+   call RegPackAlloc(RF, InData%I_xfb_l)
+   call RegPackAlloc(RF, InData%I_xfb_u)
+   call RegPackAlloc(RF, InData%I_yfb_l)
+   call RegPackAlloc(RF, InData%I_yfb_u)
    call RegPackAlloc(RF, InData%m_mg_l)
    call RegPackAlloc(RF, InData%m_mg_u)
    call RegPackAlloc(RF, InData%h_cmg_l)
@@ -1650,10 +2375,18 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPackAlloc(RF, InData%I_lmg_u)
    call RegPackAlloc(RF, InData%I_rmg_l)
    call RegPackAlloc(RF, InData%I_rmg_u)
+   call RegPackAlloc(RF, InData%I_xmg_l)
+   call RegPackAlloc(RF, InData%I_xmg_u)
+   call RegPackAlloc(RF, InData%I_ymg_l)
+   call RegPackAlloc(RF, InData%I_ymg_u)
    call RegPackAlloc(RF, InData%Cfl_fb)
    call RegPackAlloc(RF, InData%Cfr_fb)
+   call RegPackAlloc(RF, InData%Cfx_fb)
+   call RegPackAlloc(RF, InData%Cfy_fb)
    call RegPackAlloc(RF, InData%CM0_fb)
    call RegPack(RF, InData%MGvolume)
+   call RegPack(RF, InData%MSecGeom)
+   call RegPack(RF, InData%MSpinOrient)
    call RegPack(RF, InData%MDivSize)
    call RegPack(RF, InData%MCoefMod)
    call RegPack(RF, InData%MmbrCoefIDIndx)
@@ -1688,11 +2421,25 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%RMG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%RMGB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Rin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Sa); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%SaMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%SaMGB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Sain); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Sb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%SbMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%SbMGB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Sbin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%tMG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MGdensity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dRdl_mg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dRdl_mg_b); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%dRdl_in); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%dSadl_mg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%dSadl_mg_b); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%dSadl_in); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%dSbdl_mg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%dSbdl_mg_b); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%dSbdl_in); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Vinner); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Vouter); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Vballast); if (RegCheckErr(RF, RoutineName)) return
@@ -1710,6 +2457,10 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%alpha_fb_star); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Cd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Ca); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CdA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CaA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CdB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CaB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Cp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AxCd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AxCa); if (RegCheckErr(RF, RoutineName)) return
@@ -1723,6 +2474,10 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%I_lfb_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%I_rfb_l); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%I_rfb_u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%I_xfb_l); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%I_xfb_u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%I_yfb_l); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%I_yfb_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%m_mg_l); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%m_mg_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%h_cmg_l); if (RegCheckErr(RF, RoutineName)) return
@@ -1731,10 +2486,18 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%I_lmg_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%I_rmg_l); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%I_rmg_u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%I_xmg_l); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%I_xmg_u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%I_ymg_l); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%I_ymg_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Cfl_fb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Cfr_fb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Cfx_fb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Cfy_fb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CM0_fb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MGvolume); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MSecGeom); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MSpinOrient); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MDivSize); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MCoefMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MmbrCoefIDIndx); if (RegCheckErr(RF, RoutineName)) return
@@ -2099,6 +2862,155 @@ subroutine Morison_UnPackCoefMembers(RF, OutData)
    call RegUnpack(RF, OutData%MemberMCF); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine Morison_CopyRecCoefMembers(SrcRecCoefMembersData, DstRecCoefMembersData, CtrlCode, ErrStat, ErrMsg)
+   type(Morison_RecCoefMembers), intent(in) :: SrcRecCoefMembersData
+   type(Morison_RecCoefMembers), intent(inout) :: DstRecCoefMembersData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Morison_CopyRecCoefMembers'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstRecCoefMembersData%MemberID = SrcRecCoefMembersData%MemberID
+   DstRecCoefMembersData%MemberCdA1 = SrcRecCoefMembersData%MemberCdA1
+   DstRecCoefMembersData%MemberCdA2 = SrcRecCoefMembersData%MemberCdA2
+   DstRecCoefMembersData%MemberCdAMG1 = SrcRecCoefMembersData%MemberCdAMG1
+   DstRecCoefMembersData%MemberCdAMG2 = SrcRecCoefMembersData%MemberCdAMG2
+   DstRecCoefMembersData%MemberCdB1 = SrcRecCoefMembersData%MemberCdB1
+   DstRecCoefMembersData%MemberCdB2 = SrcRecCoefMembersData%MemberCdB2
+   DstRecCoefMembersData%MemberCdBMG1 = SrcRecCoefMembersData%MemberCdBMG1
+   DstRecCoefMembersData%MemberCdBMG2 = SrcRecCoefMembersData%MemberCdBMG2
+   DstRecCoefMembersData%MemberCaA1 = SrcRecCoefMembersData%MemberCaA1
+   DstRecCoefMembersData%MemberCaA2 = SrcRecCoefMembersData%MemberCaA2
+   DstRecCoefMembersData%MemberCaAMG1 = SrcRecCoefMembersData%MemberCaAMG1
+   DstRecCoefMembersData%MemberCaAMG2 = SrcRecCoefMembersData%MemberCaAMG2
+   DstRecCoefMembersData%MemberCaB1 = SrcRecCoefMembersData%MemberCaB1
+   DstRecCoefMembersData%MemberCaB2 = SrcRecCoefMembersData%MemberCaB2
+   DstRecCoefMembersData%MemberCaBMG1 = SrcRecCoefMembersData%MemberCaBMG1
+   DstRecCoefMembersData%MemberCaBMG2 = SrcRecCoefMembersData%MemberCaBMG2
+   DstRecCoefMembersData%MemberCp1 = SrcRecCoefMembersData%MemberCp1
+   DstRecCoefMembersData%MemberCp2 = SrcRecCoefMembersData%MemberCp2
+   DstRecCoefMembersData%MemberCpMG1 = SrcRecCoefMembersData%MemberCpMG1
+   DstRecCoefMembersData%MemberCpMG2 = SrcRecCoefMembersData%MemberCpMG2
+   DstRecCoefMembersData%MemberAxCd1 = SrcRecCoefMembersData%MemberAxCd1
+   DstRecCoefMembersData%MemberAxCd2 = SrcRecCoefMembersData%MemberAxCd2
+   DstRecCoefMembersData%MemberAxCdMG1 = SrcRecCoefMembersData%MemberAxCdMG1
+   DstRecCoefMembersData%MemberAxCdMG2 = SrcRecCoefMembersData%MemberAxCdMG2
+   DstRecCoefMembersData%MemberAxCa1 = SrcRecCoefMembersData%MemberAxCa1
+   DstRecCoefMembersData%MemberAxCa2 = SrcRecCoefMembersData%MemberAxCa2
+   DstRecCoefMembersData%MemberAxCaMG1 = SrcRecCoefMembersData%MemberAxCaMG1
+   DstRecCoefMembersData%MemberAxCaMG2 = SrcRecCoefMembersData%MemberAxCaMG2
+   DstRecCoefMembersData%MemberAxCp1 = SrcRecCoefMembersData%MemberAxCp1
+   DstRecCoefMembersData%MemberAxCp2 = SrcRecCoefMembersData%MemberAxCp2
+   DstRecCoefMembersData%MemberAxCpMG1 = SrcRecCoefMembersData%MemberAxCpMG1
+   DstRecCoefMembersData%MemberAxCpMG2 = SrcRecCoefMembersData%MemberAxCpMG2
+   DstRecCoefMembersData%MemberCb1 = SrcRecCoefMembersData%MemberCb1
+   DstRecCoefMembersData%MemberCb2 = SrcRecCoefMembersData%MemberCb2
+   DstRecCoefMembersData%MemberCbMG1 = SrcRecCoefMembersData%MemberCbMG1
+   DstRecCoefMembersData%MemberCbMG2 = SrcRecCoefMembersData%MemberCbMG2
+   DstRecCoefMembersData%MemberMCF = SrcRecCoefMembersData%MemberMCF
+end subroutine
+
+subroutine Morison_DestroyRecCoefMembers(RecCoefMembersData, ErrStat, ErrMsg)
+   type(Morison_RecCoefMembers), intent(inout) :: RecCoefMembersData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Morison_DestroyRecCoefMembers'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine Morison_PackRecCoefMembers(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Morison_RecCoefMembers), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Morison_PackRecCoefMembers'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%MemberID)
+   call RegPack(RF, InData%MemberCdA1)
+   call RegPack(RF, InData%MemberCdA2)
+   call RegPack(RF, InData%MemberCdAMG1)
+   call RegPack(RF, InData%MemberCdAMG2)
+   call RegPack(RF, InData%MemberCdB1)
+   call RegPack(RF, InData%MemberCdB2)
+   call RegPack(RF, InData%MemberCdBMG1)
+   call RegPack(RF, InData%MemberCdBMG2)
+   call RegPack(RF, InData%MemberCaA1)
+   call RegPack(RF, InData%MemberCaA2)
+   call RegPack(RF, InData%MemberCaAMG1)
+   call RegPack(RF, InData%MemberCaAMG2)
+   call RegPack(RF, InData%MemberCaB1)
+   call RegPack(RF, InData%MemberCaB2)
+   call RegPack(RF, InData%MemberCaBMG1)
+   call RegPack(RF, InData%MemberCaBMG2)
+   call RegPack(RF, InData%MemberCp1)
+   call RegPack(RF, InData%MemberCp2)
+   call RegPack(RF, InData%MemberCpMG1)
+   call RegPack(RF, InData%MemberCpMG2)
+   call RegPack(RF, InData%MemberAxCd1)
+   call RegPack(RF, InData%MemberAxCd2)
+   call RegPack(RF, InData%MemberAxCdMG1)
+   call RegPack(RF, InData%MemberAxCdMG2)
+   call RegPack(RF, InData%MemberAxCa1)
+   call RegPack(RF, InData%MemberAxCa2)
+   call RegPack(RF, InData%MemberAxCaMG1)
+   call RegPack(RF, InData%MemberAxCaMG2)
+   call RegPack(RF, InData%MemberAxCp1)
+   call RegPack(RF, InData%MemberAxCp2)
+   call RegPack(RF, InData%MemberAxCpMG1)
+   call RegPack(RF, InData%MemberAxCpMG2)
+   call RegPack(RF, InData%MemberCb1)
+   call RegPack(RF, InData%MemberCb2)
+   call RegPack(RF, InData%MemberCbMG1)
+   call RegPack(RF, InData%MemberCbMG2)
+   call RegPack(RF, InData%MemberMCF)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Morison_UnPackRecCoefMembers(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Morison_RecCoefMembers), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Morison_UnPackRecCoefMembers'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%MemberID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCdA1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCdA2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCdAMG1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCdAMG2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCdB1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCdB2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCdBMG1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCdBMG2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCaA1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCaA2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCaAMG1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCaAMG2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCaB1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCaB2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCaBMG1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCaBMG2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCp1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCp2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCpMG1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCpMG2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCd1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCd2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCdMG1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCdMG2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCa1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCa2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCaMG1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCaMG2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCp1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCp2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCpMG1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberAxCpMG2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCb1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCb2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCbMG1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberCbMG2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MemberMCF); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
 subroutine Morison_CopyMGDepthsType(SrcMGDepthsTypeData, DstMGDepthsTypeData, CtrlCode, ErrStat, ErrMsg)
    type(Morison_MGDepthsType), intent(in) :: SrcMGDepthsTypeData
    type(Morison_MGDepthsType), intent(inout) :: DstMGDepthsTypeData
@@ -2419,6 +3331,23 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   DstInitInputData%NRecPropSets = SrcInitInputData%NRecPropSets
+   if (allocated(SrcInitInputData%MRecPropSets)) then
+      LB(1:1) = lbound(SrcInitInputData%MRecPropSets, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%MRecPropSets, kind=B8Ki)
+      if (.not. allocated(DstInitInputData%MRecPropSets)) then
+         allocate(DstInitInputData%MRecPropSets(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%MRecPropSets.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call Morison_CopyRecMemberPropType(SrcInitInputData%MRecPropSets(i1), DstInitInputData%MRecPropSets(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    DstInitInputData%SimplCd = SrcInitInputData%SimplCd
    DstInitInputData%SimplCdMG = SrcInitInputData%SimplCdMG
    DstInitInputData%SimplCa = SrcInitInputData%SimplCa
@@ -2434,6 +3363,25 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%SimplCb = SrcInitInputData%SimplCb
    DstInitInputData%SimplCbMg = SrcInitInputData%SimplCbMg
    DstInitInputData%SimplMCF = SrcInitInputData%SimplMCF
+   DstInitInputData%SimplRecCdA = SrcInitInputData%SimplRecCdA
+   DstInitInputData%SimplRecCdAMG = SrcInitInputData%SimplRecCdAMG
+   DstInitInputData%SimplRecCdB = SrcInitInputData%SimplRecCdB
+   DstInitInputData%SimplRecCdBMG = SrcInitInputData%SimplRecCdBMG
+   DstInitInputData%SimplRecCaA = SrcInitInputData%SimplRecCaA
+   DstInitInputData%SimplRecCaAMG = SrcInitInputData%SimplRecCaAMG
+   DstInitInputData%SimplRecCaB = SrcInitInputData%SimplRecCaB
+   DstInitInputData%SimplRecCaBMG = SrcInitInputData%SimplRecCaBMG
+   DstInitInputData%SimplRecCp = SrcInitInputData%SimplRecCp
+   DstInitInputData%SimplRecCpMG = SrcInitInputData%SimplRecCpMG
+   DstInitInputData%SimplRecAxCd = SrcInitInputData%SimplRecAxCd
+   DstInitInputData%SimplRecAxCdMG = SrcInitInputData%SimplRecAxCdMG
+   DstInitInputData%SimplRecAxCa = SrcInitInputData%SimplRecAxCa
+   DstInitInputData%SimplRecAxCaMG = SrcInitInputData%SimplRecAxCaMG
+   DstInitInputData%SimplRecAxCp = SrcInitInputData%SimplRecAxCp
+   DstInitInputData%SimplRecAxCpMG = SrcInitInputData%SimplRecAxCpMG
+   DstInitInputData%SimplRecCb = SrcInitInputData%SimplRecCb
+   DstInitInputData%SimplRecCbMg = SrcInitInputData%SimplRecCbMg
+   DstInitInputData%SimplRecMCF = SrcInitInputData%SimplRecMCF
    DstInitInputData%NCoefDpth = SrcInitInputData%NCoefDpth
    if (allocated(SrcInitInputData%CoefDpths)) then
       LB(1:1) = lbound(SrcInitInputData%CoefDpths, kind=B8Ki)
@@ -2451,6 +3399,23 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   DstInitInputData%NRecCoefDpth = SrcInitInputData%NRecCoefDpth
+   if (allocated(SrcInitInputData%RecCoefDpths)) then
+      LB(1:1) = lbound(SrcInitInputData%RecCoefDpths, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%RecCoefDpths, kind=B8Ki)
+      if (.not. allocated(DstInitInputData%RecCoefDpths)) then
+         allocate(DstInitInputData%RecCoefDpths(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%RecCoefDpths.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call Morison_CopyRecCoefDpths(SrcInitInputData%RecCoefDpths(i1), DstInitInputData%RecCoefDpths(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    DstInitInputData%NCoefMembers = SrcInitInputData%NCoefMembers
    if (allocated(SrcInitInputData%CoefMembers)) then
       LB(1:1) = lbound(SrcInitInputData%CoefMembers, kind=B8Ki)
@@ -2464,6 +3429,23 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
       end if
       do i1 = LB(1), UB(1)
          call Morison_CopyCoefMembers(SrcInitInputData%CoefMembers(i1), DstInitInputData%CoefMembers(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   DstInitInputData%NRecCoefMembers = SrcInitInputData%NRecCoefMembers
+   if (allocated(SrcInitInputData%RecCoefMembers)) then
+      LB(1:1) = lbound(SrcInitInputData%RecCoefMembers, kind=B8Ki)
+      UB(1:1) = ubound(SrcInitInputData%RecCoefMembers, kind=B8Ki)
+      if (.not. allocated(DstInitInputData%RecCoefMembers)) then
+         allocate(DstInitInputData%RecCoefMembers(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%RecCoefMembers.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call Morison_CopyRecCoefMembers(SrcInitInputData%RecCoefMembers(i1), DstInitInputData%RecCoefMembers(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
@@ -2621,6 +3603,15 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       end do
       deallocate(InitInputData%MPropSets)
    end if
+   if (allocated(InitInputData%MRecPropSets)) then
+      LB(1:1) = lbound(InitInputData%MRecPropSets, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%MRecPropSets, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call Morison_DestroyRecMemberPropType(InitInputData%MRecPropSets(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(InitInputData%MRecPropSets)
+   end if
    if (allocated(InitInputData%CoefDpths)) then
       LB(1:1) = lbound(InitInputData%CoefDpths, kind=B8Ki)
       UB(1:1) = ubound(InitInputData%CoefDpths, kind=B8Ki)
@@ -2630,6 +3621,15 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       end do
       deallocate(InitInputData%CoefDpths)
    end if
+   if (allocated(InitInputData%RecCoefDpths)) then
+      LB(1:1) = lbound(InitInputData%RecCoefDpths, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%RecCoefDpths, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call Morison_DestroyRecCoefDpths(InitInputData%RecCoefDpths(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(InitInputData%RecCoefDpths)
+   end if
    if (allocated(InitInputData%CoefMembers)) then
       LB(1:1) = lbound(InitInputData%CoefMembers, kind=B8Ki)
       UB(1:1) = ubound(InitInputData%CoefMembers, kind=B8Ki)
@@ -2638,6 +3638,15 @@ subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
       deallocate(InitInputData%CoefMembers)
+   end if
+   if (allocated(InitInputData%RecCoefMembers)) then
+      LB(1:1) = lbound(InitInputData%RecCoefMembers, kind=B8Ki)
+      UB(1:1) = ubound(InitInputData%RecCoefMembers, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call Morison_DestroyRecCoefMembers(InitInputData%RecCoefMembers(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(InitInputData%RecCoefMembers)
    end if
    if (allocated(InitInputData%InpMembers)) then
       LB(1:1) = lbound(InitInputData%InpMembers, kind=B8Ki)
@@ -2741,6 +3750,16 @@ subroutine Morison_PackInitInput(RF, Indata)
          call Morison_PackMemberPropType(RF, InData%MPropSets(i1)) 
       end do
    end if
+   call RegPack(RF, InData%NRecPropSets)
+   call RegPack(RF, allocated(InData%MRecPropSets))
+   if (allocated(InData%MRecPropSets)) then
+      call RegPackBounds(RF, 1, lbound(InData%MRecPropSets, kind=B8Ki), ubound(InData%MRecPropSets, kind=B8Ki))
+      LB(1:1) = lbound(InData%MRecPropSets, kind=B8Ki)
+      UB(1:1) = ubound(InData%MRecPropSets, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call Morison_PackRecMemberPropType(RF, InData%MRecPropSets(i1)) 
+      end do
+   end if
    call RegPack(RF, InData%SimplCd)
    call RegPack(RF, InData%SimplCdMG)
    call RegPack(RF, InData%SimplCa)
@@ -2756,6 +3775,25 @@ subroutine Morison_PackInitInput(RF, Indata)
    call RegPack(RF, InData%SimplCb)
    call RegPack(RF, InData%SimplCbMg)
    call RegPack(RF, InData%SimplMCF)
+   call RegPack(RF, InData%SimplRecCdA)
+   call RegPack(RF, InData%SimplRecCdAMG)
+   call RegPack(RF, InData%SimplRecCdB)
+   call RegPack(RF, InData%SimplRecCdBMG)
+   call RegPack(RF, InData%SimplRecCaA)
+   call RegPack(RF, InData%SimplRecCaAMG)
+   call RegPack(RF, InData%SimplRecCaB)
+   call RegPack(RF, InData%SimplRecCaBMG)
+   call RegPack(RF, InData%SimplRecCp)
+   call RegPack(RF, InData%SimplRecCpMG)
+   call RegPack(RF, InData%SimplRecAxCd)
+   call RegPack(RF, InData%SimplRecAxCdMG)
+   call RegPack(RF, InData%SimplRecAxCa)
+   call RegPack(RF, InData%SimplRecAxCaMG)
+   call RegPack(RF, InData%SimplRecAxCp)
+   call RegPack(RF, InData%SimplRecAxCpMG)
+   call RegPack(RF, InData%SimplRecCb)
+   call RegPack(RF, InData%SimplRecCbMg)
+   call RegPack(RF, InData%SimplRecMCF)
    call RegPack(RF, InData%NCoefDpth)
    call RegPack(RF, allocated(InData%CoefDpths))
    if (allocated(InData%CoefDpths)) then
@@ -2766,6 +3804,16 @@ subroutine Morison_PackInitInput(RF, Indata)
          call Morison_PackCoefDpths(RF, InData%CoefDpths(i1)) 
       end do
    end if
+   call RegPack(RF, InData%NRecCoefDpth)
+   call RegPack(RF, allocated(InData%RecCoefDpths))
+   if (allocated(InData%RecCoefDpths)) then
+      call RegPackBounds(RF, 1, lbound(InData%RecCoefDpths, kind=B8Ki), ubound(InData%RecCoefDpths, kind=B8Ki))
+      LB(1:1) = lbound(InData%RecCoefDpths, kind=B8Ki)
+      UB(1:1) = ubound(InData%RecCoefDpths, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call Morison_PackRecCoefDpths(RF, InData%RecCoefDpths(i1)) 
+      end do
+   end if
    call RegPack(RF, InData%NCoefMembers)
    call RegPack(RF, allocated(InData%CoefMembers))
    if (allocated(InData%CoefMembers)) then
@@ -2774,6 +3822,16 @@ subroutine Morison_PackInitInput(RF, Indata)
       UB(1:1) = ubound(InData%CoefMembers, kind=B8Ki)
       do i1 = LB(1), UB(1)
          call Morison_PackCoefMembers(RF, InData%CoefMembers(i1)) 
+      end do
+   end if
+   call RegPack(RF, InData%NRecCoefMembers)
+   call RegPack(RF, allocated(InData%RecCoefMembers))
+   if (allocated(InData%RecCoefMembers)) then
+      call RegPackBounds(RF, 1, lbound(InData%RecCoefMembers, kind=B8Ki), ubound(InData%RecCoefMembers, kind=B8Ki))
+      LB(1:1) = lbound(InData%RecCoefMembers, kind=B8Ki)
+      UB(1:1) = ubound(InData%RecCoefMembers, kind=B8Ki)
+      do i1 = LB(1), UB(1)
+         call Morison_PackRecCoefMembers(RF, InData%RecCoefMembers(i1)) 
       end do
    end if
    call RegPack(RF, InData%NMembers)
@@ -2913,6 +3971,20 @@ subroutine Morison_UnPackInitInput(RF, OutData)
          call Morison_UnpackMemberPropType(RF, OutData%MPropSets(i1)) ! MPropSets 
       end do
    end if
+   call RegUnpack(RF, OutData%NRecPropSets); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%MRecPropSets)) deallocate(OutData%MRecPropSets)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%MRecPropSets(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%MRecPropSets.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call Morison_UnpackRecMemberPropType(RF, OutData%MRecPropSets(i1)) ! MRecPropSets 
+      end do
+   end if
    call RegUnpack(RF, OutData%SimplCd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SimplCdMG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SimplCa); if (RegCheckErr(RF, RoutineName)) return
@@ -2928,6 +4000,25 @@ subroutine Morison_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%SimplCb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SimplCbMg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SimplMCF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCdA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCdAMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCdB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCdBMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCaA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCaAMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCaB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCaBMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCpMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecAxCd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecAxCdMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecAxCa); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecAxCaMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecAxCp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecAxCpMG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecCbMg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SimplRecMCF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NCoefDpth); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%CoefDpths)) deallocate(OutData%CoefDpths)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -2942,6 +4033,20 @@ subroutine Morison_UnPackInitInput(RF, OutData)
          call Morison_UnpackCoefDpths(RF, OutData%CoefDpths(i1)) ! CoefDpths 
       end do
    end if
+   call RegUnpack(RF, OutData%NRecCoefDpth); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%RecCoefDpths)) deallocate(OutData%RecCoefDpths)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%RecCoefDpths(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%RecCoefDpths.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call Morison_UnpackRecCoefDpths(RF, OutData%RecCoefDpths(i1)) ! RecCoefDpths 
+      end do
+   end if
    call RegUnpack(RF, OutData%NCoefMembers); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%CoefMembers)) deallocate(OutData%CoefMembers)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -2954,6 +4059,20 @@ subroutine Morison_UnPackInitInput(RF, OutData)
       end if
       do i1 = LB(1), UB(1)
          call Morison_UnpackCoefMembers(RF, OutData%CoefMembers(i1)) ! CoefMembers 
+      end do
+   end if
+   call RegUnpack(RF, OutData%NRecCoefMembers); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%RecCoefMembers)) deallocate(OutData%RecCoefMembers)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%RecCoefMembers(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%RecCoefMembers.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call Morison_UnpackRecCoefMembers(RF, OutData%RecCoefMembers(i1)) ! RecCoefMembers 
       end do
    end if
    call RegUnpack(RF, OutData%NMembers); if (RegCheckErr(RF, RoutineName)) return

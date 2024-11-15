@@ -379,7 +379,7 @@ subroutine GetOrientationAngles(p1, p2, phi, sinPhi, cosPhi, tanPhi, sinBeta, co
 end subroutine GetOrientationAngles
 !----------------------------------------------------------------------------------------------------------------------------------
 !function to return conical taper geometry calculations (volume and center of volume)
-SUBROUTINE TaperCalc(R1, R2, H, taperV, h_c)
+SUBROUTINE CylTaperCalc(R1, R2, H, taperV, h_c)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1
    REAL(ReKi),                     INTENT    ( IN    )  :: R2
    REAL(ReKi),                     INTENT    ( IN    )  :: H
@@ -401,7 +401,35 @@ SUBROUTINE TaperCalc(R1, R2, H, taperV, h_c)
      h_c = H*(R1**2 + 2*R1*R2 + 3*R2**2)/4.0/(R1**2 + R1*R2 + R2**2) !( coneV*1./4.*coneH - coneVtip*(1./4.*(coneH-H) + H) )/ taperV ! from base
    end if
    
-END SUBROUTINE TaperCalc
+END SUBROUTINE CylTaperCalc
+!----------------------------------------------------------------------------------------------------------------------------------
+!function to return pyramidal taper geometry calculations (volume and center of volume)
+SUBROUTINE RecTaperCalc(a0, a1, b0, b1, H, taperV, h_c)
+   REAL(ReKi),                     INTENT    ( IN    )  :: a0
+   REAL(ReKi),                     INTENT    ( IN    )  :: a1
+   REAL(ReKi),                     INTENT    ( IN    )  :: b0
+   REAL(ReKi),                     INTENT    ( IN    )  :: b1
+   REAL(ReKi),                     INTENT    ( IN    )  :: H
+   REAL(ReKi),                     INTENT    ( OUT   )  :: taperV   ! volume of tapered section
+   REAL(ReKi),                     INTENT    ( OUT   )  :: h_c      ! center of mass offset from first node
+
+   REAL(ReKi) :: a0b0, a0b1, a1b0, a1b1, tmp   
+
+   a0b0 = a0*b0
+   a0b1 = a0*b1
+   a1b0 = a1*b0
+   a1b1 = a1*b1
+
+   tmp    = 2.0*a0b0 + a0b1 + a1b0 + 2.0*a1b1
+   if ( EqualRealNos(tmp, 0.0_ReKi) ) then
+      taperV = 0.0_ReKi
+      h_c    = 0.0_ReKi
+   else
+      taperV = abs(H/6.0*tmp)
+      h_c    = 0.5*H*(a0b0 + a0b1 + a1b0 + 3.0*a1b1)/tmp ! from base
+   end if
+   
+END SUBROUTINE RecTaperCalc
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE CylInertia(R1, R2, H, rho, Il, Ir)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1
@@ -431,7 +459,37 @@ SUBROUTINE CylInertia(R1, R2, H, rho, Il, Ir)
    
 END SUBROUTINE CylInertia
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE MarineGrowthPartSegment(R1, R2, Rmg1, Rmg2, L, rho,  Vinner, Vouter, m_mg, h_c, Ilmg, Irmg)
+SUBROUTINE RecInertia(a0, a1, b0, b1, H, rho, Ize, Ixe, Iye)
+   REAL(ReKi),                     INTENT    ( IN    )  :: a0  ! Length of side A at node 0
+   REAL(ReKi),                     INTENT    ( IN    )  :: a1  ! Length of side A at node 1
+   REAL(ReKi),                     INTENT    ( IN    )  :: b0  ! Length of side B at node 0
+   REAL(ReKi),                     INTENT    ( IN    )  :: b1  ! Length of side B at node 1
+   REAL(ReKi),                     INTENT    ( IN    )  :: H   ! Element height/distance from node 0 to node 1
+   REAL(ReKi),                     INTENT    ( IN    )  :: rho ! density of material
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Ize ! Moment of inertia about element local z-axis (along member axis)
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Ixe ! Moment of inertia about element local x-axis (aligned with sides A)
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Iye ! Moment of inertia about element local y-axis (aligned with sides B)
+   real(ReKi) :: I1, I2, I3, da, da2, da3, db, db2, db3, a02, a03, b02, b03
+   ! All moment of inertia computed about node 0
+   da  = a1 - a0
+   da2 = da * da
+   da3 = da * da2
+   db  = b1 - b0
+   db2 = db * db
+   db3 = db * db2
+   a02 = a0 * a0
+   a03 = a0 * a02
+   b02 = b0 * b0
+   b03 = b0 * b02
+   I1 = rho*H/12.0 * ( db3*(0.2*a1+0.05*a0) + db2*b0*(0.75*a1+0.25*a0) + db*b02*(a1+0.5*a0) + 0.5*(a1+a0)*b03 )
+   I2 = rho*H/12.0 * ( da3*(0.2*b1+0.05*b0) + da2*a0*(0.75*b1+0.25*b0) + da*a02*(b1+0.5*b0) + 0.5*(b1+b0)*a03 )
+   I3 = rho*H**3   * ( 0.2*a1*b1 + 0.05*a1*b0 + 0.05*a0*b1 + a0*b0/30.0 )
+   Ixe = abs(I1 + I3)
+   Iye = abs(I2 + I3)
+   Ize = abs(I1 + I2)
+END SUBROUTINE RecInertia
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE MarineGrowthPartSegmentCyl(R1, R2, Rmg1, Rmg2, L, rho,  Vinner, Vouter, m_mg, h_c, Ilmg, Irmg)
    
    REAL(ReKi),                     INTENT    ( IN    )  :: R1
    REAL(ReKi),                     INTENT    ( IN    )  :: R2
@@ -454,14 +512,12 @@ SUBROUTINE MarineGrowthPartSegment(R1, R2, Rmg1, Rmg2, L, rho,  Vinner, Vouter, 
    REAL(ReKi)                         :: Irinner
    REAL(ReKi)                         :: Ilouter
    REAL(ReKi)                         :: Irouter
-   
-   
-   
+      
    ! get V and CV for element
-   call TaperCalc(R1, R2, L, Vinner, cVinner) 
+   call CylTaperCalc(R1, R2, L, Vinner, cVinner) 
 
    ! get V and CV for marine growth displacement
-   call TaperCalc(Rmg1, Rmg2, L, Vouter, cVouter) 
+   call CylTaperCalc(Rmg1, Rmg2, L, Vouter, cVouter) 
    
    ! get mass and CV specific to marine growth thickness
    m_mg = (Vouter - Vinner)*rho
@@ -479,9 +535,65 @@ SUBROUTINE MarineGrowthPartSegment(R1, R2, Rmg1, Rmg2, L, rho,  Vinner, Vouter, 
    Ilmg = Ilouter - Ilinner
    Irmg = Irouter - Irinner
 
-END SUBROUTINE MarineGrowthPartSegment
+END SUBROUTINE MarineGrowthPartSegmentCyl
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE FloodedBallastPartSegment(R1, R2, L, rho, V, m, h_c, Il, Ir)
+SUBROUTINE MarineGrowthPartSegmentRec(a1, a2, b1, b2, amg1, amg2, bmg1, bmg2, L, rho,  Vinner, Vouter, m_mg, h_c, Izemg, Ixemg, Iyemg)
+   
+   REAL(ReKi),                     INTENT    ( IN    )  :: a1
+   REAL(ReKi),                     INTENT    ( IN    )  :: a2
+   REAL(ReKi),                     INTENT    ( IN    )  :: b1
+   REAL(ReKi),                     INTENT    ( IN    )  :: b2
+   REAL(ReKi),                     INTENT    ( IN    )  :: amg1
+   REAL(ReKi),                     INTENT    ( IN    )  :: amg2
+   REAL(ReKi),                     INTENT    ( IN    )  :: bmg1
+   REAL(ReKi),                     INTENT    ( IN    )  :: bmg2
+   REAL(ReKi),                     INTENT    ( IN    )  :: L
+   REAL(ReKi),                     INTENT    ( IN    )  :: rho ! density of material
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Vinner   ! volume from inner radius
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Vouter   ! volume from outer radius
+   REAL(ReKi),                     INTENT    ( OUT   )  :: m_mg   ! mass of marine growth
+   REAL(ReKi),                     INTENT    ( OUT   )  :: h_c    ! center of mass offset from first node
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Izemg  ! moment of inertia about axis at first node
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Ixemg  ! moment of inertia about element local x-axis at first node
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Iyemg  ! moment of inertia about element local y-axis at first node
+   
+   ! Local variables
+   
+   REAL(ReKi)                         :: cVinner  ! center of volume from inner radius
+   REAL(ReKi)                         :: cVouter  ! center of volume from outer radius
+   REAL(ReKi)                         :: Izeinner
+   REAL(ReKi)                         :: Ixeinner
+   REAL(ReKi)                         :: Iyeinner
+   REAL(ReKi)                         :: Izeouter
+   REAL(ReKi)                         :: Ixeouter
+   REAL(ReKi)                         :: Iyeouter
+      
+   ! get V and CV for element
+   call RecTaperCalc(a1, a2, b1, b2, L, Vinner, cVinner) 
+
+   ! get V and CV for marine growth displacement
+   call RecTaperCalc(amg1, amg2, bmg1, bmg2, L, Vouter, cVouter) 
+   
+   ! get mass and CV specific to marine growth thickness
+   m_mg = (Vouter - Vinner)*rho
+   if ( EqualRealNos(m_mg, 0.0_ReKi) ) then
+      h_c = 0.0
+   else
+      h_c = (cVouter*Vouter - cVinner*Vinner)/(Vouter - Vinner)
+   end if
+   
+   ! get two moments of inertia for marine growth as if solid...
+   call RecInertia(amg1, amg2, bmg1, bmg2, L, rho, Izeouter, Ixeouter, Iyeouter)  ! inertias for marine growth if solid
+   call RecInertia(a1  , a2  , b1,   b2,   L, rho, Izeinner, Ixeinner, Iyeinner)  ! inertias for element if filled with marine growth
+
+   ! subtract to get moments of inertia of marine growth shell
+   Izemg = Izeouter - Izeinner
+   Ixemg = Ixeouter - Ixeinner
+   Iyemg = Iyeouter - Iyeinner
+
+END SUBROUTINE MarineGrowthPartSegmentRec
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FloodedBallastPartSegmentCyl(R1, R2, L, rho, V, m, h_c, Il, Ir)
    
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
@@ -489,19 +601,43 @@ SUBROUTINE FloodedBallastPartSegment(R1, R2, L, rho, V, m, h_c, Il, Ir)
    REAL(ReKi),                     INTENT    ( OUT   )  :: V   ! volume from inner radius
    REAL(ReKi),                     INTENT    ( IN    )  :: rho ! density of ballast
    REAL(ReKi),                     INTENT    ( OUT   )  :: m   ! mass of material
-   REAL(ReKi),                     INTENT    ( OUT   )  :: h_c    ! center of mass offset from first node
+   REAL(ReKi),                     INTENT    ( OUT   )  :: h_c  ! center of mass offset from first node
    REAL(ReKi),                     INTENT    ( OUT   )  :: Il   ! moment of inertia about axis
    REAL(ReKi),                     INTENT    ( OUT   )  :: Ir   ! moment of inertia about radial axis from first node
    
 
    
    ! get V and CV for flooded part of part-element
-   call TaperCalc(R1, R2, L, V, h_c) 
+   call CylTaperCalc(R1, R2, L, V, h_c) 
    m = rho*V
    
    call CylInertia(R1, R2, L, rho, Il, Ir)  ! inertias for filled section
 
-END SUBROUTINE FloodedBallastPartSegment
+END SUBROUTINE FloodedBallastPartSegmentCyl
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FloodedBallastPartSegmentRec(a1, a2, b1, b2, L, rho, V, m, h_c, Ize, Ixe, Iye)
+   
+   REAL(ReKi),                     INTENT    ( IN    )  :: a1  ! interior length of side A at node 1
+   REAL(ReKi),                     INTENT    ( IN    )  :: a2  ! interior length of side A at node 2
+   REAL(ReKi),                     INTENT    ( IN    )  :: b1  ! interior length of side B at node 1
+   REAL(ReKi),                     INTENT    ( IN    )  :: b2  ! interior length of side B at node 2
+   REAL(ReKi),                     INTENT    ( IN    )  :: L   ! distance positive along axis to end of part-element
+   REAL(ReKi),                     INTENT    ( OUT   )  :: V   ! volume from inner radius
+   REAL(ReKi),                     INTENT    ( IN    )  :: rho ! density of ballast
+   REAL(ReKi),                     INTENT    ( OUT   )  :: m   ! mass of material
+   REAL(ReKi),                     INTENT    ( OUT   )  :: h_c    ! center of mass offset from first node
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Ize   ! moment of inertia about element local z-axis
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Ixe   ! moment of inertia about element local x-axis at first node
+   REAL(ReKi),                     INTENT    ( OUT   )  :: Iye   ! moment of inertia about element local y-axis at first node   
+
+   
+   ! get V and CV for flooded part of part-element
+   call RecTaperCalc(a1, a2, b1, b2, L, V, h_c) 
+   m = rho*V
+   
+   call RecInertia(a1, a2, b1, b2, L, rho, Ize, Ixe, Iye)  ! inertias for filled section
+
+END SUBROUTINE FloodedBallastPartSegmentRec
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, members, &
                              NOutputs, OutParam, MOutLst, JOutLst, uMesh, yMesh, p, m, errStat, errMsg ) 
@@ -1050,7 +1186,7 @@ end subroutine Morison_GenerateSimulationNodes
 
 
 !====================================================================================================
-SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, AxCa, AxCp, Cb )
+SUBROUTINE SetCylDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, AxCa, AxCp, Cb )
    
    REAL(ReKi), INTENT (IN   )             :: z ! Z location relative to MSL inertial system
    REAL(ReKi), INTENT (IN   )             :: tMG
@@ -1111,19 +1247,97 @@ SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, A
       Cd     = CoefDpths(indx1)%DpthCd*(1-s)     + CoefDpths(indx2)%DpthCd*s
       Ca     = CoefDpths(indx1)%DpthCa*(1-s)     + CoefDpths(indx2)%DpthCa*s
       Cp     = CoefDpths(indx1)%DpthCp*(1-s)     + CoefDpths(indx2)%DpthCp*s
-      AxCd   = CoefDpths(indx1)%DpthCd*(1-s)     + CoefDpths(indx2)%DpthAxCd*s
-      AxCa   = CoefDpths(indx1)%DpthCa*(1-s)     + CoefDpths(indx2)%DpthAxCa*s
-      AxCp   = CoefDpths(indx1)%DpthCp*(1-s)     + CoefDpths(indx2)%DpthAxCp*s
+      AxCd   = CoefDpths(indx1)%DpthAxCd*(1-s)   + CoefDpths(indx2)%DpthAxCd*s
+      AxCa   = CoefDpths(indx1)%DpthAxCa*(1-s)   + CoefDpths(indx2)%DpthAxCa*s
+      AxCp   = CoefDpths(indx1)%DpthAxCp*(1-s)   + CoefDpths(indx2)%DpthAxCp*s
       Cb     = CoefDpths(indx1)%DpthCb*(1-s)     + CoefDpths(indx2)%DpthCb*s
    end if
    
 
-END SUBROUTINE SetDepthBasedCoefs
+END SUBROUTINE SetCylDepthBasedCoefs
+
+
+!====================================================================================================
+SUBROUTINE SetRecDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, CdA, CdB, CaA, CaB, Cp, AxCd, AxCa, AxCp, Cb )
+   
+   REAL(ReKi), INTENT (IN   )             :: z ! Z location relative to MSL inertial system
+   REAL(ReKi), INTENT (IN   )             :: tMG
+   INTEGER,    INTENT (IN   )             :: NCoefDpth
+   TYPE(Morison_RecCoefDpths), INTENT (IN   ):: CoefDpths(:)
+   REAL(ReKi), INTENT (  OUT)             :: CdA
+   REAL(ReKi), INTENT (  OUT)             :: CdB
+   REAL(ReKi), INTENT (  OUT)             :: CaA
+   REAL(ReKi), INTENT (  OUT)             :: CaB
+   REAL(ReKi), INTENT (  OUT)             :: Cp
+   REAL(ReKi), INTENT (  OUT)             :: AxCd
+   REAL(ReKi), INTENT (  OUT)             :: AxCa
+   REAL(ReKi), INTENT (  OUT)             :: AxCp
+   REAL(ReKi), INTENT (  OUT)             :: Cb
+   
+   INTEGER                 :: I, indx1, indx2
+   REAL(ReKi)              :: dd, s
+   LOGICAL                 :: foundLess 
+
+
+      ! Find the table entry(ies) which match the node's depth value
+      ! The assumption here is that the depth table is stored from largest
+      ! to smallest in depth
+   
+   foundLess = .FALSE.
+   indx1     = 1
+   indx2     = 1 
+   
+   if (NCoefDpth == 0) return
+   
+   DO I = 1, NCoefDpth
+      IF ( CoefDpths(I)%Dpth <= z .AND. .NOT. foundLess ) THEN
+         indx1 = I
+         foundLess = .TRUE.
+      END IF
+      IF ( CoefDpths(I)%Dpth >= z ) THEN
+         indx2 = I
+      END IF
+      
+   END DO
+   
+      ! Linearly interpolate the coef values based on depth
+   !CALL FindInterpFactor( z, CoefDpths(indx1)%Dpth, CoefDpths(indx2)%Dpth, s )
+      
+   dd = CoefDpths(indx1)%Dpth - CoefDpths(indx2)%Dpth
+   IF ( EqualRealNos(dd, 0.0_ReKi) ) THEN
+      s = 0
+   ELSE
+      s = ( CoefDpths(indx1)%Dpth - z ) / dd
+   END IF
+   if ( tMG > 0.0_ReKi ) then    
+      CdA    = CoefDpths(indx1)%DpthCdAMG*(1-s)  + CoefDpths(indx2)%DpthCdAMG*s
+      CdB    = CoefDpths(indx1)%DpthCdBMG*(1-s)  + CoefDpths(indx2)%DpthCdBMG*s
+      CaA    = CoefDpths(indx1)%DpthCaAMG*(1-s)  + CoefDpths(indx2)%DpthCaAMG*s
+      CaB    = CoefDpths(indx1)%DpthCaBMG*(1-s)  + CoefDpths(indx2)%DpthCaBMG*s
+      Cp     = CoefDpths(indx1)%DpthCpMG*(1-s)   + CoefDpths(indx2)%DpthCpMG*s
+      AxCd   = CoefDpths(indx1)%DpthAxCdMG*(1-s) + CoefDpths(indx2)%DpthAxCdMG*s
+      AxCa   = CoefDpths(indx1)%DpthAxCaMG*(1-s) + CoefDpths(indx2)%DpthAxCaMG*s
+      AxCp   = CoefDpths(indx1)%DpthAxCpMG*(1-s) + CoefDpths(indx2)%DpthAxCpMG*s
+      Cb     = CoefDpths(indx1)%DpthCbMG*(1-s)   + CoefDpths(indx2)%DpthCbMG*s
+   else
+      CdA    = CoefDpths(indx1)%DpthCdA*(1-s)    + CoefDpths(indx2)%DpthCdA*s
+      CdB    = CoefDpths(indx1)%DpthCdB*(1-s)    + CoefDpths(indx2)%DpthCdB*s
+      CaA    = CoefDpths(indx1)%DpthCaA*(1-s)    + CoefDpths(indx2)%DpthCaA*s
+      CaB    = CoefDpths(indx1)%DpthCaB*(1-s)    + CoefDpths(indx2)%DpthCaB*s
+      Cp     = CoefDpths(indx1)%DpthCp*(1-s)     + CoefDpths(indx2)%DpthCp*s
+      AxCd   = CoefDpths(indx1)%DpthAxCd*(1-s)   + CoefDpths(indx2)%DpthAxCd*s
+      AxCa   = CoefDpths(indx1)%DpthAxCa*(1-s)   + CoefDpths(indx2)%DpthAxCa*s
+      AxCp   = CoefDpths(indx1)%DpthAxCp*(1-s)   + CoefDpths(indx2)%DpthAxCp*s
+      Cb     = CoefDpths(indx1)%DpthCb*(1-s)     + CoefDpths(indx2)%DpthCb*s
+   end if
+   
+
+END SUBROUTINE SetRecDepthBasedCoefs
 
 
 
 !====================================================================================================
-SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
+SUBROUTINE SetCylExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
                                    SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplCb, SimplCbMG, SimplMCF, CoefMembers,    &
                                    NCoefDpth, CoefDpths, nodes, member )   
 !     This private subroutine generates the Cd, Ca, Cp, Cb, CdMG, CaMG, CpMG, and CbMG coefs for the member based on
@@ -1181,7 +1395,7 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
       member%PropMCF = SimplMCF
    CASE (2) ! Depth-based model: coefficients are set using depth-based table data
       do i = 1, member%NElements + 1
-         CALL SetDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%Cd(i), member%Ca(i), &
+         CALL SetCylDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%Cd(i), member%Ca(i), &
                                     member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i), member%Cb(i) )
       end do
       member%PropMCF = CoefDpths(1)%DpthMCF
@@ -1210,7 +1424,110 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
       member%propMCF = CoefMembers(MmbrCoefIDIndx)%MemberMCF
    end select
   
-end subroutine SetExternalHydroCoefs
+end subroutine SetCylExternalHydroCoefs
+
+!====================================================================================================
+SUBROUTINE SetRecExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCdA, SimplCdAMG, SimplCdB, SimplCdBMG, SimplCaA, SimplCaAMG, SimplCaB, SimplCaBMG, SimplCp, &
+                                   SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplCb, SimplCbMG, SimplMCF, CoefMembers,    &
+                                   NCoefDpth, CoefDpths, nodes, member )   
+!     This private subroutine generates the Cd, Ca, Cp, Cb, CdMG, CaMG, CpMG, and CbMG coefs for the member based on
+!     the input data.  
+!---------------------------------------------------------------------------------------------------- 
+   real(ReKi),                                intent(in   )  :: MSL2SWL
+   integer(IntKi),                            intent(in   )  :: MCoefMod
+   integer(IntKi),                            intent(in   )  :: MmbrCoefIDIndx
+   real(ReKi),                                intent(in   )  :: SimplCdA 
+   real(ReKi),                                intent(in   )  :: SimplCdAMG
+   real(ReKi),                                intent(in   )  :: SimplCdB 
+   real(ReKi),                                intent(in   )  :: SimplCdBMG
+   real(ReKi),                                intent(in   )  :: SimplCaA
+   real(ReKi),                                intent(in   )  :: SimplCaAMG 
+   real(ReKi),                                intent(in   )  :: SimplCaB
+   real(ReKi),                                intent(in   )  :: SimplCaBMG 
+   real(ReKi),                                intent(in   )  :: SimplCp
+   real(ReKi),                                intent(in   )  :: SimplCpMG 
+   real(ReKi),                                intent(in   )  :: SimplAxCd
+   real(ReKi),                                intent(in   )  :: SimplAxCdMG 
+   real(ReKi),                                intent(in   )  :: SimplAxCa
+   real(ReKi),                                intent(in   )  :: SimplAxCaMG 
+   real(ReKi),                                intent(in   )  :: SimplAxCp
+   real(ReKi),                                intent(in   )  :: SimplAxCpMG 
+   real(ReKi),                                intent(in   )  :: SimplCb
+   real(ReKi),                                intent(in   )  :: SimplCbMG
+   logical,                                   intent(in   )  :: SimplMCF
+   type(Morison_RecCoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
+   integer(IntKi),                            intent(in   )  :: NCoefDpth
+   type(Morison_RecCoefDpths),   allocatable, intent(in   )  :: CoefDpths(:)
+   type(Morison_NodeType),       allocatable, intent(in   )  :: nodes(:)
+   type(Morison_MemberType),                  intent(inout)  :: member
+   
+   integer(IntKi)                              :: i
+   real(ReKi)                                  :: s
+  
+   select case ( MCoefMod )
+      
+   case (1)  ! Simple model : all nodes receive the same coefficients
+      do i = 1, member%NElements + 1
+         if ( member%tMG(i) > 0.0_ReKi ) then
+            member%CdA   (i) = SimplCdAMG
+            member%CdB   (i) = SimplCdBMG
+            member%CaA   (i) = SimplCaAMG
+            member%CaB   (i) = SimplCaBMG
+            member%Cp    (i) = SimplCpMG
+            member%AxCd  (i) = SimplAxCdMG
+            member%AxCa  (i) = SimplAxCaMG
+            member%AxCp  (i) = SimplAxCpMG
+            member%Cb    (i) = SimplCbMG
+         else
+            member%CdA   (i) = SimplCdA
+            member%CdB   (i) = SimplCdB
+            member%CaA   (i) = SimplCaA
+            member%CaB   (i) = SimplCaB
+            member%Cp    (i) = SimplCp
+            member%AxCd  (i) = SimplAxCd
+            member%AxCa  (i) = SimplAxCa
+            member%AxCp  (i) = SimplAxCp
+            member%Cb    (i) = SimplCb
+         end if
+      end do
+      member%PropMCF = SimplMCF
+   CASE (2) ! Depth-based model: coefficients are set using depth-based table data
+      do i = 1, member%NElements + 1
+         CALL SetRecDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%CdA(i), member%CdB(i), & 
+                                     member%CaA(i), member%CaB(i), member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i), member%Cb(i) )
+      end do
+      member%PropMCF = CoefDpths(1)%DpthMCF
+   CASE (3) ! Member-based model: coefficients set using member-specific coefficient tables
+       do i = 1, member%NElements + 1
+         ! Pull member  end-node data from the tables and then linearly interpolate it onto the interior member nodes    
+         s = (real(i,ReKi)-1.0) / real(member%NElements,ReKi)
+         if ( member%tMG(i) > 0.0_ReKi ) then
+            member%CdA   (i) = CoefMembers(MmbrCoefIDIndx)%MemberCdAMG1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCdAMG2 *s
+            member%CdB   (i) = CoefMembers(MmbrCoefIDIndx)%MemberCdBMG1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCdBMG2 *s
+            member%CaA   (i) = CoefMembers(MmbrCoefIDIndx)%MemberCaAMG1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCaAMG2 *s
+            member%CaB   (i) = CoefMembers(MmbrCoefIDIndx)%MemberCaBMG1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCaBMG2 *s
+            member%Cp    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCpMG1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCpMG2  *s
+            member%Cb    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCbMG1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCbMG2  *s
+            member%AxCd  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCaMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCdMG2*s
+            member%AxCa  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCaMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCaMG2*s
+            member%AxCp  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCpMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCpMG2*s
+         else
+            member%CdA   (i) = CoefMembers(MmbrCoefIDIndx)%MemberCdA1   *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCdA2   *s
+            member%CdB   (i) = CoefMembers(MmbrCoefIDIndx)%MemberCdB1   *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCdB2   *s
+            member%CaA   (i) = CoefMembers(MmbrCoefIDIndx)%MemberCaA1   *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCaA2   *s
+            member%CaB   (i) = CoefMembers(MmbrCoefIDIndx)%MemberCaB1   *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCaB2   *s
+            member%Cp    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCp1    *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCp2    *s
+            member%Cb    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCb1    *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCb2    *s
+            member%AxCd  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCd1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCd2  *s
+            member%AxCa  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCa1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCa2  *s
+            member%AxCp  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCp1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCp2  *s
+         end if
+      end do
+      member%propMCF = CoefMembers(MmbrCoefIDIndx)%MemberMCF
+   end select
+  
+end subroutine SetRecExternalHydroCoefs
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, MSL2SWL, tMG, MGdensity )
@@ -1283,9 +1600,6 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    errStat = ErrID_None
    errMSg  = ''
    call AllocAry(member%NodeIndx     , member%NElements+1, 'member%NodeIndx'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%dRdl_mg      , member%NElements,   'member%dRdl_mg'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%dRdl_mg_b    , member%NElements,   'member%dRdl_mg_b'    , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%dRdl_in      , member%NElements,   'member%dRdl_in'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%floodstatus  , member%NElements,   'member%floodstatus'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%alpha        , member%NElements,   'member%alpha'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%alpha_fb     , member%NElements,   'member%alpha_fb'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1296,27 +1610,16 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry(member%h_cfb_u      , member%NElements,   'member%h_cfb_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%I_lfb_l      , member%NElements,   'member%I_lfb_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%I_lfb_u      , member%NElements,   'member%I_lfb_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%I_rfb_l      , member%NElements,   'member%I_rfb_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%I_rfb_u      , member%NElements,   'member%I_rfb_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%m_mg_l       , member%NElements,   'member%m_mg_l       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%m_mg_u       , member%NElements,   'member%m_mg_u       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%h_cmg_l      , member%NElements,   'member%h_cmg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%h_cmg_u      , member%NElements,   'member%h_cmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%I_lmg_l      , member%NElements,   'member%I_lmg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%I_lmg_u      , member%NElements,   'member%I_lmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%I_rmg_l      , member%NElements,   'member%I_rmg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%I_rmg_u      , member%NElements,   'member%I_rmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%Cfl_fb       , member%NElements,   'member%Cfl_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%Cfr_fb       , member%NElements,   'member%Cfr_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%CM0_fb       , member%NElements,   'member%CM0_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName) 
-   call AllocAry(member%R            , member%NElements+1, 'member%R            ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%RMG          , member%NElements+1, 'member%RMG          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%RMGB         , member%NElements+1, 'member%RMGB         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%Rin          , member%NElements+1, 'member%Rin          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%tMG          , member%NElements+1, 'member%tMG          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%MGdensity    , member%NElements+1, 'member%MGdensity    ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%Cd           , member%NElements+1, 'member%Cd           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%Ca           , member%NElements+1, 'member%Ca           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%Cp           , member%NElements+1, 'member%Cp           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%AxCd         , member%NElements+1, 'member%AxCd         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%AxCa         , member%NElements+1, 'member%AxCa         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1330,14 +1633,58 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry( memberLoads%F_If   , 6, member%NElements+1, 'memberLoads%F_If'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_WMG  , 6, member%NElements+1, 'memberLoads%F_WMG' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_IMG  , 6, member%NElements+1, 'memberLoads%F_IMG' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+
+   ! Shape dependent variables
+   if (member%MSecGeom == MSecGeom_Cyl) then
+      call AllocAry(member%dRdl_mg      , member%NElements,   'member%dRdl_mg'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%dRdl_mg_b    , member%NElements,   'member%dRdl_mg_b'    , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%dRdl_in      , member%NElements,   'member%dRdl_in'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_rfb_l      , member%NElements,   'member%I_rfb_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_rfb_u      , member%NElements,   'member%I_rfb_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_rmg_l      , member%NElements,   'member%I_rmg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_rmg_u      , member%NElements,   'member%I_rmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Cfr_fb       , member%NElements,   'member%Cfr_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%R            , member%NElements+1, 'member%R            ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%RMG          , member%NElements+1, 'member%RMG          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%RMGB         , member%NElements+1, 'member%RMGB         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Rin          , member%NElements+1, 'member%Rin          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Cd           , member%NElements+1, 'member%Cd           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Ca           , member%NElements+1, 'member%Ca           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   else if (member%MSecGeom == MSecGeom_Rec) then
+      call AllocAry(member%dSadl_mg     , member%NElements,   'member%dSadl_mg'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%dSadl_mg_b   , member%NElements,   'member%dSadl_mg_b'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%dSadl_in     , member%NElements,   'member%dSadl_in'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%dSbdl_mg     , member%NElements,   'member%dSbdl_mg'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%dSbdl_mg_b   , member%NElements,   'member%dSbdl_mg_b'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%dSbdl_in     , member%NElements,   'member%dSbdl_in'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_xfb_l      , member%NElements,   'member%I_xfb_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_xfb_u      , member%NElements,   'member%I_xfb_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_yfb_l      , member%NElements,   'member%I_yfb_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_yfb_u      , member%NElements,   'member%I_yfb_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_xmg_l      , member%NElements,   'member%I_xmg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_xmg_u      , member%NElements,   'member%I_xmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_ymg_l      , member%NElements,   'member%I_ymg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%I_ymg_u      , member%NElements,   'member%I_ymg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Cfx_fb       , member%NElements,   'member%Cfx_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Cfy_fb       , member%NElements,   'member%Cfy_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Sa           , member%NElements+1, 'member%Sa           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%SaMG         , member%NElements+1, 'member%SaMG         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%SaMGB        , member%NElements+1, 'member%SaMGB        ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Sain         , member%NElements+1, 'member%Sain         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Sb           , member%NElements+1, 'member%Sb           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%SbMG         , member%NElements+1, 'member%SbMG         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%SbMGB        , member%NElements+1, 'member%SbMGB        ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%Sbin         , member%NElements+1, 'member%Sbin         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%CdA          , member%NElements+1, 'member%CdA          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%CdB          , member%NElements+1, 'member%CdB          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%CaA          , member%NElements+1, 'member%CaA          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      call AllocAry(member%CaB          , member%NElements+1, 'member%CaB          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   end if
    
    if (ErrStat >= AbortErrLev) return
 
    ! Initialize everything to zero
    member%NodeIndx      = 0.0_ReKi
-   member%dRdl_mg       = 0.0_ReKi
-   member%dRdl_mg_b     = 0.0_ReKi
-   member%dRdl_in       = 0.0_ReKi
    member%floodstatus   = 0.0_ReKi
    member%alpha         = 0.0_ReKi
    member%alpha_fb      = 0.0_ReKi
@@ -1348,27 +1695,16 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    member%h_cfb_u       = 0.0_ReKi
    member%I_lfb_l       = 0.0_ReKi
    member%I_lfb_u       = 0.0_ReKi
-   member%I_rfb_l       = 0.0_ReKi
-   member%I_rfb_u       = 0.0_ReKi
    member%m_mg_l        = 0.0_ReKi
    member%m_mg_u        = 0.0_ReKi
    member%h_cmg_l       = 0.0_ReKi
    member%h_cmg_u       = 0.0_ReKi
    member%I_lmg_l       = 0.0_ReKi
    member%I_lmg_u       = 0.0_ReKi
-   member%I_rmg_l       = 0.0_ReKi
-   member%I_rmg_u       = 0.0_ReKi
    member%Cfl_fb        = 0.0_ReKi
-   member%Cfr_fb        = 0.0_ReKi
    member%CM0_fb        = 0.0_ReKi
-   member%R             = 0.0_ReKi
-   member%RMG           = 0.0_ReKi
-   member%RMGB          = 0.0_ReKi
-   member%Rin           = 0.0_ReKi
    member%tMG           = 0.0_ReKi
    member%MGdensity     = 0.0_ReKi
-   member%Cd            = 0.0_ReKi
-   member%Ca            = 0.0_ReKi
    member%Cp            = 0.0_ReKi
    member%AxCd          = 0.0_ReKi
    member%AxCa          = 0.0_ReKi
@@ -1382,6 +1718,52 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    memberLoads%F_If     = 0.0_ReKi
    memberLoads%F_WMG    = 0.0_ReKi
    memberLoads%F_IMG    = 0.0_ReKi
+
+   if (member%MSecGeom == MSecGeom_Cyl) then
+      member%dRdl_mg       = 0.0_ReKi
+      member%dRdl_mg_b     = 0.0_ReKi
+      member%dRdl_in       = 0.0_ReKi
+      member%I_rfb_l       = 0.0_ReKi
+      member%I_rfb_u       = 0.0_ReKi
+      member%I_rmg_l       = 0.0_ReKi
+      member%I_rmg_u       = 0.0_ReKi
+      member%Cfr_fb        = 0.0_ReKi
+      member%R             = 0.0_ReKi
+      member%RMG           = 0.0_ReKi
+      member%RMGB          = 0.0_ReKi
+      member%Rin           = 0.0_ReKi
+      member%Cd            = 0.0_ReKi
+      member%Ca            = 0.0_ReKi
+   else if (member%MSecGeom == MSecGeom_Rec) then
+      member%dSadl_mg      = 0.0_ReKi
+      member%dSadl_mg_b    = 0.0_ReKi
+      member%dSadl_in      = 0.0_ReKi
+      member%dSbdl_mg      = 0.0_ReKi
+      member%dSbdl_mg_b    = 0.0_ReKi
+      member%dSbdl_in      = 0.0_ReKi
+      member%I_xfb_l       = 0.0_ReKi
+      member%I_xfb_u       = 0.0_ReKi
+      member%I_yfb_l       = 0.0_ReKi
+      member%I_yfb_u       = 0.0_ReKi
+      member%I_xmg_l       = 0.0_ReKi
+      member%I_xmg_u       = 0.0_ReKi
+      member%I_ymg_l       = 0.0_ReKi
+      member%I_ymg_u       = 0.0_ReKi
+      member%Cfx_fb        = 0.0_ReKi
+      member%Cfy_fb        = 0.0_ReKi
+      member%Sa            = 0.0_ReKi
+      member%SaMG          = 0.0_ReKi
+      member%SaMGB         = 0.0_ReKi
+      member%Sain          = 0.0_ReKi
+      member%Sb            = 0.0_ReKi
+      member%SbMG          = 0.0_ReKi
+      member%SbMGB         = 0.0_ReKi
+      member%Sbin          = 0.0_ReKi
+      member%CdA           = 0.0_ReKi
+      member%CdB           = 0.0_ReKi
+      member%CaA           = 0.0_ReKi
+      member%CaB           = 0.0_ReKi
+   end if
 
 end subroutine AllocateMemberDataArrays
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1426,7 +1808,7 @@ subroutine FlipMemberNodeData( member, nodes, doSwap)
    
 end subroutine FlipMemberNodeData
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
+subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
    real(ReKi),                   intent (in   )  :: gravity
    type(Morison_MemberType),     intent (inout)  :: member
    integer(IntKi),               intent (in   )  :: MCoefMod
@@ -1497,7 +1879,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
       member%RMG(i) =  member%R(i) + member%tMG(i)
    end do
 
-   call SetExternalHydroCoefs(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
+   call SetCylExternalHydroCoefs(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
                                    InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, &
                                    InitInp%SimplCb, InitInp%SimplCbMG, InitInp%SimplMCF, & 
                                    InitInp%CoefMembers, InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%Nodes, member )
@@ -1623,8 +2005,8 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
       member%dRdl_in(  i) = (member%Rin( i+1) - member%Rin( i))/dl
       member%dRdl_mg_b(i) = (member%RMGB(i+1) - member%RMGB(i))/dl
       
-      member%alpha(   i) = GetAlpha(member%RMGB(i), member%RMGB(i+1))   ! Only used to distribute external buoyancy load to nodes
-      member%alpha_fb(i) = GetAlpha(member%Rin( i), member%Rin( i+1))
+      member%alpha(   i) = GetAlphaCyl(member%RMGB(i), member%RMGB(i+1))   ! Only used to distribute external buoyancy load to nodes
+      member%alpha_fb(i) = GetAlphaCyl(member%Rin( i), member%Rin( i+1))
       
    end do
 
@@ -1650,8 +2032,8 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
          RmidMG = 0.5*(member%RMG(i)+member%RMG(i+1))  ! radius with marine growth at middle of segment, where division occurs
          Lmid   = 0.5*dl   ! = 0.5*(R2-R1)/m  half-length of segment
 
-         CALL MarineGrowthPartSegment(member%R(i  ), Rmid, member%RMG(i  ),RmidMG, Lmid, member%MGDensity(i),  Vinner_l, Vouter_l, member%m_mg_l(i), member%h_cmg_l(i), member%I_lmg_l(i), member%I_rmg_l(i))   ! get precomputed quantities for lower half-segment
-         CALL MarineGrowthPartSegment(member%R(i+1), Rmid, member%RMG(i+1),RmidMG,-Lmid, member%MGDensity(i),  Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_rmg_u(i))   ! get precomputed quantities for upper half-segment
+         CALL MarineGrowthPartSegmentCyl(member%R(i  ), Rmid, member%RMG(i  ),RmidMG, Lmid, member%MGDensity(i),  Vinner_l, Vouter_l, member%m_mg_l(i), member%h_cmg_l(i), member%I_lmg_l(i), member%I_rmg_l(i))   ! get precomputed quantities for lower half-segment
+         CALL MarineGrowthPartSegmentCyl(member%R(i+1), Rmid, member%RMG(i+1),RmidMG,-Lmid, member%MGDensity(i),  Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_rmg_u(i))   ! get precomputed quantities for upper half-segment
          
       else if (i == member%i_floor) then         
          ! crossing seabed: get the properties for part-element above the seabed and lump to the upper node      
@@ -1660,7 +2042,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
          RmidMG = (-member%h_floor*member%RMG(i) +(dl+member%h_floor)*member%RMG(i+1))/dl
          Lmid   = -member%h_floor
 
-         CALL MarineGrowthPartSegment(member%R(i+1), Rmid, member%RMG(i+1),RmidMG, -Lmid, member%MGDensity(i),  Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_rmg_u(i))   ! get precomputed quantities for upper half-segment
+         CALL MarineGrowthPartSegmentCyl(member%R(i+1), Rmid, member%RMG(i+1),RmidMG, -Lmid, member%MGDensity(i),  Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_rmg_u(i))   ! get precomputed quantities for upper half-segment
          Vinner_l   = 0.0
          Vouter_l   = 0.0
       end if
@@ -1675,8 +2057,8 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
             ! get the properties for each half-element lumped to the appropriate node
             Rmidin = 0.5*(member%Rin(i)+member%Rin(i+1))  ! radius of member interior at middle of segment, where division occurs
             Lmid   = 0.5*dl   ! = 0.5*(R2-R1)/m  half-length of segment
-            CALL FloodedBallastPartSegment(member%Rin(i  ), Rmidin,  Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_rfb_l(i))   ! get precomputed quantities for lower half-segment
-            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, member%FillDens, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
+            CALL FloodedBallastPartSegmentCyl(member%Rin(i  ), Rmidin,  Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_rfb_l(i))   ! get precomputed quantities for lower half-segment
+            CALL FloodedBallastPartSegmentCyl(member%Rin(i+1), Rmidin, -Lmid, member%FillDens, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
  
          ! partially filled element, so split at FillFSLoc
          else if ((i > member%i_floor)  .AND. (member%FillFSLoc < Zb)) then
@@ -1684,16 +2066,15 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
             ! get the properties for each partial-element lumped to the appropriate node
             Lmid   = member%FillFSLoc - Za 
             Rmidin = member%Rin(i)+(Lmid/(Zb-Za))*(member%Rin(i+1)-member%Rin(i))  ! radius of member interior at middle of segment, where division occurs
-            CALL FloodedBallastPartSegment(member%Rin(i  ), Rmidin,  Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_rfb_l(i))   ! get precomputed quantities for lower half-segment
-            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, 0.0_ReKi, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
+            CALL FloodedBallastPartSegmentCyl(member%Rin(i  ), Rmidin,  Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_rfb_l(i))   ! get precomputed quantities for lower half-segment
+            CALL FloodedBallastPartSegmentCyl(member%Rin(i+1), Rmidin, -Lmid, 0.0_ReKi, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
  
          else if (i == member%i_floor) then     ! Hopefully we don't have a partially filled element crossing the seabed.
  
             ! crossing seabed: get the properties for part-element above the seabed and lump to the upper node
-            RmidMG = (-member%h_floor*member%RMG(i) +(dl+member%h_floor)*member%RMG(i+1))/dl
             Rmidin = (-member%h_floor*member%Rin(i) +(dl+member%h_floor)*member%Rin(i+1))/dl
             Lmid   = -member%h_floor
-            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, member%FillDens,  Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
+            CALL FloodedBallastPartSegmentCyl(member%Rin(i+1), Rmidin, -Lmid, member%FillDens,  Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
             Vballast_l = 0.0
  
          end if
@@ -1729,7 +2110,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
             member%Vouter = member%Vouter + Vouter_l + Vouter_u
             ! compute volume portion which is submerged
             Lmid = -Za/cosPhi 
-            call TaperCalc( member%Rmg(i), member%Rmg(i)+Lmid*member%dRdl_mg(i), Lmid, Vouter_l, h_c)
+            call CylTaperCalc( member%Rmg(i), member%Rmg(i)+Lmid*member%dRdl_mg(i), Lmid, Vouter_l, h_c)
             
             member%Vsubmerged = member%Vsubmerged + Vouter_l 
             
@@ -1781,7 +2162,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
          ! length along axis from node i to fill level
          member%h_fill = member%l_fill - (i-1)*dl
          !Since this element is only partially flooded/ballasted, compute the Volume fraction which is filled
-         call TaperCalc( member%Rin(i), member%Rin(i)+member%h_fill*member%dRdl_in(i), member%h_fill, Vballast_l, h_c)
+         call CylTaperCalc( member%Rin(i), member%Rin(i)+member%h_fill*member%dRdl_in(i), member%h_fill, Vballast_l, h_c)
          Vballast_u = 0.0
          member%Vballast = member%Vballast + Vballast_l + Vballast_u ! Note: Vballast_l will match calculations above
        
@@ -1806,7 +2187,385 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
    end do ! end looping through elements   
   
  
-end subroutine SetMemberProperties
+end subroutine SetCylMemberProperties
+
+subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
+   real(ReKi),                   intent (in   )  :: gravity
+   type(Morison_MemberType),     intent (inout)  :: member
+   integer(IntKi),               intent (in   )  :: MCoefMod
+   integer(IntKi),               intent (in   )  :: MmbrCoefIDIndx
+   integer(IntKi),               intent (in   )  :: MmbrFilledIDIndx
+   type(Morison_RecMemberPropType), intent (in   )  :: propSet1             ! property set of node 1
+   type(Morison_RecMemberPropType), intent (in   )  :: propSet2             ! property set of node N+1
+   type(Morison_InitInputType),  intent (in   )  :: InitInp
+   integer(IntKi),               intent (  out)  :: errStat              ! returns a non-zero value when an error occurs            
+   character(*),                 intent (  out)  :: errMsg               ! Error message if errStat /= ErrID_None
+
+   integer(IntKi) :: N, i
+   real(ReKi)     :: s, dl
+   real(ReKi)     :: vec(3)
+   real(ReKi)     :: memLength 
+   real(ReKi)     :: Za 
+   real(ReKi)     :: Zb 
+   real(ReKi)     :: phi 
+   real(ReKi)     :: sinPhi
+   real(ReKi)     :: cosPhi
+   real(ReKi)     :: SaMid, SbMid  
+   real(ReKi)     :: SaMidMG, SbMidMG
+   real(ReKi)     :: SaMidIn, SbMidIn
+   real(ReKi)     :: Lmid
+   real(ReKi)     :: li
+   real(ReKi)     :: Vinner_l, Vinner_u, Vouter_l, Vouter_u, Vballast_l, Vballast_u
+   real(ReKi)     :: tk(1,3), Imat(3,3)
+   REAL(ReKi)     :: h_c    ! center of mass offset from first node
+   
+   errStat = ErrID_None
+   errMSg  = ''
+   
+   N  = member%NElements
+   dl = member%dl
+   
+   vec     = InitInp%Nodes(member%NodeIndx(N+1))%Position - InitInp%Nodes(member%NodeIndx(1))%Position   
+   
+   ! calculate reference orientation information.  Note: members are straight to start
+   memLength = member%RefLength 
+   member%k(1:3) = (vec/memLength)  ! vector along member from start to end point, length > 0 was already checked when the members were parsed and generated from the input file data
+   tk(1,1) = member%k(1)
+   tk(1,2) = member%k(2)
+   tk(1,3) = member%k(3)
+   member%kkt    = matmul(transpose(tk),tk)
+   call Eye(Imat,errStat,errMsg)
+   member%Ak     =  Imat - member%kkt
+   phi = acos( max(-1.0_ReKi, min(1.0_ReKi, vec(3)/memLength) ) )  ! incline angle   
+   sinPhi = sin(phi)
+   cosPhi = cos(phi)  
+   member%cosPhi_ref = cosPhi
+   
+   ! These are all per node and not done here, yet
+   
+   do i = 1, member%NElements+1
+      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(member%NodeIndx(i)), InitInp%WaveField%MSL2SWL, member%tMG(i), member%MGDensity(i) )
+   end do
+
+   member%Sa(  1)   = propSet1%PropA
+   member%SaMG(1)   = propSet1%PropA + 2.0 * member%tMG(1) 
+   member%Sain(1)   = propSet1%PropA - 2.0 * propSet1%PropThck  
+   member%Sb(  1)   = propSet1%PropB            
+   member%SbMG(1)   = propSet1%PropB + 2.0 * member%tMG(1) 
+   member%Sbin(1)   = propSet1%PropB - 2.0 * propSet1%PropThck  
+   member%Sa(  N+1) = propSet2%PropA
+   member%SaMG(N+1) = propSet2%PropA + 2.0 * member%tMG(N+1)
+   member%Sain(N+1) = propSet2%PropA - 2.0 * propSet2%PropThck 
+   member%Sb(  N+1) = propSet2%PropB
+   member%SbMG(N+1) = propSet2%PropB + 2.0 * member%tMG(N+1)
+   member%Sbin(N+1) = propSet2%PropB - 2.0 * propSet2%PropThck 
+   do i = 2,  member%NElements
+      s = (real(i,ReKi)-1.0) / real(member%NElements,ReKi)
+      member%Sa(  i) =  member%Sa(  1)*(1-s) + member%Sa(  N+1)*s
+      member%Sain(i) =  member%Sain(1)*(1-s) + member%Sain(N+1)*s
+      member%SaMG(i) =  member%Sa(i) + 2.0 * member%tMG(i)
+      member%Sb(  i) =  member%Sb(  1)*(1-s) + member%Sb(  N+1)*s
+      member%Sbin(i) =  member%Sbin(1)*(1-s) + member%Sbin(N+1)*s
+      member%SbMG(i) =  member%Sb(i) + 2.0 * member%tMG(i)
+   end do
+
+   call SetRecExternalHydroCoefs(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplRecCdA, InitInp%SimplRecCdAMG, InitInp%SimplRecCdB, InitInp%SimplRecCdBMG, &
+                                   InitInp%SimplRecCaA, InitInp%SimplRecCaAMG, InitInp%SimplRecCaB, InitInp%SimplRecCaBMG, InitInp%SimplRecCp, &
+                                   InitInp%SimplRecCpMG, InitInp%SimplRecAxCd, InitInp%SimplRecAxCdMG, InitInp%SimplRecAxCa, InitInp%SimplRecAxCaMG, InitInp%SimplRecAxCp, InitInp%SimplRecAxCpMG, &
+                                   InitInp%SimplRecCb, InitInp%SimplRecCbMG, InitInp%SimplRecMCF, & 
+                                   InitInp%RecCoefMembers, InitInp%NRecCoefDpth, InitInp%RecCoefDpths, InitInp%Nodes, member )
+   
+   ! calculate member radius with marine growth scaled by sqrt(Cb) for buoyancy/hydrostatic load calculation
+   do i = 1, member%NElements+1
+      member%SaMGB(i) = member%SaMG(i) * SQRT(member%Cb(i))
+      member%SbMGB(i) = member%SbMG(i) * SQRT(member%Cb(i))
+   end do
+
+   ! calculate reference incline angle and heading, and related trig values.  Note: members are straight to start
+   Za = InitInp%Nodes(member%NodeIndx(1  ))%Position(3) 
+   Zb = InitInp%Nodes(member%NodeIndx(N+1))%Position(3)
+
+   ! Check if members with the MacCamy-Fuchs diffraction model and not modeled by potential flow satisfy the necessary criteria.
+   IF ( member%PropMCF .AND. ( .NOT. member%PropPot )) THEN
+      ! Check if surface piercing
+      IF ( Za*Zb > 0 ) THEN ! Two end joints of the member on the same side of the SWL
+         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         RETURN
+      END IF
+      ! Check inclination
+      If ( ABS(phi) .GE. 0.174533 ) THEN ! If inclination from vertical is greater than 10 deg
+         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be within 10 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         RETURN
+      END IF
+      CALL SetErrStat(ErrID_Info, 'Applying MacCamy-Fuchs diffraction correction to a rectangular member with ID '//trim(num2lstr(member%MemberID))//'; accuracy not guaranteed.', errStat, errMsg, 'SetMemberProperties' )   
+   END IF
+
+   ! find fill location of member (previously in SetElementFillProps)
+   member%MmbrFilledIDIndx = MmbrFilledIDIndx ! Set this to the parameter version of this member data
+   if ( MmbrFilledIDIndx > 0 ) then    
+      member%FillDens     =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillDens
+      member%FillFSLoc    =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillFSLoc - InitInp%WaveField%MSL2SWL
+       if (member%FillFSLoc >= Zb) then
+         member%z_overfill = member%FillFSLoc - Zb
+         member%l_fill = member%RefLength
+         member%memfloodstatus = 1  ! fully flooded   
+       elseif (Za >= member%FillFSLoc) then
+          ! No ballast
+         member%memfloodstatus = 0  
+         member%z_overfill = 0.0_ReKi
+         member%l_fill = 0.0_ReKi
+      else
+         member%z_overfill =0
+         if ( Zb <= -InitInp%WaveField%EffWtrDpth ) then
+            member%memfloodstatus = 0  ! member fully buried in seabed
+            member%l_fill = 0
+         else
+            member%memfloodstatus = 2  ! partially flooded member
+            member%l_fill = (member%FillFSLoc - Za)/cosPhi
+         end if
+      
+      end if
+      
+   else
+      member%FillDens     =   0.0
+      member%FillFSLoc    =   0.0  ! Future calculations for ballasting MUST verify that MbrFilledIDIndx > 0 for any ballasting calcs or this value will cause errors
+      member%z_overfill =0
+      member%l_fill = 0
+      member%memfloodstatus = 0
+   end if
+
+    ! Check the member does not exhibit any of the following conditions
+   if (.not. member%PropPot) then 
+      ! MHstLMod=1 is not allowed for rectangular members at the moment. Skip the following check.
+      ! if (member%MHstLMod == 1) then
+      !    if ( abs(Zb) < abs(member%Rmg(N+1)*sinPhi) ) then
+      !       call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+      !    end if
+      !    if ( abs(Za) < abs(member%Rmg(1)*sinPhi) ) then
+      !       call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+      !    end if
+      ! end if
+      if ( ( Za < -InitInp%WaveField%EffWtrDpth .and. Zb >= -InitInp%WaveField%EffWtrDpth ) .and. ( phi > 10.0*d2r .or. abs((member%SaMG(N+1) - member%SaMG(1))/member%RefLength)>0.1 .or. abs((member%SbMG(N+1) - member%SbMG(1))/member%RefLength)>0.1 ) ) then
+         call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+      end if      
+   end if
+
+   ! calculate h_floor if seabed-piercing
+   member%h_floor = 0.0_ReKi
+   member%i_floor = member%NElements+1  ! Default to entire member is below the seabed
+   member%doEndBuoyancy = .false.
+   if (Za < -InitInp%WaveField%EffWtrDpth) then
+      do i= 2, member%NElements+1
+         Za = InitInp%Nodes(member%NodeIndx(i))%Position(3)
+         if (Za > -InitInp%WaveField%EffWtrDpth) then            ! find the lowest node above the seabed
+            
+            if (cosPhi < 0.173648178 ) then ! phi > 80 degrees and member is seabed crossing
+               call SetErrStat(ErrID_Fatal, 'A seabed crossing member must have an inclination angle of <= 80 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )
+            end if
+            
+            member%h_floor = (-InitInp%WaveField%EffWtrDpth-Za)/cosPhi  ! get the distance from the node to the seabed along the member axis (negative value)
+            member%i_floor = i-1                    ! record the number of the element that pierces the seabed
+            member%doEndBuoyancy = .true.
+            exit
+         else if ( EqualRealNos(Za, -InitInp%WaveField%EffWtrDpth ) ) then
+            member%doEndBuoyancy = .true.
+         end if
+      end do
+   else
+      member%i_floor = 0 ! lower end is at or above the seabed
+   end if
+  
+   ! calculate element-level values
+   do i = 1, member%NElements
+      member%dSadl_mg(  i) = (member%SaMG( i+1) - member%SaMG( i))/dl
+      member%dSadl_in(  i) = (member%Sain( i+1) - member%Sain( i))/dl
+      member%dSadl_mg_b(i) = (member%SaMGB(i+1) - member%SaMGB(i))/dl
+
+      member%dSbdl_mg(  i) = (member%SbMG( i+1) - member%SbMG( i))/dl
+      member%dSbdl_in(  i) = (member%Sbin( i+1) - member%Sbin( i))/dl
+      member%dSbdl_mg_b(i) = (member%SbMGB(i+1) - member%SbMGB(i))/dl
+      
+      member%alpha(   i) = GetAlphaRec(member%SaMGB(i), member%SaMGB(i+1), member%SbMGB(i), member%SbMGB(i+1))   ! Only used to distribute external buoyancy load to nodes
+      member%alpha_fb(i) = GetAlphaRec(member%Sain( i), member%Sain( i+1), member%Sbin( i), member%Sbin( i+1))
+      
+   end do
+
+   member%Vinner   = 0.0_ReKi  ! Total  volume of member without marine growth
+   member%Vouter   = 0.0_ReKi  ! Total outer volume of member including marine growth
+   member%Vballast = 0.0_ReKi  ! Total ballasted volume of member
+   
+   ! force-related constants for each element
+   do i = 1, member%NElements
+   
+      Za = InitInp%Nodes(member%NodeIndx(  i))%Position(3)   ! z location of node i
+      Zb = InitInp%Nodes(member%NodeIndx(i+1))%Position(3)   ! z location of node i+1
+      
+      ! ------------------ marine growth weight and inertia ------------------------------------------------
+      Vinner_l   = 0.0
+      Vouter_l   = 0.0
+      Vinner_u   = 0.0
+      Vouter_u   = 0.0
+      if (i > member%i_floor) then         
+         ! full marine growth: get the properties for each half-element lumped to the appropriate node
+                  
+         SaMid   = 0.5*(member%Sa(  i)+member%Sa(  i+1))  ! length of Side A at middle of segment, where division occurs
+         SaMidMG = 0.5*(member%SaMG(i)+member%SaMG(i+1))  ! length of Side A with marine growth at middle of segment, where division occurs
+         SbMid   = 0.5*(member%Sb(  i)+member%Sb(  i+1))  ! length of Side B at middle of segment, where division occurs
+         SbMidMG = 0.5*(member%SbMG(i)+member%SbMG(i+1))  ! length of Side B with marine growth at middle of segment, where division occurs
+         Lmid    = 0.5*dl   ! half-length of segment
+
+         CALL MarineGrowthPartSegmentRec(member%Sa(i  ), SaMid, member%Sb(i  ), SbMid, member%SaMG(i  ), SaMidMG, member%SbMG(i  ), SbMidMG, Lmid, member%MGDensity(i), Vinner_l, Vouter_l, member%m_mg_l(i), member%h_cmg_l(i), member%I_lmg_l(i), member%I_xmg_l(i), member%I_ymg_l(i))   ! get precomputed quantities for lower half-segment
+         CALL MarineGrowthPartSegmentRec(member%Sa(i+1), SaMid, member%Sb(i+1), SbMid, member%SaMG(i+1), SaMidMG, member%SbMG(i+1), SbMidMG,-Lmid, member%MGDensity(i), Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_xmg_u(i), member%I_ymg_u(i))   ! get precomputed quantities for upper half-segment
+         
+      else if (i == member%i_floor) then         
+         ! crossing seabed: get the properties for part-element above the seabed and lump to the upper node      
+
+         SaMid   = (-member%h_floor*member%Sa(  i) +(dl+member%h_floor)*member%Sa(  i+1))/dl
+         SaMidMG = (-member%h_floor*member%SaMG(i) +(dl+member%h_floor)*member%SaMG(i+1))/dl
+         SbMid   = (-member%h_floor*member%Sb(  i) +(dl+member%h_floor)*member%Sb(  i+1))/dl
+         SbMidMG = (-member%h_floor*member%SbMG(i) +(dl+member%h_floor)*member%SbMG(i+1))/dl
+         Lmid    = -member%h_floor
+
+         CALL MarineGrowthPartSegmentRec(member%Sa(i+1), SaMid, member%Sb(i+1), SbMid, member%SaMG(i+1), SaMidMG, member%SbMG(i+1), SbMidMG,-Lmid, member%MGDensity(i), Vinner_u, Vouter_u, member%m_mg_u(i), member%h_cmg_u(i), member%I_lmg_u(i), member%I_xmg_u(i), member%I_ymg_u(i))   ! get precomputed quantities for upper half-segment
+         Vinner_l   = 0.0
+         Vouter_l   = 0.0
+      end if
+
+      ! ------------------ flooded ballast inertia ---------------------------------------------------------
+      Vballast_l = 0.0
+      Vballast_U = 0.0
+      if (member%memfloodstatus > 0 .and. (member%FillFSLoc > Za)) then
+         ! Fully filled element, so split in middle
+         if ((i > member%i_floor) .and. (member%FillFSLoc >= Zb)) then
+
+            ! get the properties for each half-element lumped to the appropriate node
+            SaMidIn = 0.5*(member%Sain(i)+member%Sain(i+1))  ! length of side A of member interior at middle of segment, where division occurs
+            SbMidIn = 0.5*(member%Sbin(i)+member%Sbin(i+1))  ! length of side B of member interior at middle of segment, where division occurs
+            Lmid   = 0.5*dl   ! half-length of segment
+            CALL FloodedBallastPartSegmentRec(member%Sain(i  ), SaMidIn, member%Sbin(i  ), SbMidIn, Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_xfb_l(i), member%I_yfb_l(i))   ! get precomputed quantities for lower half-segment
+            CALL FloodedBallastPartSegmentRec(member%Sain(i+1), SaMidIn, member%Sbin(i+1), SbMidIn,-Lmid, member%FillDens, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_xfb_u(i), member%I_yfb_u(i))   ! get precomputed quantities for upper half-segment
+ 
+         ! partially filled element, so split at FillFSLoc
+         else if ((i > member%i_floor)  .AND. (member%FillFSLoc < Zb)) then
+
+            ! get the properties for each partial-element lumped to the appropriate node
+            Lmid    = member%FillFSLoc - Za 
+            SaMidIn = member%Sain(i)+(Lmid/(Zb-Za))*(member%Sain(i+1)-member%Sain(i))  ! length of side A of member interior at middle of segment, where division occurs
+            SbMidIn = member%Sbin(i)+(Lmid/(Zb-Za))*(member%Sbin(i+1)-member%Sbin(i))  ! length of side A of member interior at middle of segment, where division occurs
+            CALL FloodedBallastPartSegmentRec(member%Sain(i  ), SaMidIn, member%Sbin(i  ), SbMidIn, Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_xfb_l(i), member%I_yfb_l(i))   ! get precomputed quantities for lower half-segment
+            CALL FloodedBallastPartSegmentRec(member%Sain(i+1), SaMidIn, member%Sbin(i+1), SbMidIn,-Lmid,        0.0_ReKi, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_xfb_u(i), member%I_yfb_u(i))   ! get precomputed quantities for upper half-segment
+ 
+         else if (i == member%i_floor) then     ! Hopefully we don't have a partially filled element crossing the seabed.
+ 
+            ! crossing seabed: get the properties for part-element above the seabed and lump to the upper node
+            SaMidIn = (-member%h_floor*member%Sain(i) +(dl+member%h_floor)*member%Sain(i+1))/dl
+            SbMidIn = (-member%h_floor*member%Sbin(i) +(dl+member%h_floor)*member%Sbin(i+1))/dl
+            Lmid    = -member%h_floor
+            CALL FloodedBallastPartSegmentRec(member%Sain(i+1), SaMidIn, member%Sbin(i+1), SbMidIn,-Lmid, member%FillDens, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_xfb_u(i), member%I_yfb_u(i))   ! get precomputed quantities for upper half-segment
+            Vballast_l = 0.0
+ 
+         end if
+      else  ! Either no ballast flooding in member, or this particular element isn't flooded at all
+         Vballast_u        = 0.0
+         Vballast_l        = 0.0
+         member%m_fb_u(i)  = 0.0
+         member%h_cfb_u(i) = 0.0
+         member%I_lfb_u(i) = 0.0
+         member%I_xfb_u(i) = 0.0
+         member%I_yfb_u(i) = 0.0
+      endif
+      
+      ! Determine volumes to add to Non-WAMIT modeled members, etc.
+      if (.not. member%PropPot) then
+         
+         if (Zb < -InitInp%WaveField%EffWtrDpth) then
+            ! fully buried element, do not add these volume contributions to totals
+         else if (0.0 >= Zb) then   ! Bug fix per OpenFAST issue #844   GJH 2/3/2022
+            ! fully submerged elements.  
+            ! NOTE: For an element which is fractionaly in the seabed, the entire element volume is added to totals
+            member%Vinner = member%Vinner + Vinner_l + Vinner_u
+            member%Vouter = member%Vouter + Vouter_l + Vouter_u
+            member%Vsubmerged = member%Vsubmerged + Vouter_l + Vouter_u
+         else if ((0.0 > Za) .AND. (0.0 < Zb)) then ! Bug fix per OpenFAST issue #844   GJH 2/3/2022
+            ! if (i == 1) then
+            !    call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties')
+            ! end if
+            
+            ! partially submerged element
+            member%Vinner = member%Vinner + Vinner_l + Vinner_u
+            member%Vouter = member%Vouter + Vouter_l + Vouter_u
+            ! compute volume portion which is submerged
+            Lmid = -Za/cosPhi 
+            call RecTaperCalc( member%SaMG(i), member%SaMG(i)+Lmid*member%dSadl_mg(i), member%SbMG(i), member%SbMG(i)+Lmid*member%dSbdl_mg(i), Lmid, Vouter_l, h_c)
+            
+            member%Vsubmerged = member%Vsubmerged + Vouter_l 
+            
+         else ! fully above the water
+            member%Vinner = member%Vinner + Vinner_l + Vinner_u
+            member%Vouter = member%Vouter + Vouter_l + Vouter_u
+         end if 
+      end if
+      
+      ! ------------------ flooded ballast weight (done) --------------------
+      ! NOTE: this section of code is somewhat redundant with "flooded ballast inertia" section above
+
+      li = dl*(i-1)
+      ! fully buried element
+      if (Zb < -InitInp%WaveField%EffWtrDpth) then
+         member%floodstatus(i) = 0
+      
+      ! fully filled elements 
+      else if (member%memfloodstatus > 0 .and. member%FillFSLoc > Zb) then  
+         member%floodstatus(i) = 1
+         member%Vballast = member%Vballast + Vballast_l + Vballast_u
+         ! depth-adjusted force distribution constant
+         ! member%alpha_fb_star(i) = member%alpha_fb(i)*( Zb - member%FillFSLoc )**3 / ( ( (1-member%alpha_fb(i))*(Za - member%FillFSLoc))**3 + member%alpha_fb(i)*(Zb - member%FillFSLoc)**3 )
+         
+         ! force and moment magnitude constants         
+         ! member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * dl *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)* member%dRdl_in(i) + member%Rin(i))*dl + 1.0/3.0* member%dRdl_in(i)*dl**2 )
+         ! member%Cfr_fb(i) =    Pi *                     member%FillDens * gravity * dl *( member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)*dl +1.0/3.0 * member%dRdl_in(i)**2 *dl**2 )
+         ! member%CM0_fb(i) = TwoPi *                     member%FillDens * gravity * dl *( 0.25*dl**3* member%dRdl_in(i)**4 + 0.25*dl**3* member%dRdl_in(i)**2 + dl**2* member%dRdl_in(i)**3*member%Rin(i) + 2.0/3.0*dl**2* member%dRdl_in(i)*member%Rin(i) + 1.5*dl* member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*dl*member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)**3 )
+         
+      ! partially filled element
+      else if ((member%memfloodstatus > 0) .and. (member%FillFSLoc > Za) .AND. (member%FillFSLoc < Zb)) then
+         
+         ! Need to enforce the modeling requirement that the first/bottom-most element of a member be fully flooded
+         if (i == 1) then
+            call SetErrStat(ErrID_Fatal,'The modeling of partially flooded/ballested members requires that the first/bottom-most element of a member must be fully flooded. This is not true for MemberID '//trim(num2lstr(member%MemberID)),ErrStat,ErrMsg,'SetMemberProperties')
+            return
+         end if
+         ! Need to enforce the modeling requirement that a partially flooded member must not be close to horizontal
+         ! if ( (InitInp%Nodes(member%NodeIndx(N+1))%Position(3) - sqrt(member%Sain(N+1)**2+member%Sbin(N+1)**2) *sinPhi) < member%FillFSLoc ) then
+         !    call SetErrStat(ErrID_Fatal,'The modeling of partially flooded/ballested members requires that the member not be near horizontal.  This is not true for MemberID '//trim(num2lstr(member%MemberID)),ErrStat,ErrMsg,'SetMemberProperties') 
+         !    return
+         ! end if
+         
+         member%floodstatus(i) = 2
+         
+         ! length along axis from node i to fill level
+         member%h_fill = member%l_fill - (i-1)*dl
+         !Since this element is only partially flooded/ballasted, compute the Volume fraction which is filled
+         call RecTaperCalc( member%Sain(i), member%Sain(i)+member%h_fill*member%dSadl_in(i), member%Sbin(i), member%Sbin(i)+member%h_fill*member%dSbdl_in(i), member%h_fill, Vballast_l, h_c)
+         Vballast_u = 0.0
+         member%Vballast = member%Vballast + Vballast_l + Vballast_u ! Note: Vballast_l will match calculations above
+       
+         ! depth-adjusted force distribution constant
+         ! member%alpha_fb_star(i) = (1 - member%alpha_fb(i))*( Za - member%FillFSLoc )**3 / ( ( (1-member%alpha_fb(i))*(Za - member%FillFSLoc))**3 - member%alpha_fb(i)*(Zb - member%FillFSLoc)**3 )
+         
+         ! force and moment magnitude constants
+         ! member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * member%h_fill *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)*member%dRdl_in(i) + member%Rin(i))*member%h_fill + 1.0/3.0*member%dRdl_in(i)*member%h_fill**2 )
+         ! member%Cfr_fb(i) =    Pi * member%FillDens * gravity * member%h_fill *( member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)*member%h_fill +1.0/3.0 *member%dRdl_in(i)**2 *member%h_fill**2 )
+         ! member%CM0_fb(i) = TwoPi * member%FillDens * gravity * member%h_fill *( 0.25*member%h_fill**3*member%dRdl_in(i)**4 + 0.25*member%h_fill**3*member%dRdl_in(i)**2 + member%h_fill**2*member%dRdl_in(i)**3*member%Rin(i) + 2.0/3.0*member%h_fill**2*member%dRdl_in(i)*member%Rin(i)  &
+         !                                                                         + 1.5*member%h_fill*member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*member%h_fill*member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)**3 ) &
+         !                            -0.25 * member%FillDens * gravity * Pi * (  member%Rin(i) + member%h_fill*member%dRdl_in(i))**4
+      ! unflooded element
+      else
+         member%floodstatus(i) = 0
+      end if
+      
+   end do ! end looping through elements   
+
+end subroutine SetRecMemberProperties
 
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
@@ -1842,13 +2601,14 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
    END IF  
         
    do i = 1, p%NMembers
-      p%Members(i)%MemberID  = InitInp%InpMembers(i)%MemberID
-      p%Members(i)%RefLength = InitInp%InpMembers(i)%RefLength
-      p%Members(i)%dl        = InitInp%InpMembers(i)%dl
-      p%Members(i)%NElements = InitInp%InpMembers(i)%NElements
-      p%Members(i)%PropPot   = InitInp%InpMembers(i)%PropPot
-      p%Members(i)%MHstLMod  = InitInp%InpMembers(i)%MHstLMod
-      ! p%Members(i)%MCF       = InitInp%InpMembers(i)%MCF
+      p%Members(i)%MemberID    = InitInp%InpMembers(i)%MemberID
+      p%Members(i)%RefLength   = InitInp%InpMembers(i)%RefLength
+      p%Members(i)%dl          = InitInp%InpMembers(i)%dl
+      p%Members(i)%NElements   = InitInp%InpMembers(i)%NElements
+      p%Members(i)%PropPot     = InitInp%InpMembers(i)%PropPot
+      p%Members(i)%MHstLMod    = InitInp%InpMembers(i)%MHstLMod
+      p%Members(i)%MSecGeom    = InitInp%InpMembers(i)%MSecGeom
+      p%Members(i)%MSpinOrient = InitInp%InpMembers(i)%MSpinOrient
       
       call AllocateMemberDataArrays(p%Members(i), m%MemberLoads(i), errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
@@ -1866,7 +2626,11 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
             prop2Indx = InitInp%InpMembers(I)%MPropSetID2Indx
       end if
       ! Now populate the various member data arrays using the HydroDyn input file data
-      call SetMemberProperties( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+      if (p%Members(i)%MSecGeom == MSecGeom_Cyl) then
+         call SetCylMemberProperties( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+      else if (p%Members(i)%MSecGeom == MSecGeom_Rec) then
+         call SetRecMemberProperties( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MRecPropSets(prop1Indx), InitInp%MRecPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+      end if
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
       if (ErrStat >= AbortErrLev) return
    end do
@@ -2407,19 +3171,38 @@ SUBROUTINE RodrigMat(a, R, errStat, errMsg)
 END SUBROUTINE RodrigMat
 
 !----------------------------------------------------------------------------------------------------------------------------------
-FUNCTION GetAlpha(R1,R2)
+FUNCTION GetAlphaCyl(R1,R2)
    ! calculates relative center of volume location for a (tapered) cylindrical element
-   real(ReKi)    :: GetAlpha
+   real(ReKi)    :: GetAlphaCyl
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    
    IF ( EqualRealNos(R1, R2) ) THEN ! Also cover the case where R1=R2=0
-      GetAlpha = 0.5
+      GetAlphaCyl = 0.5
    ELSE
-      GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
+      GetAlphaCyl = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
    END IF
    
-END FUNCTION GetAlpha
+END FUNCTION GetAlphaCyl
+
+FUNCTION GetAlphaRec(a0,a1,b0,b1)
+   ! calculates relative center of volume location for a (tapered) rectangular element
+   real(ReKi)    :: GetAlphaRec
+   REAL(ReKi),                     INTENT    ( IN    )  :: a0  ! Length of side A of element at node 1
+   REAL(ReKi),                     INTENT    ( IN    )  :: a1  ! Length of side A of element at node 2
+   REAL(ReKi),                     INTENT    ( IN    )  :: b0  ! Length of side B of element at node 1
+   REAL(ReKi),                     INTENT    ( IN    )  :: b1  ! Length of side B of element at node 2
+   
+   REAL(ReKi) :: tmp
+   tmp = 2.0*a0*b0+a0*b1+a1*b0+2.0*a1*b1
+
+   IF ( EqualRealNos(tmp, 0.0_ReKi) ) THEN ! zero volume
+      GetAlphaRec = 0.5
+   ELSE
+      GetAlphaRec = 0.5 * (a0*b0+a0*b1+a1*b0+3.0*a1*b1) / tmp
+   END IF
+   
+END FUNCTION GetAlphaRec
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
