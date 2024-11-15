@@ -5,7 +5,7 @@
 	</Platforms>
 	<Configurations>
 		<Configuration Name="Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\">
-			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
 			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -15,8 +15,8 @@
 			<Tool Name="VFPostBuildEventTool"/>
 			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
 		</Configuration>
-		<Configuration Name="Release|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\">
-			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+		<Configuration Name="Release|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" WholeProgramOptimization="true">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Preprocess="preprocessYes"/>
 			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -28,10 +28,18 @@
 		</Configuration>
 	</Configurations>
 	<Files>
-		<Filter Name="Registry Files" Filter="txt"/>
+		<Filter Name="Registry Files" Filter="txt">
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Registry.txt"/>
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper_Registry.txt"/>
+		</Filter>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
-			<File RelativePath="..\..\modules\beamdyn\src\Driver_Beam.f90"/>
-			<File RelativePath="..\..\modules\beamdyn\src\Driver_Beam_Subs.f90"/>
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm.f90"/>
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_IO.f90"/>
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_IO_Params.f90"/>
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Subs.f90"/>
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/>
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper.f90"/>
+			<File RelativePath="..\..\glue-codes\fast-farm\src\FASTWrapper_Types.f90"/>
 		</Filter>
 	</Files>
 	<Globals/>

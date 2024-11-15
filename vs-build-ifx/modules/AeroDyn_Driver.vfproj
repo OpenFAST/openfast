@@ -30,8 +30,8 @@
 	<Files>
 		<Filter Name="Registry Files" Filter="txt"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
-			<File RelativePath="..\..\modules\beamdyn\src\Driver_Beam.f90"/>
-			<File RelativePath="..\..\modules\beamdyn\src\Driver_Beam_Subs.f90"/>
+			<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Driver.f90">
+			</File>
 		</Filter>
 	</Files>
 	<Globals/>
