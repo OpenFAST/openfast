@@ -4,7 +4,7 @@ module AeroDyn_Inflow
    use NWTC_Library
    use AeroDyn_Inflow_Types
    use AeroDyn_Types
-   use AeroDyn, only: AD_Init, AD_ReInit, AD_CalcOutput, AD_UpdateStates, AD_End
+   use AeroDyn, only: AD_Init, AD_ReInit, AD_CalcOutput, AD_UpdateStates, AD_End, AD_BoxExceedPointsIdx
    use AeroDyn, only: AD_NumWindPoints, AD_GetExternalWind, AD_SetExternalWindPositions
    use AeroDyn_IO, only: AD_SetVTKSurface
    use InflowWind, only: InflowWind_Init, InflowWind_CalcOutput, InflowWind_End
@@ -344,6 +344,11 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       InitInData%InputFileName    = i_IW%InputFile
       InitInData%Linearize        = i_IW%Linearize
       InitInData%UseInputFile     = i_IW%UseInputFile
+      ! Box exceed allow for OLAF poitns
+      if (allocated(o_AD%WakeLocationPoints)) then
+         InitInData%BoxExceedAllowF = .true.
+         InitInData%BoxExceedAllowIdx = min(InitInData%BoxExceedAllowIdx, AD_BoxExceedPointsIdx(u_AD, o_AD))
+      endif
       if (.not. i_IW%UseInputFile) then
          call NWTC_Library_Copyfileinfotype( i_IW%PassedFileData, InitInData%PassedFileData, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
       endif
