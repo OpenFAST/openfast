@@ -158,7 +158,7 @@ subroutine Orca_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Orca_CopyInitOutput'
@@ -168,8 +168,8 @@ subroutine Orca_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -180,8 +180,8 @@ subroutine Orca_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -227,7 +227,7 @@ subroutine Orca_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Orca_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -330,7 +330,7 @@ subroutine Orca_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Orca_CopyMisc'
    ErrStat = ErrID_None
@@ -339,8 +339,8 @@ subroutine Orca_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%PtfmFt = SrcMiscData%PtfmFt
    DstMiscData%F_PtfmAM = SrcMiscData%F_PtfmAM
    if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%AllOuts, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%AllOuts)
+      UB(1:1) = ubound(SrcMiscData%AllOuts)
       if (.not. allocated(DstMiscData%AllOuts)) then
          allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -382,7 +382,7 @@ subroutine Orca_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Orca_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackMisc'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -399,8 +399,8 @@ subroutine Orca_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Orca_CopyParam'
@@ -412,8 +412,8 @@ subroutine Orca_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%SimNamePathLen = SrcParamData%SimNamePathLen
    DstParamData%NumOuts = SrcParamData%NumOuts
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -433,8 +433,8 @@ subroutine Orca_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(Orca_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Orca_DestroyParam'
@@ -443,8 +443,8 @@ subroutine Orca_DestroyParam(ParamData, ErrStat, ErrMsg)
    call FreeDynamicLib( ParamData%DLL_Orca, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -457,8 +457,8 @@ subroutine Orca_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(Orca_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackParam'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call DLLTypePack(RF, InData%DLL_Orca) 
@@ -467,9 +467,9 @@ subroutine Orca_PackParam(RF, Indata)
    call RegPack(RF, InData%NumOuts)
    call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(RF, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
-      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
+      LB(1:1) = lbound(InData%OutParam)
+      UB(1:1) = ubound(InData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(RF, InData%OutParam(i1)) 
       end do
@@ -481,8 +481,8 @@ subroutine Orca_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Orca_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackParam'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -558,7 +558,7 @@ subroutine Orca_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Orca_CopyOutput'
@@ -568,8 +568,8 @@ subroutine Orca_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -611,7 +611,7 @@ subroutine Orca_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Orca_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

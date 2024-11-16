@@ -351,14 +351,6 @@ typedef	^	RotMiscVarType	ReKi	TFinSTV_i 	3	-	-	"Structural velocity at the refer
 typedef	^	RotMiscVarType	ReKi	TFinF_i 	3	-	-	"Forces at the reference point of the fin in the inertial system"
 typedef	^	RotMiscVarType	ReKi	TFinM_i 	3	-	-	"Moments at the reference point of the fin in the inertial system"
 
-typedef	^	MiscVarType	RotMiscVarType	rotors	{:}	-	-	"MiscVars for each rotor"	-
-typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
-typedef	^	MiscVarType	FVW_OutputType	FVW_y	-	-	-	"Outputs from the FVW module"	-
-typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
-typedef	^	MiscVarType	ReKi            WindPos	{:}{:} - -	"XYZ coordinates to query for wind velocity/acceleration"	-
-typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind velocity"	-
-typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
-
 # Inflow data storage
 typedef	^	ElemInflowType	ReKi	InflowVel	{:}{:}	-	-	"U,V,W at nodes on element (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 typedef	^	ElemInflowType	ReKi	InflowAcc	{:}{:}	-	-	"Wind acceleration at nodes on element (blade or tower) (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
@@ -368,8 +360,17 @@ typedef	^	RotInflowType	ReKi	InflowOnHub 	{3}{1}	-	-	"U,V,W at hub"	m/s
 typedef	^	RotInflowType	ReKi	InflowOnNacelle	{3}{1}	-	-	"U,V,W at nacelle"	m/s
 typedef	^	RotInflowType	ReKi	InflowOnTailFin	{3}{1}	-	-	"U,V,W at tailfin"	m/s
 typedef	^	RotInflowType	ReKi	AvgDiskVel	{3}	-	0.0	"disk-averaged U,V,W"	m/s
+
 typedef	^	AD_InflowType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
 typedef	^	AD_InflowType	RotInflowType	RotInflow	{:}	-	-	"Inflow on rotor"	-
+
+typedef	^	MiscVarType	RotMiscVarType	rotors	{:} -	-	"MiscVars for each rotor"	-
+typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
+typedef	^	MiscVarType	FVW_OutputType	FVW_y	-	-	-	"Outputs from the FVW module"	-
+typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
+typedef	^	MiscVarType	ReKi            WindPos	{:}{:} - -	"XYZ coordinates to query for wind velocity/acceleration"	-
+typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind velocity"	-
+typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
 typedef	^	MiscVarType	AD_InflowType	Inflow	{:}	-	-	"Inflow storage (size of u for history of inputs)"	-
 
 

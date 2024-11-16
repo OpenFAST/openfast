@@ -66,7 +66,7 @@ subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Current_CopyInitInput'
    ErrStat = ErrID_None
@@ -82,8 +82,8 @@ subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%CurrMod = SrcInitInputData%CurrMod
    DstInitInputData%EffWtrDpth = SrcInitInputData%EffWtrDpth
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi)
       if (.not. allocated(DstInitInputData%WaveKinGridzi)) then
          allocate(DstInitInputData%WaveKinGridzi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -134,7 +134,7 @@ subroutine Current_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Current_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Current_UnPackInitInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -159,14 +159,14 @@ subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Current_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%CurrVxi)) then
-      LB(1:1) = lbound(SrcInitOutputData%CurrVxi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%CurrVxi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%CurrVxi)
+      UB(1:1) = ubound(SrcInitOutputData%CurrVxi)
       if (.not. allocated(DstInitOutputData%CurrVxi)) then
          allocate(DstInitOutputData%CurrVxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -177,8 +177,8 @@ subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%CurrVxi = SrcInitOutputData%CurrVxi
    end if
    if (allocated(SrcInitOutputData%CurrVyi)) then
-      LB(1:1) = lbound(SrcInitOutputData%CurrVyi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%CurrVyi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%CurrVyi)
+      UB(1:1) = ubound(SrcInitOutputData%CurrVyi)
       if (.not. allocated(DstInitOutputData%CurrVyi)) then
          allocate(DstInitOutputData%CurrVyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -223,7 +223,7 @@ subroutine Current_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Current_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Current_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
