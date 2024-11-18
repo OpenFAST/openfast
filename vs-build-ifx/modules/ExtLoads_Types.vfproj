@@ -5,31 +5,11 @@
 		<Platform Name="x64"/>
 	</Platforms>
 	<Configurations>
-		<Configuration Name="Debug|Win32" UseCompiler="ifortCompiler" ConfigurationType="typeStaticLibrary">
-			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
-			<Tool Name="VFLibrarianTool"/>
-			<Tool Name="VFResourceCompilerTool"/>
-			<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
-			<Tool Name="VFCustomBuildTool"/>
-			<Tool Name="VFPreLinkEventTool"/>
-			<Tool Name="VFPreBuildEventTool"/>
-			<Tool Name="VFPostBuildEventTool"/>
-		</Configuration>
 		<Configuration Name="Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
 			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
-			<Tool Name="VFCustomBuildTool"/>
-			<Tool Name="VFPreLinkEventTool"/>
-			<Tool Name="VFPreBuildEventTool"/>
-			<Tool Name="VFPostBuildEventTool"/>
-		</Configuration>
-		<Configuration Name="Release|Win32" UseCompiler="ifortCompiler" ConfigurationType="typeStaticLibrary">
-			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
-			<Tool Name="VFLibrarianTool"/>
-			<Tool Name="VFResourceCompilerTool"/>
-			<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 			<Tool Name="VFCustomBuildTool"/>
 			<Tool Name="VFPreLinkEventTool"/>
 			<Tool Name="VFPreBuildEventTool"/>
@@ -47,11 +27,18 @@
 		</Configuration>
 	</Configurations>
 	<Files>
-		<Filter Name="Registry Files" Filter="txt"/>
+		<Filter Name="Registry Files" Filter="txt">
+			<File RelativePath="..\..\modules\extloads\src\ExtLoads_Registry.txt">
+				<FileConfiguration Name="Release|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+				<FileConfiguration Name="Debug|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoads" Description="Running Registry for ExtLoads" Outputs="..\..\modules\extloads\src\ExtLoads_Types.f90"/></FileConfiguration>
+			</File>
+			<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Registry.txt">
+				<FileConfiguration Name="Release|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoadsDX" Description="Running Registry for ExtLoadsDX" Outputs="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></FileConfiguration>
+				<FileConfiguration Name="Debug|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtLoadsDX" Description="Running Registry for ExtLoadsDX" Outputs="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/></FileConfiguration>
+			</File>
+		</Filter>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
-			<File RelativePath="..\..\modules\extloads\src\ExtLoads_Registry.txt"/>
 			<File RelativePath="..\..\modules\extloads\src\ExtLoads_Types.f90"/>
-			<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Registry.txt"/>
 			<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Types.f90"/>
 			<File RelativePath="..\..\modules\extloads\src\ExtLoadsDX_Types.h"/>
 		</Filter>

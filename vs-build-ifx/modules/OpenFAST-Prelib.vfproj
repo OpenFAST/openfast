@@ -47,11 +47,14 @@
 		</Configuration>
 	</Configurations>
 	<Files>
-		<Filter Name="Registry Files" Filter="txt"/>
+		<Filter Name="Registry Files" Filter="txt">
+			<File RelativePath="..\..\modules\openfast-library\src\FAST_Registry.txt">
+			</File>
+			<File RelativePath="..\..\modules\openfast-library\src\Glue_Registry.txt">
+			</File>
+		</Filter>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
-			<File RelativePath="..\..\modules\openfast-library\src\FAST_Registry.txt"/>
 			<File RelativePath="..\..\modules\openfast-library\src\FAST_Types.f90"/>
-			<File RelativePath="..\..\modules\openfast-library\src\Glue_Registry.txt"/>
 			<File RelativePath="..\..\modules\openfast-library\src\Glue_Types.f90"/>
 		</Filter>
 	</Files>
