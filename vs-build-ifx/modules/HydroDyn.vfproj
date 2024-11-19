@@ -1,12 +1,12 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<VisualStudioProject ProjectType="typeStaticLibrary" ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{5ADBD025-C654-42C2-BA7C-10F3C3CEEB0E}">
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioProject Keyword="Static Library" ProjectCreator="Intel Fortran" ProjectIdGuid="{5ADBD025-C654-42C2-BA7C-10F3C3CEEB0E}" ProjectType="typeStaticLibrary" Version="11.0">
 	<Platforms>
 		<Platform Name="Win32"/>
 		<Platform Name="x64"/>
 	</Platforms>
 	<Configurations>
-		<Configuration Name="Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
-			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Debug|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
+			<Tool BoundsCheck="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="" RuntimeLibrary="rtMultiThreadedDebug" StackFrameCheck="true" SuppressStartupBanner="true" Traceback="true" UseMkl="mklSequential" WarnInterfaces="true" WarnUnusedVariables="false"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -15,8 +15,68 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration Name="Release|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Platform)\$(Configuration)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
-			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" RuntimeLibrary="rtMultiThreadedDLL"/>
+		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Debug_Double|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
+			<Tool BoundsCheck="true" DebugInformationFormat="debugEnabled" DoublePrecisionKIND="doublePrecisionKIND8" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="" RealKIND="realKIND8" RuntimeLibrary="rtMultiThreadedDebug" StackFrameCheck="true" SuppressStartupBanner="true" Traceback="true" UseMkl="mklSequential" WarnInterfaces="true" WarnUnusedVariables="false"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Debug_Matlab|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
+			<Tool BoundsCheck="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" RuntimeLibrary="rtMultiThreadedDebug" StackFrameCheck="true" SuppressStartupBanner="true" Traceback="true" UseMkl="mklSequential" WarnInterfaces="true" WarnUnusedVariables="false"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
+			<Tool MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Preprocess="preprocessYes" PreprocessorDefinitions="" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_Double|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
+			<Tool DoublePrecisionKIND="doublePrecisionKIND8" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Preprocess="preprocessYes" PreprocessorDefinitions="" RealKIND="realKIND8" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_Matlab|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
+			<Tool MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_OpenMP|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
+			<Tool EnableOpenMPSupport="OpenMPParallelCodeIFX" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode" Preprocess="preprocessYes" PreprocessorDefinitions="" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+			<Tool Name="VFLibrarianTool"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+		</Configuration>
+		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_Double_OpenMP|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
+			<Tool DoublePrecisionKIND="doublePrecisionKIND8" EnableOpenMPSupport="OpenMPParallelCodeIFX" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode" Preprocess="preprocessYes" PreprocessorDefinitions="" RealKIND="realKIND8" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -27,37 +87,191 @@
 		</Configuration>
 	</Configurations>
 	<Files>
-		<Filter Name="Registry Files" Filter="txt">
+		<Filter Filter="txt" Name="Registry Files">
 			<File RelativePath="..\..\modules\hydrodyn\src\Conv_Radiation.txt">
-				<FileConfiguration Name="Release|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/></FileConfiguration>
-				<FileConfiguration Name="Debug|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/></FileConfiguration>
+				<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
+				</FileConfiguration>
 			</File>
 			<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn.txt">
-				<FileConfiguration Name="Release|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/></FileConfiguration>
-				<FileConfiguration Name="Debug|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/></FileConfiguration>
+				<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\HydroDyn_Types.f90"/>
+				</FileConfiguration>
 			</File>
 			<File RelativePath="..\..\modules\hydrodyn\src\Morison.txt">
-				<FileConfiguration Name="Release|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/></FileConfiguration>
-				<FileConfiguration Name="Debug|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/></FileConfiguration>
+				<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\Morison_Types.f90"/>
+				</FileConfiguration>
 			</File>
 			<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.txt">
-				<FileConfiguration Name="Release|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
-				<FileConfiguration Name="Debug|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/></FileConfiguration>
+				<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Excitation_Types.f90"/>
+				</FileConfiguration>
 			</File>
 			<File RelativePath="..\..\modules\hydrodyn\src\SS_Radiation.txt">
-				<FileConfiguration Name="Release|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/></FileConfiguration>
-				<FileConfiguration Name="Debug|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/></FileConfiguration>
+				<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\SS_Radiation_Types.f90"/>
+				</FileConfiguration>
 			</File>
 			<File RelativePath="..\..\modules\hydrodyn\src\WAMIT.txt">
-				<FileConfiguration Name="Release|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/></FileConfiguration>
-				<FileConfiguration Name="Debug|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/></FileConfiguration>
+				<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT_Types.f90"/>
+				</FileConfiguration>
 			</File>
 			<File RelativePath="..\..\modules\hydrodyn\src\WAMIT2.txt">
-				<FileConfiguration Name="Release|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/></FileConfiguration>
-				<FileConfiguration Name="Debug|x64"><Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/></FileConfiguration>
+				<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Name="VFCustomBuildTool" Outputs="..\..\modules\hydrodyn\src\WAMIT2_Types.f90"/>
+				</FileConfiguration>
 			</File>
 		</Filter>
-		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Filter="f90;for;f;fpp;ftn;def;odl;idl" Name="Source Files">
 			<File RelativePath="..\..\modules\hydrodyn\src\Conv_Radiation.f90"/>
 			<File RelativePath="..\..\modules\hydrodyn\src\Conv_Radiation_Types.f90"/>
 			<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn.f90"/>

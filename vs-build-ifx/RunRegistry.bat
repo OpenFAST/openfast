@@ -90,6 +90,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\FAST_Registry.txt" %ALL_FAST_Includes% -noextrap -O "%Output_Loc%"
 GOTO checkError
 
+:Glue
+SET CURR_LOC=%FAST_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\Glue_Registry.txt" %ALL_FAST_Includes% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
 :BeamDyn
 SET CURR_LOC=%BD_Loc%
 SET Output_Loc=%CURR_LOC%
