@@ -90,54 +90,54 @@
 		<Filter Filter="txt" Name="Registry Files">
 			<File RelativePath="..\..\modules\openfast-library\src\FAST_Registry.txt">
 				<FileConfiguration Name="Debug|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Debug_Double|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Debug_Matlab|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release_Double|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release_Matlab|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release_OpenMP|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release_Double_OpenMP|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\FAST_Types.f90"/>
 				</FileConfiguration>
 			</File>
 			<File RelativePath="..\..\modules\openfast-library\src\Glue_Registry.txt">
 				<FileConfiguration Name="Debug|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Debug_Double|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Debug_Matlab|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release_Double|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release_Matlab|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release_OpenMP|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
 				</FileConfiguration>
 				<FileConfiguration Name="Release_Double_OpenMP|x64">
-					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
+					<Tool CommandLine="CALL ..\RunRegistry.bat Glue" Description="Running Registry for Glue" Name="VFCustomBuildTool" Outputs="..\..\modules\openfast-library\src\Glue_Types.f90"/>
 				</FileConfiguration>
 			</File>
 		</Filter>

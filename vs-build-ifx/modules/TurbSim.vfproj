@@ -95,7 +95,6 @@
 		</Configuration>
 	</Configurations>
 	<Files>
-		<Filter Filter="fi;fd;h;inc" Name="Header Files"/>
 		<Filter Filter="f90;for;f;fpp;ftn;def;odl;idl" Name="Source Files">
 			<File RelativePath="..\..\modules\turbsim\src\BlankModVKM.f90"/>
 			<File RelativePath="..\..\modules\turbsim\src\CohStructures.f90"/>

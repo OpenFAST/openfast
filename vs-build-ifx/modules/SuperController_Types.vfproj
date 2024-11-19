@@ -1,12 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
-<VisualStudioProject Keyword="Static Library" ProjectCreator="Intel Fortran" ProjectIdGuid="{5ADBD025-C654-42C2-BA7C-10F3C3CEEB0E}" ProjectType="typeStaticLibrary" Version="11.0">
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectType="typeStaticLibrary" ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{5ADBD025-C654-42C2-BA7C-10F3C3CEEB0E}">
 	<Platforms>
-		<Platform Name="Win32"/>
 		<Platform Name="x64"/>
 	</Platforms>
 	<Configurations>
-		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Debug|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
-			<Tool BoundsCheck="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="" RuntimeLibrary="rtMultiThreadedDebug" StackFrameCheck="true" SuppressStartupBanner="true" Traceback="true" UseMkl="mklSequential" WarnInterfaces="true" WarnUnusedVariables="false"/>
+		<Configuration Name="Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -15,8 +14,8 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Debug_Double|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
-			<Tool BoundsCheck="true" DebugInformationFormat="debugEnabled" DoublePrecisionKIND="doublePrecisionKIND8" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="" RealKIND="realKIND8" RuntimeLibrary="rtMultiThreadedDebug" StackFrameCheck="true" SuppressStartupBanner="true" Traceback="true" UseMkl="mklSequential" WarnInterfaces="true" WarnUnusedVariables="false"/>
+		<Configuration Name="Debug_Double|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" RealKIND="realKIND8" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -25,8 +24,8 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Debug_Matlab|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
-			<Tool BoundsCheck="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" RuntimeLibrary="rtMultiThreadedDebug" StackFrameCheck="true" SuppressStartupBanner="true" Traceback="true" UseMkl="mklSequential" WarnInterfaces="true" WarnUnusedVariables="false"/>
+		<Configuration Name="Debug_Matlab|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -35,8 +34,8 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
-			<Tool MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Preprocess="preprocessYes" PreprocessorDefinitions="" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+		<Configuration Name="Release|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" UseMkl="mklSequential"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -45,8 +44,8 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_Double|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
-			<Tool DoublePrecisionKIND="doublePrecisionKIND8" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Preprocess="preprocessYes" PreprocessorDefinitions="" RealKIND="realKIND8" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+		<Configuration Name="Release_Double|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" RealKIND="realKIND8" UseMkl="mklSequential"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -55,8 +54,8 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_Matlab|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
-			<Tool MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+		<Configuration Name="Release_Matlab|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" UseMkl="mklSequential"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -65,8 +64,8 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_OpenMP|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
-			<Tool EnableOpenMPSupport="OpenMPParallelCodeIFX" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode" Preprocess="preprocessYes" PreprocessorDefinitions="" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+		<Configuration Name="Release_OpenMP|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" OpenMP="OpenMPParallelCode" EnableOpenMPSupport="OpenMPParallelCodeIFX" UseMkl="mklSequential"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -75,8 +74,8 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration ConfigurationType="typeStaticLibrary" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_Double_OpenMP|x64" OutputDirectory="..\..\build\lib" UseCompiler="ifxCompiler">
-			<Tool DoublePrecisionKIND="doublePrecisionKIND8" EnableOpenMPSupport="OpenMPParallelCodeIFX" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode" Preprocess="preprocessYes" PreprocessorDefinitions="" RealKIND="realKIND8" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+		<Configuration Name="Release_Double_OpenMP|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\lib" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" ConfigurationType="typeStaticLibrary">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" OpenMP="OpenMPParallelCode" EnableOpenMPSupport="OpenMPParallelCodeIFX" RealKIND="realKIND8" UseMkl="mklSequential"/>
 			<Tool Name="VFLibrarianTool"/>
 			<Tool Name="VFResourceCompilerTool"/>
 			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -87,14 +86,41 @@
 		</Configuration>
 	</Configurations>
 	<Files>
-		<Filter Filter="fi;fd" Name="Header Files">
+		<Filter Name="Header Files" Filter="h">
 			<File RelativePath="..\..\modules\supercontroller\src\SCDataEx_Types.h"/>
 			<File RelativePath="..\..\modules\supercontroller\src\SuperController_Types.h"/>
 		</Filter>
-		<Filter Filter="f90;for;f;fpp;ftn;def;odl;idl" Name="Source Files">
-			<File RelativePath="..\..\modules\supercontroller\src\SC_DataEx_Registry.txt"/>
-			<File RelativePath="..\..\modules\supercontroller\src\SCDataEx_Types.f90"/>
+		<Filter Name="Registry Files" Filter="txt">
+			<File RelativePath="..\..\modules\supercontroller\src\SC_DataEx_Registry.txt">
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/>
+				</FileConfiguration>
+			</File>
 			<File RelativePath="..\..\modules\supercontroller\src\SuperController_Registry.txt"/>
+		</Filter>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+			<File RelativePath="..\..\modules\supercontroller\src\SCDataEx_Types.f90"/>
 			<File RelativePath="..\..\modules\supercontroller\src\SuperController_Types.f90"/>
 		</Filter>
 	</Files>

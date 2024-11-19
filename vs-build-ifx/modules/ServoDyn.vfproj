@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <VisualStudioProject Keyword="Static Library" ProjectCreator="Intel Fortran" ProjectIdGuid="{5ADBD025-C654-42C2-BA7C-10F3C3CEEB0E}" ProjectType="typeStaticLibrary" Version="11.0">
 	<Platforms>
-		<Platform Name="Win32"/>
 		<Platform Name="x64"/>
 	</Platforms>
 	<Configurations>
@@ -87,17 +86,68 @@
 		</Configuration>
 	</Configurations>
 	<Files>
-		<Filter Filter="txt" Name="Registry Files"/>
+		<Filter Filter="txt" Name="Registry Files">
+			<File RelativePath="..\..\modules\servodyn\src\ServoDyn_Registry.txt">
+				<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\ServoDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\ServoDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\ServoDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\ServoDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\ServoDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\ServoDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\ServoDyn_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\ServoDyn_Types.f90"/>
+				</FileConfiguration>
+			</File>
+			<File RelativePath="..\..\modules\servodyn\src\StrucCtrl_Registry.txt">
+				<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat StrucCtrl" Description="Running Registry for StrucCtrl" Name="VFCustomBuildTool" Outputs="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/>
+				</FileConfiguration>
+			</File>
+		</Filter>
 		<Filter Filter="f90;for;f;fpp;ftn;def;odl;idl" Name="Source Files">
 			<File RelativePath="..\..\modules\servodyn\src\BladedInterface.f90"/>
 			<File RelativePath="..\..\modules\servodyn\src\BladedInterface_EX.f90"/>
 			<File RelativePath="..\..\modules\servodyn\src\PitchCntrl_ACH.f90"/>
 			<File RelativePath="..\..\modules\servodyn\src\ServoDyn.f90"/>
 			<File RelativePath="..\..\modules\servodyn\src\ServoDyn_IO.f90"/>
-			<File RelativePath="..\..\modules\servodyn\src\ServoDyn_Registry.txt"/>
 			<File RelativePath="..\..\modules\servodyn\src\ServoDyn_Types.f90"/>
 			<File RelativePath="..\..\modules\servodyn\src\StrucCtrl.f90"/>
-			<File RelativePath="..\..\modules\servodyn\src\StrucCtrl_Registry.txt"/>
 			<File RelativePath="..\..\modules\servodyn\src\StrucCtrl_Types.f90"/>
 			<File RelativePath="..\..\modules\servodyn\src\UserSubs.f90"/>
 			<File RelativePath="..\..\modules\servodyn\src\UserVSCont_KP.f90"/>
