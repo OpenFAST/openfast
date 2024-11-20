@@ -87,7 +87,7 @@
 	</Configurations>
 	<Files>
 		<Filter Filter="txt" Name="Registry Files">
-			<File RelativePath="..\..\modules\aerodisk\src\AeroDyn_Inflow_Registry.txt">
+			<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Inflow_Registry.txt">
 				<FileConfiguration Name="Debug|x64">
 					<Tool CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Name="VFCustomBuildTool" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/>
 				</FileConfiguration>

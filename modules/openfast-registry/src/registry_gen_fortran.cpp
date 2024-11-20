@@ -107,7 +107,8 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
 
     // If this is the NWTC Library, we're not going to print "USE NWTC_Library"
     if (tolower(mod.name).compare("nwtc_library") == 0)
-        w << "USE SysSubs\n"
+        w << "USE Precision\n" 
+          << "USE SysSubs\n"
           << "USE ModReg\n";
     else
         w << "USE NWTC_Library\n";
