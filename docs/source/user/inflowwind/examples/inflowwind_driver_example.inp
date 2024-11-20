@@ -24,4 +24,11 @@ InflowWind driver input file.
    6,0,15      GridCtrCoord   -- coordinate of center of grid                          (m)
    1,1,0       GridDx,GridDY,GridDZ  -- Step size of grid                              (m)
    1,1,0       GridNx,GridNY,GridNZ  -- number of grid points in X, Y and Z directions (-)
+----  Output VTK slices  ------------------------------------------------------
+   0            NOutWindXY    -- Number of XY planes for output <RootName>.XY<loc>.t<n>.vtk (-) [0 to 9]
+   90           OutWindZ      -- Z coordinates of XY planes for output (m) [1 to NOutWindXY] [unused for NOutWindXY=0]
+   0            NOutWindXZ    -- Number of XZ planes for output <RootName>.YZ<loc>.t<n>.vtk (-) [0 to 9]
+   0            OutWindY      -- Y coordinates of XZ planes for output (m) [1 to NOutWindXZ] [unused for NOutWindXZ=0]
+   0            NOutWindYZ    -- Number of YZ planes for output <RootName>.YZ<loc>.t<n>.vtk (-) [0 to 9]
+   0            OutWindX      -- X coordinates of YZ planes for output (m) [1 to NOutWindYZ] [unused for NOutWindYZ=0]
 END of driver input file
