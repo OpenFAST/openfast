@@ -578,7 +578,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          ! Wake -- we allow the wake positions to exceed the wind box
          if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
             Init%InData_IfW%BoxExceedAllowF = .true.
-            Init%InData_IfW%BoxExceedAllowIdx = min(Init%InData_IfW%BoxExceedAllowIdx, AD_BoxExceedPointsIdx(AD%Input(1), AD%OtherSt(STATE_CURR)))
+            Init%InData_IfW%BoxExceedAllowIdx = AD_BoxExceedPointsIdx(AD%Input(1), AD%OtherSt(STATE_CURR))
          endif
       END IF
 
