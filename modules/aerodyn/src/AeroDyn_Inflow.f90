@@ -347,7 +347,7 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       ! Box exceed allow for OLAF poitns
       if (allocated(o_AD%WakeLocationPoints)) then
          InitInData%BoxExceedAllowF = .true.
-         InitInData%BoxExceedAllowIdx = min(InitInData%BoxExceedAllowIdx, AD_BoxExceedPointsIdx(u_AD, o_AD))
+         InitInData%BoxExceedAllowIdx = AD_BoxExceedPointsIdx(u_AD, o_AD)
       endif
       if (.not. i_IW%UseInputFile) then
          call NWTC_Library_Copyfileinfotype( i_IW%PassedFileData, InitInData%PassedFileData, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
