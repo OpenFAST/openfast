@@ -1047,9 +1047,9 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    
    do i=1,IfW_NumPtsAvg
       theta = pi +(i-1)*TwoPi/IfW_NumPtsAvg
-      p%PositionAvg(1,i) = R*cos(theta)
-      p%PositionAvg(2,i) = R*sin(theta)
-      p%PositionAvg(3,i) = 0.0_ReKi
+      p%PositionAvg(1,i) = 0.0_ReKi          ! Hub X (perpindicular to rotor plane)
+      p%PositionAvg(2,i) = R*cos(theta)      ! Hub Y
+      p%PositionAvg(3,i) = R*sin(theta)      ! Hub Z (in vertical plane when azimuth=0)
    end do
    
    p%OutputAccel = InitInp%OutputAccel
