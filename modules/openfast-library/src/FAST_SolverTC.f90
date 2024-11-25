@@ -1751,10 +1751,8 @@ subroutine BuildJacobianTC(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat
          associate (dUTdyT => m%Mod%Lin%dUdy(p%iUT(1):p%iUT(2), p%iyT(1):p%iyT(2)), &
                     dYTdx2 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX2(1):p%iX2(2)), &
                     dYTdx1 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX1(1):p%iX1(2)))
-            ! J21 = C1*matmul(dUTdyT, dYTdx2) + C2*matmul(dUTdyT, dYTdx1)
-            call LAPACK_GEMM('N', 'N', p%GammaPrime, dUTdyT, dYTdx2, 0.0_R8Ki, m%J21, ErrStat2, ErrMsg2); if (Failed()) return
-            call LAPACK_GEMM('N', 'N', p%BetaPrime, dUTdyT, dYTdx1, 1.0_R8Ki, m%J21, ErrStat2, ErrMsg2); if (Failed()) return
-            m%Mod%Lin%J(p%iJUT(1):p%iJUT(2), p%iJX(1):p%iJX(2)) = m%J21
+            m%Mod%Lin%J(p%iJUT(1):p%iJUT(2), p%iJX(1):p%iJX(2)) = &
+                p%GammaPrime*matmul(dUTdyT, dYTdx2) + p%BetaPrime*matmul(dUTdyT, dYTdx1)
          end associate
       end if
 
