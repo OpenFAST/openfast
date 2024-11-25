@@ -56,14 +56,15 @@ for path in Path(".").rglob("*.vfproj"):
             cfg["OutputDirectory"] = "..\\..\\build\\lib"
         elif cfg.attrs.get("ConfigurationType", "") == "typeDynamicLibrary":
             cfg["OutputDirectory"] = "..\\..\\build\\bin"
-            compiler_tool["AdditionalOptions"] = "/fpe-all:0"
-            compiler_tool["FloatingPointExceptionHandling"] = "fpe0"
+            if 'Debug' in cfg_name:
+                compiler_tool["FloatingPointExceptionHandling"] = "fpe0"
             linker_tool["StackReserveSize"] = "9999999"
         elif linker_tool != None and linker_tool["SubSystem"] == "subSystemConsole":
             cfg["OutputDirectory"] = "..\\..\\build\\bin"
-            compiler_tool["AdditionalOptions"] = "/fpe-all:0"
-            compiler_tool["FloatingPointExceptionHandling"] = "fpe0"
+            if 'Debug' in cfg_name:
+                compiler_tool["FloatingPointExceptionHandling"] = "fpe0"
             linker_tool["StackReserveSize"] = "9999999"
+            linker_tool['GenerateManifest'] = "false"
         else:
             print("unknown project type")
             continue
