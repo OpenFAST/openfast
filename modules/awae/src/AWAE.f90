@@ -1613,7 +1613,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    character(ErrMsgLen)                         :: errMsg2
    character(*), parameter                      :: RoutineName = 'AWAE_CalcOutput'
    integer(intKi)                               :: n, n_high
-   character(3)                                 :: PlaneNumStr          ! 2 digit number of the output plane
+   character(3)                                 :: PlaneNumStr          ! 3 digit number of the output plane
    CHARACTER(1024)                              :: FileName
    INTEGER(IntKi)                               :: Un                   ! unit number of opened file
 
