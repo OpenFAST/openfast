@@ -56,7 +56,7 @@ install(TARGETS openfastcpplib
 )
 
 # Build driver if requested
-if (BUILD_OPENFAST_CPP_DRIVER)
+if (BUILD_OPENFAST_CFD_DRIVER)
 
   find_package(yaml-cpp REQUIRED)
   add_executable(openfastcpp src/FAST_Prog.cpp)
