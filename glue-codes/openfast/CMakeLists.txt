@@ -33,7 +33,7 @@ endif()
 install(TARGETS openfast
   RUNTIME DESTINATION bin)
 
-if(BUILD_OPENFAST_CPP_DRIVER)
+if(BUILD_OPENFAST_LIB_DRIVER)
   add_executable(openfast_cpp_driver src/FAST_Prog.cpp src/FastLibAPI.cpp)
   target_link_libraries(openfast_cpp_driver openfastlib)
   
