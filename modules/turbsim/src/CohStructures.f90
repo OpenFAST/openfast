@@ -119,8 +119,6 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
    
    MaxEvtCTKE = 0.0  ! initialize the MAX variable
 
-   CALL GetNewUnit( Un, ErrStat2, ErrMsg2 )
-   
    CALL OpenFInpFile ( Un,  p_CohStr%CTEventFile, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_ReadEventFile')
       IF (ErrStat >= AbortErrLev) RETURN
@@ -775,13 +773,10 @@ SUBROUTINE CohStr_WriteEvents( RootName, p_CohStr, e_CohStr, y_CohStr, TScale, U
    ErrMsg  = ""
    
    UnOut = -1
-   CALL GetNewUnit( UnOut, ErrStat2, ErrMsg2 )      
+   UnIn = -1
    CALL OpenFOutFile ( UnOut, TRIM( RootName )//'.cts', ErrStat2, ErrMsg2 ) 
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteEvents' )
 
-   UnIn = -1
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-      
 
       ! Write event data to the time step output file (opened at the beginnig)
 

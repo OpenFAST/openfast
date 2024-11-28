@@ -102,9 +102,6 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    ! Open input file
    !===============================================================================================================================
 
-   CALL GetNewUnit( UI, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      
    CALL OpenFInpFile( UI, InFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
@@ -1144,7 +1141,6 @@ IMPLICIT         NONE
 
 
    ! Open summary file.
-CALL GetNewUnit( US, ErrStat, ErrMsg )
 CALL OpenFOutFile( US, TRIM( RootName )//'.sum', ErrStat, ErrMsg ) ! Formatted output file
 if (ErrStat >= AbortErrLev) then
    US = -1
@@ -1205,8 +1201,6 @@ SUBROUTINE GetUSRProfiles(FileName, p_met, UnEc, ErrStat, ErrMsg)
    ErrMsg  = ""
    
    U_in = -1
-   CALL GetNewUnit( U_in, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL OpenFInpFile( U_in, FileName, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
@@ -1401,9 +1395,6 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    
       ! --------- Open the file ---------------
 
-   CALL GetNewUnit( USpec, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
-      
    CALL OpenFInpFile( USpec, FileName, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
@@ -1595,9 +1586,6 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    
       ! --------- Open the file ---------------
 
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
-      
    CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
@@ -2119,7 +2107,6 @@ END IF
 
    IF ( p%WrFile(FileExt_WND) )  THEN
 
-      CALL GetNewUnit( UBFFW )
       CALL OpenBOutFile ( UBFFW, TRIM(p%RootName)//'.wnd', ErrStat, ErrMsg )
       IF (ErrStat >= AbortErrLev) RETURN
       
@@ -2188,7 +2175,6 @@ END IF
       
       IF ( p%WrFile(FileExt_TWR) ) THEN
                            
-         CALL GetNewUnit( UATWR, ErrStat, ErrMsg )
          CALL OpenBOutFile ( UATWR, TRIM( p%RootName )//'.twr', ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
          
@@ -2369,7 +2355,6 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
    CALL WrScr ( ' Generating AeroDyn binary time-series file "'//TRIM( p%RootName )//'.bts"' )
    
-   CALL GetNewUnit(UAFFW, ErrStat, ErrMsg)
    CALL OpenBOutFile ( UAFFW, TRIM(p%RootName)//'.bts', ErrStat, ErrMsg )
    IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2483,10 +2468,6 @@ SUBROUTINE WrBinHAWC( p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    
    ErrStat = ErrID_None
    ErrMsg = ""
-   
-   CALL GetNewUnit( UnWind, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
-      IF (ErrStat >= AbortErrLev) RETURN
    
       ! calculate factors (for workaround in HAWC2); factor = Target / actual
    ScaleFactors = (/ USig, VSig, WSig /)
@@ -2607,8 +2588,6 @@ CHARACTER(ErrMsgLen)         :: ErrMsg
       ! Allocate the array of wind speeds.
 
       
-   CALL GetNewUnit(UFFF)
-
    DO IVec=1,3
 
       CALL WrScr ( ' Generating full-field formatted file "'//TRIM(RootName)//'.'//Comp(IVec)//'".' )
@@ -3017,7 +2996,6 @@ SUBROUTINE WrHH_ADtxtfile(p, V, TurbInt, ErrStat, ErrMsg)
    
    
 
-   CALL GetNewUnit( UAHH, ErrStat, ErrMsg)
    CALL OpenFOutFile ( UAHH, TRIM( p%RootName)//'.hh', ErrStat, ErrMsg )
    IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3083,8 +3061,6 @@ SUBROUTINE WrHH_binary(p, V, ErrStat, ErrMsg)
 
 
 
-   CALL GetNewUnit(UGTP, ErrStat, ErrMsg)
-   
    CALL OpenUOutfile ( UGTP , TRIM( p%RootName)//'.bin', ErrStat, ErrMsg ) 
    IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3139,7 +3115,6 @@ SUBROUTINE WrHH_text(p, V, ErrStat, ErrMsg)
    
    ! p%WrFile(FileExt_DAT)
 
-   CALL GetNewUnit( UFTP, ErrStat, ErrMsg )
    CALL OpenFOutFile ( UFTP, TRIM( p%RootName)//'.dat', ErrStat, ErrMsg )
    IF (ErrStat >= AbortErrLev) RETURN
 

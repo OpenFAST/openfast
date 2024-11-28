@@ -296,8 +296,6 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
 IF ( COH_OUT ) THEN !debugging info...
 
       ! Write the coherence for three frequencies, for debugging purposes
-      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
-      
       CALL OpenFOutFile( UC, TRIM(p%RootName)//'.coh', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
          IF (ErrStat >= AbortErrLev) THEN
@@ -600,8 +598,6 @@ REAL :: A_Y, A_Z
 IF ( COH_OUT ) THEN !debugging info...
 
       ! Write the coherence for three frequencies, for debugging purposes
-      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-      
       CALL OpenFOutFile( UC, TRIM(p%RootName)//'.coh', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
          IF (ErrStat >= AbortErrLev) THEN
@@ -1195,8 +1191,6 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          
    !IF (PSD_OUT) THEN
    !   UP = -1
-   !   CALL GetNewUnit( UP, ErrStat2, ErrMsg2 )
-   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !   CALL OpenFOutFile ( UP, TRIM( p%RootName )//'.psd', ErrStat2, ErrMsg2)
    !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !      IF (ErrStat >= AbortErrLev) THEN
@@ -2149,7 +2143,6 @@ END IF
    ! Mention the files in the summary file.
 
 IF ( ANY (p%WrFile) )  THEN
-   CALL GetNewUnit( UnOut )
 
    WRITE (p%US,"( // 'You have requested that the following file(s) be generated:' / )")
 
