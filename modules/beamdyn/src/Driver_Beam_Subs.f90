@@ -101,7 +101,6 @@ module BeamDyn_driver_subs
    ErrMsg  = ""
    UnEc = -1
    
-   CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2);   if (Failed())  return;
    CALL OpenFInpFile(UnIn,DvrInputFile,ErrStat2,ErrMsg2);   if (Failed())  return;
       
       
@@ -261,7 +260,6 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
    ErrStat = ErrID_none
    ErrMsg  = ""
    
-   CALL GetNewUnit(OutUnit,ErrStat2,ErrMsg2)
    CALL OpenFOutFile ( OutUnit, trim(RootName)//'.out', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
