@@ -73,10 +73,6 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    CHARACTER(100)               :: strModDescr
    
    ! Open the summary file and give it a heading.
-   
-   CALL GetNewUnit( UnSum, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) RETURN
-
    CALL OpenFOutFile ( UnSum, TRIM( farm%p%OutFileRoot )//'.sum', ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
@@ -267,9 +263,6 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
    !......................................................
 
   ! IF (farm%p%WrTxtOutFile) THEN
-
-      CALL GetNewUnit( farm%p%UnOu, ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) RETURN
 
       CALL OpenFOutFile ( farm%p%UnOu, TRIM(farm%p%OutFileRoot)//'.out', ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
