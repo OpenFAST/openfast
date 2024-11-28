@@ -196,7 +196,6 @@ PROGRAM MAIN
    
    ! Open output file
    OutFileName = Trim(IceD_parameter%RootName)//'.txt'
-   CALL GetNewUnit (Un)
    CALL OpenFOutFile (Un, OutFileName, ErrStat, ErrMsg)
       CALL CheckError()
       
