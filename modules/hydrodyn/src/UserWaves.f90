@@ -75,9 +75,6 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
    ErrMsg   =  ""
 
 
-      ! Get a unit number for reading in the file
-   CALL GetNewUnit( WaveElevUnit )
-
       ! Assemble the filename for the wave elevation data.
    WaveElevData%FileName   =  TRIM(InitInp%WvKinFile)//'.Elev'
 
@@ -760,8 +757,6 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 
    ! Read the first file and set the initial values of the 
-   
-   CALL GetNewUnit( UnWv )
 
    FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(1))
    
@@ -807,8 +802,6 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ! Now read the remaining files and check that the elements are consistent with the first file
    DO iFile = 2,7
       
-      CALL GetNewUnit( UnWv )
-
       FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(iFile))
    
       CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
@@ -879,7 +872,6 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    
    ! WaveElev
    IF ( InitInp%NWaveElev > 0 ) THEN
-      CALL GetNewUnit( UnWv )
 
       FileName = TRIM(InitInp%WvKinFile) // '.Elev'
    

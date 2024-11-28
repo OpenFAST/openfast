@@ -205,7 +205,6 @@ PROGRAM HydroDynDriver
    IF ( drvrInitInp%PRPInputsMod == 2 ) THEN
       
          ! Open the PRP inputs data file
-      CALL GetNewUnit( UnPRPInp ) 
       CALL OpenFInpFile ( UnPRPInp, drvrInitInp%PRPInputsFile, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) THEN
             call WrScr( ErrMsg )
@@ -240,7 +239,6 @@ PROGRAM HydroDynDriver
       
       NBODY = -drvrInitInp%PRPInputsMod
          ! Open the WAMIT inputs data file
-      CALL GetNewUnit( UnPRPInp ) 
       CALL OpenFInpFile ( UnPRPInp, drvrInitInp%PRPInputsFile, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) THEN
             call WrScr( ErrMsg )
@@ -655,7 +653,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    
    FileName = TRIM(inputFile)
    
-   CALL GetNewUnit( UnIn ) 
    CALL OpenFInpFile ( UnIn, FileName, ErrStat, ErrMsg ) 
       IF (ErrStat >=AbortErrLev) THEN
          call WrScr( ErrMsg )
@@ -706,7 +703,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    IF ( InitInp%Echo ) THEN
       
       EchoFile = TRIM(FileName)//'.ech'
-      CALL GetNewUnit( UnEchoLocal )   
       CALL OpenEcho ( UnEchoLocal, EchoFile, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
          !ErrMsg  = ' Failed to open Echo file.'
@@ -1126,7 +1122,6 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, HDynInitInp, HDynInitOut, HDyn_p, E
 
       ! If we calculated the wave elevation at a set of coordinates for use with making movies, put it into an output file
    WaveElevFileName  =  TRIM(drvrInitInp%OutRootName)//".WaveElev.out"
-   CALL GetNewUnit( WaveElevFileUn )
 
    CALL OpenFOutFile( WaveElevFileUn, WaveElevFileName, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None) THEN 
