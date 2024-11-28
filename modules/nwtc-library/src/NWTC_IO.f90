@@ -24,6 +24,10 @@ MODULE NWTC_IO
    USE NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
    USE IEEE_ARITHMETIC
 
+#ifdef _OPENMP
+   use OMP_LIB
+#endif
+
    IMPLICIT  NONE
 
 !=======================================================================
