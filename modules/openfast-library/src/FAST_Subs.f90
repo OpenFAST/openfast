@@ -2280,9 +2280,6 @@ end do
          y_FAST%OutFmt_a = trim(y_FAST%OutFmt_a)//','//trim(num2lstr(y_FAST%ActualChanLen - p_FAST%FmtWidth))//'x'
       end if
 
-      CALL GetNewUnit( y_FAST%UnOu, ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
       CALL OpenFOutFile ( y_FAST%UnOu, TRIM(p_FAST%OutFileRoot)//'.out', ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -2413,14 +2410,7 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
 
-      ! Get an available unit number for the file.
-
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      ! Open the Primary input file.
-
+   ! Open the Primary input file.
    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if ( ErrStat >= AbortErrLev ) then
@@ -3927,11 +3917,7 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER                 :: NotUsedTxt = " [not called]"       ! text written if a module is not called
    CHARACTER(ChanLen)                      :: ChanTxt(2)                         ! temp strings to help with formatting with unknown ChanLen size
 
-      ! Get a unit number and open the file:
-
-   CALL GetNewUnit( y_FAST%UnSum, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
+   ! Get a unit number and open the file:
    CALL OpenFOutFile ( y_FAST%UnSum, TRIM(p_FAST%OutFileRoot)//'.sum', ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -6173,7 +6159,6 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
 
       ! Open the binary output file:
    unOut=-1
-   CALL GetNewUnit( unOut, ErrStat, ErrMsg )
    CALL OpenBOutFile ( unOut, TRIM(FileName), ErrStat, ErrMsg )
       IF (ErrStat /= ErrID_None) RETURN
 
@@ -6252,8 +6237,6 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_
 
       ! Open the binary output file and write a header:
    if (unOut<0) then
-      CALL GetNewUnit( unOut, ErrStat, ErrMsg )
-
       CALL OpenBOutFile ( unOut, TRIM(FileName), ErrStat, ErrMsg )
          IF (ErrStat /= ErrID_None) RETURN
 
@@ -7045,7 +7028,6 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
 
    IF ( unOut < 0 ) THEN
 
-      CALL GetNewUnit( unOut, ErrStat2, ErrMsg2 )
       CALL OpenBOutFile ( unOut, FileName, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev ) then
@@ -7212,8 +7194,6 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    IF (PRESENT(Unit)) unIn = Unit
 
    IF ( unIn < 0 ) THEN
-
-      CALL GetNewUnit( unIn, ErrStat2, ErrMsg2 )
 
       CALL OpenBInpFile ( unIn, FileName, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -7616,9 +7596,7 @@ SUBROUTINE ReadModeShapeMatlabFile(p_FAST, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      !  Open data file.
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-
+   !  Open data file.
    CALL OpenBInpFile ( UnIn, trim(p_FAST%VTK_modes%MatlabFileName), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
@@ -7742,9 +7720,7 @@ SUBROUTINE ReadModeShapeFile(p_FAST, InputFile, ErrStat, ErrMsg, checkpointOnly)
 
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
-      !  Open data file.
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-
+   !  Open data file.
    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
