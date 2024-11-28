@@ -341,8 +341,6 @@ SUBROUTINE MeshMapWrBin( UnIn, Src, Dest, MeshMap, ErrStat, ErrMsg, FileName )
    MatInFile= 0
    
    IF (UnIn < 0) THEN
-      CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-
       CALL OpenBOutFile ( UnIn, TRIM(FileName), ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
@@ -1962,7 +1960,6 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
                
 #ifdef DEBUG_MESHMAPPING
                   ! output some mesh information for debugging
-               CALL GetNewUnit(Un,ErrStat2,ErrMsg2)
                DebugFileName='FAST_Meshes.'//trim(num2Lstr(Un))//'.dbg'
                CALL OpenFOutFile(Un,DebugFileName,ErrStat2,ErrMsg2)
                IF (ErrStat2 >= AbortErrLev) RETURN
