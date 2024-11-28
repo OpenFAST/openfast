@@ -938,7 +938,6 @@ IF (ErrStat >= AbortErrLev) RETURN
     
     ! Open the MAP input file
     Un = -1  
-    CALL GetNewUnit( Un, ErrStat, ErrMsg )
     CALL OpenFInpFile ( Un, file, ErrStat, ErrMsg )
     IF ( ErrStat >= AbortErrLev )RETURN
 
