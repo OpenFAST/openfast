@@ -24,7 +24,7 @@
 module iceLog
 
    use NWTC_Base
-   use NWTC_IO, only : GetNewUnit, OpenFOutFile, conv2uc, progwarn, progabort, NewLine
+   use NWTC_IO, only : OpenFOutFile, conv2uc, progwarn, progabort, NewLine
 
    implicit none
 
@@ -89,11 +89,6 @@ contains
       INTEGER(IntKi)    :: Err        
       CHARACTER(msgLen) :: Msg         
 
-      call GetNewUnit ( iceLog%UnitNum, Err, Msg )
-      if (Err >= ErrID_Severe) then
-         iceLog%ErrMsg = 'OpenIceLog: '//newLine//trim(Msg)
-         return
-      endif
       if (present(logFile)) then
          call OpenFOutFile ( iceLog%unitNum, logFile, Err, Msg )
       else
