@@ -25,7 +25,6 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! Open file
-   CALL GetNewUnit( UnIn )   
    CALL OpenFInpfile(UnIn, TRIM(FileName), ErrStat2, ErrMsg2)
    if (Check( ErrStat2 /= ErrID_None , 'Could not open input file')) return
    CALL GetPath( FileName, PriPath )    ! Input files will be relative to the path where the primary input file is located.

@@ -61,7 +61,6 @@ module UA_Dvr_Subs
       ErrMsg      = ''
       FileName = trim(inputFile)
    
-      call GetNewUnit( UnIn )   
       call OpenFInpFile( UnIn, FileName, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev) then
@@ -110,7 +109,6 @@ module UA_Dvr_Subs
       if ( InitInp%Echo ) then
       
          EchoFile = TRIM(FileName)//'.ech'
-         call GetNewUnit( UnEchoLocal )   
          call OpenEcho ( UnEchoLocal, EchoFile, errStat2, errMsg2 )
             call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
             if (ErrStat >= AbortErrLev) then
@@ -431,7 +429,6 @@ module UA_Dvr_Subs
       
       FileName = trim(inputsFile)
       
-      call GetNewUnit( UnIn )   
       call OpenFInpFile( UnIn, FileName, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev) then
@@ -682,10 +679,6 @@ module UA_Dvr_Subs
          call kernelSmoothing(tab%alpha, tab%Coefs(:,AFI_Params%ColCl), kernelType_TRIWEIGHT, 2.0_ReKi*D2R, cl_smooth)
 
          ! Write to file
-
-         CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None ) RETURN
-
          CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.UA.Coefs.'//trim(num2lstr(iTab))//'.out', ErrStat, ErrMsg )
             if (ErrStat >= AbortErrLev) then
                call WrScr(Trim(ErrMsg))

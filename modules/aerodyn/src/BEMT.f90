@@ -2400,7 +2400,6 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
    DEBUG_BLADENODE = 23 !max(1, size(u%Vx,1) / 2 )
    
    if (DEBUG_nStep == 1) then
-      call GetNewUnit(DEBUG_FILE_UNIT, ErrStat, ErrMsg )
       call OpenFOutFile ( DEBUG_FILE_UNIT, "CheckBEMT.inputs.out", ErrStat, ErrMsg )
       
       WRITE(DEBUG_FILE_UNIT,'(A7,200(1x,A15))') "Step","IsGeomPhi","Time", "GeomPhi", "phi" &
@@ -2439,7 +2438,6 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
    ! now write the residual function to a separate file:
    if ((DEBUG_nStep >= 0).AND.(DEBUG_nStep <= 450000).AND.(MOD(DEBUG_nStep,25) == 0)) then
                                              
-      call GetNewUnit( UnOut, ErrStat, ErrMsg )
       call OpenFOutFile ( UnOut, "CheckBEMT.residual."//trim(num2lstr(DEBUG_nStep))//".out", ErrStat, ErrMsg )
       !WRITE(UnOut, '(2(A15,1x),A2,5(1x,A15))') 'phi', 'residual', 'OK', 'AxialInd', 'TangentialInd', 'k', 'kp'
 

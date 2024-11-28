@@ -131,7 +131,6 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrS
    ErrStat = ErrID_None
    ErrMsg  = ''
    ! ---
-   call GetNewUnit(iUnit)
    call OpenFInpFile(iUnit, CirculationFileName, errStat2, errMsg2); if(Failed()) return
    nLines=line_count(iUnit)-1
    ! Read Header

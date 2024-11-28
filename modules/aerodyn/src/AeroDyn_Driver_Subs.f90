@@ -1447,11 +1447,6 @@ subroutine Dvr_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
             else
                sWT = ''
             endif
-            call GetNewUnit(out%unOutFile(iWT), errStat, errMsg)
-            if ( errStat >= AbortErrLev ) then
-               out%unOutFile(iWT) = -1
-               return
-            end if
             call OpenFOutFile ( out%unOutFile(iWT), trim(out%Root)//trim(sWT)//'.out', errStat, errMsg )
             if ( errStat >= AbortErrLev ) return
             write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
@@ -1714,7 +1709,6 @@ subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, p
    endif
 
    ! Open file
-   call GetNewUnit(UnIn) 
    call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); if(Failed()) return 
    ! Count number of lines
    nLine = line_count(UnIn)

@@ -1328,9 +1328,6 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    p%Delim   =''
    
    if (p%NumOuts > 0) then
-      CALL GetNewUnit( p%unOutFile, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
       CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.UA.out', ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -3685,9 +3682,6 @@ subroutine UA_WriteAFIParamsToFile(InitInp, AFInfo, ErrStat, ErrMsg)
    ChanName(i) = 'c_Rate';           ChanUnit(i) = '(-/rad)';    i = i+1;
    ChanName(i) = 'c_RateUpper';      ChanUnit(i) = '(-/rad)';    i = i+1;
       
-   CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) RETURN
-
    CALL OpenFOutFile ( unOutFile, trim(InitInp%OutRootName)//'.UA.sum', ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
