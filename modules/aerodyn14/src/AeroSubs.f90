@@ -59,10 +59,6 @@ SUBROUTINE AD14_GetInput(InitInp, P, x, xd, z, m, y, ErrStat, ErrMess )
    ErrStat = ErrID_None
    ErrMess = ''
    
-      ! Function definition
-
-   call GetNewUnit(UnIn, ErrStatLcl, ErrMessLcl)
-
    !-------------------------------------------------------------------------------------------------
    ! Open the AeroDyn input file
    !-------------------------------------------------------------------------------------------------
@@ -747,9 +743,6 @@ END SUBROUTINE AD14_GetInput
    ErrStat = ErrID_None
    ErrMess = ""
 
-   ! Function definition
-
-   CALL GetNewUnit( UnOut, ErrStat, ErrMess )
    CALL OpenFOutFile( UnOut, FileName, ErrStatLcl, ErrMessLcl)
       CALL SetErrStat(ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,'ADOut' )
       IF ( ErrStat >= AbortErrLev )  THEN
@@ -1026,7 +1019,6 @@ CHARACTER(1024)              :: LINE
    ErrStat = ErrID_None
    ErrMess = ""
 
-   CALL GetNewUnit(NUNIT, ErrStat, ErrMess) 
    p%AirFoil%NumCL    = 0
 
  ! The first loop checks existence and file length to set NumCL
@@ -1372,7 +1364,7 @@ END SUBROUTINE READFL
 !====================================================================================================
    IMPLICIT                      NONE
       ! Passed Variables:
-   INTEGER,                      INTENT(IN)     :: UnIn
+   INTEGER,                        INTENT(INOUT)  :: UnIn
    TYPE(AD14_InitInputType),       INTENT(INOUT)  :: InitInp
    TYPE(AD14_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
    TYPE(AD14_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
@@ -4465,7 +4457,7 @@ END SUBROUTINE infupdt
 
    INTEGER                    :: i
    INTEGER                    :: NumOut
-   INTEGER, PARAMETER         :: UnDyn = 80
+   INTEGER                    :: UnDyn
 
    CHARACTER(50)              :: Frmt
 
