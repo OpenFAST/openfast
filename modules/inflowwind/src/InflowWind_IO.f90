@@ -431,16 +431,16 @@ subroutine UniformWind_AllocArrays(UF, ErrStat, ErrMsg)
 end subroutine
 
 !> Uniform_WriteHH writes a Uniform field hub-height wind file.
-subroutine Uniform_WriteHH(UF, FileRootName, unit, ErrStat, ErrMsg)
+subroutine Uniform_WriteHH(UF, FileRootName, ErrStat, ErrMsg)
 
    type(UniformFieldType), intent(in)  :: UF             !< Parameter
    character(*), intent(in)            :: FileRootName   !< RootName for output files
-   integer(IntKi), intent(in)          :: Unit           !< Indicates whether an error occurred (see NWTC_Library)
    integer(IntKi), intent(out)         :: ErrStat        !< Error status of the operation
    character(*), intent(out)           :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
    character(*), parameter             :: RoutineName = 'Uniform_WriteHH'
    integer(IntKi)                      :: i
+   integer(IntKi)                      :: Unit           !< unit number of file to open
    integer(IntKi)                      :: ErrStat2
    character(ErrMsgLen)                :: ErrMsg2
 
@@ -516,11 +516,6 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
    ! Open the binary wind file and read header
    !----------------------------------------------------------------------------
-
-   ! Get a unit number to use for the wind file
-   call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
 
    ! Open binary file
    call OpenBInpFile(WindFileUnit, TRIM(InitInp%WindFileName), TmpErrStat, TmpErrMsg)
@@ -883,11 +878,6 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
               TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2))// &
               ' m above ground) with a characteristic wind speed of '//TRIM(Num2LStr(G3D%MeanWS))//' m/s. ')
 
-   ! Get a unit number to use for the wind file
-   call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
    ! Loop through wind components (X, Y, Z)
    do IC = 1, G3D%NComp
 
@@ -1131,11 +1121,6 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
       BinFileName = InitInp%WindFileName
    end if
 
-   ! Get a unit number to use
-   call GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
    !----------------------------------------------------------------------------
    ! Open the binary file, read its "header" (first 2-byte integer) to
    ! determine what format binary file it is, and close it.
@@ -1279,7 +1264,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
          ! Double check that the tower file exists and read it.  If it was requested but doesn't exist,
          ! throw fatal error and exit.
          if (Exists) then
-            call Bladed_ReadTower(UnitWind, G3D, TwrFile, TmpErrStat, TmpErrMsg)
+            call Bladed_ReadTower(G3D, TwrFile, TmpErrStat, TmpErrMsg)
             call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) then
                close (UnitWind)
@@ -1424,7 +1409,6 @@ end subroutine IfW_Bladed_Init
 
 subroutine Bladed_ReadTurbSimSummary(UnitWind, FileName, CWise, ZCenter, TI, UBar, RefHt, Periodic, LHR, ErrStat, ErrMsg)
 
-   integer(IntKi), intent(in)    :: UnitWind       !< unit number for the file to open
    character(*), intent(in)      :: FileName       !< name of the summary file
    logical, intent(out)          :: CWise          !< rotation (for reading the order of the binary data)
    real(ReKi), intent(out)       :: ZCenter        !< the height at the center of the grid
@@ -1445,6 +1429,7 @@ subroutine Bladed_ReadTurbSimSummary(UnitWind, FileName, CWise, ZCenter, TI, UBa
    integer(IntKi)                :: I              ! A loop counter
    integer(IntKi)                :: LastIndx       ! The last  character of a line where data is located
    integer(IntKi)                :: LineCount      ! Number of lines that have been read in the file
+   integer(IntKi)                :: UnitWind       !< unit number for the file to open
    logical                       :: StrNeeded(NumStrings)   ! if the string has been found
    character(1024)               :: LINE           ! temporary storage for reading a line from the file
 
@@ -2204,9 +2189,8 @@ subroutine Bladed_ReadGrids(UnitWind, NativeBladedFmt, CWise, LHR, TI, G3D, ErrS
 
 end subroutine Bladed_ReadGrids
 
-subroutine Bladed_ReadTower(UnitWind, G3D, TwrFileName, ErrStat, ErrMsg)
+subroutine Bladed_ReadTower(G3D, TwrFileName, ErrStat, ErrMsg)
 
-   integer(IntKi)                         :: UnitWind       !< unit number of wind file to be opened
    type(Grid3DFieldType), intent(inout)   :: G3D            !< Parameters
    character(*), intent(in)               :: TwrFileName
    integer(IntKi), intent(out)            :: ErrStat        !< error status return value (0=no error; non-zero is error)
@@ -2225,6 +2209,7 @@ subroutine Bladed_ReadTower(UnitWind, G3D, TwrFileName, ErrStat, ErrMsg)
    real(ReKi), parameter      :: FF_Offset(3) = (/1.0, 0.0, 0.0/)  ! used for "un-normalizing" the data
    real(ReKi), parameter      :: TOL = 1E-4     ! tolerence for wind file comparisons
    integer(IntKi)             :: IC, IT         ! loop counters
+   integer(IntKi)             :: UnitWind       ! unit number for file reading
    real(SiKi)                 :: TI(3)          ! scaling values for "un-normalizing the data" [approx. turbulence intensities of the wind components]
    integer(B2Ki), allocatable :: raw_twr(:, :)  ! holds tower velocity for one timestep
    type(HeaderType)           :: header
@@ -2610,17 +2595,16 @@ subroutine Grid3D_ValidateInput(InitInp, NComp, ErrStat, ErrMsg)
 
 end subroutine
 
-subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
+subroutine Grid3D_WriteBladed(G3D, FileRootName, ErrStat, ErrMsg)
 
    type(Grid3DFieldType), intent(in)  :: G3D             !< Parameters
    character(*), intent(in)           :: FileRootName    !< Name of the file to write the output in
-   integer(IntKi), intent(in)         :: Unit            !< Indicates whether an error occurred (see NWTC_Library)
    integer(IntKi), intent(out)        :: ErrStat         !< Indicates whether an error occurred (see NWTC_Library)
    character(*), intent(out)          :: ErrMsg          !< Error message associated with the ErrStat
 
    character(*), parameter       :: RoutineName = 'Grid3D_WriteBladed'
    real(SiKi), parameter         :: Tolerance = 0.0001   ! The largest difference between two numbers that are assumed to be equal
-   integer(IntKi)                :: ic, it, iy, iz
+   integer(IntKi)                :: ic, it, iy, iz, unit
    real(SiKi), allocatable       :: MeanVal(:, :)
    real(SiKi), allocatable       :: SigmaGrid(:, :)
    real(SiKi)                    :: TI(3)                !< array containing turbulence intensity (for scaling factors)
@@ -2786,11 +2770,10 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
 
 end subroutine Grid3D_WriteBladed
 
-subroutine Grid3D_WriteVTK(G3D, FileRootName, unit, ErrStat, ErrMsg)
+subroutine Grid3D_WriteVTK(G3D, FileRootName, ErrStat, ErrMsg)
 
    type(Grid3DFieldType), intent(in)   :: G3D            !< Parameters
    character(*), intent(in)            :: FileRootName   !< RootName for output files
-   integer(IntKi), intent(in)           :: unit           !< Error status of the operation
    integer(IntKi), intent(out)          :: ErrStat        !< Error status of the operation
    character(*), intent(out)            :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -2800,6 +2783,7 @@ subroutine Grid3D_WriteVTK(G3D, FileRootName, unit, ErrStat, ErrMsg)
    integer                                :: i
    integer                                :: iy
    integer                                :: iz
+   integer(IntKi)                         :: unit         ! unit number for file writing
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
 
@@ -2843,11 +2827,10 @@ subroutine Grid3D_WriteVTK(G3D, FileRootName, unit, ErrStat, ErrMsg)
 
 end subroutine Grid3D_WriteVTK
 
-subroutine Grid3D_WriteHAWC(G3D, FileRootName, unit, ErrStat, ErrMsg)
+subroutine Grid3D_WriteHAWC(G3D, FileRootName, ErrStat, ErrMsg)
 
    character(*), intent(in)            :: FileRootName   !< Name of the file to write the output in
    type(Grid3DFieldType), intent(in)   :: G3D            !< Parameters
-   integer(IntKi), intent(in)          :: unit           !< Error status of the operation
    integer(IntKi), intent(out)         :: ErrStat        !< Indicates whether an error occurred (see NWTC_Library)
    character(*), intent(out)           :: ErrMsg         !< Error message associated with the ErrStat
 
@@ -2855,6 +2838,7 @@ subroutine Grid3D_WriteHAWC(G3D, FileRootName, unit, ErrStat, ErrMsg)
    character(*), parameter       :: Comp(3) = (/'u', 'v', 'w'/)
    real(ReKi)                    :: delta(3)
    integer(IntKi)                :: IC, IX, IY, IZ
+   integer(IntKi)                :: unit                 ! unit number for file writing
    real(SiKi), allocatable       :: MeanVal(:)
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2

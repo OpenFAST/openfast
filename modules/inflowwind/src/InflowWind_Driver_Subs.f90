@@ -737,7 +737,6 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    FileName = TRIM(DvrFileName)
 
-   CALL GetNewUnit( UnIn )
    CALL OpenFInpFile( UnIn, FileName, ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp /= ErrID_None ) THEN
       CALL SetErrStat(ErrID_Fatal,' Failed to open InflowWind Driver input file: '//FileName,   &
@@ -787,7 +786,6 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    IF ( EchoFileContents ) THEN
 
       EchoFileName = TRIM(FileName)//'.ech'
-      CALL GetNewUnit( UnEchoLocal )
       CALL OpenEcho ( UnEchoLocal, EchoFileName, ErrStatTmp, ErrMsgTmp, ProgInfo )
       IF ( ErrStatTmp /= ErrID_None ) THEN
          CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
@@ -1823,7 +1821,6 @@ SUBROUTINE ReadPointsFile( PointsFileName, CoordList, ErrStat, ErrMsg )
 
 
       ! Now open file
-   CALL GetNewUnit(    FiUnitPoints )
    CALL OpenFInpFile(   FiUnitPoints,  TRIM(PointsFileName), ErrStatTmp, ErrMsgTmp )   ! Unformatted input file
    IF ( ErrStatTmp >= AbortErrLev ) THEN
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'ReadPointsFile')
@@ -2319,7 +2316,6 @@ SUBROUTINE WindGridVel_OutputWrite (OutFile, Settings, GridXYZ, GridVel, TIME, E
       ! If it hasn't been initially written to, do this then exit. Otherwise set a few things and continue.
    IF ( .NOT. OutFile%Initialized ) THEN
 
-      CALL GetNewUnit( OutFile%Unit )
       CALL OpenFOutFile( OutFile%Unit, TRIM(OutFile%Name), ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WindGridVel_OutputWrite' )
       IF ( ErrStat >= AbortErrLev ) RETURN
@@ -2389,7 +2385,6 @@ SUBROUTINE PointData_OutputWrite (OutFile, Settings, GridXYZ, GridVel, GridAcc, 
       ! If it hasn't been initially written to, do this then exit. Otherwise set a few things and continue.
    IF ( .NOT. OutFile%Initialized ) THEN
 
-      CALL GetNewUnit( OutFile%Unit )
       CALL OpenFOutFile( OutFile%Unit, TRIM(OutFile%Name), ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'PointData_OutputWrite' )
       IF ( ErrStat >= AbortErrLev ) RETURN
@@ -2445,24 +2440,18 @@ subroutine IfW_WriteUniform(FF, FileRootName, ErrStat, ErrMsg)
 
    character(*), parameter          :: RoutineName = "IfW_WriteUniform"
    type(UniformFieldType)           :: UF
-   integer(IntKi)                   :: unit
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Get new unit for writing file
-   call GetNewUnit(unit, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
    ! Switch based on field type
    select case (FF%FieldType)
 
    case (Uniform_FieldType)
 
-      call Uniform_WriteHH(FF%Uniform, FileRootName, unit, ErrStat2, ErrMsg2)
+      call Uniform_WriteHH(FF%Uniform, FileRootName, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    case (Grid3D_FieldType)
@@ -2470,7 +2459,7 @@ subroutine IfW_WriteUniform(FF, FileRootName, ErrStat, ErrMsg)
       call Grid3D_to_Uniform(FF%Grid3D, UF, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat < AbortErrLev) then
-         call Uniform_WriteHH(UF, FileRootName, unit, ErrStat2, ErrMsg2)
+         call Uniform_WriteHH(UF, FileRootName, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
 
@@ -2492,14 +2481,8 @@ subroutine IfW_WriteHAWC(FF, FileRootName, ErrStat, ErrMsg)
 
    character(*), parameter          :: RoutineName = "IfW_Convert2HAWC"
    type(Grid3DFieldType)            :: G3D
-   integer(IntKi)                   :: unit
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
-
-   ! Get new unit for writing file
-   call GetNewUnit(unit, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
 
    ! Switch based on field type
    select case (FF%FieldType)
@@ -2509,13 +2492,13 @@ subroutine IfW_WriteHAWC(FF, FileRootName, ErrStat, ErrMsg)
       call Uniform_to_Grid3D(FF%Uniform, FF%VelInterpCubic, G3D, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat < AbortErrLev) then
-         call Grid3D_WriteHAWC(G3D, FileRootName, unit, ErrStat2, ErrMsg2)
+         call Grid3D_WriteHAWC(G3D, FileRootName, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
 
    case (Grid3D_FieldType)
 
-      call Grid3D_WriteHAWC(FF%Grid3D, FileRootName, unit, ErrStat, ErrMsg)
+      call Grid3D_WriteHAWC(FF%Grid3D, FileRootName, ErrStat, ErrMsg)
 
    case default
 
@@ -2543,11 +2526,6 @@ subroutine IfW_WriteBladed(FF, FileRootName, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Get new unit for writing file
-   call GetNewUnit(unit, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
    ! Switch based on field type
    select case (FF%FieldType)
 
@@ -2556,13 +2534,13 @@ subroutine IfW_WriteBladed(FF, FileRootName, ErrStat, ErrMsg)
       call Uniform_to_Grid3D(FF%Uniform, FF%VelInterpCubic, G3D, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat < AbortErrLev) then
-         call Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat2, ErrMsg2)
+         call Grid3D_WriteBladed(G3D, FileRootName, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
 
    case (Grid3D_FieldType)
 
-      call Grid3D_WriteBladed(FF%Grid3D, FileRootName, unit, ErrStat, ErrMsg)
+      call Grid3D_WriteBladed(FF%Grid3D, FileRootName, ErrStat, ErrMsg)
 
    case default
 
@@ -2584,17 +2562,11 @@ subroutine IfW_WriteVTK(FF, FileRootName, ErrStat, ErrMsg)
 
    character(*), parameter          :: RoutineName = "IfW_WriteVTK"
    type(Grid3DFieldType)            :: G3D
-   integer(IntKi)                   :: unit
    integer(IntKi)                   :: ErrStat2
    character(ErrMsgLen)             :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg = ""
-
-   ! Get new unit for writing file
-   call GetNewUnit(unit, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
 
    ! Switch based on field type
    select case (FF%FieldType)
@@ -2604,13 +2576,13 @@ subroutine IfW_WriteVTK(FF, FileRootName, ErrStat, ErrMsg)
       call Uniform_to_Grid3D(FF%Uniform, FF%VelInterpCubic, G3D, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat < AbortErrLev) then
-         call Grid3D_WriteVTK(G3D, FileRootName, unit, ErrStat2, ErrMsg2)
+         call Grid3D_WriteVTK(G3D, FileRootName, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
 
    case (Grid3D_FieldType)
 
-      call Grid3D_WriteVTK(FF%Grid3D, FileRootName, unit, ErrStat, ErrMsg)
+      call Grid3D_WriteVTK(FF%Grid3D, FileRootName, ErrStat, ErrMsg)
 
    case default
 
