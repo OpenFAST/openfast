@@ -351,8 +351,6 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    CALL GetPath(InputFile, PriPath)     ! Input files will be relative to the path where the primary input file is located.
    CALL AllocAry(InputFileData%OutList, MaxOutChs, "ExtPtfm Input File's Outlist", ErrStat, ErrMsg); if(Failed()) return
    
-   ! Get an available unit number for the file.
-   CALL GetNewUnit(UnIn, ErrStat, ErrMsg);              if(Failed()) return
    ! Open the Primary input file.
    CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if(Failed()) return
    
@@ -590,8 +588,6 @@ SUBROUTINE ReadReducedFile( InputFile, p, FileFormat, ErrStat, ErrMsg )
        return
    endif
    ! --- The code below can detect between FlexASCII and GuyanASCII format by looking at the two first lines
-   ! Get an available unit number for the file.
-   !CALL GetNewUnit( UnIn, ErrStat, ErrMsg );               if(Failed()) return
    !! Open the Primary input file.
    !CALL OpenFInpFile ( UnIn, InputFile, ErrStat, ErrMsg ); if(Failed()) return
    !iLine=1
@@ -634,8 +630,6 @@ CONTAINS
 
        T=-1
        dt=-1
-       ! Get an available unit number for the file.
-       CALL GetNewUnit( UnIn, ErrStat, ErrMsg );            if ( ErrStat /= 0 ) return
        ! Open the Primary input file.
        CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
 
@@ -734,8 +728,6 @@ CONTAINS
        ! Guyan reduction has 6 DOF, 0 CB DOFs
        p%nCB  = 0
        p%nTot = 6
-       ! Get an available unit number for the file.
-       CALL GetNewUnit( UnIn, ErrStat, ErrMsg );               if ( ErrStat /= 0 ) return
        ! Open the Primary input file.
        CALL OpenFInpFile ( UnIn, InputFile, ErrStat, ErrMsg ); if ( ErrStat /= 0 ) return
 
@@ -832,7 +824,6 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    ! TODO TODO TODO ONLY Open Summary if no optional unit given 
 
    ! Open the summary file and give it a heading.
-   CALL GetNewUnit(UnSu, ErrStat, ErrMsg);
    CALL OpenFOutFile(UnSu, TRIM( RootName )//'.sum', ErrStat, ErrMsg)
    IF ( ErrStat /= ErrID_None ) RETURN
    ! Heading:
