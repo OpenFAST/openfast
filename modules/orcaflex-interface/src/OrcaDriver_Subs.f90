@@ -782,7 +782,6 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    FileName = TRIM(DvrFileName)
 
-   CALL GetNewUnit( UnIn )
    CALL OpenFInpFile( UnIn, FileName, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStatTmp >= AbortErrLev ) THEN
@@ -830,7 +829,6 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    IF ( EchoFileContents ) THEN
 
       EchoFileName = TRIM(FileName)//'.ech'
-      CALL GetNewUnit( UnEchoLocal )
       CALL OpenEcho ( UnEchoLocal, EchoFileName, ErrStatTmp, ErrMsgTmp, ProgInfo )
       IF ( ErrStatTmp /= ErrID_None ) THEN
          CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
@@ -1382,7 +1380,6 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, TimeList, CoordList,
 
 
       ! Now open file
-   CALL GetNewUnit(    FiUnitPoints )
    CALL OpenFInpFile(   FiUnitPoints,  TRIM(PointsFileName), ErrStatTmp, ErrMsgTmp )   ! Unformatted input file
    IF ( ErrStatTmp >= AbortErrLev ) THEN
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
@@ -1864,7 +1861,6 @@ SUBROUTINE AddedMass_OutputWrite (DvrSettings, Initialized, PtfmAM, ErrStat, Err
       ! If it hasn't been initially written to, do this then exit. Otherwise set a few things and continue.
    IF ( .NOT. Initialized ) THEN
 
-      CALL GetNewUnit( DvrSettings%AddedMassOutputUnit )
       CALL OpenFOutFile( DvrSettings%AddedMassOutputUnit, TRIM(DvrSettings%AddedMassFileName), ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1934,7 +1930,6 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
          AngleUnit   =  "rad"
       ENDIF
 
-      CALL GetNewUnit( OutUnit )
       CALL OpenFOutFile( OutUnit, TRIM(OutFileName), ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) RETURN
