@@ -229,7 +229,6 @@ PROGRAM MoorDyn_Driver
    END DO
    
    ! open driver output file >>> not yet used <<<
-   !CALL GetNewUnit( Un )
    !OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
   
    ! call the initialization routine
@@ -727,7 +726,6 @@ CONTAINS
    
       FileName = TRIM(inputFile)
    
-      CALL GetNewUnit( UnIn )   
       CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2);
       call AbortIfFailed()
    
@@ -740,7 +738,6 @@ CONTAINS
       ! If we echo, we rewind
       IF ( InitInp%Echo ) THEN
          EchoFile = TRIM(FileName)//'.echo'
-         CALL GetNewUnit( UnEcho )   
          CALL OpenEcho ( UnEcho, EchoFile, ErrStat, ErrMsg ); call AbortIfFailed()
          REWIND(UnIn)
          CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()

@@ -1106,8 +1106,6 @@ CONTAINS
     INTEGER(IntKi)   :: I
         
      
-     CALL GetNewUnit( UnOut)
-  
      CALL OpenFOutFile ( UnOut, "waves.txt", ErrStat, ErrMsg )
      IF ( ErrStat > ErrID_None ) THEN
         ErrMsg = ' Error opening wave grid file: '//TRIM(ErrMsg)
@@ -1153,8 +1151,6 @@ CONTAINS
     INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
     INTEGER(IntKi)   :: I,J,K, l, Itemp
     
-    CALL GetNewUnit( UnOut)
-  
      CALL OpenFOutFile ( UnOut, "wave data.txt", ErrStat, ErrMsg )
      IF ( ErrStat > ErrID_None ) THEN
         ErrMsg = ' Error opening wave grid file: '//TRIM(ErrMsg)
@@ -1369,7 +1365,6 @@ CONTAINS
       
       
       UnEcho=-1
-      CALL GetNewUnit( UnIn )   
       CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
 
 
@@ -1456,8 +1451,6 @@ CONTAINS
          
          ! note: following is adapted from MoorDyn_Driver
          
-         CALL GetNewUnit( UnElev ) 
-      
          CALL OpenFInpFile ( UnElev, WaveKinFile, ErrStat2, ErrMsg2 ); if(Failed()) return
         
          print *, 'Reading wave elevation data from ', trim(WaveKinFile)

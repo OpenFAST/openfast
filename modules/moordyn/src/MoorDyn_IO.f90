@@ -173,7 +173,6 @@ CONTAINS
          CALL WrScr("   The depth input contains letters so will load a bathymetry file.")
          
          ! load lookup table data from file
-         CALL GetNewUnit( UnCoef ) ! unit number for coefficient input file
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )
          cALL SetErrStat(ErrStat4, ErrMsg4, ErrStat3, ErrMsg3, 'MDIO_getBathymetry')
 
@@ -249,7 +248,6 @@ CONTAINS
          
          ! load lookup table data from file
         
-         CALL GetNewUnit( UnCoef )
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )   ! add error handling?
          
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first two lines (title, names, and units) then parse
@@ -872,7 +870,6 @@ CONTAINS
 
          ! Open the file for output
          OutFileName = TRIM(p%RootName)//'.out'
-         CALL GetNewUnit( p%MDUnOut )
 
          CALL OpenFOutFile ( p%MDUnOut, OutFileName, ErrStat, ErrMsg )
          IF ( ErrStat > ErrID_None ) THEN
@@ -918,7 +915,6 @@ CONTAINS
            
             ! Open the file for output
             OutFileName = TRIM(p%RootName)//'.Line'//TRIM(Int2LStr(I))//'.out'
-            CALL GetNewUnit( m%LineList(I)%LineUnOut )
 
             CALL OpenFOutFile ( m%LineList(I)%LineUnOut, OutFileName, ErrStat, ErrMsg )
             IF ( ErrStat > ErrID_None ) THEN
@@ -1072,7 +1068,6 @@ CONTAINS
            
             ! Open the file for output
             OutFileName = TRIM(p%RootName)//'.Rod'//TRIM(Int2LStr(I))//'.out'
-            CALL GetNewUnit( m%RodList(I)%RodUnOut )
 
             CALL OpenFOutFile ( m%RodList(I)%RodUnOut, OutFileName, ErrStat, ErrMsg )
             IF ( ErrStat > ErrID_None ) THEN
