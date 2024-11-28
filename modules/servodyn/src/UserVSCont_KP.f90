@@ -108,7 +108,7 @@ INTEGER(IntKi)              :: IOS                                           ! I
 INTEGER(IntKi)              :: N1
 INTEGER, SAVE               :: NSCH   = 0                                    ! Number of lines found in the file
 INTEGER, PARAMETER          :: NST    = 5                                    ! Number of integration time steps between controller torque calculations.
-INTEGER, PARAMETER          :: UnCont = 99                                   ! Unit number for the input file
+INTEGER                     :: UnCont                                        ! Unit number for the input file
 
 LOGICAL,    SAVE            :: SFLAG  = .TRUE.
 
