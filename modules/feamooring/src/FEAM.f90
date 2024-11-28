@@ -1673,15 +1673,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
     IF ( ErrStat >= AbortErrLev ) RETURN   
 
 
-    ! Get an available unit number for the file.
-
-    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-    CALL CheckError( ErrStat2, ErrMsg2 )
-    IF ( ErrStat >= AbortErrLev ) RETURN
-
-
     ! Open the Primary input file.
-
     CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
     CALL CheckError( ErrStat2, ErrMsg2 )
     IF ( ErrStat >= AbortErrLev ) RETURN                
