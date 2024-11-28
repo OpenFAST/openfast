@@ -176,7 +176,6 @@ PROGRAM SubDyn_Driver
    SDin(:,:)=0.0_ReKi
    IF ( drvrInitInp%InputsMod == 2 ) THEN
       ! Open the  inputs data file
-      CALL GetNewUnit( UnIn ) 
       CALL OpenFInpFile ( UnIn, drvrInitInp%InputsFile, ErrStat2, ErrMsg2); Call AbortIfFailed()
       DO n = 1,drvrInitInp%NSteps
          ! TODO Add safety for backward compatibility if only 13 columns
@@ -338,7 +337,6 @@ CONTAINS
       ! Primary path, relative files will be based on it
       CALL GetPath( FileName, PriPath )
    
-      CALL GetNewUnit( UnIn )   
       CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2);
       call AbortIfFailed()
    
@@ -351,7 +349,6 @@ CONTAINS
       ! If we echo, we rewind
       IF ( InitInp%Echo ) THEN
          EchoFile = TRIM(FileName)//'.echo'
-         CALL GetNewUnit( UnEcho )   
          CALL OpenEcho ( UnEcho, EchoFile, ErrStat, ErrMsg ); call AbortIfFailed()
          REWIND(UnIn)
          CALL ReadCom( UnIn, FileName, 'SubDyn Driver input file header line 1', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
@@ -542,7 +539,6 @@ CONTAINS
 
 
       ! Open file
-      call GetNewUnit(UnIn) 
       call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile')
       if (errStat >= AbortErrLev) return
       ! Count number of lines
