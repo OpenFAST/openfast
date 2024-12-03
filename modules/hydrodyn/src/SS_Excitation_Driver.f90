@@ -111,7 +111,9 @@ PROGRAM SS_Excitation_Driver
    end do
    
       ! Need to read in the wave elevation data to pass in as initialization data
+!FIXME: hard coded path!!!!!!
    waveFile = 'C:\Dev\Envision\all-changes\Test_Models\5MW_ITIBarge_DLL_WTurb_WavesIrr\barge.Elev'
+   UnWvEl   = -1  ! set to -1 so that Open* calls will find a valid unit number
    call OpenFInpFile ( UnWvEl,  trim(waveFile), ErrStat, ErrMsg   )  ! Open wave elevation file.
       if ( ErrStat /= 0 ) then
          ErrStat = ErrID_Fatal
@@ -145,6 +147,7 @@ PROGRAM SS_Excitation_Driver
   
 
       ! Initialize output file
+   Outputy = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFOutFile ( Outputy, (TRIM(InitInData%InputFile)//'.out'), ErrStat, ErrMsg)
       IF ( ErrStat /= 0 ) THEN
          ErrStat = ErrID_Fatal

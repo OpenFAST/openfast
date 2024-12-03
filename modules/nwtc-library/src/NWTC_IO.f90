@@ -1864,7 +1864,6 @@ END SUBROUTINE CheckR8Var
    END DO
 
    UnIn = Un
-
    RETURN
    END SUBROUTINE GetNewUnit
 !=======================================================================
@@ -2333,7 +2332,7 @@ END SUBROUTINE CheckR8Var
 
       ! Open input file.  Make sure it worked.
    !$OMP critical
-   call GetNewUnit(Un,ErrStat,ErrMsg)
+   if (Un<=0) call GetNewUnit(Un,ErrStat,ErrMsg)
    if (ErrStat==ErrID_None) then
       OPEN( Un, FILE=TRIM( InFile ), STATUS='OLD', FORM='UNFORMATTED', ACCESS='STREAM', IOSTAT=ErrStat, ACTION='READ' )
  
@@ -2361,7 +2360,7 @@ END SUBROUTINE CheckR8Var
 
    ! Open output file.  Make sure it worked.
    !$OMP critical
-   call GetNewUnit(Un,ErrStat,ErrMsg)
+   if (Un<=0) call GetNewUnit(Un,ErrStat,ErrMsg)
    if (ErrStat==ErrID_None) then
       OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='UNFORMATTED' , ACCESS='STREAM', IOSTAT=ErrStat, ACTION='WRITE' )
  
@@ -2397,7 +2396,7 @@ END SUBROUTINE CheckR8Var
 
    ! Open the file for writing:
    !$OMP critical
-   call GetNewUnit(Un,ErrStat,ErrMsg)
+   if (Un<=0) call GetNewUnit(Un,ErrStat,ErrMsg)
    if (ErrStat==ErrID_None) then
       CALL OpenFOutFile( Un, OutFile, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat, ErrMsg, RoutineName )
@@ -2440,7 +2439,7 @@ END SUBROUTINE CheckR8Var
 
       ! Open input file.  Make sure it worked.
       !$OMP critical
-      call GetNewUnit(Un,ErrStat,ErrMsg)
+      if (Un<=0) call GetNewUnit(Un,ErrStat,ErrMsg)
       if (ErrStat==ErrID_None) then
          OPEN( Un, FILE=TRIM( InFile ), STATUS='OLD', FORM='FORMATTED', IOSTAT=IOS, ACTION='READ' )
  
@@ -2468,7 +2467,7 @@ END SUBROUTINE CheckR8Var
 
    ! Open output file.  Make sure it worked.
    !$OMP critical
-   call GetNewUnit(Un,ErrStat,ErrMsg)
+   if (Un<=0) call GetNewUnit(Un,ErrStat,ErrMsg)
    if (ErrStat==ErrID_None) then
       OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE" )
  
@@ -2504,7 +2503,7 @@ END SUBROUTINE CheckR8Var
 
    ! Open output file.  Make sure it worked.
    !$OMP critical
-   call GetNewUnit(Un,ErrStat,ErrMsg)
+   if (Un<=0) call GetNewUnit(Un,ErrStat,ErrMsg)
    if (ErrStat==ErrID_None) then
       OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='FORMATTED', IOSTAT=IOS )
  
@@ -2540,7 +2539,7 @@ END SUBROUTINE CheckR8Var
 
    ! Open output file.  Make sure it worked.
    !$OMP critical
-   call GetNewUnit(Un,ErrStat,ErrMsg)
+   if (Un<=0) call GetNewUnit(Un,ErrStat,ErrMsg)
    if (ErrStat==ErrID_None) then
       if (FileExists) then
          OPEN( Un, FILE=TRIM( OutFile ), STATUS='OLD', POSITION='APPEND', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE" )
@@ -2593,18 +2592,15 @@ END SUBROUTINE CheckR8Var
 
    ! Open the file.
    !$OMP critical
-   call GetNewUnit(Un,ErrStat,ErrMsg)
-   if (ErrStat==ErrID_None) then
-      CALL OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
+   CALL OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
  
-      IF ( Error )  THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg = 'OpenUInBEFile:Cannot open file "'//TRIM( InFile )//'".  Another program may have locked it.'
-      ELSE
-         ErrStat = ErrID_None
-         ErrMsg = ''
-      END IF
-   endif
+   IF ( Error )  THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'OpenUInBEFile:Cannot open file "'//TRIM( InFile )//'".  Another program may have locked it.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ''
+   END IF
    !$OMP end critical
 
    RETURN
@@ -2631,7 +2627,7 @@ END SUBROUTINE CheckR8Var
 
    ! Open the file.
    !$OMP critical
-   call GetNewUnit(Un,ErrStat,ErrMsg)
+   if (Un<=0) call GetNewUnit(Un,ErrStat,ErrMsg)
    if (ErrStat==ErrID_None) then
       OPEN ( Un, FILE=TRIM( InFile ), STATUS='UNKNOWN', FORM=UnfForm, ACCESS='SEQUENTIAL', IOSTAT=IOS, ACTION='READ' )
  
@@ -2660,7 +2656,7 @@ END SUBROUTINE CheckR8Var
 
    ! Open the file.
    !$OMP critical
-   call GetNewUnit(Un,ErrStat,ErrMsg)
+   if (Un<=0) call GetNewUnit(Un,ErrStat,ErrMsg)
    if (ErrStat==ErrID_None) then
       OPEN ( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM=UnfForm, ACCESS='SEQUENTIAL', IOSTAT=IOS, ACTION='WRITE' )
  
@@ -4545,6 +4541,7 @@ END SUBROUTINE CheckR8Var
       RETURN
    END IF
    
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile ( UnIn, FileInfo%FileList(FileIndx), ErrStatLcl, ErrMsg2 )
       CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev )  RETURN

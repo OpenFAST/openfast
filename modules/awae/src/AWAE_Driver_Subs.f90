@@ -53,6 +53,7 @@ module AWAE_Driver_Subs
 !   ErrMsg  = ""
 !      
 !   UnEc = -1
+!   UnIn = -1      ! set to -1 so that Open* calls will find a valid unit number
 !   Echo = .FALSE.   
 !   call GetPath( filename, PriPath )     ! Input files will be relative to the path where the driver input file is located.
 !   
@@ -271,6 +272,7 @@ module AWAE_Driver_Subs
 !   ErrStat = ErrID_None
 !   ErrMsg  = ''
 !   UnEcho  = -1
+!   UnIn    = -1   ! set to -1 so that Open* calls will find a valid unit number
 !   InputFileData%DT = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
 !
 !      ! get the primary/platform input-file data

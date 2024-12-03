@@ -425,6 +425,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, ErrStat, ErrM
       ! Initialize some variables:
    Echo = .FALSE.
    UnEc = -1                             ! Echo file not opened, yet
+   UnIn = -1                             ! set to -1 at start to find valid unit numbers in Open* calls
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
       ! OrcaFlex doesn't like relative path names, so we're going to make it absolute

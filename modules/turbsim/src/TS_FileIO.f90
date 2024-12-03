@@ -94,6 +94,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    
    
    UnEc = -1
+   UI   = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    Echo = .FALSE.   
    CALL GetPath( InFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
         
@@ -1394,7 +1395,7 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    ErrMSg  = ""
    
       ! --------- Open the file ---------------
-
+   USpec = -1  ! set to -1 at start to find valid unit numbers in Open* calls
    CALL OpenFInpFile( USpec, FileName, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
@@ -1585,7 +1586,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    ErrMsg  = ""
    
       ! --------- Open the file ---------------
-
+   UnIn = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
@@ -2106,7 +2107,7 @@ END IF
 
 
    IF ( p%WrFile(FileExt_WND) )  THEN
-
+      UBFFW = -1  ! set to -1 at start to find valid unit numbers in Open* calls
       CALL OpenBOutFile ( UBFFW, TRIM(p%RootName)//'.wnd', ErrStat, ErrMsg )
       IF (ErrStat >= AbortErrLev) RETURN
       
@@ -2174,7 +2175,7 @@ END IF
       !.......................................................      
       
       IF ( p%WrFile(FileExt_TWR) ) THEN
-                           
+         UATWR = -1  ! set to -1 at start to find valid unit numbers in Open* calls
          CALL OpenBOutFile ( UATWR, TRIM( p%RootName )//'.twr', ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
          
@@ -2354,7 +2355,7 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
    LenDesc = LEN_TRIM( p%DescStr )             ! Length of the string that contains program name, version, date, and time
 
    CALL WrScr ( ' Generating AeroDyn binary time-series file "'//TRIM( p%RootName )//'.bts"' )
-   
+   UAFFW = -1  ! set to -1 at start to find valid unit numbers in Open* calls
    CALL OpenBOutFile ( UAFFW, TRIM(p%RootName)//'.bts', ErrStat, ErrMsg )
    IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2485,7 +2486,7 @@ SUBROUTINE WrBinHAWC( p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    ic = INDEX( p%RootName, '\', BACK=.TRUE. )
    ic = MAX( ic, INDEX( p%RootName, '/', BACK=.TRUE. ) )
    RootWithoutPathName = p%RootName((ic+1):)
-
+   UnWind = -1    ! set to -1 at start to find valid unit numbers in Open* calls
    CALL OpenFOutFile ( UnWind, trim(p%RootName)//'.hawc', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
@@ -2540,7 +2541,7 @@ SUBROUTINE WrBinHAWC( p, V, USig, VSig, WSig, ErrStat, ErrMsg)
 
    DO IC = 1,3
       CALL WrScr ( ' Generating HAWC2 binary time-series file "'//trim(p%RootName)//'-'//Comp(ic)//'.bin"' )
-
+      UnWind = -1    ! set to -1 at start to find valid unit numbers in Open* calls
       CALL OpenBOutFile ( UnWind, trim(p%RootName)//'-'//Comp(ic)//'.bin', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
          IF (ErrStat >= AbortErrLev) EXIT ! exit this do loop to deallocate array
@@ -2591,6 +2592,7 @@ CHARACTER(ErrMsgLen)         :: ErrMsg
    DO IVec=1,3
 
       CALL WrScr ( ' Generating full-field formatted file "'//TRIM(RootName)//'.'//Comp(IVec)//'".' )
+      UFFF = -1   ! set to -1 at start to find valid unit numbers in Open* calls
       CALL OpenFOutFile ( UFFF, TRIM( RootName )//'.'//Comp(IVec), ErrStat, ErrMsg )
         IF (ErrStat /= ErrID_None) then
            call WrScr(Trim(ErrMsg))
@@ -2995,7 +2997,7 @@ SUBROUTINE WrHH_ADtxtfile(p, V, TurbInt, ErrStat, ErrMsg)
 
    
    
-
+   UAHH = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    CALL OpenFOutFile ( UAHH, TRIM( p%RootName)//'.hh', ErrStat, ErrMsg )
    IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3060,7 +3062,7 @@ SUBROUTINE WrHH_binary(p, V, ErrStat, ErrMsg)
    INTEGER                 :: UGTP                             ! I/O unit for GenPro HH turbulence properties.
 
 
-
+   UGTP = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    CALL OpenUOutfile ( UGTP , TRIM( p%RootName)//'.bin', ErrStat, ErrMsg ) 
    IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3114,7 +3116,7 @@ SUBROUTINE WrHH_text(p, V, ErrStat, ErrMsg)
 
    
    ! p%WrFile(FileExt_DAT)
-
+   UFTP = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    CALL OpenFOutFile ( UFTP, TRIM( p%RootName)//'.dat', ErrStat, ErrMsg )
    IF (ErrStat >= AbortErrLev) RETURN
 

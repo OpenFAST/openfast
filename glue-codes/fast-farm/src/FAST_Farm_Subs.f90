@@ -415,6 +415,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    
       ! Initialize some variables:
    UnEc = -1
+   UnIn = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    Echo = .FALSE.                        ! Don't echo until we've read the "Echo" flag
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 

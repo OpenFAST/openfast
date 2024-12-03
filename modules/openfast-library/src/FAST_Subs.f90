@@ -2407,6 +2407,9 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
       ! Initialize some variables:
    UnEc = -1
    Echo = .FALSE.                        ! Don't echo until we've read the "Echo" flag
+   UnIn = -1                             ! set to -1 at start to find valid unit numbers in Open* calls
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
 
@@ -7595,6 +7598,7 @@ SUBROUTINE ReadModeShapeMatlabFile(p_FAST, ErrStat, ErrMsg)
 
    ErrStat = ErrID_None
    ErrMsg  = ""
+   UnIn    = -1   ! set to -1 at start to find valid unit numbers in Open* calls
 
    !  Open data file.
    CALL OpenBInpFile ( UnIn, trim(p_FAST%VTK_modes%MatlabFileName), ErrStat2, ErrMsg2 )
@@ -7717,6 +7721,7 @@ SUBROUTINE ReadModeShapeFile(p_FAST, InputFile, ErrStat, ErrMsg, checkpointOnly)
    ErrStat = ErrID_None
    ErrMsg  = ""
    UnEc = -1
+   UnIn = -1   ! set to -1 at start to find valid unit numbers in Open* calls
 
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 

@@ -140,7 +140,7 @@ IF ( SFLAG )  THEN
       inFileName = 'spd_trq.dat'
    END IF
 
-
+   UnCont = -1    ! set to -1 at start to find valid unit numbers in Open* calls
    CALL OpenFInpFile ( UnCont, TRIM(inFileName), ErrStat, ErrMsg )
    IF (ErrStat >= AbortErrLev) CALL ProgAbort(TRIM(ErrMsg))
 

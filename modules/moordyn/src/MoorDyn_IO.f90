@@ -146,6 +146,7 @@ CONTAINS
       INTEGER(IntKi)                   :: nGridX         ! integer of the size of BathGrid_Xs
       INTEGER(IntKi)                   :: nGridY         ! integer of the size of BathGrid_Ys
 
+      UnCoef = -1    ! set to -1 so that Open* calls will find a valid unit number
 
       IF (LEN_TRIM(inputString) == 0) THEN
          ! If the input is empty (not provided), make the 1x1 bathymetry grid using the default depth
@@ -233,6 +234,7 @@ CONTAINS
       CHARACTER(120)                   :: ErrMsg4         
       CHARACTER(120)                   :: Line2   
       
+      UnCoef = -1    ! set to -1 so that Open* calls will find a valid unit number
            
       if (SCAN(inputString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) then ! "eE" are exluded as they're used for scientific notation!
       

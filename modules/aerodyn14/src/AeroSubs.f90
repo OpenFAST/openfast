@@ -58,6 +58,7 @@ SUBROUTINE AD14_GetInput(InitInp, P, x, xd, z, m, y, ErrStat, ErrMess )
    
    ErrStat = ErrID_None
    ErrMess = ''
+   UnIn    = -1   ! set to -1 so that Open* calls will find a valid unit number
    
    !-------------------------------------------------------------------------------------------------
    ! Open the AeroDyn input file
@@ -742,6 +743,7 @@ END SUBROUTINE AD14_GetInput
 
    ErrStat = ErrID_None
    ErrMess = ""
+   UnOut   = -1   ! set to -1 so that Open* calls will find a valid unit number
 
    CALL OpenFOutFile( UnOut, FileName, ErrStatLcl, ErrMessLcl)
       CALL SetErrStat(ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,'ADOut' )
@@ -1025,6 +1027,7 @@ CHARACTER(1024)              :: LINE
 DO NFOILID = 1, p%AirFoil%NUMFOIL
 
  ! Open the file for reading # of lines
+   NUNIT   = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile (NUNIT, TRIM(p%AirFoil%FOILNM(NFOILID)), ErrStatLcL, ErrMessLcl)
    CALL SetErrStat( ErrStatLcL, ErrMessLcl, ErrStat, ErrMess, 'READFL')
    IF (ErrStat >= AbortErrLev) THEN
@@ -1057,6 +1060,7 @@ CALL AllocArrays (InitInp, P, x, xd, z, m, y, 'Aerodata')
 DO NFOILID = 1, p%AirFoil%NUMFOIL
 
  ! Open the file for reading inputs
+   NUNIT   = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile (NUNIT, TRIM(Adjustl(p%AirFoil%FOILNM(NFOILID))), ErrStatLcL, ErrMessLcl )
    CALL SetErrStat( ErrStatLcL, ErrMessLcl, ErrStat, ErrMess, 'READFL')
    IF (ErrStat >= AbortErrLev) THEN
@@ -1387,6 +1391,7 @@ END SUBROUTINE READFL
    ! Open the file for reading
    !-------------------------------------------------------------------------------------------------
    FilName = p%TwrProps%TwrFile
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile (UnIn, TRIM(FilName), ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
@@ -4463,6 +4468,7 @@ END SUBROUTINE infupdt
 
    ErrStat = ErrID_None
    ErrMess = ""
+   UnDyn   = -1   ! set to -1 so that Open* calls will find a valid unit number
 
 !SAVE                                                   ! Save *all* local variables.  Is this necessary, or is OnePass enough.
 

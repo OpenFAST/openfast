@@ -864,10 +864,9 @@ ErrStat = ErrID_None
 ErrMsg  = ""
 
 UnEc = -1 
+UnIn = -1   ! set to -1 at start to find valid unit numbers in Open* calls
 Echo = .FALSE.
 
-CALL GetNewUnit( UnIn )   
-  
 CALL OpenFInpfile(UnIn, TRIM(SDInputFile), ErrStat2, ErrMsg2)
 
 IF ( ErrStat2 /= ErrID_None ) THEN
@@ -3491,7 +3490,6 @@ SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, Err
 
    ! --- Create file  and get unit
    UnSum = -1 ! we haven't opened the summary file, yet.   
-   call GetNewUnit( UnSum )
    call OpenFOutFile ( UnSum, FileName, ErrStat2, ErrMsg2 ) 
    write(UnSum, '(A)')'{'
 

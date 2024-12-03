@@ -147,6 +147,7 @@ contains
       CHARACTER(msgLen) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
       integer(IntKi)    :: ioStatus
 
+      input%UnitNum = -1   ! set to -1 so that Open* calls will find a valid unit number
       call OpenFInpFile ( input%UnitNum, trim(fname), ErrStat, ErrMsg  )
       if (ErrStat >= AbortErrLev) then
          call iceErrorHndlr (iceLog, ErrStat, 'CountIceInputs => OpenFInpFile: '//newLine//ErrMsg, 1)

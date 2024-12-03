@@ -79,6 +79,7 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
    WaveElevData%FileName   =  TRIM(InitInp%WvKinFile)//'.Elev'
 
       ! Open the file containing the wave elevation timeseries
+   WaveElevUnit = -1    ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile(  WaveElevUnit, WaveElevData%FileName, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat,ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
@@ -759,7 +760,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ! Read the first file and set the initial values of the 
 
    FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(1))
-   
+   UnWv     = -1  ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
@@ -803,7 +804,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    DO iFile = 2,7
       
       FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(iFile))
-   
+      UnWv     = -1  ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
       IF ( ErrStat /= 0 ) THEN
          ErrStat = ErrID_Fatal
@@ -874,7 +875,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    IF ( InitInp%NWaveElev > 0 ) THEN
 
       FileName = TRIM(InitInp%WvKinFile) // '.Elev'
-   
+      UnWv     = -1  ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
       IF ( ErrStat /= 0 ) THEN
          ErrStat = ErrID_Fatal

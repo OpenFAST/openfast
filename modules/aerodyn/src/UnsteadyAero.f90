@@ -1084,6 +1084,7 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
       ! Initialize variables for this routine
    ErrStat = ErrID_None
    ErrMsg  = ""
+   p%unOutFile = -1  ! set to -1 so that Open* calls will find a valid unit number
 
 
       ! Initialize the NWTC Subroutine Library

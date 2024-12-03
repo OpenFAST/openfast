@@ -1961,6 +1961,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 #ifdef DEBUG_MESHMAPPING
                   ! output some mesh information for debugging
                DebugFileName='FAST_Meshes.'//trim(num2Lstr(Un))//'.dbg'
+               Un = -1  ! set to -1 so that Open* calls will find a valid unit number
                CALL OpenFOutFile(Un,DebugFileName,ErrStat2,ErrMsg2)
                IF (ErrStat2 >= AbortErrLev) RETURN
                

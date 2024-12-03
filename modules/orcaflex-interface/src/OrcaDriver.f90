@@ -526,7 +526,7 @@ PROGRAM OrcaDriver
 
             ! write the output file.  This is a bit of a hack here to use the same routine as used for the points file output
          TmpFlag  =  .FALSE.                                      ! Tell the subroutine that it has not initialized the file before
-         TmpUnit  =  -1                                           ! Temporary unit number to pass
+         TmpUnit  =  -1                                           ! Temporary unit number to pass (set to -1 at start to find valid unit numbers in Open* calls)
          CALL GetRoot( Settings%DvrIptFileName, TmpChar )         ! Get the root name
          TmpChar=TRIM(TmpChar)//'.out'
 

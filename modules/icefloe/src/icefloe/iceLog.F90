@@ -89,6 +89,7 @@ contains
       INTEGER(IntKi)    :: Err        
       CHARACTER(msgLen) :: Msg         
 
+      iceLog%unitNum = -1  ! set to -1 so that Open* calls will find a valid unit number
       if (present(logFile)) then
          call OpenFOutFile ( iceLog%unitNum, logFile, Err, Msg )
       else

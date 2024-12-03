@@ -1141,7 +1141,7 @@ SUBROUTINE IceD_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    UnEc    = -1
-   UnIn    = -1
+   UnIn    = -1      ! set to -1 so that Open* calls will find a valid unit number
 
    !-------------------------------------------------------------------------------------------------
    ! Open the file

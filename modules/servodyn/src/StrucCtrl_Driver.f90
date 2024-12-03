@@ -151,6 +151,7 @@ END SUBROUTINE U_ReadInput
    ErrMsg  = ""
       
    UnEc = -1
+   UnIn = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    Echo = .FALSE.   
    CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
    
@@ -254,6 +255,7 @@ CONTAINS
    ErrMsg  = ""
       
    UnEc = -1
+   UnIn = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    Echo = .FALSE.   
    CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
    
@@ -356,6 +358,7 @@ CONTAINS
    ErrMsg  = ""
       
    UnEc = -1
+   UnIn = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    Echo = .FALSE.   
    CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
    
@@ -457,6 +460,7 @@ END SUBROUTINE ReadAngAccelFile
    ErrMsg  = ""
       
    UnEc = -1
+   UnIn = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    Echo = .FALSE.   
    CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
    
@@ -539,6 +543,7 @@ SUBROUTINE StC_OpenOutputFile(OutputFile,UnIn,ErrStat,ErrMsg)
    
    ErrStat = ErrID_None
    ErrMsg  = ''
+   UnIn    = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    !OutputFile = 'StC_Output_Data.txt'
    !Fmt = "F10.2))/"
    

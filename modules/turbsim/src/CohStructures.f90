@@ -116,6 +116,7 @@ CHARACTER(MaxMsgLen)                           :: ErrMsg2                       
 
    ErrStat = ErrID_None
    ErrMsg  = ""
+   Un      = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    
    MaxEvtCTKE = 0.0  ! initialize the MAX variable
 

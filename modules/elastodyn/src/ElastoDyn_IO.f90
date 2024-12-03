@@ -1581,7 +1581,7 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   UnIn = -1
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
 
    ! Open the input file for blade K.
    CALL OpenFInpFile ( UnIn, BldFile, ErrStat2, ErrMsg2 )
@@ -1883,6 +1883,7 @@ SUBROUTINE ReadBladeMeshFileAD( BladeKInputFileMesh, MeshFile, UnEc, ErrStat, Er
 
 
    ! Open the AeroDyn input file.
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile ( UnIn, MeshFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -2170,6 +2171,7 @@ SUBROUTINE ReadTowerFile( TwrFile, InputFileData, UnEc, ErrStat, ErrMsg )
 
 
    ! Open the tower input file.
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile ( UnIn, TwrFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -2503,6 +2505,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    ErrMsg   =  ""
    Echo = .FALSE.
    UnEc = -1                             ! Echo file not opened, yet
+   UnIn = -1                             ! set to -1 so that Open* calls will find a valid unit number
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
 

@@ -779,6 +779,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEchoLocal = -1
+   UnIn        = -1     ! set to -1 at start to find valid unit numbers in Open* calls
 
    FileName = TRIM(DvrFileName)
 
@@ -1369,6 +1370,7 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, TimeList, CoordList,
    ErrMsgTmp   =  ''
    ErrStat     =  ErrID_None
    ErrStatTmp  =  ErrID_None
+   FIunitPoints= -1           ! set to -1 at start to find valid unit numbers in Open* calls
 
       ! Set the ConvToRadians multiplier
    IF ( AnglesInDegrees) THEN

@@ -9633,6 +9633,7 @@ SUBROUTINE ED_PrintSum( p, OtherState, ErrStat, ErrMsg )
    CHARACTER(ChanLen),PARAMETER :: TitleStrLines(2) = (/ '---------------', '---------------' /)
 
    ! Open the summary file and give it a heading.
+   UnSu = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFOutFile ( UnSu, TRIM( p%RootName )//'.sum', ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 

@@ -196,6 +196,7 @@ PROGRAM MAIN
    
    ! Open output file
    OutFileName = Trim(IceD_parameter%RootName)//'.txt'
+   Un = -1  ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFOutFile (Un, OutFileName, ErrStat, ErrMsg)
       CALL CheckError()
       

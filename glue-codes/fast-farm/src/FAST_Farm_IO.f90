@@ -73,6 +73,7 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    CHARACTER(100)               :: strModDescr
    
    ! Open the summary file and give it a heading.
+   UnSum = -1  ! set to -1 at start to find valid unit numbers in Open* calls
    CALL OpenFOutFile ( UnSum, TRIM( farm%p%OutFileRoot )//'.sum', ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
@@ -263,7 +264,7 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
    !......................................................
 
   ! IF (farm%p%WrTxtOutFile) THEN
-
+      farm%p%UnOu = -1     ! set to -1 at start to find valid unit numbers in Open* calls
       CALL OpenFOutFile ( farm%p%UnOu, TRIM(farm%p%OutFileRoot)//'.out', ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
 

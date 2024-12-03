@@ -106,6 +106,7 @@ PROGRAM SS_Radiation_Driver
    CALL Get_Arg_Num (len )
      
    ! Read the time dependent input vector dq
+   Inputdq = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile ( Inputdq,  (TRIM(InitInData%InputFile)//'.txt'), ErrStat   )  ! Open motion file.
     IF ( ErrStat /= 0 ) THEN
         ErrStat = ErrID_Fatal
@@ -126,6 +127,7 @@ PROGRAM SS_Radiation_Driver
       
     !!!GREG: here the output file is opened, you should not need this
       !Initialize output file
+    Outputy = -1  ! set to -1 so that Open* calls will find a valid unit number
     CALL OpenFOutFile ( Outputy, (TRIM(InitInData%InputFile)//'.out'), ErrStat)
     IF ( ErrStat /= 0 ) THEN
         ErrStat = ErrID_Fatal

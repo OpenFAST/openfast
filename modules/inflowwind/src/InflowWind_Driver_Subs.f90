@@ -734,6 +734,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEchoLocal = -1
+   UnIn        = -1  ! set to -1 so that Open* calls will find a valid unit number
 
    FileName = TRIM(DvrFileName)
 
@@ -1818,6 +1819,7 @@ SUBROUTINE ReadPointsFile( PointsFileName, CoordList, ErrStat, ErrMsg )
    ErrMsgTmp   =  ''
    ErrStat     =  ErrID_None
    ErrStatTmp  =  ErrID_None
+   FiUnitPoints = -1 ! set to -1 so that Open* calls will find a valid unit number
 
 
       ! Now open file
@@ -2315,7 +2317,7 @@ SUBROUTINE WindGridVel_OutputWrite (OutFile, Settings, GridXYZ, GridVel, TIME, E
 
       ! If it hasn't been initially written to, do this then exit. Otherwise set a few things and continue.
    IF ( .NOT. OutFile%Initialized ) THEN
-
+      OutFile%Unit = -1    ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFOutFile( OutFile%Unit, TRIM(OutFile%Name), ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WindGridVel_OutputWrite' )
       IF ( ErrStat >= AbortErrLev ) RETURN
@@ -2384,7 +2386,7 @@ SUBROUTINE PointData_OutputWrite (OutFile, Settings, GridXYZ, GridVel, GridAcc, 
 
       ! If it hasn't been initially written to, do this then exit. Otherwise set a few things and continue.
    IF ( .NOT. OutFile%Initialized ) THEN
-
+      OutFile%Unit = -1    ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFOutFile( OutFile%Unit, TRIM(OutFile%Name), ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'PointData_OutputWrite' )
       IF ( ErrStat >= AbortErrLev ) RETURN

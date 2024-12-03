@@ -93,7 +93,8 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: Un                   !< unit number of opened file
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
-   
+  
+      Un = -1  ! set to -1 so that Open* calls will find a valid unit number 
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
          if (ErrStat >= AbortErrLev) return
       
@@ -356,6 +357,7 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
+      Un = -1     ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
          if (ErrStat >= AbortErrLev) return
       

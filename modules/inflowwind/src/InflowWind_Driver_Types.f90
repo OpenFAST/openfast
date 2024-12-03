@@ -34,7 +34,7 @@ MODULE InflowWind_Driver_Types
    TYPE OutputFile
       LOGICAL           :: Initialized = .FALSE.   !< Flag indicating that file has been initialized
       CHARACTER(1024)   :: Name = ""               !< Filename for output from points read in from points file
-      INTEGER(IntKi)    :: Unit = -1               !< Unit number for the output file for the Points file output
+      INTEGER(IntKi)    :: Unit = -1               !< Unit number for the output file for the Points file output, set to -1 so that Open* calls will find a valid unit number
    END TYPE
 
       !> This contains flags to note if the settings were made.  This same data structure is

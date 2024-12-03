@@ -118,7 +118,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     ! Local variables:
     integer(IntKi)                :: I                                         ! loop counter
-    integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
+    integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file (set to -1 so that Open* calls will find a valid unit number)
     character(1024)               :: ObserverFile                              ! name of the files containing obesever location
     integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
     logical                       :: Echo                                      ! Determines if an echo file should be written
@@ -130,7 +130,9 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     ErrStat = ErrID_None
     ErrMsg  = ""
 
-    UnEc = -1
+    UnEc  = -1
+    UnIn  = -1
+    UnIn2 = -1
     Echo = .FALSE.
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
@@ -333,6 +335,7 @@ SUBROUTINE ReadBLTables( InputFile, AFI, InputFileData, ErrStat, ErrMsg )
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
+    UnIn = -1     ! set to -1 so that Open* calls will find a valid unit number
 
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
     nAirfoils = size(AFI)
@@ -438,6 +441,7 @@ SUBROUTINE ReadTICalcTables(InputFile, InputFileData, ErrStat, ErrMsg)
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
+    UnIn = -1     ! set to -1 so that Open* calls will find a valid unit number
 
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 

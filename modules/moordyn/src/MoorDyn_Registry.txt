@@ -201,7 +201,7 @@ typedef  ^            ^                DbKi               a6           {6}      
 typedef  ^            ^                DbKi               F6net        {6}       -  -   "total force and moment about end A (excluding inertial loads) that Rod may exert on whatever it's attached to"
 typedef  ^            ^                DbKi               M6net        {6}{6}    -  -   "total mass matrix about end A of Rod and any attached Points"
 typedef  ^            ^                DbKi               OrMat        {3}{3}    -  -   "DCM for body orientation"
-typedef  ^            ^                IntKi              RodUnOut      -        -  -   "unit number of rod output file"
+typedef  ^            ^                IntKi              RodUnOut      -        -1 -   "unit number of rod output file"
 typedef  ^            ^                DbKi               RodWrOutput  {:}       -  -   "one row of output data for this rod"
 
 
@@ -268,7 +268,7 @@ typedef  ^            ^                DbKi               S            {:}{:}{:}
 typedef  ^            ^                DbKi               M            {:}{:}{:} -  -   "node mass matrix"  "[kg]"
 typedef  ^            ^                DbKi               EndMomentA   {3}       -  -   "vector of end moments due to bending at line end A"  "[N-m]"
 typedef  ^            ^                DbKi               EndMomentB   {3}       -  -   "vector of end moments due to bending at line end B"  "[N-m]"
-typedef  ^            ^                IntKi              LineUnOut     -        -  -   "unit number of line output file"
+typedef  ^            ^                IntKi              LineUnOut     -        -1 -   "unit number of line output file"
 typedef  ^            ^                DbKi               LineWrOutput {:}       -  -   "one row of output data for this line"
 
 # this is the Fail type, which holds data for possible line failure descriptors  TO BE FILLED IN LATER
@@ -383,7 +383,7 @@ typedef   ^       ^                    DbKi                dtOut          -     
 typedef   ^       ^                    CHARACTER(1024)     RootName       -     -    -   "RootName for writing output files"          -
 typedef   ^       ^                    MD_OutParmType      OutParam       {:}   -    -   "Names and units (and other characteristics) of all requested output parameters"          -
 typedef   ^       ^                    CHARACTER(1)        Delim          -     -    -   "Column delimiter for output text files"     -
-typedef   ^       ^                    IntKi               MDUnOut        -     -    -   "Unit number of main output file"
+typedef   ^       ^                    IntKi               MDUnOut        -     -1   -   "Unit number of main output file (set to -1 so that Open* calls will find a valid unit number)"
 typedef   ^       ^                    CHARACTER(1024)     PriPath        -     -    -   "The path to the primary MoorDyn input file, used if looking for additional input files"
 typedef   ^       ^                    IntKi               writeLog       -     -1   -   "Switch for level of log file output"
 #NOTE: there may be an issue with start/restart with the UnLog stored in parameters. We'll ignore this for now -- ADP

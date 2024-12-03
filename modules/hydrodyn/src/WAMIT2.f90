@@ -3649,6 +3649,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !------------------------------------------------------------------------------
 
          ! Open the file
+      UnitDataFile = -1  ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFInpFile(  UnitDataFile, TRIM(Filename3D), ErrStat, ErrMsg )  ! Open file containing mean drift information
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -4410,6 +4411,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !------------------------------------------------------------------------------
 
          ! Open the file
+      UnitDataFile = -1 ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFInpFile(  UnitDataFile, TRIM(Filename4D), ErrStat, ErrMsg )  ! Open file containing mean drift information
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN

@@ -198,10 +198,10 @@ typedef     ^                   ParameterType        IntKi               NumOuts
 typedef     ^                   ParameterType        IntKi               NumOutsForPE                 -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
 typedef     ^                   ParameterType        IntKi               NumOutsForSep                 -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
 typedef     ^                   ParameterType        IntKi               NumOutsForNodes               -      -     -     "Number of parameters in the output list (number of outputs requested)"     -
-typedef     ^                   ParameterType        IntKi               unOutFile        -      -     -   "unit number for writing output file" "-"
-typedef     ^                   ParameterType        IntKi               unOutFile2        -      -     -   "unit number for writing output file" "-"
-typedef     ^                   ParameterType        IntKi               unOutFile3        -      -     -   "unit number for writing output file" "-"
-typedef     ^                   ParameterType        IntKi               unOutFile4        -      -     -   "unit number for writing output file" "-"
+typedef     ^                   ParameterType        IntKi               unOutFile         -      -1     -   "unit number for writing output file (set to -1 so that Open* calls will find a valid unit number)" "-"
+typedef     ^                   ParameterType        IntKi               unOutFile2        -      -1     -   "unit number for writing output file (set to -1 so that Open* calls will find a valid unit number)" "-"
+typedef     ^                   ParameterType        IntKi               unOutFile3        -      -1     -   "unit number for writing output file (set to -1 so that Open* calls will find a valid unit number)" "-"
+typedef     ^                   ParameterType        IntKi               unOutFile4        -      -1     -   "unit number for writing output file (set to -1 so that Open* calls will find a valid unit number)" "-"
 typedef     ^                   ParameterType        CHARACTER(1024)     RootName                -      -     -     "RootName for writing output files"     -
 typedef     ^                   ParameterType        OutParmType         OutParam               {:}     -     -     "Names and units (and other characteristics) of all requested output parameters"     -
 typedef     ^                   ParameterType        ReKi                StallStart                {:}{:}  -     -     "ation"     -

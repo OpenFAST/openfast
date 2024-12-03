@@ -531,6 +531,7 @@ CONTAINS
       character(len=2048) :: Filename_Loc   ! filename local to this function
       ErrStat = ErrID_None
       ErrMsg  = ""
+      UnIn    = -1   ! set to -1 at start to find valid unit numbers in Open* calls
 
       Filename_Loc = Filename
       if (present(priPath)) then

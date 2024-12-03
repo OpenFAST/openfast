@@ -577,6 +577,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
    ErrMsg  = ""
    Echo = .FALSE.
    UnEc = -1
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
    CALL AllocAry( InputFileData%OutList, MaxOutPts, "Outlist", ErrStat2, ErrMsg2 )
@@ -1045,6 +1046,7 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
 
    ErrStat = ErrID_None
    ErrMsg  = ""
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
 
    CALL OpenFInpFile (UnIn,BldFile,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1935,7 +1937,7 @@ SUBROUTINE BD_PrintSum( p, x, OtherState, m, InitInp, ErrStat, ErrMsg )
    CHARACTER(80)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
 
    ! Open the summary file and give it a heading.
-
+   UnSu = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFOutFile ( UnSu, TRIM( InitInp%RootName )//'.sum.yaml', ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev ) RETURN
 

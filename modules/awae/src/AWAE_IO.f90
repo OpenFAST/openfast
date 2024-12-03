@@ -539,6 +539,7 @@ SUBROUTINE AWAE_PrintSum(  p, u, y, ErrStat, ErrMsg )
 
    errStat = ErrID_None
    errMsg  = ""
+   UnSu    = -1   ! set to -1 so that Open* calls will find a valid unit number
 
    ! Open the summary file and give it a heading.
    CALL OpenFOutFile ( UnSu, TRIM( p%OutFileRoot )//'.sum', ErrStat, ErrMsg )

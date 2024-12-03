@@ -76,7 +76,7 @@ MODULE OrcaDriver_Types
 
       CHARACTER(1024)         :: PointsFileName                !< Filename of points file to read in
       CHARACTER(1024)         :: PointsOutputName              !< Filename for output from points read in from points file
-      INTEGER(IntKi)          :: AddedMassOutputUnit           !< Unit number for the output file for the AddedMass matrix
+      INTEGER(IntKi)          :: AddedMassOutputUnit  = 01     !< Unit number for the output file for the AddedMass matrix (set to -1 at start to find valid unit numbers in Open* calls)
       INTEGER(IntKi)          :: PointsOutputUnit              !< Unit number for the output file for the Points file output
       REAL(DbKi)              :: DT                            !< resolution of time
       REAL(ReKi)              :: TMax                          !< Maximum time (we calculate this based on the number of points and timestep)

@@ -1273,7 +1273,8 @@ SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, E
    
                   
    ErrStat = ErrID_None
-   ErrMsg = ""
+   ErrMsg  = ""
+   Un      = -1   ! set to -1 at start to find valid unit numbers in Open* calls
          
    n = 0;
    if (allocated(LinData%names_x )) n(Indx_x) = size(LinData%names_x )

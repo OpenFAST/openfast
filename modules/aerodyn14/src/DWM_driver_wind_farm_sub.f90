@@ -27,7 +27,7 @@ SUBROUTINE read_wind_farm_parameter(PriFile)
     IMPLICIT NONE
 
     CHARACTER(*), INTENT(IN) :: PriFile
-    INTEGER  ::  UnIn = 0
+    INTEGER  ::  UnIn = -1    ! set to -1 so that Open* calls will find a valid unit number
     INTEGER  ::  UnEc = -1
     INTEGER  ::  I
     CHARACTER(1024) :: DWM_Title,comment

@@ -100,6 +100,7 @@ module BeamDyn_driver_subs
    ErrStat = ErrID_None
    ErrMsg  = ""
    UnEc = -1
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
    
    CALL OpenFInpFile(UnIn,DvrInputFile,ErrStat2,ErrMsg2);   if (Failed())  return;
       
@@ -259,6 +260,7 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
 
    ErrStat = ErrID_none
    ErrMsg  = ""
+   OutUnit = -1   ! set to -1 at start to find valid unit numbers in Open* calls
    
    CALL OpenFOutFile ( OutUnit, trim(RootName)//'.out', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

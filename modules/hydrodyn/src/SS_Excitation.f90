@@ -122,12 +122,11 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       
     u%DummyInput = 0.0_ReKi
       
-    UnSS  = -1
+    UnSS  = -1               ! set to -1 so that Open* calls will find a valid unit number
     p%numStates     =  0
     p%NBody = InitInp%NBody  ! Number of WAMIT bodies: =1 if WAMIT is using NBodyMod > 1,  >=1 if NBodyMod=1
   
     ! Open the .ss input file!
-    CALL GetNewUnit( UnSS )
     CALL OpenFInpFile ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', ErrStat2, ErrMsg2 )  ! Open file.
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
       IF (ErrStat >= AbortErrLev) THEN

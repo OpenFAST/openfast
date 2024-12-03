@@ -2392,11 +2392,12 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
    integer,  save         :: DEBUG_BLADE
    integer,  save         :: DEBUG_BLADENODE
    integer,  save         :: DEBUG_nStep = 1
-   integer,  save         :: DEBUG_FILE_UNIT
+   integer,  save         :: DEBUG_FILE_UNIT = -1     ! set to -1 so that Open* calls will find a valid unit number
 
 !   character(*), parameter               :: RoutineName = 'BEMT_UnCoupledSolve'
    
-   DEBUG_BLADE     = 1 !size(u%Vx,2)
+   UnOut = -1           ! set to -1 so that Open* calls will find a valid unit number
+   DEBUG_BLADE     = 1  !size(u%Vx,2)
    DEBUG_BLADENODE = 23 !max(1, size(u%Vx,1) / 2 )
    
    if (DEBUG_nStep == 1) then

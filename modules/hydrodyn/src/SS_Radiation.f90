@@ -130,10 +130,10 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     character(ErrMsgLen)                   :: ErrMsg2
     
     ! Initialize ErrStat   
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
+    ErrStat = ErrID_None
+    ErrMsg  = ""
       
-    UnSS  = -1
+    UnSS  = -1    ! set to -1 so that Open* calls will find a valid unit number
     N     =  0
     numStates = 0
     p%NBody = InitInp%NBody  ! Number of WAMIT bodies: =1 if WAMIT is using NBodyMod > 1,  >=1 if NBodyMod=1

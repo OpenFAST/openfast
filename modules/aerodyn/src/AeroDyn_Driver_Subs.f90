@@ -216,7 +216,7 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
       call Dvr_InitializeDriverOutputs(dvr, ADI, errStat2, errMsg2); if(Failed()) return
       allocate(dvr%out%unOutFile(dvr%numTurbines))
    endif
-   dvr%out%unOutFile = -1
+   dvr%out%unOutFile = -1     ! set to -1 so that Open* calls will find a valid unit number
 
    ! --- Initialize ADI
    call Init_ADI_ForDriver(iCase, ADI, dvr, FED, dvr%dt, errStat2, errMsg2); if(Failed()) return
@@ -1702,6 +1702,7 @@ subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, p
    character(len=2048) :: Filename_Loc   ! filename local to this function
    errStat = ErrID_None
    errMsg  = ""
+   UnIn = -1      ! set to -1 so that Open* calls will find a valid unit number
 
    Filename_Loc = Filename
    if (present(priPath)) then
