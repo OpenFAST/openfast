@@ -977,9 +977,8 @@ SUBROUTINE HDOut_OpenSum( UnSum, SummaryName, HD_Prog, ErrStat, ErrMsg )
          
    ErrStat = ErrID_None         
    ErrMsg  = ""       
+   UnSum   = -1   ! set to -1 so that Open* calls will find a valid unit number
       
-
-   CALL GetNewUnit( UnSum )
 
    CALL OpenFOutFile ( UnSum, SummaryName, ErrStat, ErrMsg ) 
    IF (ErrStat >=AbortErrLev) RETURN
@@ -1033,9 +1032,8 @@ SUBROUTINE HDOut_WriteWvKinFiles( Rootname, HD_Prog, NStepWave, NNodes, NWaveEle
          
    DO iFile = 1,7
       
-      CALL GetNewUnit( UnWv )
-
       WvName = Rootname // TRIM(extension(iFile))
+      UnWv   = -1   ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFOutFile ( UnWv, WvName, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) RETURN
       
@@ -1084,9 +1082,8 @@ SUBROUTINE HDOut_WriteWvKinFiles( Rootname, HD_Prog, NStepWave, NNodes, NWaveEle
    
    IF ( NWaveElev > 0 ) THEN
    
-      CALL GetNewUnit( UnWv )
-
       WvName = Rootname // '.Elev'
+      UnWv   = -1   ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFOutFile ( UnWv, WvName, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) RETURN
       
@@ -1463,8 +1460,8 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
       
          ! Open the file for output
       OutFileName = TRIM(OutRootName)//'.HD.out'
-      CALL GetNewUnit( p%UnOutFile )
    
+      p%UnOutFile = -1  ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
       IF (ErrStat >=AbortErrLev) RETURN
       

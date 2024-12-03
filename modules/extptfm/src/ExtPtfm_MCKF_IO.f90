@@ -348,11 +348,10 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    ErrMsg  = ""
    Echo = .FALSE.
    UnEc = -1                             ! Echo file not opened, yet
+   UnIn = -1                             ! set to -1 so that Open* calls will find a valid unit number
    CALL GetPath(InputFile, PriPath)     ! Input files will be relative to the path where the primary input file is located.
    CALL AllocAry(InputFileData%OutList, MaxOutChs, "ExtPtfm Input File's Outlist", ErrStat, ErrMsg); if(Failed()) return
    
-   ! Get an available unit number for the file.
-   CALL GetNewUnit(UnIn, ErrStat, ErrMsg);              if(Failed()) return
    ! Open the Primary input file.
    CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if(Failed()) return
    
@@ -581,6 +580,7 @@ SUBROUTINE ReadReducedFile( InputFile, p, FileFormat, ErrStat, ErrMsg )
    CHARACTER(4096)                      :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
    ErrStat = ErrID_None
    ErrMsg  = ""
+   UnIn = -1                             ! set to -1 so that Open* calls will find a valid unit number
    if     (FileFormat==FILEFORMAT_GUYANASCII) then
        call ReadGuyanASCII()
    elseif (FileFormat==FILEFORMAT_FLEXASCII) then
@@ -590,8 +590,6 @@ SUBROUTINE ReadReducedFile( InputFile, p, FileFormat, ErrStat, ErrMsg )
        return
    endif
    ! --- The code below can detect between FlexASCII and GuyanASCII format by looking at the two first lines
-   ! Get an available unit number for the file.
-   !CALL GetNewUnit( UnIn, ErrStat, ErrMsg );               if(Failed()) return
    !! Open the Primary input file.
    !CALL OpenFInpFile ( UnIn, InputFile, ErrStat, ErrMsg ); if(Failed()) return
    !iLine=1
@@ -634,8 +632,6 @@ CONTAINS
 
        T=-1
        dt=-1
-       ! Get an available unit number for the file.
-       CALL GetNewUnit( UnIn, ErrStat, ErrMsg );            if ( ErrStat /= 0 ) return
        ! Open the Primary input file.
        CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
 
@@ -734,8 +730,6 @@ CONTAINS
        ! Guyan reduction has 6 DOF, 0 CB DOFs
        p%nCB  = 0
        p%nTot = 6
-       ! Get an available unit number for the file.
-       CALL GetNewUnit( UnIn, ErrStat, ErrMsg );               if ( ErrStat /= 0 ) return
        ! Open the Primary input file.
        CALL OpenFInpFile ( UnIn, InputFile, ErrStat, ErrMsg ); if ( ErrStat /= 0 ) return
 
@@ -828,11 +822,11 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    CHARACTER(ChanLen),PARAMETER :: TitleStrLines(2) = (/ '---------------', '---------------' /)
    ErrStat = ErrID_None
    ErrMsg  = ""
+   UnSu    = -1      ! set to -1 so that Open* calls will find a valid unit number
    ! TODO TODO TODO YAML FORMAT
    ! TODO TODO TODO ONLY Open Summary if no optional unit given 
 
    ! Open the summary file and give it a heading.
-   CALL GetNewUnit(UnSu, ErrStat, ErrMsg);
    CALL OpenFOutFile(UnSu, TRIM( RootName )//'.sum', ErrStat, ErrMsg)
    IF ( ErrStat /= ErrID_None ) RETURN
    ! Heading:

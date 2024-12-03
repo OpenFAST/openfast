@@ -512,7 +512,7 @@ SUBROUTINE SDOut_OpenSum( UnSum, SummaryName, SD_Prog, ErrStat, ErrMsg )
    ErrStat = ErrID_None         
    ErrMsg  = ""       
 
-   CALL GetNewUnit( UnSum )
+   UnSum = -1     ! OpenFOutFile will find a unit number
    CALL OpenFOutFile ( UnSum, SummaryName, ErrStat, ErrMsg ) 
    IF ( ErrStat >= AbortErrLev ) THEN
       ErrMsg  = 'Failed to open SubDyn summary file: '//TRIM(ErrMsg)
@@ -543,11 +543,12 @@ SUBROUTINE SDOut_OpenOutput( ProgVer, OutRootName,  p, InitOut, ErrStat, ErrMsg 
    INTEGER                                        :: ErrStat2              
    ErrStat = ErrID_None  
    ErrMsg  = ""
+   p%UnJckF = -1        ! unit for summary file set to -1 so OpenFOutFile will find a valid unit number
+
    ! Open the output file, if necessary, and write the header
    IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
       ! Open the file for output
       OutFileName = TRIM(OutRootName)//'.out'
-      CALL GetNewUnit( p%UnJckF )
    
       CALL OpenFOutFile ( p%UnJckF, OutFileName, ErrStat, ErrMsg ) 
       IF ( ErrStat >= AbortErrLev ) THEN

@@ -1581,12 +1581,9 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   UnIn = -1
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
 
-
-      ! Open the input file for blade K.
-
+   ! Open the input file for blade K.
    CALL OpenFInpFile ( UnIn, BldFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -1885,15 +1882,8 @@ SUBROUTINE ReadBladeMeshFileAD( BladeKInputFileMesh, MeshFile, UnEc, ErrStat, Er
 !   CHARACTER(1024)              :: TmpStr(1)                                            ! Temporary string.
 
 
-
-      ! Get an available unit number for the file.
-
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      ! Open the AeroDyn input file.
-
+   ! Open the AeroDyn input file.
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile ( UnIn, MeshFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -2179,11 +2169,9 @@ SUBROUTINE ReadTowerFile( TwrFile, InputFileData, UnEc, ErrStat, ErrMsg )
    ErrMsg   =  ""
 
 
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
 
-      ! Open the tower input file.
-
+   ! Open the tower input file.
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile ( UnIn, TwrFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -2517,17 +2505,11 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    ErrMsg   =  ""
    Echo = .FALSE.
    UnEc = -1                             ! Echo file not opened, yet
+   UnIn = -1                             ! set to -1 so that Open* calls will find a valid unit number
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
 
-      ! Get an available unit number for the file.
-
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      ! Open the Primary input file.
-
+   ! Open the Primary input file.
    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN

@@ -130,8 +130,8 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrS
    real(ReKi), parameter :: ReNaN = huge(1.0_ReKi)
    ErrStat = ErrID_None
    ErrMsg  = ''
+   iUnit   = -1   ! set to -1 so that Open* calls will find a valid unit number
    ! ---
-   call GetNewUnit(iUnit)
    call OpenFInpFile(iUnit, CirculationFileName, errStat2, errMsg2); if(Failed()) return
    nLines=line_count(iUnit)-1
    ! Read Header

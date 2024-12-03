@@ -417,7 +417,6 @@ CONTAINS
                   if ( OptString == 'WRITELOG') THEN
                      read (OptValue,*) p%writeLog
                      if (p%writeLog > 0) then   ! if not zero, open a log file for output
-                        CALL GetNewUnit( p%UnLog )
                         CALL OpenFOutFile ( p%UnLog, TRIM(p%RootName)//'.log', ErrStat, ErrMsg )
                         IF ( ErrStat > AbortErrLev ) THEN
                            ErrMsg = ' Failed to open MoorDyn log file: '//TRIM(ErrMsg)

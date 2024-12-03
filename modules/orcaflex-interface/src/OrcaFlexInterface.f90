@@ -425,6 +425,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, ErrStat, ErrM
       ! Initialize some variables:
    Echo = .FALSE.
    UnEc = -1                             ! Echo file not opened, yet
+   UnIn = -1                             ! set to -1 at start to find valid unit numbers in Open* calls
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
       ! OrcaFlex doesn't like relative path names, so we're going to make it absolute
@@ -435,14 +436,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, ErrStat, ErrM
    END IF
          
 
-      ! Get an available unit number for the file.
-
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      ! Open the Primary input file.
-
+   ! Open the Primary input file.
    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) RETURN

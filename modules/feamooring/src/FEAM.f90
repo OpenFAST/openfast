@@ -1666,6 +1666,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
 
     UnEc = -1
     Echo = .FALSE.  
+    UnIn = -1                              ! set to -1 so that Open* calls will find a valid unit number
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
     CALL AllocAry( InputFileData%OutList, MaxOutPts, "FEAMooring Input File's Outlist", ErrStat2, ErrMsg2 )
@@ -1673,15 +1674,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
     IF ( ErrStat >= AbortErrLev ) RETURN   
 
 
-    ! Get an available unit number for the file.
-
-    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-    CALL CheckError( ErrStat2, ErrMsg2 )
-    IF ( ErrStat >= AbortErrLev ) RETURN
-
-
     ! Open the Primary input file.
-
     CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
     CALL CheckError( ErrStat2, ErrMsg2 )
     IF ( ErrStat >= AbortErrLev ) RETURN                

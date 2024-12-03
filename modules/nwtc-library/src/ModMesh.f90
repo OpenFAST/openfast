@@ -79,8 +79,6 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    ErrMsg  = ""
    
    IF (UnIn < 0) THEN
-      CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-
       CALL OpenBOutFile ( UnIn, TRIM(FileName), ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF

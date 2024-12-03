@@ -221,7 +221,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:6)  :: F6net      !< total force and moment about end A (excluding inertial loads) that Rod may exert on whatever it's attached to [-]
     REAL(DbKi) , DIMENSION(1:6,1:6)  :: M6net      !< total mass matrix about end A of Rod and any attached Points [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: OrMat      !< DCM for body orientation [-]
-    INTEGER(IntKi)  :: RodUnOut      !< unit number of rod output file [-]
+    INTEGER(IntKi)  :: RodUnOut = -1      !< unit number of rod output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: RodWrOutput      !< one row of output data for this rod [-]
   END TYPE MD_Rod
 ! =======================
@@ -288,7 +288,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M      !< node mass matrix [[kg]]
     REAL(DbKi) , DIMENSION(1:3)  :: EndMomentA      !< vector of end moments due to bending at line end A [[N-m]]
     REAL(DbKi) , DIMENSION(1:3)  :: EndMomentB      !< vector of end moments due to bending at line end B [[N-m]]
-    INTEGER(IntKi)  :: LineUnOut      !< unit number of line output file [-]
+    INTEGER(IntKi)  :: LineUnOut = -1      !< unit number of line output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: LineWrOutput      !< one row of output data for this line [-]
   END TYPE MD_Line
 ! =======================
@@ -418,7 +418,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(MD_OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
-    INTEGER(IntKi)  :: MDUnOut      !< Unit number of main output file [-]
+    INTEGER(IntKi)  :: MDUnOut = -1      !< Unit number of main output file (set to -1 so that Open* calls will find a valid unit number) [-]
     CHARACTER(1024)  :: PriPath      !< The path to the primary MoorDyn input file, used if looking for additional input files [-]
     INTEGER(IntKi)  :: writeLog = -1      !< Switch for level of log file output [-]
     INTEGER(IntKi)  :: UnLog = -1      !< Unit number of log file [-]

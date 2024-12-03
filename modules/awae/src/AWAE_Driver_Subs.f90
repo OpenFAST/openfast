@@ -53,17 +53,12 @@ module AWAE_Driver_Subs
 !   ErrMsg  = ""
 !      
 !   UnEc = -1
+!   UnIn = -1      ! set to -1 so that Open* calls will find a valid unit number
 !   Echo = .FALSE.   
 !   call GetPath( filename, PriPath )     ! Input files will be relative to the path where the driver input file is located.
 !   
 !        
-!      ! Get an available unit number for the file.
-!
-!   call GetNewUnit( UnIn, errStat2, errMsg2 )
-!      call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-!
-!      ! Open the driver input file.
-!
+!   ! Open the driver input file.
 !   call OpenFInpFile ( UnIn, filename, errStat2, errMsg2 )
 !      call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
 !      if ( ErrStat >= AbortErrLev ) then
@@ -277,6 +272,7 @@ module AWAE_Driver_Subs
 !   ErrStat = ErrID_None
 !   ErrMsg  = ''
 !   UnEcho  = -1
+!   UnIn    = -1   ! set to -1 so that Open* calls will find a valid unit number
 !   InputFileData%DT = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
 !
 !      ! get the primary/platform input-file data
@@ -294,13 +290,7 @@ module AWAE_Driver_Subs
 !   !call AllocAry( InputFileData%OutList, MaxOutPts, "Outlist", errStat2, errMsg2 )
 !   !   call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
 !        
-!      ! Get an available unit number for the file.
-!
-!   call GetNewUnit( UnIn, errStat2, errMsg2 )
-!      call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-!
-!      ! Open the Primary input file.
-!
+!   ! Open the Primary input file.
 !   call OpenFInpFile ( UnIn, InputFile, errStat2, errMsg2 )
 !      call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
 !      if ( ErrStat >= AbortErrLev ) then

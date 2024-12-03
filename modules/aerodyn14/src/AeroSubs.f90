@@ -58,11 +58,8 @@ SUBROUTINE AD14_GetInput(InitInp, P, x, xd, z, m, y, ErrStat, ErrMess )
    
    ErrStat = ErrID_None
    ErrMess = ''
+   UnIn    = -1   ! set to -1 so that Open* calls will find a valid unit number
    
-      ! Function definition
-
-   call GetNewUnit(UnIn, ErrStatLcl, ErrMessLcl)
-
    !-------------------------------------------------------------------------------------------------
    ! Open the AeroDyn input file
    !-------------------------------------------------------------------------------------------------
@@ -746,10 +743,8 @@ END SUBROUTINE AD14_GetInput
 
    ErrStat = ErrID_None
    ErrMess = ""
+   UnOut   = -1   ! set to -1 so that Open* calls will find a valid unit number
 
-   ! Function definition
-
-   CALL GetNewUnit( UnOut, ErrStat, ErrMess )
    CALL OpenFOutFile( UnOut, FileName, ErrStatLcl, ErrMessLcl)
       CALL SetErrStat(ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,'ADOut' )
       IF ( ErrStat >= AbortErrLev )  THEN
@@ -1026,13 +1021,13 @@ CHARACTER(1024)              :: LINE
    ErrStat = ErrID_None
    ErrMess = ""
 
-   CALL GetNewUnit(NUNIT, ErrStat, ErrMess) 
    p%AirFoil%NumCL    = 0
 
  ! The first loop checks existence and file length to set NumCL
 DO NFOILID = 1, p%AirFoil%NUMFOIL
 
  ! Open the file for reading # of lines
+   NUNIT   = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile (NUNIT, TRIM(p%AirFoil%FOILNM(NFOILID)), ErrStatLcL, ErrMessLcl)
    CALL SetErrStat( ErrStatLcL, ErrMessLcl, ErrStat, ErrMess, 'READFL')
    IF (ErrStat >= AbortErrLev) THEN
@@ -1065,6 +1060,7 @@ CALL AllocArrays (InitInp, P, x, xd, z, m, y, 'Aerodata')
 DO NFOILID = 1, p%AirFoil%NUMFOIL
 
  ! Open the file for reading inputs
+   NUNIT   = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile (NUNIT, TRIM(Adjustl(p%AirFoil%FOILNM(NFOILID))), ErrStatLcL, ErrMessLcl )
    CALL SetErrStat( ErrStatLcL, ErrMessLcl, ErrStat, ErrMess, 'READFL')
    IF (ErrStat >= AbortErrLev) THEN
@@ -1372,7 +1368,7 @@ END SUBROUTINE READFL
 !====================================================================================================
    IMPLICIT                      NONE
       ! Passed Variables:
-   INTEGER,                      INTENT(IN)     :: UnIn
+   INTEGER,                        INTENT(INOUT)  :: UnIn
    TYPE(AD14_InitInputType),       INTENT(INOUT)  :: InitInp
    TYPE(AD14_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
    TYPE(AD14_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
@@ -1395,6 +1391,7 @@ END SUBROUTINE READFL
    ! Open the file for reading
    !-------------------------------------------------------------------------------------------------
    FilName = p%TwrProps%TwrFile
+   UnIn = -1   ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile (UnIn, TRIM(FilName), ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
@@ -4465,12 +4462,13 @@ END SUBROUTINE infupdt
 
    INTEGER                    :: i
    INTEGER                    :: NumOut
-   INTEGER, PARAMETER         :: UnDyn = 80
+   INTEGER                    :: UnDyn
 
    CHARACTER(50)              :: Frmt
 
    ErrStat = ErrID_None
    ErrMess = ""
+   UnDyn   = -1   ! set to -1 so that Open* calls will find a valid unit number
 
 !SAVE                                                   ! Save *all* local variables.  Is this necessary, or is OnePass enough.
 

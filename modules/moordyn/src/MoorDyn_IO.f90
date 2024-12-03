@@ -146,6 +146,7 @@ CONTAINS
       INTEGER(IntKi)                   :: nGridX         ! integer of the size of BathGrid_Xs
       INTEGER(IntKi)                   :: nGridY         ! integer of the size of BathGrid_Ys
 
+      UnCoef = -1    ! set to -1 so that Open* calls will find a valid unit number
 
       IF (LEN_TRIM(inputString) == 0) THEN
          ! If the input is empty (not provided), make the 1x1 bathymetry grid using the default depth
@@ -173,7 +174,6 @@ CONTAINS
          CALL WrScr("   The depth input contains letters so will load a bathymetry file.")
          
          ! load lookup table data from file
-         CALL GetNewUnit( UnCoef ) ! unit number for coefficient input file
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )
          cALL SetErrStat(ErrStat4, ErrMsg4, ErrStat3, ErrMsg3, 'MDIO_getBathymetry')
 
@@ -234,6 +234,7 @@ CONTAINS
       CHARACTER(120)                   :: ErrMsg4         
       CHARACTER(120)                   :: Line2   
       
+      UnCoef = -1    ! set to -1 so that Open* calls will find a valid unit number
            
       if (SCAN(inputString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) then ! "eE" are exluded as they're used for scientific notation!
       
@@ -249,7 +250,6 @@ CONTAINS
          
          ! load lookup table data from file
         
-         CALL GetNewUnit( UnCoef )
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )   ! add error handling?
          
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first two lines (title, names, and units) then parse
@@ -872,7 +872,6 @@ CONTAINS
 
          ! Open the file for output
          OutFileName = TRIM(p%RootName)//'.out'
-         CALL GetNewUnit( p%MDUnOut )
 
          CALL OpenFOutFile ( p%MDUnOut, OutFileName, ErrStat, ErrMsg )
          IF ( ErrStat > ErrID_None ) THEN
@@ -918,7 +917,6 @@ CONTAINS
            
             ! Open the file for output
             OutFileName = TRIM(p%RootName)//'.Line'//TRIM(Int2LStr(I))//'.out'
-            CALL GetNewUnit( m%LineList(I)%LineUnOut )
 
             CALL OpenFOutFile ( m%LineList(I)%LineUnOut, OutFileName, ErrStat, ErrMsg )
             IF ( ErrStat > ErrID_None ) THEN
@@ -1072,7 +1070,6 @@ CONTAINS
            
             ! Open the file for output
             OutFileName = TRIM(p%RootName)//'.Rod'//TRIM(Int2LStr(I))//'.out'
-            CALL GetNewUnit( m%RodList(I)%RodUnOut )
 
             CALL OpenFOutFile ( m%RodList(I)%RodUnOut, OutFileName, ErrStat, ErrMsg )
             IF ( ErrStat > ErrID_None ) THEN

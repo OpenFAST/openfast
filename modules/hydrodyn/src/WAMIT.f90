@@ -325,7 +325,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
 
          ! Linear restoring from the hydrostatics problem:
-
+      UnWh = -1   ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFInpFile ( UnWh, TRIM(InitInp%WAMITFile)//'.hst', ErrStat2, ErrMsg2 )  ! Open file.
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')      
          IF ( ErrStat >= AbortErrLev )  THEN
@@ -365,7 +365,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
          ! Linear, frequency-dependent hydrodynamic added mass and damping from the
          !   radiation problem:
-
+      UnW1 = -1   ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFInpFile ( UnW1, TRIM(InitInp%WAMITFile)//'.1', ErrStat2, ErrMsg2   )  ! Open file.
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')      
          IF ( ErrStat >= AbortErrLev )  THEN
@@ -589,7 +589,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! Linear, frequency- and direction-dependent complex hydrodynamic wave
          !   excitation force per unit wave amplitude vector from the diffraction
          !   problem:
-
+      UnW3 = -1   ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFInpFile ( UnW3, TRIM(InitInp%WAMITFile)//'.3', ErrStat2, ErrMsg2   )  ! Open file.
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')      
          IF ( ErrStat >= AbortErrLev )  THEN

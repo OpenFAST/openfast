@@ -1080,12 +1080,7 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
    ErrMsg  = ""
    UnIn = -1
    
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-
       ! Open the input file for blade K.
-
    CALL OpenFInpFile ( UnIn, ADBlFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1322,9 +1317,9 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    CHARACTER(ChanLen),PARAMETER :: TitleStr(2) = (/ 'Parameter', 'Units    ' /)
    CHARACTER(ChanLen),PARAMETER :: TitleStrLines(2) = (/ '---------------', '---------------' /)
 
+   UnSu = -1   ! set to -1 so that Open* calls will find a valid unit number
+
    ! Open the summary file and give it a heading.
-      
-   CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
    CALL OpenFOutFile ( UnSu, TRIM( p%RootName )//'.sum', ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev ) RETURN
 

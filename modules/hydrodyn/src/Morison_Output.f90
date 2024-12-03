@@ -6610,8 +6610,8 @@ SUBROUTINE MrsnOut_OpenOutput( ProgName, OutRootName,  p, InitOut, ErrStat, ErrM
       
          ! Open the file for output
       OutFileName = TRIM(OutRootName)//'.MRSN.out'
-      CALL GetNewUnit( p%UnOutFile )
    
+      p%UnOutFile = -1  ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
       IF (ErrStat >=AbortErrLev) RETURN
       

@@ -1141,13 +1141,12 @@ SUBROUTINE IceD_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    UnEc    = -1
-   UnIn    = -1
+   UnIn    = -1      ! set to -1 so that Open* calls will find a valid unit number
 
    !-------------------------------------------------------------------------------------------------
    ! Open the file
    !-------------------------------------------------------------------------------------------------
    IF ( Echo ) THEN
-      CALL GetNewUnit( UnEc, ErrStat, ErrMsg )      
       CALL OpenFOutFile( UnEc, TRIM(InitInp%RootName)//'.IceD.ech', ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( ' Error opening echo file: "'//TRIM(ErrMsg)//'". Simulation will continue with no IceDyn echo file.' )
@@ -1160,7 +1159,6 @@ SUBROUTINE IceD_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
    
    FileName = TRIM(InitInp%InputFile)
 
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
    CALL OpenFInpFile( UnIn, FileName, ErrStat, ErrMsg )
 
    IF ( ErrStat /= ErrID_None ) THEN

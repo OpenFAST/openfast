@@ -24,8 +24,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    character(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
+   UnIn = -1      ! set to -1 so that Open* calls will find a valid unit number
    ! Open file
-   CALL GetNewUnit( UnIn )   
    CALL OpenFInpfile(UnIn, TRIM(FileName), ErrStat2, ErrMsg2)
    if (Check( ErrStat2 /= ErrID_None , 'Could not open input file')) return
    CALL GetPath( FileName, PriPath )    ! Input files will be relative to the path where the primary input file is located.

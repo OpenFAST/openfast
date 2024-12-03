@@ -24,7 +24,7 @@ module iceInputParams
 
    use , INTRINSIC :: iso_fortran_env , only : iostat_end  ! for end of file detection
    use precision
-   use NWTC_IO, only : GetNewUnit, OpenFInpFile
+   use NWTC_IO, only : OpenFInpFile
    use iceLog
 
    implicit none
@@ -147,12 +147,7 @@ contains
       CHARACTER(msgLen) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
       integer(IntKi)    :: ioStatus
 
-      call GetNewUnit ( input%UnitNum, ErrStat, ErrMsg )
-      if (ErrStat >= AbortErrLev) then
-         call iceErrorHndlr (iceLog, ErrStat, 'CountIceInputs => GetNewUnit: '//newLine//ErrMsg, 1)
-         return
-      endif
-
+      input%UnitNum = -1   ! set to -1 so that Open* calls will find a valid unit number
       call OpenFInpFile ( input%UnitNum, trim(fname), ErrStat, ErrMsg  )
       if (ErrStat >= AbortErrLev) then
          call iceErrorHndlr (iceLog, ErrStat, 'CountIceInputs => OpenFInpFile: '//newLine//ErrMsg, 1)

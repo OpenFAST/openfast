@@ -1839,7 +1839,6 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
 
 #ifdef OUTPUT_ADDEDMASS  
    UnAM = -1
-   CALL GetNewUnit( UnAM, ErrStat, ErrMsg )
    CALL OpenFOutFile( UnAM, TRIM(p_FAST%OutFileRoot)//'.AddedMassMatrix', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )               
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -1853,7 +1852,6 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
 #endif   
 #ifdef OUTPUT_JACOBIAN
    UnJac = -1
-   CALL GetNewUnit( UnJac, ErrStat2, ErrMsg2 )
    CALL OpenFOutFile( UnJac, TRIM(p_FAST%OutFileRoot)//'.'//TRIM(num2lstr(this_time))//'.Jacobian2', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )               
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -2608,7 +2606,6 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
 #ifdef OUTPUT_ADDEDMASS  
 IF (p_FAST%CompHydro == Module_HD ) THEN
    UnAM = -1
-   CALL GetNewUnit( UnAM, ErrStat2, ErrMsg2 )
    CALL OpenFOutFile( UnAM, TRIM(p_FAST%OutFileRoot)//'.AddedMassMatrix', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
       IF ( ErrStat >= AbortErrLev ) RETURN               
@@ -2621,7 +2618,6 @@ END IF
 #endif
 #ifdef OUTPUT_JACOBIAN
    UnJac = -1
-   CALL GetNewUnit( UnJac, ErrStat2, ErrMsg2 )
    CALL OpenFOutFile( UnJac, TRIM(p_FAST%OutFileRoot)//'.'//TRIM(num2lstr(this_time))//'.Jacobian', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
       IF ( ErrStat >= AbortErrLev ) RETURN               
@@ -5095,7 +5091,6 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
 #ifdef OUTPUT_MASS_MATRIX
    if (n_t_global == 0) then   
       UnMM = -1
-      CALL GetNewUnit( UnMM, ErrStat2, ErrMsg2 )
       CALL OpenFOutFile( UnMM, TRIM(p_FAST%OutFileRoot)//'.EDMassMatrix', ErrStat2, ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          IF ( ErrStat >= AbortErrLev ) RETURN                  

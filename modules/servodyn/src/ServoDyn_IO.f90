@@ -2399,8 +2399,8 @@ subroutine InitializeSummaryFile(InputFileData,OutfileRoot,UnSum,ErrStat,ErrMsg)
    ! init vars
    ErrStat  =  ErrID_None
    ErrMsg   =  ''
+   UnSum    = -1  ! set to -1 at start to find valid unit numbers in Open* calls
    if ( InputFileData%SumPrint ) then
-      call GetNewUnit( UnSum )
       CALL OpenEcho ( UnSum, TRIM(OutFileRoot)//'.sum', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN

@@ -75,13 +75,11 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
    ErrMsg   =  ""
 
 
-      ! Get a unit number for reading in the file
-   CALL GetNewUnit( WaveElevUnit )
-
       ! Assemble the filename for the wave elevation data.
    WaveElevData%FileName   =  TRIM(InitInp%WvKinFile)//'.Elev'
 
       ! Open the file containing the wave elevation timeseries
+   WaveElevUnit = -1    ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile(  WaveElevUnit, WaveElevData%FileName, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat,ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
@@ -760,11 +758,9 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 
    ! Read the first file and set the initial values of the 
-   
-   CALL GetNewUnit( UnWv )
 
    FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(1))
-   
+   UnWv     = -1  ! set to -1 so that Open* calls will find a valid unit number
    CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
@@ -807,10 +803,8 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ! Now read the remaining files and check that the elements are consistent with the first file
    DO iFile = 2,7
       
-      CALL GetNewUnit( UnWv )
-
       FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(iFile))
-   
+      UnWv     = -1  ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
       IF ( ErrStat /= 0 ) THEN
          ErrStat = ErrID_Fatal
@@ -879,10 +873,9 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    
    ! WaveElev
    IF ( InitInp%NWaveElev > 0 ) THEN
-      CALL GetNewUnit( UnWv )
 
       FileName = TRIM(InitInp%WvKinFile) // '.Elev'
-   
+      UnWv     = -1  ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
       IF ( ErrStat /= 0 ) THEN
          ErrStat = ErrID_Fatal

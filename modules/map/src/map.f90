@@ -937,8 +937,7 @@ IF (ErrStat >= AbortErrLev) RETURN
 !    p%InputLines = ""
     
     ! Open the MAP input file
-    Un = -1  
-    CALL GetNewUnit( Un, ErrStat, ErrMsg )
+    Un = -1    ! set to -1 so that Open* calls will find a valid unit number 
     CALL OpenFInpFile ( Un, file, ErrStat, ErrMsg )
     IF ( ErrStat >= AbortErrLev )RETURN
 

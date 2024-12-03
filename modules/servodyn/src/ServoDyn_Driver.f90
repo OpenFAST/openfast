@@ -79,8 +79,7 @@ PROGRAM SrvD_Driver
 
    CALL GetRoot( InitInData%InputFile, OutFile )
    OutFile = trim(OutFile)//'.out'
-   
-   CALL GetNewUnit( Un, ErrStat, ErrMsg)
+   Un = -1  ! set to -1 at start to find valid unit numbers in Open* calls
    call OpenFOutFile ( Un, OutFile, ErrStat, ErrMsg )
    
          ! Set the driver's request for time interval here:

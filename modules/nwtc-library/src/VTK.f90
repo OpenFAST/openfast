@@ -6,7 +6,7 @@ module VTK
 
    use Precision, only: IntKi, SiKi, ReKi
    use NWTC_Base, only: ErrID_None, ErrID_Fatal, AbortErrLev, ErrMsgLen
-   use NWTC_IO, only: GetNewUnit, NewLine, WrScr, ReadStr, OpenFOutFile
+   use NWTC_IO, only: NewLine, WrScr, ReadStr, OpenFOutFile
    use NWTC_IO, only: OpenFinpFile, ReadCom, Conv2UC
    use NWTC_IO, only: SetErrStat
 
@@ -93,8 +93,8 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: Un                   !< unit number of opened file
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
-   
-      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
+  
+      Un = -1  ! set to -1 so that Open* calls will find a valid unit number 
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
          if (ErrStat >= AbortErrLev) return
       
@@ -158,10 +158,7 @@ contains
          closeOnReturn = .FALSE.
       END IF
       
-      !$OMP critical
-      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFInpFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-      !$OMP end critical
          if (ErrStat >= AbortErrLev) return
       
        CALL ReadCom( Un, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, 0 )
@@ -360,10 +357,8 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
-      !$OMP critical
-      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
+      Un = -1     ! set to -1 so that Open* calls will find a valid unit number
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-      !$OMP end critical
          if (ErrStat >= AbortErrLev) return
       
       WRITE(Un,'(A)')  '# vtk DataFile Version 3.0'
@@ -451,7 +446,6 @@ contains
         logical :: b
 
         if (.not. mvtk%bFileOpen) then
-            CALL GetNewUnit( mvtk%vtk_unit )   
             if (mvtk%bBinary) then
                 ! Fortran 2003 stream, otherwise intel fortran !
                 !form='UNFORMATTED',access='SEQUENTIAL',action='WRITE',convert='BIG_ENDIAN',recordtype='STREAM',buffered='YES',

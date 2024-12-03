@@ -118,7 +118,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     ! Local variables:
     integer(IntKi)                :: I                                         ! loop counter
-    integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
+    integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file (set to -1 so that Open* calls will find a valid unit number)
     character(1024)               :: ObserverFile                              ! name of the files containing obesever location
     integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
     logical                       :: Echo                                      ! Determines if an echo file should be written
@@ -130,12 +130,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     ErrStat = ErrID_None
     ErrMsg  = ""
 
-    UnEc = -1
+    UnEc  = -1
+    UnIn  = -1
+    UnIn2 = -1
     Echo = .FALSE.
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
     ! Open the Primary input file.
-    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 ); call check()
     CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); call check()
     IF ( ErrStat >= AbortErrLev ) THEN
         CALL Cleanup()
@@ -225,8 +226,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     !----- read from observer file
     CALL ReadVar ( UnIn, InputFile, ObserverFile, ObserverFile, 'Name of file  observer locations', ErrStat2, ErrMsg2, UnEc ); call check()
     IF ( PathIsRelative( ObserverFile ) ) ObserverFile = TRIM(PriPath)//TRIM(ObserverFile)
-
-    CALL GetNewUnit( UnIn2, ErrStat2, ErrMsg2 ); call check()
 
     CALL OpenFInpFile ( UnIn2, ObserverFile, ErrStat2, ErrMsg2 ); call check()
     IF ( ErrStat >= AbortErrLev ) RETURN
@@ -336,6 +335,7 @@ SUBROUTINE ReadBLTables( InputFile, AFI, InputFileData, ErrStat, ErrMsg )
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
+    UnIn = -1     ! set to -1 so that Open* calls will find a valid unit number
 
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
     nAirfoils = size(AFI)
@@ -345,7 +345,6 @@ SUBROUTINE ReadBLTables( InputFile, AFI, InputFileData, ErrStat, ErrMsg )
 
         call WrScr('AeroAcoustics_IO: reading BL table:'//trim(Filename))
 
-        CALL GetNewUnit(UnIn, ErrStat2, ErrMsg2); if(Failed()) return
         CALL OpenFInpFile(UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
 
         CALL ReadCom(UnIn, FileName, "! Boundary layer", ErrStat2, ErrMsg2); if(Failed()) return
@@ -442,12 +441,12 @@ SUBROUTINE ReadTICalcTables(InputFile, InputFileData, ErrStat, ErrMsg)
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
+    UnIn = -1     ! set to -1 so that Open* calls will find a valid unit number
 
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
     FileName = TRIM(PriPath)//InputFileData%TICalcTabFile
 
-    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2); call check()
     CALL OpenFInpFile ( UnIn, FileName, ErrStat2, ErrMsg2 ); if(Failed()) return
     CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check()
     CALL ReadVar(UnIn, FileName, InputFileData%AvgV, 'AvgV',   'Echo flag', ErrStat2, ErrMsg2); call check()
@@ -629,11 +628,6 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
 
    ! FIRST FILE
    IF (InputFileData%NrOutFile .gt.0) THEN
-      call GetNewUnit( p%unOutFile, ErrStat, ErrMsg )
-      if ( ErrStat >= AbortErrLev ) then
-         p%unOutFile = -1
-         return
-      end if
 
       call OpenFOutFile ( p%unOutFile, trim(InputFileData%AAOutFile(1)), ErrStat, ErrMsg )
       if ( ErrStat >= AbortErrLev ) return
@@ -663,11 +657,6 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
    ENDIF
    ! SECOND FILE
    IF (InputFileData%NrOutFile .gt. 1) THEN
-      call GetNewUnit( p%unOutFile2, ErrStat, ErrMsg )
-      if ( ErrStat >= AbortErrLev ) then
-         p%unOutFile = -1
-         return
-      end if
       call OpenFOutFile ( p%unOutFile2, trim(InputFileData%AAOutFile(2)), ErrStat, ErrMsg )
       if ( ErrStat >= AbortErrLev ) return
       write (p%unOutFile2,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '//trim(GetNVD(InitOut%Ver))
@@ -699,11 +688,6 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
    ENDIF
    ! THIRD FILE
    IF (InputFileData%NrOutFile .gt. 2) THEN
-      call GetNewUnit( p%unOutFile3, ErrStat, ErrMsg )
-      if ( ErrStat >= AbortErrLev ) then
-         p%unOutFile = -1
-         return
-      end if
       call OpenFOutFile ( p%unOutFile3, trim(InputFileData%AAOutFile(3)), ErrStat, ErrMsg )
       if ( ErrStat >= AbortErrLev ) return
       write (p%unOutFile3,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '//trim(GetNVD(InitOut%Ver))
@@ -733,11 +717,6 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
    ENDIF
    ! FOURTH FILE
    IF (InputFileData%NrOutFile .gt. 3) THEN
-      call GetNewUnit( p%unOutFile4, ErrStat, ErrMsg )
-      if ( ErrStat >= AbortErrLev ) then
-         p%unOutFile = -1
-         return
-      end if
       call OpenFOutFile ( p%unOutFile4, trim(InputFileData%AAOutFile(4)), ErrStat, ErrMsg )
       if ( ErrStat >= AbortErrLev ) return
       write (p%unOutFile4,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '//trim(GetNVD(InitOut%Ver))
