@@ -698,6 +698,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
       Init%InData_AD%InputFile          = p_FAST%AeroFile
       Init%InData_AD%RootName           = p_FAST%OutFileRoot
       Init%InData_AD%MHK                = p_FAST%MHK
+      Init%InData_AD%CompSeaSt          = p_FAST%CompSeaSt
       if ( p_FAST%MHK == MHK_None ) then
          Init%InData_AD%defFldDens      = p_FAST%AirDens
       else
@@ -920,6 +921,60 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          RETURN
       END IF
 
+   if ( p_FAST%CompSeaSt == Module_SeaSt ) then
+
+      Init%InData_SeaSt%Gravity       = p_FAST%Gravity
+      Init%InData_SeaSt%defWtrDens    = p_FAST%WtrDens
+      Init%InData_SeaSt%defWtrDpth    = p_FAST%WtrDpth
+      Init%InData_SeaSt%defMSL2SWL    = p_FAST%MSL2SWL
+      Init%InData_SeaSt%MHK           = p_FAST%MHK
+      Init%InData_SeaSt%UseInputFile  = .TRUE.
+      Init%InData_SeaSt%Linearize     = p_FAST%Linearize
+      Init%InData_SeaSt%hasIce        = p_FAST%CompIce /= Module_None
+      Init%InData_SeaSt%InputFile     = p_FAST%SeaStFile
+      Init%InData_SeaSt%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_SeaSt))
+      
+         ! these values support wave field handling
+      Init%InData_SeaSt%WaveFieldMod  = p_FAST%WaveFieldMod
+      Init%InData_SeaSt%PtfmLocationX = p_FAST%TurbinePos(1)
+      Init%InData_SeaSt%PtfmLocationY = p_FAST%TurbinePos(2)
+      
+      Init%InData_SeaSt%TMax          = p_FAST%TMax
+      
+      IF ( p_FAST%MHK .NE. 0_IntKi .AND. p_FAST%CompInflow == Module_IfW) THEN
+         Init%InData_SeaSt%hasCurrField = .TRUE.
+      ELSE
+         Init%InData_SeaSt%hasCurrField = .FALSE.
+      END IF
+
+      CALL SeaSt_Init( Init%InData_SeaSt, SeaSt%Input(1), SeaSt%p,  SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), &
+                          SeaSt%OtherSt(STATE_CURR), SeaSt%y, SeaSt%m, p_FAST%dt_module( MODULE_SeaSt ), Init%OutData_SeaSt, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+      p_FAST%ModuleInitialized(Module_SeaSt) = .TRUE.
+      CALL SetModuleSubstepTime(Module_SeaSt, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF  
+      
+      IF ( p_FAST%MHK .NE. 0_IntKi .AND. p_FAST%CompInflow == Module_IfW) THEN ! MHK turbine
+         ! Simulating an MHK turbine; load dynamic current from IfW
+         SeaSt%p%WaveField%CurrField  => Init%OutData_IfW%FlowField
+         SeaSt%p%WaveField%hasCurrField = .TRUE.
+         ! Set AD pointers to wavefield
+         IF (p_FAST%CompAero == Module_AD) AD%p%WaveField => Init%OutData_SeaSt%WaveField
+      ELSE ! Wind turbine
+         SeaSt%p%WaveField%hasCurrField = .FALSE.
+      END IF
+     
+   end if
+   
+   ! ........................
+   ! initialize HydroDyn
+   ! ........................
    ALLOCATE( HD%Input_Saved( p_FAST%InterpOrder+1 ), HD%InputTimes_Saved( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating HD%Input_Saved and HD%InputTimes_Saved.",ErrStat,ErrMsg,RoutineName)
@@ -2248,6 +2303,8 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    IF (p%MHK /= MHK_None .and. p%MHK /= MHK_FixedBottom .and. p%MHK /= MHK_Floating) CALL SetErrStat( ErrID_Fatal, 'MHK switch is invalid. Set MHK to 0, 1, or 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%MHK /= MHK_None .and. p%Linearize) CALL SetErrStat( ErrID_Warn, 'Linearization is not fully implemented for an MHK turbine (buoyancy not included in perturbations, and added mass not included anywhere).', ErrStat, ErrMsg, RoutineName )
+
+   IF (p%MHK /= MHK_None .and. p%CompSeaSt == Module_SeaSt .and. p%CompInflow /= Module_IfW) CALL SetErrStat( ErrID_Fatal, 'InflowWind must be activated for MHK turbines when SeaState is used.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%Gravity < 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'Gravity must not be negative.', ErrStat, ErrMsg, RoutineName )
 

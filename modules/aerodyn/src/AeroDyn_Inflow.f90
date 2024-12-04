@@ -74,7 +74,8 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%WtrDpth    = InitInp%AD%WtrDpth
 
    ! --- Initialize Inflow Wind 
-   call ADI_InitInflowWind(InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOut_IW, errStat2, errMsg2); if (Failed()) return
+   call ADI_InitInflowWind(InitInp%IW_InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOut_IW, errStat2, errMsg2); if (Failed()) return
+
    ! Concatenate AD outputs to IW outputs
    call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_IW%WriteOutputHdr, InitOut_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
 
@@ -380,6 +381,8 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       InitInData%InputFileName    = i_IW%InputFile
       InitInData%Linearize        = i_IW%Linearize
       InitInData%FilePassingMethod= i_IW%FilePassingMethod
+      InitInData%WtrDpth          = i_IW%WtrDpth
+      InitInData%MSL2SWL          = i_IW%MSL2SWL
       InitInData%NumWindPoints = 1
       if (i_IW%FilePassingMethod == 1_IntKi) then     ! passing input file as an FileInfoType structure
          call NWTC_Library_Copyfileinfotype( i_IW%PassedFileInfo, InitInData%PassedFileInfo, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
@@ -388,6 +391,7 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       endif
       InitInData%RootName         = trim(Root)//'.IfW'
       InitInData%MHK              = i_IW%MHK
+      InitInData%OutputAccel      = InitInData%MHK > 0
       CALL InflowWind_Init( InitInData, IW%u, IW%p, &
                      IW%x, IW%xd, IW%z, IW%OtherSt, &
                      IW%y, IW%m, dt,  InitOutData, errStat2, errMsg2 )
