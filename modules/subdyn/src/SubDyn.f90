@@ -192,6 +192,12 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    real(FEKi), dimension(:)  , allocatable :: Omega
    real(FEKi), dimension(:)  , allocatable :: Omega_Gy       ! Frequencies of Guyan modes
    logical, allocatable                    :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
+ 
+   REAL(ReKi)                              :: rOG(3)         ! Vector from origin to G
+   REAL(ReKi)                              :: M_O(6,6)       ! Rigid-body inertia matrix
+   REAL(FEKi),allocatable                  :: MBB(:,:)       ! Leader DOFs mass matrix
+   REAL(ReKi), dimension(:,:), allocatable :: TI2 ! For Equivalent mass matrix
+
    INTEGER(IntKi)       :: ErrStat2      ! Error status of the operation
    CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
    
@@ -222,7 +228,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !     %RefOrientation   is the identity matrix (3,3,N)
       !     %Position         is the reference position (3,N)
       ! Maybe some logic to make sure these points correspond roughly to nodes -- though this may not be true for a long pile into the soil with multiple connection points
-      ! Note: F = -kx  whre k is the relevant 6x6 matrix from SoilStiffness
+      ! Note: F = -kx  where k is the relevant 6x6 matrix from SoilStiffness
       call AllocAry(Init%Soil_K, 6,6, size(InitInput%SoilStiffness,3), 'Soil_K', ErrStat2, ErrMsg2);
       call AllocAry(Init%Soil_Points, 3, InitInput%SoilMesh%NNodes, 'Soil_Points', ErrStat2, ErrMsg2);
       call AllocAry(Init%Soil_Nodes,     InitInput%SoilMesh%NNodes, 'Soil_Nodes' , ErrStat2, ErrMsg2);
@@ -237,7 +243,8 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    !bjj added this ugly check (mostly for checking SubDyn driver). not sure if anyone would want to play with different values of gravity so I don't return an error.
    IF (Init%g < 0.0_ReKi ) CALL ProgWarn( ' SubDyn calculations use gravity assuming it is input as a positive number; the input value is negative.' ) 
-   
+   p%g = Init%g
+
    ! Establish the GLUECODE requested/suggested time step.  This may be overridden by SubDyn based on the SDdeltaT parameter of the SubDyn input file.
    Init%DT  = Interval
    IF ( LEN_TRIM(Init%RootName) == 0 ) THEN
@@ -346,6 +353,29 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    ! Construct the input mesh (u%LMesh, force on nodes) and output mesh (y%Y2Mesh, displacements)
    CALL CreateInputOutputMeshes( p%nNodes, Init%Nodes, u%LMesh, y%Y2Mesh, y%Y3Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
+
+   ! If floating, compute the vector from the reference point to the rigid-body CoG in Guyan frame
+   IF (p%Floating) THEN
+      ! Compute the vector from reference point P to rigid-body CoG for floating structures
+      ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
+      CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
+      ! Compute Rigid body mass matrix (without Soil, and using both Interface and Reactions nodes as leader DOF)
+      if (p%nDOFR__/=p%nDOF__Rb) then
+         call SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat2, ErrMsg2); if(Failed()) return
+         M_O=matmul(TRANSPOSE(TI2),matmul(MBB,TI2)) !Equivalent mass matrix of the rigid body
+      else
+         M_O=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
+      endif
+      deallocate(TI2)
+      ! Clean up for values that ought to be 0
+      M_O(1,2:4)= 0.0_ReKi; 
+      M_O(2,1  )= 0.0_ReKi; M_O(2,3  )= 0.0_ReKi; M_O(2,5  )= 0.0_ReKi;
+      M_O(3,1:2)= 0.0_ReKi; M_O(3,6  )= 0.0_ReKi
+      M_O(4,1  )= 0.0_ReKi; M_O(5,2  )= 0.0_ReKi; M_O(6,3  )= 0.0_ReKi;
+      CALL rigidBodyMassMatrixCOG(M_O, rOG);
+      p%rPG = rOG-InitInput%TP_RefPoint
+   END IF
 
    ! --- Eigen values of full system (for summary file output only)
    IF ( Init%SSSum .or. p%OutFEMModes>idOutputFormatNone) THEN 
@@ -481,6 +511,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: udotdot_TP(6)
       INTEGER(IntKi), pointer      :: DOFList(:)
       REAL(ReKi)                   :: DCM(3,3)
+      REAL(ReKi)                   :: MBB(6,6), CBB(6,6)   ! Guyan mode inertia and damping matrices transformed to earth-fixed frame of reference
       REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       ! Variables for Guyan rigid body motion
@@ -493,7 +524,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       real(ReKi), dimension(3) ::  aP   ! Rigid-body acceleration of node
       real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
       real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global coordinates
-      real(R8Ki), dimension(6,6) :: RRb2g ! Rotation matrix global 2 body coordinates, acts on a 6-vector
+      real(R8Ki), dimension(6,6) :: RRb2g ! Rotation matrix body 2 global coordinates, acts on a 6-vector
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
       ! Initialize ErrStat
@@ -501,17 +532,23 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ErrMsg  = ""
 
       ! --- Convert inputs to FEM DOFs and convenient 6-vector storage
-      ! Compute the small rotation angles given the input direction cosine matrix
-      rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat2, Errmsg2); if(Failed()) return
+      ! Compute the roll, pitch, and yaw angles given the input direction cosine matrix
+      IF ( p%Floating ) THEN
+         ! Only needed for outputs when floating
+         rotations  = EulerExtractZYX(u%TPMesh%Orientation(:,:,1))
+      ELSE
+         ! Need to be small angles due to the Guyan stiffness terms
+         rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat2, ErrMsg2); if(Failed()) return
+      END IF
       m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
       Rb2g(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
-      RRb2g(:,:) = 0.0_ReKi
+      RRb2g(:,:) = 0.0_R8Ki
       RRb2g(1:3,1:3) = Rb2g
       RRb2g(4:6,4:6) = Rb2g
-     
+
       ! --------------------------------------------------------------------------------
       ! --- Output Meshes 2&3
       ! --------------------------------------------------------------------------------
@@ -576,7 +613,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Storing elastic motion (full motion for fixed bottom, CB motion+SIM for floating)
       m%U_full_elast  = m%U_full
-                                                            
+
       ! --- Place displacement/velocity/acceleration into Y2 output mesh        
       if (p%Floating) then
          ! For floating, we compute the Guyan motion directly (rigid body motion with TP as origin)
@@ -596,9 +633,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             ! Full displacements CB-rotated + Guyan (KEEP ME) >>> Rotate All
             if (p%GuyanLoadCorrection) then
                m%U_full_NS    (DOFList(1:3)) = matmul(Rb2g, m%U_full_NS    (DOFList(1:3))) + duP(1:3)       
-               m%U_full_NS    (DOFList(4:6)) = matmul(Rb2g, m%U_full_NS    (DOFList(4:6))) + rotations(1:3)
+               CALL SmllRotTrans('Nodal rotation',m%U_full_NS(DOFList(4)),m%U_full_NS(DOFList(5)),m%U_full_NS(DOFList(6)),DCM,'',ErrStat2,ErrMsg2); if(Failed()) return
+               m%U_full_NS    (DOFList(4:6)) = EulerExtractZYX( matmul(DCM,Rg2b) )
                m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
-               m%U_full       (DOFList(4:6)) = matmul(Rb2g, m%U_full       (DOFList(4:6))) + rotations(1:3)
+               CALL SmllRotTrans('Nodal rotation',m%U_full(DOFList(4)),m%U_full(DOFList(5)),m%U_full(DOFList(6)),DCM,'',ErrStat2,ErrMsg2); if(Failed()) return
+               m%U_full       (DOFList(4:6)) = EulerExtractZYX( matmul(DCM,Rg2b) )
                m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
                m%U_full_dot   (DOFList(4:6)) = matmul(Rb2g, m%U_full_dot   (DOFList(4:6))) + Om(1:3)
                m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
@@ -615,15 +654,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             endif
 
             ! --- Rigid body displacements for hydrodyn
-            ! Construct the direction cosine matrix given the output angles
-            call SmllRotTrans( 'UR_bar input angles Guyan', rotations(1), rotations(2), rotations(3), DCM, '', ErrStat2, ErrMsg2) ! NOTE: using only Guyan rotations
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
-            y%Y2mesh%Orientation     (:,:,iSDNode)   = DCM
+            y%Y2mesh%Orientation     (:,:,iSDNode)   = u%TPMesh%Orientation(:,:,1)
             y%Y2mesh%TranslationDisp (:,iSDNode)     = duP(1:3)                       ! Y2: NOTE: only the Guyan displacements for floating
             ! --- Full elastic displacements for others (moordyn)
-            call SmllRotTrans( 'Nodal rotation', m%U_full_NS(DOFList(4)), m%U_full_NS(DOFList(5)), m%U_full_NS(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
-            y%Y3mesh%Orientation     (:,:,iSDNode)   = DCM
+            y%Y3mesh%Orientation     (:,:,iSDNode)   = EulerConstructZYX(m%U_full_NS(DOFList(4:6)))
             y%Y3mesh%TranslationDisp (:,iSDNode)     = m%U_full_NS     (DOFList(1:3)) ! Y3: Guyan+CB (but no SIM) displacements
             ! --- Elastic velocities and accelerations 
             y%Y2mesh%TranslationVel  (:,iSDNode)     = m%U_full_dot    (DOFList(1:3))
@@ -637,8 +671,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
             ! TODO TODO which orientation to give for joints with more than 6 dofs?
             ! Construct the direction cosine matrix given the output angles
-            CALL SmllRotTrans( 'UR_bar input angles', m%U_full_NS(DOFList(4)), m%U_full_NS(DOFList(5)), m%U_full_NS(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
+            CALL SmllRotTrans( 'UR_bar input angles', m%U_full_NS(DOFList(4)), m%U_full_NS(DOFList(5)), m%U_full_NS(DOFList(6)), DCM, '', ErrStat2, ErrMsg2); if(Failed()) return
             y%Y2mesh%Orientation     (:,:,iSDNode)   = DCM
             y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full_NS     (DOFList(1:3)) !Y2: Guyan+CB (but no SIM) displacements
             y%Y2mesh%TranslationVel  (:,iSDNode)     = m%U_full_dot    (DOFList(1:3))
@@ -670,41 +703,76 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       else
          Y1_CB = 0.0_ReKi
       endif
+      ! print *, 'Y1_CB: ', Y1_CB
 
-      ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP 
-      Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB, m%udotdot_TP) )
+      ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP
+      if (p%GuyanLoadCorrection.and.p%Floating) then
+          ! Transform the body-frame Guyan mode (rigid-body) inertia and damping matrix to global frame
+          MBB = matmul(RRb2g, matmul(p%MBB,transpose(RRb2g)))
+          CBB = matmul(RRb2g, matmul(p%CBB,transpose(RRb2g)))
+          ! Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(MBB,m%udotdot_TP) )
+          Y1_Utp  = - ( matmul(CBB,m%udot_TP) + matmul(MBB,m%udotdot_TP) )
+          ! Add back the nonlinear terms of the Guyan mode equation of motion
+          Y1_Utp(1:3) = Y1_Utp(1:3) - MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),matmul(Rb2g,p%rPG)))
+          Y1_Utp(4:6) = Y1_Utp(4:6) - cross_product(m%udot_TP(4:6),matmul(MBB(4:6,4:6),m%udot_TP(4:6)))
+      else
+          Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB,m%udotdot_TP) )
+      end if
+
       if (p%nDOFM>0) then
          !>>> Rotate All
          ! NOTE: this introduces some hysteresis
-         !if (p%Floating) then
-         !   udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
-         !   udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
-         !   Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, udotdot_TP))  
-         !else
-         Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
-         !endif
+         if (p%GuyanLoadCorrection.and.p%Floating) then
+            udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
+            udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
+            Y1_Utp  = Y1_Utp + matmul(RRb2g, matmul(p%MBmmB, udotdot_TP))
+         else
+            Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)
+         endif
       endif
 
-      ! --- Special case for floating with extramoment, we use "rotated loads" m%F_L previously computed
       if (p%GuyanLoadCorrection.and.p%Floating) then
-         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
-         Y1_CB_L = matmul(RRb2g, Y1_CB_L)      ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
+         ! --- Special case for floating with extra moment, we use "rotated loads" m%F_L previously computed
+         ! Contributions from external forces - Note: T_I is in the rotated frame
+         call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+         Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
+         Y1_Guy_R =   matmul(RRb2g, Y1_Guy_R)
+         Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, rotated loads
+         Y1_Guy_L =   matmul(RRb2g, Y1_Guy_L)
+         Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
+         Y1_CB_L  =   matmul(RRb2g, Y1_CB_L)  ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
+      else ! .not.(p%GuyanLoadCorrection.and.p%Floating)
+         ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
+         call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
+         call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+         ! Contributions from external forces
+         Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
+         Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
+         Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
       endif
 
-      ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
-      call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
-
-      ! Contributions from external forces
-      Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
-      Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
-
-      if (.not.(p%GuyanLoadCorrection.and.p%Floating)) then
-         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
-      endif
+      ! Old implementation below
+      ! ! --- Special case for floating with extramoment, we use "rotated loads" m%F_L previously computed
+      ! if (p%GuyanLoadCorrection.and.p%Floating) then
+      !    Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
+      !    Y1_CB_L = matmul(RRb2g, Y1_CB_L)      ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
+      ! endif
+      ! 
+      ! ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
+      ! call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
+      ! call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+      !
+      ! ! Contributions from external forces
+      ! Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
+      ! Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
+      !
+      ! if (.not.(p%GuyanLoadCorrection.and.p%Floating)) then
+      !    Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
+      ! endif
 
       ! Total contribution
       Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
+
       ! KEEP ME
       !if ( p%nDOFM > 0) then
       !   Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
@@ -749,8 +817,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             CALL SD_DestroyContState( dxdt, ErrStat2, ErrMsg2); if(Failed()) return
          END IF
          ! 6-vectors (making sure they are up to date for outputs
-         m%udot_TP    = (/u%TPMesh%TranslationVel( :,1),u%TPMesh%RotationVel(:,1)/) 
-         m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
+         m%udot_TP    = (/u%TPMesh%TranslationVel(:,1),u%TPMesh%RotationVel(:,1)/)
+         m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1),u%TPMesh%RotationAcc(:,1)/)
           
          ! Write the previous output data into the output file           
          IF ( ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) .AND. ( t > m%LastOutTime ) ) THEN
@@ -846,7 +914,7 @@ CHARACTER(1024)              :: Line, Dummy_Str  ! String to temporarially hold 
 CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo  
 LOGICAL                      :: LegacyFormat
-LOGICAL                      :: bNumeric, bInteger
+LOGICAL                      :: bNumeric, bInteger, bCableHasPretension
 INTEGER(IntKi)               :: UnIn
 INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
 INTEGER(IntKi)               :: IOS
@@ -930,20 +998,23 @@ endif
 IF (Check(.not.(any(idSIM_Valid==p%SttcSolve)), 'Invalid value entered for SttcSolve')) return
 
 ! GuyanLoadCorrection  - For legacy, allowing this line to be a comment
-CALL ReadVar (UnIn, SDInputFile, Dummy_Str, 'GuyanLoadCorrection', 'Add extra lever arm contribution to interface loads', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-if (is_logical(Dummy_Str, Dummy_Bool)) then ! the parameter was present
-   p%GuyanLoadCorrection=Dummy_Bool
-   ! We still need to read the comment on the next line 
-   CALL ReadCom  ( UnIn, SDInputFile, ' FEA and CRAIG-BAMPTON PARAMETERS ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-else ! we have a actually read a comment line, we do nothing. 
-   call LegacyWarning('ExtraMom line missing from input file. Assuming no extra moment.')
-   p%GuyanLoadCorrection=.False.  ! For Legacy, GuyanLoadCorrection is False
-endif
+! CALL ReadVar (UnIn, SDInputFile, Dummy_Str, 'GuyanLoadCorrection', 'Add extra lever arm contribution to interface loads', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+! if (is_logical(Dummy_Str, Dummy_Bool)) then ! the parameter was present
+!    p%GuyanLoadCorrection=Dummy_Bool
+!    ! We still need to read the comment on the next line 
+!    CALL ReadCom  ( UnIn, SDInputFile, ' FEA and CRAIG-BAMPTON PARAMETERS ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+! else ! we have a actually read a comment line, we do nothing. 
+!    call LegacyWarning('ExtraMom line missing from input file. Assuming no extra moment.')
+!    p%GuyanLoadCorrection=.False.  ! For Legacy, GuyanLoadCorrection is False
+! endif
+
+! GuyanLoadCorrection will always be set to true. The corresponding user input is commented out above.
+p%GuyanLoadCorrection=.True.
 
 !-------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------
+CALL ReadCom  ( UnIn, SDInputFile, ' FEA and CRAIG-BAMPTON PARAMETERS ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%FEMMod, 'FEMMod', 'FEM analysis mode'             ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return ! 0= Euler-Bernoulli(E-B); 1=Tapered E-B; 2= Timoshenko; 3= tapered Timoshenko
 CALL ReadIVar ( UnIn, SDInputFile, Init%NDiv  , 'NDiv'  , 'Number of divisions per member',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadLVar ( UnIn, SDInputFile, Init%CBMod , 'CBMod' , 'C-B mod flag'                  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 
 IF (Check( (p%IntMethod < 1) .OR.(p%IntMethod > 4)     , 'IntMethod must be 1 through 4.')) return
 IF (Check( (Init%FEMMod < 0 ) .OR. ( Init%FEMMod > 4 ) , 'FEMMod must be 0, 1, 2, or 3.')) return
@@ -951,13 +1022,15 @@ IF (Check( Init%NDiv < 1                               , 'NDiv must be a positiv
 IF (Check( Init%FEMMod==2  , 'FEMMod = 2 (tapered Euler-Bernoulli) not implemented')) return
 IF (Check( Init%FEMMod==4  , 'FEMMod = 4 (tapered Timoshenko) not implemented')) return
 
+! Nmodes - Number of internal modes to retain. Retain all modes if Nmodes<0.
+CALL ReadIVar ( UnIn, SDInputFile, p%nDOFM, 'Nmodes', 'Number of internal modes',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+IF ( p%nDOFM >= 0 ) THEN
+   Init%CBMod = .TRUE.
+ELSE
+   Init%CBMod = .FALSE.
+ENDIF
 IF (Init%CBMod) THEN
-   ! Nmodes - Number of interal modes to retain.
-   CALL ReadIVar ( UnIn, SDInputFile, p%nDOFM, 'Nmodes', 'Number of internal modes',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-
-   IF (Check( p%nDOFM < 0 , 'Nmodes must be a non-negative integer.')) return
-   
-   if ( p%nDOFM > 0 ) THEN
+   IF ( p%nDOFM > 0 ) THEN
       ! Damping ratios for retained modes
       CALL AllocAry(Init%JDampings, p%nDOFM, 'JDamping', ErrStat2, ErrMsg2) ; if(Failed()) return
       Init%JDampings=WrongNo !Initialize
@@ -982,12 +1055,9 @@ IF (Init%CBMod) THEN
    ELSE
       CALL ReadCom( UnIn, SDInputFile, 'JDamping', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    END IF
-
 ELSE   !CBMOD=FALSE  : all modes are retained, not sure how many they are yet
    !note at this stage I do not know nDOFL yet; Nmodes will be updated later for the FULL FEM CASE. 
    p%nDOFM = -1
-   !Ignore next line
-   CALL ReadCom( UnIn, SDInputFile, 'Nmodes', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    !Read 1 damping value for all modes
    CALL AllocAry(Init%JDampings, 1, 'JDamping', ErrStat2, ErrMsg2) ; if(Failed()) return
    CALL ReadVar ( UnIn, SDInputFile, Init%JDampings(1), 'JDampings', 'Damping ratio',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1173,7 +1243,7 @@ if (ErrStat2/=0) then
    CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
    call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members. &
    &The directional cosines will be computed based on the member nodes for all members.')
-   Init%Members(:,7) = -1
+   Init%Members(:,7) = -1 ! For the spring element, we need the direction cosine from the user. Both JointIDs are coincident, the direction cosine cannot be determined.
 endif
 ! Extract fields from first line
 DO I = 1, nColumns
@@ -1227,6 +1297,7 @@ if (.not. LegacyFormat) then
    CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    IF (Check( Init%NPropSetsC < 0, 'NPropSetsCable must be >=0')) return
    CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
+   bCableHasPretension = .false.
    DO I = 1, Init%NPropSetsC
       !CALL ReadAry( UnIn, SDInputFile, Init%PropSetsC(I,:), PropSetsCCol, 'PropSetsC', 'PropSetsC ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
       READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading cable property line'; if (Failed()) return
@@ -1239,7 +1310,18 @@ if (.not. LegacyFormat) then
          call LegacyWarning('Using 4 values instead of 5 for cable properties. Cable will have constant properties and wont be controllable.')
          Init%PropSetsC(:,5:PropSetsCCol)=0 ! No CtrlChannel
       endif
+      if (Init%PropSetsC(I,4)>0.0) then
+         bCableHasPretension = .true.
+      end if
    ENDDO   
+   if (bCableHasPretension) then
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      call WrScr('Warning: Cable with non-zero pretension specified.')
+      call WrScr('         SubDyn currently does not account for geometric stiffness from pretension.' )
+      call WrScr('         Avoid non-zero cable pretension if possible.' )
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+   end if
+
    !----------------------- RIGID LINK PROPERTIES ------------------------------------
    CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsR, 'NPropSetsR', 'Number of rigid link properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1250,11 +1332,29 @@ if (.not. LegacyFormat) then
       CALL ReadAry( UnIn, SDInputFile, Init%PropSetsR(I,:), PropSetsRCol, 'RigidPropSets', 'RigidPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    ENDDO   
    IF (Check( Init%NPropSetsR < 0, 'NPropSetsRigid must be >=0')) return
+   !----------------------- SPRING ELEMENT PROPERTIES --------------------------------
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsS, 'NPropSetsS', 'Number of spring properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   IF (Check( Init%NPropSetsS < 0, 'NPropSetsSpring must be >=0')) return
+   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'PropSetsS', ErrStat2, ErrMsg2); if(Failed()) return
+   DO I = 1, Init%NPropSetsS
+      READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading spring property line'; if (Failed()) return
+      call ReadFAryFromStr(Line, Init%PropSetsS(I,:), PropSetsSCol, nColValid, nColNumeric);
+      if ((nColValid/=nColNumeric).or.((nColNumeric/=22).and.(nColNumeric/=PropSetsSCol)) ) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Spring property line must consist of 22 numerical values. Problematic line: "'//trim(Line)//'"')
+         return
+      endif
+   ENDDO   
+
 else
    Init%NPropSetsC=0
    Init%NPropSetsR=0
+   Init%NPropSetsS=0
    CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
    CALL AllocAry(Init%PropSetsR, Init%NPropSetsR, PropSetsRCol, 'RigidPropSets', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'PropSetsS', ErrStat2, ErrMsg2); if(Failed()) return
 endif
 
 !---------------------- MEMBER COSINE MATRICES COSM(i,j) ------------------------
@@ -2792,6 +2892,7 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
 
    CALL AllocAry( Misc%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   CALL AllocAry( Misc%FG,        p%nDOF     , 'm%FG      ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    
 END SUBROUTINE AllocMiscVars
 
@@ -3096,13 +3197,11 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
    real(ReKi), dimension(3)   ::  rIP0 ! Vector from TP to Node (undeflected)
    real(ReKi), dimension(3)   ::  duP  ! Displacement of node due to rigid rotation
    real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global coordinates
+   real(ReKi), dimension(3,3) :: DCM
    INTEGER(IntKi)             :: ErrStat2    ! Error status of the operation (occurs after initial error)
    CHARACTER(ErrMsgLen)       :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
    ! --- Convert inputs to FEM DOFs and convenient 6-vector storage
-   ! Compute the small rotation angles given the input direction cosine matrix
-   rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat2, Errmsg2);
-   m%u_TP     = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
-
+   
    ! --- CB modes contribution to motion (L-DOF only), NO STATIC IMPROVEMENT
    if (bElastic .and. p%nDOFM > 0) then
       m%UL = matmul( p%PhiM,  x%qm    )
@@ -3111,6 +3210,9 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
    end if
    ! --- Adding Guyan contribution to R and L DOFs
    if (bGuyan .and. .not.p%Floating) then
+      ! Compute the small rotation angles given the input direction cosine matrix
+      rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat2, Errmsg2);
+      m%u_TP     = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
       m%UR_bar =         matmul( p%TI      , m%u_TP       )
       m%UL     = m%UL +  matmul( p%PhiRb_TI, m%u_TP       ) 
    else
@@ -3132,8 +3234,9 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
          duP(1:3)    = rIP - rIP0 ! NOTE: without m%u_TP(1:3)
          ! Full diplacements Guyan + rotated CB (if asked) >>> Rotate All
          if (p%GuyanLoadCorrection) then
-            DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
-            DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
+            DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)
+            CALL SmllRotTrans('Nodal rotation',DU_full(DOFList(4)),DU_full(DOFList(5)),DU_full(DOFList(6)),DCM,'',ErrStat2,ErrMsg2);
+            DU_full(DOFList(4:6)) = EulerExtractZYX( matmul(DCM,transpose(Rb2g)) )
          else
             DU_full(DOFList(1:3)) = DU_full(DOFList(1:3)) + duP(1:3)       
             DU_full(DOFList(4:6)) = DU_full(DOFList(4:6)) + rotations(1:3)
@@ -3164,14 +3267,22 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    real(ReKi)                    :: CableTension ! Controllable Cable force
    real(ReKi)                    :: DeltaL ! Change of length
    real(ReKi)                    :: rotations(3)
-   real(ReKi)                    :: du(3), Moment(3), Force(3) 
+   real(ReKi)                    :: du(3), Moment(3), Force(3), CMassOffset(3), CMassWeight(3)
    real(ReKi)                    :: u_TP(6)
+   real(FEKi)                    :: FGe(12) ! element gravity force vector
    ! Variables for Guyan Rigid motion
    real(ReKi), dimension(3) ::  rIP  ! Vector from TP to rotated Node
    real(ReKi), dimension(3) ::  rIP0 ! Vector from TP to Node (undeflected)
    real(ReKi), dimension(3) ::  duP  ! Displacement of node due to rigid rotation
    real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global
    real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
+   real(ReKi), dimension(3,3) :: orientation ! Nodal orientation matrix
+
+   INTEGER(IntKi)           :: ErrStat2      ! Error status of the operation
+   CHARACTER(ErrMsgLen)     :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    if (GuyanLoadCorrection) then
       ! Compute node displacements "DU_full" for lever arm
@@ -3192,11 +3303,11 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    if (RotateLoads) then ! Forces in body coordinates 
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
       do iNode = 1,p%nNodes
-         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  matmul(Rg2b, u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3)))
+         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  matmul(Rg2b, u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3)) ) + p%FC(p%NodesDOF(iNode)%List(1:3))
       enddo
    else ! Forces in global
       do iNode = 1,p%nNodes
-         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =               u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3))
+         m%Fext( p%NodesDOF(iNode)%List(1:3) ) =               u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3))   + p%FC(p%NodesDOF(iNode)%List(1:3))
       enddo
    endif
 
@@ -3230,19 +3341,56 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    endif
 
    ! --- Build vector of external moment
+   ! For floating structure with potentially large Guyan (rigid-body) rotation, nodal self-weight needs to be recomputed based on the current rigid-body orientation
+   m%FG = 0.0_R8Ki
+   if ( RotateLoads ) then ! if and only if floating
+      Rb2g = transpose(Rg2b) ! Body (Guyan) to global
+      do i = 1, size(p%ElemProps) ! Loop through all elements
+         ! --- Element Fg in the earth-fixed frame
+         CALL ElemG(p%ElemProps(i)%Area, p%ElemProps(i)%Length, p%ElemProps(i)%Rho, matmul(Rb2g,p%ElemProps(i)%DirCos), FGe, p%g)
+         ! --- Element Fg in the Guyan rigid-body frame
+         FGe( 1: 3) = matmul(Rg2b,FGe( 1: 3)) ! Node 1 force
+         FGe( 4: 6) = matmul(Rg2b,FGe( 4: 6)) ! Node 1 moment
+         FGe( 7: 9) = matmul(Rg2b,FGe( 7: 9)) ! Node 2 force
+         FGe(10:12) = matmul(Rg2b,FGe(10:12)) ! Node 2 moment
+         ! --- Assembly in global unconstrained system
+         IDOF = p%ElemsDOF(1:12,i)
+         m%FG( IDOF ) = m%FG( IDOF ) + FGe(1:12)
+      end do
+      do i = 1,size(p%CMassNode) ! Loop through all concentrated masses
+         iNode       = p%CMassNode(i)
+         IDOF(1:6)   = p%NodesDOF(iNode)%List(1:6)
+         CMassOffset = p%CMassOffset(i,:)
+         CMassWeight = matmul(Rg2b, (/0.0,0.0,-p%CMassWeight(i)/) )
+         m%FG(IDOF(1:3)) = m%FG(IDOF(1:3)) + CMassWeight
+         m%FG(IDOF(4:6)) = m%FG(IDOF(4:6)) + cross_product(CMassOffset,CMassWeight)
+      end do
+   end if
+
+   if (GuyanLoadCorrection) then ! if and only if fixed-bottom
+      ! Additional GuyanLoadCorrection coming from the weight of concentrated masses with CoG offset
+      do i = 1,size(p%CMassNode) ! Loop through all concentrated masses
+         iNode       = p%CMassNode(i)
+         IDOF(4:6)   = p%NodesDOF(iNode)%List(4:6)
+         call SmllRotTrans('Nodal rotation',m%DU_full(IDOF(4)),m%DU_full(IDOF(5)),m%DU_full(IDOF(6)),orientation,'',ErrStat2,ErrMsg2); if(Failed()) return
+         CMassOffset = matmul(p%CMassOffset(i,:),orientation)
+         m%Fext(IDOF(4:6)) = m%Fext(IDOF(4:6)) + cross_product( CMassOffset-p%CMassOffset(i,:), (/0.0,0.0,-p%CMassWeight(i)/) )
+      end do
+   end if
+
    do iNode = 1,p%nNodes
       Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
       Moment(1:3) = m%Fext(p%NodesDOF(iNode)%List(4:6) ) ! Controllable cable 
-      ! Moment ext + gravity
+      ! Moment ext + gravity (Cable pretension has no moment contribution)
       if (RotateLoads) then
          ! In body coordinates
-         Moment(1:3) = matmul(Rg2b, Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6)))
+         Moment(1:3) = matmul(Rg2b, Moment(1:3)+ u%LMesh%Moment(1:3,iNode) ) + m%FG(p%NodesDOF(iNode)%List(4:6)) ! Use updated m%FG instead of p%FG
       else
-         Moment(1:3) =              Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6))
+         Moment(1:3) =              Moment(1:3)+ u%LMesh%Moment(1:3,iNode)   + p%FG(p%NodesDOF(iNode)%List(4:6))
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)
-      if (GuyanLoadCorrection) then
+      if (GuyanLoadCorrection) then ! if and only if fixed-bottom
          du = m%DU_full(p%NodesDOF(iNode)%List(1:3)) ! Lever arm
          Moment(1) = Moment(1) + du(2) * Force(3) - du(3) * Force(2)
          Moment(2) = Moment(2) + du(3) * Force(1) - du(1) * Force(3)
@@ -3267,8 +3415,14 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
 contains
    subroutine Fatal(ErrMsg_in)
       character(len=*), intent(in) :: ErrMsg_in
-      call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'GetExtForce');
+      call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'GetExtForceOnInternalDOF');
    end subroutine Fatal
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetExtForceOnInternalDOF')
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+
 END SUBROUTINE GetExtForceOnInternalDOF
 
 !------------------------------------------------------------------------------------------------------
@@ -3549,6 +3703,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    INTEGER(IntKi)         :: i, j, k, propIDs(2), Iprop(2)  !counter and temporary holders
    INTEGER(IntKi)         :: iNode1, iNode2 ! Node indices
    INTEGER(IntKi)         :: mType ! Member Type
+   INTEGER                :: iDirCos
    REAL(ReKi)             :: mMass, mLength ! Member mass and length
    REAL(ReKi)             :: M_O(6,6)    ! Equivalent mass matrix at origin
    REAL(ReKi)             :: M_P(6,6)    ! Equivalent mass matrix at P (ref point)
@@ -3765,11 +3920,13 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A,I6)')  '#Number of nodes per member:', Init%Ndiv+1
    WRITE(UnSum, '(A9,A10,A10,A10,A10,A15,A15,A16)')  '#Member ID', 'Joint1_ID', 'Joint2_ID','Prop_I','Prop_J', 'Mass','Length', 'Node IDs...'
    DO i=1,p%NMembers
-       !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
-       !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
-       propIDs=Init%Members(i,iMProp:iMProp+1) 
-       mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
-       IF (ErrStat .EQ. ErrID_None) THEN
+      !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
+      !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
+      propIDs=Init%Members(i,iMProp:iMProp+1) 
+      if (Init%Members(I, iMType)/=idMemberSpring) then ! This check only applies for members different than springs (springs have no mass and no length)
+      mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
+      endif
+      IF (ErrStat .EQ. ErrID_None) THEN
         mType =  Init%Members(I, iMType) ! 
         if (mType==idMemberBeamCirc) then
            iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
@@ -3789,6 +3946,12 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
            mMass= Init%PropSetsR(iProp(1),2) * mLength ! rho [kg/m] * L
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Rigid link'
+        else if (mType==idMemberSpring) then
+           iProp(1) = FINDLOCI(Init%PropSetsS(:,1), propIDs(1))
+           mMass= 0.0 ! Spring element has no mass
+           mLength = 0.0 ! Spring element has no length. Both JointIDs must be coincident.
+           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Spring element'
          else if (mType==idMemberBeamArb) then
            iProp(1) = FINDLOCI(Init%PropSetsX(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsX(:,1), propIDs(2))
@@ -3798,9 +3961,9 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
          else
            WRITE(UnSum, '(A)') '#TODO, member unknown'
         endif
-       ELSE 
-           RETURN
-       ENDIF
+      ELSE 
+          RETURN
+      ENDIF
    ENDDO   
    !-------------------------------------------------------------------------------------------------------------
    ! write Cosine matrix for all members to a txt file
@@ -3809,11 +3972,25 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A, I6)') '#Direction Cosine Matrices for all Members: GLOBAL-2-LOCAL. No. of 3x3 matrices=', p%NMembers 
    WRITE(UnSum, '(A9,9(A15))')  '#Member ID', 'DC(1,1)', 'DC(1,2)', 'DC(1,3)', 'DC(2,1)','DC(2,2)','DC(2,3)','DC(3,1)','DC(3,2)','DC(3,3)'
    DO i=1,p%NMembers
+      mType = Init%Members(I, iMType)
       iNode1 = FINDLOCI(Init%Joints(:,1), Init%Members(i,2)) ! index of joint 1 of member i
       iNode2 = FINDLOCI(Init%Joints(:,1), Init%Members(i,3)) ! index of joint 2 of member i
       XYZ1   = Init%Joints(iNode1,2:4)
       XYZ2   = Init%Joints(iNode2,2:4)
-      CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
+      if ((mType == idMemberSpring) .or. (mType == idMemberBeamArb)) then ! The direction cosine for these member types must be provided by the user
+         iDirCos = p%Elems(i, iMDirCosID)
+         DirCos(1, 1) =  Init%COSMs(iDirCos, 2)
+         DirCos(2, 1) =  Init%COSMs(iDirCos, 3)
+         DirCos(3, 1) =  Init%COSMs(iDirCos, 4)
+         DirCos(1, 2) =  Init%COSMs(iDirCos, 5)
+         DirCos(2, 2) =  Init%COSMs(iDirCos, 6)
+         DirCos(3, 2) =  Init%COSMs(iDirCos, 7)
+         DirCos(1, 3) =  Init%COSMs(iDirCos, 8)
+         DirCos(2, 3) =  Init%COSMs(iDirCos, 9)
+         DirCos(3, 3) =  Init%COSMs(iDirCos, 10)
+      else
+         CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), mType, DirCos, mLength, ErrStat, ErrMsg)
+      endif
       DirCos=TRANSPOSE(DirCos) !This is now global to local
       WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
@@ -4084,7 +4261,7 @@ FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
     xyz1= Init%Joints(Joint1,2:4)
     xyz2= Init%Joints(Joint2,2:4)
     MemberLength=SQRT( SUM((xyz2-xyz1)**2.) )
-    if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then 
+    if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then
         call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' has zero length!', ErrStat,ErrMsg,RoutineName);
         return
     endif
@@ -4169,44 +4346,6 @@ SUBROUTINE SymMatDebug(M,MAT)
    WRITE(*, '(A,I4,I4)')  'Matrix Symmetry Check: (I,J)=', imax,jmax
 
 END SUBROUTINE SymMatDebug
-
-FUNCTION is_numeric(string, x)
-   IMPLICIT NONE
-   CHARACTER(len=*), INTENT(IN) :: string
-   REAL(ReKi), INTENT(OUT) :: x
-   LOGICAL :: is_numeric
-   INTEGER :: e,n
-   CHARACTER(len=12) :: fmt
-   x = 0.0_ReKi
-   n=LEN_TRIM(string)
-   WRITE(fmt,'("(F",I0,".0)")') n
-   READ(string,fmt,IOSTAT=e) x
-   is_numeric = e == 0
-END FUNCTION is_numeric
-
-FUNCTION is_integer(string, x)
-   IMPLICIT NONE
-   CHARACTER(len=*), INTENT(IN) :: string
-   INTEGER(IntKi), INTENT(OUT) :: x
-   LOGICAL :: is_integer
-   INTEGER :: e, n
-   x = 0
-   n=LEN_TRIM(string)
-   READ(string,*,IOSTAT=e) x
-   is_integer = e == 0
-END FUNCTION is_integer
-
-FUNCTION is_logical(string, b)
-   IMPLICIT NONE
-   CHARACTER(len=*), INTENT(IN) :: string
-   Logical, INTENT(OUT) :: b
-   LOGICAL :: is_logical
-   INTEGER :: e,n
-   b = .false.
-   n=LEN_TRIM(string)
-   READ(string,*,IOSTAT=e) b
-   is_logical = e == 0
-END FUNCTION is_logical
 
 !> Parses a file for Kxx,Kxy,..Kxthtx,..Kxtz, Kytx, Kyty,..Kztz
 SUBROUTINE ReadSSIfile ( Filename, JointID, SSIK, SSIM, ErrStat, ErrMsg, UnEc )

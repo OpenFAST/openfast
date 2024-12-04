@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "octue-openfast"
+version = "3.5.4.beta-1"
+description = "Readers and writers for OpenFAST files."
+license = "Apache-2.0"
+authors = [
+    "NREL WISDEM Team <systems.engineering@nrel.gov>",
+    "dzalkind",
+    "Garrett Barter <garrett.barter@nrel.gov>",
+    "Pietro Bortolotti <ptrbortolotti@gmail.com>",
+    "Mayank Chetan",
+    "John Jasa",
+]
+readme = "README.md"
+packages = [{include = "openfast_io"}]
+
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "^1"
+pandas = "^2"
+xlrd = "^2"
+ruamel_yaml = "^0.18"
+rosco = {version = "^2.9.2", optional = true}
+
+
+[tool.poetry.extras]
+rosco = ["rosco"]
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

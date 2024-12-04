@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.902
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "FASTlib", "..\FASTlib\FASTlib.vfproj", "{1A440C5B-CBA6-47D9-9CC2-C1CBA8C00BF9}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -55,18 +55,18 @@ Global
 		{BF86702A-CB17-4050-8AE9-078CDC5910D3}.Release|Win32.Build.0 = Release|Win32
 		{BF86702A-CB17-4050-8AE9-078CDC5910D3}.Release|x64.ActiveCfg = Release|x64
 		{BF86702A-CB17-4050-8AE9-078CDC5910D3}.Release|x64.Build.0 = Release|x64
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|Win32.ActiveCfg = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|Win32.Build.0 = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|x64.ActiveCfg = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|x64.Build.0 = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.ActiveCfg = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.Build.0 = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.ActiveCfg = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.Build.0 = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.ActiveCfg = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.Build.0 = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|x64.ActiveCfg = Release|Win32
-		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|x64.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|Win32.ActiveCfg = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|Win32.Build.0 = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|x64.ActiveCfg = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|x64.Build.0 = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.ActiveCfg = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.Build.0 = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.ActiveCfg = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.Build.0 = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.ActiveCfg = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.Build.0 = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|x64.ActiveCfg = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|x64.Build.0 = Release|x64
 		{F47C7C94-2A7F-4CBE-B834-1BC7DD3FE692}.Debug|Win32.ActiveCfg = Debug|Win32
 		{F47C7C94-2A7F-4CBE-B834-1BC7DD3FE692}.Debug|Win32.Build.0 = Debug|Win32
 		{F47C7C94-2A7F-4CBE-B834-1BC7DD3FE692}.Debug|x64.ActiveCfg = Debug|x64
@@ -82,5 +82,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {13BD9A6C-E2B3-4423-AA37-D06CB518B5B2}
 	EndGlobalSection
 EndGlobal

@@ -35,7 +35,7 @@ These methods are specified in :numref:`sec:vortconv`.
 
 **DTfvw** [sec] specifies the time interval at which the module will update the
 wake. The time interval must be a multiple of the time step used by
-*AeroDyn15*. The blade circulation is updated at each intermediate time
+*AeroDyn*. The blade circulation is updated at each intermediate time
 step based on the intermediate blades positions and wind velocities. The default
 value is :math:`dt_{aero}`, where :math:`dt_{aero}` is the time step used by
 AeroDyn.
@@ -312,13 +312,13 @@ of a box of shape 5x20x30 and dimension 1200x300x295.  The grid contains both th
 The two other grids are vertical and horizontal planes containing only the velocity.
 
 
-AeroDyn15 Input File
+AeroDyn Input File
 --------------------
 Input file modifications
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-As OLAF is incorporated into the *AeroDyn15* module, a wake computation option
-has been added to the *AeroDyn15* input file and a line has been added. These
+As OLAF is incorporated into the *AeroDyn* module, a wake computation option
+has been added to the *AeroDyn* input file and a line has been added. These
 additions are as follows.
 
 **WakeMod** specifies the type of wake model that is used. *WakeMod* = *[3]* has

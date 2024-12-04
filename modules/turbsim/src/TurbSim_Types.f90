@@ -90,8 +90,8 @@ use NWTC_Library
       REAL(ReKi)                   :: DistScl                                  ! Disturbance scale for AeroDyn coherent turbulence events
    
                   
-      CHARACTER(200)               :: CTEventPath                              ! String used to store the name of the coherent event definition file
-      CHARACTER(200)               :: CTEventFile                              ! String used to store the name of the coherent event definition file
+      CHARACTER(1024)              :: CTEventPath                              ! String used to store the name of the coherent event definition file
+      CHARACTER(1024)              :: CTEventFile                              ! String used to store the name of the coherent event definition file
       CHARACTER(  3)               :: CTExt                                    ! String used to determine the type of coherent structures ("dns" or "les")
 
    END TYPE CohStr_ParameterType
@@ -276,8 +276,8 @@ use NWTC_Library
       INTEGER                          :: US  = -1                    ! I/O unit for summary file.
               
       
-      CHARACTER(200)                   :: DescStr                     ! String used to describe the run (and the first line of the summary file)
-      CHARACTER(197)                   :: RootName                    ! Root name of the I/O files.
+      CHARACTER(1024)                  :: DescStr                     ! String used to describe the run (and the first line of the summary file)
+      CHARACTER(1024)                  :: RootName                    ! Root name of the I/O files.
       TYPE(RandNum_ParameterType)      :: RNG                         ! parameters for random numbers p_RandNum
       TYPE(Grid_ParameterType)         :: grid                        ! parameters for TurbSim (specify grid/frequency size)
       TYPE(Meteorology_ParameterType)  :: met                         ! parameters for TurbSim 

@@ -35,8 +35,7 @@ set_target_properties(extinflowlib PROPERTIES PUBLIC_HEADER src/ExternalInflow_T
 install(TARGETS extinflowtypeslib extinflowlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
-  ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
   PUBLIC_HEADER DESTINATION include
 )
-

@@ -118,6 +118,7 @@ MODULE MoorDyn_IO
    PUBLIC :: MDIO_CloseOutput
    PUBLIC :: MDIO_ProcessOutList
    PUBLIC :: MDIO_WriteOutputs
+   PUBLIC :: Line_GetNodeTen
 
 
 CONTAINS
@@ -139,7 +140,7 @@ CONTAINS
       
       INTEGER(IntKi)                   :: ErrStat4
       CHARACTER(120)                   :: ErrMsg4         
-      CHARACTER(120)                   :: Line2
+      CHARACTER(4096)                   :: Line2
 
       CHARACTER(20)                    :: nGridX_string  ! string to temporarily hold the nGridX string from Line2
       CHARACTER(20)                    :: nGridY_string  ! string to temporarily hold the nGridY string from Line3
@@ -182,7 +183,7 @@ CONTAINS
          READ(UnCoef,*,IOSTAT=ErrStat4) nGridY_string, nGridY  ! read in the third line as the number of y values in the BathGrid
 
          ! Allocate the bathymetry matrix and associated grid x and y values
-         ALLOCATE(BathGrid(nGridX, nGridY), STAT=ErrStat4)
+         ALLOCATE(BathGrid(nGridY, nGridX), STAT=ErrStat4)
          ALLOCATE(BathGrid_Xs(nGridX), STAT=ErrStat4)
          ALLOCATE(BathGrid_Ys(nGridY), STAT=ErrStat4)
 
@@ -242,8 +243,7 @@ CONTAINS
          LineProp_npoints = 0;
       
       else ! otherwise interpet the input as a file name to load stress-strain lookup data from
-      
-         CALL WrScr("found A letter in the line coefficient value so will try to load the filename.")
+         CALL WrScr1(" Found a letter in the line EA coefficient value so will try to load the filename.")
          
          LineProp_c = 0.0
          
@@ -251,8 +251,13 @@ CONTAINS
         
          CALL GetNewUnit( UnCoef )
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )   ! add error handling?
+         IF (ErrStat4 == ErrID_Fatal) then
+            ErrStat3 = ErrStat4
+            ErrMsg3 = ErrMsg4
+            RETURN
+         ENDIF   
          
-         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first two lines (title, names, and units) then parse
+         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first three lines (title, names, and units) then parse
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
             
@@ -563,7 +568,7 @@ CONTAINS
           END IF
         
         ! Point case                            
-        ELSE IF (let1(1:1) == 'P') THEN    ! Look for P?xxx or Point?xxx
+        ELSE IF (let1(1:1) == 'P' .OR. let1(1:1) == 'C') THEN    ! Look for P?xxx or Point?xxx (C?xxx and Con?xxx for backwards compatability)
           p%OutParam(I)%OType = 2                ! Point object type
           qVal = let2                            ! quantity type string
           
@@ -601,7 +606,7 @@ CONTAINS
         ! error
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Must start with L, C, R, or B')
+          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Must start with L, R, or B')
           CYCLE
         END IF
 
@@ -1361,11 +1366,11 @@ CONTAINS
                   CASE (FZ)
                      y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%Fnet(3,p%OutParam(I)%NodeID)  ! node force in z
                   CASE (Ten)
-                    y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), p%OutParam(I)%NodeID, p)  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
+                    y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), p%OutParam(I)%NodeID)  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
                   CASE (TenA)
-                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), 0, p) 
+                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), 0) 
                   CASE (TenB)
-                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), m%LineList(p%OutParam(I)%ObjID)%N, p)  
+                     y%WriteOutput(I) = Line_GetNodeTen(m%LineList(p%OutParam(I)%ObjID), m%LineList(p%OutParam(I)%ObjID)%N)  
                   CASE DEFAULT
                     y%WriteOutput(I) = 0.0_ReKi
                     ErrStat = ErrID_Warn
@@ -1882,11 +1887,10 @@ CONTAINS
 
    ! get tension at any node including fairlead or anchor (accounting for weight in these latter cases)
    !--------------------------------------------------------------
-   FUNCTION Line_GetNodeTen(Line, i, p) result(NodeTen)
+   FUNCTION Line_GetNodeTen(Line, i) result(NodeTen)
 
       TYPE(MD_Line),          INTENT(IN   )  :: Line           ! label for the current line, for convenience
       INTEGER(IntKi),         INTENT(IN   )  :: i              ! node index to get tension at
-      TYPE(MD_ParameterType), INTENT(IN   )  :: p              ! Parameters
       REAL(DbKi)                             :: NodeTen        ! returned calculation of tension at node   
       
       INTEGER(IntKi)                   :: J      

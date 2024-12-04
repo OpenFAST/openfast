@@ -72,7 +72,7 @@ verbose = args.verbose
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 ### Build the filesystem navigation variables for running openfast on the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")

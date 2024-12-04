@@ -50,7 +50,7 @@ to compute the aerodynamic forces on moving two- or three-bladed horizontal-axis
 wind turbines.  This module has been incorporated into the National Renewable
 Energy Laboratory physics-based engineering tool, OpenFAST, which solves the
 aero-hydro-servo-elastic dynamics of individual wind turbines. OLAF is
-incorporated into the OpenFAST module, *AeroDyn15*, as an alternative to the
+incorporated into the OpenFAST module, *AeroDyn*, as an alternative to the
 traditional blade-element momentum (BEM) option, as shown in
 Figures :numref:`figOpenFAST_a` and :numref:`figOpenFAST_b`.
 
@@ -70,7 +70,7 @@ Figures :numref:`figOpenFAST_a` and :numref:`figOpenFAST_b`.
    :width: 100%
    :align: center
 
-   OLAF and BEM integration with *AeroDyn15*
+   OLAF and BEM integration with *AeroDyn*
 
 Incorporating the OLAF module within OpenFAST allows for the modeling of
 highly flexible turbines along with the aero-hydro-servo-elastic
@@ -127,13 +127,13 @@ truncation error is minimized~(:cite:`olaf-Leishman02_1`). The buffer zone is
 typically chosen as the convected distance over one rotor revolution.
 
 As part of OpenFAST, induced velocities at the lifting line/blade are
-transferred to *AeroDyn15* and used to compute the effective blade angle of
+transferred to *AeroDyn* and used to compute the effective blade angle of
 attack at each blade section, which is then used to compute the aerodynamic
 forces on the blades. The OLAF method returns the same information as the BEM
 method, but allows for more accurate calculations in areas where BEM assumptions
 are violated, such as those discussed above. As the OLAF method is more
 computationally expensive than BEM, both methods remain available in OpenFAST,
-and the user may specify in the *AeroDyn15* input file which method is
+and the user may specify in the *AeroDyn* input file which method is
 used.
 
 The OLAF input file defines the wake convection and circulation solution
@@ -148,10 +148,10 @@ regularization parameter. Wake visualization output options are also available.
 
 This document is organized as follows. :numref:`Running-OLAF` covers
 downloading, compiling, and running OLAF. :numref:`OLAF-Input-Files` describes the
-OLAF input file and modifications to the *AeroDyn15* input file.
+OLAF input file and modifications to the *AeroDyn* input file.
 :numref:`Output-Files` details the OLAF output file.  :numref:`OLAF-Theory`
 provides an overview of the OLAF theory, including the free vortex wake method
-as well as integration into the *AeroDyn15* module. Example input files and a
+as well as integration into the *AeroDyn* module. Example input files and a
 list of output channels are detailed in Appendices A, B, and C.
 
 

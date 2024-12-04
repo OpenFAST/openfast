@@ -866,14 +866,17 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       !-------------------------------------------------------------------------
 
       ! ConstWaveMod
-   IF ( ( InputFileData%Waves%ConstWaveMod /= 0 ) .AND. ( InputFileData%Waves%ConstWaveMod /= 1 ) .AND. &
-     ( InputFileData%Waves%ConstWaveMod /= 2 ) ) THEN
-     call SetErrStat( ErrID_Fatal,'ConstWaveMod must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
-     RETURN
-   END IF
+   select case(InputFileData%Waves%ConstWaveMod)
+      case(ConstWaveMod_None)          ! 0
+      case(ConstWaveMod_CrestElev)     ! 1
+      case(ConstWaveMod_Peak2Trough)   ! 2
+      case default
+         call SetErrStat( ErrID_Fatal,'ConstWaveMod must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
+         return
+   end select
    
       ! CrestHmax
-   IF ( ( InputFileData%WaveMod == WaveMod_JONSWAP ) .AND. ( InputFileData%Waves%ConstWaveMod>0 ) .AND. &
+   IF ( ( InputFileData%WaveMod == WaveMod_JONSWAP ) .AND. ( InputFileData%Waves%ConstWaveMod /= ConstWaveMod_None ) .AND. &
         ( InputFileData%Waves%CrestHmax < InputFileData%Waves%WaveHs ) ) THEN
       call SetErrStat( ErrID_Fatal,'CrestHmax must be larger than WaveHs.',ErrStat,ErrMsg,RoutineName)
       RETURN

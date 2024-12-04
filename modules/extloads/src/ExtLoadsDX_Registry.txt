@@ -1,0 +1,45 @@
+###################################################################################################################################
+# Registry for ExternalLoadsDX in the FAST Modularization Framework
+# This Registry file is used to create ExtLoadsDX_Types which contains data used in the ExtLoads module for data exchange with external drivers.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# File last committed $Date$
+# (File) Revision #: $Rev$
+# URL: $HeadURL$
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include	Registry_NWTC_Library.txt
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+typedef ExtLoadsDX/ExtLdDX       InputType      R8Ki            twrDef        {:}     -       -       "Deformations on the tower  - to send to external driver"
+typedef ^       InputType      R8Ki            bldDef        {:}     -       -       "Deformations on all blades - to send to external driver"
+typedef ^       InputType      R8Ki            hubDef        {:}     -       -       "Deformations on the hub  - to send to external driver"
+typedef ^       InputType      R8Ki            nacDef        {:}     -       -       "Deformations the nacelle - to send to external driver"
+typedef ^       InputType      R8Ki            bldRootDef    {:}     -       -       "Deformations of the blade root nodes - to send to external driver"
+typedef ^       InputType      R8Ki            bldPitch      {:}     -       -       "Pitch angle of blade"
+
+# ..... Parameters ................................................................................................................
+typedef ^       ParameterType  IntKi           nBlades       {:}     -       -       "Number of blades"
+typedef ^       ParameterType  IntKi           nBladeNodes   {:}     -       -       "Number of blade nodes for each blade"  -
+typedef ^       ParameterType  IntKi           nTowerNodes   {:}     -       -       "Number of tower nodes for each blade"  -
+typedef ^       ParameterType  R8Ki            twrRefPos     {:}     -       -       "Reference position of the tower nodes - to send to external driver"
+typedef ^       ParameterType  R8Ki            bldRefPos     {:}     -       -       "Reference position of the all blade nodes - to send to external driver"
+typedef ^       ParameterType  R8Ki            hubRefPos     {:}     -       -       "Reference position of the tower nodes - to send to external driver"
+typedef ^       ParameterType  R8Ki            nacRefPos     {:}     -       -       "Reference position of the all blade nodes - to send to external driver"
+typedef ^       ParameterType  R8Ki            bldRootRefPos {:}     -       -       "Reference position of the blade root nodes - to send to external driver"
+typedef ^       ParameterType  R8Ki            bldChord      {:}     -       -       "Blade chord" m
+typedef ^       ParameterType  R8Ki            bldRloc       {:}     -       -       "Radial location along the blade" m
+typedef ^       ParameterType  R8Ki            twrDia        {:}     -       -       "Tower diameter" m
+typedef ^       ParameterType  R8Ki            twrHloc       {:}     -       -       "Height location along the tower" m
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+typedef ^       OutputType      R8Ki            twrLd        {:}     -       -       "Loads on the tower  - Externally supplied"
+typedef ^       OutputType      R8Ki            bldLd        {:}     -       -       "Loads on all blades - Externally supplied"

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31613.86
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.902
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{A1373E92-2C9A-4B4D-BE47-0B46E317E1A8}") = "MoorDynDriver", "MoorDynDriver.vfproj", "{E91DED35-18F8-415F-9719-59DFBA79CB2C}"
 EndProject

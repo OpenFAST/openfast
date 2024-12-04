@@ -43,6 +43,7 @@ add_library(hydrodynlib STATIC
   src/SS_Excitation_Types.f90
   src/WAMIT_Types.f90
   src/WAMIT2_Types.f90
+  src/YawOffset.f90
 )
 target_link_libraries(hydrodynlib seastlib nwtclibs)
 

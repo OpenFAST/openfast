@@ -80,7 +80,7 @@ modules use the *value column* format):
 ============== ==========================================================
  Module         Input file           
 ============== ==========================================================
-AeroDyn         Main AD15 input file 
+AeroDyn         Main AeroDyn input file 
 AeroDyn         Airfoil files
 HydroDyn        Main HD input file
 InflowWind      Main IfW input file

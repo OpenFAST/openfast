@@ -40,9 +40,9 @@ contains
             '"unused"      FilenameRoot   - Rootname of the full-field wind file to use (.wnd, .sum)                                                                                            ', &
             'False         TowerFile      - Have tower file (.twr) (flag)                                                                                                                       ', &
             '================== Parameters for HAWC-format binary files  [Only used with WindType = 5] =====================                                                                    ', &
-            '"wasp\Output\basic_5u.bin"    FileName_u     - name of the file containing the u-component fluctuating wind (.bin)                                                                 ', &
-            '"wasp\Output\basic_5v.bin"    FileName_v     - name of the file containing the v-component fluctuating wind (.bin)                                                                 ', &
-            '"wasp\Output\basic_5w.bin"    FileName_w     - name of the file containing the w-component fluctuating wind (.bin)                                                                 ', &
+            '"wasp/Output/basic_5u.bin"    FileName_u     - name of the file containing the u-component fluctuating wind (.bin)                                                                 ', &
+            '"wasp/Output/basic_5v.bin"    FileName_v     - name of the file containing the v-component fluctuating wind (.bin)                                                                 ', &
+            '"wasp/Output/basic_5w.bin"    FileName_w     - name of the file containing the w-component fluctuating wind (.bin)                                                                 ', &
             '         64   nx             - number of grids in the x direction (in the 3 files above) (-)                                                                                       ', &
             '         32   ny             - number of grids in the y direction (in the 3 files above) (-)                                                                                       ', &
             '         32   nz             - number of grids in the z direction (in the 3 files above) (-)                                                                                       ', &
@@ -121,9 +121,9 @@ contains
             '"unused"      FilenameRoot   - Rootname of the full-field wind file to use (.wnd, .sum)                                                                                            ', &
             'False         TowerFile      - Have tower file (.twr) (flag)                                                                                                                       ', &
             '================== Parameters for HAWC-format binary files  [Only used with WindType = 5] =====================                                                                    ', &
-            '"wasp\Output\basic_5u.bin"    FileName_u     - name of the file containing the u-component fluctuating wind (.bin)                                                                 ', &
-            '"wasp\Output\basic_5v.bin"    FileName_v     - name of the file containing the v-component fluctuating wind (.bin)                                                                 ', &
-            '"wasp\Output\basic_5w.bin"    FileName_w     - name of the file containing the w-component fluctuating wind (.bin)                                                                 ', &
+            '"wasp/Output/basic_5u.bin"    FileName_u     - name of the file containing the u-component fluctuating wind (.bin)                                                                 ', &
+            '"wasp/Output/basic_5v.bin"    FileName_v     - name of the file containing the v-component fluctuating wind (.bin)                                                                 ', &
+            '"wasp/Output/basic_5w.bin"    FileName_w     - name of the file containing the w-component fluctuating wind (.bin)                                                                 ', &
             '         64   nx             - number of grids in the x direction (in the 3 files above) (-)                                                                                       ', &
             '         32   ny             - number of grids in the y direction (in the 3 files above) (-)                                                                                       ', &
             '         32   nz             - number of grids in the z direction (in the 3 files above) (-)                                                                                       ', &

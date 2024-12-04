@@ -185,7 +185,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
    if (InitInp%UseInputFile) then
       call ProcessComFile(InitInp%WindFileName, WindFileInfo, TmpErrStat, TmpErrMsg)
    else
-      call NWTC_Library_CopyFileInfoType(InitInp%PassedFileData, WindFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
+      call NWTC_Library_CopyFileInfoType(InitInp%PassedFileInfo, WindFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
    end if
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -256,6 +256,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
          call SetErrStat(ErrID_Fatal, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       end if
    end do
+   if (ErrStat >= AbortErrLev) return
 
    !----------------------------------------------------------------------------
    ! Find out information on the timesteps and range
@@ -276,6 +277,24 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
       WindFileConstantDT = .false.
       WindFileDT = 0.0_ReKi
    end if
+
+   !----------------------------------------------------------------------------
+   ! Check that time is always increasing
+   !----------------------------------------------------------------------------
+
+   ! Check that last timestep is always increasing
+   if (UF%DataSize > 2) then
+      do I = 2, UF%DataSize
+         if (UF%Time(I)<=UF%Time(I-1)) then
+            TmpErrMsg = ' Time vector must always increase in the uniform wind file. Error around wind step ' &
+                        //TRIM(Num2LStr(I))//' at time '//TRIM(Num2LStr(UF%Time(I)))//' in wind file ' &
+                        //TRIM(InitInp%WindFileName)//'.'
+            call SetErrStat(ErrID_Fatal, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            exit
+         endif
+      end do
+      if (ErrStat >= AbortErrLev) return
+   endif
 
    !----------------------------------------------------------------------------
    ! Store wind file metadata

@@ -48,6 +48,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: WAMITULEN = 0.0_ReKi      !< WAMIT unit length scale [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [(rad)]
+    INTEGER(IntKi)  :: NExctnHdg = 0_IntKi      !< Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1] [-]
     INTEGER(IntKi)  :: MnDrift = 0_IntKi      !< Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: NewmanApp = 0_IntKi      !< Slow drift forces computed with Newman approximation from WAMIT file:{0: No slow drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: DiffQTF = 0_IntKi      !< Full Difference-Frequency forces computed with full QTF's from WAMIT file: {0: No diff-QTF; [10,11, or 12]: WAMIT file to use} [-]
@@ -62,13 +65,15 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WAMIT2_MiscVarType
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LastIndWave      !< Index for last interpolation step of 2nd order forces [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_Waves2      !< 2nd order force from this timestep [-]
+    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
   END TYPE WAMIT2_MiscVarType
 ! =======================
 ! =========  WAMIT2_ParameterType  =======
   TYPE, PUBLIC :: WAMIT2_ParameterType
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod = 0_IntKi      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
-    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveExctn2      !< Time series of the resulting 2nd order force (first index is timestep, second index is load component) [(N)]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveExctn2Grid      !< Grid of time series of the resulting 2nd order force (Index 1: Time, Index 2: x, Index 3: y, Index 4: platform heading, and Index 5: load component) [(N)]
+    TYPE(SeaSt_WaveField_ParameterType)  :: Exctn2GridParams      !< Parameters of WaveExctn2Grid [-]
     LOGICAL , DIMENSION(1:6)  :: MnDriftDims = .false.      !< Flags for which dimensions to calculate in MnDrift   calculations [-]
     LOGICAL , DIMENSION(1:6)  :: NewmanAppDims = .false.      !< Flags for which dimensions to calculate in NewmanApp calculations [-]
     LOGICAL , DIMENSION(1:6)  :: DiffQTFDims = .false.      !< Flags for which dimensions to calculate in DiffQTF   calculations [-]
@@ -77,6 +82,8 @@ IMPLICIT NONE
     LOGICAL  :: NewmanAppF = .false.      !< Flag indicating Newman approximation should be calculated [-]
     LOGICAL  :: DiffQTFF = .false.      !< Flag indicating the full difference QTF should be calculated [-]
     LOGICAL  :: SumQTFF = .false.      !< Flag indicating the full    sum     QTF should be calculated [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    INTEGER(IntKi)  :: NExctnHdg = 0_IntKi      !< Number of PRP headings/yaw offset evenly distributed over the region [-180, 180) deg to be used when precomputing the wave excitation [only used when PtfmYMod=1] [-]
   END TYPE WAMIT2_ParameterType
 ! =======================
 ! =========  WAMIT2_OutputType  =======
@@ -92,7 +99,7 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_CopyInitInput'
@@ -103,8 +110,8 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%NBody = SrcInitInputData%NBody
    DstInitInputData%NBodyMod = SrcInitInputData%NBodyMod
    if (allocated(SrcInitInputData%PtfmRefxt)) then
-      LB(1:1) = lbound(SrcInitInputData%PtfmRefxt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%PtfmRefxt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefxt)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefxt)
       if (.not. allocated(DstInitInputData%PtfmRefxt)) then
          allocate(DstInitInputData%PtfmRefxt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -115,8 +122,8 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%PtfmRefxt = SrcInitInputData%PtfmRefxt
    end if
    if (allocated(SrcInitInputData%PtfmRefyt)) then
-      LB(1:1) = lbound(SrcInitInputData%PtfmRefyt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%PtfmRefyt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefyt)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefyt)
       if (.not. allocated(DstInitInputData%PtfmRefyt)) then
          allocate(DstInitInputData%PtfmRefyt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -127,8 +134,8 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%PtfmRefyt = SrcInitInputData%PtfmRefyt
    end if
    if (allocated(SrcInitInputData%PtfmRefzt)) then
-      LB(1:1) = lbound(SrcInitInputData%PtfmRefzt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%PtfmRefzt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefzt)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefzt)
       if (.not. allocated(DstInitInputData%PtfmRefzt)) then
          allocate(DstInitInputData%PtfmRefzt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -139,8 +146,8 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%PtfmRefzt = SrcInitInputData%PtfmRefzt
    end if
    if (allocated(SrcInitInputData%PtfmRefztRot)) then
-      LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%PtfmRefztRot, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefztRot)
       if (.not. allocated(DstInitInputData%PtfmRefztRot)) then
          allocate(DstInitInputData%PtfmRefztRot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -153,6 +160,9 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WaveField => SrcInitInputData%WaveField
+   DstInitInputData%PtfmYMod = SrcInitInputData%PtfmYMod
+   DstInitInputData%PtfmRefY = SrcInitInputData%PtfmRefY
+   DstInitInputData%NExctnHdg = SrcInitInputData%NExctnHdg
    DstInitInputData%MnDrift = SrcInitInputData%MnDrift
    DstInitInputData%NewmanApp = SrcInitInputData%NewmanApp
    DstInitInputData%DiffQTF = SrcInitInputData%DiffQTF
@@ -187,170 +197,92 @@ subroutine WAMIT2_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    nullify(InitInputData%WaveField)
 end subroutine
 
-subroutine WAMIT2_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine WAMIT2_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(WAMIT2_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT2_PackInitInput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%HasWAMIT)
-   call RegPack(Buf, InData%WAMITFile)
-   call RegPack(Buf, InData%NBody)
-   call RegPack(Buf, InData%NBodyMod)
-   call RegPack(Buf, allocated(InData%PtfmRefxt))
-   if (allocated(InData%PtfmRefxt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefxt, kind=B8Ki), ubound(InData%PtfmRefxt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefxt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefyt))
-   if (allocated(InData%PtfmRefyt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefyt, kind=B8Ki), ubound(InData%PtfmRefyt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefyt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefzt))
-   if (allocated(InData%PtfmRefzt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefzt, kind=B8Ki), ubound(InData%PtfmRefzt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefzt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefztRot))
-   if (allocated(InData%PtfmRefztRot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot, kind=B8Ki), ubound(InData%PtfmRefztRot, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefztRot)
-   end if
-   call RegPack(Buf, InData%WAMITULEN)
-   call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, associated(InData%WaveField))
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%HasWAMIT)
+   call RegPack(RF, InData%WAMITFile)
+   call RegPack(RF, InData%NBody)
+   call RegPack(RF, InData%NBodyMod)
+   call RegPackAlloc(RF, InData%PtfmRefxt)
+   call RegPackAlloc(RF, InData%PtfmRefyt)
+   call RegPackAlloc(RF, InData%PtfmRefzt)
+   call RegPackAlloc(RF, InData%PtfmRefztRot)
+   call RegPack(RF, InData%WAMITULEN)
+   call RegPack(RF, InData%Gravity)
+   call RegPack(RF, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
-      call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
+      call RegPackPointer(RF, c_loc(InData%WaveField), PtrInIndex)
       if (.not. PtrInIndex) then
-         call SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, InData%WaveField) 
+         call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
-   call RegPack(Buf, InData%MnDrift)
-   call RegPack(Buf, InData%NewmanApp)
-   call RegPack(Buf, InData%DiffQTF)
-   call RegPack(Buf, InData%SumQTF)
-   call RegPack(Buf, InData%MnDriftF)
-   call RegPack(Buf, InData%NewmanAppF)
-   call RegPack(Buf, InData%DiffQTFF)
-   call RegPack(Buf, InData%SumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%PtfmRefY)
+   call RegPack(RF, InData%NExctnHdg)
+   call RegPack(RF, InData%MnDrift)
+   call RegPack(RF, InData%NewmanApp)
+   call RegPack(RF, InData%DiffQTF)
+   call RegPack(RF, InData%SumQTF)
+   call RegPack(RF, InData%MnDriftF)
+   call RegPack(RF, InData%NewmanAppF)
+   call RegPack(RF, InData%DiffQTFF)
+   call RegPack(RF, InData%SumQTFF)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine WAMIT2_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine WAMIT2_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(WAMIT2_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackInitInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%HasWAMIT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WAMITFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBodyMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%PtfmRefxt)) deallocate(OutData%PtfmRefxt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefxt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefxt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefxt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefyt)) deallocate(OutData%PtfmRefyt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefyt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefyt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefyt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefzt)) deallocate(OutData%PtfmRefzt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefzt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefzt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefzt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefztRot)) deallocate(OutData%PtfmRefztRot)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefztRot(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefztRot.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefztRot)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%WAMITULEN)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%HasWAMIT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAMITFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefxt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefyt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefzt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefztRot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WAMITULEN); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
       if (c_associated(Ptr)) then
          call c_f_pointer(Ptr, OutData%WaveField)
       else
          allocate(OutData%WaveField,stat=stat)
          if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', RF%ErrStat, RF%ErrMsg, RoutineName)
             return
          end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveField)
-         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(Buf, OutData%WaveField) ! WaveField 
+         RF%Pointers(PtrIdx) = c_loc(OutData%WaveField)
+         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(RF, OutData%WaveField) ! WaveField 
       end if
    else
       OutData%WaveField => null()
    end if
-   call RegUnpack(Buf, OutData%MnDrift)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NewmanApp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DiffQTF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SumQTF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MnDriftF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NewmanAppF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DiffQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NExctnHdg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MnDrift); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NewmanApp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DiffQTF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SumQTF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MnDriftF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NewmanAppF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DiffQTFF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SumQTFF); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -359,14 +291,15 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%LastIndWave)) then
-      LB(1:1) = lbound(SrcMiscData%LastIndWave, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%LastIndWave, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%LastIndWave)
+      UB(1:1) = ubound(SrcMiscData%LastIndWave)
       if (.not. allocated(DstMiscData%LastIndWave)) then
          allocate(DstMiscData%LastIndWave(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -377,8 +310,8 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%LastIndWave = SrcMiscData%LastIndWave
    end if
    if (allocated(SrcMiscData%F_Waves2)) then
-      LB(1:1) = lbound(SrcMiscData%F_Waves2, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%F_Waves2, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%F_Waves2)
+      UB(1:1) = ubound(SrcMiscData%F_Waves2)
       if (.not. allocated(DstMiscData%F_Waves2)) then
          allocate(DstMiscData%F_Waves2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -388,12 +321,17 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%F_Waves2 = SrcMiscData%F_Waves2
    end if
+   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine WAMIT2_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(WAMIT2_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -403,62 +341,32 @@ subroutine WAMIT2_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%F_Waves2)) then
       deallocate(MiscData%F_Waves2)
    end if
+   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine WAMIT2_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine WAMIT2_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(WAMIT2_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT2_PackMisc'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%LastIndWave))
-   if (allocated(InData%LastIndWave)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LastIndWave, kind=B8Ki), ubound(InData%LastIndWave, kind=B8Ki))
-      call RegPack(Buf, InData%LastIndWave)
-   end if
-   call RegPack(Buf, allocated(InData%F_Waves2))
-   if (allocated(InData%F_Waves2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%F_Waves2, kind=B8Ki), ubound(InData%F_Waves2, kind=B8Ki))
-      call RegPack(Buf, InData%F_Waves2)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%LastIndWave)
+   call RegPackAlloc(RF, InData%F_Waves2)
+   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine WAMIT2_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine WAMIT2_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(WAMIT2_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackMisc'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%LastIndWave)) deallocate(OutData%LastIndWave)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LastIndWave(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LastIndWave.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LastIndWave)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%F_Waves2)) deallocate(OutData%F_Waves2)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%F_Waves2(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%F_Waves2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%F_Waves2)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_Waves2); if (RegCheckErr(RF, RoutineName)) return
+   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
 
 subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -467,25 +375,29 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstParamData%NBody = SrcParamData%NBody
    DstParamData%NBodyMod = SrcParamData%NBodyMod
-   if (allocated(SrcParamData%WaveExctn2)) then
-      LB(1:2) = lbound(SrcParamData%WaveExctn2, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%WaveExctn2, kind=B8Ki)
-      if (.not. allocated(DstParamData%WaveExctn2)) then
-         allocate(DstParamData%WaveExctn2(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcParamData%WaveExctn2Grid)) then
+      LB(1:5) = lbound(SrcParamData%WaveExctn2Grid)
+      UB(1:5) = ubound(SrcParamData%WaveExctn2Grid)
+      if (.not. allocated(DstParamData%WaveExctn2Grid)) then
+         allocate(DstParamData%WaveExctn2Grid(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctn2.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctn2Grid.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstParamData%WaveExctn2 = SrcParamData%WaveExctn2
+      DstParamData%WaveExctn2Grid = SrcParamData%WaveExctn2Grid
    end if
+   call SeaSt_WaveField_CopyParam(SrcParamData%Exctn2GridParams, DstParamData%Exctn2GridParams, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstParamData%MnDriftDims = SrcParamData%MnDriftDims
    DstParamData%NewmanAppDims = SrcParamData%NewmanAppDims
    DstParamData%DiffQTFDims = SrcParamData%DiffQTFDims
@@ -494,85 +406,70 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    DstParamData%NewmanAppF = SrcParamData%NewmanAppF
    DstParamData%DiffQTFF = SrcParamData%DiffQTFF
    DstParamData%SumQTFF = SrcParamData%SumQTFF
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
+   DstParamData%NExctnHdg = SrcParamData%NExctnHdg
 end subroutine
 
 subroutine WAMIT2_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(WAMIT2_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'WAMIT2_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ParamData%WaveExctn2)) then
-      deallocate(ParamData%WaveExctn2)
+   if (allocated(ParamData%WaveExctn2Grid)) then
+      deallocate(ParamData%WaveExctn2Grid)
    end if
+   call SeaSt_WaveField_DestroyParam(ParamData%Exctn2GridParams, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine WAMIT2_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine WAMIT2_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(WAMIT2_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT2_PackParam'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%NBody)
-   call RegPack(Buf, InData%NBodyMod)
-   call RegPack(Buf, allocated(InData%WaveExctn2))
-   if (allocated(InData%WaveExctn2)) then
-      call RegPackBounds(Buf, 2, lbound(InData%WaveExctn2, kind=B8Ki), ubound(InData%WaveExctn2, kind=B8Ki))
-      call RegPack(Buf, InData%WaveExctn2)
-   end if
-   call RegPack(Buf, InData%MnDriftDims)
-   call RegPack(Buf, InData%NewmanAppDims)
-   call RegPack(Buf, InData%DiffQTFDims)
-   call RegPack(Buf, InData%SumQTFDims)
-   call RegPack(Buf, InData%MnDriftF)
-   call RegPack(Buf, InData%NewmanAppF)
-   call RegPack(Buf, InData%DiffQTFF)
-   call RegPack(Buf, InData%SumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%NBody)
+   call RegPack(RF, InData%NBodyMod)
+   call RegPackAlloc(RF, InData%WaveExctn2Grid)
+   call SeaSt_WaveField_PackParam(RF, InData%Exctn2GridParams) 
+   call RegPack(RF, InData%MnDriftDims)
+   call RegPack(RF, InData%NewmanAppDims)
+   call RegPack(RF, InData%DiffQTFDims)
+   call RegPack(RF, InData%SumQTFDims)
+   call RegPack(RF, InData%MnDriftF)
+   call RegPack(RF, InData%NewmanAppF)
+   call RegPack(RF, InData%DiffQTFF)
+   call RegPack(RF, InData%SumQTFF)
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%NExctnHdg)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine WAMIT2_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine WAMIT2_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(WAMIT2_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackParam'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBodyMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%WaveExctn2)) deallocate(OutData%WaveExctn2)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveExctn2(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveExctn2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveExctn2)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%MnDriftDims)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NewmanAppDims)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DiffQTFDims)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SumQTFDims)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MnDriftF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NewmanAppF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DiffQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveExctn2Grid); if (RegCheckErr(RF, RoutineName)) return
+   call SeaSt_WaveField_UnpackParam(RF, OutData%Exctn2GridParams) ! Exctn2GridParams 
+   call RegUnpack(RF, OutData%MnDriftDims); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NewmanAppDims); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DiffQTFDims); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SumQTFDims); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MnDriftF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NewmanAppF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DiffQTFF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SumQTFF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NExctnHdg); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine WAMIT2_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -604,21 +501,21 @@ subroutine WAMIT2_DestroyOutput(OutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine WAMIT2_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine WAMIT2_PackOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(WAMIT2_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT2_PackOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call MeshPack(Buf, InData%Mesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call MeshPack(RF, InData%Mesh) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine WAMIT2_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine WAMIT2_UnPackOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(WAMIT2_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT2_UnPackOutput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call MeshUnpack(Buf, OutData%Mesh) ! Mesh 
+   if (RF%ErrStat /= ErrID_None) return
+   call MeshUnpack(RF, OutData%Mesh) ! Mesh 
 end subroutine
 
 subroutine WAMIT2_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)

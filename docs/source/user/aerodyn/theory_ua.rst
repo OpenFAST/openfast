@@ -25,6 +25,12 @@ speed increases, but stall is delayed.
 
 
 
+
+
+
+.. _ua_theory:
+
+
 Theory
 ------
 
@@ -489,6 +495,12 @@ where :math:`\alpha_{50}` is computed the same way as :math:`\alpha_{34}` (using
 
 
 
+
+
+
+
+.. _UA_inputs:
+
 Inputs
 ------
 
@@ -501,6 +513,10 @@ See :numref:`ua_notations` for a list of notations and definitions specific to u
 
 An example of profile data (containing some of the unsteady aerodynamic parameters) is available here
 :download:`(here) <examples/ad_polar_example.dat>`.
+
+
+The unsteady aerodynamic driver inputs are documented in :numref:`ua_driver`.
+
 
 
 .. _UA_AFI_defaults:
@@ -579,17 +595,195 @@ to set preprocessor variable ``UA_OUTS`` and recompile the program (OpenFAST, Ae
 The outputs are written in output files with extension `*.UA.out`.
 To activate these outputs with `cmake`, compile using ``-DCMAKE_Fortran_FLAGS="-DUA_OUTS=ON"``
 
+When using the driver, there is no need to use this preprocessor variable.
 
 
+
+
+.. _ua_aeroelasttheory:
+
+Aeroelastic simulation of a 2D section
+--------------------------------------
+
+Aeroelastic simulations of an isolated 2D section are possible using the driver in order to use the unsteady aerodynamic model in a simplified context.
+See :numref:`ua_driver`.
+The theory and description for the aeroelastic simulation can be found in 
+:cite:`ad-UAElast:torquepaper`.
+
+
+
+
+.. _ua_driver:
 
 Driver
 ------
 
-A driver is available to run simulations for a single airfoil, using sinusoidal variation of the angle of attack, 
-or user defined time series of angle of attack, relative wind speed and pitch rate.
+
+A driver is available to run simulations for a single airfoil.
+
+Different kind of simulations are possible:
+
+ - using sinusoidal variation of the angle of attack, 
+ - user defined time series of angle of attack, relative wind speed and pitch rate.
+ - aero elastic simulations with 3 degrees of freedom for the elastic motion of the section in it's 2D plane (flap, edge and torsion), with possibility to prescribe time series of the wind speed, or prescribe the motion of the section.
+
+The theory and description for the aeroelastic simulation can be found in :cite:`ad-UAElast:torquepaper`.
+
+
+
+
+
+Compilation
+~~~~~~~~~~~
 
 Using `cmake`, the driver is compiled using `make unsteadyaero_driver`, resulting as an executable in the `aerodyn` folder.
 
-An example of driver input file is available here: :download:`here <../aerodyn-dynamicStall/examples/UA-driver.dvr>`.
-An example of time series input is available here: :download:`here <../aerodyn-dynamicStall/examples/UA-driver-timeseries.dat>`
 
+
+Driver Inputs
+~~~~~~~~~~~~~
+
+An example of input file for the unsteady aerodynamic driver can be found in the `r-test repository <https://github.com/OpenFAST/r-test/blob/main/modules/unsteadyaero/ua_redfreq/UA2.dvr>`__.
+
+
+The differente inputs are described below.
+
+
+
+**Environmental conditions**
+
+
+``FldDens``: Density of working fluid (kg/m^3)
+
+``KinVisc``: Kinematic viscosity of working fluid (m^2/s)
+
+``SpdSound``: Speed of sound of working fluid (m/s)
+
+
+**Unsteady aerodynamics options**
+
+``UAMod``     : Unsteady Aero Model Switch (switch) {2=B-L Gonzalez, 3=B-L Minnema/Pierce, 4=B-L HGM 4-states, 5=B-L 5 states, 6=Oye, 7=Boeing-Vertol} [used only when AFAeroMod=2]
+
+``FLookup``   : Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
+
+
+**Airfoil properties**
+
+``AirFoil``: Airfoil table (Column 1: Angle of Attack (AoA), column 2: Lift coeff, column 3: Drag coeff).
+
+``Chord`` : Chord length (m)
+
+``Vec_AQ`` : Vector from reference point "A" to aerodynamic center (~quarter chord) "Q" in airfoil coordinates and in chord length. If "A" is at mid chord values are likely (0, -0.25) (-)
+
+``Vec_AT`` : Vector from reference point "A" to three-quarter chord point           "T" in airfoil coordinates and in chord length. If "A" is at mid chord values are likely (0,  0.25) (-)
+
+``UseCm`` : Use Cm (moment coefficient) data in airfoil table {true/false}
+
+
+**Simulation control**
+
+``SimMod``: Simulation model {1=reduced frequency model, 2=prescribed-aero time series, 3=elastic cross section}
+
+
+**Reduced-frequency simulation** (``SimMod=1``)
+
+``InflowVel``      : Inflow velocity (m/s)
+
+``NCycles``        : Number of angle-of-attack oscillations over the length of the simulation (-)
+
+``StepsPerCycle``  : Number of timesteps per cycle (-)
+
+``Frequency``      : Frequency for the airfoil oscillations (Hz)
+
+``Amplitude``      : Amplitude of the angle of attack oscillations (deg)
+
+``Mean``           : Cycle mean (deg)
+
+``Phase``          : Initial phase (num steps).    
+
+
+**Prescribed aerodynamic simulation inputs**  (``SimMod=2``)
+
+``TMax_PA``   : Total run time (s) 
+
+``DT_PA``     : Recommended module time step (s)
+
+``AeroTSFile``: Time series data in delimited input file (e.g. csv) with 1 header line, 4 columns: Time (s), angle-of-attack (deg), InflowVel (m/s), Pitch rate (rad/s)
+
+
+**Aeroelastic simulation** (``SimMod=3``)
+
+The theory for the aeroelastic simulation can be found in :numref:`ua_aeroelasttheory`.
+
+``TMax``        : Total run time (s)
+
+``DT``          : Time step (s).
+
+``ActiveDOF``   : List of Degrees of freedom that are active (true or false)
+
+``InitPos``     : List of initial positions for the elastic degrees of freedom (m, m and rad)
+
+``InitVel``     : List of initial velocities for the elastic degrees of freedom  (m/s, m/s, and rad/s)
+
+``GFScalingL1`` : Generalized force scaling factors to convert from section loads to generalized loads (3x3). Three values per line.
+
+``MassMatrixL1`` :  Mass matrix (3x3). Three values per line.
+
+``DampMatrixL1`` :  Damping matrix (3x3). Three values per line.
+
+``StifMatrixL1`` :  Stiffness matrix (3x3). Three values per line.
+
+``Twist``        : Fixed twist of the section when torsion degree of freedom is zero (deg)
+
+``InflowMod``    : Model for the inflow velocity. {1: constant velocity, 2: time series}
+
+``Inflow``      : Inflow velocity in x and y direction [used only when InflowMod=1]
+
+``InflowTSFile`` : Input file for inflow velocity. Delimited file (e.g. csv) with one header line, three columns: Time (s), Ux (m/s), Uy (m/s). [used only when InflowMod=2]
+
+``MotionMod``    :  Model for the motion of the degrees of freedom {1: dynamic, 2: prescribed}  
+
+``MotionTSFile`` :  Input file for prescribed motion. Delimited file (e.g. csv) with one header line, 10 columns: Time (s), x (m), y (m), th (rad), velocities, and accelerations. [used only when InflowMod=2]
+
+
+**Output control**
+
+``SumPrint`` : Write unsteady aerodynamics summary file (flag)
+
+``WrAFITables`` : Write back the aerodynamic coefficients used internally (flag)
+
+
+**Example CSV input files**
+
+The unsteady aerodyn driver now relies on CSV files for it's input time series. 
+The time column does not need to be at a constant time step, but needs to be monotonously increasing. 
+
+Prescribed aero input (``SimMod=2``):
+
+.. code: 
+
+    Time_[s] , Alpha_[deg] , VRel_[m/s] , omega_[rad/s]
+    0.0      , 0           , 10         , 0
+    0.01     , 0           , 10         , 0
+
+
+Inflow file input (``SimMod=3``, ``InflowMod=2``):
+
+.. code: 
+
+    Time_[s]  , Ux_[m/s], Uy_[m/s]
+    0.0       , 1       , 10
+    1.0       , 2       , 10
+    5.0       , 2       ,  8
+    10.0      , 1       , 12
+
+
+Motion file input (``SimMod=3``, ``MotionMod=2``) (note in this dummy exmaple velocities and accelerations are not provided, but preferably they should be):
+
+.. code: 
+
+    Time_[s] , x_[m] , y_[m] , th_[rad] , xd_[m/s] , yd_[m/s] , thd_[rad/s] , xdd_[m/s^2] , ydd_[m/s^2] , thdd_[rad/s^2]
+    0.0        , 1     , 1     , 1        , 0        , 0        , 0           , 0           , 0           , 0
+    1.0        , 2     , 2     , 2        , 0        , 0        , 0           , 0           , 0           , 0
+    5.0        , 2     , 2     , 2        , 0        , 0        , 0           , 0           , 0           , 0
+    10.0       , 1     , 1     , 1        , 0        , 0        , 0           , 0           , 0           , 0

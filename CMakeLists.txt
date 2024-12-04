@@ -67,7 +67,10 @@ endif()
 option(BUILD_TESTING "Build the testing tree." OFF)
 if(BUILD_TESTING)
   option(CODECOVERAGE "Enable infrastructure for measuring code coverage." OFF)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+  option(BUILD_UNIT_TESTING "Enable unit testing" ON)
+  if(BUILD_UNIT_TESTING)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+  endif()
 endif()
 
 # Setup Fortran Compiler options based on architecture/compiler
@@ -107,7 +110,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 # OpenMP
 #-------------------------------------------------------------------------------
 
-if (OPENMP OR BUILD_FASTFARM OR BUILD_OPENFAST_CPP_API)
+if (OPENMP)
   FIND_PACKAGE(OpenMP REQUIRED)
   if (OpenMP_Fortran_FOUND)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
@@ -184,8 +187,9 @@ set(OPENFAST_MODULES
   nwtc-library
   version
   inflowwind
+  extloads
   aerodyn
-  aerodyn14
+  aerodisk
   servodyn
   elastodyn
   beamdyn
@@ -200,11 +204,13 @@ set(OPENFAST_MODULES
   icefloe
   wakedynamics
   awae
+  lindyn
   map
   turbsim
   supercontroller
   externalinflow
   openfast-library
+  simple-elastodyn
 )
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
@@ -277,8 +283,10 @@ if(BUILD_TESTING)
   add_subdirectory(reg_tests)
 
   # unit tests
-  if(NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang"))
-    add_subdirectory(unit_tests)
+  if(BUILD_UNIT_TESTING)
+    if(NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang"))
+      add_subdirectory(unit_tests)
+    endif()
   endif()
 endif()
 

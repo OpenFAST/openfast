@@ -11,3 +11,7 @@ usage of MoorDyn at the FAST.Farm level
 (`MoorDyn with FAST.Farm <https://moordyn.readthedocs.io/en/latest/inputs.html#moordyn-with-fast-farm-inputs>`_),
 and links to publications with the relevant theory.
 
+
+The user guide can be downloaded below.
+
+`Official User's Guide <http://www.matt-hall.ca/files/MoorDyn%20Users%20Guide%202017-08-16.pdf>`_

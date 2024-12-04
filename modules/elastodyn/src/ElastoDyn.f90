@@ -120,23 +120,25 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Read the input file and validate the data
       !............................................................................................
    p%BD4Blades = .NOT. InitInp%CompElast           ! if we're not using ElastoDyn for the blades, use BeamDyn
-   p%UseAD14   = LEN_TRIM(InitInp%ADInputFile) > 0 ! if we're using AD14, we need to use the AD14 input files
+   p%RigidAero = InitInp%RigidAero                 ! If AeroDisk is used, set blades to all be rigid
 
    p%RootName = InitInp%RootName ! FAST already adds '.ED' to the root name
    p%CompAeroMaps = InitInp%CompAeroMaps
    p%Gravity = InitInp%Gravity
    
-   CALL ED_ReadInput( InitInp%InputFile, InitInp%ADInputFile, InputFileData, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
+   CALL ED_ReadInput( InitInp%InputFile, InputFileData, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-   IF ( p%BD4Blades ) THEN
-   
-         ! Set DOFs to FALSE for whatever values you don't want on for BeamDyn
+
+   IF ( p%BD4Blades .or. p%RigidAero ) THEN
+         ! Set DOFs to make rotor rigid
       InputFileData%FlapDOF1 = .FALSE.
       InputFileData%FlapDOF2 = .FALSE.
       InputFileData%EdgeDOF  = .FALSE.
-      
+   ENDIF
+
+   IF ( p%BD4Blades ) THEN
          ! Set other values not used for BeamDyn      
       InputFileData%OoPDefl  = 0.0_ReKi
       InputFileData%IPDefl   = 0.0_ReKi
@@ -145,7 +147,6 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       InputFileData%NBlGages = 0
       InputFileData%BldGagNd = 0
       InputFileData%BldNodes = 0
-       
    END IF
 
    IF (p%CompAeroMaps) THEN
@@ -287,12 +288,14 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%Ver         = ED_Ver
    InitOut%NumBl       = p%NumBl
    InitOut%BladeLength = p%TipRad - p%HubRad
-   InitOut%TowerHeight = p%TwrFlexL
+   InitOut%TowerFlexL = p%TwrFlexL
    InitOut%TowerBaseHeight = p%TowerBsHt
 
    ! Platform reference point wrt to global origin (0,0,0)
    InitOut%PlatformPos = x%QT(1:6)
-   CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
+   ! CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
+   TransMat = EulerConstructZYX((/x%QT(4),x%QT(5),x%QT(6)/))
+
    InitOut%PlatformPos(1) = InitOut%PlatformPos(1) - TransMat(3,1)*p%PtfmRefzt
    InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
    InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
@@ -489,6 +492,8 @@ SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""            
       
+         ! Passing in u(1) as a dummy. ED_UpdateDiscState does not require input, u, only the continuous state, x.
+      CALL ED_UpdateDiscState( t, n, u(1), p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       SELECT CASE ( p%method )
          
@@ -521,7 +526,6 @@ SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       
       IF ( ( x%QT(DOF_GeAz) + x%QT(DOF_DrTr) ) >= TwoPi_D )  x%QT(DOF_GeAz) = x%QT(DOF_GeAz) - TwoPi_D
             
-      
 END SUBROUTINE ED_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
@@ -666,9 +670,13 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    FrcT0Trb   = m%RtHS%FrcT0Trbt
 
    ! was FZHydro    = m%RtHS%FZHydrot
-   FZHydro    = u%PlatformPtMesh%Force(DOF_Sg,1)*m%RtHS%PLinVelEZ(DOF_Sg,0,:) &
-              + u%PlatformPtMesh%Force(DOF_Sw,1)*m%RtHS%PLinVelEZ(DOF_Sw,0,:) &
-              + u%PlatformPtMesh%Force(DOF_Hv,1)*m%RtHS%PLinVelEZ(DOF_Hv,0,:)
+   ! FZHydro    = u%PlatformPtMesh%Force(DOF_Sg,1)*m%RtHS%PLinVelEZ(DOF_Sg,0,:) &
+   !            + u%PlatformPtMesh%Force(DOF_Sw,1)*m%RtHS%PLinVelEZ(DOF_Sw,0,:) &
+   !            + u%PlatformPtMesh%Force(DOF_Hv,1)*m%RtHS%PLinVelEZ(DOF_Hv,0,:)
+
+   FZHydro    = u%PlatformPtMesh%Force(DOF_Sg,1)*m%CoordSys%z1 &
+              - u%PlatformPtMesh%Force(DOF_Sw,1)*m%CoordSys%z3 &
+              + u%PlatformPtMesh%Force(DOF_Hv,1)*m%CoordSys%z2
 
    MomBNcRt   = m%RtHS%MomBNcRtt
    MomLPRot   = m%RtHS%MomLPRott
@@ -677,9 +685,13 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    MomX0Trb   = m%RtHS%MomX0Trbt
 
    ! was MXHydro = m%RtHS%MXHydrot
-   MXHydro    = u%PlatformPtMesh%Moment(DOF_R-3,1)*m%RtHS%PAngVelEX(DOF_R ,0,:) &
-              + u%PlatformPtMesh%Moment(DOF_P-3,1)*m%RtHS%PAngVelEX(DOF_P ,0,:) &
-              + u%PlatformPtMesh%Moment(DOF_Y-3,1)*m%RtHS%PAngVelEX(DOF_Y ,0,:)
+   ! MXHydro    = u%PlatformPtMesh%Moment(DOF_R-3,1)*m%RtHS%PAngVelEX(DOF_R ,0,:) &
+   !            + u%PlatformPtMesh%Moment(DOF_P-3,1)*m%RtHS%PAngVelEX(DOF_P ,0,:) &
+   !            + u%PlatformPtMesh%Moment(DOF_Y-3,1)*m%RtHS%PAngVelEX(DOF_Y ,0,:)
+
+   MXHydro    = u%PlatformPtMesh%Moment(DOF_R-3,1)*m%CoordSys%z1 &
+              - u%PlatformPtMesh%Moment(DOF_P-3,1)*m%CoordSys%z3 &
+              + u%PlatformPtMesh%Moment(DOF_Y-3,1)*m%CoordSys%z2
 
    DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
       AngAccEB   = AngAccEB   + m%RtHS%PAngVelEB  (p%DOFs%SrtPS(I),0,:)*m%QD2T(p%DOFs%SrtPS(I))
@@ -1007,9 +1019,13 @@ END IF
       m%AllOuts( TwHtTPyi(I) ) = -1.0*m%RtHS%rT(3,p%TwrGagNd(I))
       m%AllOuts( TwHtTPzi(I) ) =      m%RtHS%rT(2,p%TwrGagNd(I)) + p%PtfmRefzt
 
-      m%AllOuts( TwHtRPxi(I) ) =  m%RtHS%AngPosEF(1,p%TwrGagNd(I))*R2D
-      m%AllOuts( TwHtRPyi(I) ) = -m%RtHS%AngPosEF(3,p%TwrGagNd(I))*R2D
-      m%AllOuts( TwHtRPzi(I) ) =  m%RtHS%AngPosEF(2,p%TwrGagNd(I))*R2D
+      ! m%AllOuts( TwHtRPxi(I) ) =  m%RtHS%AngPosEF(1,p%TwrGagNd(I))*R2D
+      ! m%AllOuts( TwHtRPyi(I) ) = -m%RtHS%AngPosEF(3,p%TwrGagNd(I))*R2D
+      ! m%AllOuts( TwHtRPzi(I) ) =  m%RtHS%AngPosEF(2,p%TwrGagNd(I))*R2D
+
+      m%AllOuts( TwHtRPxi(I) ) =  m%RtHS%AngPosEF(1,p%TwrGagNd(I))*R2D ! <- AngPosEF is now simply the roll, pitch, and yaw angles (possibly large) of each tower section
+      m%AllOuts( TwHtRPyi(I) ) =  m%RtHS%AngPosEF(2,p%TwrGagNd(I))*R2D
+      m%AllOuts( TwHtRPzi(I) ) =  m%RtHS%AngPosEF(3,p%TwrGagNd(I))*R2D
 
    END DO !I
 
@@ -1045,15 +1061,21 @@ END IF
    m%AllOuts( PtfmRVxt) =  DOT_PRODUCT( m%RtHS%AngVelEX, m%CoordSys%a1 )*R2D
    m%AllOuts( PtfmRVyt) = -DOT_PRODUCT( m%RtHS%AngVelEX, m%CoordSys%a3 )*R2D
    m%AllOuts( PtfmRVzt) =  DOT_PRODUCT( m%RtHS%AngVelEX, m%CoordSys%a2 )*R2D
-   m%AllOuts( PtfmRVxi) = x%QDT (DOF_R )*R2D
-   m%AllOuts( PtfmRVyi) = x%QDT (DOF_P )*R2D
-   m%AllOuts( PtfmRVzi) = x%QDT (DOF_Y )*R2D
+   ! m%AllOuts( PtfmRVxi) = x%QDT (DOF_R )*R2D
+   ! m%AllOuts( PtfmRVyi) = x%QDT (DOF_P )*R2D
+   ! m%AllOuts( PtfmRVzi) = x%QDT (DOF_Y )*R2D
+   m%AllOuts( PtfmRVxi) =  m%RtHS%AngVelEX(1)*R2D
+   m%AllOuts( PtfmRVyi) = -m%RtHS%AngVelEX(3)*R2D
+   m%AllOuts( PtfmRVzi) =  m%RtHS%AngVelEX(2)*R2D
    m%AllOuts( PtfmRAxt) =  DOT_PRODUCT(                 AngAccEX, m%CoordSys%a1 )*R2D
    m%AllOuts( PtfmRAyt) = -DOT_PRODUCT(                 AngAccEX, m%CoordSys%a3 )*R2D
    m%AllOuts( PtfmRAzt) =  DOT_PRODUCT(                 AngAccEX, m%CoordSys%a2 )*R2D
-   m%AllOuts( PtfmRAxi) = m%QD2T(DOF_R )*R2D
-   m%AllOuts( PtfmRAyi) = m%QD2T(DOF_P )*R2D
-   m%AllOuts( PtfmRAzi) = m%QD2T(DOF_Y )*R2D
+   ! m%AllOuts( PtfmRAxi) = m%QD2T(DOF_R )*R2D
+   ! m%AllOuts( PtfmRAyi) = m%QD2T(DOF_P )*R2D
+   ! m%AllOuts( PtfmRAzi) = m%QD2T(DOF_Y )*R2D
+   m%AllOuts( PtfmRAxi) =  AngAccEX(1)*R2D
+   m%AllOuts( PtfmRAyi) = -AngAccEX(3)*R2D
+   m%AllOuts( PtfmRAzi) =  AngAccEX(2)*R2D
 
 
 
@@ -1224,7 +1246,12 @@ END IF
    m%AllOuts( YawBrMzn) =  DOT_PRODUCT( MomBNcRt, m%CoordSys%d2 )
    m%AllOuts( YawBrMxp) =  DOT_PRODUCT( MomBNcRt, m%CoordSys%b1 )
    m%AllOuts( YawBrMyp) = -DOT_PRODUCT( MomBNcRt, m%CoordSys%b3 )
-
+   m%AllOuts(YawFriMom) = OtherState%Mfhat*0.001_ReKi    !KBF add YawFricMom as an output based on HSSBrTq (kN-m)
+   m%AllOuts(YawFriMfp)      = OtherState%YawFriMfp*0.001_ReKi
+   m%AllOuts(YawFriMz) = m%YawFriMz*0.001_ReKi
+   m%FrcONcRt =  m%AllOuts( YawBrFzn)*1000_ReKi
+   m%AllOuts(OmegaYF) = OtherState%OmegaTn*R2D
+   m%AllOuts(dOmegaYF) = OtherState%OmegaDotTn*R2D
 
       ! Tower Base Loads:
 
@@ -1429,49 +1456,28 @@ END IF
             if (j==0) then
                   ! blade root
                NodeNum = p%BldNodes + 2
-               if (p%UseAD14) j2 = 1                  
             elseif (j==p%TipNode) then
                ! blade tip
                NodeNum = p%BldNodes + 1
-               if (p%UseAD14) j2 = p%BldNodes
             else
                NodeNum = J
             end if
                                                                                                         
-            if (p%UseAD14) then                  
-                  ! Translational Displacement (first calculate absolute position)
-               y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     m%RtHS%rS (1,K,J2) + m%RtHS%rSAerCen(1,J2,K)               ! = the distance from the undeflected tower centerline                                     to the current blade aerodynamic center in the xi ( z1) direction
-               y%BladeLn2Mesh(K)%TranslationDisp(2,NodeNum) = -1.*m%RtHS%rS (3,K,J2) - m%RtHS%rSAerCen(3,J2,K)               ! = the distance from the undeflected tower centerline                                     to the current blade aerodynamic center in the yi (-z3) direction
-               y%BladeLn2Mesh(K)%TranslationDisp(3,NodeNum) =     m%RtHS%rS (2,K,J2) + m%RtHS%rSAerCen(2,J2,K) + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade aerodynamic center in the zi ( z2) direction
-               
-                  ! Orientation 
-               y%BladeLn2Mesh(K)%Orientation(1,1,NodeNum) =     m%CoordSys%te1(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(2,1,NodeNum) =     m%CoordSys%te2(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(3,1,NodeNum) =     m%CoordSys%te3(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(1,2,NodeNum) = -1.*m%CoordSys%te1(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(2,2,NodeNum) = -1.*m%CoordSys%te2(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(3,2,NodeNum) = -1.*m%CoordSys%te3(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(1,3,NodeNum) =     m%CoordSys%te1(K,J2,2)
-               y%BladeLn2Mesh(K)%Orientation(2,3,NodeNum) =     m%CoordSys%te2(K,J2,2)
-               y%BladeLn2Mesh(K)%Orientation(3,3,NodeNum) =     m%CoordSys%te3(K,J2,2)
-               
-            else         
-                  ! Translational Displacement (first calculate absolute position)
-               y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     m%RtHS%rS (1,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-               y%BladeLn2Mesh(K)%TranslationDisp(2,NodeNum) = -1.*m%RtHS%rS (3,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
-               y%BladeLn2Mesh(K)%TranslationDisp(3,NodeNum) =     m%RtHS%rS (2,K,J2)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
-               
-                  ! Orientation
-               y%BladeLn2Mesh(K)%Orientation(1,1,NodeNum) =     m%CoordSys%n1(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(2,1,NodeNum) =     m%CoordSys%n2(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(3,1,NodeNum) =     m%CoordSys%n3(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(1,2,NodeNum) = -1.*m%CoordSys%n1(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(2,2,NodeNum) = -1.*m%CoordSys%n2(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(3,2,NodeNum) = -1.*m%CoordSys%n3(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(1,3,NodeNum) =     m%CoordSys%n1(K,J2,2)
-               y%BladeLn2Mesh(K)%Orientation(2,3,NodeNum) =     m%CoordSys%n2(K,J2,2)
-               y%BladeLn2Mesh(K)%Orientation(3,3,NodeNum) =     m%CoordSys%n3(K,J2,2)
-            end if
+               ! Translational Displacement (first calculate absolute position)
+            y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     m%RtHS%rS (1,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+            y%BladeLn2Mesh(K)%TranslationDisp(2,NodeNum) = -1.*m%RtHS%rS (3,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+            y%BladeLn2Mesh(K)%TranslationDisp(3,NodeNum) =     m%RtHS%rS (2,K,J2)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
+            
+               ! Orientation
+            y%BladeLn2Mesh(K)%Orientation(1,1,NodeNum) =     m%CoordSys%n1(K,J2,1)
+            y%BladeLn2Mesh(K)%Orientation(2,1,NodeNum) =     m%CoordSys%n2(K,J2,1)
+            y%BladeLn2Mesh(K)%Orientation(3,1,NodeNum) =     m%CoordSys%n3(K,J2,1)
+            y%BladeLn2Mesh(K)%Orientation(1,2,NodeNum) = -1.*m%CoordSys%n1(K,J2,3)
+            y%BladeLn2Mesh(K)%Orientation(2,2,NodeNum) = -1.*m%CoordSys%n2(K,J2,3)
+            y%BladeLn2Mesh(K)%Orientation(3,2,NodeNum) = -1.*m%CoordSys%n3(K,J2,3)
+            y%BladeLn2Mesh(K)%Orientation(1,3,NodeNum) =     m%CoordSys%n1(K,J2,2)
+            y%BladeLn2Mesh(K)%Orientation(2,3,NodeNum) =     m%CoordSys%n2(K,J2,2)
+            y%BladeLn2Mesh(K)%Orientation(3,3,NodeNum) =     m%CoordSys%n3(K,J2,2)
             
                ! Translational Displacement (get displacement, not absolute position):
             y%BladeLn2Mesh(K)%TranslationDisp(:,NodeNum) = y%BladeLn2Mesh(K)%TranslationDisp(:,NodeNum) - y%BladeLn2Mesh(K)%Position(:,NodeNum)
@@ -1575,90 +1581,7 @@ END IF
       
    END DO   
    
-   !...........
-   ! Hub (for AeroDyn v14):
-   !...........   
-
-      ! the hub position should use rQ instead of rP, but AeroDyn 14 treats
-      ! teeter deflections like blade deflections:
-   
-   y%HubPtMotion14%TranslationDisp(1,1)  =     m%RtHS%rP(1)
-   y%HubPtMotion14%TranslationDisp(2,1)  = -1.*m%RtHS%rP(3)
-   y%HubPtMotion14%TranslationDisp(3,1)  =     m%RtHS%rP(2) + p%PtfmRefzt
-   
-   y%HubPtMotion14%TranslationDisp  = y%HubPtMotion14%TranslationDisp - y%HubPtMotion14%Position   
-   
-        ! Hub orientation should use the g instead of e system, but the current version
-        ! of AeroDyn calculates forces normal and tangential to the cone of rotation
-         
-   y%HubPtMotion14%Orientation(1,1,1)  =     m%CoordSys%e1(1) 
-   y%HubPtMotion14%Orientation(2,1,1)  =     m%CoordSys%e2(1)
-   y%HubPtMotion14%Orientation(3,1,1)  =     m%CoordSys%e3(1)   
-   y%HubPtMotion14%Orientation(1,2,1)  = -1.*m%CoordSys%e1(3)
-   y%HubPtMotion14%Orientation(2,2,1)  = -1.*m%CoordSys%e2(3) 
-   y%HubPtMotion14%Orientation(3,2,1)  = -1.*m%CoordSys%e3(3) 
-   y%HubPtMotion14%Orientation(1,3,1)  =     m%CoordSys%e1(2)
-   y%HubPtMotion14%Orientation(2,3,1)  =     m%CoordSys%e2(2)
-   y%HubPtMotion14%Orientation(3,3,1)  =     m%CoordSys%e3(2)
-   
-      ! Note the hub rotational velocity should be AngVelEH instead AngVelEL, but AeroDyn (13.00.00)
-      ! treats teeter deflections like blade deflections:
-   
-   y%HubPtMotion14%RotationVel(1,1) =     m%RtHS%AngVelEL(1)
-   y%HubPtMotion14%RotationVel(2,1) = -1.*m%RtHS%AngVelEL(3)
-   y%HubPtMotion14%RotationVel(3,1) =     m%RtHS%AngVelEL(2)
-      
-   !...........
-   ! Blade roots (AeroDyn v14):
-   !...........   
-   
-        ! Blade root orientations should use the j instead of i system, but the current version
-        ! of AeroDyn calculates forces normal and tangential to the cone of rotation
-      
-   DO K=1,p%NumBl
-         
-      y%BladeRootMotion14%Orientation(1,1,K) =     m%CoordSys%i1(K,1)
-      y%BladeRootMotion14%Orientation(2,1,K) =     m%CoordSys%i2(K,1)
-      y%BladeRootMotion14%Orientation(3,1,K) =     m%CoordSys%i3(K,1)
-      y%BladeRootMotion14%Orientation(1,2,K) = -1.*m%CoordSys%i1(K,3)
-      y%BladeRootMotion14%Orientation(2,2,K) = -1.*m%CoordSys%i2(K,3)
-      y%BladeRootMotion14%Orientation(3,2,K) = -1.*m%CoordSys%i3(K,3)
-      y%BladeRootMotion14%Orientation(1,3,K) =     m%CoordSys%i1(K,2)
-      y%BladeRootMotion14%Orientation(2,3,K) =     m%CoordSys%i2(K,2)
-      y%BladeRootMotion14%Orientation(3,3,K) =     m%CoordSys%i3(K,2)
-            
-   END DO
-   
-    
-   !...........
-   ! Rotor furl:
-   !...........   
-   
-      ! Rotor furl position should be rP instead of rV, but AeroDyn needs this for the HubVDue2Yaw calculation:
-   
-   y%RotorFurlMotion14%TranslationDisp(1,1) =     m%RtHS%rV(1)
-   y%RotorFurlMotion14%TranslationDisp(2,1) = -1.*m%RtHS%rV(3)
-   y%RotorFurlMotion14%TranslationDisp(3,1) =     m%RtHS%rV(2) + p%PtfmRefzt
-   
-   y%RotorFurlMotion14%TranslationDisp      = y%RotorFurlMotion14%TranslationDisp - y%RotorFurlMotion14%Position   
-         
-        ! Rotor furl orientation (note the different order than hub and blade root!)
-   
-   y%RotorFurlMotion14%Orientation(1,1,1) =     m%CoordSys%c1(1)
-   y%RotorFurlMotion14%Orientation(2,1,1) = -1.*m%CoordSys%c3(1)
-   y%RotorFurlMotion14%Orientation(3,1,1) =     m%CoordSys%c2(1)
-   y%RotorFurlMotion14%Orientation(1,2,1) = -1.*m%CoordSys%c1(3)
-   y%RotorFurlMotion14%Orientation(2,2,1) =     m%CoordSys%c3(3)
-   y%RotorFurlMotion14%Orientation(3,2,1) = -1.*m%CoordSys%c2(3)
-   y%RotorFurlMotion14%Orientation(1,3,1) =     m%CoordSys%c1(2)
-   y%RotorFurlMotion14%Orientation(2,3,1) = -1.*m%CoordSys%c3(2)
-   y%RotorFurlMotion14%Orientation(3,3,1) =     m%CoordSys%c2(2) 
-   
-      ! rotaional velocity:
-   y%RotorFurlMotion14%RotationVel(1,1) =     m%RtHS%AngVelER(1)
-   y%RotorFurlMotion14%RotationVel(2,1) = -1.*m%RtHS%AngVelER(3)
-   y%RotorFurlMotion14%RotationVel(3,1) =     m%RtHS%AngVelER(2)
-
+  
    !...........
    ! TailFin :
    !...........   
@@ -1727,21 +1650,7 @@ END IF
    y%NacelleMotion%TranslationAcc(3,1)  =      LinAccEO(2)
    
    
-   !...........
-   ! Tower :
-   !...........         
-   
-      ! Tower base position should be rT(0) instead of rZ, but AeroDyn needs this for  the HubVDue2Yaw calculation:
-   y%TowerBaseMotion14%TranslationDisp(1,1) =     m%RtHS%rZ(1)
-   y%TowerBaseMotion14%TranslationDisp(2,1) = -1.*m%RtHS%rZ(3)
-   y%TowerBaseMotion14%TranslationDisp(3,1) =     m%RtHS%rZ(2) + p%PtfmRefzt
-   
-   y%TowerBaseMotion14%TranslationDisp      = y%TowerBaseMotion14%TranslationDisp - y%TowerBaseMotion14%Position   
-      
-   y%TowerBaseMotion14%RotationVel(1,1)     =     m%RtHS%AngVelEX(1)
-   y%TowerBaseMotion14%RotationVel(2,1)     = -1.*m%RtHS%AngVelEX(3)
-   y%TowerBaseMotion14%RotationVel(3,1)     =     m%RtHS%AngVelEX(2) 
-   
+  
    !...............................................................................................................................
    ! Outputs required for HydroDyn
    !...............................................................................................................................
@@ -1750,28 +1659,37 @@ END IF
    y%PlatformPtMesh%TranslationDisp(2,1) = x%QT(DOF_Sw)
    y%PlatformPtMesh%TranslationDisp(3,1) = x%QT(DOF_Hv)
    
-   y%PlatformPtMesh%RotationVel(1,1)    = x%QDT(DOF_R )
-   y%PlatformPtMesh%RotationVel(2,1)    = x%QDT(DOF_P )
-   y%PlatformPtMesh%RotationVel(3,1)    = x%QDT(DOF_Y )
+   ! y%PlatformPtMesh%RotationVel(1,1)    = x%QDT(DOF_R )
+   ! y%PlatformPtMesh%RotationVel(2,1)    = x%QDT(DOF_P )
+   ! y%PlatformPtMesh%RotationVel(3,1)    = x%QDT(DOF_Y )
+
+   y%PlatformPtMesh%RotationVel(1,1)    =     m%RtHS%AngVelEX(1)
+   y%PlatformPtMesh%RotationVel(2,1)    = -1.*m%RtHS%AngVelEX(3)
+   y%PlatformPtMesh%RotationVel(3,1)    =     m%RtHS%AngVelEX(2)
    
    y%PlatformPtMesh%TranslationVel(1,1) = x%QDT(DOF_Sg)
    y%PlatformPtMesh%TranslationVel(2,1) = x%QDT(DOF_Sw)
    y%PlatformPtMesh%TranslationVel(3,1) = x%QDT(DOF_Hv) 
    
+   ! CALL SmllRotTrans( 'platform displacement (ED_CalcOutput)', x%QT(DOF_R ),x%QT(DOF_P ),x%QT(DOF_Y ), &
+   !        y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat, errmsg=ErrMsg )
+   !    IF (ErrStat /= ErrID_None)    ErrMsg = TRIM(ErrMsg)//' (occurred at '//TRIM(Num2LStr(t))//' s)'
+   !   !IF (ErrStat >= AbortErrLev) RETURN
 
-   CALL SmllRotTrans( 'platform displacement (ED_CalcOutput)', x%QT(DOF_R ),x%QT(DOF_P ),x%QT(DOF_Y ), &
-          y%PlatformPtMesh%Orientation(:,:,1), errstat=ErrStat, errmsg=ErrMsg )
-      IF (ErrStat /= ErrID_None)    ErrMsg = TRIM(ErrMsg)//' (occurred at '//TRIM(Num2LStr(t))//' s)'
-     !IF (ErrStat >= AbortErrLev) RETURN
+   y%PlatformPtMesh%Orientation(:,:,1) = EulerConstructZYX((/x%QT(DOF_R ),x%QT(DOF_P ),x%QT(DOF_Y )/))
 
-   y%PlatformPtMesh%RotationAcc(1,1) = m%QD2T(DOF_R )     
-   y%PlatformPtMesh%RotationAcc(2,1) = m%QD2T(DOF_P )     
-   y%PlatformPtMesh%RotationAcc(3,1) = m%QD2T(DOF_Y )     
+   ! y%PlatformPtMesh%RotationAcc(1,1) = m%QD2T(DOF_R )     
+   ! y%PlatformPtMesh%RotationAcc(2,1) = m%QD2T(DOF_P )     
+   ! y%PlatformPtMesh%RotationAcc(3,1) = m%QD2T(DOF_Y )     
+
+   y%PlatformPtMesh%RotationAcc(1,1) =     AngAccEX(1)     
+   y%PlatformPtMesh%RotationAcc(2,1) = -1.*AngAccEX(3)     
+   y%PlatformPtMesh%RotationAcc(3,1) =     AngAccEX(2)   
 
    y%PlatformPtMesh%TranslationAcc(1,1) = m%QD2T(DOF_Sg)     
    y%PlatformPtMesh%TranslationAcc(2,1) = m%QD2T(DOF_Sw)    
    y%PlatformPtMesh%TranslationAcc(3,1) = m%QD2T(DOF_Hv)    
-      
+     
    !...............................................................................................................................
    ! Outputs required for external tower loads
    !...............................................................................................................................
@@ -1956,6 +1874,9 @@ SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    INTEGER(IntKi)                         :: ErrStat2          ! The error status code
    CHARACTER(ErrMsgLen)                   :: ErrMsg2           ! The error message, if an error occurred
    CHARACTER(*), PARAMETER                :: RoutineName = 'ED_CalcContStateDeriv'
+   Real(R8Ki)                             :: YawFriMz                 ! Loops through some or all of the DOFs.
+   Real(R8Ki)                             :: Fz                 ! Loops through some or all of the DOFs.
+
    
       ! Initialize ErrStat
 
@@ -1977,10 +1898,12 @@ SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
          IF (ErrStat >= AbortErrLev) RETURN
    
       CALL CalculatePositions(        p, x, m%CoordSys,    m%RtHS ) ! calculate positions
-      CALL CalculateAngularPosVelPAcc(p, x, m%CoordSys,    m%RtHS ) ! calculate angular positions, velocities, and partial accelerations, including partial angular quantities
+      CALL CalculateAngularPosVelPAcc(p, x, m%CoordSys,    m%RtHS, ErrStat2, ErrMsg2 ) ! calculate angular positions, velocities, and partial accelerations, including partial angular quantities
       CALL CalculateLinearVelPAcc(    p, x, m%CoordSys,    m%RtHS ) ! calculate linear velocities and partial accelerations
       CALL CalculateForcesMoments(    p, x, m%CoordSys, u, m%RtHS ) ! calculate the forces and moments (requires AeroBladeForces and AeroBladeMoments)            
-      
+         call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+
    END IF
       
    !.....................................
@@ -1993,6 +1916,13 @@ SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CALL Teeter  ( t, p, m%RtHS%TeetAng, m%RtHS%TeetAngVel, m%RtHS%TeetMom ) ! Compute moment from teeter     springs and dampers, TeetMom; NOTE: TeetMom will be zero for a 3-blader since TeetAng = TeetAngVel = 0
    CALL RFurling( t, p, x%QT(DOF_RFrl),          x%QDT(DOF_RFrl),            m%RtHS%RFrlMom ) ! Compute moment from rotor-furl springs and dampers, RFrlMom
    CALL TFurling( t, p, x%QT(DOF_TFrl),          x%QDT(DOF_TFrl),            m%RtHS%TFrlMom ) ! Compute moment from tail-furl  springs and dampers, TFrlMom
+   ! Compute the yaw friction torque
+   Fz= m%FrcONcRt !YawBrFzn force from CalcOutput
+   YawFriMz=DOT_PRODUCT( m%RtHS%MomBNcRtt, m%CoordSys%d2 ) + u%YawMom
+   m%YawFriMz = YawFriMz
+   
+   CALL YawFriction( t, p, Fz, YawFriMz, OtherState%OmegaTn, OtherState%OmegaDotTn, m%RtHS%YawFriMom )  !Compute yaw Friction #RRD
+
    
    !bjj: note m%RtHS%GBoxEffFac needed in OtherState only to fix HSSBrTrq (and used in FillAugMat)
    m%RtHS%GBoxEffFac  = p%GBoxEff**OtherState%SgnPrvLSTQ      ! = GBoxEff if SgnPrvLSTQ = 1 OR 1/GBoxEff if SgnPrvLSTQ = -1
@@ -2947,296 +2877,152 @@ SUBROUTINE SetOtherParameters( p, InputFileData, ErrStat, ErrMsg )
 
    CALL Coeff(p, InputFileData, ErrStat, ErrMsg)
    IF ( ErrStat /= ErrID_None ) RETURN
-   
-   
 END SUBROUTINE SetOtherParameters
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine allocates arrays in the RtHndSide data structure.
 !! It requires p\%TwrNodes, p\%NumBl, p\%TipNode, p\%NDOF, p\%BldNodes to be set before calling this routine.
 SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
-!..................................................................................................................................
-
    TYPE(ED_RtHndSide),       INTENT(INOUT)  :: RtHS                         !< RtHndSide data type
    TYPE(ED_ParameterType),   INTENT(IN)     :: p                            !< Parameters of the structural dynamics module
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
    ! local variables:
+   integer(IntKi)                           :: ErrStat2
+   character(ErrMsgLen)                     :: ErrMsg2
    INTEGER(IntKi),   PARAMETER              :: Dims = 3                     ! The position arrays all must be allocated with a dimension for X,Y,and Z
    CHARACTER(*),     PARAMETER              :: RoutineName = 'Alloc_RtHS'
 
-      ! positions:
-  !CALL AllocAry( RtHS%rZT,       Dims, p%TwrNodes,        'rZT',       ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rT,        Dims, p%TwrNodes,        'rT',        ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rT0T,      Dims, p%TwrNodes,        'rT0T',      ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-  !CALL AllocAry( RtHS%rQS,       Dims, p%NumBl,p%TipNode, 'rQS',       ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-  !CALL AllocAry( RtHS%rS,        Dims, p%NumBl,p%TipNode, 'rS',        ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rS0S,      Dims, p%NumBl,p%TipNode, 'rS0S',      ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rPS0,      Dims, p%NumBl,           'rPS0',      ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%rSAerCen,  Dims, p%TipNode, p%NumBl,'rSAerCen',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
+   ! positions:
+  !call AllocAry( RtHS%rZT,       Dims, p%TwrNodes,        'rZT',      ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rZT      = 0.0_ReKi
+   call AllocAry( RtHS%rT,        Dims, p%TwrNodes,        'rT',       ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rT       = 0.0_ReKi
+   call AllocAry( RtHS%rT0T,      Dims, p%TwrNodes,        'rT0T',     ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rT0T     = 0.0_ReKi
+  !call AllocAry( RtHS%rQS,       Dims, p%NumBl,p%TipNode, 'rQS',      ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rQS      = 0.0_ReKi
+  !call AllocAry( RtHS%rS,        Dims, p%NumBl,p%TipNode, 'rS',       ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rS       = 0.0_ReKi
+   call AllocAry( RtHS%rS0S,      Dims, p%NumBl,p%TipNode, 'rS0S',     ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rS0S     = 0.0_ReKi
+   call AllocAry( RtHS%rPS0,      Dims, p%NumBl,           'rPS0',     ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rPS0     = 0.0_ReKi
+   call AllocAry( RtHS%rSAerCen,  Dims, p%TipNode, p%NumBl,'rSAerCen', ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%rSAerCen = 0.0_ReKi
   
-      ! tower
-   allocate(RtHS%rZT(      Dims,  0:p%TwrNodes), &
-            RtHS%AngPosEF( Dims,  0:p%TwrNodes), &
-            RtHS%AngPosXF( Dims,  0:p%TwrNodes), &
-            RtHS%AngVelEF( Dims,  0:p%TwrNodes), &
-            RtHS%LinVelET( Dims,  0:p%TwrNodes), &
-            RtHS%AngAccEFt(Dims,  0:p%TwrNodes), &
-            RtHS%LinAccETt(Dims,  0:p%TwrNodes), &
-      STAT=ErrStat)
-      if (ErrStat /= 0) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = "Error allocating rZT, AngPosEF, AngPosXF, LinVelET, AngVelEF, LinAccETt, and AngAccEFt arrays."
-         RETURN
-      end if
-               
+   ! tower
+   allocate(RtHS%rZT(      Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('rZT      ')) return;   RtHS%rZT       = 0.0_ReKi
+   allocate(RtHS%AngPosEF( Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('AngPosEF ')) return;   RtHS%AngPosEF  = 0.0_ReKi
+   allocate(RtHS%AngPosXF( Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('AngPosXF ')) return;   RtHS%AngPosXF  = 0.0_ReKi
+   allocate(RtHS%AngVelEF( Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('AngVelEF ')) return;   RtHS%AngVelEF  = 0.0_ReKi
+   allocate(RtHS%LinVelET( Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('LinVelET ')) return;   RtHS%LinVelET  = 0.0_ReKi
+   allocate(RtHS%AngAccEFt(Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('AngAccEFt')) return;   RtHS%AngAccEFt = 0.0_ReKi
+   allocate(RtHS%LinAccETt(Dims, 0:p%TwrNodes), STAT=ErrStat2); if (Failed0('LinAccETt')) return;   RtHS%LinAccETt = 0.0_ReKi
       
-      ! blades
-   allocate(RtHS%rS( Dims, p%NumBl,0:p%TipNode), &
-            RtHS%rQS(Dims, p%NumBl,0:p%TipNode), STAT=ErrStat)
-      if (ErrStat /= 0) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = "Error allocating rS and rQS."
-         RETURN
-      end if
+   ! blades
+   allocate(RtHS%rS( Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat2); if (Failed0('rS ')) return;   RtHS%rS  = 0.0_ReKi
+   allocate(RtHS%rQS(Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat2); if (Failed0('rQS')) return;   RtHS%rQS = 0.0_ReKi
+
+   ! angular velocities (including partial angular velocities):
+   !call AllocAry( RtHS%AngVelEF,  Dims, p%TwrNodes, 'AngVelEF', ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%AngVelEF = 0.0_ReKi
+   !call AllocAry( RtHS%AngPosEF,  Dims, p%TwrNodes, 'AngPosEF', ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%AngPosEF = 0.0_ReKi
+   !call AllocAry( RtHS%AngPosXF,  Dims, p%TwrNodes, 'AngPosXF', ErrStat2, ErrMsg2 );  if (Failed()) return;  RtHS%AngPosXF = 0.0_ReKi
+
+
+   ! These angular velocities are allocated to start numbering a dimension with 0 instead of 1:
+   allocate(RtHS%PAngVelEB(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEB')) return;  RtHS%PAngVelEB = 0.0_ReKi
+   allocate(RtHS%PAngVelER(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelER')) return;  RtHS%PAngVelER = 0.0_ReKi
+   allocate(RtHS%PAngVelEX(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEX')) return;  RtHS%PAngVelEX = 0.0_ReKi
+   allocate(RtHS%PAngVelEA(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEA')) return;  RtHS%PAngVelEA = 0.0_ReKi
+   allocate(RtHS%PAngVelEF(0:p%TwrNodes,       p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEF')) return;  RtHS%PAngVelEF = 0.0_ReKi
+   allocate(RtHS%PAngVelEG(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEG')) return;  RtHS%PAngVelEG = 0.0_ReKi
+   allocate(RtHS%PAngVelEH(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEH')) return;  RtHS%PAngVelEH = 0.0_ReKi
+   allocate(RtHS%PAngVelEL(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEL')) return;  RtHS%PAngVelEL = 0.0_ReKi
+   allocate(RtHS%PAngVelEM(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEM')) return;  RtHS%PAngVelEM = 0.0_ReKi
+   allocate(RtHS%PAngVelEN(                    p%NDOF,0:1,Dims), STAT=ErrStat2);  if (Failed0('PAngVelEN')) return;  RtHS%PAngVelEN = 0.0_ReKi
+
+   ! angular accelerations:
+   !CALL AllocAry( RtHS%AngAccEFt, Dims, p%TwrNodes,         'AngAccEFt', ErrStat2, ErrMsg2 ); 
+
+   ! linear velocities (including partial linear velocities):
+   !CALL AllocAry( RtHS%LinVelET,  Dims, p%TwrNodes,         'LinVelET',  ErrStat2, ErrMsg2 ); 
+   !CALL AllocAry( RtHS%LinVelESm2,                 p%NumBl, 'LinVelESm2',ErrStat2, ErrMsg2 );           ! The m2-component (closest to tip) of LinVelES
+   allocate(RtHS%LinVelES( Dims, 0:p%TipNode, p%NumBl), STAT=ErrStat2); if (Failed0('LinVelES')) return; RtHS%LinVelES  = 0.0_ReKi
+   allocate(RtHS%AngVelEM( Dims, 0:p%TipNode, p%NumBl), STAT=ErrStat2); if (Failed0('AngVelEM')) return; RtHS%AngVelEM  = 0.0_ReKi
    
+   ! These linear velocities are allocated to start numbering a dimension with 0 instead of 1:
+   allocate(RtHS%PLinVelEIMU(p%NDOF,0:1,Dims), STAT=ErrStat2);                   if (Failed0('PLinVelEIMU')) return;  RtHS%PLinVelEIMU = 0.0_ReKi;
+   allocate(RtHS%PLinVelEO(p%NDOF,0:1,Dims), STAT=ErrStat2);                     if (Failed0('PLinVelEO  ')) return;  RtHS%PLinVelEO   = 0.0_ReKi;
+   allocate(RtHS%PLinVelES(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims), STAT=ErrStat2); if (Failed0('PLinVelES  ')) return;  RtHS%PLinVelES   = 0.0_ReKi;
+   allocate(RtHS%PLinVelET(0:p%TwrNodes,p%NDOF,0:1,Dims), STAT=ErrStat2);        if (Failed0('PLinVelET  ')) return;  RtHS%PLinVelET   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEZ(p%NDOF,0:1,Dims), STAT=ErrStat2);                     if (Failed0('PLinVelEZ  ')) return;  RtHS%PLinVelEZ   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEC(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEC  ')) return;  RtHS%PLinVelEC   = 0.0_ReKi;
+   allocate(RtHS%PLinVelED(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelED  ')) return;  RtHS%PLinVelED   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEI(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEI  ')) return;  RtHS%PLinVelEI   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEJ(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEJ  ')) return;  RtHS%PLinVelEJ   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEP(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEP  ')) return;  RtHS%PLinVelEP   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEQ(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEQ  ')) return;  RtHS%PLinVelEQ   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEU(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEU  ')) return;  RtHS%PLinVelEU   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEV(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEV  ')) return;  RtHS%PLinVelEV   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEW(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEW  ')) return;  RtHS%PLinVelEW   = 0.0_ReKi;
+   allocate(RtHS%PLinVelEY(p%NDOF,0:1,3), STAT=ErrStat2);                        if (Failed0('PLinVelEY  ')) return;  RtHS%PLinVelEY   = 0.0_ReKi;
+   allocate(RtHS%LinAccESt(Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat2);          if (Failed0('LinAccESt  ')) return;  RtHS%LinAccESt   = 0.0_ReKi;
+   allocate(RtHS%AngAccEKt(Dims, 0:p%TipNode, p%NumBl), STAT=ErrStat2);          if (Failed0('AngAccEKt  ')) return;  RtHS%AngAccEKt   = 0.0_ReKi;
+   allocate(RtHS%AngPosHM( Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat2);          if (Failed0('AngPosHM   ')) return;  RtHS%AngPosHM    = 0.0_ReKi;
 
-      ! angular velocities (including partial angular velocities):
-   !CALL AllocAry( RtHS%AngVelEF,  Dims, p%TwrNodes,        'AngVelEF',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   !CALL AllocAry( RtHS%AngPosEF,  Dims, p%TwrNodes,        'AngPosEF',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   !CALL AllocAry( RtHS%AngPosXF,  Dims, p%TwrNodes,        'AngPosXF',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
+   !call AllocAry( RtHS%LinAccESt, Dims, p%NumBl, p%TipNode,'LinAccESt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%LinAccESt  = 0.0_ReKi;
+   !call AllocAry( RtHS%LinAccETt, Dims, p%TwrNodes,        'LinAccETt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%LinAccETt  = 0.0_ReKi
+   call AllocAry( RtHS%PFrcS0B,   Dims, p%NumBl,p%NDOF,    'PFrcS0B  ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcS0B   = 0.0_ReKi
+   call AllocAry( RtHS%FrcS0Bt,   Dims, p%NumBl,           'FrcS0Bt  ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%FrcS0Bt   = 0.0_ReKi
+   call AllocAry( RtHS%PMomH0B,   Dims, p%NumBl, p%NDOF,   'PMomH0B  ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomH0B   = 0.0_ReKi
+   call AllocAry( RtHS%MomH0Bt,   Dims, p%NumBl,           'MomH0Bt  ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%MomH0Bt   = 0.0_ReKi
+   call AllocAry( RtHS%PFrcPRot,  Dims, p%NDOF,            'PFrcPRot ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcPRot  = 0.0_ReKi
+   call AllocAry( RtHS%PMomLPRot, Dims, p%NDOF,            'PMomLPRot', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomLPRot = 0.0_ReKi
+   call AllocAry( RtHS%PMomNGnRt, Dims, p%NDOF,            'PMomNGnRt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomNGnRt = 0.0_ReKi
+   call AllocAry( RtHS%PMomNTail, Dims, p%NDOF,            'PMomNTail', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomNTail = 0.0_ReKi
+   call AllocAry( RtHS%PFrcONcRt, Dims, p%NDOF,            'PFrcONcRt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcONcRt = 0.0_ReKi
+   call AllocAry( RtHS%PMomBNcRt, Dims, p%NDOF,            'PMomBNcRt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomBNcRt = 0.0_ReKi
+   call AllocAry( RtHS%PFrcT0Trb, Dims, p%NDOF,            'PFrcT0Trb', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcT0Trb = 0.0_ReKi
+   call AllocAry( RtHS%PMomX0Trb, Dims, p%NDOF,            'PMomX0Trb', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomX0Trb = 0.0_ReKi
+   call AllocAry( RtHS%FSAero,    Dims, p%NumBl,p%BldNodes,'FSAero   ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%FSAero    = 0.0_ReKi
+   call AllocAry( RtHS%MMAero,    Dims, p%NumBl,p%BldNodes,'MMAero   ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%MMAero    = 0.0_ReKi
+   call AllocAry( RtHS%FSTipDrag, Dims, p%NumBl,           'FSTipDrag', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%FSTipDrag = 0.0_ReKi
+   call AllocAry( RtHS%PFTHydro,  Dims, p%TwrNodes, p%NDOF,'PFTHydro ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFTHydro  = 0.0_ReKi
+   call AllocAry( RtHS%PMFHydro,  Dims, p%TwrNodes, p%NDOF,'PMFHydro ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMFHydro  = 0.0_ReKi
+   call AllocAry( RtHS%FTHydrot,  Dims, p%TwrNodes,        'FTHydrot ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%FTHydrot  = 0.0_ReKi
+   call AllocAry( RtHS%MFHydrot,  Dims, p%TwrNodes,        'MFHydrot ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%MFHydrot  = 0.0_ReKi
 
+   call AllocAry( RtHS%PFrcVGnRt, Dims, p%NDOF,            'PFrcVGnRt', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcVGnRt = 0.0_ReKi
+   call AllocAry( RtHS%PFrcWTail, Dims, p%NDOF,            'PFrcWTail', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcWTail = 0.0_ReKi
+   call AllocAry( RtHS%PFrcZAll,  Dims, p%NDOF,            'PFrcZAll ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PFrcZAll  = 0.0_ReKi
+   call AllocAry( RtHS%PMomXAll,  Dims, p%NDOF,            'PMomXAll ', ErrStat2, ErrMsg2);  if ( Failed()) return;  RtHS%PMomXAll  = 0.0_ReKi
 
-         ! These angular velocities are allocated to start numbering a dimension with 0 instead of 1:
-   ALLOCATE ( RtHS%PAngVelEB(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEB array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PAngVelER(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelER array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PAngVelEX(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEX array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PAngVelEA(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEA array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PAngVelEF(0:p%TwrNodes, p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEF array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEG(                  p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEG array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEH(                  p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEH array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEL(                  p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEL array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEM(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEM array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PAngVelEN(                  p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PAngVelEN array.'
-      RETURN
-   ENDIF
-
-      ! angular accelerations:
-   !CALL AllocAry( RtHS%AngAccEFt, Dims, p%TwrNodes,         'AngAccEFt', ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN
-
-      ! linear velocities (including partial linear velocities):
-   !CALL AllocAry( RtHS%LinVelET,  Dims, p%TwrNodes,         'LinVelET',  ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN         
-
-   !CALL AllocAry( RtHS%LinVelESm2,                 p%NumBl, 'LinVelESm2',ErrStat, ErrMsg );  IF ( ErrStat /= ErrID_None ) RETURN ! The m2-component (closest to tip) of LinVelES
-   ALLOCATE( RtHS%LinVelES( Dims, 0:p%TipNode, p%NumBl ), &
-             RtHS%AngVelEM( Dims, 0:p%TipNode, p%NumBl ), STAT=ErrStat )
-   IF (ErrStat /= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = RoutineName//":Error allocating LinVelES and AngVelEM."
-      RETURN
-   END IF
-   
-            ! These linear velocities are allocated to start numbering a dimension with 0 instead of 1:
-
-   ALLOCATE ( RtHS%PLinVelEIMU(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEIMU array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelEO(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEO array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelES(p%NumBl,0:p%TipNode,p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelES array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelET(0:p%TwrNodes,p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelET array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelEZ(p%NDOF,0:1,Dims) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEZ array.'
-      RETURN
-   ENDIF
-
-   ALLOCATE ( RtHS%PLinVelEC(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEC array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelED(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelED array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelEI(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEI array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelEJ(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEJ array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelEP(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEP array.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%PLinVelEQ(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEQ array.'
-      RETURN
-   ENDIF
-   
-   ALLOCATE ( RtHS%PLinVelEU(p%NDOF,0:1,3) , &
-              RtHS%PLinVelEV(p%NDOF,0:1,3) , &
-              RtHS%PLinVelEW(p%NDOF,0:1,3) , &
-              RtHS%PLinVelEY(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEU, PLinVelEV, PLinVelEW and PLinVelEY arrays.'
-      RETURN
-   ENDIF
-
-   
-   ALLOCATE( RtHS%LinAccESt( Dims, p%NumBl, 0:p%TipNode ), STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for LinAccESt.'
-      RETURN
-   ENDIF
-   ALLOCATE ( RtHS%AngAccEKt( Dims, 0:p%TipNode, p%NumBl ) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for AngAccEKt.'
-      RETURN
-   ENDIF
-
-   ALLOCATE(RtHS%AngPosHM(Dims, p%NumBl, 0:p%TipNode), STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the AngPosHM arrays.'
-      RETURN
-   ENDIF
-
-   !CALL AllocAry( RtHS%LinAccESt, Dims, p%NumBl, p%TipNode,'LinAccESt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   !CALL AllocAry( RtHS%LinAccETt, Dims, p%TwrNodes,        'LinAccETt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcS0B,   Dims, p%NumBl,p%NDOF,    'PFrcS0B',   ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%FrcS0Bt,   Dims, p%NumBl,           'FrcS0Bt',   ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomH0B,   Dims, p%NumBl, p%NDOF,   'PMomH0B',   ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%MomH0Bt,   Dims, p%NumBl,           'MomH0Bt',   ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcPRot,  Dims, p%NDOF,            'PFrcPRot',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomLPRot, Dims, p%NDOF,            'PMomLPRot', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomNGnRt, Dims, p%NDOF,            'PMomNGnRt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomNTail, Dims, p%NDOF,            'PMomNTail', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcONcRt, Dims, p%NDOF,            'PFrcONcRt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomBNcRt, Dims, p%NDOF,            'PMomBNcRt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcT0Trb, Dims, p%NDOF,            'PFrcT0Trb', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomX0Trb, Dims, p%NDOF,            'PMomX0Trb', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%FSAero,    Dims, p%NumBl,p%BldNodes,'FSAero',    ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%MMAero,    Dims, p%NumBl,p%BldNodes,'MMAero',    ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%FSTipDrag, Dims, p%NumBl,           'FSTipDrag', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFTHydro,  Dims, p%TwrNodes, p%NDOF,'PFTHydro',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMFHydro,  Dims, p%TwrNodes, p%NDOF,'PMFHydro',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%FTHydrot,  Dims, p%TwrNodes,        'FTHydrot',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%MFHydrot,  Dims, p%TwrNodes,        'MFHydrot',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-
-   CALL AllocAry( RtHS%PFrcVGnRt, Dims, p%NDOF,            'PFrcVGnRt', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcWTail, Dims, p%NDOF,            'PFrcWTail', ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PFrcZAll,  Dims, p%NDOF,            'PFrcZAll',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-   CALL AllocAry( RtHS%PMomXAll,  Dims, p%NDOF,            'PMomXAll',  ErrStat, ErrMsg );   IF ( ErrStat /= ErrID_None ) RETURN
-
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate "//trim(txt)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg2, RoutineName)
+      endif
+      Failed0 = ErrStat >= AbortErrLev
+   end function Failed0
 END SUBROUTINE Alloc_RtHS
+
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This takes the tower input file data and sets the corresponding tower parameters, performing linear interpolation of the
 !! input data to the specified tower mesh.
 !! It requires p\%TwrFlexL, and p\%TwrNodes to be set first.
-SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
-!..................................................................................................................................
-
-      ! Passed variables
-
+SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg )
+   ! Passed variables
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< Parameters of the structural dynamics module
    TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
-      ! Local variables:
-
+   ! Local variables:
    REAL(ReKi)                               :: x                            ! Fractional location between two points in linear interpolation
    INTEGER(IntKi )                          :: J                            ! Index for the node arrays
    INTEGER(IntKi)                           :: InterpInd                    ! Index for the interpolation routine
@@ -3506,6 +3292,9 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%PtfmRIner = InputFileData%PtfmRIner
    p%PtfmPIner = InputFileData%PtfmPIner
    p%PtfmYIner = InputFileData%PtfmYIner
+   p%PtfmXYIner = InputFileData%PtfmXYIner
+   p%PtfmYZIner = InputFileData%PtfmYZIner
+   p%PtfmXZIner = InputFileData%PtfmXZIner
    p%GBoxEff   = InputFileData%GBoxEff
    p%GBRatio   = InputFileData%GBRatio
    p%DTTorSpr  = InputFileData%DTTorSpr
@@ -3544,6 +3333,11 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
       p%TeetSSSp = 0.0
       p%TeetHSSp = 0.0
    END IF
+
+   p%YawFrctMod  = InputFileData%YawFrctMod
+   p%M_CD  = InputFileData%M_CD
+   p%M_CSmax  = InputFileData%M_CSmax
+   p%sig_v  = InputFileData%sig_v
 
    
    CALL AllocAry( p%TipMass, p%NumBl, 'TipMass', ErrStat, ErrMsg )
@@ -3655,7 +3449,6 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    !p%NcIMUxn   = InputFileData%NcIMUxn
    !p%NcIMUyn   = InputFileData%NcIMUyn
    !p%NcIMUzn   = InputFileData%NcIMUzn
-
 
    ! plus everything else from FAST_Initialize
 
@@ -3908,6 +3701,10 @@ SUBROUTINE Init_MiscOtherStates( m, OtherState, p, x, InputFileData, ErrStat, Er
    OtherState%HSSBrTrqC  = 0.0_ReKi
    OtherState%SgnPrvLSTQ = 1
    OtherState%SgnLSTQ    = 1
+   OtherState%OmegaTn = 0.0_R8Ki
+   OtherState%OmegaDotTn = 0.0_R8Ki
+   OtherState%Mfhat = 0.0_ReKi
+   OtherState%YawFriMfp = 0.0_ReKi
    
    
 END SUBROUTINE Init_MiscOtherStates
@@ -3925,393 +3722,400 @@ END SUBROUTINE Init_MiscOtherStates
 !!  the sign is set to 0 if the channel is invalid.
 !! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
 !! 
-!! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 25-Jan-2021 13:23:51.
+!! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx.
 SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 !..................................................................................................................................
-
+   
    IMPLICIT                        NONE
-
+   
       ! Passed variables
-
-   CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list out user-requested outputs
+   
+   CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list of user-requested outputs
    TYPE(ED_ParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
    INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
    CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
-
+   
       ! Local variables
-
+   
    INTEGER                      :: ErrStat2                                        ! temporary (local) error status
    INTEGER                      :: I                                               ! Generic loop-counting index
    INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
    INTEGER                      :: startIndx                                       ! Index for using BeamDyn for Blades
-
-   LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
    LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
-   CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
-
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(1110) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
+   
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(1115) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
                                "AZIMUTH   ","BLDPITCH1 ","BLDPITCH2 ","BLDPITCH3 ","BLPITCH1  ","BLPITCH2  ","BLPITCH3  ", &
-                               "GENACCEL  ","GENSPEED  ","HSSBRTQ   ","HSSHFTA   ","HSSHFTPWR ","HSSHFTTQ  ","HSSHFTV   ", &
-                               "IPDEFL1   ","IPDEFL2   ","IPDEFL3   ","LSSGAGA   ","LSSGAGAXA ","LSSGAGAXS ","LSSGAGFXA ", &
-                               "LSSGAGFXS ","LSSGAGFYA ","LSSGAGFYS ","LSSGAGFZA ","LSSGAGFZS ","LSSGAGMXA ","LSSGAGMXS ", &
-                               "LSSGAGMYA ","LSSGAGMYS ","LSSGAGMZA ","LSSGAGMZS ","LSSGAGP   ","LSSGAGPXA ","LSSGAGPXS ", &
-                               "LSSGAGV   ","LSSGAGVXA ","LSSGAGVXS ","LSSHFTFXA ","LSSHFTFXS ","LSSHFTFYA ","LSSHFTFYS ", &
-                               "LSSHFTFZA ","LSSHFTFZS ","LSSHFTMXA ","LSSHFTMXS ","LSSHFTPWR ","LSSHFTTQ  ","LSSTIPA   ", &
-                               "LSSTIPAXA ","LSSTIPAXS ","LSSTIPMYA ","LSSTIPMYS ","LSSTIPMZA ","LSSTIPMZS ","LSSTIPP   ", &
-                               "LSSTIPPXA ","LSSTIPPXS ","LSSTIPV   ","LSSTIPVXA ","LSSTIPVXS ","NACYAW    ","NACYAWA   ", &
-                               "NACYAWP   ","NACYAWV   ","NCIMURAXS ","NCIMURAYS ","NCIMURAZS ","NCIMURVXS ","NCIMURVYS ", &
-                               "NCIMURVZS ","NCIMUTAGXS","NCIMUTAGYS","NCIMUTAGZS","NCIMUTAXS ","NCIMUTAYS ","NCIMUTAZS ", &
-                               "NCIMUTVXS ","NCIMUTVYS ","NCIMUTVZS ","OOPDEFL1  ","OOPDEFL2  ","OOPDEFL3  ","PTCHDEFL1 ", &
-                               "PTCHDEFL2 ","PTCHDEFL3 ","PTCHPMZB1 ","PTCHPMZB2 ","PTCHPMZB3 ","PTCHPMZC1 ","PTCHPMZC2 ", &
-                               "PTCHPMZC3 ","PTFMHEAVE ","PTFMPITCH ","PTFMRAXI  ","PTFMRAXT  ","PTFMRAYI  ","PTFMRAYT  ", &
-                               "PTFMRAZI  ","PTFMRAZT  ","PTFMRDXI  ","PTFMRDYI  ","PTFMRDZI  ","PTFMROLL  ","PTFMRVXI  ", &
-                               "PTFMRVXT  ","PTFMRVYI  ","PTFMRVYT  ","PTFMRVZI  ","PTFMRVZT  ","PTFMSURGE ","PTFMSWAY  ", &
-                               "PTFMTAGXI ","PTFMTAGXT ","PTFMTAGYI ","PTFMTAGYT ","PTFMTAGZI ","PTFMTAGZT ","PTFMTAXI  ", &
-                               "PTFMTAXT  ","PTFMTAYI  ","PTFMTAYT  ","PTFMTAZI  ","PTFMTAZT  ","PTFMTDXI  ","PTFMTDXT  ", &
-                               "PTFMTDYI  ","PTFMTDYT  ","PTFMTDZI  ","PTFMTDZT  ","PTFMTVXI  ","PTFMTVXT  ","PTFMTVYI  ", &
-                               "PTFMTVYT  ","PTFMTVZI  ","PTFMTVZT  ","PTFMYAW   ","QD2_B1E1  ","QD2_B1F1  ","QD2_B1F2  ", &
-                               "QD2_B2E1  ","QD2_B2F1  ","QD2_B2F2  ","QD2_B3E1  ","QD2_B3F1  ","QD2_B3F2  ","QD2_DRTR  ", &
-                               "QD2_GEAZ  ","QD2_HV    ","QD2_P     ","QD2_R     ","QD2_RFRL  ","QD2_SG    ","QD2_SW    ", &
-                               "QD2_TEET  ","QD2_TFA1  ","QD2_TFA2  ","QD2_TFRL  ","QD2_TSS1  ","QD2_TSS2  ","QD2_Y     ", &
-                               "QD2_YAW   ","QD_B1E1   ","QD_B1F1   ","QD_B1F2   ","QD_B2E1   ","QD_B2F1   ","QD_B2F2   ", &
-                               "QD_B3E1   ","QD_B3F1   ","QD_B3F2   ","QD_DRTR   ","QD_GEAZ   ","QD_HV     ","QD_P      ", &
-                               "QD_R      ","QD_RFRL   ","QD_SG     ","QD_SW     ","QD_TEET   ","QD_TFA1   ","QD_TFA2   ", &
-                               "QD_TFRL   ","QD_TSS1   ","QD_TSS2   ","QD_Y      ","QD_YAW    ","Q_B1E1    ","Q_B1F1    ", &
-                               "Q_B1F2    ","Q_B2E1    ","Q_B2F1    ","Q_B2F2    ","Q_B3E1    ","Q_B3F1    ","Q_B3F2    ", &
-                               "Q_DRTR    ","Q_GEAZ    ","Q_HV      ","Q_P       ","Q_R       ","Q_RFRL    ","Q_SG      ", &
-                               "Q_SW      ","Q_TEET    ","Q_TFA1    ","Q_TFA2    ","Q_TFRL    ","Q_TSS1    ","Q_TSS2    ", &
-                               "Q_Y       ","Q_YAW     ","RFRLBRM   ","ROLLDEFL1 ","ROLLDEFL2 ","ROLLDEFL3 ","ROOTFXB1  ", &
-                               "ROOTFXB2  ","ROOTFXB3  ","ROOTFXC1  ","ROOTFXC2  ","ROOTFXC3  ","ROOTFYB1  ","ROOTFYB2  ", &
-                               "ROOTFYB3  ","ROOTFYC1  ","ROOTFYC2  ","ROOTFYC3  ","ROOTFZB1  ","ROOTFZB2  ","ROOTFZB3  ", &
-                               "ROOTFZC1  ","ROOTFZC2  ","ROOTFZC3  ","ROOTMEDG1 ","ROOTMEDG2 ","ROOTMEDG3 ","ROOTMFLP1 ", &
-                               "ROOTMFLP2 ","ROOTMFLP3 ","ROOTMIP1  ","ROOTMIP2  ","ROOTMIP3  ","ROOTMOOP1 ","ROOTMOOP2 ", &
-                               "ROOTMOOP3 ","ROOTMXB1  ","ROOTMXB2  ","ROOTMXB3  ","ROOTMXC1  ","ROOTMXC2  ","ROOTMXC3  ", &
-                               "ROOTMYB1  ","ROOTMYB2  ","ROOTMYB3  ","ROOTMYC1  ","ROOTMYC2  ","ROOTMYC3  ","ROOTMZB1  ", &
-                               "ROOTMZB2  ","ROOTMZB3  ","ROOTMZC1  ","ROOTMZC2  ","ROOTMZC3  ","ROTACCEL  ","ROTFURL   ", &
-                               "ROTFURLA  ","ROTFURLP  ","ROTFURLV  ","ROTPWR    ","ROTSPEED  ","ROTTEETA  ","ROTTEETP  ", &
-                               "ROTTEETV  ","ROTTHRUST ","ROTTORQ   ","SPN1ALGXB1","SPN1ALGXB2","SPN1ALGXB3","SPN1ALGYB1", &
-                               "SPN1ALGYB2","SPN1ALGYB3","SPN1ALGZB1","SPN1ALGZB2","SPN1ALGZB3","SPN1ALXB1 ","SPN1ALXB2 ", &
-                               "SPN1ALXB3 ","SPN1ALYB1 ","SPN1ALYB2 ","SPN1ALYB3 ","SPN1ALZB1 ","SPN1ALZB2 ","SPN1ALZB3 ", &
-                               "SPN1FLXB1 ","SPN1FLXB2 ","SPN1FLXB3 ","SPN1FLYB1 ","SPN1FLYB2 ","SPN1FLYB3 ","SPN1FLZB1 ", &
-                               "SPN1FLZB2 ","SPN1FLZB3 ","SPN1MLXB1 ","SPN1MLXB2 ","SPN1MLXB3 ","SPN1MLYB1 ","SPN1MLYB2 ", &
-                               "SPN1MLYB3 ","SPN1MLZB1 ","SPN1MLZB2 ","SPN1MLZB3 ","SPN1RDXB1 ","SPN1RDXB2 ","SPN1RDXB3 ", &
-                               "SPN1RDYB1 ","SPN1RDYB2 ","SPN1RDYB3 ","SPN1RDZB1 ","SPN1RDZB2 ","SPN1RDZB3 ","SPN1TDXB1 ", &
-                               "SPN1TDXB2 ","SPN1TDXB3 ","SPN1TDYB1 ","SPN1TDYB2 ","SPN1TDYB3 ","SPN1TDZB1 ","SPN1TDZB2 ", &
-                               "SPN1TDZB3 ","SPN2ALGXB1","SPN2ALGXB2","SPN2ALGXB3","SPN2ALGYB1","SPN2ALGYB2","SPN2ALGYB3", &
-                               "SPN2ALGZB1","SPN2ALGZB2","SPN2ALGZB3","SPN2ALXB1 ","SPN2ALXB2 ","SPN2ALXB3 ","SPN2ALYB1 ", &
-                               "SPN2ALYB2 ","SPN2ALYB3 ","SPN2ALZB1 ","SPN2ALZB2 ","SPN2ALZB3 ","SPN2FLXB1 ","SPN2FLXB2 ", &
-                               "SPN2FLXB3 ","SPN2FLYB1 ","SPN2FLYB2 ","SPN2FLYB3 ","SPN2FLZB1 ","SPN2FLZB2 ","SPN2FLZB3 ", &
-                               "SPN2MLXB1 ","SPN2MLXB2 ","SPN2MLXB3 ","SPN2MLYB1 ","SPN2MLYB2 ","SPN2MLYB3 ","SPN2MLZB1 ", &
-                               "SPN2MLZB2 ","SPN2MLZB3 ","SPN2RDXB1 ","SPN2RDXB2 ","SPN2RDXB3 ","SPN2RDYB1 ","SPN2RDYB2 ", &
-                               "SPN2RDYB3 ","SPN2RDZB1 ","SPN2RDZB2 ","SPN2RDZB3 ","SPN2TDXB1 ","SPN2TDXB2 ","SPN2TDXB3 ", &
-                               "SPN2TDYB1 ","SPN2TDYB2 ","SPN2TDYB3 ","SPN2TDZB1 ","SPN2TDZB2 ","SPN2TDZB3 ","SPN3ALGXB1", &
-                               "SPN3ALGXB2","SPN3ALGXB3","SPN3ALGYB1","SPN3ALGYB2","SPN3ALGYB3","SPN3ALGZB1","SPN3ALGZB2", &
-                               "SPN3ALGZB3","SPN3ALXB1 ","SPN3ALXB2 ","SPN3ALXB3 ","SPN3ALYB1 ","SPN3ALYB2 ","SPN3ALYB3 ", &
-                               "SPN3ALZB1 ","SPN3ALZB2 ","SPN3ALZB3 ","SPN3FLXB1 ","SPN3FLXB2 ","SPN3FLXB3 ","SPN3FLYB1 ", &
-                               "SPN3FLYB2 ","SPN3FLYB3 ","SPN3FLZB1 ","SPN3FLZB2 ","SPN3FLZB3 ","SPN3MLXB1 ","SPN3MLXB2 ", &
-                               "SPN3MLXB3 ","SPN3MLYB1 ","SPN3MLYB2 ","SPN3MLYB3 ","SPN3MLZB1 ","SPN3MLZB2 ","SPN3MLZB3 ", &
-                               "SPN3RDXB1 ","SPN3RDXB2 ","SPN3RDXB3 ","SPN3RDYB1 ","SPN3RDYB2 ","SPN3RDYB3 ","SPN3RDZB1 ", &
-                               "SPN3RDZB2 ","SPN3RDZB3 ","SPN3TDXB1 ","SPN3TDXB2 ","SPN3TDXB3 ","SPN3TDYB1 ","SPN3TDYB2 ", &
-                               "SPN3TDYB3 ","SPN3TDZB1 ","SPN3TDZB2 ","SPN3TDZB3 ","SPN4ALGXB1","SPN4ALGXB2","SPN4ALGXB3", &
-                               "SPN4ALGYB1","SPN4ALGYB2","SPN4ALGYB3","SPN4ALGZB1","SPN4ALGZB2","SPN4ALGZB3","SPN4ALXB1 ", &
-                               "SPN4ALXB2 ","SPN4ALXB3 ","SPN4ALYB1 ","SPN4ALYB2 ","SPN4ALYB3 ","SPN4ALZB1 ","SPN4ALZB2 ", &
-                               "SPN4ALZB3 ","SPN4FLXB1 ","SPN4FLXB2 ","SPN4FLXB3 ","SPN4FLYB1 ","SPN4FLYB2 ","SPN4FLYB3 ", &
-                               "SPN4FLZB1 ","SPN4FLZB2 ","SPN4FLZB3 ","SPN4MLXB1 ","SPN4MLXB2 ","SPN4MLXB3 ","SPN4MLYB1 ", &
-                               "SPN4MLYB2 ","SPN4MLYB3 ","SPN4MLZB1 ","SPN4MLZB2 ","SPN4MLZB3 ","SPN4RDXB1 ","SPN4RDXB2 ", &
-                               "SPN4RDXB3 ","SPN4RDYB1 ","SPN4RDYB2 ","SPN4RDYB3 ","SPN4RDZB1 ","SPN4RDZB2 ","SPN4RDZB3 ", &
-                               "SPN4TDXB1 ","SPN4TDXB2 ","SPN4TDXB3 ","SPN4TDYB1 ","SPN4TDYB2 ","SPN4TDYB3 ","SPN4TDZB1 ", &
-                               "SPN4TDZB2 ","SPN4TDZB3 ","SPN5ALGXB1","SPN5ALGXB2","SPN5ALGXB3","SPN5ALGYB1","SPN5ALGYB2", &
-                               "SPN5ALGYB3","SPN5ALGZB1","SPN5ALGZB2","SPN5ALGZB3","SPN5ALXB1 ","SPN5ALXB2 ","SPN5ALXB3 ", &
-                               "SPN5ALYB1 ","SPN5ALYB2 ","SPN5ALYB3 ","SPN5ALZB1 ","SPN5ALZB2 ","SPN5ALZB3 ","SPN5FLXB1 ", &
-                               "SPN5FLXB2 ","SPN5FLXB3 ","SPN5FLYB1 ","SPN5FLYB2 ","SPN5FLYB3 ","SPN5FLZB1 ","SPN5FLZB2 ", &
-                               "SPN5FLZB3 ","SPN5MLXB1 ","SPN5MLXB2 ","SPN5MLXB3 ","SPN5MLYB1 ","SPN5MLYB2 ","SPN5MLYB3 ", &
-                               "SPN5MLZB1 ","SPN5MLZB2 ","SPN5MLZB3 ","SPN5RDXB1 ","SPN5RDXB2 ","SPN5RDXB3 ","SPN5RDYB1 ", &
-                               "SPN5RDYB2 ","SPN5RDYB3 ","SPN5RDZB1 ","SPN5RDZB2 ","SPN5RDZB3 ","SPN5TDXB1 ","SPN5TDXB2 ", &
-                               "SPN5TDXB3 ","SPN5TDYB1 ","SPN5TDYB2 ","SPN5TDYB3 ","SPN5TDZB1 ","SPN5TDZB2 ","SPN5TDZB3 ", &
-                               "SPN6ALGXB1","SPN6ALGXB2","SPN6ALGXB3","SPN6ALGYB1","SPN6ALGYB2","SPN6ALGYB3","SPN6ALGZB1", &
-                               "SPN6ALGZB2","SPN6ALGZB3","SPN6ALXB1 ","SPN6ALXB2 ","SPN6ALXB3 ","SPN6ALYB1 ","SPN6ALYB2 ", &
-                               "SPN6ALYB3 ","SPN6ALZB1 ","SPN6ALZB2 ","SPN6ALZB3 ","SPN6FLXB1 ","SPN6FLXB2 ","SPN6FLXB3 ", &
-                               "SPN6FLYB1 ","SPN6FLYB2 ","SPN6FLYB3 ","SPN6FLZB1 ","SPN6FLZB2 ","SPN6FLZB3 ","SPN6MLXB1 ", &
-                               "SPN6MLXB2 ","SPN6MLXB3 ","SPN6MLYB1 ","SPN6MLYB2 ","SPN6MLYB3 ","SPN6MLZB1 ","SPN6MLZB2 ", &
-                               "SPN6MLZB3 ","SPN6RDXB1 ","SPN6RDXB2 ","SPN6RDXB3 ","SPN6RDYB1 ","SPN6RDYB2 ","SPN6RDYB3 ", &
-                               "SPN6RDZB1 ","SPN6RDZB2 ","SPN6RDZB3 ","SPN6TDXB1 ","SPN6TDXB2 ","SPN6TDXB3 ","SPN6TDYB1 ", &
-                               "SPN6TDYB2 ","SPN6TDYB3 ","SPN6TDZB1 ","SPN6TDZB2 ","SPN6TDZB3 ","SPN7ALGXB1","SPN7ALGXB2", &
-                               "SPN7ALGXB3","SPN7ALGYB1","SPN7ALGYB2","SPN7ALGYB3","SPN7ALGZB1","SPN7ALGZB2","SPN7ALGZB3", &
-                               "SPN7ALXB1 ","SPN7ALXB2 ","SPN7ALXB3 ","SPN7ALYB1 ","SPN7ALYB2 ","SPN7ALYB3 ","SPN7ALZB1 ", &
-                               "SPN7ALZB2 ","SPN7ALZB3 ","SPN7FLXB1 ","SPN7FLXB2 ","SPN7FLXB3 ","SPN7FLYB1 ","SPN7FLYB2 ", &
-                               "SPN7FLYB3 ","SPN7FLZB1 ","SPN7FLZB2 ","SPN7FLZB3 ","SPN7MLXB1 ","SPN7MLXB2 ","SPN7MLXB3 ", &
-                               "SPN7MLYB1 ","SPN7MLYB2 ","SPN7MLYB3 ","SPN7MLZB1 ","SPN7MLZB2 ","SPN7MLZB3 ","SPN7RDXB1 ", &
-                               "SPN7RDXB2 ","SPN7RDXB3 ","SPN7RDYB1 ","SPN7RDYB2 ","SPN7RDYB3 ","SPN7RDZB1 ","SPN7RDZB2 ", &
-                               "SPN7RDZB3 ","SPN7TDXB1 ","SPN7TDXB2 ","SPN7TDXB3 ","SPN7TDYB1 ","SPN7TDYB2 ","SPN7TDYB3 ", &
-                               "SPN7TDZB1 ","SPN7TDZB2 ","SPN7TDZB3 ","SPN8ALGXB1","SPN8ALGXB2","SPN8ALGXB3","SPN8ALGYB1", &
-                               "SPN8ALGYB2","SPN8ALGYB3","SPN8ALGZB1","SPN8ALGZB2","SPN8ALGZB3","SPN8ALXB1 ","SPN8ALXB2 ", &
-                               "SPN8ALXB3 ","SPN8ALYB1 ","SPN8ALYB2 ","SPN8ALYB3 ","SPN8ALZB1 ","SPN8ALZB2 ","SPN8ALZB3 ", &
-                               "SPN8FLXB1 ","SPN8FLXB2 ","SPN8FLXB3 ","SPN8FLYB1 ","SPN8FLYB2 ","SPN8FLYB3 ","SPN8FLZB1 ", &
-                               "SPN8FLZB2 ","SPN8FLZB3 ","SPN8MLXB1 ","SPN8MLXB2 ","SPN8MLXB3 ","SPN8MLYB1 ","SPN8MLYB2 ", &
-                               "SPN8MLYB3 ","SPN8MLZB1 ","SPN8MLZB2 ","SPN8MLZB3 ","SPN8RDXB1 ","SPN8RDXB2 ","SPN8RDXB3 ", &
-                               "SPN8RDYB1 ","SPN8RDYB2 ","SPN8RDYB3 ","SPN8RDZB1 ","SPN8RDZB2 ","SPN8RDZB3 ","SPN8TDXB1 ", &
-                               "SPN8TDXB2 ","SPN8TDXB3 ","SPN8TDYB1 ","SPN8TDYB2 ","SPN8TDYB3 ","SPN8TDZB1 ","SPN8TDZB2 ", &
-                               "SPN8TDZB3 ","SPN9ALGXB1","SPN9ALGXB2","SPN9ALGXB3","SPN9ALGYB1","SPN9ALGYB2","SPN9ALGYB3", &
-                               "SPN9ALGZB1","SPN9ALGZB2","SPN9ALGZB3","SPN9ALXB1 ","SPN9ALXB2 ","SPN9ALXB3 ","SPN9ALYB1 ", &
-                               "SPN9ALYB2 ","SPN9ALYB3 ","SPN9ALZB1 ","SPN9ALZB2 ","SPN9ALZB3 ","SPN9FLXB1 ","SPN9FLXB2 ", &
-                               "SPN9FLXB3 ","SPN9FLYB1 ","SPN9FLYB2 ","SPN9FLYB3 ","SPN9FLZB1 ","SPN9FLZB2 ","SPN9FLZB3 ", &
-                               "SPN9MLXB1 ","SPN9MLXB2 ","SPN9MLXB3 ","SPN9MLYB1 ","SPN9MLYB2 ","SPN9MLYB3 ","SPN9MLZB1 ", &
-                               "SPN9MLZB2 ","SPN9MLZB3 ","SPN9RDXB1 ","SPN9RDXB2 ","SPN9RDXB3 ","SPN9RDYB1 ","SPN9RDYB2 ", &
-                               "SPN9RDYB3 ","SPN9RDZB1 ","SPN9RDZB2 ","SPN9RDZB3 ","SPN9TDXB1 ","SPN9TDXB2 ","SPN9TDXB3 ", &
-                               "SPN9TDYB1 ","SPN9TDYB2 ","SPN9TDYB3 ","SPN9TDZB1 ","SPN9TDZB2 ","SPN9TDZB3 ","TAILFURL  ", &
-                               "TAILFURLA ","TAILFURLP ","TAILFURLV ","TEETAYA   ","TEETDEFL  ","TEETPYA   ","TEETVYA   ", &
-                               "TFRLBRM   ","TIP2TWR1  ","TIP2TWR2  ","TIP2TWR3  ","TIPALGXB1 ","TIPALGXB2 ","TIPALGXB3 ", &
-                               "TIPALGYB1 ","TIPALGYB2 ","TIPALGYB3 ","TIPALGZB1 ","TIPALGZB2 ","TIPALGZB3 ","TIPALXB1  ", &
-                               "TIPALXB2  ","TIPALXB3  ","TIPALYB1  ","TIPALYB2  ","TIPALYB3  ","TIPALZB1  ","TIPALZB2  ", &
-                               "TIPALZB3  ","TIPCLRNC1 ","TIPCLRNC2 ","TIPCLRNC3 ","TIPDXB1   ","TIPDXB2   ","TIPDXB3   ", &
-                               "TIPDXC1   ","TIPDXC2   ","TIPDXC3   ","TIPDYB1   ","TIPDYB2   ","TIPDYB3   ","TIPDYC1   ", &
-                               "TIPDYC2   ","TIPDYC3   ","TIPDZB1   ","TIPDZB2   ","TIPDZB3   ","TIPDZC1   ","TIPDZC2   ", &
-                               "TIPDZC3   ","TIPRDXB1  ","TIPRDXB2  ","TIPRDXB3  ","TIPRDYB1  ","TIPRDYB2  ","TIPRDYB3  ", &
-                               "TIPRDZB1  ","TIPRDZB2  ","TIPRDZB3  ","TIPRDZC1  ","TIPRDZC2  ","TIPRDZC3  ","TTDSPAX   ", &
-                               "TTDSPFA   ","TTDSPPTCH ","TTDSPROLL ","TTDSPSS   ","TTDSPTWST ","TWHT1ALGXT","TWHT1ALGYT", &
-                               "TWHT1ALGZT","TWHT1ALXT ","TWHT1ALYT ","TWHT1ALZT ","TWHT1FLXT ","TWHT1FLYT ","TWHT1FLZT ", &
-                               "TWHT1MLXT ","TWHT1MLYT ","TWHT1MLZT ","TWHT1RDXT ","TWHT1RDYT ","TWHT1RDZT ","TWHT1RPXI ", &
-                               "TWHT1RPYI ","TWHT1RPZI ","TWHT1TDXT ","TWHT1TDYT ","TWHT1TDZT ","TWHT1TPXI ","TWHT1TPYI ", &
-                               "TWHT1TPZI ","TWHT2ALGXT","TWHT2ALGYT","TWHT2ALGZT","TWHT2ALXT ","TWHT2ALYT ","TWHT2ALZT ", &
-                               "TWHT2FLXT ","TWHT2FLYT ","TWHT2FLZT ","TWHT2MLXT ","TWHT2MLYT ","TWHT2MLZT ","TWHT2RDXT ", &
-                               "TWHT2RDYT ","TWHT2RDZT ","TWHT2RPXI ","TWHT2RPYI ","TWHT2RPZI ","TWHT2TDXT ","TWHT2TDYT ", &
-                               "TWHT2TDZT ","TWHT2TPXI ","TWHT2TPYI ","TWHT2TPZI ","TWHT3ALGXT","TWHT3ALGYT","TWHT3ALGZT", &
-                               "TWHT3ALXT ","TWHT3ALYT ","TWHT3ALZT ","TWHT3FLXT ","TWHT3FLYT ","TWHT3FLZT ","TWHT3MLXT ", &
-                               "TWHT3MLYT ","TWHT3MLZT ","TWHT3RDXT ","TWHT3RDYT ","TWHT3RDZT ","TWHT3RPXI ","TWHT3RPYI ", &
-                               "TWHT3RPZI ","TWHT3TDXT ","TWHT3TDYT ","TWHT3TDZT ","TWHT3TPXI ","TWHT3TPYI ","TWHT3TPZI ", &
-                               "TWHT4ALGXT","TWHT4ALGYT","TWHT4ALGZT","TWHT4ALXT ","TWHT4ALYT ","TWHT4ALZT ","TWHT4FLXT ", &
-                               "TWHT4FLYT ","TWHT4FLZT ","TWHT4MLXT ","TWHT4MLYT ","TWHT4MLZT ","TWHT4RDXT ","TWHT4RDYT ", &
-                               "TWHT4RDZT ","TWHT4RPXI ","TWHT4RPYI ","TWHT4RPZI ","TWHT4TDXT ","TWHT4TDYT ","TWHT4TDZT ", &
-                               "TWHT4TPXI ","TWHT4TPYI ","TWHT4TPZI ","TWHT5ALGXT","TWHT5ALGYT","TWHT5ALGZT","TWHT5ALXT ", &
-                               "TWHT5ALYT ","TWHT5ALZT ","TWHT5FLXT ","TWHT5FLYT ","TWHT5FLZT ","TWHT5MLXT ","TWHT5MLYT ", &
-                               "TWHT5MLZT ","TWHT5RDXT ","TWHT5RDYT ","TWHT5RDZT ","TWHT5RPXI ","TWHT5RPYI ","TWHT5RPZI ", &
-                               "TWHT5TDXT ","TWHT5TDYT ","TWHT5TDZT ","TWHT5TPXI ","TWHT5TPYI ","TWHT5TPZI ","TWHT6ALGXT", &
-                               "TWHT6ALGYT","TWHT6ALGZT","TWHT6ALXT ","TWHT6ALYT ","TWHT6ALZT ","TWHT6FLXT ","TWHT6FLYT ", &
-                               "TWHT6FLZT ","TWHT6MLXT ","TWHT6MLYT ","TWHT6MLZT ","TWHT6RDXT ","TWHT6RDYT ","TWHT6RDZT ", &
-                               "TWHT6RPXI ","TWHT6RPYI ","TWHT6RPZI ","TWHT6TDXT ","TWHT6TDYT ","TWHT6TDZT ","TWHT6TPXI ", &
-                               "TWHT6TPYI ","TWHT6TPZI ","TWHT7ALGXT","TWHT7ALGYT","TWHT7ALGZT","TWHT7ALXT ","TWHT7ALYT ", &
-                               "TWHT7ALZT ","TWHT7FLXT ","TWHT7FLYT ","TWHT7FLZT ","TWHT7MLXT ","TWHT7MLYT ","TWHT7MLZT ", &
-                               "TWHT7RDXT ","TWHT7RDYT ","TWHT7RDZT ","TWHT7RPXI ","TWHT7RPYI ","TWHT7RPZI ","TWHT7TDXT ", &
-                               "TWHT7TDYT ","TWHT7TDZT ","TWHT7TPXI ","TWHT7TPYI ","TWHT7TPZI ","TWHT8ALGXT","TWHT8ALGYT", &
-                               "TWHT8ALGZT","TWHT8ALXT ","TWHT8ALYT ","TWHT8ALZT ","TWHT8FLXT ","TWHT8FLYT ","TWHT8FLZT ", &
-                               "TWHT8MLXT ","TWHT8MLYT ","TWHT8MLZT ","TWHT8RDXT ","TWHT8RDYT ","TWHT8RDZT ","TWHT8RPXI ", &
-                               "TWHT8RPYI ","TWHT8RPZI ","TWHT8TDXT ","TWHT8TDYT ","TWHT8TDZT ","TWHT8TPXI ","TWHT8TPYI ", &
-                               "TWHT8TPZI ","TWHT9ALGXT","TWHT9ALGYT","TWHT9ALGZT","TWHT9ALXT ","TWHT9ALYT ","TWHT9ALZT ", &
-                               "TWHT9FLXT ","TWHT9FLYT ","TWHT9FLZT ","TWHT9MLXT ","TWHT9MLYT ","TWHT9MLZT ","TWHT9RDXT ", &
-                               "TWHT9RDYT ","TWHT9RDZT ","TWHT9RPXI ","TWHT9RPYI ","TWHT9RPZI ","TWHT9TDXT ","TWHT9TDYT ", &
-                               "TWHT9TDZT ","TWHT9TPXI ","TWHT9TPYI ","TWHT9TPZI ","TWRBSFXT  ","TWRBSFYT  ","TWRBSFZT  ", &
-                               "TWRBSMXT  ","TWRBSMYT  ","TWRBSMZT  ","TWRCLRNC1 ","TWRCLRNC2 ","TWRCLRNC3 ","TWRTPTDXI ", &
-                               "TWRTPTDYI ","TWRTPTDZI ","TWSTDEFL1 ","TWSTDEFL2 ","TWSTDEFL3 ","YAWACCEL  ","YAWAZN    ", &
-                               "YAWAZP    ","YAWBRFXN  ","YAWBRFXP  ","YAWBRFYN  ","YAWBRFYP  ","YAWBRFZN  ","YAWBRFZP  ", &
-                               "YAWBRMXN  ","YAWBRMXP  ","YAWBRMYN  ","YAWBRMYP  ","YAWBRMZN  ","YAWBRMZP  ","YAWBRRAXP ", &
-                               "YAWBRRAYP ","YAWBRRAZP ","YAWBRRDXT ","YAWBRRDYT ","YAWBRRDZT ","YAWBRRVXP ","YAWBRRVYP ", &
-                               "YAWBRRVZP ","YAWBRTAGXP","YAWBRTAGYP","YAWBRTAGZP","YAWBRTAXP ","YAWBRTAYP ","YAWBRTAZP ", &
-                               "YAWBRTDXI ","YAWBRTDXP ","YAWBRTDXT ","YAWBRTDYI ","YAWBRTDYP ","YAWBRTDYT ","YAWBRTDZI ", &
-                               "YAWBRTDZP ","YAWBRTDZT ","YAWBRTVXP ","YAWBRTVYP ","YAWBRTVZP ","YAWPOS    ","YAWPZN    ", &
-                               "YAWPZP    ","YAWRATE   ","YAWVZN    ","YAWVZP    "/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(1110) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                               "DOMEGAYF  ","GENACCEL  ","GENSPEED  ","HSSBRTQ   ","HSSHFTA   ","HSSHFTPWR ","HSSHFTTQ  ", &
+                               "HSSHFTV   ","IPDEFL1   ","IPDEFL2   ","IPDEFL3   ","LSSGAGA   ","LSSGAGAXA ","LSSGAGAXS ", &
+                               "LSSGAGFXA ","LSSGAGFXS ","LSSGAGFYA ","LSSGAGFYS ","LSSGAGFZA ","LSSGAGFZS ","LSSGAGMXA ", &
+                               "LSSGAGMXS ","LSSGAGMYA ","LSSGAGMYS ","LSSGAGMZA ","LSSGAGMZS ","LSSGAGP   ","LSSGAGPXA ", &
+                               "LSSGAGPXS ","LSSGAGV   ","LSSGAGVXA ","LSSGAGVXS ","LSSHFTFXA ","LSSHFTFXS ","LSSHFTFYA ", &
+                               "LSSHFTFYS ","LSSHFTFZA ","LSSHFTFZS ","LSSHFTMXA ","LSSHFTMXS ","LSSHFTPWR ","LSSHFTTQ  ", &
+                               "LSSTIPA   ","LSSTIPAXA ","LSSTIPAXS ","LSSTIPMYA ","LSSTIPMYS ","LSSTIPMZA ","LSSTIPMZS ", &
+                               "LSSTIPP   ","LSSTIPPXA ","LSSTIPPXS ","LSSTIPV   ","LSSTIPVXA ","LSSTIPVXS ","NACYAW    ", &
+                               "NACYAWA   ","NACYAWP   ","NACYAWV   ","NCIMURAXS ","NCIMURAYS ","NCIMURAZS ","NCIMURVXS ", &
+                               "NCIMURVYS ","NCIMURVZS ","NCIMUTAGXS","NCIMUTAGYS","NCIMUTAGZS","NCIMUTAXS ","NCIMUTAYS ", &
+                               "NCIMUTAZS ","NCIMUTVXS ","NCIMUTVYS ","NCIMUTVZS ","OMEGAYF   ","OOPDEFL1  ","OOPDEFL2  ", &
+                               "OOPDEFL3  ","PTCHDEFL1 ","PTCHDEFL2 ","PTCHDEFL3 ","PTCHPMZB1 ","PTCHPMZB2 ","PTCHPMZB3 ", &
+                               "PTCHPMZC1 ","PTCHPMZC2 ","PTCHPMZC3 ","PTFMHEAVE ","PTFMPITCH ","PTFMRAXI  ","PTFMRAXT  ", &
+                               "PTFMRAYI  ","PTFMRAYT  ","PTFMRAZI  ","PTFMRAZT  ","PTFMRDXI  ","PTFMRDYI  ","PTFMRDZI  ", &
+                               "PTFMROLL  ","PTFMRVXI  ","PTFMRVXT  ","PTFMRVYI  ","PTFMRVYT  ","PTFMRVZI  ","PTFMRVZT  ", &
+                               "PTFMSURGE ","PTFMSWAY  ","PTFMTAGXI ","PTFMTAGXT ","PTFMTAGYI ","PTFMTAGYT ","PTFMTAGZI ", &
+                               "PTFMTAGZT ","PTFMTAXI  ","PTFMTAXT  ","PTFMTAYI  ","PTFMTAYT  ","PTFMTAZI  ","PTFMTAZT  ", &
+                               "PTFMTDXI  ","PTFMTDXT  ","PTFMTDYI  ","PTFMTDYT  ","PTFMTDZI  ","PTFMTDZT  ","PTFMTVXI  ", &
+                               "PTFMTVXT  ","PTFMTVYI  ","PTFMTVYT  ","PTFMTVZI  ","PTFMTVZT  ","PTFMYAW   ","QD2_B1E1  ", &
+                               "QD2_B1F1  ","QD2_B1F2  ","QD2_B2E1  ","QD2_B2F1  ","QD2_B2F2  ","QD2_B3E1  ","QD2_B3F1  ", &
+                               "QD2_B3F2  ","QD2_DRTR  ","QD2_GEAZ  ","QD2_HV    ","QD2_P     ","QD2_R     ","QD2_RFRL  ", &
+                               "QD2_SG    ","QD2_SW    ","QD2_TEET  ","QD2_TFA1  ","QD2_TFA2  ","QD2_TFRL  ","QD2_TSS1  ", &
+                               "QD2_TSS2  ","QD2_Y     ","QD2_YAW   ","QD_B1E1   ","QD_B1F1   ","QD_B1F2   ","QD_B2E1   ", &
+                               "QD_B2F1   ","QD_B2F2   ","QD_B3E1   ","QD_B3F1   ","QD_B3F2   ","QD_DRTR   ","QD_GEAZ   ", &
+                               "QD_HV     ","QD_P      ","QD_R      ","QD_RFRL   ","QD_SG     ","QD_SW     ","QD_TEET   ", &
+                               "QD_TFA1   ","QD_TFA2   ","QD_TFRL   ","QD_TSS1   ","QD_TSS2   ","QD_Y      ","QD_YAW    ", &
+                               "Q_B1E1    ","Q_B1F1    ","Q_B1F2    ","Q_B2E1    ","Q_B2F1    ","Q_B2F2    ","Q_B3E1    ", &
+                               "Q_B3F1    ","Q_B3F2    ","Q_DRTR    ","Q_GEAZ    ","Q_HV      ","Q_P       ","Q_R       ", &
+                               "Q_RFRL    ","Q_SG      ","Q_SW      ","Q_TEET    ","Q_TFA1    ","Q_TFA2    ","Q_TFRL    ", &
+                               "Q_TSS1    ","Q_TSS2    ","Q_Y       ","Q_YAW     ","RFRLBRM   ","ROLLDEFL1 ","ROLLDEFL2 ", &
+                               "ROLLDEFL3 ","ROOTFXB1  ","ROOTFXB2  ","ROOTFXB3  ","ROOTFXC1  ","ROOTFXC2  ","ROOTFXC3  ", &
+                               "ROOTFYB1  ","ROOTFYB2  ","ROOTFYB3  ","ROOTFYC1  ","ROOTFYC2  ","ROOTFYC3  ","ROOTFZB1  ", &
+                               "ROOTFZB2  ","ROOTFZB3  ","ROOTFZC1  ","ROOTFZC2  ","ROOTFZC3  ","ROOTMEDG1 ","ROOTMEDG2 ", &
+                               "ROOTMEDG3 ","ROOTMFLP1 ","ROOTMFLP2 ","ROOTMFLP3 ","ROOTMIP1  ","ROOTMIP2  ","ROOTMIP3  ", &
+                               "ROOTMOOP1 ","ROOTMOOP2 ","ROOTMOOP3 ","ROOTMXB1  ","ROOTMXB2  ","ROOTMXB3  ","ROOTMXC1  ", &
+                               "ROOTMXC2  ","ROOTMXC3  ","ROOTMYB1  ","ROOTMYB2  ","ROOTMYB3  ","ROOTMYC1  ","ROOTMYC2  ", &
+                               "ROOTMYC3  ","ROOTMZB1  ","ROOTMZB2  ","ROOTMZB3  ","ROOTMZC1  ","ROOTMZC2  ","ROOTMZC3  ", &
+                               "ROTACCEL  ","ROTFURL   ","ROTFURLA  ","ROTFURLP  ","ROTFURLV  ","ROTPWR    ","ROTSPEED  ", &
+                               "ROTTEETA  ","ROTTEETP  ","ROTTEETV  ","ROTTHRUST ","ROTTORQ   ","SPN1ALGXB1","SPN1ALGXB2", &
+                               "SPN1ALGXB3","SPN1ALGYB1","SPN1ALGYB2","SPN1ALGYB3","SPN1ALGZB1","SPN1ALGZB2","SPN1ALGZB3", &
+                               "SPN1ALXB1 ","SPN1ALXB2 ","SPN1ALXB3 ","SPN1ALYB1 ","SPN1ALYB2 ","SPN1ALYB3 ","SPN1ALZB1 ", &
+                               "SPN1ALZB2 ","SPN1ALZB3 ","SPN1FLXB1 ","SPN1FLXB2 ","SPN1FLXB3 ","SPN1FLYB1 ","SPN1FLYB2 ", &
+                               "SPN1FLYB3 ","SPN1FLZB1 ","SPN1FLZB2 ","SPN1FLZB3 ","SPN1MLXB1 ","SPN1MLXB2 ","SPN1MLXB3 ", &
+                               "SPN1MLYB1 ","SPN1MLYB2 ","SPN1MLYB3 ","SPN1MLZB1 ","SPN1MLZB2 ","SPN1MLZB3 ","SPN1RDXB1 ", &
+                               "SPN1RDXB2 ","SPN1RDXB3 ","SPN1RDYB1 ","SPN1RDYB2 ","SPN1RDYB3 ","SPN1RDZB1 ","SPN1RDZB2 ", &
+                               "SPN1RDZB3 ","SPN1TDXB1 ","SPN1TDXB2 ","SPN1TDXB3 ","SPN1TDYB1 ","SPN1TDYB2 ","SPN1TDYB3 ", &
+                               "SPN1TDZB1 ","SPN1TDZB2 ","SPN1TDZB3 ","SPN2ALGXB1","SPN2ALGXB2","SPN2ALGXB3","SPN2ALGYB1", &
+                               "SPN2ALGYB2","SPN2ALGYB3","SPN2ALGZB1","SPN2ALGZB2","SPN2ALGZB3","SPN2ALXB1 ","SPN2ALXB2 ", &
+                               "SPN2ALXB3 ","SPN2ALYB1 ","SPN2ALYB2 ","SPN2ALYB3 ","SPN2ALZB1 ","SPN2ALZB2 ","SPN2ALZB3 ", &
+                               "SPN2FLXB1 ","SPN2FLXB2 ","SPN2FLXB3 ","SPN2FLYB1 ","SPN2FLYB2 ","SPN2FLYB3 ","SPN2FLZB1 ", &
+                               "SPN2FLZB2 ","SPN2FLZB3 ","SPN2MLXB1 ","SPN2MLXB2 ","SPN2MLXB3 ","SPN2MLYB1 ","SPN2MLYB2 ", &
+                               "SPN2MLYB3 ","SPN2MLZB1 ","SPN2MLZB2 ","SPN2MLZB3 ","SPN2RDXB1 ","SPN2RDXB2 ","SPN2RDXB3 ", &
+                               "SPN2RDYB1 ","SPN2RDYB2 ","SPN2RDYB3 ","SPN2RDZB1 ","SPN2RDZB2 ","SPN2RDZB3 ","SPN2TDXB1 ", &
+                               "SPN2TDXB2 ","SPN2TDXB3 ","SPN2TDYB1 ","SPN2TDYB2 ","SPN2TDYB3 ","SPN2TDZB1 ","SPN2TDZB2 ", &
+                               "SPN2TDZB3 ","SPN3ALGXB1","SPN3ALGXB2","SPN3ALGXB3","SPN3ALGYB1","SPN3ALGYB2","SPN3ALGYB3", &
+                               "SPN3ALGZB1","SPN3ALGZB2","SPN3ALGZB3","SPN3ALXB1 ","SPN3ALXB2 ","SPN3ALXB3 ","SPN3ALYB1 ", &
+                               "SPN3ALYB2 ","SPN3ALYB3 ","SPN3ALZB1 ","SPN3ALZB2 ","SPN3ALZB3 ","SPN3FLXB1 ","SPN3FLXB2 ", &
+                               "SPN3FLXB3 ","SPN3FLYB1 ","SPN3FLYB2 ","SPN3FLYB3 ","SPN3FLZB1 ","SPN3FLZB2 ","SPN3FLZB3 ", &
+                               "SPN3MLXB1 ","SPN3MLXB2 ","SPN3MLXB3 ","SPN3MLYB1 ","SPN3MLYB2 ","SPN3MLYB3 ","SPN3MLZB1 ", &
+                               "SPN3MLZB2 ","SPN3MLZB3 ","SPN3RDXB1 ","SPN3RDXB2 ","SPN3RDXB3 ","SPN3RDYB1 ","SPN3RDYB2 ", &
+                               "SPN3RDYB3 ","SPN3RDZB1 ","SPN3RDZB2 ","SPN3RDZB3 ","SPN3TDXB1 ","SPN3TDXB2 ","SPN3TDXB3 ", &
+                               "SPN3TDYB1 ","SPN3TDYB2 ","SPN3TDYB3 ","SPN3TDZB1 ","SPN3TDZB2 ","SPN3TDZB3 ","SPN4ALGXB1", &
+                               "SPN4ALGXB2","SPN4ALGXB3","SPN4ALGYB1","SPN4ALGYB2","SPN4ALGYB3","SPN4ALGZB1","SPN4ALGZB2", &
+                               "SPN4ALGZB3","SPN4ALXB1 ","SPN4ALXB2 ","SPN4ALXB3 ","SPN4ALYB1 ","SPN4ALYB2 ","SPN4ALYB3 ", &
+                               "SPN4ALZB1 ","SPN4ALZB2 ","SPN4ALZB3 ","SPN4FLXB1 ","SPN4FLXB2 ","SPN4FLXB3 ","SPN4FLYB1 ", &
+                               "SPN4FLYB2 ","SPN4FLYB3 ","SPN4FLZB1 ","SPN4FLZB2 ","SPN4FLZB3 ","SPN4MLXB1 ","SPN4MLXB2 ", &
+                               "SPN4MLXB3 ","SPN4MLYB1 ","SPN4MLYB2 ","SPN4MLYB3 ","SPN4MLZB1 ","SPN4MLZB2 ","SPN4MLZB3 ", &
+                               "SPN4RDXB1 ","SPN4RDXB2 ","SPN4RDXB3 ","SPN4RDYB1 ","SPN4RDYB2 ","SPN4RDYB3 ","SPN4RDZB1 ", &
+                               "SPN4RDZB2 ","SPN4RDZB3 ","SPN4TDXB1 ","SPN4TDXB2 ","SPN4TDXB3 ","SPN4TDYB1 ","SPN4TDYB2 ", &
+                               "SPN4TDYB3 ","SPN4TDZB1 ","SPN4TDZB2 ","SPN4TDZB3 ","SPN5ALGXB1","SPN5ALGXB2","SPN5ALGXB3", &
+                               "SPN5ALGYB1","SPN5ALGYB2","SPN5ALGYB3","SPN5ALGZB1","SPN5ALGZB2","SPN5ALGZB3","SPN5ALXB1 ", &
+                               "SPN5ALXB2 ","SPN5ALXB3 ","SPN5ALYB1 ","SPN5ALYB2 ","SPN5ALYB3 ","SPN5ALZB1 ","SPN5ALZB2 ", &
+                               "SPN5ALZB3 ","SPN5FLXB1 ","SPN5FLXB2 ","SPN5FLXB3 ","SPN5FLYB1 ","SPN5FLYB2 ","SPN5FLYB3 ", &
+                               "SPN5FLZB1 ","SPN5FLZB2 ","SPN5FLZB3 ","SPN5MLXB1 ","SPN5MLXB2 ","SPN5MLXB3 ","SPN5MLYB1 ", &
+                               "SPN5MLYB2 ","SPN5MLYB3 ","SPN5MLZB1 ","SPN5MLZB2 ","SPN5MLZB3 ","SPN5RDXB1 ","SPN5RDXB2 ", &
+                               "SPN5RDXB3 ","SPN5RDYB1 ","SPN5RDYB2 ","SPN5RDYB3 ","SPN5RDZB1 ","SPN5RDZB2 ","SPN5RDZB3 ", &
+                               "SPN5TDXB1 ","SPN5TDXB2 ","SPN5TDXB3 ","SPN5TDYB1 ","SPN5TDYB2 ","SPN5TDYB3 ","SPN5TDZB1 ", &
+                               "SPN5TDZB2 ","SPN5TDZB3 ","SPN6ALGXB1","SPN6ALGXB2","SPN6ALGXB3","SPN6ALGYB1","SPN6ALGYB2", &
+                               "SPN6ALGYB3","SPN6ALGZB1","SPN6ALGZB2","SPN6ALGZB3","SPN6ALXB1 ","SPN6ALXB2 ","SPN6ALXB3 ", &
+                               "SPN6ALYB1 ","SPN6ALYB2 ","SPN6ALYB3 ","SPN6ALZB1 ","SPN6ALZB2 ","SPN6ALZB3 ","SPN6FLXB1 ", &
+                               "SPN6FLXB2 ","SPN6FLXB3 ","SPN6FLYB1 ","SPN6FLYB2 ","SPN6FLYB3 ","SPN6FLZB1 ","SPN6FLZB2 ", &
+                               "SPN6FLZB3 ","SPN6MLXB1 ","SPN6MLXB2 ","SPN6MLXB3 ","SPN6MLYB1 ","SPN6MLYB2 ","SPN6MLYB3 ", &
+                               "SPN6MLZB1 ","SPN6MLZB2 ","SPN6MLZB3 ","SPN6RDXB1 ","SPN6RDXB2 ","SPN6RDXB3 ","SPN6RDYB1 ", &
+                               "SPN6RDYB2 ","SPN6RDYB3 ","SPN6RDZB1 ","SPN6RDZB2 ","SPN6RDZB3 ","SPN6TDXB1 ","SPN6TDXB2 ", &
+                               "SPN6TDXB3 ","SPN6TDYB1 ","SPN6TDYB2 ","SPN6TDYB3 ","SPN6TDZB1 ","SPN6TDZB2 ","SPN6TDZB3 ", &
+                               "SPN7ALGXB1","SPN7ALGXB2","SPN7ALGXB3","SPN7ALGYB1","SPN7ALGYB2","SPN7ALGYB3","SPN7ALGZB1", &
+                               "SPN7ALGZB2","SPN7ALGZB3","SPN7ALXB1 ","SPN7ALXB2 ","SPN7ALXB3 ","SPN7ALYB1 ","SPN7ALYB2 ", &
+                               "SPN7ALYB3 ","SPN7ALZB1 ","SPN7ALZB2 ","SPN7ALZB3 ","SPN7FLXB1 ","SPN7FLXB2 ","SPN7FLXB3 ", &
+                               "SPN7FLYB1 ","SPN7FLYB2 ","SPN7FLYB3 ","SPN7FLZB1 ","SPN7FLZB2 ","SPN7FLZB3 ","SPN7MLXB1 ", &
+                               "SPN7MLXB2 ","SPN7MLXB3 ","SPN7MLYB1 ","SPN7MLYB2 ","SPN7MLYB3 ","SPN7MLZB1 ","SPN7MLZB2 ", &
+                               "SPN7MLZB3 ","SPN7RDXB1 ","SPN7RDXB2 ","SPN7RDXB3 ","SPN7RDYB1 ","SPN7RDYB2 ","SPN7RDYB3 ", &
+                               "SPN7RDZB1 ","SPN7RDZB2 ","SPN7RDZB3 ","SPN7TDXB1 ","SPN7TDXB2 ","SPN7TDXB3 ","SPN7TDYB1 ", &
+                               "SPN7TDYB2 ","SPN7TDYB3 ","SPN7TDZB1 ","SPN7TDZB2 ","SPN7TDZB3 ","SPN8ALGXB1","SPN8ALGXB2", &
+                               "SPN8ALGXB3","SPN8ALGYB1","SPN8ALGYB2","SPN8ALGYB3","SPN8ALGZB1","SPN8ALGZB2","SPN8ALGZB3", &
+                               "SPN8ALXB1 ","SPN8ALXB2 ","SPN8ALXB3 ","SPN8ALYB1 ","SPN8ALYB2 ","SPN8ALYB3 ","SPN8ALZB1 ", &
+                               "SPN8ALZB2 ","SPN8ALZB3 ","SPN8FLXB1 ","SPN8FLXB2 ","SPN8FLXB3 ","SPN8FLYB1 ","SPN8FLYB2 ", &
+                               "SPN8FLYB3 ","SPN8FLZB1 ","SPN8FLZB2 ","SPN8FLZB3 ","SPN8MLXB1 ","SPN8MLXB2 ","SPN8MLXB3 ", &
+                               "SPN8MLYB1 ","SPN8MLYB2 ","SPN8MLYB3 ","SPN8MLZB1 ","SPN8MLZB2 ","SPN8MLZB3 ","SPN8RDXB1 ", &
+                               "SPN8RDXB2 ","SPN8RDXB3 ","SPN8RDYB1 ","SPN8RDYB2 ","SPN8RDYB3 ","SPN8RDZB1 ","SPN8RDZB2 ", &
+                               "SPN8RDZB3 ","SPN8TDXB1 ","SPN8TDXB2 ","SPN8TDXB3 ","SPN8TDYB1 ","SPN8TDYB2 ","SPN8TDYB3 ", &
+                               "SPN8TDZB1 ","SPN8TDZB2 ","SPN8TDZB3 ","SPN9ALGXB1","SPN9ALGXB2","SPN9ALGXB3","SPN9ALGYB1", &
+                               "SPN9ALGYB2","SPN9ALGYB3","SPN9ALGZB1","SPN9ALGZB2","SPN9ALGZB3","SPN9ALXB1 ","SPN9ALXB2 ", &
+                               "SPN9ALXB3 ","SPN9ALYB1 ","SPN9ALYB2 ","SPN9ALYB3 ","SPN9ALZB1 ","SPN9ALZB2 ","SPN9ALZB3 ", &
+                               "SPN9FLXB1 ","SPN9FLXB2 ","SPN9FLXB3 ","SPN9FLYB1 ","SPN9FLYB2 ","SPN9FLYB3 ","SPN9FLZB1 ", &
+                               "SPN9FLZB2 ","SPN9FLZB3 ","SPN9MLXB1 ","SPN9MLXB2 ","SPN9MLXB3 ","SPN9MLYB1 ","SPN9MLYB2 ", &
+                               "SPN9MLYB3 ","SPN9MLZB1 ","SPN9MLZB2 ","SPN9MLZB3 ","SPN9RDXB1 ","SPN9RDXB2 ","SPN9RDXB3 ", &
+                               "SPN9RDYB1 ","SPN9RDYB2 ","SPN9RDYB3 ","SPN9RDZB1 ","SPN9RDZB2 ","SPN9RDZB3 ","SPN9TDXB1 ", &
+                               "SPN9TDXB2 ","SPN9TDXB3 ","SPN9TDYB1 ","SPN9TDYB2 ","SPN9TDYB3 ","SPN9TDZB1 ","SPN9TDZB2 ", &
+                               "SPN9TDZB3 ","TAILFURL  ","TAILFURLA ","TAILFURLP ","TAILFURLV ","TEETAYA   ","TEETDEFL  ", &
+                               "TEETPYA   ","TEETVYA   ","TFRLBRM   ","TIP2TWR1  ","TIP2TWR2  ","TIP2TWR3  ","TIPALGXB1 ", &
+                               "TIPALGXB2 ","TIPALGXB3 ","TIPALGYB1 ","TIPALGYB2 ","TIPALGYB3 ","TIPALGZB1 ","TIPALGZB2 ", &
+                               "TIPALGZB3 ","TIPALXB1  ","TIPALXB2  ","TIPALXB3  ","TIPALYB1  ","TIPALYB2  ","TIPALYB3  ", &
+                               "TIPALZB1  ","TIPALZB2  ","TIPALZB3  ","TIPCLRNC1 ","TIPCLRNC2 ","TIPCLRNC3 ","TIPDXB1   ", &
+                               "TIPDXB2   ","TIPDXB3   ","TIPDXC1   ","TIPDXC2   ","TIPDXC3   ","TIPDYB1   ","TIPDYB2   ", &
+                               "TIPDYB3   ","TIPDYC1   ","TIPDYC2   ","TIPDYC3   ","TIPDZB1   ","TIPDZB2   ","TIPDZB3   ", &
+                               "TIPDZC1   ","TIPDZC2   ","TIPDZC3   ","TIPRDXB1  ","TIPRDXB2  ","TIPRDXB3  ","TIPRDYB1  ", &
+                               "TIPRDYB2  ","TIPRDYB3  ","TIPRDZB1  ","TIPRDZB2  ","TIPRDZB3  ","TIPRDZC1  ","TIPRDZC2  ", &
+                               "TIPRDZC3  ","TTDSPAX   ","TTDSPFA   ","TTDSPPTCH ","TTDSPROLL ","TTDSPSS   ","TTDSPTWST ", &
+                               "TWHT1ALGXT","TWHT1ALGYT","TWHT1ALGZT","TWHT1ALXT ","TWHT1ALYT ","TWHT1ALZT ","TWHT1FLXT ", &
+                               "TWHT1FLYT ","TWHT1FLZT ","TWHT1MLXT ","TWHT1MLYT ","TWHT1MLZT ","TWHT1RDXT ","TWHT1RDYT ", &
+                               "TWHT1RDZT ","TWHT1RPXI ","TWHT1RPYI ","TWHT1RPZI ","TWHT1TDXT ","TWHT1TDYT ","TWHT1TDZT ", &
+                               "TWHT1TPXI ","TWHT1TPYI ","TWHT1TPZI ","TWHT2ALGXT","TWHT2ALGYT","TWHT2ALGZT","TWHT2ALXT ", &
+                               "TWHT2ALYT ","TWHT2ALZT ","TWHT2FLXT ","TWHT2FLYT ","TWHT2FLZT ","TWHT2MLXT ","TWHT2MLYT ", &
+                               "TWHT2MLZT ","TWHT2RDXT ","TWHT2RDYT ","TWHT2RDZT ","TWHT2RPXI ","TWHT2RPYI ","TWHT2RPZI ", &
+                               "TWHT2TDXT ","TWHT2TDYT ","TWHT2TDZT ","TWHT2TPXI ","TWHT2TPYI ","TWHT2TPZI ","TWHT3ALGXT", &
+                               "TWHT3ALGYT","TWHT3ALGZT","TWHT3ALXT ","TWHT3ALYT ","TWHT3ALZT ","TWHT3FLXT ","TWHT3FLYT ", &
+                               "TWHT3FLZT ","TWHT3MLXT ","TWHT3MLYT ","TWHT3MLZT ","TWHT3RDXT ","TWHT3RDYT ","TWHT3RDZT ", &
+                               "TWHT3RPXI ","TWHT3RPYI ","TWHT3RPZI ","TWHT3TDXT ","TWHT3TDYT ","TWHT3TDZT ","TWHT3TPXI ", &
+                               "TWHT3TPYI ","TWHT3TPZI ","TWHT4ALGXT","TWHT4ALGYT","TWHT4ALGZT","TWHT4ALXT ","TWHT4ALYT ", &
+                               "TWHT4ALZT ","TWHT4FLXT ","TWHT4FLYT ","TWHT4FLZT ","TWHT4MLXT ","TWHT4MLYT ","TWHT4MLZT ", &
+                               "TWHT4RDXT ","TWHT4RDYT ","TWHT4RDZT ","TWHT4RPXI ","TWHT4RPYI ","TWHT4RPZI ","TWHT4TDXT ", &
+                               "TWHT4TDYT ","TWHT4TDZT ","TWHT4TPXI ","TWHT4TPYI ","TWHT4TPZI ","TWHT5ALGXT","TWHT5ALGYT", &
+                               "TWHT5ALGZT","TWHT5ALXT ","TWHT5ALYT ","TWHT5ALZT ","TWHT5FLXT ","TWHT5FLYT ","TWHT5FLZT ", &
+                               "TWHT5MLXT ","TWHT5MLYT ","TWHT5MLZT ","TWHT5RDXT ","TWHT5RDYT ","TWHT5RDZT ","TWHT5RPXI ", &
+                               "TWHT5RPYI ","TWHT5RPZI ","TWHT5TDXT ","TWHT5TDYT ","TWHT5TDZT ","TWHT5TPXI ","TWHT5TPYI ", &
+                               "TWHT5TPZI ","TWHT6ALGXT","TWHT6ALGYT","TWHT6ALGZT","TWHT6ALXT ","TWHT6ALYT ","TWHT6ALZT ", &
+                               "TWHT6FLXT ","TWHT6FLYT ","TWHT6FLZT ","TWHT6MLXT ","TWHT6MLYT ","TWHT6MLZT ","TWHT6RDXT ", &
+                               "TWHT6RDYT ","TWHT6RDZT ","TWHT6RPXI ","TWHT6RPYI ","TWHT6RPZI ","TWHT6TDXT ","TWHT6TDYT ", &
+                               "TWHT6TDZT ","TWHT6TPXI ","TWHT6TPYI ","TWHT6TPZI ","TWHT7ALGXT","TWHT7ALGYT","TWHT7ALGZT", &
+                               "TWHT7ALXT ","TWHT7ALYT ","TWHT7ALZT ","TWHT7FLXT ","TWHT7FLYT ","TWHT7FLZT ","TWHT7MLXT ", &
+                               "TWHT7MLYT ","TWHT7MLZT ","TWHT7RDXT ","TWHT7RDYT ","TWHT7RDZT ","TWHT7RPXI ","TWHT7RPYI ", &
+                               "TWHT7RPZI ","TWHT7TDXT ","TWHT7TDYT ","TWHT7TDZT ","TWHT7TPXI ","TWHT7TPYI ","TWHT7TPZI ", &
+                               "TWHT8ALGXT","TWHT8ALGYT","TWHT8ALGZT","TWHT8ALXT ","TWHT8ALYT ","TWHT8ALZT ","TWHT8FLXT ", &
+                               "TWHT8FLYT ","TWHT8FLZT ","TWHT8MLXT ","TWHT8MLYT ","TWHT8MLZT ","TWHT8RDXT ","TWHT8RDYT ", &
+                               "TWHT8RDZT ","TWHT8RPXI ","TWHT8RPYI ","TWHT8RPZI ","TWHT8TDXT ","TWHT8TDYT ","TWHT8TDZT ", &
+                               "TWHT8TPXI ","TWHT8TPYI ","TWHT8TPZI ","TWHT9ALGXT","TWHT9ALGYT","TWHT9ALGZT","TWHT9ALXT ", &
+                               "TWHT9ALYT ","TWHT9ALZT ","TWHT9FLXT ","TWHT9FLYT ","TWHT9FLZT ","TWHT9MLXT ","TWHT9MLYT ", &
+                               "TWHT9MLZT ","TWHT9RDXT ","TWHT9RDYT ","TWHT9RDZT ","TWHT9RPXI ","TWHT9RPYI ","TWHT9RPZI ", &
+                               "TWHT9TDXT ","TWHT9TDYT ","TWHT9TDZT ","TWHT9TPXI ","TWHT9TPYI ","TWHT9TPZI ","TWRBSFXT  ", &
+                               "TWRBSFYT  ","TWRBSFZT  ","TWRBSMXT  ","TWRBSMYT  ","TWRBSMZT  ","TWRCLRNC1 ","TWRCLRNC2 ", &
+                               "TWRCLRNC3 ","TWRTPTDXI ","TWRTPTDYI ","TWRTPTDZI ","TWSTDEFL1 ","TWSTDEFL2 ","TWSTDEFL3 ", &
+                               "YAWACCEL  ","YAWAZN    ","YAWAZP    ","YAWBRFXN  ","YAWBRFXP  ","YAWBRFYN  ","YAWBRFYP  ", &
+                               "YAWBRFZN  ","YAWBRFZP  ","YAWBRMXN  ","YAWBRMXP  ","YAWBRMYN  ","YAWBRMYP  ","YAWBRMZN  ", &
+                               "YAWBRMZP  ","YAWBRRAXP ","YAWBRRAYP ","YAWBRRAZP ","YAWBRRDXT ","YAWBRRDYT ","YAWBRRDZT ", &
+                               "YAWBRRVXP ","YAWBRRVYP ","YAWBRRVZP ","YAWBRTAGXP","YAWBRTAGYP","YAWBRTAGZP","YAWBRTAXP ", &
+                               "YAWBRTAYP ","YAWBRTAZP ","YAWBRTDXI ","YAWBRTDXP ","YAWBRTDXT ","YAWBRTDYI ","YAWBRTDYP ", &
+                               "YAWBRTDYT ","YAWBRTDZI ","YAWBRTDZP ","YAWBRTDZT ","YAWBRTVXP ","YAWBRTVYP ","YAWBRTVZP ", &
+                               "YAWFRIMFP ","YAWFRIMOM ","YAWFRIMZ  ","YAWPOS    ","YAWPZN    ","YAWPZP    ","YAWRATE   ", &
+                               "YAWVZN    ","YAWVZP    "/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(1115) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                  LSSTipPxa ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 , &
-                                   HSShftA ,    HSShftV ,    HSSBrTq ,    HSShftA ,  HSShftPwr ,   HSShftTq ,    HSShftV , &
-                                   TipDyc1 ,    TipDyc2 ,    TipDyc3 ,  LSSGagAxa ,  LSSGagAxa ,  LSSGagAxa ,  LSShftFxa , &
-                                 LSShftFxa ,  LSShftFya ,  LSShftFys ,  LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa , &
-                                 LSSGagMya ,  LSSGagMys ,  LSSGagMza ,  LSSGagMzs ,  LSSGagPxa ,  LSSGagPxa ,  LSSGagPxa , &
-                                 LSSGagVxa ,  LSSGagVxa ,  LSSGagVxa ,  LSShftFxa ,  LSShftFxa ,  LSShftFya ,  LSShftFys , &
-                                 LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa ,     RotPwr ,  LSShftMxa ,  LSSTipAxa , &
-                                 LSSTipAxa ,  LSSTipAxa ,  LSSTipMya ,  LSSTipMys ,  LSSTipMza ,  LSSTipMzs ,  LSSTipPxa , &
-                                 LSSTipPxa ,  LSSTipPxa ,  LSSTipVxa ,  LSSTipVxa ,  LSSTipVxa ,     YawPzn ,     YawAzn , &
-                                    YawPzn ,     YawVzn ,  NcIMURAxs ,  NcIMURAys ,  NcIMURAzs ,  NcIMURVxs ,  NcIMURVys , &
-                                 NcIMURVzs , NcIMUTAgxs , NcIMUTAgys , NcIMUTAgzs ,  NcIMUTAxs ,  NcIMUTAys ,  NcIMUTAzs , &
-                                 NcIMUTVxs ,  NcIMUTVys ,  NcIMUTVzs ,    TipDxc1 ,    TipDxc2 ,    TipDxc3 ,   TipRDyb1 , &
-                                  TipRDyb2 ,   TipRDyb3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 ,  PtchPMzc1 ,  PtchPMzc2 , &
-                                 PtchPMzc3 ,   PtfmTDzi ,   PtfmRDyi ,   PtfmRAxi ,   PtfmRAxt ,   PtfmRAyi ,   PtfmRAyt , &
-                                  PtfmRAzi ,   PtfmRAzt ,   PtfmRDxi ,   PtfmRDyi ,   PtfmRDzi ,   PtfmRDxi ,   PtfmRVxi , &
-                                  PtfmRVxt ,   PtfmRVyi ,   PtfmRVyt ,   PtfmRVzi ,   PtfmRVzt ,   PtfmTDxi ,   PtfmTDyi , &
-                                 PtfmTAgxi ,  PtfmTAgxt ,  PtfmTAgyi ,  PtfmTAgyt ,  PtfmTAgzi ,  PtfmTAgzt ,   PtfmTAxi , &
-                                  PtfmTAxt ,   PtfmTAyi ,   PtfmTAyt ,   PtfmTAzi ,   PtfmTAzt ,   PtfmTDxi ,   PtfmTDxt , &
-                                  PtfmTDyi ,   PtfmTDyt ,   PtfmTDzi ,   PtfmTDzt ,   PtfmTVxi ,   PtfmTVxt ,   PtfmTVyi , &
-                                  PtfmTVyt ,   PtfmTVzi ,   PtfmTVzt ,   PtfmRDzi ,   QD2_B1E1 ,   QD2_B1F1 ,   QD2_B1F2 , &
-                                  QD2_B2E1 ,   QD2_B2F1 ,   QD2_B2F2 ,   QD2_B3E1 ,   QD2_B3F1 ,   QD2_B3F2 ,   QD2_DrTr , &
-                                  QD2_GeAz ,     QD2_Hv ,      QD2_P ,      QD2_R ,   QD2_RFrl ,     QD2_Sg ,     QD2_Sw , &
-                                  QD2_Teet ,   QD2_TFA1 ,   QD2_TFA2 ,   QD2_TFrl ,   QD2_TSS1 ,   QD2_TSS2 ,      QD2_Y , &
-                                   QD2_Yaw ,    QD_B1E1 ,    QD_B1F1 ,    QD_B1F2 ,    QD_B2E1 ,    QD_B2F1 ,    QD_B2F2 , &
-                                   QD_B3E1 ,    QD_B3F1 ,    QD_B3F2 ,    QD_DrTr ,    QD_GeAz ,      QD_Hv ,       QD_P , &
-                                      QD_R ,    QD_RFrl ,      QD_Sg ,      QD_Sw ,    QD_Teet ,    QD_TFA1 ,    QD_TFA2 , &
-                                   QD_TFrl ,    QD_TSS1 ,    QD_TSS2 ,       QD_Y ,     QD_Yaw ,     Q_B1E1 ,     Q_B1F1 , &
-                                    Q_B1F2 ,     Q_B2E1 ,     Q_B2F1 ,     Q_B2F2 ,     Q_B3E1 ,     Q_B3F1 ,     Q_B3F2 , &
-                                    Q_DrTr ,     Q_GeAz ,       Q_Hv ,        Q_P ,        Q_R ,     Q_RFrl ,       Q_Sg , &
-                                      Q_Sw ,     Q_Teet ,     Q_TFA1 ,     Q_TFA2 ,     Q_TFrl ,     Q_TSS1 ,     Q_TSS2 , &
-                                       Q_Y ,      Q_Yaw ,    RFrlBrM ,   TipRDxb1 ,   TipRDxb2 ,   TipRDxb3 ,   RootFxb1 , &
-                                  RootFxb2 ,   RootFxb3 ,   RootFxc1 ,   RootFxc2 ,   RootFxc3 ,   RootFyb1 ,   RootFyb2 , &
-                                  RootFyb3 ,   RootFyc1 ,   RootFyc2 ,   RootFyc3 ,   RootFzc1 ,   RootFzc2 ,   RootFzc3 , &
-                                  RootFzc1 ,   RootFzc2 ,   RootFzc3 ,   RootMxb1 ,   RootMxb2 ,   RootMxb3 ,   RootMyb1 , &
-                                  RootMyb2 ,   RootMyb3 ,   RootMxc1 ,   RootMxc2 ,   RootMxc3 ,   RootMyc1 ,   RootMyc2 , &
-                                  RootMyc3 ,   RootMxb1 ,   RootMxb2 ,   RootMxb3 ,   RootMxc1 ,   RootMxc2 ,   RootMxc3 , &
-                                  RootMyb1 ,   RootMyb2 ,   RootMyb3 ,   RootMyc1 ,   RootMyc2 ,   RootMyc3 ,   RootMzc1 , &
-                                  RootMzc2 ,   RootMzc3 ,   RootMzc1 ,   RootMzc2 ,   RootMzc3 ,  LSSTipAxa ,   RotFurlP , &
-                                  RotFurlA ,   RotFurlP ,   RotFurlV ,     RotPwr ,  LSSTipVxa ,    TeetAya ,    TeetPya , &
-                                   TeetVya ,  LSShftFxa ,  LSShftMxa , Spn1ALgxb1 , Spn1ALgxb2 , Spn1ALgxb3 , Spn1ALgyb1 , &
-                                Spn1ALgyb2 , Spn1ALgyb3 , Spn1ALgzb1 , Spn1ALgzb2 , Spn1ALgzb3 ,  Spn1ALxb1 ,  Spn1ALxb2 , &
-                                 Spn1ALxb3 ,  Spn1ALyb1 ,  Spn1ALyb2 ,  Spn1ALyb3 ,  Spn1ALzb1 ,  Spn1ALzb2 ,  Spn1ALzb3 , &
-                                 Spn1FLxb1 ,  Spn1FLxb2 ,  Spn1FLxb3 ,  Spn1FLyb1 ,  Spn1FLyb2 ,  Spn1FLyb3 ,  Spn1FLzb1 , &
-                                 Spn1FLzb2 ,  Spn1FLzb3 ,  Spn1MLxb1 ,  Spn1MLxb2 ,  Spn1MLxb3 ,  Spn1MLyb1 ,  Spn1MLyb2 , &
-                                 Spn1MLyb3 ,  Spn1MLzb1 ,  Spn1MLzb2 ,  Spn1MLzb3 ,  Spn1RDxb1 ,  Spn1RDxb2 ,  Spn1RDxb3 , &
-                                 Spn1RDyb1 ,  Spn1RDyb2 ,  Spn1RDyb3 ,  Spn1RDzb1 ,  Spn1RDzb2 ,  Spn1RDzb3 ,  Spn1TDxb1 , &
-                                 Spn1TDxb2 ,  Spn1TDxb3 ,  Spn1TDyb1 ,  Spn1TDyb2 ,  Spn1TDyb3 ,  Spn1TDzb1 ,  Spn1TDzb2 , &
-                                 Spn1TDzb3 , Spn2ALgxb1 , Spn2ALgxb2 , Spn2ALgxb3 , Spn2ALgyb1 , Spn2ALgyb2 , Spn2ALgyb3 , &
-                                Spn2ALgzb1 , Spn2ALgzb2 , Spn2ALgzb3 ,  Spn2ALxb1 ,  Spn2ALxb2 ,  Spn2ALxb3 ,  Spn2ALyb1 , &
-                                 Spn2ALyb2 ,  Spn2ALyb3 ,  Spn2ALzb1 ,  Spn2ALzb2 ,  Spn2ALzb3 ,  Spn2FLxb1 ,  Spn2FLxb2 , &
-                                 Spn2FLxb3 ,  Spn2FLyb1 ,  Spn2FLyb2 ,  Spn2FLyb3 ,  Spn2FLzb1 ,  Spn2FLzb2 ,  Spn2FLzb3 , &
-                                 Spn2MLxb1 ,  Spn2MLxb2 ,  Spn2MLxb3 ,  Spn2MLyb1 ,  Spn2MLyb2 ,  Spn2MLyb3 ,  Spn2MLzb1 , &
-                                 Spn2MLzb2 ,  Spn2MLzb3 ,  Spn2RDxb1 ,  Spn2RDxb2 ,  Spn2RDxb3 ,  Spn2RDyb1 ,  Spn2RDyb2 , &
-                                 Spn2RDyb3 ,  Spn2RDzb1 ,  Spn2RDzb2 ,  Spn2RDzb3 ,  Spn2TDxb1 ,  Spn2TDxb2 ,  Spn2TDxb3 , &
-                                 Spn2TDyb1 ,  Spn2TDyb2 ,  Spn2TDyb3 ,  Spn2TDzb1 ,  Spn2TDzb2 ,  Spn2TDzb3 , Spn3ALgxb1 , &
-                                Spn3ALgxb2 , Spn3ALgxb3 , Spn3ALgyb1 , Spn3ALgyb2 , Spn3ALgyb3 , Spn3ALgzb1 , Spn3ALgzb2 , &
-                                Spn3ALgzb3 ,  Spn3ALxb1 ,  Spn3ALxb2 ,  Spn3ALxb3 ,  Spn3ALyb1 ,  Spn3ALyb2 ,  Spn3ALyb3 , &
-                                 Spn3ALzb1 ,  Spn3ALzb2 ,  Spn3ALzb3 ,  Spn3FLxb1 ,  Spn3FLxb2 ,  Spn3FLxb3 ,  Spn3FLyb1 , &
-                                 Spn3FLyb2 ,  Spn3FLyb3 ,  Spn3FLzb1 ,  Spn3FLzb2 ,  Spn3FLzb3 ,  Spn3MLxb1 ,  Spn3MLxb2 , &
-                                 Spn3MLxb3 ,  Spn3MLyb1 ,  Spn3MLyb2 ,  Spn3MLyb3 ,  Spn3MLzb1 ,  Spn3MLzb2 ,  Spn3MLzb3 , &
-                                 Spn3RDxb1 ,  Spn3RDxb2 ,  Spn3RDxb3 ,  Spn3RDyb1 ,  Spn3RDyb2 ,  Spn3RDyb3 ,  Spn3RDzb1 , &
-                                 Spn3RDzb2 ,  Spn3RDzb3 ,  Spn3TDxb1 ,  Spn3TDxb2 ,  Spn3TDxb3 ,  Spn3TDyb1 ,  Spn3TDyb2 , &
-                                 Spn3TDyb3 ,  Spn3TDzb1 ,  Spn3TDzb2 ,  Spn3TDzb3 , Spn4ALgxb1 , Spn4ALgxb2 , Spn4ALgxb3 , &
-                                Spn4ALgyb1 , Spn4ALgyb2 , Spn4ALgyb3 , Spn4ALgzb1 , Spn4ALgzb2 , Spn4ALgzb3 ,  Spn4ALxb1 , &
-                                 Spn4ALxb2 ,  Spn4ALxb3 ,  Spn4ALyb1 ,  Spn4ALyb2 ,  Spn4ALyb3 ,  Spn4ALzb1 ,  Spn4ALzb2 , &
-                                 Spn4ALzb3 ,  Spn4FLxb1 ,  Spn4FLxb2 ,  Spn4FLxb3 ,  Spn4FLyb1 ,  Spn4FLyb2 ,  Spn4FLyb3 , &
-                                 Spn4FLzb1 ,  Spn4FLzb2 ,  Spn4FLzb3 ,  Spn4MLxb1 ,  Spn4MLxb2 ,  Spn4MLxb3 ,  Spn4MLyb1 , &
-                                 Spn4MLyb2 ,  Spn4MLyb3 ,  Spn4MLzb1 ,  Spn4MLzb2 ,  Spn4MLzb3 ,  Spn4RDxb1 ,  Spn4RDxb2 , &
-                                 Spn4RDxb3 ,  Spn4RDyb1 ,  Spn4RDyb2 ,  Spn4RDyb3 ,  Spn4RDzb1 ,  Spn4RDzb2 ,  Spn4RDzb3 , &
-                                 Spn4TDxb1 ,  Spn4TDxb2 ,  Spn4TDxb3 ,  Spn4TDyb1 ,  Spn4TDyb2 ,  Spn4TDyb3 ,  Spn4TDzb1 , &
-                                 Spn4TDzb2 ,  Spn4TDzb3 , Spn5ALgxb1 , Spn5ALgxb2 , Spn5ALgxb3 , Spn5ALgyb1 , Spn5ALgyb2 , &
-                                Spn5ALgyb3 , Spn5ALgzb1 , Spn5ALgzb2 , Spn5ALgzb3 ,  Spn5ALxb1 ,  Spn5ALxb2 ,  Spn5ALxb3 , &
-                                 Spn5ALyb1 ,  Spn5ALyb2 ,  Spn5ALyb3 ,  Spn5ALzb1 ,  Spn5ALzb2 ,  Spn5ALzb3 ,  Spn5FLxb1 , &
-                                 Spn5FLxb2 ,  Spn5FLxb3 ,  Spn5FLyb1 ,  Spn5FLyb2 ,  Spn5FLyb3 ,  Spn5FLzb1 ,  Spn5FLzb2 , &
-                                 Spn5FLzb3 ,  Spn5MLxb1 ,  Spn5MLxb2 ,  Spn5MLxb3 ,  Spn5MLyb1 ,  Spn5MLyb2 ,  Spn5MLyb3 , &
-                                 Spn5MLzb1 ,  Spn5MLzb2 ,  Spn5MLzb3 ,  Spn5RDxb1 ,  Spn5RDxb2 ,  Spn5RDxb3 ,  Spn5RDyb1 , &
-                                 Spn5RDyb2 ,  Spn5RDyb3 ,  Spn5RDzb1 ,  Spn5RDzb2 ,  Spn5RDzb3 ,  Spn5TDxb1 ,  Spn5TDxb2 , &
-                                 Spn5TDxb3 ,  Spn5TDyb1 ,  Spn5TDyb2 ,  Spn5TDyb3 ,  Spn5TDzb1 ,  Spn5TDzb2 ,  Spn5TDzb3 , &
-                                Spn6ALgxb1 , Spn6ALgxb2 , Spn6ALgxb3 , Spn6ALgyb1 , Spn6ALgyb2 , Spn6ALgyb3 , Spn6ALgzb1 , &
-                                Spn6ALgzb2 , Spn6ALgzb3 ,  Spn6ALxb1 ,  Spn6ALxb2 ,  Spn6ALxb3 ,  Spn6ALyb1 ,  Spn6ALyb2 , &
-                                 Spn6ALyb3 ,  Spn6ALzb1 ,  Spn6ALzb2 ,  Spn6ALzb3 ,  Spn6FLxb1 ,  Spn6FLxb2 ,  Spn6FLxb3 , &
-                                 Spn6FLyb1 ,  Spn6FLyb2 ,  Spn6FLyb3 ,  Spn6FLzb1 ,  Spn6FLzb2 ,  Spn6FLzb3 ,  Spn6MLxb1 , &
-                                 Spn6MLxb2 ,  Spn6MLxb3 ,  Spn6MLyb1 ,  Spn6MLyb2 ,  Spn6MLyb3 ,  Spn6MLzb1 ,  Spn6MLzb2 , &
-                                 Spn6MLzb3 ,  Spn6RDxb1 ,  Spn6RDxb2 ,  Spn6RDxb3 ,  Spn6RDyb1 ,  Spn6RDyb2 ,  Spn6RDyb3 , &
-                                 Spn6RDzb1 ,  Spn6RDzb2 ,  Spn6RDzb3 ,  Spn6TDxb1 ,  Spn6TDxb2 ,  Spn6TDxb3 ,  Spn6TDyb1 , &
-                                 Spn6TDyb2 ,  Spn6TDyb3 ,  Spn6TDzb1 ,  Spn6TDzb2 ,  Spn6TDzb3 , Spn7ALgxb1 , Spn7ALgxb2 , &
-                                Spn7ALgxb3 , Spn7ALgyb1 , Spn7ALgyb2 , Spn7ALgyb3 , Spn7ALgzb1 , Spn7ALgzb2 , Spn7ALgzb3 , &
-                                 Spn7ALxb1 ,  Spn7ALxb2 ,  Spn7ALxb3 ,  Spn7ALyb1 ,  Spn7ALyb2 ,  Spn7ALyb3 ,  Spn7ALzb1 , &
-                                 Spn7ALzb2 ,  Spn7ALzb3 ,  Spn7FLxb1 ,  Spn7FLxb2 ,  Spn7FLxb3 ,  Spn7FLyb1 ,  Spn7FLyb2 , &
-                                 Spn7FLyb3 ,  Spn7FLzb1 ,  Spn7FLzb2 ,  Spn7FLzb3 ,  Spn7MLxb1 ,  Spn7MLxb2 ,  Spn7MLxb3 , &
-                                 Spn7MLyb1 ,  Spn7MLyb2 ,  Spn7MLyb3 ,  Spn7MLzb1 ,  Spn7MLzb2 ,  Spn7MLzb3 ,  Spn7RDxb1 , &
-                                 Spn7RDxb2 ,  Spn7RDxb3 ,  Spn7RDyb1 ,  Spn7RDyb2 ,  Spn7RDyb3 ,  Spn7RDzb1 ,  Spn7RDzb2 , &
-                                 Spn7RDzb3 ,  Spn7TDxb1 ,  Spn7TDxb2 ,  Spn7TDxb3 ,  Spn7TDyb1 ,  Spn7TDyb2 ,  Spn7TDyb3 , &
-                                 Spn7TDzb1 ,  Spn7TDzb2 ,  Spn7TDzb3 , Spn8ALgxb1 , Spn8ALgxb2 , Spn8ALgxb3 , Spn8ALgyb1 , &
-                                Spn8ALgyb2 , Spn8ALgyb3 , Spn8ALgzb1 , Spn8ALgzb2 , Spn8ALgzb3 ,  Spn8ALxb1 ,  Spn8ALxb2 , &
-                                 Spn8ALxb3 ,  Spn8ALyb1 ,  Spn8ALyb2 ,  Spn8ALyb3 ,  Spn8ALzb1 ,  Spn8ALzb2 ,  Spn8ALzb3 , &
-                                 Spn8FLxb1 ,  Spn8FLxb2 ,  Spn8FLxb3 ,  Spn8FLyb1 ,  Spn8FLyb2 ,  Spn8FLyb3 ,  Spn8FLzb1 , &
-                                 Spn8FLzb2 ,  Spn8FLzb3 ,  Spn8MLxb1 ,  Spn8MLxb2 ,  Spn8MLxb3 ,  Spn8MLyb1 ,  Spn8MLyb2 , &
-                                 Spn8MLyb3 ,  Spn8MLzb1 ,  Spn8MLzb2 ,  Spn8MLzb3 ,  Spn8RDxb1 ,  Spn8RDxb2 ,  Spn8RDxb3 , &
-                                 Spn8RDyb1 ,  Spn8RDyb2 ,  Spn8RDyb3 ,  Spn8RDzb1 ,  Spn8RDzb2 ,  Spn8RDzb3 ,  Spn8TDxb1 , &
-                                 Spn8TDxb2 ,  Spn8TDxb3 ,  Spn8TDyb1 ,  Spn8TDyb2 ,  Spn8TDyb3 ,  Spn8TDzb1 ,  Spn8TDzb2 , &
-                                 Spn8TDzb3 , Spn9ALgxb1 , Spn9ALgxb2 , Spn9ALgxb3 , Spn9ALgyb1 , Spn9ALgyb2 , Spn9ALgyb3 , &
-                                Spn9ALgzb1 , Spn9ALgzb2 , Spn9ALgzb3 ,  Spn9ALxb1 ,  Spn9ALxb2 ,  Spn9ALxb3 ,  Spn9ALyb1 , &
-                                 Spn9ALyb2 ,  Spn9ALyb3 ,  Spn9ALzb1 ,  Spn9ALzb2 ,  Spn9ALzb3 ,  Spn9FLxb1 ,  Spn9FLxb2 , &
-                                 Spn9FLxb3 ,  Spn9FLyb1 ,  Spn9FLyb2 ,  Spn9FLyb3 ,  Spn9FLzb1 ,  Spn9FLzb2 ,  Spn9FLzb3 , &
-                                 Spn9MLxb1 ,  Spn9MLxb2 ,  Spn9MLxb3 ,  Spn9MLyb1 ,  Spn9MLyb2 ,  Spn9MLyb3 ,  Spn9MLzb1 , &
-                                 Spn9MLzb2 ,  Spn9MLzb3 ,  Spn9RDxb1 ,  Spn9RDxb2 ,  Spn9RDxb3 ,  Spn9RDyb1 ,  Spn9RDyb2 , &
-                                 Spn9RDyb3 ,  Spn9RDzb1 ,  Spn9RDzb2 ,  Spn9RDzb3 ,  Spn9TDxb1 ,  Spn9TDxb2 ,  Spn9TDxb3 , &
-                                 Spn9TDyb1 ,  Spn9TDyb2 ,  Spn9TDyb3 ,  Spn9TDzb1 ,  Spn9TDzb2 ,  Spn9TDzb3 ,  TailFurlP , &
-                                 TailFurlA ,  TailFurlP ,  TailFurlV ,    TeetAya ,    TeetPya ,    TeetPya ,    TeetVya , &
-                                   TFrlBrM ,  TipClrnc1 ,  TipClrnc2 ,  TipClrnc3 ,  TipALgxb1 ,  TipALgxb2 ,  TipALgxb3 , &
-                                 TipALgyb1 ,  TipALgyb2 ,  TipALgyb3 ,  TipALgzb1 ,  TipALgzb2 ,  TipALgzb3 ,   TipALxb1 , &
-                                  TipALxb2 ,   TipALxb3 ,   TipALyb1 ,   TipALyb2 ,   TipALyb3 ,   TipALzb1 ,   TipALzb2 , &
-                                  TipALzb3 ,  TipClrnc1 ,  TipClrnc2 ,  TipClrnc3 ,    TipDxb1 ,    TipDxb2 ,    TipDxb3 , &
-                                   TipDxc1 ,    TipDxc2 ,    TipDxc3 ,    TipDyb1 ,    TipDyb2 ,    TipDyb3 ,    TipDyc1 , &
-                                   TipDyc2 ,    TipDyc3 ,    TipDzc1 ,    TipDzc2 ,    TipDzc3 ,    TipDzc1 ,    TipDzc2 , &
-                                   TipDzc3 ,   TipRDxb1 ,   TipRDxb2 ,   TipRDxb3 ,   TipRDyb1 ,   TipRDyb2 ,   TipRDyb3 , &
-                                  TipRDzc1 ,   TipRDzc2 ,   TipRDzc3 ,   TipRDzc1 ,   TipRDzc2 ,   TipRDzc3 ,  YawBrTDzt , &
-                                 YawBrTDxt ,  YawBrRDyt ,  YawBrRDxt ,  YawBrTDyt ,  YawBrRDzt , TwHt1ALgxt , TwHt1ALgyt , &
-                                TwHt1ALgzt ,  TwHt1ALxt ,  TwHt1ALyt ,  TwHt1ALzt ,  TwHt1FLxt ,  TwHt1FLyt ,  TwHt1FLzt , &
-                                 TwHt1MLxt ,  TwHt1MLyt ,  TwHt1MLzt ,  TwHt1RDxt ,  TwHt1RDyt ,  TwHt1RDzt ,  TwHt1RPxi , &
-                                 TwHt1RPyi ,  TwHt1RPzi ,  TwHt1TDxt ,  TwHt1TDyt ,  TwHt1TDzt ,  TwHt1TPxi ,  TwHt1TPyi , &
-                                 TwHt1TPzi , TwHt2ALgxt , TwHt2ALgyt , TwHt2ALgzt ,  TwHt2ALxt ,  TwHt2ALyt ,  TwHt2ALzt , &
-                                 TwHt2FLxt ,  TwHt2FLyt ,  TwHt2FLzt ,  TwHt2MLxt ,  TwHt2MLyt ,  TwHt2MLzt ,  TwHt2RDxt , &
-                                 TwHt2RDyt ,  TwHt2RDzt ,  TwHt2RPxi ,  TwHt2RPyi ,  TwHt2RPzi ,  TwHt2TDxt ,  TwHt2TDyt , &
-                                 TwHt2TDzt ,  TwHt2TPxi ,  TwHt2TPyi ,  TwHt2TPzi , TwHt3ALgxt , TwHt3ALgyt , TwHt3ALgzt , &
-                                 TwHt3ALxt ,  TwHt3ALyt ,  TwHt3ALzt ,  TwHt3FLxt ,  TwHt3FLyt ,  TwHt3FLzt ,  TwHt3MLxt , &
-                                 TwHt3MLyt ,  TwHt3MLzt ,  TwHt3RDxt ,  TwHt3RDyt ,  TwHt3RDzt ,  TwHt3RPxi ,  TwHt3RPyi , &
-                                 TwHt3RPzi ,  TwHt3TDxt ,  TwHt3TDyt ,  TwHt3TDzt ,  TwHt3TPxi ,  TwHt3TPyi ,  TwHt3TPzi , &
-                                TwHt4ALgxt , TwHt4ALgyt , TwHt4ALgzt ,  TwHt4ALxt ,  TwHt4ALyt ,  TwHt4ALzt ,  TwHt4FLxt , &
-                                 TwHt4FLyt ,  TwHt4FLzt ,  TwHt4MLxt ,  TwHt4MLyt ,  TwHt4MLzt ,  TwHt4RDxt ,  TwHt4RDyt , &
-                                 TwHt4RDzt ,  TwHt4RPxi ,  TwHt4RPyi ,  TwHt4RPzi ,  TwHt4TDxt ,  TwHt4TDyt ,  TwHt4TDzt , &
-                                 TwHt4TPxi ,  TwHt4TPyi ,  TwHt4TPzi , TwHt5ALgxt , TwHt5ALgyt , TwHt5ALgzt ,  TwHt5ALxt , &
-                                 TwHt5ALyt ,  TwHt5ALzt ,  TwHt5FLxt ,  TwHt5FLyt ,  TwHt5FLzt ,  TwHt5MLxt ,  TwHt5MLyt , &
-                                 TwHt5MLzt ,  TwHt5RDxt ,  TwHt5RDyt ,  TwHt5RDzt ,  TwHt5RPxi ,  TwHt5RPyi ,  TwHt5RPzi , &
-                                 TwHt5TDxt ,  TwHt5TDyt ,  TwHt5TDzt ,  TwHt5TPxi ,  TwHt5TPyi ,  TwHt5TPzi , TwHt6ALgxt , &
-                                TwHt6ALgyt , TwHt6ALgzt ,  TwHt6ALxt ,  TwHt6ALyt ,  TwHt6ALzt ,  TwHt6FLxt ,  TwHt6FLyt , &
-                                 TwHt6FLzt ,  TwHt6MLxt ,  TwHt6MLyt ,  TwHt6MLzt ,  TwHt6RDxt ,  TwHt6RDyt ,  TwHt6RDzt , &
-                                 TwHt6RPxi ,  TwHt6RPyi ,  TwHt6RPzi ,  TwHt6TDxt ,  TwHt6TDyt ,  TwHt6TDzt ,  TwHt6TPxi , &
-                                 TwHt6TPyi ,  TwHt6TPzi , TwHt7ALgxt , TwHt7ALgyt , TwHt7ALgzt ,  TwHt7ALxt ,  TwHt7ALyt , &
-                                 TwHt7ALzt ,  TwHt7FLxt ,  TwHt7FLyt ,  TwHt7FLzt ,  TwHt7MLxt ,  TwHt7MLyt ,  TwHt7MLzt , &
-                                 TwHt7RDxt ,  TwHt7RDyt ,  TwHt7RDzt ,  TwHt7RPxi ,  TwHt7RPyi ,  TwHt7RPzi ,  TwHt7TDxt , &
-                                 TwHt7TDyt ,  TwHt7TDzt ,  TwHt7TPxi ,  TwHt7TPyi ,  TwHt7TPzi , TwHt8ALgxt , TwHt8ALgyt , &
-                                TwHt8ALgzt ,  TwHt8ALxt ,  TwHt8ALyt ,  TwHt8ALzt ,  TwHt8FLxt ,  TwHt8FLyt ,  TwHt8FLzt , &
-                                 TwHt8MLxt ,  TwHt8MLyt ,  TwHt8MLzt ,  TwHt8RDxt ,  TwHt8RDyt ,  TwHt8RDzt ,  TwHt8RPxi , &
-                                 TwHt8RPyi ,  TwHt8RPzi ,  TwHt8TDxt ,  TwHt8TDyt ,  TwHt8TDzt ,  TwHt8TPxi ,  TwHt8TPyi , &
-                                 TwHt8TPzi , TwHt9ALgxt , TwHt9ALgyt , TwHt9ALgzt ,  TwHt9ALxt ,  TwHt9ALyt ,  TwHt9ALzt , &
-                                 TwHt9FLxt ,  TwHt9FLyt ,  TwHt9FLzt ,  TwHt9MLxt ,  TwHt9MLyt ,  TwHt9MLzt ,  TwHt9RDxt , &
-                                 TwHt9RDyt ,  TwHt9RDzt ,  TwHt9RPxi ,  TwHt9RPyi ,  TwHt9RPzi ,  TwHt9TDxt ,  TwHt9TDyt , &
-                                 TwHt9TDzt ,  TwHt9TPxi ,  TwHt9TPyi ,  TwHt9TPzi ,   TwrBsFxt ,   TwrBsFyt ,   TwrBsFzt , &
-                                  TwrBsMxt ,   TwrBsMyt ,   TwrBsMzt ,  TipClrnc1 ,  TipClrnc2 ,  TipClrnc3 ,  TwrTpTDxi , &
-                                 TwrTpTDyi ,  TwrTpTDzi ,   TipRDzc1 ,   TipRDzc2 ,   TipRDzc3 ,     YawAzn ,     YawAzn , &
-                                    YawAzn ,   YawBrFxn ,   YawBrFxp ,   YawBrFyn ,   YawBrFyp ,   YawBrFzn ,   YawBrFzn , &
-                                  YawBrMxn ,   YawBrMxp ,   YawBrMyn ,   YawBrMyp ,   YawBrMzn ,   YawBrMzn ,  YawBrRAxp , &
-                                 YawBrRAyp ,  YawBrRAzp ,  YawBrRDxt ,  YawBrRDyt ,  YawBrRDzt ,  YawBrRVxp ,  YawBrRVyp , &
-                                 YawBrRVzp , YawBrTAgxp , YawBrTAgyp , YawBrTAgzp ,  YawBrTAxp ,  YawBrTAyp ,  YawBrTAzp , &
-                                 TwrTpTDxi ,  YawBrTDxp ,  YawBrTDxt ,  TwrTpTDyi ,  YawBrTDyp ,  YawBrTDyt ,  TwrTpTDzi , &
-                                 YawBrTDzp ,  YawBrTDzt ,  YawBrTVxp ,  YawBrTVyp ,  YawBrTVzp ,     YawPzn ,     YawPzn , &
-                                    YawPzn ,     YawVzn ,     YawVzn ,     YawVzn /)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1110) =  (/  &  ! This lists the units corresponding to the allowed parameters
+                                  dOmegaYF ,    HSShftA ,    HSShftV ,    HSSBrTq ,    HSShftA ,  HSShftPwr ,   HSShftTq , &
+                                   HSShftV ,    TipDyc1 ,    TipDyc2 ,    TipDyc3 ,  LSSGagAxa ,  LSSGagAxa ,  LSSGagAxa , &
+                                 LSShftFxa ,  LSShftFxa ,  LSShftFya ,  LSShftFys ,  LSShftFza ,  LSShftFzs ,  LSShftMxa , &
+                                 LSShftMxa ,  LSSGagMya ,  LSSGagMys ,  LSSGagMza ,  LSSGagMzs ,  LSSGagPxa ,  LSSGagPxa , &
+                                 LSSGagPxa ,  LSSGagVxa ,  LSSGagVxa ,  LSSGagVxa ,  LSShftFxa ,  LSShftFxa ,  LSShftFya , &
+                                 LSShftFys ,  LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa ,     RotPwr ,  LSShftMxa , &
+                                 LSSTipAxa ,  LSSTipAxa ,  LSSTipAxa ,  LSSTipMya ,  LSSTipMys ,  LSSTipMza ,  LSSTipMzs , &
+                                 LSSTipPxa ,  LSSTipPxa ,  LSSTipPxa ,  LSSTipVxa ,  LSSTipVxa ,  LSSTipVxa ,     YawPzn , &
+                                    YawAzn ,     YawPzn ,     YawVzn ,  NcIMURAxs ,  NcIMURAys ,  NcIMURAzs ,  NcIMURVxs , &
+                                 NcIMURVys ,  NcIMURVzs , NcIMUTAgxs , NcIMUTAgys , NcIMUTAgzs ,  NcIMUTAxs ,  NcIMUTAys , &
+                                 NcIMUTAzs ,  NcIMUTVxs ,  NcIMUTVys ,  NcIMUTVzs ,    OmegaYF ,    TipDxc1 ,    TipDxc2 , &
+                                   TipDxc3 ,   TipRDyb1 ,   TipRDyb2 ,   TipRDyb3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 , &
+                                 PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 ,   PtfmTDzi ,   PtfmRDyi ,   PtfmRAxi ,   PtfmRAxt , &
+                                  PtfmRAyi ,   PtfmRAyt ,   PtfmRAzi ,   PtfmRAzt ,   PtfmRDxi ,   PtfmRDyi ,   PtfmRDzi , &
+                                  PtfmRDxi ,   PtfmRVxi ,   PtfmRVxt ,   PtfmRVyi ,   PtfmRVyt ,   PtfmRVzi ,   PtfmRVzt , &
+                                  PtfmTDxi ,   PtfmTDyi ,  PtfmTAgxi ,  PtfmTAgxt ,  PtfmTAgyi ,  PtfmTAgyt ,  PtfmTAgzi , &
+                                 PtfmTAgzt ,   PtfmTAxi ,   PtfmTAxt ,   PtfmTAyi ,   PtfmTAyt ,   PtfmTAzi ,   PtfmTAzt , &
+                                  PtfmTDxi ,   PtfmTDxt ,   PtfmTDyi ,   PtfmTDyt ,   PtfmTDzi ,   PtfmTDzt ,   PtfmTVxi , &
+                                  PtfmTVxt ,   PtfmTVyi ,   PtfmTVyt ,   PtfmTVzi ,   PtfmTVzt ,   PtfmRDzi ,   QD2_B1E1 , &
+                                  QD2_B1F1 ,   QD2_B1F2 ,   QD2_B2E1 ,   QD2_B2F1 ,   QD2_B2F2 ,   QD2_B3E1 ,   QD2_B3F1 , &
+                                  QD2_B3F2 ,   QD2_DrTr ,   QD2_GeAz ,     QD2_Hv ,      QD2_P ,      QD2_R ,   QD2_RFrl , &
+                                    QD2_Sg ,     QD2_Sw ,   QD2_Teet ,   QD2_TFA1 ,   QD2_TFA2 ,   QD2_TFrl ,   QD2_TSS1 , &
+                                  QD2_TSS2 ,      QD2_Y ,    QD2_Yaw ,    QD_B1E1 ,    QD_B1F1 ,    QD_B1F2 ,    QD_B2E1 , &
+                                   QD_B2F1 ,    QD_B2F2 ,    QD_B3E1 ,    QD_B3F1 ,    QD_B3F2 ,    QD_DrTr ,    QD_GeAz , &
+                                     QD_Hv ,       QD_P ,       QD_R ,    QD_RFrl ,      QD_Sg ,      QD_Sw ,    QD_Teet , &
+                                   QD_TFA1 ,    QD_TFA2 ,    QD_TFrl ,    QD_TSS1 ,    QD_TSS2 ,       QD_Y ,     QD_Yaw , &
+                                    Q_B1E1 ,     Q_B1F1 ,     Q_B1F2 ,     Q_B2E1 ,     Q_B2F1 ,     Q_B2F2 ,     Q_B3E1 , &
+                                    Q_B3F1 ,     Q_B3F2 ,     Q_DrTr ,     Q_GeAz ,       Q_Hv ,        Q_P ,        Q_R , &
+                                    Q_RFrl ,       Q_Sg ,       Q_Sw ,     Q_Teet ,     Q_TFA1 ,     Q_TFA2 ,     Q_TFrl , &
+                                    Q_TSS1 ,     Q_TSS2 ,        Q_Y ,      Q_Yaw ,    RFrlBrM ,   TipRDxb1 ,   TipRDxb2 , &
+                                  TipRDxb3 ,   RootFxb1 ,   RootFxb2 ,   RootFxb3 ,   RootFxc1 ,   RootFxc2 ,   RootFxc3 , &
+                                  RootFyb1 ,   RootFyb2 ,   RootFyb3 ,   RootFyc1 ,   RootFyc2 ,   RootFyc3 ,   RootFzc1 , &
+                                  RootFzc2 ,   RootFzc3 ,   RootFzc1 ,   RootFzc2 ,   RootFzc3 ,   RootMxb1 ,   RootMxb2 , &
+                                  RootMxb3 ,   RootMyb1 ,   RootMyb2 ,   RootMyb3 ,   RootMxc1 ,   RootMxc2 ,   RootMxc3 , &
+                                  RootMyc1 ,   RootMyc2 ,   RootMyc3 ,   RootMxb1 ,   RootMxb2 ,   RootMxb3 ,   RootMxc1 , &
+                                  RootMxc2 ,   RootMxc3 ,   RootMyb1 ,   RootMyb2 ,   RootMyb3 ,   RootMyc1 ,   RootMyc2 , &
+                                  RootMyc3 ,   RootMzc1 ,   RootMzc2 ,   RootMzc3 ,   RootMzc1 ,   RootMzc2 ,   RootMzc3 , &
+                                 LSSTipAxa ,   RotFurlP ,   RotFurlA ,   RotFurlP ,   RotFurlV ,     RotPwr ,  LSSTipVxa , &
+                                   TeetAya ,    TeetPya ,    TeetVya ,  LSShftFxa ,  LSShftMxa , Spn1ALgxb1 , Spn1ALgxb2 , &
+                                Spn1ALgxb3 , Spn1ALgyb1 , Spn1ALgyb2 , Spn1ALgyb3 , Spn1ALgzb1 , Spn1ALgzb2 , Spn1ALgzb3 , &
+                                 Spn1ALxb1 ,  Spn1ALxb2 ,  Spn1ALxb3 ,  Spn1ALyb1 ,  Spn1ALyb2 ,  Spn1ALyb3 ,  Spn1ALzb1 , &
+                                 Spn1ALzb2 ,  Spn1ALzb3 ,  Spn1FLxb1 ,  Spn1FLxb2 ,  Spn1FLxb3 ,  Spn1FLyb1 ,  Spn1FLyb2 , &
+                                 Spn1FLyb3 ,  Spn1FLzb1 ,  Spn1FLzb2 ,  Spn1FLzb3 ,  Spn1MLxb1 ,  Spn1MLxb2 ,  Spn1MLxb3 , &
+                                 Spn1MLyb1 ,  Spn1MLyb2 ,  Spn1MLyb3 ,  Spn1MLzb1 ,  Spn1MLzb2 ,  Spn1MLzb3 ,  Spn1RDxb1 , &
+                                 Spn1RDxb2 ,  Spn1RDxb3 ,  Spn1RDyb1 ,  Spn1RDyb2 ,  Spn1RDyb3 ,  Spn1RDzb1 ,  Spn1RDzb2 , &
+                                 Spn1RDzb3 ,  Spn1TDxb1 ,  Spn1TDxb2 ,  Spn1TDxb3 ,  Spn1TDyb1 ,  Spn1TDyb2 ,  Spn1TDyb3 , &
+                                 Spn1TDzb1 ,  Spn1TDzb2 ,  Spn1TDzb3 , Spn2ALgxb1 , Spn2ALgxb2 , Spn2ALgxb3 , Spn2ALgyb1 , &
+                                Spn2ALgyb2 , Spn2ALgyb3 , Spn2ALgzb1 , Spn2ALgzb2 , Spn2ALgzb3 ,  Spn2ALxb1 ,  Spn2ALxb2 , &
+                                 Spn2ALxb3 ,  Spn2ALyb1 ,  Spn2ALyb2 ,  Spn2ALyb3 ,  Spn2ALzb1 ,  Spn2ALzb2 ,  Spn2ALzb3 , &
+                                 Spn2FLxb1 ,  Spn2FLxb2 ,  Spn2FLxb3 ,  Spn2FLyb1 ,  Spn2FLyb2 ,  Spn2FLyb3 ,  Spn2FLzb1 , &
+                                 Spn2FLzb2 ,  Spn2FLzb3 ,  Spn2MLxb1 ,  Spn2MLxb2 ,  Spn2MLxb3 ,  Spn2MLyb1 ,  Spn2MLyb2 , &
+                                 Spn2MLyb3 ,  Spn2MLzb1 ,  Spn2MLzb2 ,  Spn2MLzb3 ,  Spn2RDxb1 ,  Spn2RDxb2 ,  Spn2RDxb3 , &
+                                 Spn2RDyb1 ,  Spn2RDyb2 ,  Spn2RDyb3 ,  Spn2RDzb1 ,  Spn2RDzb2 ,  Spn2RDzb3 ,  Spn2TDxb1 , &
+                                 Spn2TDxb2 ,  Spn2TDxb3 ,  Spn2TDyb1 ,  Spn2TDyb2 ,  Spn2TDyb3 ,  Spn2TDzb1 ,  Spn2TDzb2 , &
+                                 Spn2TDzb3 , Spn3ALgxb1 , Spn3ALgxb2 , Spn3ALgxb3 , Spn3ALgyb1 , Spn3ALgyb2 , Spn3ALgyb3 , &
+                                Spn3ALgzb1 , Spn3ALgzb2 , Spn3ALgzb3 ,  Spn3ALxb1 ,  Spn3ALxb2 ,  Spn3ALxb3 ,  Spn3ALyb1 , &
+                                 Spn3ALyb2 ,  Spn3ALyb3 ,  Spn3ALzb1 ,  Spn3ALzb2 ,  Spn3ALzb3 ,  Spn3FLxb1 ,  Spn3FLxb2 , &
+                                 Spn3FLxb3 ,  Spn3FLyb1 ,  Spn3FLyb2 ,  Spn3FLyb3 ,  Spn3FLzb1 ,  Spn3FLzb2 ,  Spn3FLzb3 , &
+                                 Spn3MLxb1 ,  Spn3MLxb2 ,  Spn3MLxb3 ,  Spn3MLyb1 ,  Spn3MLyb2 ,  Spn3MLyb3 ,  Spn3MLzb1 , &
+                                 Spn3MLzb2 ,  Spn3MLzb3 ,  Spn3RDxb1 ,  Spn3RDxb2 ,  Spn3RDxb3 ,  Spn3RDyb1 ,  Spn3RDyb2 , &
+                                 Spn3RDyb3 ,  Spn3RDzb1 ,  Spn3RDzb2 ,  Spn3RDzb3 ,  Spn3TDxb1 ,  Spn3TDxb2 ,  Spn3TDxb3 , &
+                                 Spn3TDyb1 ,  Spn3TDyb2 ,  Spn3TDyb3 ,  Spn3TDzb1 ,  Spn3TDzb2 ,  Spn3TDzb3 , Spn4ALgxb1 , &
+                                Spn4ALgxb2 , Spn4ALgxb3 , Spn4ALgyb1 , Spn4ALgyb2 , Spn4ALgyb3 , Spn4ALgzb1 , Spn4ALgzb2 , &
+                                Spn4ALgzb3 ,  Spn4ALxb1 ,  Spn4ALxb2 ,  Spn4ALxb3 ,  Spn4ALyb1 ,  Spn4ALyb2 ,  Spn4ALyb3 , &
+                                 Spn4ALzb1 ,  Spn4ALzb2 ,  Spn4ALzb3 ,  Spn4FLxb1 ,  Spn4FLxb2 ,  Spn4FLxb3 ,  Spn4FLyb1 , &
+                                 Spn4FLyb2 ,  Spn4FLyb3 ,  Spn4FLzb1 ,  Spn4FLzb2 ,  Spn4FLzb3 ,  Spn4MLxb1 ,  Spn4MLxb2 , &
+                                 Spn4MLxb3 ,  Spn4MLyb1 ,  Spn4MLyb2 ,  Spn4MLyb3 ,  Spn4MLzb1 ,  Spn4MLzb2 ,  Spn4MLzb3 , &
+                                 Spn4RDxb1 ,  Spn4RDxb2 ,  Spn4RDxb3 ,  Spn4RDyb1 ,  Spn4RDyb2 ,  Spn4RDyb3 ,  Spn4RDzb1 , &
+                                 Spn4RDzb2 ,  Spn4RDzb3 ,  Spn4TDxb1 ,  Spn4TDxb2 ,  Spn4TDxb3 ,  Spn4TDyb1 ,  Spn4TDyb2 , &
+                                 Spn4TDyb3 ,  Spn4TDzb1 ,  Spn4TDzb2 ,  Spn4TDzb3 , Spn5ALgxb1 , Spn5ALgxb2 , Spn5ALgxb3 , &
+                                Spn5ALgyb1 , Spn5ALgyb2 , Spn5ALgyb3 , Spn5ALgzb1 , Spn5ALgzb2 , Spn5ALgzb3 ,  Spn5ALxb1 , &
+                                 Spn5ALxb2 ,  Spn5ALxb3 ,  Spn5ALyb1 ,  Spn5ALyb2 ,  Spn5ALyb3 ,  Spn5ALzb1 ,  Spn5ALzb2 , &
+                                 Spn5ALzb3 ,  Spn5FLxb1 ,  Spn5FLxb2 ,  Spn5FLxb3 ,  Spn5FLyb1 ,  Spn5FLyb2 ,  Spn5FLyb3 , &
+                                 Spn5FLzb1 ,  Spn5FLzb2 ,  Spn5FLzb3 ,  Spn5MLxb1 ,  Spn5MLxb2 ,  Spn5MLxb3 ,  Spn5MLyb1 , &
+                                 Spn5MLyb2 ,  Spn5MLyb3 ,  Spn5MLzb1 ,  Spn5MLzb2 ,  Spn5MLzb3 ,  Spn5RDxb1 ,  Spn5RDxb2 , &
+                                 Spn5RDxb3 ,  Spn5RDyb1 ,  Spn5RDyb2 ,  Spn5RDyb3 ,  Spn5RDzb1 ,  Spn5RDzb2 ,  Spn5RDzb3 , &
+                                 Spn5TDxb1 ,  Spn5TDxb2 ,  Spn5TDxb3 ,  Spn5TDyb1 ,  Spn5TDyb2 ,  Spn5TDyb3 ,  Spn5TDzb1 , &
+                                 Spn5TDzb2 ,  Spn5TDzb3 , Spn6ALgxb1 , Spn6ALgxb2 , Spn6ALgxb3 , Spn6ALgyb1 , Spn6ALgyb2 , &
+                                Spn6ALgyb3 , Spn6ALgzb1 , Spn6ALgzb2 , Spn6ALgzb3 ,  Spn6ALxb1 ,  Spn6ALxb2 ,  Spn6ALxb3 , &
+                                 Spn6ALyb1 ,  Spn6ALyb2 ,  Spn6ALyb3 ,  Spn6ALzb1 ,  Spn6ALzb2 ,  Spn6ALzb3 ,  Spn6FLxb1 , &
+                                 Spn6FLxb2 ,  Spn6FLxb3 ,  Spn6FLyb1 ,  Spn6FLyb2 ,  Spn6FLyb3 ,  Spn6FLzb1 ,  Spn6FLzb2 , &
+                                 Spn6FLzb3 ,  Spn6MLxb1 ,  Spn6MLxb2 ,  Spn6MLxb3 ,  Spn6MLyb1 ,  Spn6MLyb2 ,  Spn6MLyb3 , &
+                                 Spn6MLzb1 ,  Spn6MLzb2 ,  Spn6MLzb3 ,  Spn6RDxb1 ,  Spn6RDxb2 ,  Spn6RDxb3 ,  Spn6RDyb1 , &
+                                 Spn6RDyb2 ,  Spn6RDyb3 ,  Spn6RDzb1 ,  Spn6RDzb2 ,  Spn6RDzb3 ,  Spn6TDxb1 ,  Spn6TDxb2 , &
+                                 Spn6TDxb3 ,  Spn6TDyb1 ,  Spn6TDyb2 ,  Spn6TDyb3 ,  Spn6TDzb1 ,  Spn6TDzb2 ,  Spn6TDzb3 , &
+                                Spn7ALgxb1 , Spn7ALgxb2 , Spn7ALgxb3 , Spn7ALgyb1 , Spn7ALgyb2 , Spn7ALgyb3 , Spn7ALgzb1 , &
+                                Spn7ALgzb2 , Spn7ALgzb3 ,  Spn7ALxb1 ,  Spn7ALxb2 ,  Spn7ALxb3 ,  Spn7ALyb1 ,  Spn7ALyb2 , &
+                                 Spn7ALyb3 ,  Spn7ALzb1 ,  Spn7ALzb2 ,  Spn7ALzb3 ,  Spn7FLxb1 ,  Spn7FLxb2 ,  Spn7FLxb3 , &
+                                 Spn7FLyb1 ,  Spn7FLyb2 ,  Spn7FLyb3 ,  Spn7FLzb1 ,  Spn7FLzb2 ,  Spn7FLzb3 ,  Spn7MLxb1 , &
+                                 Spn7MLxb2 ,  Spn7MLxb3 ,  Spn7MLyb1 ,  Spn7MLyb2 ,  Spn7MLyb3 ,  Spn7MLzb1 ,  Spn7MLzb2 , &
+                                 Spn7MLzb3 ,  Spn7RDxb1 ,  Spn7RDxb2 ,  Spn7RDxb3 ,  Spn7RDyb1 ,  Spn7RDyb2 ,  Spn7RDyb3 , &
+                                 Spn7RDzb1 ,  Spn7RDzb2 ,  Spn7RDzb3 ,  Spn7TDxb1 ,  Spn7TDxb2 ,  Spn7TDxb3 ,  Spn7TDyb1 , &
+                                 Spn7TDyb2 ,  Spn7TDyb3 ,  Spn7TDzb1 ,  Spn7TDzb2 ,  Spn7TDzb3 , Spn8ALgxb1 , Spn8ALgxb2 , &
+                                Spn8ALgxb3 , Spn8ALgyb1 , Spn8ALgyb2 , Spn8ALgyb3 , Spn8ALgzb1 , Spn8ALgzb2 , Spn8ALgzb3 , &
+                                 Spn8ALxb1 ,  Spn8ALxb2 ,  Spn8ALxb3 ,  Spn8ALyb1 ,  Spn8ALyb2 ,  Spn8ALyb3 ,  Spn8ALzb1 , &
+                                 Spn8ALzb2 ,  Spn8ALzb3 ,  Spn8FLxb1 ,  Spn8FLxb2 ,  Spn8FLxb3 ,  Spn8FLyb1 ,  Spn8FLyb2 , &
+                                 Spn8FLyb3 ,  Spn8FLzb1 ,  Spn8FLzb2 ,  Spn8FLzb3 ,  Spn8MLxb1 ,  Spn8MLxb2 ,  Spn8MLxb3 , &
+                                 Spn8MLyb1 ,  Spn8MLyb2 ,  Spn8MLyb3 ,  Spn8MLzb1 ,  Spn8MLzb2 ,  Spn8MLzb3 ,  Spn8RDxb1 , &
+                                 Spn8RDxb2 ,  Spn8RDxb3 ,  Spn8RDyb1 ,  Spn8RDyb2 ,  Spn8RDyb3 ,  Spn8RDzb1 ,  Spn8RDzb2 , &
+                                 Spn8RDzb3 ,  Spn8TDxb1 ,  Spn8TDxb2 ,  Spn8TDxb3 ,  Spn8TDyb1 ,  Spn8TDyb2 ,  Spn8TDyb3 , &
+                                 Spn8TDzb1 ,  Spn8TDzb2 ,  Spn8TDzb3 , Spn9ALgxb1 , Spn9ALgxb2 , Spn9ALgxb3 , Spn9ALgyb1 , &
+                                Spn9ALgyb2 , Spn9ALgyb3 , Spn9ALgzb1 , Spn9ALgzb2 , Spn9ALgzb3 ,  Spn9ALxb1 ,  Spn9ALxb2 , &
+                                 Spn9ALxb3 ,  Spn9ALyb1 ,  Spn9ALyb2 ,  Spn9ALyb3 ,  Spn9ALzb1 ,  Spn9ALzb2 ,  Spn9ALzb3 , &
+                                 Spn9FLxb1 ,  Spn9FLxb2 ,  Spn9FLxb3 ,  Spn9FLyb1 ,  Spn9FLyb2 ,  Spn9FLyb3 ,  Spn9FLzb1 , &
+                                 Spn9FLzb2 ,  Spn9FLzb3 ,  Spn9MLxb1 ,  Spn9MLxb2 ,  Spn9MLxb3 ,  Spn9MLyb1 ,  Spn9MLyb2 , &
+                                 Spn9MLyb3 ,  Spn9MLzb1 ,  Spn9MLzb2 ,  Spn9MLzb3 ,  Spn9RDxb1 ,  Spn9RDxb2 ,  Spn9RDxb3 , &
+                                 Spn9RDyb1 ,  Spn9RDyb2 ,  Spn9RDyb3 ,  Spn9RDzb1 ,  Spn9RDzb2 ,  Spn9RDzb3 ,  Spn9TDxb1 , &
+                                 Spn9TDxb2 ,  Spn9TDxb3 ,  Spn9TDyb1 ,  Spn9TDyb2 ,  Spn9TDyb3 ,  Spn9TDzb1 ,  Spn9TDzb2 , &
+                                 Spn9TDzb3 ,  TailFurlP ,  TailFurlA ,  TailFurlP ,  TailFurlV ,    TeetAya ,    TeetPya , &
+                                   TeetPya ,    TeetVya ,    TFrlBrM ,  TipClrnc1 ,  TipClrnc2 ,  TipClrnc3 ,  TipALgxb1 , &
+                                 TipALgxb2 ,  TipALgxb3 ,  TipALgyb1 ,  TipALgyb2 ,  TipALgyb3 ,  TipALgzb1 ,  TipALgzb2 , &
+                                 TipALgzb3 ,   TipALxb1 ,   TipALxb2 ,   TipALxb3 ,   TipALyb1 ,   TipALyb2 ,   TipALyb3 , &
+                                  TipALzb1 ,   TipALzb2 ,   TipALzb3 ,  TipClrnc1 ,  TipClrnc2 ,  TipClrnc3 ,    TipDxb1 , &
+                                   TipDxb2 ,    TipDxb3 ,    TipDxc1 ,    TipDxc2 ,    TipDxc3 ,    TipDyb1 ,    TipDyb2 , &
+                                   TipDyb3 ,    TipDyc1 ,    TipDyc2 ,    TipDyc3 ,    TipDzc1 ,    TipDzc2 ,    TipDzc3 , &
+                                   TipDzc1 ,    TipDzc2 ,    TipDzc3 ,   TipRDxb1 ,   TipRDxb2 ,   TipRDxb3 ,   TipRDyb1 , &
+                                  TipRDyb2 ,   TipRDyb3 ,   TipRDzc1 ,   TipRDzc2 ,   TipRDzc3 ,   TipRDzc1 ,   TipRDzc2 , &
+                                  TipRDzc3 ,  YawBrTDzt ,  YawBrTDxt ,  YawBrRDyt ,  YawBrRDxt ,  YawBrTDyt ,  YawBrRDzt , &
+                                TwHt1ALgxt , TwHt1ALgyt , TwHt1ALgzt ,  TwHt1ALxt ,  TwHt1ALyt ,  TwHt1ALzt ,  TwHt1FLxt , &
+                                 TwHt1FLyt ,  TwHt1FLzt ,  TwHt1MLxt ,  TwHt1MLyt ,  TwHt1MLzt ,  TwHt1RDxt ,  TwHt1RDyt , &
+                                 TwHt1RDzt ,  TwHt1RPxi ,  TwHt1RPyi ,  TwHt1RPzi ,  TwHt1TDxt ,  TwHt1TDyt ,  TwHt1TDzt , &
+                                 TwHt1TPxi ,  TwHt1TPyi ,  TwHt1TPzi , TwHt2ALgxt , TwHt2ALgyt , TwHt2ALgzt ,  TwHt2ALxt , &
+                                 TwHt2ALyt ,  TwHt2ALzt ,  TwHt2FLxt ,  TwHt2FLyt ,  TwHt2FLzt ,  TwHt2MLxt ,  TwHt2MLyt , &
+                                 TwHt2MLzt ,  TwHt2RDxt ,  TwHt2RDyt ,  TwHt2RDzt ,  TwHt2RPxi ,  TwHt2RPyi ,  TwHt2RPzi , &
+                                 TwHt2TDxt ,  TwHt2TDyt ,  TwHt2TDzt ,  TwHt2TPxi ,  TwHt2TPyi ,  TwHt2TPzi , TwHt3ALgxt , &
+                                TwHt3ALgyt , TwHt3ALgzt ,  TwHt3ALxt ,  TwHt3ALyt ,  TwHt3ALzt ,  TwHt3FLxt ,  TwHt3FLyt , &
+                                 TwHt3FLzt ,  TwHt3MLxt ,  TwHt3MLyt ,  TwHt3MLzt ,  TwHt3RDxt ,  TwHt3RDyt ,  TwHt3RDzt , &
+                                 TwHt3RPxi ,  TwHt3RPyi ,  TwHt3RPzi ,  TwHt3TDxt ,  TwHt3TDyt ,  TwHt3TDzt ,  TwHt3TPxi , &
+                                 TwHt3TPyi ,  TwHt3TPzi , TwHt4ALgxt , TwHt4ALgyt , TwHt4ALgzt ,  TwHt4ALxt ,  TwHt4ALyt , &
+                                 TwHt4ALzt ,  TwHt4FLxt ,  TwHt4FLyt ,  TwHt4FLzt ,  TwHt4MLxt ,  TwHt4MLyt ,  TwHt4MLzt , &
+                                 TwHt4RDxt ,  TwHt4RDyt ,  TwHt4RDzt ,  TwHt4RPxi ,  TwHt4RPyi ,  TwHt4RPzi ,  TwHt4TDxt , &
+                                 TwHt4TDyt ,  TwHt4TDzt ,  TwHt4TPxi ,  TwHt4TPyi ,  TwHt4TPzi , TwHt5ALgxt , TwHt5ALgyt , &
+                                TwHt5ALgzt ,  TwHt5ALxt ,  TwHt5ALyt ,  TwHt5ALzt ,  TwHt5FLxt ,  TwHt5FLyt ,  TwHt5FLzt , &
+                                 TwHt5MLxt ,  TwHt5MLyt ,  TwHt5MLzt ,  TwHt5RDxt ,  TwHt5RDyt ,  TwHt5RDzt ,  TwHt5RPxi , &
+                                 TwHt5RPyi ,  TwHt5RPzi ,  TwHt5TDxt ,  TwHt5TDyt ,  TwHt5TDzt ,  TwHt5TPxi ,  TwHt5TPyi , &
+                                 TwHt5TPzi , TwHt6ALgxt , TwHt6ALgyt , TwHt6ALgzt ,  TwHt6ALxt ,  TwHt6ALyt ,  TwHt6ALzt , &
+                                 TwHt6FLxt ,  TwHt6FLyt ,  TwHt6FLzt ,  TwHt6MLxt ,  TwHt6MLyt ,  TwHt6MLzt ,  TwHt6RDxt , &
+                                 TwHt6RDyt ,  TwHt6RDzt ,  TwHt6RPxi ,  TwHt6RPyi ,  TwHt6RPzi ,  TwHt6TDxt ,  TwHt6TDyt , &
+                                 TwHt6TDzt ,  TwHt6TPxi ,  TwHt6TPyi ,  TwHt6TPzi , TwHt7ALgxt , TwHt7ALgyt , TwHt7ALgzt , &
+                                 TwHt7ALxt ,  TwHt7ALyt ,  TwHt7ALzt ,  TwHt7FLxt ,  TwHt7FLyt ,  TwHt7FLzt ,  TwHt7MLxt , &
+                                 TwHt7MLyt ,  TwHt7MLzt ,  TwHt7RDxt ,  TwHt7RDyt ,  TwHt7RDzt ,  TwHt7RPxi ,  TwHt7RPyi , &
+                                 TwHt7RPzi ,  TwHt7TDxt ,  TwHt7TDyt ,  TwHt7TDzt ,  TwHt7TPxi ,  TwHt7TPyi ,  TwHt7TPzi , &
+                                TwHt8ALgxt , TwHt8ALgyt , TwHt8ALgzt ,  TwHt8ALxt ,  TwHt8ALyt ,  TwHt8ALzt ,  TwHt8FLxt , &
+                                 TwHt8FLyt ,  TwHt8FLzt ,  TwHt8MLxt ,  TwHt8MLyt ,  TwHt8MLzt ,  TwHt8RDxt ,  TwHt8RDyt , &
+                                 TwHt8RDzt ,  TwHt8RPxi ,  TwHt8RPyi ,  TwHt8RPzi ,  TwHt8TDxt ,  TwHt8TDyt ,  TwHt8TDzt , &
+                                 TwHt8TPxi ,  TwHt8TPyi ,  TwHt8TPzi , TwHt9ALgxt , TwHt9ALgyt , TwHt9ALgzt ,  TwHt9ALxt , &
+                                 TwHt9ALyt ,  TwHt9ALzt ,  TwHt9FLxt ,  TwHt9FLyt ,  TwHt9FLzt ,  TwHt9MLxt ,  TwHt9MLyt , &
+                                 TwHt9MLzt ,  TwHt9RDxt ,  TwHt9RDyt ,  TwHt9RDzt ,  TwHt9RPxi ,  TwHt9RPyi ,  TwHt9RPzi , &
+                                 TwHt9TDxt ,  TwHt9TDyt ,  TwHt9TDzt ,  TwHt9TPxi ,  TwHt9TPyi ,  TwHt9TPzi ,   TwrBsFxt , &
+                                  TwrBsFyt ,   TwrBsFzt ,   TwrBsMxt ,   TwrBsMyt ,   TwrBsMzt ,  TipClrnc1 ,  TipClrnc2 , &
+                                 TipClrnc3 ,  TwrTpTDxi ,  TwrTpTDyi ,  TwrTpTDzi ,   TipRDzc1 ,   TipRDzc2 ,   TipRDzc3 , &
+                                    YawAzn ,     YawAzn ,     YawAzn ,   YawBrFxn ,   YawBrFxp ,   YawBrFyn ,   YawBrFyp , &
+                                  YawBrFzn ,   YawBrFzn ,   YawBrMxn ,   YawBrMxp ,   YawBrMyn ,   YawBrMyp ,   YawBrMzn , &
+                                  YawBrMzn ,  YawBrRAxp ,  YawBrRAyp ,  YawBrRAzp ,  YawBrRDxt ,  YawBrRDyt ,  YawBrRDzt , &
+                                 YawBrRVxp ,  YawBrRVyp ,  YawBrRVzp , YawBrTAgxp , YawBrTAgyp , YawBrTAgzp ,  YawBrTAxp , &
+                                 YawBrTAyp ,  YawBrTAzp ,  TwrTpTDxi ,  YawBrTDxp ,  YawBrTDxt ,  TwrTpTDyi ,  YawBrTDyp , &
+                                 YawBrTDyt ,  TwrTpTDzi ,  YawBrTDzp ,  YawBrTDzt ,  YawBrTVxp ,  YawBrTVyp ,  YawBrTVzp , &
+                                 YawFriMfp ,  YawFriMom ,   YawFriMz ,     YawPzn ,     YawPzn ,     YawPzn ,     YawVzn , &
+                                    YawVzn ,     YawVzn /)
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1115) =  (/ character(ChanLen) :: &  ! This lists the units corresponding to the allowed parameters
                                "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                               "(deg/s^2)","(rpm)    ","(kN-m)   ","(deg/s^2)","(kW)     ","(kN-m)   ","(rpm)    ", &
-                               "(m)      ","(m)      ","(m)      ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN)     ", &
-                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
-                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
-                               "(rpm)    ","(rpm)    ","(rpm)    ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                               "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kW)     ","(kN-m)   ","(deg/s^2)", &
-                               "(deg/s^2)","(deg/s^2)","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
-                               "(deg)    ","(deg)    ","(rpm)    ","(rpm)    ","(rpm)    ","(deg)    ","(deg/s^2)", &
-                               "(deg)    ","(deg/s)  ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s)  ","(deg/s)  ", &
-                               "(deg/s)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                               "(m/s)    ","(m/s)    ","(m/s)    ","(m)      ","(m)      ","(m)      ","(deg)    ", &
-                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                               "(deg)    ","(m)      ","(deg)    ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s^2)", &
-                               "(deg/s^2)","(deg/s^2)","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg/s)  ", &
-                               "(deg/s)  ","(deg/s)  ","(deg/s)  ","(deg/s)  ","(deg/s)  ","(m)      ","(m)      ", &
+                               "(deg/s^2)","(deg/s^2)","(rpm)    ","(kN-m)   ","(deg/s^2)","(kW)     ","(kN-m)   ", &
+                               "(rpm)    ","(m)      ","(m)      ","(m)      ","(deg/s^2)","(deg/s^2)","(deg/s^2)", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(rpm)    ","(rpm)    ","(rpm)    ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kW)     ","(kN-m)   ", &
+                               "(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(rpm)    ","(rpm)    ","(rpm)    ","(deg)    ", &
+                               "(deg/s^2)","(deg)    ","(deg/s)  ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s)  ", &
+                               "(deg/s)  ","(deg/s)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s)    ","(m/s)    ","(m/s)    ","(deg/s)  ","(m)      ","(m)      ", &
+                               "(m)      ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(m)      ","(deg)    ","(deg/s^2)","(deg/s^2)", &
+                               "(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg/s)  ","(deg/s)  ","(deg/s)  ","(deg/s)  ","(deg/s)  ","(deg/s)  ", &
+                               "(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
                                "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ", &
-                               "(m)      ","(m)      ","(m)      ","(m)      ","(m/s)    ","(m/s)    ","(m/s)    ", &
-                               "(m/s)    ","(m/s)    ","(m/s)    ","(deg)    ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(rad/s^2)", &
-                               "(rad/s^2)","(m/s^2)  ","(rad/s^2)","(rad/s^2)","(rad/s^2)","(m/s^2)  ","(m/s^2)  ", &
-                               "(rad/s^2)","(m/s^2)  ","(m/s^2)  ","(rad/s^2)","(m/s^2)  ","(m/s^2)  ","(rad/s^2)", &
-                               "(rad/s^2)","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ", &
-                               "(m/s)    ","(m/s)    ","(m/s)    ","(rad/s)  ","(rad/s)  ","(m/s)    ","(rad/s)  ", &
-                               "(rad/s)  ","(rad/s)  ","(m/s)    ","(m/s)    ","(rad/s)  ","(m/s)    ","(m/s)    ", &
-                               "(rad/s)  ","(m/s)    ","(m/s)    ","(rad/s)  ","(rad/s)  ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s)    ", &
+                               "(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(deg)    ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(rad/s^2)","(rad/s^2)","(m/s^2)  ","(rad/s^2)","(rad/s^2)","(rad/s^2)", &
+                               "(m/s^2)  ","(m/s^2)  ","(rad/s^2)","(m/s^2)  ","(m/s^2)  ","(rad/s^2)","(m/s^2)  ", &
+                               "(m/s^2)  ","(rad/s^2)","(rad/s^2)","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ", &
+                               "(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(rad/s)  ","(rad/s)  ", &
+                               "(m/s)    ","(rad/s)  ","(rad/s)  ","(rad/s)  ","(m/s)    ","(m/s)    ","(rad/s)  ", &
+                               "(m/s)    ","(m/s)    ","(rad/s)  ","(m/s)    ","(m/s)    ","(rad/s)  ","(rad/s)  ", &
                                "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                               "(rad)    ","(rad)    ","(m)      ","(rad)    ","(rad)    ","(rad)    ","(m)      ", &
-                               "(m)      ","(rad)    ","(m)      ","(m)      ","(rad)    ","(m)      ","(m)      ", &
-                               "(rad)    ","(rad)    ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(kN)     ", &
+                               "(m)      ","(m)      ","(rad)    ","(rad)    ","(m)      ","(rad)    ","(rad)    ", &
+                               "(rad)    ","(m)      ","(m)      ","(rad)    ","(m)      ","(m)      ","(rad)    ", &
+                               "(m)      ","(m)      ","(rad)    ","(rad)    ","(kN-m)   ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
                                "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                               "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
                                "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
                                "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
                                "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg/s^2)","(deg)    ", &
-                               "(deg/s^2)","(deg)    ","(deg/s)  ","(kW)     ","(rpm)    ","(deg/s^2)","(deg)    ", &
-                               "(deg/s)  ","(kN)     ","(kN-m)   ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(deg/s^2)","(deg)    ","(deg/s^2)","(deg)    ","(deg/s)  ","(kW)     ","(rpm)    ", &
+                               "(deg/s^2)","(deg)    ","(deg/s)  ","(kN)     ","(kN-m)   ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
                                "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
                                "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
                                "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
@@ -4373,34 +4177,16 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
                                "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
                                "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                               "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ", &
-                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                               "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
-                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(deg)    ", &
-                               "(deg/s^2)","(deg)    ","(deg/s)  ","(deg/s^2)","(deg)    ","(deg)    ","(deg/s)  ", &
-                               "(kN-m)   ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m)      ","(deg)    ","(deg/s^2)","(deg)    ","(deg/s)  ","(deg/s^2)","(deg)    ", &
+                               "(deg)    ","(deg/s)  ","(kN-m)   ","(m)      ","(m)      ","(m)      ","(m/s^2)  ", &
                                "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
                                "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                               "(m/s^2)  ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ","(m)      ","(m)      ", &
                                "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
                                "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                               "(m)      ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
-                               "(m)      ","(deg)    ","(deg)    ","(m)      ","(deg)    ","(m/s^2)  ","(m/s^2)  ", &
-                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ", &
-                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                               "(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                               "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                               "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
-                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
-                               "(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ", &
-                               "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                               "(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(m)      ","(m)      ","(deg)    ","(deg)    ","(m)      ","(deg)    ", &
                                "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
                                "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
                                "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
@@ -4421,16 +4207,27 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
                                "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
                                "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
-                               "(m)      ","(m)      ","(m)      ","(m)      ","(kN)     ","(kN)     ","(kN)     ", &
-                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                               "(m)      ","(m)      ","(deg)    ","(deg)    ","(deg)    ","(deg/s^2)","(deg/s^2)", &
-                               "(deg/s^2)","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg/s^2)", &
-                               "(deg/s^2)","(deg/s^2)","(deg)    ","(deg)    ","(deg)    ","(deg/s)  ","(deg/s)  ", &
-                               "(deg/s)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                               "(m)      ","(m)      ","(m/s)    ","(m/s)    ","(m/s)    ","(deg)    ","(deg)    ", &
-                               "(deg)    ","(deg/s)  ","(deg/s)  ","(deg/s)  "/)
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg/s)  ","(deg/s)  ","(deg/s)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m/s)    ","(m/s)    ","(m/s)    ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg/s)  ", &
+                               "(deg/s)  ","(deg/s)  "/)
 
 
       ! Initialize values
@@ -4440,7 +4237,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
 
 !   ..... Developer must add checking for invalid inputs here: .....
-if (p%BD4Blades) then
+if (p%BD4Blades .or. p%RigidAero) then
    startIndx = 1
 else
    startIndx = p%NumBl+1
@@ -4624,7 +4421,7 @@ end if
    
    InvalidOutput(HSSBrTq) = p%method == Method_RK4
 
-    IF ( p%BD4Blades ) THEN
+    IF ( p%BD4Blades .or. p%RigidAero ) THEN
       InvalidOutput(   Q_B1E1) = .TRUE.
       InvalidOutput(   Q_B1F1) = .TRUE.
       InvalidOutput(   Q_B1F2) = .TRUE.
@@ -4704,17 +4501,18 @@ end if
          p%OutParam(I)%Indx  = 0                    ! pick any valid channel (I just picked "Time=0" here because it's universal)
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
-
+   
          CALL SetErrStat(ErrID_Fatal, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
       END IF
-
+   
    END DO
-
+   
    RETURN
 END SUBROUTINE SetOutParam
 !----------------------------------------------------------------------------------------------------------------------------------
 !End of code generated by Matlab script
 !**********************************************************************************************************************************
+
 !> This routine is used to compute rotor (blade and hub) properties:
 !!   KBF(), KBE(), CBF(), CBE(), FreqBF(), FreqBE(), AxRedBld(),
 !!   TwistedSF(), BldMass(), FirstMom(), SecondMom(), BldCG(),
@@ -6176,14 +5974,28 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
 
       ! Tower base / platform coordinate system:
 
-   CALL SmllRotTrans( 'platform displacement (ElastoDyn SetCoordSy)', x%QT(DOF_R), x%QT(DOF_Y), -x%QT(DOF_P), TransMat, TRIM(Num2LStr(t))//' s', ErrStat2, ErrMsg2 )  ! Get the transformation matrix, TransMat, from inertial frame to tower base / platform coordinate systems.
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+   ! CALL SmllRotTrans( 'platform displacement (ElastoDyn SetCoordSy)', x%QT(DOF_R), x%QT(DOF_Y), -x%QT(DOF_P), TransMat, TRIM(Num2LStr(t))//' s', ErrStat2, ErrMsg2 )  ! Get the transformation matrix, TransMat, from inertial frame to tower base / platform coordinate systems.
+   !    CALL CheckError( ErrStat2, ErrMsg2 )
+   !    IF (ErrStat >= AbortErrLev) RETURN
 
-   CoordSys%a1 = TransMat(1,1)*CoordSys%z1 + TransMat(1,2)*CoordSys%z2 + TransMat(1,3)*CoordSys%z3 ! Vector / direction a1 (=  xt from the IEC coord. system).
-   CoordSys%a2 = TransMat(2,1)*CoordSys%z1 + TransMat(2,2)*CoordSys%z2 + TransMat(2,3)*CoordSys%z3 ! Vector / direction a2 (=  zt from the IEC coord. system).
-   CoordSys%a3 = TransMat(3,1)*CoordSys%z1 + TransMat(3,2)*CoordSys%z2 + TransMat(3,3)*CoordSys%z3 ! Vector / direction a3 (= -yt from the IEC coord. system).
+   ! CoordSys%a1 = TransMat(1,1)*CoordSys%z1 + TransMat(1,2)*CoordSys%z2 + TransMat(1,3)*CoordSys%z3 ! Vector / direction a1 (=  xt from the IEC coord. system).
+   ! CoordSys%a2 = TransMat(2,1)*CoordSys%z1 + TransMat(2,2)*CoordSys%z2 + TransMat(2,3)*CoordSys%z3 ! Vector / direction a2 (=  zt from the IEC coord. system).
+   ! CoordSys%a3 = TransMat(3,1)*CoordSys%z1 + TransMat(3,2)*CoordSys%z2 + TransMat(3,3)*CoordSys%z3 ! Vector / direction a3 (= -yt from the IEC coord. system).
 
+      ! Platform orientation after yaw
+   CoordSys%alpha1 =  cos(x%QT(DOF_Y))*CoordSys%z1 - sin(x%QT(DOF_Y))*CoordSys%z3
+   CoordSys%alpha2 =  CoordSys%z2
+   CoordSys%alpha3 =  sin(x%QT(DOF_Y))*CoordSys%z1 + cos(x%QT(DOF_Y))*CoordSys%z3
+
+      ! Platform orientation after pitch
+   CoordSys%beta1  =  cos(x%QT(DOF_P))*CoordSys%alpha1 - sin(x%QT(DOF_P))*CoordSys%alpha2
+   CoordSys%beta2  =  sin(x%QT(DOF_P))*CoordSys%alpha1 + cos(x%QT(DOF_P))*CoordSys%alpha2
+   CoordSys%beta3  =  CoordSys%alpha3
+
+      ! Platform orientation after roll
+   CoordSys%a1     =  CoordSys%beta1 
+   CoordSys%a2     =  cos(x%QT(DOF_R))*CoordSys%beta2 + sin(x%QT(DOF_R))*CoordSys%beta3
+   CoordSys%a3     = -sin(x%QT(DOF_R))*CoordSys%beta2 + cos(x%QT(DOF_R))*CoordSys%beta3
 
    DO J = 1,p%TwrNodes ! Loop through the tower nodes / elements
 
@@ -6323,7 +6135,7 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
       CoordSys%j2(K,:) = SinPitch*CoordSys%i1(K,:) + CosPitch*CoordSys%i2(K,:)      ! j2(K,:) = vector / direction j2 for blade K (=  ybK from the IEC coord. system).
       CoordSys%j3(K,:) = CoordSys%i3(K,:)                                           ! j3(K,:) = vector / direction j3 for blade K (=  zbK from the IEC coord. system).
 
-
+!FIXME: don't need 0 and TipNode without AD14
       DO J = 0,p%TipNode ! Loop through the blade nodes / elements
 
 
@@ -6354,8 +6166,7 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
          CoordSys%n2(K,J,:) = TransMat(2,1)*Lj1 + TransMat(2,2)*Lj2 + TransMat(2,3)*Lj3   ! Vector / direction n2 for node J of blade K (= LybK from the IEC coord. system).
          CoordSys%n3(K,J,:) = TransMat(3,1)*Lj1 + TransMat(3,2)*Lj2 + TransMat(3,3)*Lj3   ! Vector / direction n3 for node J of blade K (= LzbK from the IEC coord. system).
 
-      ! skip these next CoordSys variables at the root and the tip; they are required only for AD14:
-         
+
          if (j == 0 .or. j==p%TipNode) cycle  
       
          
@@ -6591,6 +6402,62 @@ SUBROUTINE Teeter( t, p, TeetDef, TeetRate, TeetMom )
    RETURN
 END SUBROUTINE Teeter
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine computes the Yaw Friction Torque due to yaw rate and acceleration.
+SUBROUTINE YawFriction( t, p, Fz, Mzz, Omg, OmgDot, YawFriMf )
+!..................................................................................................................................
+
+      ! Passed Variables:
+   REAL(DbKi), INTENT(IN)             :: t                                       !< simulation time
+   TYPE(ED_ParameterType), INTENT(IN) :: p                                       !< parameters from the structural dynamics module
+   REAL(R8Ki), INTENT(IN )            :: Fz, Mzz                                 !< Effective yaw bearing force and external yaw bearing torque
+   REAL(R8Ki), INTENT(IN )            :: Omg                                !< The yaw rate (rotational speed), x%QDT(DOF_Yaw).
+   REAL(R8Ki), INTENT(IN )            :: OmgDot                             !< The yaw acceleration (derivative of rotational speed), x%QD2T(DOF_Yaw).
+   
+   REAL(ReKi), INTENT(OUT)            :: YawFriMf                                 !< The total friction torque (Coulomb + viscous).
+
+      ! Local variables:
+   REAL(ReKi)                         :: temp                                   ! It takes teh value of Fz or -1.
+
+   
+   SELECT CASE ( p%YawFrctMod  ) 
+   ! Yaw-friction model {0: none, 1: does not use Fz at yaw bearing, 2: does, 3: user defined model} (switch)
+
+   CASE ( 0_IntKi )              ! None!
+
+
+      YawFriMf = 0.0_ReKi
+
+
+   CASE ( 1_IntKi, 2_IntKi )              ! 1= no Fz use. 2=Fz used
+
+      temp = -1.0_ReKi  !In the case of YawFrctMod=1 
+      
+      IF  (p%YawFrctMod .EQ. 2) THEN   
+        temp = MIN(0.0_R8Ki, Fz)  !In the case of YawFrctMod=2 
+      ENDIF
+      
+      IF  (EqualRealNos( Omg, 0.0_R8Ki ) )THEN
+           YawFriMf =  -MIN(real(p%M_CD,ReKi) * ABS(temp), ABS(real(Mzz,ReKi))) * SIGN(1.0_ReKi, real(Mzz,ReKi))
+           IF (EqualRealNos( OmgDot, 0.0_R8Ki )) THEN
+                YawFriMf =  -MIN(real(p%M_CSmax,ReKi) * ABS(temp), ABS(real(Mzz,ReKi))) * SIGN(1.0_ReKi, real(Mzz,ReKi)) 
+           ENDIF    
+      ELSE
+            YawFriMf = real(p%M_CD,ReKi) * temp * sign(1.0_ReKi, real(Omg,ReKi)) - real(p%sig_v,ReKi) * real(Omg,ReKi)
+      ENDIF
+
+
+   CASE ( 3_IntKi )              ! User-defined YawFriMf  model. >>>> NOT IMPLEMENTED YET
+
+
+      CALL UserYawFrict ( t, Fz, Mzz, Omg, OmgDot, p%RootName, YawFriMf )
+
+
+   END SELECT
+
+
+   RETURN
+END SUBROUTINE YawFriction
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine computes the tail-furl moment due to tail-furl deflection and rate.
 SUBROUTINE TFurling( t, p, TFrlDef, TFrlRate, TFrlMom )
       ! Passed Variables:
@@ -6817,7 +6684,7 @@ END SUBROUTINE CalculatePositions
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is used to calculate the angular positions, velocities, and partial accelerations stored in other states that are used in
 !! both the CalcOutput and CalcContStateDeriv routines.
-SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
+SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables
@@ -6826,6 +6693,9 @@ SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
    TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    !< The coordinate systems that have been set for these states/time
    TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
+   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg                       !< Error message
+
       !Local variables
    
    REAL(ReKi)                   :: AngVelHM  (3)                                   ! Angular velocity of eleMent J of blade K (body M) in the hub (body H).
@@ -6833,6 +6703,15 @@ SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
    REAL(ReKi)                   :: AngAccELt (3)                                   ! Portion of the angular acceleration of the low-speed shaft (body L) in the inertia frame (body E for earth) associated with everything but the QD2T()'s.
    INTEGER(IntKi)               :: J                                               ! Counter for elements
    INTEGER(IntKi)               :: K                                               ! Counter for blades
+   REAL(R8Ki)                   :: PtfmOrientation (3,3)                           ! Orientation matrix for the platform (-).
+   REAL(R8Ki)                   :: TransMat (3,3)                                  ! Orientation matrix for the platform (-).
+   REAL(R8Ki)                   :: ThetaFA                                         ! Tower fore-aft tilt deflection angle.
+   REAL(R8Ki)                   :: ThetaSS                                         ! Tower side-to-side tilt deflection angle.
+
+   INTEGER(IntKi)               :: ErrStat2                      ! Temporary error status
+   CHARACTER(ErrMsgLen)         :: ErrMsg2                       ! Temporary error message
+
+   CHARACTER(*), PARAMETER      :: RoutineName = "CalculateAngularPosVelPAcc"
 
    !-------------------------------------------------------------------------------------------------
    ! Angular and partial angular velocities
@@ -6842,15 +6721,19 @@ SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
    ! NOTE: PAngVelEN(I,D,:) = the Dth-derivative of the partial angular velocity of DOF I for body N in body E.
 
    RtHSdat%PAngVelEX(       :,0,:) = 0.0
-   RtHSdat%PAngVelEX(DOF_R   ,0,:) =  CoordSys%z1
-   RtHSdat%PAngVelEX(DOF_P   ,0,:) = -CoordSys%z3
+   ! RtHSdat%PAngVelEX(DOF_R   ,0,:) =  CoordSys%z1
+   ! RtHSdat%PAngVelEX(DOF_P   ,0,:) = -CoordSys%z3
+   ! RtHSdat%PAngVelEX(DOF_Y   ,0,:) =  CoordSys%z2
+   RtHSdat%PAngVelEX(DOF_R   ,0,:) =  CoordSys%beta1
+   RtHSdat%PAngVelEX(DOF_P   ,0,:) = -CoordSys%alpha3
    RtHSdat%PAngVelEX(DOF_Y   ,0,:) =  CoordSys%z2
    RtHSdat%AngVelEX                =                     x%QDT(DOF_R   )*RtHSdat%PAngVelEX(DOF_R   ,0,:) &
                                                        + x%QDT(DOF_P   )*RtHSdat%PAngVelEX(DOF_P   ,0,:) &
                                                        + x%QDT(DOF_Y   )*RtHSdat%PAngVelEX(DOF_Y   ,0,:)
-   RtHSdat%AngPosEX                =                     x%QT (DOF_R   )*RtHSdat%PAngVelEX(DOF_R   ,0,:) &
-                                                       + x%QT (DOF_P   )*RtHSdat%PAngVelEX(DOF_P   ,0,:) &
-                                                       + x%QT (DOF_Y   )*RtHSdat%PAngVelEX(DOF_Y   ,0,:)
+   ! RtHSdat%AngPosEX                =                     x%QT (DOF_R   )*RtHSdat%PAngVelEX(DOF_R   ,0,:) & ! <- LW: Doesn't work for large rotation. Impacts AngPosEF (TwHtRP*i output)
+   !                                                     + x%QT (DOF_P   )*RtHSdat%PAngVelEX(DOF_P   ,0,:) &
+   !                                                     + x%QT (DOF_Y   )*RtHSdat%PAngVelEX(DOF_Y   ,0,:)
+   PtfmOrientation = EulerConstructZYX((/x%QT(DOF_R),x%QT(DOF_P),x%QT(DOF_Y)/))
 
    RtHSdat%PAngVelEB(       :,0,:) =  RtHSdat%PAngVelEX(:,0,:)
    RtHSdat%PAngVelEB(DOF_TFA1,0,:) = -p%TwrFASF(1,p%TTopNode,1)*CoordSys%a3
@@ -6903,7 +6786,10 @@ ENDIF
    !   everything but the QD2T()'s:
 
    RtHSdat%PAngVelEX(       :,1,:) = 0.0
-   RtHSdat%AngAccEXt               = 0.0
+   RtHSdat%PAngVelEX(DOF_R   ,1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEX,                   RtHSdat%PAngVelEX(DOF_R   ,0,:) )
+   RtHSdat%PAngVelEX(DOF_P   ,1,:) = CROSS_PRODUCT(   x%QDT(DOF_Y)*CoordSys%z2,           RtHSdat%PAngVelEX(DOF_P   ,0,:) )
+   RtHSdat%AngAccEXt               =   x%QDT(DOF_R)*RtHSdat%PAngVelEX(DOF_R   ,1,:) &
+                                     + x%QDT(DOF_P)*RtHSdat%PAngVelEX(DOF_P   ,1,:)
 
    RtHSdat%PAngVelEB(       :,1,:) =                  RtHSdat%PAngVelEX(:,1,:)
    RtHSdat%PAngVelEB(DOF_TFA1,1,:) = CROSS_PRODUCT(   RtHSdat%AngVelEX,                   RtHSdat%PAngVelEB(DOF_TFA1,0,:) )
@@ -7025,7 +6911,17 @@ ENDIF
                                                              + x%QT (DOF_TSS1)*RtHSdat%PAngVelEF(J,DOF_TSS1,0,:) &
                                                              + x%QT (DOF_TFA2)*RtHSdat%PAngVelEF(J,DOF_TFA2,0,:) &
                                                              + x%QT (DOF_TSS2)*RtHSdat%PAngVelEF(J,DOF_TSS2,0,:)
-      RtHSdat%AngPosEF (:,J)            =  RtHSdat%AngPosEX  + RtHSdat%AngPosXF(:,J)
+
+      !RtHSdat%AngPosEF (:,J)            =  RtHSdat%AngPosEX  + RtHSdat%AngPosXF(:,J) ! LW: This is no longer right with large Ptfm Rotation
+      ThetaSS =  p%TwrSSSF(1,J,1)*x%QT(DOF_TSS1) + p%TwrSSSF(2,J,1)*x%QT(DOF_TSS2)
+      ThetaFA = -p%TwrFASF(1,J,1)*x%QT(DOF_TFA1) - p%TwrFASF(2,J,1)*x%QT(DOF_TFA2)
+      CALL SmllRotTrans('tower element rotation',ThetaSS,-ThetaFA,0.0_R8Ki,TransMat,'',ErrStat2,ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat>=AbortErrLev) then
+         return
+      end if
+      RtHSdat%AngPosEF (:,J) = EulerExtractZYX(MatMul(TransMat,PtfmOrientation)) ! Extract tower element yaw, pitch, and roll angles from the combined platform and tower element rotation
+
       RtHSdat%AngAccEFt(:,J)            =  RtHSdat%AngAccEXt + x%QDT(DOF_TFA1)*RtHSdat%PAngVelEF(J,DOF_TFA1,1,:) &
                                                              + x%QDT(DOF_TSS1)*RtHSdat%PAngVelEF(J,DOF_TSS1,1,:) &
                                                              + x%QDT(DOF_TFA2)*RtHSdat%PAngVelEF(J,DOF_TFA2,1,:) &
@@ -7142,9 +7038,10 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
 
       TmpVec0 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:), RtHSdat%rZY  )
       TmpVec1 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:),     EwXXrZY  )
+      TmpVec2 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,1,:), RtHSdat%rZY  )
 
       RtHSdat%PLinVelEY(PX(I),0,:) = TmpVec0   +                       RtHSdat%PLinVelEY(PX(I)   ,0,:)
-      RtHSdat%PLinVelEY(PX(I),1,:) = TmpVec1   +                       RtHSdat%PLinVelEY(PX(I)   ,1,:)
+      RtHSdat%PLinVelEY(PX(I),1,:) = TmpVec1   +   TmpVec2   +         RtHSdat%PLinVelEY(PX(I)   ,1,:)
 
        RtHSdat%LinAccEYt           = RtHSdat%LinAccEYt + x%QDT(PX(I) )*RtHSdat%PLinVelEY(PX(I)   ,1,:)
 
@@ -7188,10 +7085,11 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    DO I = 1,NPX   ! Loop through all DOFs associated with the angular motion of the platform (body X)
 
       TmpVec0 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:), RtHSdat%rZO                 )
-      TmpVec1 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:),     EwXXrZO + LinVelXO      )
+      TmpVec1 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,0,:),     EwXXrZO + LinVelXO      ) 
+      TmpVec2 = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I)   ,1,:), RtHSdat%rZO                 )
 
       RtHSdat%PLinVelEO(PX(I),0,:) = TmpVec0    +                       RtHSdat%PLinVelEO(PX(I)   ,0,:)
-      RtHSdat%PLinVelEO(PX(I),1,:) = TmpVec1    +                       RtHSdat%PLinVelEO(PX(I)   ,1,:)
+      RtHSdat%PLinVelEO(PX(I),1,:) = TmpVec1    +    TmpVec2    +       RtHSdat%PLinVelEO(PX(I)   ,1,:)
 
       RtHSdat%LinVelEO             =  RtHSdat%LinVelEO  + x%QDT(PX(I) )*RtHSdat%PLinVelEO(PX(I)   ,0,:)
       RtHSdat%LinAccEOt            =  RtHSdat%LinAccEOt + x%QDT(PX(I) )*RtHSdat%PLinVelEO(PX(I)   ,1,:)
@@ -7484,11 +7382,12 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
       RtHSdat%LinVelET(:,J)  = LinVelXT + RtHSdat%LinVelEZ
       DO I = 1,NPX   ! Loop through all DOFs associated with the angular motion of the platform (body X)
 
-         TmpVec0   = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I),0,:), RtHSdat%rZT(:,J)            )
+         TmpVec0   = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I),0,:), RtHSdat%rZT(:,J)        )
          TmpVec1   = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I),0,:), EwXXrZT      + LinVelXT )
+         TmpVec2   = CROSS_PRODUCT( RtHSdat%PAngVelEX(PX(I),1,:), RtHSdat%rZT(:,J)        )
 
          RtHSdat%PLinVelET(J,PX(I),0,:) = RtHSdat%PLinVelET(J,PX(I),0,:) + TmpVec0
-         RtHSdat%PLinVelET(J,PX(I),1,:) = RtHSdat%PLinVelET(J,PX(I),1,:) + TmpVec1
+         RtHSdat%PLinVelET(J,PX(I),1,:) = RtHSdat%PLinVelET(J,PX(I),1,:) + TmpVec1 + TmpVec2
 
          RtHSdat%LinVelET( :,        J) = RtHSdat%LinVelET( :,        J) + x%QDT(PX(I))*RtHSdat%PLinVelET(J,PX(I),0,:)
          RtHSdat%LinAccETt(:,        J) = RtHSdat%LinAccETt(:,        J) + x%QDT(PX(I))*RtHSdat%PLinVelET(J,PX(I),1,:)
@@ -7561,21 +7460,13 @@ SUBROUTINE CalculateForcesMoments( p, x, CoordSys, u, RtHSdat )
    
          NodeNum = J ! we're ignoring the root and tip
          
-         if (p%UseAD14) then
-            RtHSdat%FSAero(:,K,J) = ( u%BladePtLoads(K)%Force(1,NodeNum) * CoordSys%te1(K,J,:) &
-                                    + u%BladePtLoads(K)%Force(2,NodeNum) * CoordSys%te2(K,J,:) ) / p%DRNodes(J)
+         RtHSdat%FSAero(1,K,J) =  u%BladePtLoads(K)%Force(1,NodeNum) / p%DRNodes(J)
+         RtHSdat%FSAero(2,K,J) =  u%BladePtLoads(K)%Force(3,NodeNum) / p%DRNodes(J) 
+         RtHSdat%FSAero(3,K,J) = -u%BladePtLoads(K)%Force(2,NodeNum) / p%DRNodes(J)
 
-            RtHSdat%MMAero(:,K,J) = CROSS_PRODUCT( RtHSdat%rSAerCen(:,J,K), RtHSdat%FSAero(:,K,J) )&
-                                  + u%BladePtLoads(K)%Moment(3,NodeNum)/p%DRNodes(J) * CoordSys%te3(K,J,:)        
-         else
-            RtHSdat%FSAero(1,K,J) =  u%BladePtLoads(K)%Force(1,NodeNum) / p%DRNodes(J)
-            RtHSdat%FSAero(2,K,J) =  u%BladePtLoads(K)%Force(3,NodeNum) / p%DRNodes(J) 
-            RtHSdat%FSAero(3,K,J) = -u%BladePtLoads(K)%Force(2,NodeNum) / p%DRNodes(J)
-
-            RtHSdat%MMAero(1,K,J) =  u%BladePtLoads(K)%Moment(1,NodeNum) / p%DRNodes(J)
-            RtHSdat%MMAero(2,K,J) =  u%BladePtLoads(K)%Moment(3,NodeNum) / p%DRNodes(J)
-            RtHSdat%MMAero(3,K,J) = -u%BladePtLoads(K)%Moment(2,NodeNum) / p%DRNodes(J)
-         end if
+         RtHSdat%MMAero(1,K,J) =  u%BladePtLoads(K)%Moment(1,NodeNum) / p%DRNodes(J)
+         RtHSdat%MMAero(2,K,J) =  u%BladePtLoads(K)%Moment(3,NodeNum) / p%DRNodes(J)
+         RtHSdat%MMAero(3,K,J) = -u%BladePtLoads(K)%Moment(2,NodeNum) / p%DRNodes(J)
                      
          
       END DO !J
@@ -8068,22 +7959,36 @@ DO K = 1,p%NumBl ! Loop through all blades
    RtHSdat%PMXHydro = 0.0
    DO I = 1,p%DOFs%NPYE  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the platform center of mass (point Y)
 
-      RtHSdat%PFZHydro(p%DOFs%PYE(I),:) = - u%PtfmAddedMass(DOF_Sg,p%DOFs%PYE(I))*RtHSdat%PLinVelEZ(DOF_Sg,0,:) &
-                                          - u%PtfmAddedMass(DOF_Sw,p%DOFs%PYE(I))*RtHSdat%PLinVelEZ(DOF_Sw,0,:) &
-                                          - u%PtfmAddedMass(DOF_Hv,p%DOFs%PYE(I))*RtHSdat%PLinVelEZ(DOF_Hv,0,:)
-      RtHSdat%PMXHydro(p%DOFs%PYE(I),:) = - u%PtfmAddedMass(DOF_R ,p%DOFs%PYE(I))*RtHSdat%PAngVelEX(DOF_R ,0,:) &
-                                          - u%PtfmAddedMass(DOF_P ,p%DOFs%PYE(I))*RtHSdat%PAngVelEX(DOF_P ,0,:) &
-                                          - u%PtfmAddedMass(DOF_Y ,p%DOFs%PYE(I))*RtHSdat%PAngVelEX(DOF_Y ,0,:)
+      ! RtHSdat%PFZHydro(p%DOFs%PYE(I),:) = - u%PtfmAddedMass(DOF_Sg,p%DOFs%PYE(I))*RtHSdat%PLinVelEZ(DOF_Sg,0,:) &
+      !                                     - u%PtfmAddedMass(DOF_Sw,p%DOFs%PYE(I))*RtHSdat%PLinVelEZ(DOF_Sw,0,:) &
+      !                                     - u%PtfmAddedMass(DOF_Hv,p%DOFs%PYE(I))*RtHSdat%PLinVelEZ(DOF_Hv,0,:)
+      ! RtHSdat%PMXHydro(p%DOFs%PYE(I),:) = - u%PtfmAddedMass(DOF_R ,p%DOFs%PYE(I))*RtHSdat%PAngVelEX(DOF_R ,0,:) &
+      !                                     - u%PtfmAddedMass(DOF_P ,p%DOFs%PYE(I))*RtHSdat%PAngVelEX(DOF_P ,0,:) &
+      !                                     - u%PtfmAddedMass(DOF_Y ,p%DOFs%PYE(I))*RtHSdat%PAngVelEX(DOF_Y ,0,:)
+
+      RtHSdat%PFZHydro(p%DOFs%PYE(I),:) = - u%PtfmAddedMass(DOF_Sg,p%DOFs%PYE(I))*CoordSys%z1 &
+                                          + u%PtfmAddedMass(DOF_Sw,p%DOFs%PYE(I))*CoordSys%z3 &
+                                          - u%PtfmAddedMass(DOF_Hv,p%DOFs%PYE(I))*CoordSys%z2
+      RtHSdat%PMXHydro(p%DOFs%PYE(I),:) = - u%PtfmAddedMass(DOF_R ,p%DOFs%PYE(I))*CoordSys%z1 &
+                                          + u%PtfmAddedMass(DOF_P ,p%DOFs%PYE(I))*CoordSys%z3 &
+                                          - u%PtfmAddedMass(DOF_Y ,p%DOFs%PYE(I))*CoordSys%z2
 
    ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the platform center of mass (point Y)
 
-   RtHSdat%FZHydrot = u%PlatformPtMesh%Force(DOF_Sg,1)*RtHSdat%PLinVelEZ(DOF_Sg,0,:) &
-                    + u%PlatformPtMesh%Force(DOF_Sw,1)*RtHSdat%PLinVelEZ(DOF_Sw,0,:) &
-                    + u%PlatformPtMesh%Force(DOF_Hv,1)*RtHSdat%PLinVelEZ(DOF_Hv,0,:)
-   RtHSdat%MXHydrot = u%PlatformPtMesh%Moment(DOF_R-3,1)*RtHSdat%PAngVelEX(DOF_R ,0,:) &
-                    + u%PlatformPtMesh%Moment(DOF_P-3,1)*RtHSdat%PAngVelEX(DOF_P ,0,:) &
-                    + u%PlatformPtMesh%Moment(DOF_Y-3,1)*RtHSdat%PAngVelEX(DOF_Y ,0,:)
-   
+   !RtHSdat%FZHydrot = u%PlatformPtMesh%Force(DOF_Sg,1)*RtHSdat%PLinVelEZ(DOF_Sg,0,:) &
+   !                 + u%PlatformPtMesh%Force(DOF_Sw,1)*RtHSdat%PLinVelEZ(DOF_Sw,0,:) &
+   !                 + u%PlatformPtMesh%Force(DOF_Hv,1)*RtHSdat%PLinVelEZ(DOF_Hv,0,:)
+   !RtHSdat%MXHydrot = u%PlatformPtMesh%Moment(DOF_R-3,1)*RtHSdat%PAngVelEX(DOF_R ,0,:) &
+   !                 + u%PlatformPtMesh%Moment(DOF_P-3,1)*RtHSdat%PAngVelEX(DOF_P ,0,:) &
+   !                 + u%PlatformPtMesh%Moment(DOF_Y-3,1)*RtHSdat%PAngVelEX(DOF_Y ,0,:)
+
+   RtHSdat%FZHydrot = u%PlatformPtMesh%Force(DOF_Sg,1)*CoordSys%z1 &
+                    - u%PlatformPtMesh%Force(DOF_Sw,1)*CoordSys%z3 &
+                    + u%PlatformPtMesh%Force(DOF_Hv,1)*CoordSys%z2
+   RtHSdat%MXHydrot = u%PlatformPtMesh%Moment(DOF_R-3,1)*CoordSys%z1 &
+                    - u%PlatformPtMesh%Moment(DOF_P-3,1)*CoordSys%z3 &
+                    + u%PlatformPtMesh%Moment(DOF_Y-3,1)*CoordSys%z2
+
 !.....................................
 ! PFrcZAll and PMomXAll  
 !  (requires PFrcT0Trb, PMomX0Trb, PFZHydro, PMXHydro )
@@ -8110,7 +8015,13 @@ DO K = 1,p%NumBl ! Loop through all blades
       RtHSdat%PMomXAll(:,p%DOFs%PYE(I)) = RtHSdat%PMomXAll(:,p%DOFs%PYE(I)  )        + RtHSdat%PMXHydro(p%DOFs%PYE(I),:) + TmpVec2 &
                                     - p%PtfmRIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a1, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
                                     - p%PtfmYIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a2, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
-                                    - p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )
+                                    - p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    - p%PtfmXZIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a2, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    + p%PtfmXYIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a3, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    + p%PtfmYZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a3, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    - p%PtfmXZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a1, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    + p%PtfmXYIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a1, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )   &
+                                    + p%PtfmYZIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a2, RtHSdat%PAngVelEX(p%DOFs%PYE(I),0,:) )
 
    ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the platform center of mass (point Y)
 
@@ -8124,12 +8035,27 @@ DO K = 1,p%NumBl ! Loop through all blades
    TmpVec3 = CROSS_PRODUCT( RtHSdat%rZT0     , RtHSdat%FrcT0Trbt )                                                      ! The portion of MomXAllt associated with the FrcT0Trbt
    TmpVec  = p%PtfmRIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngVelEX  ) &      ! = ( Platform inertia dyadic ) dot ( angular velocity of platform in the inertia frame )
            + p%PtfmYIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngVelEX  ) &
-           + p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngVelEX  )
+           + p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngVelEX  ) &
+           + p%PtfmXZIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngVelEX  ) &
+           - p%PtfmXYIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngVelEX  ) &
+           - p%PtfmYZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngVelEX  ) &
+           + p%PtfmXZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngVelEX  ) &
+           - p%PtfmXYIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngVelEX  ) &
+           - p%PtfmYZIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngVelEX  )
+
    TmpVec4 = CROSS_PRODUCT( -RtHSdat%AngVelEX,   TmpVec  )                                                      ! = ( -angular velocity of platform in the inertia frame ) cross ( TmpVec )
 
    RtHSdat%FrcZAllt = RtHSdat%FrcT0Trbt + RtHSdat%FZHydrot + TmpVec1
-   RtHSdat%MomXAllt = RtHSdat%MomX0Trbt + RtHSdat%MXHydrot + TmpVec2 + TmpVec3 + TmpVec4   
-   
+   RtHSdat%MomXAllt = RtHSdat%MomX0Trbt + RtHSdat%MXHydrot + TmpVec2 + TmpVec3 + TmpVec4 &
+                    - p%PtfmRIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngAccEXt ) &
+                    - p%PtfmYIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngAccEXt ) &
+                    - p%PtfmPIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngAccEXt ) &
+                    - p%PtfmXZIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngAccEXt ) &
+                    + p%PtfmXYIner*CoordSys%a1*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngAccEXt ) &
+                    + p%PtfmYZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a3, RtHSdat%AngAccEXt ) &
+                    - p%PtfmXZIner*CoordSys%a2*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngAccEXt ) &
+                    + p%PtfmXYIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a1, RtHSdat%AngAccEXt ) &
+                    + p%PtfmYZIner*CoordSys%a3*DOT_PRODUCT( CoordSys%a2, RtHSdat%AngAccEXt )
    
 END SUBROUTINE CalculateForcesMoments
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -8463,7 +8389,7 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
          AugMat(p%DOFs%SrtPS(I),DOF_Yaw ) = -DOT_PRODUCT( RtHSdat%PAngVelEN(DOF_Yaw ,0,:), RtHSdat%PMomBNcRt(:,p%DOFs%SrtPS(I)) )   ! [C(q,t)]N + [C(q,t)]R + [C(q,t)]G + [C(q,t)]H + [C(q,t)]B + [C(q,t)]A
       ENDDO                            ! I - All active (enabled) DOFs on or below the diagonal
          AugMat(DOF_Yaw ,         p%NAug) =  DOT_PRODUCT( RtHSdat%PAngVelEN(DOF_Yaw ,0,:), RtHSdat%MomBNcRtt             ) &        ! {-f(qd,q,t)}N + {-f(qd,q,t)}GravN + {-f(qd,q,t)}R + {-f(qd,q,t)}GravR + {-f(qd,q,t)}G + {-f(qd,q,t)}H + {-f(qd,q,t)}GravH + {-f(qd,q,t)}B + {-f(qd,q,t)}GravB + {-f(qd,q,t)}AeroB + {-f(qd,q,t)}A + {-f(qd,q,t)}GravA + {-f(qd,q,t)}AeroA
-                                                              + u%YawMom                                                            ! + {-f(qd,q,t)}SpringYaw  + {-f(qd,q,t)}DampYaw; NOTE: The neutral yaw rate, YawRateNeut, defaults to zero.  It is only used for yaw control.
+                                                              + u%YawMom + RtHSdat%YawFriMom                                                            ! + {-f(qd,q,t)}SpringYaw  + {-f(qd,q,t)}DampYaw; NOTE: The neutral yaw rate, YawRateNeut, defaults to zero.  It is only used for yaw control.
    ENDIF
    
    
@@ -8630,53 +8556,38 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
                IF (ErrStat >= AbortErrLev) RETURN
          END DO
             
-            ! now add position/orientation of nodes for AD14 or AD15
-         if (p%UseAD14) then     ! position/orientation of nodes for AeroDyn v14 or v15    
-         
-               ! Use orientation at p%BldNodes for the extra node at the blade tip
-            CALL MeshPositionNode ( y%BladeLn2Mesh(K), p%BldNodes + 1, (/0.0_ReKi, 0.0_ReKi, p%BldFlexL /), ErrStat2, ErrMsg2, Orient=u%BladePtLoads(K)%RefOrientation(:,:,p%BldNodes) )
+            ! now add position/orientation of nodes for AD15
+         ! position the nodes on the blade root and blade tip:
+         DO J = 0,p%TipNode,p%TipNode
+            if (j==0) then ! blade root
+               NodeNum = p%BldNodes + 2
+               y%BladeLn2Mesh(K)%RefNode = NodeNum
+            elseif (j==p%TipNode) then ! blade tip
+               NodeNum = p%BldNodes + 1
+            end if
+        
+            Orientation(1,1) =     m%CoordSys%n1(K,J,1)
+            Orientation(2,1) =     m%CoordSys%n2(K,J,1)
+            Orientation(3,1) =     m%CoordSys%n3(K,J,1)
+            Orientation(1,2) = -1.*m%CoordSys%n1(K,J,3)
+            Orientation(2,2) = -1.*m%CoordSys%n2(K,J,3)
+            Orientation(3,2) = -1.*m%CoordSys%n3(K,J,3)
+            Orientation(1,3) =     m%CoordSys%n1(K,J,2)
+            Orientation(2,3) =     m%CoordSys%n2(K,J,2)
+            Orientation(3,3) =     m%CoordSys%n3(K,J,2) 
+            
+               ! Translational Displacement 
+            position(1) =     m%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+            position(2) = -1.*m%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+            position(3) =     m%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
+            
+            
+            CALL MeshPositionNode ( y%BladeLn2Mesh(K), NodeNum, position, ErrStat2, ErrMsg2, Orient=Orientation )
                CALL CheckError( ErrStat2, ErrMsg2 )
                IF (ErrStat >= AbortErrLev) RETURN
+                                 
+         END DO ! nodes 
             
-               ! Use orientation at node 1 for the blade root            
-            CALL MeshPositionNode ( y%BladeLn2Mesh(K), p%BldNodes + 2, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat2, ErrMsg2, Orient=u%BladePtLoads(K)%RefOrientation(:,:,1), ref=.true. )
-               CALL CheckError( ErrStat2, ErrMsg2 )
-               IF (ErrStat >= AbortErrLev) RETURN
-               
-         else
-         
-            ! position the nodes on the blade root and blade tip:
-            DO J = 0,p%TipNode,p%TipNode
-               if (j==0) then ! blade root
-                  NodeNum = p%BldNodes + 2
-                  y%BladeLn2Mesh(K)%RefNode = NodeNum
-               elseif (j==p%TipNode) then ! blade tip
-                  NodeNum = p%BldNodes + 1
-               end if
-         
-               Orientation(1,1) =     m%CoordSys%n1(K,J,1)
-               Orientation(2,1) =     m%CoordSys%n2(K,J,1)
-               Orientation(3,1) =     m%CoordSys%n3(K,J,1)
-               Orientation(1,2) = -1.*m%CoordSys%n1(K,J,3)
-               Orientation(2,2) = -1.*m%CoordSys%n2(K,J,3)
-               Orientation(3,2) = -1.*m%CoordSys%n3(K,J,3)
-               Orientation(1,3) =     m%CoordSys%n1(K,J,2)
-               Orientation(2,3) =     m%CoordSys%n2(K,J,2)
-               Orientation(3,3) =     m%CoordSys%n3(K,J,2) 
-               
-                  ! Translational Displacement 
-               position(1) =     m%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-               position(2) = -1.*m%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
-               position(3) =     m%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
-               
-               
-               CALL MeshPositionNode ( y%BladeLn2Mesh(K), NodeNum, position, ErrStat2, ErrMsg2, Orient=Orientation )
-                  CALL CheckError( ErrStat2, ErrMsg2 )
-                  IF (ErrStat >= AbortErrLev) RETURN
-                                    
-            END DO ! nodes 
-            
-         end if ! position/orientation of nodes for AeroDyn v14 or v15
          
          ! create elements:      
          DO J = 2,p%TipNode !p%BldNodes + 1
@@ -8820,27 +8731,6 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
       CALL CheckError(ErrStat2,ErrMsg2)
       IF (ErrStat >= AbortErrLev) RETURN
       
-   ! -------------- pseudo-Hub (for AD v14)  -----------------------------------
-   CALL MeshCreate( BlankMesh          = y%HubPtMotion14  &
-                     ,IOS              = COMPONENT_OUTPUT &
-                     ,NNodes           = 1                &
-                     , TranslationDisp = .TRUE.           &
-                     , Orientation     = .TRUE.           &
-                     , RotationVel     = .TRUE.           &
-                     , ErrStat         = ErrStat2         &
-                     , ErrMess         = ErrMsg2          )      
-      CALL CheckError(ErrStat2,ErrMsg2)
-      IF (ErrStat >= AbortErrLev) RETURN
-      
-      ! pseudo-Hub position and orientation (relative here as before, but should not be)
-      
-   CALL MeshPositionNode ( y%HubPtMotion14, 1, (/0.0_ReKi, 0.0_ReKi, p%HubHt /), ErrStat, ErrMsg ) !orientation is identity by default
-      CALL CheckError(ErrStat2,ErrMsg2)
-      IF (ErrStat >= AbortErrLev) RETURN
-            
-   CALL CommitPointMesh( y%HubPtMotion14 )
-      IF (ErrStat >= AbortErrLev) RETURN
- 
       
    ! -------------- Blade Roots -----------------------------------
    ALLOCATE( y%BladeRootMotion(p%NumBl), Stat=ErrStat2 )
@@ -8867,38 +8757,9 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
    END DO
    
       
-   CALL MeshCreate( BlankMesh          = y%BladeRootMotion14    &
-                     ,IOS              = COMPONENT_OUTPUT       &
-                     ,NNodes           = p%NumBl                &
-                     , Orientation     = .TRUE.                 &
-                     ,ErrStat          = ErrStat2               &
-                     ,ErrMess          = ErrMsg2                )
-      CALL CheckError(ErrStat2,ErrMsg2)
-      IF (ErrStat >= AbortErrLev) RETURN
-
    DO K=1,p%NumBl      
       
-      Orientation(1,1) =               p%CosPreC(K)
-      Orientation(2,1) =  0.0_R8Ki
-      Orientation(3,1) =  1.0_R8Ki *   p%SinPreC(K)
-
-      Orientation(1,2) =  0.0_R8Ki
-      Orientation(2,2) =  1.0_R8Ki
-      Orientation(3,2) =  0.0_R8Ki
-
-      Orientation(1,3) = -1.0_R8Ki *    p%SinPreC(K)
-      Orientation(2,3) =  0.0_R8Ki
-      Orientation(3,3) =                p%CosPreC(K)
-                  
-      Position(1) = p%HubRad*p%SinPreC(K)
-      Position(2) = 0.0_ReKi
-      Position(3) = p%HubRad*p%CosPreC(K)      
-      
-      CALL MeshPositionNode ( y%BladeRootMotion14, K, Position, &
-                            ErrStat, ErrMsg, Orient=Orientation ) 
-         CALL CheckError(ErrStat2,ErrMsg2)
-         IF (ErrStat >= AbortErrLev) RETURN
-                  
+                 
                
       position(1) =     m%RtHS%rS (1,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
       position(2) = -1.*m%RtHS%rS (3,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
@@ -8922,37 +8783,13 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
          
    END DO
                      
-   CALL CommitPointMesh( y%BladeRootMotion14 )
-      IF (ErrStat >= AbortErrLev) RETURN
-   
    DO k=1,p%NumBl      
       CALL CommitPointMesh( y%BladeRootMotion(K) )
          IF (ErrStat >= AbortErrLev) RETURN
    END DO
    
       
-   ! -------------- Rotor Furl -----------------------------------
-   CALL MeshCreate( BlankMesh          = y%RotorFurlMotion14    &
-                     ,IOS              = COMPONENT_OUTPUT       &
-                     ,NNodes           = 1                      &
-                     , TranslationDisp = .TRUE.                 &
-                     , Orientation     = .TRUE.                 &
-                     , RotationVel     = .TRUE.                 &
-                     ,ErrStat          = ErrStat2               &
-                     ,ErrMess          = ErrMsg2                )
-      CALL CheckError(ErrStat2,ErrMsg2)
-      IF (ErrStat >= AbortErrLev) RETURN
-
-!bjj: FIX THIS>>>>     
-!call wrscr(newline//'fix RotorFurlMotion initialization')
-   CALL MeshPositionNode ( y%RotorFurlMotion14, 1, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat, ErrMsg ) !orientation is identity by default
-!<<<<<FIX THIS
-      CALL CheckError(ErrStat2,ErrMsg2)
-      IF (ErrStat >= AbortErrLev) RETURN
-      
-   CALL CommitPointMesh( y%RotorFurlMotion14 )
-      IF (ErrStat >= AbortErrLev) RETURN      
-      
+     
    ! -------------- Nacelle -----------------------------------      
    CALL MeshCopy ( SrcMesh  = u%NacelleLoads   &
                  , DestMesh = y%NacelleMotion  &
@@ -8980,35 +8817,15 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
                  , Orientation     = .TRUE.    &
                  , TranslationVel  = .TRUE.    &
                  , RotationVel     = .TRUE.    &
-                 , TranslationAcc  = .TRUE.    &
-                 , RotationAcc     = .TRUE.    &   
+                 , TranslationAcc  = .FALSE.   &
+                 , RotationAcc     = .FALSE.   &   
                  , ErrStat  = ErrStat2         &
                  , ErrMess  = ErrMsg2          )
 
    call CheckError( ErrStat2, ErrMsg2 )
    if (ErrStat >= AbortErrLev) RETURN         
      
-   ! -------------- Tower Base-----------------------------------
-   CALL MeshCreate( BlankMesh          = y%TowerBaseMotion14    &
-                     ,IOS              = COMPONENT_OUTPUT       &
-                     ,NNodes           = 1                      &
-                     , TranslationDisp = .TRUE.                 &
-                     , RotationVel     = .TRUE.                 &
-                     ,ErrStat          = ErrStat2               &
-                     ,ErrMess          = ErrMsg2                )
-      CALL CheckError(ErrStat2,ErrMsg2)
-      IF (ErrStat >= AbortErrLev) RETURN
-
-!bjj: FIX THIS>>>>     
-!call wrscr(newline//'fix TowerBaseMotion14 initialization')
-   CALL MeshPositionNode ( y%TowerBaseMotion14, 1, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat, ErrMsg ) !orientation is identity by default
-!<<<<<FIX THIS
-      CALL CheckError(ErrStat2,ErrMsg2)
-      IF (ErrStat >= AbortErrLev) RETURN
-      
-   CALL CommitPointMesh( y%TowerBaseMotion14 )
-      IF (ErrStat >= AbortErrLev) RETURN      
-      
+     
       
 CONTAINS
    !...............................................................................................................................
@@ -9159,62 +8976,34 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
                            ,ErrMess         = ErrMsg2                )
          if (Failed()) return
       
-         if (p%UseAD14) then
-            ! position the nodes on the blades:
-            DO J = 1,p%BldNodes
+         ! position the nodes on the blades:
+         DO J = 1,p%BldNodes
+            NodeNum = J
          
-               NodeNum = J
-         
-               Orientation(1,1) =  p%CAeroTwst(J)
-               Orientation(2,1) =  p%SAeroTwst(J)
-               Orientation(3,1) =  0.0_ReKi
-
-               Orientation(1,2) = -p%SAeroTwst(J)
-               Orientation(2,2) =  p%CAeroTwst(J)
-               Orientation(3,2) =  0.0_ReKi
-
-               Orientation(1,3) =  0.0_ReKi
-               Orientation(2,3) =  0.0_ReKi
-               Orientation(3,3) =  1.0_ReKi
-                           
-               CALL MeshPositionNode ( u%BladePtLoads(K), NodeNum, (/0.0_ReKi, 0.0_ReKi, p%RNodes(J) /), ErrStat2, ErrMsg2, Orient=Orientation )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  IF (ErrStat >= AbortErrLev) THEN
-                     CALL Cleanup()
-                     RETURN
-                  END IF
-                                                               
-            END DO ! nodes  
-         else
-            ! position the nodes on the blades:
-            DO J = 1,p%BldNodes
-               NodeNum = J
-         
-               Orientation(1,1) =     m%CoordSys%n1(K,J,1)
-               Orientation(2,1) =     m%CoordSys%n2(K,J,1)
-               Orientation(3,1) =     m%CoordSys%n3(K,J,1)
-               Orientation(1,2) = -1.*m%CoordSys%n1(K,J,3)
-               Orientation(2,2) = -1.*m%CoordSys%n2(K,J,3)
-               Orientation(3,2) = -1.*m%CoordSys%n3(K,J,3)
-               Orientation(1,3) =     m%CoordSys%n1(K,J,2)
-               Orientation(2,3) =     m%CoordSys%n2(K,J,2)
-               Orientation(3,3) =     m%CoordSys%n3(K,J,2) 
-               
-                  ! Translational Displacement 
-               position(1) =     m%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-               position(2) = -1.*m%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
-               position(3) =     m%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
-               
-               
-               CALL MeshPositionNode ( u%BladePtLoads(K), NodeNum, position, ErrStat2, ErrMsg2, Orient=Orientation )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  IF (ErrStat >= AbortErrLev) THEN
-                     CALL Cleanup()
-                     RETURN
-                  END IF                           
-                                    
-            END DO ! nodes              
-         end if ! position/orientation of nodes for AeroDyn v14 or v15
+            Orientation(1,1) =     m%CoordSys%n1(K,J,1)
+            Orientation(2,1) =     m%CoordSys%n2(K,J,1)
+            Orientation(3,1) =     m%CoordSys%n3(K,J,1)
+            Orientation(1,2) = -1.*m%CoordSys%n1(K,J,3)
+            Orientation(2,2) = -1.*m%CoordSys%n2(K,J,3)
+            Orientation(3,2) = -1.*m%CoordSys%n3(K,J,3)
+            Orientation(1,3) =     m%CoordSys%n1(K,J,2)
+            Orientation(2,3) =     m%CoordSys%n2(K,J,2)
+            Orientation(3,3) =     m%CoordSys%n3(K,J,2) 
+            
+               ! Translational Displacement 
+            position(1) =     m%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+            position(2) = -1.*m%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+            position(3) =     m%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
+            
+            
+            CALL MeshPositionNode ( u%BladePtLoads(K), NodeNum, position, ErrStat2, ErrMsg2, Orient=Orientation )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF                           
+                                 
+         END DO ! nodes              
          
          ! create elements:      
          DO J = 1,p%BldNodes !p%BldNodes + 1
@@ -9264,7 +9053,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%g1(2)
    Orientation(2,3) =     m%CoordSys%g2(2)
    Orientation(3,3) =     m%CoordSys%g3(2) 
-   call CreatePointMesh(u%HubPtLoad, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%HubPtLoad, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
          
                      
@@ -9273,7 +9062,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    Position = (/0.0_ReKi, 0.0_ReKi, p%PtfmRefzt /)
    call Eye(Orientation, ErrStat2, errMsg2)
-   call CreatePointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
       
    !.......................................................
@@ -9281,7 +9070,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    Position = (/0.0_ReKi, 0.0_ReKi, p%TowerHt /)
    call Eye(Orientation, ErrStat2, errMsg2)
-   call CreatePointMesh(u%NacelleLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%NacelleLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
       
    !.......................................................
@@ -9299,7 +9088,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%tf1(2)
    Orientation(2,3) =     m%CoordSys%tf2(2)
    Orientation(3,3) =     m%CoordSys%tf3(2) 
-   call CreatePointMesh(u%TFinCMLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   call CreateInputPointMesh(u%TFinCMLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
 
 
@@ -9659,6 +9448,8 @@ SUBROUTINE ED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
       END IF
       OtherState%HSSBrTrq   = OtherState%HSSBrTrqC
       OtherState%SgnPrvLSTQ = OtherState%SgnLSTQ(OtherState%IC(2))
+      OtherState%OmegaTn = x%QDT(DOF_Yaw) !this is equal to x%QDT(DOF_Yaw)
+      OtherState%OmegaDotTn = m%QD2T(DOF_Yaw) !this is equal to m%QD2T(DOF_Yaw) 
       
       CALL ED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
@@ -9693,6 +9484,11 @@ SUBROUTINE ED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
          CALL FixHSSBrTq ( 'P', p, x, OtherState, m, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
+
+         CALL FixYawFric ( 'P', p, x, OtherState, m, ErrStat2, ErrMsg2 ) !KBF Make sure YawFric will not reverse nacelle direction x%qdt(dof_yaw) = OtherState%xdot(OtherState%IC(1))%qt(DOF_Yaw )
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
             
       endif
             
@@ -9852,6 +9648,11 @@ SUBROUTINE ED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
          CALL FixHSSBrTq ( 'C', p, x, OtherState, m, ErrStat2, ErrMsg2 )      
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
+
+         CALL FixYawFric ( 'C', p, x, OtherState, m, ErrStat2, ErrMsg2 )  !KBF Make sure YawFric will not reverse nacelle direction    x%qdt(dof_yaw) = OtherState%xdot(OtherState%IC(1))%qt(DOF_Yaw )
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
          OtherState%SgnPrvLSTQ = SignLSSTrq(p, m)
          OtherState%SgnLSTQ(OtherState%IC(1)) = OtherState%SgnPrvLSTQ 
                                                                     
@@ -10330,6 +10131,201 @@ SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, m, ErrStat, ErrMsg )
 
    RETURN
 END SUBROUTINE FixHSSBrTq
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used to adjust the YawFricMom value for unphysicalities.
+SUBROUTINE FixYawFric ( Integrator, p, x, OtherState, m, ErrStat, ErrMsg )
+
+   ! Passed variables:
+
+   TYPE(ED_ParameterType),      INTENT(IN   )  :: p                       !< Parameters of the structural dynamics module
+   TYPE(ED_OtherStateType),     INTENT(INOUT)  :: OtherState              !< Other states of the structural dynamics module 
+   TYPE(ED_MiscVarType),        INTENT(INOUT)  :: m                       !< misc (optimization) variables
+   TYPE(ED_ContinuousStateType),INTENT(INOUT)  :: x                       !< Continuous states of the structural dynamics module at n+1
+   CHARACTER(1),                INTENT(IN   )  :: Integrator              !< A string holding the current integrator being used.
+   INTEGER(IntKi),              INTENT(  OUT)  :: ErrStat                 !< Error status of the operation
+   CHARACTER(*),                INTENT(  OUT)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
+
+
+   ! Local variables:
+
+   REAL(ReKi)                             :: RqdFrcYaw                           ! The force term required to produce RqdQD2Yaw.
+   REAL(ReKi)                             :: RqdQD2Yaw                           ! The required QD2T(DOF_Yaw) to cause the yaw bearing to stop rotating.
+
+   INTEGER                                :: I                                    ! Loops through all DOFs.
+   INTEGER(IntKi)                         :: ErrStat2
+   CHARACTER(ErrMsgLen)                   :: ErrMsg2
+   CHARACTER(*), PARAMETER                :: RoutineName = 'FixYawFric'
+
+   
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   IF ( .NOT. p%DOF_Flag(DOF_Yaw) .OR. EqualRealNos(m%RtHS%YawFriMom, 0.0_ReKi ) )  RETURN
+
+
+      ! The absolute magnitude of the yaw friction must have been too great
+      !   that the yaw speed sign was reversed.  What should have happened
+      !   is that the yaw system should have stopped rotating.  In other words,
+      !   QD(DOF_Yaw,IC(NMX)) should equal zero!  Determining what
+      !   QD2T(DOF_Yaw) will make QD(DOF_Yaw,IC(NMX)) = 0, depends on
+      !   which integrator we are using.
+
+   
+   SELECT CASE (Integrator)
+
+   CASE ('C')   ! Corrector
+
+      ! Find the required QD2T(DOF_Yaw) to cause the yaw system to stop rotating (RqdQD2Yaw).
+      ! This is found by solving the corrector formula for QD2(DOF_Yaw,IC(NMX))
+      !   when QD(DOF_Yaw,IC(NMX)) equals zero.
+      
+      RqdQD2Yaw = ( -      OtherState%xdot(OtherState%IC(1))%qt(DOF_Yaw)/ p%DT24 &
+                     - 19.0*OtherState%xdot(OtherState%IC(1))%qdt(DOF_Yaw)         &
+                     +  5.0*OtherState%xdot(OtherState%IC(2))%qdt(DOF_Yaw)         &
+                     -      OtherState%xdot(OtherState%IC(3))%qdt(DOF_Yaw)         ) / 9.0
+       
+   CASE ('P')   ! Predictor
+
+      ! Find the required QD2T(DOF_Yaw) to cause the yaw system to stop rotating (RqdQD2Yaw).
+      ! This is found by solving the predictor formula for QD2(DOF_Yaw,IC(1))
+      !   when QD(DOF_Yaw,IC(NMX)) equals zero.
+      
+      RqdQD2Yaw = ( -      OtherState%xdot(OtherState%IC(1))%qt( DOF_Yaw)  / p%DT24 &
+                     + 59.0*OtherState%xdot(OtherState%IC(2))%qdt(DOF_Yaw) &
+                     - 37.0*OtherState%xdot(OtherState%IC(3))%qdt(DOF_Yaw) &
+                     +  9.0*OtherState%xdot(OtherState%IC(4))%qdt(DOF_Yaw)   )/55.0
+          
+   END SELECT
+
+
+   ! Rearrange the augmented matrix of equations of motion to account
+   !   for the known acceleration of the yaw DOF.  To
+   !   do this, make the known inertia like an applied force to the
+   !   system.  Then set force QD2T(DOF_Yaw) to equal the known
+   !   acceleration in the augmented matrix of equations of motion:
+   ! Here is how the new equations are derived.  First partition the
+   !   augmented matrix as follows, where Qa are the unknown
+   !   accelerations, Qb are the known accelerations, Fa are the
+   !   known forces, and Fb are the unknown forces:
+   !      [Caa Cab]{Qa}={Fa}
+   !      [Cba Cbb]{Qb}={Fb}
+   !   By rearranging, the equations for the unknown and known
+   !   accelerations are as follows:
+   !      [Caa]{Qa}={Fa}-[Cab]{Qb} and [I]{Qb}={Qb}
+   !   Combining these two sets of equations into one set yields:
+   !      [Caa 0]{Qa}={{Fa}-[Cab]{Qb}}
+   !      [  0 I]{Qb}={          {Qb}}
+   !   Once this equation is solved, the unknown force can be found from:
+   !      {Fb}=[Cba]{Qa}+[Cbb]{Qb}
+
+   m%OgnlYawRow    = m%AugMat(DOF_Yaw,:)  ! copy this row before modifying the old matrix
+   
+  
+   DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+
+      m%AugMat(p%DOFs%SrtPS(I),    p%NAUG) = m%AugMat(p%DOFs%SrtPS(I),p%NAUG) &
+                                                    - m%AugMat(p%DOFs%SrtPS(I),DOF_Yaw)*RqdQD2Yaw  ! {{Fa}-[Cab]{Qb}}
+      m%AugMat(p%DOFs%SrtPS(I),DOF_Yaw)   = 0.0                                                     ! [0]
+      m%AugMat(DOF_Yaw, p%DOFs%SrtPS(I))  = 0.0                                                     ! [0]
+
+   ENDDO             ! I - All active (enabled) DOFs
+
+   m%AugMat(DOF_Yaw,DOF_Yaw) = 1.0                                                           ! [I]{Qb}={Qb}
+   m%AugMat(DOF_Yaw,  p%NAUG) = RqdQD2Yaw                                                    !
+
+
+   ! Invert the matrix to solve for the new (updated) accelerations.  Like in
+   !   CalcContStateDeriv(), the accelerations are returned by Gauss() in the first NActvDOF
+   !   elements of the solution vector, SolnVec().  These are transfered to the
+   !   proper index locations of the acceleration vector QD2T() using the
+   !   vector subscript array SrtPS(), after Gauss() has been called:
+
+   ! Invert the matrix to solve for the accelerations. The accelerations are returned by Gauss() in the first NActvDOF elements
+   !   of the solution vector, SolnVec(). These are transfered to the proper index locations of the acceleration vector QD2T() 
+   !   using the vector subscript array SrtPS(), after Gauss() has been called:
+
+      m%AugMat_factor = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1:p%DOFs%NActvDOF) )
+      m%SolnVec       = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1+p%DOFs%NActvDOF) )
+   
+      CALL LAPACK_getrf( M=p%DOFs%NActvDOF, N=p%DOFs%NActvDOF, A=m%AugMat_factor, IPIV=m%AugMat_pivot, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      
+      CALL LAPACK_getrs( TRANS='N',N=p%DOFs%NActvDOF, A=m%AugMat_factor,IPIV=m%AugMat_pivot, B=m%SolnVec, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+   
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev ) RETURN
+   
+         
+      ! Find the force required to produce RqdQD2Yaw from the equations of
+      !   motion using the new accelerations:
+
+   RqdFrcYaw = 0.0
+   DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+      ! bjj: use m%SolnVec(I) instead of m%QD2T(p%DOFs%SrtPS(I)) here; then update m%QD2T(p%DOFs%SrtPS(I))
+      !      later if necessary
+      RqdFrcYaw = RqdFrcYaw + m%OgnlYawRow(p%DOFs%SrtPS(I))*m%SolnVec(I)  ! {Fb}=[Cba]{Qa}+[Cbb]{Qb}  (note that [Cba , Cbb] is the old row, and [Qa;Qb] is a single vector SolVec; %Note this is supposedly= YawFriMz+YawFriMf+DeltaM
+   ENDDO             ! I - All active (enabled) DOFs
+
+      ! Find the YawFriMfp necessary to bring about this force, i.e. to stop the yaw:
+
+   OtherState%YawFriMfp = m%RtHs%YawFriMom   -  ( m%OgnlYawRow(p%NAUG) - RqdFrcYaw )  !This should return YawFriMf - (YawFriMz + YawFriMf - (YawFriMz + YawFriMf + deltaM)) = YawFriMf+DeltaM =YawFriMfp 
+   
+   OtherState%Mfhat = ABS(OtherState%YawFriMfp) * SIGN(1.0_ReKi, real(m%RtHs%YawFriMom,ReKi))  !Mfhat should have same sign as YawFriMom (YawFriMf)
+   
+!Now check if YawFriMfp is unphysical (i.e., it turned out aligned with omega), and then pick the minimum between YawFriMf and YawFriMfp
+  
+   IF ( ABS( OtherState%YawFriMfp ) > ABS( m%RtHs%YawFriMom  )) THEN  
+
+      OtherState%Mfhat = m%RtHs%YawFriMom !OtherState%HSSBrTrqC = SIGN( u%HSSBrTrqC, x%QDT(DOF_GeAz) ) KBF CHECK THIS, does YawFriMfp need to be OtherState?
+   
+   ELSE
+
+      ! overwrite QD2T with the new values
+      m%QD2T = 0.0
+      DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+         m%QD2T(p%DOFs%SrtPS(I)) = m%SolnVec(I)
+      ENDDO             ! I - All active (enabled) DOFs
+      
+            
+      ! Use the new accelerations to update the DOF values.  Again, this
+      !   depends on the integrator type:
+
+      SELECT CASE (Integrator)
+
+      CASE ('C')  ! Corrector
+
+      ! Update QD and QD2 with the new accelerations using the corrector.
+      ! This will make QD(DOF_Yaw,IC(NMX)) equal to zero and adjust all
+      !    of the other QDs as necessary.
+      ! The Q's are unnaffected by this change.     
+      
+         x%qdt =                   OtherState%xdot(OtherState%IC(1))%qt &  ! qd at n
+                 + p%DT24 * ( 9. * m%QD2T &                                ! the value we just changed
+                           + 19. * OtherState%xdot(OtherState%IC(1))%qdt &
+                           -  5. * OtherState%xdot(OtherState%IC(2))%qdt &
+                           +  1. * OtherState%xdot(OtherState%IC(3))%qdt )
+      
+      CASE ('P')  ! Predictor
+
+      ! Update QD and QD2 with the new accelerations using predictor.  
+         
+         x%qdt =                OtherState%xdot(OtherState%IC(1))%qt + &  ! qd at n
+                 p%DT24 * ( 55.*m%QD2T &                                  ! the value we just changed
+                          - 59.*OtherState%xdot(OtherState%IC(2))%qdt  &
+                          + 37.*OtherState%xdot(OtherState%IC(3))%qdt  &
+                           - 9.*OtherState%xdot(OtherState%IC(4))%qdt )
+         
+         OtherState%xdot ( OtherState%IC(1) )%qdt = m%QD2T        ! fix the history
+      
+      END SELECT
+      
+   ENDIF
+
+   RETURN
+END SUBROUTINE FixYawFric
+
 !----------------------------------------------------------------------------------------------------------------------------------
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -10940,10 +10936,11 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       end if
    
       p%Jac_ny = p%Jac_ny &
-         + y%PlatformPtMesh%NNodes  * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-         + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-         + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
-         + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
+         + y%PlatformPtMesh%NNodes  * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, RotationAcc at each node
+         + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, RotationAcc at each node
+         + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation,                 RotationVel                              at each node
+         + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, RotationAcc at each node
+         + y%TFinCMMotion%NNodes    * 12           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel                              at each node
          + 3                                       & ! Yaw, YawRate, and HSS_Spd
          + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
       
@@ -10966,13 +10963,16 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    index_next = 1
    if (allocated(y%BladeLn2Mesh)) then
       index_last = index_next
+      p%Jac_y_idxStartList%Blade = index_next
       do i=1,p%NumBl_Lin
          call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, index_next, FieldMask=BladeMask)
       end do      
    end if
    
    if (.not. p%CompAeroMaps) then
+      p%Jac_y_idxStartList%Platform = index_next
       call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, index_next)
+      p%Jac_y_idxStartList%Tower = index_next
       call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, index_next)
       
       ! note that this Mask is for the y%HubPtMotion mesh ONLY. The others pack *all* of the motion fields
@@ -10981,13 +10981,25 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       Mask(MASKID_ORIENTATION) = .true.
       Mask(MASKID_ROTATIONVEL) = .true.
       
+      p%Jac_y_idxStartList%Hub = index_next
       call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, index_next, FieldMask=Mask)
       index_last = index_next
+      p%Jac_y_idxStartList%BladeRoot = index_next
       do i=1,p%NumBl_Lin
          call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
       end do   
 
+      p%Jac_y_idxStartList%Nacelle = index_next
       call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
+
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+      Mask(MASKID_ORIENTATION)     = .true.
+      Mask(MASKID_TRANSLATIONVEL)  = .true.
+      Mask(MASKID_ROTATIONVEL)     = .true.
+      p%Jac_y_idxStartList%TFin = index_next
+      call PackMotionMesh_Names(y%TFinCMMotion,  'TailFin', InitOut%LinNames_y, index_next, FieldMask=Mask)
+
       InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
       InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
       InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
@@ -11210,6 +11222,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
          + u%TowerPtLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
          + u%HubPtLoad%NNodes      * 6            & ! 3 forces + 3 moments at each node
          + u%NacelleLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
+         + u%TFinCMLoads%NNodes    * 6            & ! 3 forces + 3 moments at each node
          + p%NumBl                                & ! blade pitch command (BlPitchCom)    
          + 2                                        ! YawMom and GenTrq
       p%NumExtendedInputs = 1
@@ -11234,6 +11247,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       
    index = 1
    if (allocated(u%BladePtLoads)) then
+      p%Jac_u_idxStartList%BladeLoad = index
       !Module/Mesh/Field: u%BladePtLoads(1)%Force  = 1;
       !Module/Mesh/Field: u%BladePtLoads(1)%Moment = 2;
       !Module/Mesh/Field: u%BladePtLoads(2)%Force  = 3;
@@ -11256,9 +11270,9 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       end do !k
                         
    end if
-   
+
    if (.not. p%CompAeroMaps) then
-      !if MaxBl ever changes (i.e., MaxBl /=3), we need to modify this accordingly:
+      p%Jac_u_idxStartList%PlatformLoad = index
       do i_meshField = 7,8
          do i=1,u%PlatformPtMesh%NNodes
             do j=1,3
@@ -11269,7 +11283,8 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
             end do !j      
          end do !i
       end do
-  
+
+      p%Jac_u_idxStartList%TowerLoad = index
       do i_meshField = 9,10
          do i=1,u%TowerPtLoads%NNodes
             do j=1,3
@@ -11280,7 +11295,8 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
             end do !j      
          end do !i
       end do
-         
+
+      p%Jac_u_idxStartList%HubLoad = index
       do i_meshField = 11,12
          do i=1,u%HubPtLoad%NNodes
             do j=1,3
@@ -11291,7 +11307,8 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
             end do !j      
          end do !i
       end do   
-   
+
+      p%Jac_u_idxStartList%NacelleLoad = index
       do i_meshField = 13,14
          do i=1,u%NacelleLoads%NNodes
             do j=1,3
@@ -11302,16 +11319,29 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
             end do !j      
          end do !i
       end do
+
+      p%Jac_u_idxStartList%TFinLoad = index
+      do i_meshField = 15,16
+         do i=1,u%TFinCMLoads%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%TFinCMLoads%Force = 15; u%TFinCMLoads%Moment = 16;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do
    
+      p%Jac_u_idxStartList%BlPitchCom = index
       do i_meshField = 1,p%NumBl ! scalars   
-         p%Jac_u_indx(index,1) =  15 !Module/Mesh/Field: u%BlPitchCom = 15;
+         p%Jac_u_indx(index,1) =  17 !Module/Mesh/Field: u%BlPitchCom = 17;
          p%Jac_u_indx(index,2) =  1 !index:  n/a
          p%Jac_u_indx(index,3) =  i_meshField !Node:   blade
          index = index + 1      
       end do
-   
-      do i_meshField = 16,17 ! scalars   
-         p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%YawMom = 16; u%GenTrq = 17;
+  
+      do i_meshField = 18,19 ! scalars   
+         p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%YawMom = 18; u%GenTrq = 19;
          p%Jac_u_indx(index,2) =  1 !index:  j
          p%Jac_u_indx(index,3) =  1 !Node:   i
          index = index + 1
@@ -11321,7 +11351,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    !................
    ! input perturbations, du:
    !................
-   call AllocAry(p%du, 17, 'p%du', ErrStat2, ErrMsg2) ! 17 = number of unique values in p%Jac_u_indx(:,1) 
+   call AllocAry(p%du, 19, 'p%du', ErrStat2, ErrMsg2) ! 19 = number of unique values in p%Jac_u_indx(:,1) 
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    if (ErrStat >= AbortErrLev) return
    
@@ -11347,9 +11377,11 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    p%du(12) = MaxTorque / 100.0_R8Ki                           ! u%HubPtLoad%Moment = 12
    p%du(13) = MaxThrust / 100.0_R8Ki                           ! u%NacelleLoads%Force = 13
    p%du(14) = MaxTorque / 100.0_R8Ki                           ! u%NacelleLoads%Moment = 14   
-   p%du(15) = 2.0_R8Ki * D2R_D                                 ! u%BlPitchCom = 15 
-   p%du(16) = MaxTorque / 100.0_R8Ki                           ! u%YawMom = 16
-   p%du(17) = MaxTorque / (100.0_R8Ki*p%GBRatio)               ! u%GenTrq = 17
+   p%du(15) = MaxThrust / 100.0_R8Ki                           ! u%TFinCMLoads%Force = 15
+   p%du(16) = MaxTorque / 100.0_R8Ki                           ! u%TFinCMLoads%Moment = 16   
+   p%du(17) = 2.0_R8Ki * D2R_D                                 ! u%BlPitchCom = 17 
+   p%du(18) = MaxTorque / 100.0_R8Ki                           ! u%YawMom = 18
+   p%du(19) = MaxTorque / (100.0_R8Ki*p%GBRatio)               ! u%GenTrq = 19
       
    !Set some limits in case perturbation is very small
    do i=1,size(p%du)
@@ -11379,6 +11411,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       call PackLoadMesh_Names(u%TowerPtLoads, 'Tower', InitOut%LinNames_u, index)   
       call PackLoadMesh_Names(u%HubPtLoad, 'Hub', InitOut%LinNames_u, index)   
       call PackLoadMesh_Names(u%NacelleLoads, 'Nacelle', InitOut%LinNames_u, index)   
+      call PackLoadMesh_Names(u%TFinCMLoads, 'Tailfin', InitOut%LinNames_u, index)   
       
       do k = 1,p%NumBl ! scalars
          InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command, rad'
@@ -11419,45 +11452,57 @@ SUBROUTINE ED_Perturb_u( p, n, perturb_sign, u, du )
       ! determine which mesh we're trying to perturb and perturb the input:
    SELECT CASE( p%Jac_u_indx(n,1) )
       
-   CASE ( 1) !Module/Mesh/Field: u%BladePtLoads(1)%Force = 1      
-      u%BladePtLoads(1)%Force( fieldIndx,node) = u%BladePtLoads(1)%Force( fieldIndx,node) + du * perturb_sign       
-   CASE ( 2) !Module/Mesh/Field: u%BladePtLoads(1)%Moment = 2
-      u%BladePtLoads(1)%Moment(fieldIndx,node) = u%BladePtLoads(1)%Moment(fieldIndx,node) + du * perturb_sign            
-   CASE ( 3) !Module/Mesh/Field: u%BladePtLoads(2)%Force = 3
-      u%BladePtLoads(2)%Force( fieldIndx,node) = u%BladePtLoads(2)%Force( fieldIndx,node) + du * perturb_sign       
-   CASE ( 4) !Module/Mesh/Field: u%BladePtLoads(2)%Moment = 4
-      u%BladePtLoads(2)%Moment(fieldIndx,node) = u%BladePtLoads(2)%Moment(fieldIndx,node) + du * perturb_sign            
-   CASE ( 5) !Module/Mesh/Field: u%BladePtLoads(2)%Force = 5
-      u%BladePtLoads(3)%Force( fieldIndx,node) = u%BladePtLoads(3)%Force( fieldIndx,node) + du * perturb_sign       
-   CASE ( 6) !Module/Mesh/Field: u%BladePtLoads(2)%Moment = 6
-      u%BladePtLoads(3)%Moment(fieldIndx,node) = u%BladePtLoads(3)%Moment(fieldIndx,node) + du * perturb_sign            
-               
-   CASE ( 7) !Module/Mesh/Field: u%PlatformPtMesh%Force = 7
-      u%PlatformPtMesh%Force( fieldIndx,node) = u%PlatformPtMesh%Force( fieldIndx,node) + du * perturb_sign       
-   CASE ( 8) !Module/Mesh/Field: u%PlatformPtMesh%Moment = 8
-      u%PlatformPtMesh%Moment(fieldIndx,node) = u%PlatformPtMesh%Moment(fieldIndx,node) + du * perturb_sign            
-                     
-   CASE ( 9) !Module/Mesh/Field: u%TowerPtLoads%Force = 9
-      u%TowerPtLoads%Force( fieldIndx,node) = u%TowerPtLoads%Force( fieldIndx,node) + du * perturb_sign       
-   CASE (10) !Module/Mesh/Field: u%TowerPtLoads%Moment = 10
-      u%TowerPtLoads%Moment(fieldIndx,node) = u%TowerPtLoads%Moment(fieldIndx,node) + du * perturb_sign            
+   !  BladePtLoads
+   !     Module/Mesh/Field: u%BladePtLoads(1)%Force  = 1
+   !     Module/Mesh/Field: u%BladePtLoads(1)%Moment = 2
+   !     Module/Mesh/Field: u%BladePtLoads(2)%Force  = 3
+   !     Module/Mesh/Field: u%BladePtLoads(2)%Moment = 4
+   !     Module/Mesh/Field: u%BladePtLoads(3)%Force  = 5
+   !     Module/Mesh/Field: u%BladePtLoads(3)%Moment = 6
+   CASE ( 1);  u%BladePtLoads(1)%Force( fieldIndx,node) = u%BladePtLoads(1)%Force( fieldIndx,node) + du * perturb_sign       
+   CASE ( 2);  u%BladePtLoads(1)%Moment(fieldIndx,node) = u%BladePtLoads(1)%Moment(fieldIndx,node) + du * perturb_sign            
+   CASE ( 3);  u%BladePtLoads(2)%Force( fieldIndx,node) = u%BladePtLoads(2)%Force( fieldIndx,node) + du * perturb_sign       
+   CASE ( 4);  u%BladePtLoads(2)%Moment(fieldIndx,node) = u%BladePtLoads(2)%Moment(fieldIndx,node) + du * perturb_sign            
+   CASE ( 5);  u%BladePtLoads(3)%Force( fieldIndx,node) = u%BladePtLoads(3)%Force( fieldIndx,node) + du * perturb_sign       
+   CASE ( 6);  u%BladePtLoads(3)%Moment(fieldIndx,node) = u%BladePtLoads(3)%Moment(fieldIndx,node) + du * perturb_sign            
 
-   CASE (11) !Module/Mesh/Field: u%HubPtLoad%Force = 11
-      u%HubPtLoad%Force( fieldIndx,node) = u%HubPtLoad%Force( fieldIndx,node) + du * perturb_sign       
-   CASE (12) !Module/Mesh/Field: u%HubPtLoad%Moment = 12
-      u%HubPtLoad%Moment(fieldIndx,node) = u%HubPtLoad%Moment(fieldIndx,node) + du * perturb_sign            
-  
-   CASE (13) !Module/Mesh/Field: u%NacelleLoads%Force = 13
-      u%NacelleLoads%Force( fieldIndx,node) = u%NacelleLoads%Force( fieldIndx,node) + du * perturb_sign       
-   CASE (14) !Module/Mesh/Field: u%NacelleLoads%Moment = 14
-      u%NacelleLoads%Moment(fieldIndx,node) = u%NacelleLoads%Moment(fieldIndx,node) + du * perturb_sign            
-   
-   CASE (15) !Module/Mesh/Field: u%BlPitchCom = 15
-      u%BlPitchCom(node) = u%BlPitchCom(node) + du * perturb_sign
-   CASE (16) !Module/Mesh/Field: u%YawMom = 16
-      u%YawMom = u%YawMom + du * perturb_sign
-   CASE (17) !Module/Mesh/Field: u%GenTrq = 17
-      u%GenTrq = u%GenTrq + du * perturb_sign
+   !  PlatformPtMesh
+   !     Module/Mesh/Field: u%PlatformPtMesh%Force  = 7
+   !     Module/Mesh/Field: u%PlatformPtMesh%Moment = 8
+   CASE ( 7);  u%PlatformPtMesh%Force( fieldIndx,node) = u%PlatformPtMesh%Force( fieldIndx,node) + du * perturb_sign       
+   CASE ( 8);  u%PlatformPtMesh%Moment(fieldIndx,node) = u%PlatformPtMesh%Moment(fieldIndx,node) + du * perturb_sign            
+                     
+   !  TowerPtLoads
+   !     Module/Mesh/Field: u%TowerPtLoads%Force  = 9
+   !     Module/Mesh/Field: u%TowerPtLoads%Moment = 10
+   CASE ( 9);  u%TowerPtLoads%Force( fieldIndx,node) = u%TowerPtLoads%Force( fieldIndx,node) + du * perturb_sign       
+   CASE (10);  u%TowerPtLoads%Moment(fieldIndx,node) = u%TowerPtLoads%Moment(fieldIndx,node) + du * perturb_sign            
+
+   !  HubPtLoad
+   !     Module/Mesh/Field: u%HubPtLoad%Force  = 11
+   !     Module/Mesh/Field: u%HubPtLoad%Moment = 12
+   CASE (11);  u%HubPtLoad%Force( fieldIndx,node) = u%HubPtLoad%Force( fieldIndx,node) + du * perturb_sign       
+   CASE (12);  u%HubPtLoad%Moment(fieldIndx,node) = u%HubPtLoad%Moment(fieldIndx,node) + du * perturb_sign            
+
+   !  NacelleLoads  
+   !     Module/Mesh/Field: u%NacelleLoads%Force  = 13
+   !     Module/Mesh/Field: u%NacelleLoads%Moment = 14
+   CASE (13);  u%NacelleLoads%Force( fieldIndx,node) = u%NacelleLoads%Force( fieldIndx,node) + du * perturb_sign       
+   CASE (14);  u%NacelleLoads%Moment(fieldIndx,node) = u%NacelleLoads%Moment(fieldIndx,node) + du * perturb_sign            
+
+   !  TFinCMLoads
+   !     Module/Mesh/Field: u%TFinCMLoads%Force  = 15
+   !     Module/Mesh/Field: u%TFinCMLoads%Moment = 16
+   CASE (15);  u%TFinCMLoads%Force( fieldIndx,node) = u%TFinCMLoads%Force( fieldIndx,node) + du * perturb_sign       
+   CASE (16);  u%TFinCMLoads%Moment(fieldIndx,node) = u%TFinCMLoads%Moment(fieldIndx,node) + du * perturb_sign            
+
+   !  Controller inputs
+   !     Module/Mesh/Field: u%BlPitchCom = 17
+   !     Module/Mesh/Field: u%YawMom     = 18
+   !     Module/Mesh/Field: u%GenTrq     = 19
+   CASE (17);  u%BlPitchCom(node) = u%BlPitchCom(node) + du * perturb_sign
+   CASE (18);  u%YawMom = u%YawMom + du * perturb_sign
+   CASE (19);  u%GenTrq = u%GenTrq + du * perturb_sign
       
    END SELECT
                                              
@@ -11527,8 +11572,8 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    end if
    
    if (.not. p%CompAeroMaps) then
-      call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.true.)
-      call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.true.)
+      call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.false.)    ! all fields
+      call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.false.)    ! all fields
       
       Mask  = .false.
       Mask(MASKID_TRANSLATIONDISP) = .true.
@@ -11540,6 +11585,13 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
          call PackMotionMesh_dY(y_p%BladeRootMotion(k),   y_m%BladeRootMotion(k),   dY, indx_first)
       end do
       call PackMotionMesh_dY(y_p%NacelleMotion,  y_m%NacelleMotion,  dY, indx_first)
+
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+      Mask(MASKID_ORIENTATION)     = .true.
+      Mask(MASKID_TRANSLATIONVEL)  = .true.   
+      Mask(MASKID_ROTATIONVEL)     = .true.   
+      call PackMotionMesh_dY(y_p%TFinCMMotion,  y_m%TFinCMMotion,  dY, indx_first, FieldMask=Mask)
                      
       dY(indx_first) = y_p%Yaw     - y_m%Yaw;       indx_first = indx_first + 1
       dY(indx_first) = y_p%YawRate - y_m%YawRate;   indx_first = indx_first + 1
@@ -11646,6 +11698,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          call PackLoadMesh(u%TowerPtLoads, u_op, index)   
          call PackLoadMesh(u%HubPtLoad, u_op, index)   
          call PackLoadMesh(u%NacelleLoads, u_op, index)   
+         call PackLoadMesh(u%TFinCMLoads, u_op, index)   
       
          do k = 1,p%NumBl_Lin ! scalars
             u_op(index) = u%BlPitchCom(k)
@@ -11684,7 +11737,8 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             ny = p%Jac_ny + y%PlatformPtMesh%NNodes * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
                        + y%TowerLn2Mesh%NNodes   * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node 
                        + y%HubPtMotion%NNodes    * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
-                       + y%NacelleMotion%NNodes  * 6   ! Jac_ny has 3 for Orientation, but we need 9 at each node
+                       + y%NacelleMotion%NNodes  * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
+                       + y%TFinCMMotion%NNodes   * 6   ! Jac_ny has 3 for Orientation, but we need 9 at each node
                        
             do k=1,p%NumBl_Lin
                ny = ny + y%BladeRootMotion(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 at each node on each blade
@@ -11723,18 +11777,26 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          end do      
       end if
       if (.not. p%CompAeroMaps) then
+         call PackMotionMesh(y%PlatformPtMesh, y_op, index, TrimOP=ReturnTrimOP)
+         call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
+      
          Mask  = .false.
          Mask(MASKID_TRANSLATIONDISP) = .true.
          Mask(MASKID_ORIENTATION) = .true.
          Mask(MASKID_ROTATIONVEL) = .true.
-      
-         call PackMotionMesh(y%PlatformPtMesh, y_op, index, TrimOP=ReturnTrimOP)
-         call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
          call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
+
          do k=1,p%NumBl_Lin
             call PackMotionMesh(y%BladeRootMotion(k), y_op, index, TrimOP=ReturnTrimOP)
          end do   
          call PackMotionMesh(y%NacelleMotion, y_op, index, TrimOP=ReturnTrimOP)
+
+         Mask  = .false.
+         Mask(MASKID_TRANSLATIONDISP) = .true.
+         Mask(MASKID_ORIENTATION)     = .true.
+         Mask(MASKID_TRANSLATIONVEL)  = .true.
+         Mask(MASKID_ROTATIONVEL)     = .true.
+         call PackMotionMesh(y%TFinCMMotion, y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
       
          y_op(index) = y%Yaw     ; index = index + 1    
          y_op(index) = y%YawRate ; index = index + 1    

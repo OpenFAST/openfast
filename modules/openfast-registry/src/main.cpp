@@ -13,6 +13,7 @@ Options:
     -h                this summary
     -I <dir>          look for usefrom files in directory "dir"
     -O <dir>          generate types files in directory "dir"
+    -incsubs          generate the pack/unpack/copy/destroy subroutines to be included in another file
     -noextrap         do not generate ModName_Input_ExtrapInterp or ModName_Output_ExtrapInterp routines
     -D<SYM>           define symbol for conditional evaluation inside registry file
     -ccode            generate additional code for interfacing with C/C++
@@ -84,6 +85,10 @@ int main(int argc, char *argv[])
             {
                 reg.include_dirs.push_back(*it);
             }
+        }
+        else if ((arg.compare("-incsubs")) == 0 || (arg.compare("/incsubs")) == 0)
+        {
+            reg.gen_inc_subs = true;
         }
         else if ((arg.compare("-template")) == 0 || (arg.compare("-registry")) == 0 ||
                  (arg.compare("/template")) == 0 || (arg.compare("/registry")) == 0)

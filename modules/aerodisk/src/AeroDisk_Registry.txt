@@ -1,0 +1,139 @@
+###################################################################################################################################
+# Registry for Simplified ElastoDyn in the FAST Modularization Framework
+# This Registry file is used to create MODULE ADsk_Types  which contains all of the user-defined types needed in Simplified ElastoDyn.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>   <ModuleName/ModName>   <TypeName>   <FieldType>   <FieldName>   <Dims>   <IO>   <DNAME>   <DESCRIP>   <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include   Registry_NWTC_Library.txt
+usefrom IfW_FlowField.txt
+
+# ..... Static Param ..............................................................................................................
+param   AeroDisk/ADsk   -           IntKi                ADsk_NumPtsDiskAvg - 144 - "Number of points averaged for rotor-average wind speed" -
+
+
+# ..... Table storage .............................................................................................................
+typedef  AeroDisk/ADsk  ADsk_AeroTable  IntKi            N_TSR             -  - -   "Number of rotor tip-speed ratios in tables" -
+typedef  ^        ADsk_AeroTable    IntKi                N_RtSpd           -  - -   "Number of rotor speeds in tables" -
+typedef  ^        ADsk_AeroTable    IntKi                N_VRel            -  - -   "Number of rotor inflow wind speeds in tables" -
+typedef  ^        ADsk_AeroTable    IntKi                N_Pitch           -  - -   "Number of rotor-collective blade-pitch angles in tables" -
+typedef  ^        ADsk_AeroTable    IntKi                N_Skew            -  - -   "Number of rotor inflow-skew angles in tables" -
+typedef  ^        ADsk_AeroTable    SiKi                 TSR              {:} - -   "Rotor TSR values in tables" -
+typedef  ^        ADsk_AeroTable    SiKi                 RtSpd            {:} - -   "Rotor speed values in tables" rad/s
+typedef  ^        ADsk_AeroTable    SiKi                 VRel             {:} - -   "Rotor inflow wind speeds tables" m/s
+typedef  ^        ADsk_AeroTable    SiKi                 Pitch            {:} - -   "Rotor-collective blade-pitch anges in tables" rad
+typedef  ^        ADsk_AeroTable    SiKi                 Skew             {:} - -   "Rotor inflow-skew values in tables" rad
+typedef  ^        ADsk_AeroTable    SiKi                 C_Fx             {:}{:}{:}{:}{:} - -   "Thrust (x/axial)      coefficient [N_TSR, N_RtSpd, N_VRel, N_Pitch, N_Skew]" -
+typedef  ^        ADsk_AeroTable    SiKi                 C_Fy             {:}{:}{:}{:}{:} - -   "Transverse (y) force  coefficient [N_TSR, N_RtSpd, N_VRel, N_Pitch, N_Skew]" -
+typedef  ^        ADsk_AeroTable    SiKi                 C_Fz             {:}{:}{:}{:}{:} - -   "Transverse (z) force  coefficient [N_TSR, N_RtSpd, N_VRel, N_Pitch, N_Skew]" -
+typedef  ^        ADsk_AeroTable    SiKi                 C_Mx             {:}{:}{:}{:}{:} - -   "Torque (x/axial)      coefficient [N_TSR, N_RtSpd, N_VRel, N_Pitch, N_Skew]" -
+typedef  ^        ADsk_AeroTable    SiKi                 C_My             {:}{:}{:}{:}{:} - -   "Transverse (y) moment coefficient [N_TSR, N_RtSpd, N_VRel, N_Pitch, N_Skew]" -
+typedef  ^        ADsk_AeroTable    SiKi                 C_Mz             {:}{:}{:}{:}{:} - -   "Transverse (z) moment coefficient [N_TSR, N_RtSpd, N_VRel, N_Pitch, N_Skew]" -
+
+
+# ..... Initialization data .......................................................................................................
+# ADsk input file
+typedef  AeroDisk/ADsk ADsk_InputFile LOGICAL            Echo              -  - -   "Echo the input file"                    -
+typedef  ^        ADsk_InputFile    DBKi                 DT                -  - -   "Time step for module time integration" s
+typedef  ^        ADsk_InputFile    ReKi                 AirDens           -  - -   "Air density" "kg/m^3"
+typedef  ^        ADsk_InputFile    ReKi                 RotorRad          -  - -   "Rotor radius"   m
+typedef  ^        ADsk_InputFile    LOGICAL              SumPrint          -  - -   "Print summary data to <RootName>.sum" -
+typedef  ^        ADsk_InputFile    IntKi                NumOuts           -  - -   "Number of outputs"   -
+typedef  ^        ADsk_InputFile    CHARACTER(ChanLen)   OutList           :  - -   "List of user-requested output channels" -
+typedef  ^        ADsk_InputFile    ADsk_AeroTable       AeroTable         -  - -   "Data table" -
+
+# ..... Initialization data .......................................................................................................
+# inputs for initialization:
+typedef  ^        InitInputType     CHARACTER(1024)      InputFile         -  - -   "Name of the input file"   -
+typedef  ^        InitInputType     CHARACTER(1024)      RootName          -  - -   "RootName for writing output files" -
+typedef  ^        InitInputType     ReKi                 RotorRad          -  - -   "Rotor radius"   m
+typedef  ^        InitInputType     ReKi                 HubPosition      {3} - -   "Hub position -- center of rotor" m
+typedef  ^        InitInputType     R8Ki                 HubOrientation   {3}{3} - - "Hub orientation" -
+typedef  ^        InitInputType     ReKi                 defAirDens        -  - -   "Default atmospheric density from the driver; may be overwritten" "kg/m^3"
+typedef  ^        InitInputType     LOGICAL              Linearize         - .false. - "this module cannot be linearized at present" -
+typedef  ^        InitInputType     LOGICAL              UseInputFile      - .TRUE.  - "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
+typedef  ^        InitInputType     FileInfoType         PassedFileData    -  - -   "If we don't use the input file, pass everything through this"   -
+typedef  ^        InitInputType     FlowFieldType        *FlowField        -  - -   "Pointer of InflowWinds flow field data type" -
+
+
+# outputs from initialization:
+typedef  ^        InitOutputType    CHARACTER(ChanLen)   WriteOutputHdr   {:} - -   "Names of the output-to-file channels"   -
+typedef  ^        InitOutputType    CHARACTER(ChanLen)   WriteOutputUnt   {:} - -   "Units of the output-to-file channels"   -
+typedef  ^        InitOutputType    ProgDesc             Ver               -  - -   "This module's name, version, and date"   -
+typedef  ^        InitOutputType    ReKi                 AirDens           -  - -   "Air density" "kg/m^3"
+
+
+# ..... Inputs ....................................................................................................................
+# inputs on meshes: NONE
+# inputs not on meshes:
+typedef  ^        InputType         MeshType             HubMotion         -  - -   "Hub motion"  -
+typedef  ^        InputType         ReKi                 RotSpeed          -  - -   "Rotor speed" "rad/s"
+typedef  ^        InputType         ReKi                 BlPitch           -  - 2pi "blade pitch" "rad"
+
+
+
+# ..... Outputs ...................................................................................................................
+# outputs on meshes:
+typedef  ^        OutputType        MeshType             AeroLoads         -  - -   "Mesh containing the forces and moments from the aero loading (at HubMotion mesh)" -
+#TODO: any mesh for visualization of blades/rotor disk?
+# outputs not on meshes:
+typedef  ^        OutputType        ReKi                 YawErr            -  - -   "Nacelle-yaw error, i.e., the angle about positive Z from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambient + rotor  motion), both projected onto the horizontal plane" rad
+typedef  ^        OutputType        ReKi                 PsiSkew           -  - -   "Azimuth angle (from the nominally vertical axis in the disk plane, Z_disk ) to the vector about which the inflow skew angle is defined, i.e., the angle about positive X_disk  from Z_disk  to the vector about which the positive inflow skew angle is defined "   rad
+typedef  ^        OutputType        ReKi                 ChiSkew           -  - -   "Inflow skew angle"   rad
+typedef  ^        OutputType        ReKi                 VRel              -  - -   "Rotor-disk-averaged relative wind speed (ambient + rotor motion), normal to disk"   m/s
+typedef  ^        OutputType        ReKi                 Ct                -  - -   "Thrust force coefficient (normal to disk)"   -
+typedef  ^        OutputType        ReKi                 Cq                -  - -   "Torque coefficient (normal to disk)"   -
+typedef  ^        OutputType        ReKi                 WriteOutput      {:} - -   "Data to be written to an output file: see WriteOutputHdr for names of each variable"   "see WriteOutputUnt"
+
+
+# ..... States ....................................................................................................................
+# continuous (differentiable) states:
+typedef  ^       ContinuousStateType   ReKi              DummyContState    -  - -   "" -
+
+# Define discrete (nondifferentiable) states here:
+typedef  ^       DiscreteStateType     ReKi             DummyDiscreteState -  - -   "" -
+
+# Define constraint states here:
+typedef  ^       ConstraintStateType   ReKi              DummyConstrState  -  - -   "" -
+
+# any other states
+typedef  ^       OtherStateType        IntKi             DummyOtherState   -  - -   "" -
+
+
+# ..... Parameters.................................................................................................................
+# unchanging parameters:
+typedef  ^        ParameterType        CHARACTER(1024)   RootName          -  - -   "RootName for writing output files" -
+typedef  ^        ParameterType        DBKi              DT                -  - -   "Time step for module time integration" s
+typedef  ^        ParameterType        ReKi              RotorRad          -  - -   "Rotor radius"   m
+typedef  ^        ParameterType        ReKi              AirDens           -  - -   "Air density" "kg/m^3"
+typedef  ^        ParameterType        IntKi             NumOuts           -  - -   "Number of outputs"   -
+typedef  ^        ParameterType        ReKi              halfRhoA          -  - -   "half air density times rotor swept area" "kg/m"
+typedef  ^        ParameterType        ADsk_AeroTable    AeroTable         -  - -   "Data table" -
+typedef  ^        ParameterType        LOGICAL           UseTSR            -  .false. -   "Use TSR values from table instead of VRel + RtSpd" -
+typedef  ^        ParameterType        OutParmType       OutParam         {:} - -   "Names and units (and other characteristics) of all requested output parameters"  -
+typedef  ^        ParameterType        FlowFieldType     *FlowField        -  - -   "Pointer of InflowWinds flow field data type" -
+typedef  ^        ParameterType        ReKi              DiskWindPosRel  {:}{:} - - "Disk locations for sampling to get disk avarage velocity (relative to hub)" m
+
+# ..... Misc/Optimization variables.................................................................................................
+typedef  ^        MiscVarType          IntKi             idx_last         {5} - -   "Last indices used in lookup search"               -
+typedef  ^        MiscVarType          ReKi              AllOuts          {:} - -   "Array of all outputs"                             -
+typedef  ^        MiscVarType          SiKi              x_hat             3  - -   "Acuator disk X direction unit vector (global)"    -
+typedef  ^        MiscVarType          SiKi              y_hat             3  - -   "Acuator disk Y direction unit vector (global)"    -
+typedef  ^        MiscVarType          SiKi              z_hat             3  - -   "Acuator disk Z direction unit vector (global)"    -
+typedef  ^        MiscVarType          SiKi              VRel              -  - -   "magnitude of VRel (output as y%VRel)"             m/s
+typedef  ^        MiscVarType          SiKi              VRel_xd           -  - -   "relative wind velocity along disk normal"         m/s
+typedef  ^        MiscVarType          SiKi              lambda            -  - -   "TSR - tip speed ratio"                            -
+typedef  ^        MiscVarType          SiKi              Chi               -  - -   "Inflow skew angle"                                rad
+typedef  ^        MiscVarType          SiKi              C_F               3  - -   "Force  coefficients from table"                   -
+typedef  ^        MiscVarType          SiKi              C_M               3  - -   "Moment coefficients from table"                   -
+typedef  ^        MiscVarType          SiKi              Force             3  - -   "Force  calculated in actuator disk coordinates"   N
+typedef  ^        MiscVarType          SiKi              Moment            3  - -   "Moment calculated in actuator disk coordinates"   N-m
+typedef  ^        MiscVarType          ReKi              DiskWindPosAbs  {:}{:} - - "Disk locations for sampling to get disk avarage velocity (absolute for getting wind)" m
+typedef  ^        MiscVarType          ReKi              DiskWindVel     {:}{:} - - "Wind speed at disk locations for disk velocity"   m/s
+typedef  ^        MiscVarType          ReKi              DiskAvgVel        3  - -   "Average wind speed across rotor disk"             m/s
+

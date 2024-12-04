@@ -24,7 +24,8 @@ The main idea behind the DWM model is to capture key wake features
 pertinent to accurate prediction of wind farm power performance and wind
 turbine loads, including the wake-deficit evolution (important for
 performance) and the wake meandering and wake-added turbulence
-(important for loads). Although fundamental laws of physics are applied,
+(important for loads, see :numref:`FF:WAT`).
+Although fundamental laws of physics are applied,
 appropriate simplifications have been made to minimize the computational
 expense, and HFM solutions are used to inform and calibrate the
 submodels. In the DWM model, the wake-flow processes are treated via the
@@ -74,7 +75,7 @@ the wake.
 
 Wake-added turbulence is the additional small-scale turbulence generated
 from the turbulent mixing in the wake. It is often modeled in DWM by
-scaling up the background (undisturbed) turbulence.
+scaling up the background (undisturbed) turbulence (see :numref:`FF:WAT`).
 
 Several variations of DWM have been implemented, e.g., by the Technical
 University of Denmark (:cite:`ff-Madsen10_1,ff-Madsen16_1`) and the University
@@ -288,7 +289,7 @@ sections below.
    |                                         | For :math:`0 \le n_p \le N_p-1`:                                                | - :math:`\gamma^\text{YawErr}`                                      | - :math:`\vec{p}_{n_p}^\text{Plane}`                                 |
    |                                         |                                                                                 | - :math:`^\text{DiskAvg}V_x^\text{Rel}`                             | - :math:`V_{x_{n_p}}^\text{Wake}\left(r\right)`                      |
    |                                         | - :math:`^\text{Filt}D_{n_p}^\text{Rotor}`                                      | - :math:`^\text{AzimAvg}C_t\left(r\right)`                          | - :math:`V_{r_{n_p}}^\text{Wake}\left(r\right)`                      |
-   |                                         | - :math:`^\text{Filt}\gamma_{n_p}^\text{YawErr}`                                | - :math:`\vec{V}_{n_p}^\text{Plane}` for :math:`0 \len_p \le N_p-1` | - :math:`D_{n_p}^\text{Wake}`                                        |
+   |                                         | - :math:`^\text{Filt}\gamma_{n_p}^\text{YawErr}`                                | - :math:`\vec{V}_{n_p}^\text{Plane}` for :math:`0\le n_p \le N_p-1` | - :math:`D_{n_p}^\text{Wake}`                                        |
    |                                         | - :math:`^\text{Filt}\vec{V}_{n_p}^\text{Plane}`                                | - :math:`^\text{DiskAvg}V_x^\text{Wind}`                            |                                                                      |
    |                                         | - :math:`^\text{FiltDiskAvg}V_{x_{n_p}}^\text{Wind}`                            | - :math:`TI_\text{Amb}`                                             |                                                                      |
    |                                         | - :math:`^\text{Filt}TI_{\text{Amb}_{n_p}}`                                     |                                                                     |                                                                      |
@@ -1291,6 +1292,184 @@ the solution of the momentum equation),
 :math:`V_{r_{n_p,n_r-1}}^\text{Wake}\left[ n+1 \right]` for
 :math:`1\le n_r\le N_r-1`. [10]_
 
+
+
+.. _FF:WAT:
+
+Wake-Added Turbulence (WAT)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Wake-added turbulence is the additional small-scale turbulence generated
+from the turbulent mixing in the wake. 
+It is modeled by scaling up a background (undisturbed) turbulence.
+
+
+The theory for WAT will is presented in more detail in :cite:`ff-Branlard2024`.
+
+The basic principle for the wake-added turbulence is illustrated in :numref:`FF:WATSketch`. 
+
+.. figure:: Pictures/FFWakeAddedTurbBoxCoord.svg
+   :alt: Wake Added turbulence
+   :name: FF:WATSketch
+   :width: 100%
+   :align: center
+
+   Wake-added turbulence
+
+A scaling factor is computed at each wake plane, it is multiplied with a unit turbulence box
+and added to the quasi steady wake to form the final wake with wake-added turbulence. 
+In this implementation, the scaling factors are computed in the meandering
+frame, but assembled with the “global” unit turbulence box in the global
+frame. More details follow.
+
+
+**Scaling factor**
+
+The scaling factor, expressed in terms of the wake deficit :math:`V_x^{Wake}`, is determined at each wake plane as:
+
+.. math::
+   \begin{aligned}
+      k_{} (x,y,z) = 
+          \frac{k_\text{def}^\text{WAT}  }{ \overline{U}} \left| V_x^{Wake}(x,y,z) \right|
+        + \frac{k_\text{grad}^\text{WAT}D}{2\overline{U}} \left[\left|{\frac{\partial {V_x^{Wake}(x,y,z)}}{\partial r}}\right| +  \left|{\frac{1}{r}\frac{\partial {V_x^{Wake}(x,y,z)}}{\partial \theta}}\right|  \right]  
+   \end{aligned}
+
+where :math:`D` is a reference diameter, and :math:`\bar{U}` is the mean
+velocity taken as the filtered velocity at the turbine location normal to the
+rotor disk.  The coordinates :math:`x,y,z` and :math:`r,\theta` are taken in the
+meandering frame of reference.  The parameters :math:`k_\text{def}^\text{WAT}`
+and :math:`k_\text{grad}^\text{WAT}` are tuning paramters of the model
+respectively multiplying the quasi-steady wake deficit and the gradient of the
+wake deficit. These are based on an eddy-viscosity filter with five calibrated
+parameters to give a more realistic dependence on downstream position.  The
+general form for both is given in Equation :eq:`eq:kDefGrad`,
+
+.. math::
+   k_\text{def/grad}^\text{WAT} \left( \tilde{x}, k_\text{c}, f_\text{min}, D_\text{min}, D_\text{max}, e \right) = k_\text{c} \left( f_\text{min} + (1 - f_\text{min}) \left[ \frac{\tilde{x} - D_\text{min}}{D_\text{max} - D_\text{min}} \right]^e \right)
+   :label: eq:kDefGrad
+
+where :math:`\tilde{x} = x/D`, and :math:`k_\text{c}` is either
+:math:`k_\text{def}` or :math:`k_\text{grad}`.  This function is capped between
+:math:`k_\text{c} f_\text{min}` and :math:`k_\text{c}` when :math:`\tilde{x}` is
+not between :math:`D_\text{min}` and :math:`D_\text{max}`.  The tuning
+parameters are shown in :eq:`eq:kDefGradDefaults`.
+
+.. math::
+   \begin{matrix}
+                               & & k_\text{def/grad} & f_\text{min}   & D_\text{min} & D_\text{max}       & e       \\
+                               & & (\gt 0)           & (\ge 0, \le 1) & (\ge 0)      & (\gt k_\text{min}) & (\gt 0) \\\hline
+      k_\text{def}^\text{WAT}  & & 0.6               & 0              & 0            & 2                  & 1       \\
+      k_\text{grad}^\text{WAT} & & 3                 & 0              & 0            & 12                 & 0.65    \\
+   \end{matrix}
+   :label: eq:kDefGradDefaults
+
+These parameters were chosen as they fit relatively well for stable and neutral
+cases (prior studies have shown that FAST.Farm matches LES well for unstable
+cases with high ambient turbulence where a WAT model seems unnecessary), as seen
+in :numref:`FF:WAT:TuneParam`.
+
+.. figure:: Pictures/KFitDownstreamConcatNEW.png
+   :alt: Fitted tuning parameters
+   :name: FF:WAT:TuneParam
+   :width: 100%
+   :align: center
+
+   Fitted tuning parameters as a function of downstream distance for different stability cases. Values for different fitting options and smoothing are shown with lighter colors, and the averages are shown with darker colors. The model and recommended default values are given as the black dashed line.  Note that results for the unstable case beyond *8D* are uncertain due to the strong wake decay.
+
+We chose to enforce a zero value at :math:`\tilde{x}=0`, as this is the expected
+behavior for a case with no background turbulence intensity. The progressive
+ramp-up of the :math:`k` factors is characteristic of what would be expected as
+the vortices progressively break down downstream as seen in
+:numref:`FF:WAT:NoTI`.
+
+.. figure:: Pictures/FF-WakeNoTI.png
+   :alt: Single wind turbine with and without WAT
+   :name: FF:WAT:NoTI
+   :width: 100%
+   :align: center
+
+   Instantaneous velocity field in the wake of one wind turbine in uniform 8 m/s inflow without (left) and with (right) WAT implemented in FAST.Farm.
+
+
+**Unit turbulence boxes** 
+
+The 3 turbulence Mann boxes are stored as a 4D
+array :math:`\boldsymbol{u}_\text{unit}` of dimension
+:math:`(3,n_x, n_y, n_z)`.
+The turbulence boxes used for the WAT are isotropic turbulence boxes
+with unit standard deviation, generated using the Mann
+model :cite:`ff-Mann1994`.
+To generate a box with unit standard deviation, the dissipation rate is set to:
+
+.. math::
+
+      \alpha\epsilon^{2/3}\approx \frac{1}{0.688 L^{2/3}} 
+
+We have found that there is no dependency on the length scale. We nevertheless recommend to set it to the rotor diameter if the users generate their own boxes.
+
+
+**Predefined boxes**
+
+A recommended practice for the high-resolution domain of FAST.Farm is to chose a grid
+spacing equal to the maximum chord of the blade. 
+Based on the data from
+different wind turbine, the max-chord can be approximated as:
+:math:`c_\text{max}\approx 0.03D`. 
+Therefore we suggest to use this spacing in all three directions, and as a compromise to obtain a box
+with sufficient extent but moderate size, we select: :math:`\Delta x = \Delta y = \Delta z = 0.03D`,
+:math:`L_x = L_y=15D`, :math:`L_z= 2D`, :math:`n_x=n_y=512`,
+:math:`n_z=64`, leading to a box size of :math:`65` Mb per wind
+component.
+
+Users may generate their own Mann box using the guidelines presented in this paragraph and the one above. 
+
+
+
+**Convection of the WAT box**
+
+There is only one WAT turbulence box stored for the entire wind farm. To
+convect the WAT turbulence box, the AWAE module keeps track of a passive
+tracer that is convected at each time step with the mean of the
+rotor-average velocity of each wind turbine
+:math:`(\boldsymbol{U}_\text{farm}`). The position of the passive
+tracer, :math:`\boldsymbol{B}`, is defined as:
+
+.. math::
+
+      \frac{d\boldsymbol{B}}{dt} = \boldsymbol{U}_\text{farm}(t)
+
+where:
+
+.. math::
+
+      \boldsymbol{U}_\text{farm} = \operatorname{mean}\{ \overline{V}^\text{Low}_\text{Amb}[i_w], i_w =1\cdots n_{WT}\}
+
+where :math:`\overline{V}^\text{Low}_\text{Amb}[i_w]` is the rotor
+averaged ambient wind speed. 
+The equation is integrated using a first order forward Euler scheme as follows:
+
+.. math::
+
+       \boldsymbol{B}^{n+1} =  \boldsymbol{B}^{n}  + \Delta t_\text{low}\,  \boldsymbol{U}^{n}_\text{farm} 
+
+where the superscript :math:`n` denotes the time step, and where the
+tracer is assumed to be at the origin at :math:`t=0`:
+
+.. math::
+
+       \boldsymbol{B}^{0}=(0,0,0)
+
+The AWAE module needs the position of the tracer at intermediate,
+high-res, time steps. The position at high-res time step is computed as
+follows:
+
+.. math::
+
+       \boldsymbol{B}^{n,j} =  \boldsymbol{B}^{n}   - (n_h-j) \, \Delta t_\text{high}\,  \boldsymbol{U}^{n-1}_\text{farm}
+       ,\qquad j\in{0,.., n_h-1}
+
+
+
 .. _FF:AWAE:
 
 Ambient Wind and Array Effects (AWAE Module)
@@ -1460,13 +1639,16 @@ spatial average is moderated by the low-pass time filter in the *WD*
 module. Using spatial averaging and the three vector components allows
 for atmospheric shear, wind veer, and other ambient wind characteristics
 to influence the eddy viscosity and wake-deficit evolution in the *WD*
-module. The incorporation of wake-added turbulence is left for future
-work. Note that Equation :eq:`eq:TI` uses the eight wind data
+module. 
+Wake-added turbulence is described in :numref:`FF:WAT`.
+Note that Equation :eq:`eq:TI` uses the eight wind data
 points from the low-resolution domain surrounding each point in the
 polar grid rather than interpolation. This is because calculating wind
 data in the polar grid on the wake plane via trilinear interpolation
 from the low-resolution domain would smooth out spatial variations and
 artificially reduce the calculated turbulence intensity.
+
+
 
 .. _FF:WMerging:
 
@@ -1483,7 +1665,7 @@ submodel of the *AWAE* module identifies zones of wake overlap between
 all wakes across the wind farm by finding wake volumes that overlap in
 space. Wake deficits are superimposed in the axial direction based on
 the RSS method (:cite:`ff-Katic86_1`); transverse components
-(radial wake deficits) are superimposed by vector sum. In Katic̀ et
+(radial wake deficits) are superimposed by vector sum. In Katic et
 al. (:cite:`ff-Katic86_1`), the RSS method is applied to wakes
 with axial deficits that are uniform across the wake diameter and radial
 deficits are not considered. In contrast, the RSS method in FAST.Farm is

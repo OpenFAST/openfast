@@ -1,63 +1,71 @@
 module test_steady_wind
 
-    use pFUnit_mod
-    use ifw_test_tools
-    use InflowWind_Subs
-    use InflowWind_Types
+use testdrive, only: new_unittest, unittest_type, error_type, check
+use ifw_test_tools
+use InflowWind_Subs
+use InflowWind_Types
 
-    implicit none
+implicit none
+private
+public :: test_steady_wind_suite
 
 contains
 
-    @test
-    subroutine test_steady_wind_input_single_height()
+!> Collect all exported unit tests
+subroutine test_steady_wind_suite(testsuite)
+   type(unittest_type), allocatable, intent(out) :: testsuite(:)
+   testsuite = [ &
+               new_unittest("test_steady_wind_input_single_height", test_steady_wind_input_single_height), &
+               new_unittest("test_steady_wind_input_mult_heights", test_steady_wind_input_mult_heights) &
+               ]
+end subroutine
 
-        TYPE(FileInfoType)              :: InFileInfo
-        TYPE(InflowWind_InputFile)      :: InputFileData
-        CHARACTER(1024)                 :: PriPath 
-        INTEGER(IntKi)                  :: TmpErrStat
-        CHARACTER(ErrMsgLen)            :: TmpErrMsg
+subroutine test_steady_wind_input_single_height(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(FileInfoType)              :: InFileInfo
+   type(InflowWind_InputFile)      :: InputFileData
+   character(1024)                 :: PriPath
+   integer(IntKi)                  :: TmpErrStat
+   character(ErrMsgLen)            :: TmpErrMsg
 
-        PriPath = ""
+   PriPath = ""
 
-        InFileInfo = getInputFileData()
-        CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, "inputFile.inp", "test.ech", .false., -1, TmpErrStat, TmpErrMsg)
+   InFileInfo = getInputFileData()
+   call InflowWind_ParseInputFileInfo(InputFileData, InFileInfo, PriPath, "inputFile.inp", "test.ech", .false., -1, TmpErrStat, TmpErrMsg)
 
-        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
-        @assertEqual(1, InputFileData%WindType)
-        @assertEqual(1, InputFileData%NWindVel)
-        @assertEqual(90, InputFileData%WindVziList(1))
+   call check(error, TmpErrStat, ErrID_None, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: '); if (allocated(error)) return
+   call check(error, InputFileData%WindType, 1); if (allocated(error)) return
+   call check(error, InputFileData%NWindVel, 1); if (allocated(error)) return
+   call check(error, InputFileData%WindVziList(1), 90.0_ReKi); if (allocated(error)) return
 
-    end subroutine
+end subroutine
 
+subroutine test_steady_wind_input_mult_heights(error)
+   type(error_type), allocatable, intent(out) :: error
+   type(FileInfoType)              :: InFileInfo
+   type(InflowWind_InputFile)      :: InputFileData
+   character(1024)                 :: PriPath
+   integer(IntKi)                  :: TmpErrStat
+   character(ErrMsgLen)            :: TmpErrMsg
 
-    @test
-    subroutine test_steady_wind_input_mult_heights()
+   PriPath = ""
 
-        TYPE(FileInfoType)              :: InFileInfo
-        TYPE(InflowWind_InputFile)      :: InputFileData 
-        CHARACTER(1024)                 :: PriPath
-        INTEGER(IntKi)                  :: TmpErrStat
-        CHARACTER(ErrMsgLen)            :: TmpErrMsg
+   InFileInfo = getInputFileData()
+   InFileInfo%Lines(9:12) = [ &
+                            '          2   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                            ', &
+                            '        0,0   WindVxiList    - List of coordinates in the inertial X direction (m)                                                                                                 ', &
+                            '        0,0   WindVyiList    - List of coordinates in the inertial Y direction (m)                                                                                                 ', &
+                            '     80,100   WindVziList    - List of coordinates in the inertial Z direction (m)                                                                                                 ' &
+                            ]
 
-        PriPath = ""
+   call InflowWind_ParseInputFileInfo(InputFileData, InFileInfo, PriPath, "inputFile.inp", "test.ech", .false., -1, TmpErrStat, TmpErrMsg)
 
-        InFileInfo = getInputFileData()
-        InFileInfo%Lines(9:12) = (/ &
-            '          2   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                            ', &
-            '        0,0   WindVxiList    - List of coordinates in the inertial X direction (m)                                                                                                 ', &
-            '        0,0   WindVyiList    - List of coordinates in the inertial Y direction (m)                                                                                                 ', &
-            '     80,100   WindVziList    - List of coordinates in the inertial Z direction (m)                                                                                                 ' &
-        /)
+   call check(error, TmpErrStat, ErrID_None, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: '); if (allocated(error)) return
+   call check(error, InputFileData%WindType, 1); if (allocated(error)) return
+   call check(error, InputFileData%NWindVel, 2); if (allocated(error)) return
+   call check(error, InputFileData%WindVziList(1), 80.0_ReKi); if (allocated(error)) return
+   call check(error, InputFileData%WindVziList(2), 100.0_ReKi); if (allocated(error)) return
 
-        CALL InflowWind_ParseInputFileInfo(InputFileData , InFileInfo, PriPath, "inputFile.inp", "test.ech", .false., -1, TmpErrStat, TmpErrMsg)
-
-        @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
-        @assertEqual(1, InputFileData%WindType)
-        @assertEqual(2, InputFileData%NWindVel)
-        @assertEqual(80, InputFileData%WindVziList(1))
-        @assertEqual(100, InputFileData%WindVziList(2))
-
-    end subroutine
+end subroutine
 
 end module

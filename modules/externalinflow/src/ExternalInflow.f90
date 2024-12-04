@@ -302,9 +302,9 @@ SUBROUTINE ExtInfw_UpdateFlowField(p_FAST, ExtInfw, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ExtInfw%m%FlowField%Points%Vel(1:size(ExtInfw%y%u),1) = ExtInfw%y%u
-   ExtInfw%m%FlowField%Points%Vel(1:size(ExtInfw%y%v),2) = ExtInfw%y%v
-   ExtInfw%m%FlowField%Points%Vel(1:size(ExtInfw%y%w),3) = ExtInfw%y%w
+   ExtInfw%m%FlowField%Points%Vel(1,1:size(ExtInfw%y%u)) = ExtInfw%y%u
+   ExtInfw%m%FlowField%Points%Vel(2,1:size(ExtInfw%y%v)) = ExtInfw%y%v
+   ExtInfw%m%FlowField%Points%Vel(3,1:size(ExtInfw%y%w)) = ExtInfw%y%w
 END SUBROUTINE ExtInfw_UpdateFlowField
 
 !----------------------------------------------------------------------------------------------------------------------------------

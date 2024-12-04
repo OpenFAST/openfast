@@ -109,9 +109,9 @@ endmacro(check_f2008_features)
 #
 macro(set_fast_gfortran)
   if(NOT WIN32)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic ")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpic")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fpic")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fPIC ")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
   endif(NOT WIN32)
 
   # Fix free-form compilation for OpenFAST
@@ -158,7 +158,9 @@ endmacro(set_fast_intel_fortran)
 # arch
 #
 macro(set_fast_intel_fortran_posix)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic -fpp")
+  # Set size where temporary are stored on heap instead of stack
+  #   1000: size in kB (1 MB)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic -fpp -heap-arrays 1000")
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -201,7 +203,9 @@ macro(set_fast_intel_fortran_windows)
   # Turn off specific warnings
   # - 5199: too many continuation lines
   # - 5268: 132 column limit
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268 /fpp")
+  # Set size where temporary are stored on heap instead of stack
+  #   1000: size in kB (1 MB)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268 /fpp /heap-arrays:1000")
 
   # If double precision, make constants double precision
   if (DOUBLE_PRECISION)

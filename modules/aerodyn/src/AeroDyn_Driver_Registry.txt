@@ -16,7 +16,7 @@ usefrom    AeroDyn_Inflow_Registry.txt
 usefrom	   SeaState.txt
 #
 # ..... Table of combined cases to run .......................................................................................................
-typedef   AeroDyn_Driver/AD_Dvr Dvr_Case   ReKi                   HWindSpeed       -      -     -   "Hub wind speed" "m/s"
+typedef   AeroDyn_Driver/AD_Dvr Dvr_Case          ReKi                   HWindSpeed       -      -     -   "Hub wind speed" "m/s"
 typedef   ^                         ^             ReKi                   PLExp            -      -     -   "Power law wind-shear exponent" "-"
 typedef   ^                         ^             ReKi                   rotSpeed         -      -     -   "Rotor speed" "rad/s"
 typedef   ^                         ^             ReKi                   bldPitch         -      -     -   "Pitch angle" "rad"
@@ -37,7 +37,7 @@ typedef    ^    DvrVTK_SurfaceType    SiKi    BaseBox       {3}{8}    -    -    
 # typedef    ^    DvrVTK_SurfaceType    DvrVTK_BLSurfaceType    BladeShape    {:}    -    -    "AirfoilCoords for each blade"    m
 
 # ..... Data for driver output file .......................................................................................................
-typedef   AeroDyn_Driver/AD_Dvr  Dvr_Outputs ProgDesc          AD_ver           -      -     -   "AeroDyn version information" -
+typedef   AeroDyn_Driver/AD_Dvr  Dvr_Outputs      ProgDesc               AD_ver           -      -     -   "AeroDyn version information" -
 typedef   ^                         ^             IntKi                  unOutFile        :      -     -   "unit number for writing output file for each rotor" "-"
 typedef   ^                         ^             IntKi                  ActualChanLen    -      -     -   "Actual length of channels written to text file (less than or equal to ChanLen)" "-"
 typedef   ^                         ^             IntKi                  nDvrOutputs      -      -     -   "Number of outputs for the driver (without AD and IW)" "-"
