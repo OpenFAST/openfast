@@ -222,7 +222,7 @@ subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Lidar_CopyParam'
    ErrStat = ErrID_None
@@ -243,8 +243,8 @@ subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    DstParamData%DisplacementLidarZ = SrcParamData%DisplacementLidarZ
    DstParamData%NumBeam = SrcParamData%NumBeam
    if (allocated(SrcParamData%FocalDistanceX)) then
-      LB(1:1) = lbound(SrcParamData%FocalDistanceX, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%FocalDistanceX, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%FocalDistanceX)
+      UB(1:1) = ubound(SrcParamData%FocalDistanceX)
       if (.not. allocated(DstParamData%FocalDistanceX)) then
          allocate(DstParamData%FocalDistanceX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -255,8 +255,8 @@ subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       DstParamData%FocalDistanceX = SrcParamData%FocalDistanceX
    end if
    if (allocated(SrcParamData%FocalDistanceY)) then
-      LB(1:1) = lbound(SrcParamData%FocalDistanceY, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%FocalDistanceY, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%FocalDistanceY)
+      UB(1:1) = ubound(SrcParamData%FocalDistanceY)
       if (.not. allocated(DstParamData%FocalDistanceY)) then
          allocate(DstParamData%FocalDistanceY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -267,8 +267,8 @@ subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       DstParamData%FocalDistanceY = SrcParamData%FocalDistanceY
    end if
    if (allocated(SrcParamData%FocalDistanceZ)) then
-      LB(1:1) = lbound(SrcParamData%FocalDistanceZ, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%FocalDistanceZ, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%FocalDistanceZ)
+      UB(1:1) = ubound(SrcParamData%FocalDistanceZ)
       if (.not. allocated(DstParamData%FocalDistanceZ)) then
          allocate(DstParamData%FocalDistanceZ(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -279,8 +279,8 @@ subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       DstParamData%FocalDistanceZ = SrcParamData%FocalDistanceZ
    end if
    if (allocated(SrcParamData%MsrPosition)) then
-      LB(1:2) = lbound(SrcParamData%MsrPosition, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%MsrPosition, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%MsrPosition)
+      UB(1:2) = ubound(SrcParamData%MsrPosition)
       if (.not. allocated(DstParamData%MsrPosition)) then
          allocate(DstParamData%MsrPosition(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -354,7 +354,7 @@ subroutine Lidar_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Lidar_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackParam'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -630,14 +630,14 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Lidar_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%LidSpeed)) then
-      LB(1:1) = lbound(SrcOutputData%LidSpeed, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%LidSpeed, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%LidSpeed)
+      UB(1:1) = ubound(SrcOutputData%LidSpeed)
       if (.not. allocated(DstOutputData%LidSpeed)) then
          allocate(DstOutputData%LidSpeed(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -648,8 +648,8 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
       DstOutputData%LidSpeed = SrcOutputData%LidSpeed
    end if
    if (allocated(SrcOutputData%WtTrunc)) then
-      LB(1:1) = lbound(SrcOutputData%WtTrunc, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WtTrunc, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WtTrunc)
+      UB(1:1) = ubound(SrcOutputData%WtTrunc)
       if (.not. allocated(DstOutputData%WtTrunc)) then
          allocate(DstOutputData%WtTrunc(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -660,8 +660,8 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
       DstOutputData%WtTrunc = SrcOutputData%WtTrunc
    end if
    if (allocated(SrcOutputData%MsrPositionsX)) then
-      LB(1:1) = lbound(SrcOutputData%MsrPositionsX, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%MsrPositionsX, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%MsrPositionsX)
+      UB(1:1) = ubound(SrcOutputData%MsrPositionsX)
       if (.not. allocated(DstOutputData%MsrPositionsX)) then
          allocate(DstOutputData%MsrPositionsX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -672,8 +672,8 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
       DstOutputData%MsrPositionsX = SrcOutputData%MsrPositionsX
    end if
    if (allocated(SrcOutputData%MsrPositionsY)) then
-      LB(1:1) = lbound(SrcOutputData%MsrPositionsY, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%MsrPositionsY, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%MsrPositionsY)
+      UB(1:1) = ubound(SrcOutputData%MsrPositionsY)
       if (.not. allocated(DstOutputData%MsrPositionsY)) then
          allocate(DstOutputData%MsrPositionsY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -684,8 +684,8 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
       DstOutputData%MsrPositionsY = SrcOutputData%MsrPositionsY
    end if
    if (allocated(SrcOutputData%MsrPositionsZ)) then
-      LB(1:1) = lbound(SrcOutputData%MsrPositionsZ, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%MsrPositionsZ, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%MsrPositionsZ)
+      UB(1:1) = ubound(SrcOutputData%MsrPositionsZ)
       if (.not. allocated(DstOutputData%MsrPositionsZ)) then
          allocate(DstOutputData%MsrPositionsZ(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -738,7 +738,7 @@ subroutine Lidar_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Lidar_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

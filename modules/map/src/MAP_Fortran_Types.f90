@@ -98,14 +98,14 @@ subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MAP_Fortran_CopyLin_InitOutputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcLin_InitOutputTypeData%LinNames_y)) then
-      LB(1:1) = lbound(SrcLin_InitOutputTypeData%LinNames_y, kind=B8Ki)
-      UB(1:1) = ubound(SrcLin_InitOutputTypeData%LinNames_y, kind=B8Ki)
+      LB(1:1) = lbound(SrcLin_InitOutputTypeData%LinNames_y)
+      UB(1:1) = ubound(SrcLin_InitOutputTypeData%LinNames_y)
       if (.not. allocated(DstLin_InitOutputTypeData%LinNames_y)) then
          allocate(DstLin_InitOutputTypeData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -116,8 +116,8 @@ subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_
       DstLin_InitOutputTypeData%LinNames_y = SrcLin_InitOutputTypeData%LinNames_y
    end if
    if (allocated(SrcLin_InitOutputTypeData%LinNames_u)) then
-      LB(1:1) = lbound(SrcLin_InitOutputTypeData%LinNames_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcLin_InitOutputTypeData%LinNames_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcLin_InitOutputTypeData%LinNames_u)
+      UB(1:1) = ubound(SrcLin_InitOutputTypeData%LinNames_u)
       if (.not. allocated(DstLin_InitOutputTypeData%LinNames_u)) then
          allocate(DstLin_InitOutputTypeData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -128,8 +128,8 @@ subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_
       DstLin_InitOutputTypeData%LinNames_u = SrcLin_InitOutputTypeData%LinNames_u
    end if
    if (allocated(SrcLin_InitOutputTypeData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcLin_InitOutputTypeData%IsLoad_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcLin_InitOutputTypeData%IsLoad_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcLin_InitOutputTypeData%IsLoad_u)
+      UB(1:1) = ubound(SrcLin_InitOutputTypeData%IsLoad_u)
       if (.not. allocated(DstLin_InitOutputTypeData%IsLoad_u)) then
          allocate(DstLin_InitOutputTypeData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -174,7 +174,7 @@ subroutine MAP_Fortran_UnPackLin_InitOutputType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Lin_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_Fortran_UnPackLin_InitOutputType'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -189,14 +189,14 @@ subroutine MAP_Fortran_CopyLin_ParamType(SrcLin_ParamTypeData, DstLin_ParamTypeD
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'MAP_Fortran_CopyLin_ParamType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcLin_ParamTypeData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcLin_ParamTypeData%Jac_u_indx, kind=B8Ki)
-      UB(1:2) = ubound(SrcLin_ParamTypeData%Jac_u_indx, kind=B8Ki)
+      LB(1:2) = lbound(SrcLin_ParamTypeData%Jac_u_indx)
+      UB(1:2) = ubound(SrcLin_ParamTypeData%Jac_u_indx)
       if (.not. allocated(DstLin_ParamTypeData%Jac_u_indx)) then
          allocate(DstLin_ParamTypeData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -237,7 +237,7 @@ subroutine MAP_Fortran_UnPackLin_ParamType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Lin_ParamType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MAP_Fortran_UnPackLin_ParamType'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

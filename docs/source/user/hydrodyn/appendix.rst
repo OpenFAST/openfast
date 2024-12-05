@@ -12,9 +12,13 @@ structure::
       False            Echo           - Echo the input file data (flag)
       ---------------------- FLOATING PLATFORM --------------------------------------- [unused with WaveMod=6]
                    1   PotMod         - Potential-flow model {0: none=no potential flow, 1: frequency-to-time-domain transforms based on WAMIT output, 2: fluid-impulse theory (FIT)} (switch)
-                   1   ExctnMod       - Wave-excitation model {0: no wave-excitation calculation, 1: DFT, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ssexctn INPUT FILE]
+                   1   ExctnMod       - Wave-excitation model {0: no wave-excitation calculation, 1: DFT, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ssexctn INPUT FILE; if PtfmYMod=1, need ExctnMod=0 or 1]
                    0   ExctnDisp      - Method of computing Wave Excitation {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0 and SeaState's WaveMod>0]} (switch)
                   10   ExctnCutOff    - Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2]) [only used when PotMod=1 and ExctnMod>0 and SeaState's WaveMod>0]} (switch)
+                   0   PtfmYMod       - Model for large platform yaw offset {0: Static reference yaw offset based on PtfmRefY, 1: dynamic reference yaw offset based on low-pass filtering the PRP yaw motion with cutoff frequency PtfmYCutOff} (switch)
+                   0   PtfmRefY       - Constant (if PtfmYMod=0) or initial (if PtfmYMod=1) platform reference yaw offset (deg)
+                0.01   PtfmYCutOff    - Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [>0.0; unused when PtfmYMod=0] (Hz)
+                  36   NExctnHdg      - Number of evenly distributed platform yaw/heading angles over the range of [-180, 180) deg for which the wave excitation shall be computed [>=2; unused when PtfmYMod=0] (-)
                    1   RdtnMod        - Radiation memory-effect model {0: no memory-effect calculation, 1: convolution, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ss INPUT FILE]
                   60   RdtnTMax       - Analysis time for wave radiation kernel calculations (sec) [only used when PotMod=1 and RdtnMod>0; determines RdtnDOmega=Pi/RdtnTMax in the cosine transform; MAKE SURE THIS IS LONG ENOUGH FOR THE RADIATION IMPULSE RESPONSE FUNCTIONS TO DECAY TO NEAR-ZERO FOR THE GIVEN PLATFORM!]
               0.0125   RdtnDT         - Time step for wave radiation kernel calculations (sec) [only used when PotMod=1 and ExctnMod>0 or RdtnMod>0; DT<=RdtnDT<=0.1 recommended; determines RdtnOmegaMax=Pi/RdtnDT in the cosine transform]
@@ -32,8 +36,8 @@ structure::
       ---------------------- 2ND-ORDER FLOATING PLATFORM FORCES ---------------------- [unused with WaveMod=0 or 6, or PotMod=0 or 2]
                    0   MnDrift        - Mean-drift 2nd-order forces computed                                       {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero. If NBody>1, MnDrift  /=8]
                    0   NewmanApp      - Mean- and slow-drift 2nd-order forces computed with Newman's approximation {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero. If NBody>1, NewmanApp/=8. Used only when WaveDirMod=0]
-                   0   DiffQTF        - Full difference-frequency 2nd-order forces computed with full QTF          {0: None; [10, 11, or 12]: WAMIT file to use}          [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero]
-                   0   SumQTF         - Full summation -frequency 2nd-order forces computed with full QTF          {0: None; [10, 11, or 12]: WAMIT file to use}
+                   0   DiffQTF        - Full difference-frequency 2nd-order forces computed with full QTF          {0: None; [10, 11, or 12]: WAMIT file to use}          [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero. If PtfmYMod=1, need DiffQTF=0]
+                   0   SumQTF         - Full summation -frequency 2nd-order forces computed with full QTF          {0: None; [10, 11, or 12]: WAMIT file to use}          [If PtfmYMod=1, need SumQTF=0]
       ---------------------- PLATFORM ADDITIONAL STIFFNESS AND DAMPING  -------------- [unused with PotMod=0 or 2]
                    0   AddF0    - Additional preload (N, N-m)  [If NBodyMod=1, one size 6*NBody x 1 vector; if NBodyMod>1, NBody size 6 x 1 vectors]
                    0
@@ -60,7 +64,7 @@ structure::
                    0             0             0             0             0             0
                    0             0             0             0             0             0
       ---------------------- STRIP THEORY OPTIONS --------------------------------------
-                   0   WaveDisp       - Method of computing Wave Kinematics {0: use undisplaced position, 1: use displaced position) } (switch)
+                   0   WaveDisp       - Method of computing Wave Kinematics {0: use undisplaced position, 1: use displaced position) } (switch) [If PtfmYMod=1, need WaveDisp=1]
                    0   AMMod          - Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 2: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]
       ---------------------- AXIAL COEFFICIENTS --------------------------------------
                    2   NAxCoef        - Number of axial coefficients (-)

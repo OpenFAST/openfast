@@ -167,7 +167,7 @@ CONTAINS
       InitOut%Ver = MD_ProgDesc
 
       CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')
-      CALL DispCopyrightLicense( MD_ProgDesc%Name, 'Copyright (C) 2019 Matt Hall' )
+      CALL DispCopyrightLicense( MD_ProgDesc%Name)
 
 
       !---------------------------------------------------------------------------------------------
@@ -638,10 +638,14 @@ CONTAINS
                    
                    ! process stiffness coefficients
                    CALL SplitByBars(tempString1, N, tempStrings)
-                   if (N > 2) then
-                      CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 2 (comma-separated) values.', ErrStat, ErrMsg, RoutineName )
+                   if (N > 3) then
+                      CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 3 (bar-separated) values.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
-                   else if (N==2) then                               ! visco-elastic case!
+                   else if (N==3) then                               ! visco-elastic case, load dependent dynamic stiffness!
+                      m%LineTypeList(l)%ElasticMod = 3
+                      read(tempStrings(2), *) m%LineTypeList(l)%alphaMBL
+                      read(tempStrings(3), *) m%LineTypeList(l)%vbeta
+                   else if (N==2) then                               ! visco-elastic case, constant dynamic stiffness!
                       m%LineTypeList(l)%ElasticMod = 2
                       read(tempStrings(2), *) m%LineTypeList(l)%EA_D 
                    else
@@ -657,11 +661,11 @@ CONTAINS
                    ! process damping coefficients 
                    CALL SplitByBars(tempString2, N, tempStrings)
                    if (N > m%LineTypeList(l)%ElasticMod) then
-                      CALL SetErrStat( ErrID_Fatal, 'A line type BA entry cannot have more (comma-separated) values its EA entry.', ErrStat, ErrMsg, RoutineName )
+                      CALL SetErrStat( ErrID_Fatal, 'A line type BA entry cannot have more (bar-separated) values than its EA entry.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
                    else if (N==2) then                               ! visco-elastic case when two BA values provided
                       read(tempStrings(2), *) m%LineTypeList(l)%BA_D 
-                   else if (m%LineTypeList(l)%ElasticMod == 2) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
+                   else if (m%LineTypeList(l)%ElasticMod > 1) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
                       CALL WrScr("Warning, viscoelastic model being used with zero damping on the dynamic stiffness.")
                       if (p%writeLog > 0) then
                         write(p%UnLog,'(A)') "Warning, viscoelastic model being used with zero damping on the dynamic stiffness."
@@ -1438,7 +1442,7 @@ CONTAINS
                   
                   ! account for states of line
                   m%LineStateIs1(l) = Nx + 1
-                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%ElasticMod == 2) then
+                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%ElasticMod > 1) then ! todo add an error check here? or change to 2 or 3?
                      Nx = Nx + 7*m%LineList(l)%N - 6       ! if using viscoelastic model, need one more state per segment
                      m%LineStateIsN(l) = Nx          
                   else
@@ -3498,7 +3502,10 @@ CONTAINS
          
       ! calculate line dynamics (and calculate line forces and masses attributed to points)
       DO l = 1,p%nLines
-         CALL Line_GetStateDeriv(m%LineList(l), dxdt%states(m%LineStateIs1(l):m%LineStateIsN(l)), m, p)  !dt might also be passed for fancy friction models
+         CALL Line_GetStateDeriv(m%LineList(l), dxdt%states(m%LineStateIs1(l):m%LineStateIsN(l)), m, p, ErrStat, ErrMsg)  !dt might also be passed for fancy friction models
+         if (ErrStat == ErrID_Fatal) then
+            return
+         endif
       END DO
       
       ! calculate point dynamics (including contributions from attached lines
