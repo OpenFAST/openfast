@@ -766,6 +766,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          RETURN
       END IF
 
+      ! AeroDyn may override the AirDens value.  Store this to inform other modules
       AirDens = Init%OutData_AD%rotors(1)%AirDens
 
    ELSEIF ( p_FAST%CompAero == Module_ADsk ) THEN
@@ -795,6 +796,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
       CALL SetModuleSubstepTime(Module_ADsk, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+      ! AeroDisk may override the AirDens value.  Store this to inform other modules
+      AirDens = Init%OutData_ADsk%AirDens
+
    END IF ! CompAero
 
    IF ( p_FAST%CompAero == Module_ExtLd ) THEN
@@ -815,6 +819,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
             RETURN
          END IF
 
+         ! ExtLd may override the AirDens value.  Store this to inform other modules
          AirDens = Init%OutData_ExtLd%AirDens
 
       END IF
@@ -824,8 +829,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
    ! ........................
    ! No aero of any sort
    ! ........................
-   IF ( (p_FAST%CompAero /= Module_AD) .and. (p_FAST%CompAero /= Module_ExtLd) ) THEN
-   ELSE
+   IF ( (p_FAST%CompAero == Module_None) .or. (p_FAST%CompAero == Module_Unknown)) THEN
       AirDens = 0.0_ReKi
    ENDIF
 
@@ -931,6 +935,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
       Init%InData_HD%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))
       Init%InData_HD%TMax          = p_FAST%TMax
       Init%InData_HD%Linearize     = p_FAST%Linearize
+      Init%InData_HD%PlatformPos   = Init%OutData_ED%PlatformPos ! Initial platform position; PlatformPos(1:3) is effectively the initial position of the HD origin
       if (p_FAST%WrVTK /= VTK_None) Init%InData_HD%VisMeshes=.true.
       
       ! if ( p_FAST%CompSeaSt == Module_SeaSt ) then  ! this is always true
@@ -1663,42 +1668,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          ErrStat = ErrID_None
          ErrMsg = ""
       END IF
-
-   ! ----------------------------------------------------------------------------
-   ! Initialize low-pass-filtered displacements of HydroDyn potential-flow bodies
-   ! ----------------------------------------------------------------------------
-   IF ( (p_FAST%CompHydro == Module_HD) .AND. (HD%p%PotMod == 1_IntKi) ) THEN
-      IF ( HD%p%WAMIT(1)%ExctnDisp == 2_IntKi ) THEN
-         ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
-         ED%y%PlatformPtMesh%TranslationDisp(:,1) = Init%OutData_ED%PlatformPos(1:3)
-         CALL SmllRotTrans( 'initial platform rotation ', &
-                             REAL(Init%OutData_ED%PlatformPos(4),R8Ki), &
-                             REAL(Init%OutData_ED%PlatformPos(5),R8Ki), &
-                             REAL(Init%OutData_ED%PlatformPos(6),R8Ki), &
-                             ED%y%PlatformPtMesh%Orientation(:,:,1), '', ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         ED%y%PlatformPtMesh%TranslationDisp(1,1) = ED%y%PlatformPtMesh%TranslationDisp(1,1) + ED%y%PlatformPtMesh%Orientation(3,1,1) * ED%p%PtfmRefzt
-         ED%y%PlatformPtMesh%TranslationDisp(2,1) = ED%y%PlatformPtMesh%TranslationDisp(2,1) + ED%y%PlatformPtMesh%Orientation(3,2,1) * ED%p%PtfmRefzt
-         ED%y%PlatformPtMesh%TranslationDisp(3,1) = ED%y%PlatformPtMesh%TranslationDisp(3,1) + ED%y%PlatformPtMesh%Orientation(3,3,1) * ED%p%PtfmRefzt - ED%p%PtfmRefzt
-         CALL Transfer_PlatformMotion_to_HD( ED%y%PlatformPtMesh, HD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-         IF (HD%p%NBodyMod .EQ. 1_IntKi) THEN ! One instance of WAMIT with NBody
-            DO i = 1,HD%p%NBody
-               HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(1,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
-               HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(2,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)
-            END DO
-         ELSE IF (HD%p%NBodyMod > 1_IntKi) THEN ! NBody instances of WAMIT with one body each
-            DO i = 1,HD%p%NBody
-               HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(1,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
-               HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(2,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)
-            END DO
-         END IF
-      END IF
-   END IF
 
    ! -------------------------------------------------------------------------
    ! Initialize for linearization or computing aero maps:

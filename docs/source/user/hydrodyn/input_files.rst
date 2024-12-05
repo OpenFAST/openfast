@@ -58,6 +58,20 @@ computed and printed to the calling terminal. **NSteps** specifies the
 number of simulation time steps, and **TimeInterval** specifies the time 
 between steps.
 
+Motion of the structure can be specified in different ways according to 
+**PRPInputsMod**. Irrespective of the choice of **PRPInputsMod** (which 
+are explained below), the translational displacement, velocity, and 
+acceleration are always specified in the global inertial-frame coordinate 
+system. With OpenFAST now updated to support potentially large platform 
+rotation, the specification of rotation differs from previous versions. 
+HydroDyn now describes body rotation using Tait-Bryan roll, pitch, and 
+yaw angles with the convention of intrinsic (about body-fixed axis) yaw 
+rotation first, followed by pitch rotation, and roll last. Furthermore, 
+HydroDyn now expects the first and second time derivatives of the 
+Tait-Bryan roll, pitch, and yaw angles in place of angular velocity and 
+acceleration. The standalone HydroDyn driver will convert these inputs 
+to angular velocity and acceleration internally. 
+
 Setting **PRPInputsMod** = 0 forces all platform reference point (PRP)
 input motions to zero for all time. If you set **PRPInputsMod** = 1,
 then you must set the steady-state inputs in the PRP STEADY STATE
@@ -67,25 +81,24 @@ time-series input file whose name is specified via the
 file. This file has no header lines. Each data row corresponds to a
 given time step, and the whitespace separated columns of floating point
 values represent the necessary motion inputs as shown in
-:numref:`hd-prp_input_table`. All motions are specified in the global
-inertial-frame coordinate system.
+:numref:`hd-prp_input_table`. 
 
 .. _hd-prp_input_table:
 
 .. table:: PRP Inputs Time-Series Data File Contents (**PRPInputsMod** = 2)
    :widths: auto
 
-   ============= ================================================================================ ======================================
-   Column Number Input                                                                            Units
-   ============= ================================================================================ ======================================
-   1             Time step value                                                                  .. math:: s
-   2-4           Translational displacements along *X*, *Y*, and *Z*                              .. math:: m
-   5-7           Rotational displacements about *X*, *Y*, and *Z* (small angle assumptions apply) .. math:: \text{radians}
-   8-10          Translational velocities along *X*, *Y*, and *Z*                                 .. math:: \frac{m}{s}
-   11-13         Rotational velocities about *X*, *Y*, and *Z*                                    .. math:: \frac{\text{radians}}{s}
-   14-16         Translational accelerations along *X*, *Y*, and *Z*                              .. math:: \frac{m}{s^{2}}
-   17-19         Rotational accelerations about *X*, *Y*, and *Z*                                 .. math:: \frac{\text{radians}}{s^{2}}
-   ============= ================================================================================ ======================================
+   ============= ====================================================================== ======================================
+   Column Number Input                                                                  Units
+   ============= ====================================================================== ======================================
+   1             Time step value                                                        .. math:: s
+   2-4           Translational displacements along *X*, *Y*, and *Z*                    .. math:: m
+   5-7           Tait-Bryan roll, pitch, and yaw angles                                 .. math:: \text{radians}
+   8-10          Translational velocities along *X*, *Y*, and *Z*                       .. math:: \frac{m}{s}
+   11-13         First time derivatives of the Tait-Bryan roll, pitch, and yaw angles   .. math:: \frac{\text{radians}}{s}
+   14-16         Translational accelerations along *X*, *Y*, and *Z*                    .. math:: \frac{m}{s^{2}}
+   17-19         Second time derivatives of the Tait-Bryan roll, pitch, and yaw angles  .. math:: \frac{\text{radians}}{s^{2}}
+   ============= ====================================================================== ======================================
 
 With **PRPInputsMod** = 1 or 2, any potential-flow bodies and strip-theory 
 members defined in the primary HydroDyn input file will follow the prescribed 
@@ -110,18 +123,18 @@ with respect to time.
 .. table:: PRP Inputs Time-Series Data File Contents (**PRPInputsMod** < 0)
    :widths: auto
 
-   ============= ================================================================================================================ ========================
-   Column Number Input                                                                                                            Units
-   ============= ================================================================================================================ ========================
-   1             Time step value                                                                                                  .. math:: s
-   2-4           Translational displacements of the PRP along *X*, *Y*, and *Z*                                                   .. math:: m
-   5-7           Rotational displacements of the PRP about *X*, *Y*, and *Z* (small angle assumptions apply)                      .. math:: \text{radians}
-   8-10          Translational displacements of the 1st potential-flow body along *X*, *Y*, and *Z*                               .. math:: m
-   11-13         Rotational displacements of the 1st potential-flow body about *X*, *Y*, and *Z* (small angle assumptions apply)  .. math:: \text{radians}
-   14-16         Translational displacements of the 2nd potential-flow body along *X*, *Y*, and *Z*                               .. math:: m
-   17-19         Rotational displacements of the 2nd potential-flow body about *X*, *Y*, and *Z* (small angle assumptions apply)  .. math:: \text{radians}
-   ...           ...                                                                                                              ...
-   ============= ================================================================================================================ ========================
+   ============= =================================================================================== ========================
+   Column Number Input                                                                               Units
+   ============= =================================================================================== ========================
+   1             Time step value                                                                     .. math:: s
+   2-4           Translational displacements of the PRP along *X*, *Y*, and *Z*                      .. math:: m
+   5-7           Tait-Bryan roll, pitch, and yaw angles of the PRP                                   .. math:: \text{radians}
+   8-10          Translational displacements of the 1st potential-flow body along *X*, *Y*, and *Z*  .. math:: m
+   11-13         Tait-Bryan roll, pitch, and yaw angles of the 1st potential-flow body               .. math:: \text{radians}
+   14-16         Translational displacements of the 2nd potential-flow body along *X*, *Y*, and *Z*  .. math:: m
+   17-19         Tait-Bryan roll, pitch, and yaw angles of the 2nd potential-flow body               .. math:: \text{radians}
+   ...           ...                                                                                 ...
+   ============= =================================================================================== ========================
 
 .. _hd-primary-input:
 
@@ -199,6 +212,83 @@ wave-frequency PRP motion as possible while retaining the low-frequency drift
 motion to prevent double counting the contributions from first-order 
 structural motion already included in the second-order potential-flow wave 
 excitation.
+
+HydroDyn now supports large but slow (well below wave frequencies) 
+transient platform yaw motion with both strip-theory only and hybrid 
+potential-flow models. To enable this capability, the inputs 
+**PtfmYMod**, **PtfmRefY**, **PtfmYCutoff**, and **NExctnHdg** must 
+be set appropriately. Note that HydroDyn still requires the platform 
+roll and pitch angles to be small, i.e., within +/-15 deg.
+
+To conform with the first- and second-order potential-flow theory, 
+which limits the structure to small displacement about a reference 
+mean position, a constant or slowly varying reference platform yaw 
+orientation must be established. 
+
+Setting **PtfmYMod** = 0 lets HydroDyn use a constant reference yaw 
+angle given by **PtfmRefY** in degrees. In this case, the platform 
+yaw rotation during the simulation, as given by the **PRPYaw** 
+output channel, must stay within +/-15 deg of **PtfmRefY** specified 
+by the user. A severe warning will be displayed if this requirement 
+is not met at any point during the simulation, while still allowing 
+the simulation to continue if possible. With a hybrid potential-flow 
+model, the potential-flow wave excitation input file needs to cover 
+a suitable range of wave headings relative to the platform after a 
+yaw offset of **PtfmRefY** is applied.
+
+Alternatively, **PtfmYMod** = 1 lets HydroDyn update the reference 
+yaw position **PtfmRefY** dynamically based on the low-pass-filtered 
+platform yaw rotation, analogous to the modeling of slow-drift motion 
+with **ExctnDisp** = 2 above. In this case, the **PtfmRefY** input 
+allows the user to specify the initial reference yaw position at 
+**t** = 0. The cutoff frequency of the first-order low-pass filter 
+for platform yaw rotation can be set with **PtfmYCutoff** in Hz. 
+Ideally, **PtfmYCutoff** should be placed between the wave frequency 
+region and the characteristic frequency of any slow but large change 
+in platform heading to filter out as much wave-frequency platform 
+motion as possible while minimizing the phase shift in the low-frequency 
+heading change. Throughout the simulation, the instantaneous 
+platform yaw rotation should stay within +/-15 deg of the now 
+time-dependent **PtfmRefY**. A severe warning will be displayed if 
+this requirement is not met at any point during the simulation, while 
+still allowing the simulation to continue if possible. 
+
+With **PtfmYMod** = 1, HydroDyn requires the first- and second-order 
+(mean- or slow-drift loads from Newman's approximation only) 
+potential-flow wave excitation input file(s) to cover the full range 
+of possible wave headings with the first (smallest) wave heading being 
+exactly -180 deg and the last (largest) wave heading being exactly 
++180 deg (the duplicated wave headings of +/-180 deg are intentional). 
+HydroDyn will error out if this requirement is not met by the input files.
+HydroDyn uses this information to precompute the wave excitation on 
+the platform for **NExctnHdg** evenly distributed platform yaw/heading 
+angles over the range of [-180,+180) deg. For instance, with 
+**NExctnHdg** = 36, HydroDyn will precomupte the wave excitation for 0, 
+10, 20, ..., 350 deg platform heading. The instantaneous wave excitation 
+applied on the platform during the time-domain simulation is interpolated 
+from this data based on the instantaneous **PtfmRefY**. **NExctnHdg** 
+should be set appropriately to ensure adequate angular resolution in 
+platform heading. However, a high **NExctnHdg** can increase memory use 
+by OpenFAST substantially.
+
+Additional constraints on HydroDyn inputs apply when **PtfmYMod** = 1. 
+The strip-theory hydrodynamic load must be evaluated using the wave 
+kinematics and dynamic pressure at the displaced structure position 
+by setting **WaveDisp** = 1. State-space wave excitation cannot be used. 
+**ExctnMod** must be either 0 (no wave excitation) or 1 (frequency-to-time 
+domain transform using inverse discrete Fourier transform). Lastly, 
+full difference- and sum-frequency QTFs are not supported, requiring 
+both **DiffQTF** and **SumQTF** to be set to 0. However, mean- or 
+slow-drift loads based on Newman's approximation can be included through 
+the **MnDrift** or **NewmanApp** inputs explained below.
+
+Note that the inputs **PtfmYMod** and **PtfmRefY** also affect the 
+strip-theory hydrodynamic load. This is because the orientation of 
+the strip-theory members is updated based on **PtfmRefY** instead 
+of the instantaneous platform yaw rotation. Behavior of previous 
+versions of HydroDyn can be approximately recovered by setting 
+**PtfmYMod** = 0 and **PtfmRefY** = 0 deg, in which case, the 
+inputs **PtfmYCutoff** and **NExctnHdg** are not used.
 
 HydroDyn has two methods for calculating the radiation memory effect.
 Set **RdtnMod** to 1 for the convolution method, 2 for the linear

@@ -435,7 +435,7 @@ subroutine ADI_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_CopyInitOutput'
@@ -445,8 +445,8 @@ subroutine ADI_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -457,8 +457,8 @@ subroutine ADI_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -504,7 +504,7 @@ subroutine ADI_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADI_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADI_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -703,8 +703,8 @@ subroutine ADI_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_CopyMisc'
@@ -717,8 +717,8 @@ subroutine ADI_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%VTK_surfaces)) then
-      LB(1:1) = lbound(SrcMiscData%VTK_surfaces, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%VTK_surfaces, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%VTK_surfaces)
+      UB(1:1) = ubound(SrcMiscData%VTK_surfaces)
       if (.not. allocated(DstMiscData%VTK_surfaces)) then
          allocate(DstMiscData%VTK_surfaces(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -738,8 +738,8 @@ subroutine ADI_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(ADI_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_DestroyMisc'
@@ -750,8 +750,8 @@ subroutine ADI_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call ADI_DestroyInflowWindData(MiscData%IW, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%VTK_surfaces)) then
-      LB(1:1) = lbound(MiscData%VTK_surfaces, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%VTK_surfaces, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%VTK_surfaces)
+      UB(1:1) = ubound(MiscData%VTK_surfaces)
       do i1 = LB(1), UB(1)
          call AD_DestroyVTK_RotSurfaceType(MiscData%VTK_surfaces(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -764,16 +764,16 @@ subroutine ADI_PackMisc(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ADI_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ADI_PackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call AD_PackMisc(RF, InData%AD) 
    call ADI_PackInflowWindData(RF, InData%IW) 
    call RegPack(RF, allocated(InData%VTK_surfaces))
    if (allocated(InData%VTK_surfaces)) then
-      call RegPackBounds(RF, 1, lbound(InData%VTK_surfaces, kind=B8Ki), ubound(InData%VTK_surfaces, kind=B8Ki))
-      LB(1:1) = lbound(InData%VTK_surfaces, kind=B8Ki)
-      UB(1:1) = ubound(InData%VTK_surfaces, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%VTK_surfaces), ubound(InData%VTK_surfaces))
+      LB(1:1) = lbound(InData%VTK_surfaces)
+      UB(1:1) = ubound(InData%VTK_surfaces)
       do i1 = LB(1), UB(1)
          call AD_PackVTK_RotSurfaceType(RF, InData%VTK_surfaces(i1)) 
       end do
@@ -785,8 +785,8 @@ subroutine ADI_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADI_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADI_UnPackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -926,7 +926,7 @@ subroutine ADI_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_CopyOutput'
@@ -936,8 +936,8 @@ subroutine ADI_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%HHVel)) then
-      LB(1:2) = lbound(SrcOutputData%HHVel, kind=B8Ki)
-      UB(1:2) = ubound(SrcOutputData%HHVel, kind=B8Ki)
+      LB(1:2) = lbound(SrcOutputData%HHVel)
+      UB(1:2) = ubound(SrcOutputData%HHVel)
       if (.not. allocated(DstOutputData%HHVel)) then
          allocate(DstOutputData%HHVel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -949,8 +949,8 @@ subroutine ADI_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    end if
    DstOutputData%PLExp = SrcOutputData%PLExp
    if (allocated(SrcOutputData%IW_WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%IW_WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%IW_WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%IW_WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%IW_WriteOutput)
       if (.not. allocated(DstOutputData%IW_WriteOutput)) then
          allocate(DstOutputData%IW_WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -961,8 +961,8 @@ subroutine ADI_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%IW_WriteOutput = SrcOutputData%IW_WriteOutput
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1013,7 +1013,7 @@ subroutine ADI_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADI_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADI_UnPackOutput'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1030,16 +1030,16 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_CopyData'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcDataData%x)) then
-      LB(1:1) = lbound(SrcDataData%x, kind=B8Ki)
-      UB(1:1) = ubound(SrcDataData%x, kind=B8Ki)
+      LB(1:1) = lbound(SrcDataData%x)
+      UB(1:1) = ubound(SrcDataData%x)
       if (.not. allocated(DstDataData%x)) then
          allocate(DstDataData%x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1054,8 +1054,8 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcDataData%xd)) then
-      LB(1:1) = lbound(SrcDataData%xd, kind=B8Ki)
-      UB(1:1) = ubound(SrcDataData%xd, kind=B8Ki)
+      LB(1:1) = lbound(SrcDataData%xd)
+      UB(1:1) = ubound(SrcDataData%xd)
       if (.not. allocated(DstDataData%xd)) then
          allocate(DstDataData%xd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1070,8 +1070,8 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcDataData%z)) then
-      LB(1:1) = lbound(SrcDataData%z, kind=B8Ki)
-      UB(1:1) = ubound(SrcDataData%z, kind=B8Ki)
+      LB(1:1) = lbound(SrcDataData%z)
+      UB(1:1) = ubound(SrcDataData%z)
       if (.not. allocated(DstDataData%z)) then
          allocate(DstDataData%z(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1086,8 +1086,8 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcDataData%OtherState)) then
-      LB(1:1) = lbound(SrcDataData%OtherState, kind=B8Ki)
-      UB(1:1) = ubound(SrcDataData%OtherState, kind=B8Ki)
+      LB(1:1) = lbound(SrcDataData%OtherState)
+      UB(1:1) = ubound(SrcDataData%OtherState)
       if (.not. allocated(DstDataData%OtherState)) then
          allocate(DstDataData%OtherState(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1108,8 +1108,8 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcDataData%u)) then
-      LB(1:1) = lbound(SrcDataData%u, kind=B8Ki)
-      UB(1:1) = ubound(SrcDataData%u, kind=B8Ki)
+      LB(1:1) = lbound(SrcDataData%u)
+      UB(1:1) = ubound(SrcDataData%u)
       if (.not. allocated(DstDataData%u)) then
          allocate(DstDataData%u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1127,8 +1127,8 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcDataData%inputTimes)) then
-      LB(1:1) = lbound(SrcDataData%inputTimes, kind=B8Ki)
-      UB(1:1) = ubound(SrcDataData%inputTimes, kind=B8Ki)
+      LB(1:1) = lbound(SrcDataData%inputTimes)
+      UB(1:1) = ubound(SrcDataData%inputTimes)
       if (.not. allocated(DstDataData%inputTimes)) then
          allocate(DstDataData%inputTimes(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1144,16 +1144,16 @@ subroutine ADI_DestroyData(DataData, ErrStat, ErrMsg)
    type(ADI_Data), intent(inout) :: DataData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_DestroyData'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(DataData%x)) then
-      LB(1:1) = lbound(DataData%x, kind=B8Ki)
-      UB(1:1) = ubound(DataData%x, kind=B8Ki)
+      LB(1:1) = lbound(DataData%x)
+      UB(1:1) = ubound(DataData%x)
       do i1 = LB(1), UB(1)
          call ADI_DestroyContState(DataData%x(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1161,8 +1161,8 @@ subroutine ADI_DestroyData(DataData, ErrStat, ErrMsg)
       deallocate(DataData%x)
    end if
    if (allocated(DataData%xd)) then
-      LB(1:1) = lbound(DataData%xd, kind=B8Ki)
-      UB(1:1) = ubound(DataData%xd, kind=B8Ki)
+      LB(1:1) = lbound(DataData%xd)
+      UB(1:1) = ubound(DataData%xd)
       do i1 = LB(1), UB(1)
          call ADI_DestroyDiscState(DataData%xd(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1170,8 +1170,8 @@ subroutine ADI_DestroyData(DataData, ErrStat, ErrMsg)
       deallocate(DataData%xd)
    end if
    if (allocated(DataData%z)) then
-      LB(1:1) = lbound(DataData%z, kind=B8Ki)
-      UB(1:1) = ubound(DataData%z, kind=B8Ki)
+      LB(1:1) = lbound(DataData%z)
+      UB(1:1) = ubound(DataData%z)
       do i1 = LB(1), UB(1)
          call ADI_DestroyConstrState(DataData%z(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1179,8 +1179,8 @@ subroutine ADI_DestroyData(DataData, ErrStat, ErrMsg)
       deallocate(DataData%z)
    end if
    if (allocated(DataData%OtherState)) then
-      LB(1:1) = lbound(DataData%OtherState, kind=B8Ki)
-      UB(1:1) = ubound(DataData%OtherState, kind=B8Ki)
+      LB(1:1) = lbound(DataData%OtherState)
+      UB(1:1) = ubound(DataData%OtherState)
       do i1 = LB(1), UB(1)
          call ADI_DestroyOtherState(DataData%OtherState(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1192,8 +1192,8 @@ subroutine ADI_DestroyData(DataData, ErrStat, ErrMsg)
    call ADI_DestroyMisc(DataData%m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(DataData%u)) then
-      LB(1:1) = lbound(DataData%u, kind=B8Ki)
-      UB(1:1) = ubound(DataData%u, kind=B8Ki)
+      LB(1:1) = lbound(DataData%u)
+      UB(1:1) = ubound(DataData%u)
       do i1 = LB(1), UB(1)
          call ADI_DestroyInput(DataData%u(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1211,41 +1211,41 @@ subroutine ADI_PackData(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ADI_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ADI_PackData'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%x))
    if (allocated(InData%x)) then
-      call RegPackBounds(RF, 1, lbound(InData%x, kind=B8Ki), ubound(InData%x, kind=B8Ki))
-      LB(1:1) = lbound(InData%x, kind=B8Ki)
-      UB(1:1) = ubound(InData%x, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%x), ubound(InData%x))
+      LB(1:1) = lbound(InData%x)
+      UB(1:1) = ubound(InData%x)
       do i1 = LB(1), UB(1)
          call ADI_PackContState(RF, InData%x(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%xd))
    if (allocated(InData%xd)) then
-      call RegPackBounds(RF, 1, lbound(InData%xd, kind=B8Ki), ubound(InData%xd, kind=B8Ki))
-      LB(1:1) = lbound(InData%xd, kind=B8Ki)
-      UB(1:1) = ubound(InData%xd, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%xd), ubound(InData%xd))
+      LB(1:1) = lbound(InData%xd)
+      UB(1:1) = ubound(InData%xd)
       do i1 = LB(1), UB(1)
          call ADI_PackDiscState(RF, InData%xd(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%z))
    if (allocated(InData%z)) then
-      call RegPackBounds(RF, 1, lbound(InData%z, kind=B8Ki), ubound(InData%z, kind=B8Ki))
-      LB(1:1) = lbound(InData%z, kind=B8Ki)
-      UB(1:1) = ubound(InData%z, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%z), ubound(InData%z))
+      LB(1:1) = lbound(InData%z)
+      UB(1:1) = ubound(InData%z)
       do i1 = LB(1), UB(1)
          call ADI_PackConstrState(RF, InData%z(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%OtherState))
    if (allocated(InData%OtherState)) then
-      call RegPackBounds(RF, 1, lbound(InData%OtherState, kind=B8Ki), ubound(InData%OtherState, kind=B8Ki))
-      LB(1:1) = lbound(InData%OtherState, kind=B8Ki)
-      UB(1:1) = ubound(InData%OtherState, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%OtherState), ubound(InData%OtherState))
+      LB(1:1) = lbound(InData%OtherState)
+      UB(1:1) = ubound(InData%OtherState)
       do i1 = LB(1), UB(1)
          call ADI_PackOtherState(RF, InData%OtherState(i1)) 
       end do
@@ -1254,9 +1254,9 @@ subroutine ADI_PackData(RF, Indata)
    call ADI_PackMisc(RF, InData%m) 
    call RegPack(RF, allocated(InData%u))
    if (allocated(InData%u)) then
-      call RegPackBounds(RF, 1, lbound(InData%u, kind=B8Ki), ubound(InData%u, kind=B8Ki))
-      LB(1:1) = lbound(InData%u, kind=B8Ki)
-      UB(1:1) = ubound(InData%u, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%u), ubound(InData%u))
+      LB(1:1) = lbound(InData%u)
+      UB(1:1) = ubound(InData%u)
       do i1 = LB(1), UB(1)
          call ADI_PackInput(RF, InData%u(i1)) 
       end do
@@ -1270,8 +1270,8 @@ subroutine ADI_UnPackData(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADI_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADI_UnPackData'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1352,8 +1352,8 @@ subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_CopyRotFED'
@@ -1375,8 +1375,8 @@ subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMs
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcRotFEDData%BladeRootMotion)) then
-      LB(1:1) = lbound(SrcRotFEDData%BladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotFEDData%BladeRootMotion, kind=B8Ki)
+      LB(1:1) = lbound(SrcRotFEDData%BladeRootMotion)
+      UB(1:1) = ubound(SrcRotFEDData%BladeRootMotion)
       if (.not. allocated(DstRotFEDData%BladeRootMotion)) then
          allocate(DstRotFEDData%BladeRootMotion(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1391,8 +1391,8 @@ subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMs
       end do
    end if
    if (allocated(SrcRotFEDData%BladeLn2Mesh)) then
-      LB(1:1) = lbound(SrcRotFEDData%BladeLn2Mesh, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotFEDData%BladeLn2Mesh, kind=B8Ki)
+      LB(1:1) = lbound(SrcRotFEDData%BladeLn2Mesh)
+      UB(1:1) = ubound(SrcRotFEDData%BladeLn2Mesh)
       if (.not. allocated(DstRotFEDData%BladeLn2Mesh)) then
          allocate(DstRotFEDData%BladeLn2Mesh(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1416,8 +1416,8 @@ subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMs
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcRotFEDData%AD_P_2_AD_L_B)) then
-      LB(1:1) = lbound(SrcRotFEDData%AD_P_2_AD_L_B, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotFEDData%AD_P_2_AD_L_B, kind=B8Ki)
+      LB(1:1) = lbound(SrcRotFEDData%AD_P_2_AD_L_B)
+      UB(1:1) = ubound(SrcRotFEDData%AD_P_2_AD_L_B)
       if (.not. allocated(DstRotFEDData%AD_P_2_AD_L_B)) then
          allocate(DstRotFEDData%AD_P_2_AD_L_B(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1435,8 +1435,8 @@ subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMs
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcRotFEDData%ED_P_2_AD_P_R)) then
-      LB(1:1) = lbound(SrcRotFEDData%ED_P_2_AD_P_R, kind=B8Ki)
-      UB(1:1) = ubound(SrcRotFEDData%ED_P_2_AD_P_R, kind=B8Ki)
+      LB(1:1) = lbound(SrcRotFEDData%ED_P_2_AD_P_R)
+      UB(1:1) = ubound(SrcRotFEDData%ED_P_2_AD_P_R)
       if (.not. allocated(DstRotFEDData%ED_P_2_AD_P_R)) then
          allocate(DstRotFEDData%ED_P_2_AD_P_R(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1462,8 +1462,8 @@ subroutine ADI_DestroyRotFED(RotFEDData, ErrStat, ErrMsg)
    type(RotFED), intent(inout) :: RotFEDData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_DestroyRotFED'
@@ -1480,8 +1480,8 @@ subroutine ADI_DestroyRotFED(RotFEDData, ErrStat, ErrMsg)
    call MeshDestroy( RotFEDData%HubPtMotion, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotFEDData%BladeRootMotion)) then
-      LB(1:1) = lbound(RotFEDData%BladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(RotFEDData%BladeRootMotion, kind=B8Ki)
+      LB(1:1) = lbound(RotFEDData%BladeRootMotion)
+      UB(1:1) = ubound(RotFEDData%BladeRootMotion)
       do i1 = LB(1), UB(1)
          call MeshDestroy( RotFEDData%BladeRootMotion(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1489,8 +1489,8 @@ subroutine ADI_DestroyRotFED(RotFEDData, ErrStat, ErrMsg)
       deallocate(RotFEDData%BladeRootMotion)
    end if
    if (allocated(RotFEDData%BladeLn2Mesh)) then
-      LB(1:1) = lbound(RotFEDData%BladeLn2Mesh, kind=B8Ki)
-      UB(1:1) = ubound(RotFEDData%BladeLn2Mesh, kind=B8Ki)
+      LB(1:1) = lbound(RotFEDData%BladeLn2Mesh)
+      UB(1:1) = ubound(RotFEDData%BladeLn2Mesh)
       do i1 = LB(1), UB(1)
          call MeshDestroy( RotFEDData%BladeLn2Mesh(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1502,8 +1502,8 @@ subroutine ADI_DestroyRotFED(RotFEDData, ErrStat, ErrMsg)
    call NWTC_Library_DestroyMeshMapType(RotFEDData%AD_P_2_AD_L_T, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotFEDData%AD_P_2_AD_L_B)) then
-      LB(1:1) = lbound(RotFEDData%AD_P_2_AD_L_B, kind=B8Ki)
-      UB(1:1) = ubound(RotFEDData%AD_P_2_AD_L_B, kind=B8Ki)
+      LB(1:1) = lbound(RotFEDData%AD_P_2_AD_L_B)
+      UB(1:1) = ubound(RotFEDData%AD_P_2_AD_L_B)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyMeshMapType(RotFEDData%AD_P_2_AD_L_B(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1513,8 +1513,8 @@ subroutine ADI_DestroyRotFED(RotFEDData, ErrStat, ErrMsg)
    call NWTC_Library_DestroyMeshMapType(RotFEDData%ED_P_2_AD_P_TF, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotFEDData%ED_P_2_AD_P_R)) then
-      LB(1:1) = lbound(RotFEDData%ED_P_2_AD_P_R, kind=B8Ki)
-      UB(1:1) = ubound(RotFEDData%ED_P_2_AD_P_R, kind=B8Ki)
+      LB(1:1) = lbound(RotFEDData%ED_P_2_AD_P_R)
+      UB(1:1) = ubound(RotFEDData%ED_P_2_AD_P_R)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyMeshMapType(RotFEDData%ED_P_2_AD_P_R(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1531,8 +1531,8 @@ subroutine ADI_PackRotFED(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(RotFED), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ADI_PackRotFED'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call MeshPack(RF, InData%PlatformPtMesh) 
    call MeshPack(RF, InData%TwrPtMesh) 
@@ -1541,18 +1541,18 @@ subroutine ADI_PackRotFED(RF, Indata)
    call MeshPack(RF, InData%HubPtMotion) 
    call RegPack(RF, allocated(InData%BladeRootMotion))
    if (allocated(InData%BladeRootMotion)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeRootMotion, kind=B8Ki), ubound(InData%BladeRootMotion, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeRootMotion, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%BladeRootMotion), ubound(InData%BladeRootMotion))
+      LB(1:1) = lbound(InData%BladeRootMotion)
+      UB(1:1) = ubound(InData%BladeRootMotion)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%BladeRootMotion(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%BladeLn2Mesh))
    if (allocated(InData%BladeLn2Mesh)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeLn2Mesh, kind=B8Ki), ubound(InData%BladeLn2Mesh, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeLn2Mesh, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeLn2Mesh, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%BladeLn2Mesh), ubound(InData%BladeLn2Mesh))
+      LB(1:1) = lbound(InData%BladeLn2Mesh)
+      UB(1:1) = ubound(InData%BladeLn2Mesh)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%BladeLn2Mesh(i1)) 
       end do
@@ -1564,9 +1564,9 @@ subroutine ADI_PackRotFED(RF, Indata)
    call NWTC_Library_PackMeshMapType(RF, InData%AD_P_2_AD_L_T) 
    call RegPack(RF, allocated(InData%AD_P_2_AD_L_B))
    if (allocated(InData%AD_P_2_AD_L_B)) then
-      call RegPackBounds(RF, 1, lbound(InData%AD_P_2_AD_L_B, kind=B8Ki), ubound(InData%AD_P_2_AD_L_B, kind=B8Ki))
-      LB(1:1) = lbound(InData%AD_P_2_AD_L_B, kind=B8Ki)
-      UB(1:1) = ubound(InData%AD_P_2_AD_L_B, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%AD_P_2_AD_L_B), ubound(InData%AD_P_2_AD_L_B))
+      LB(1:1) = lbound(InData%AD_P_2_AD_L_B)
+      UB(1:1) = ubound(InData%AD_P_2_AD_L_B)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackMeshMapType(RF, InData%AD_P_2_AD_L_B(i1)) 
       end do
@@ -1574,9 +1574,9 @@ subroutine ADI_PackRotFED(RF, Indata)
    call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_AD_P_TF) 
    call RegPack(RF, allocated(InData%ED_P_2_AD_P_R))
    if (allocated(InData%ED_P_2_AD_P_R)) then
-      call RegPackBounds(RF, 1, lbound(InData%ED_P_2_AD_P_R, kind=B8Ki), ubound(InData%ED_P_2_AD_P_R, kind=B8Ki))
-      LB(1:1) = lbound(InData%ED_P_2_AD_P_R, kind=B8Ki)
-      UB(1:1) = ubound(InData%ED_P_2_AD_P_R, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%ED_P_2_AD_P_R), ubound(InData%ED_P_2_AD_P_R))
+      LB(1:1) = lbound(InData%ED_P_2_AD_P_R)
+      UB(1:1) = ubound(InData%ED_P_2_AD_P_R)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_AD_P_R(i1)) 
       end do
@@ -1590,8 +1590,8 @@ subroutine ADI_UnPackRotFED(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(RotFED), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADI_UnPackRotFED'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1668,16 +1668,16 @@ subroutine ADI_CopyFED_Data(SrcFED_DataData, DstFED_DataData, CtrlCode, ErrStat,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_CopyFED_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcFED_DataData%WT)) then
-      LB(1:1) = lbound(SrcFED_DataData%WT, kind=B8Ki)
-      UB(1:1) = ubound(SrcFED_DataData%WT, kind=B8Ki)
+      LB(1:1) = lbound(SrcFED_DataData%WT)
+      UB(1:1) = ubound(SrcFED_DataData%WT)
       if (.not. allocated(DstFED_DataData%WT)) then
          allocate(DstFED_DataData%WT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1697,16 +1697,16 @@ subroutine ADI_DestroyFED_Data(FED_DataData, ErrStat, ErrMsg)
    type(FED_Data), intent(inout) :: FED_DataData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADI_DestroyFED_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(FED_DataData%WT)) then
-      LB(1:1) = lbound(FED_DataData%WT, kind=B8Ki)
-      UB(1:1) = ubound(FED_DataData%WT, kind=B8Ki)
+      LB(1:1) = lbound(FED_DataData%WT)
+      UB(1:1) = ubound(FED_DataData%WT)
       do i1 = LB(1), UB(1)
          call ADI_DestroyRotFED(FED_DataData%WT(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1719,14 +1719,14 @@ subroutine ADI_PackFED_Data(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(FED_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ADI_PackFED_Data'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%WT))
    if (allocated(InData%WT)) then
-      call RegPackBounds(RF, 1, lbound(InData%WT, kind=B8Ki), ubound(InData%WT, kind=B8Ki))
-      LB(1:1) = lbound(InData%WT, kind=B8Ki)
-      UB(1:1) = ubound(InData%WT, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WT), ubound(InData%WT))
+      LB(1:1) = lbound(InData%WT)
+      UB(1:1) = ubound(InData%WT)
       do i1 = LB(1), UB(1)
          call ADI_PackRotFED(RF, InData%WT(i1)) 
       end do
@@ -1738,8 +1738,8 @@ subroutine ADI_UnPackFED_Data(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FED_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADI_UnPackFED_Data'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
