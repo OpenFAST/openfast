@@ -2502,6 +2502,7 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
    
    REAL(R8Ki)                                          :: orientation(3,3)
    REAL(R8Ki)                                          :: rotation(3,3)
+   REAL(R8Ki)                                          :: CrvPerturb(3), CrvBase(3)
    
    dx = p%dx(dof)
                
@@ -2509,13 +2510,16 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
       if (dof < 4) then ! translational displacement
          x%q( dof, node ) = x%q( dof, node ) + dx * perturb_sign
       else ! w-m parameters
-         call BD_CrvMatrixR( x%q( 4:6, node ), rotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
-         orientation = transpose(rotation)
          
-         CALL PerturbOrientationMatrix( orientation, dx * perturb_sign, dof-3 )   ! NOTE: call not using DCM_logmap
-         
-         rotation = transpose(orientation)
-         call BD_CrvExtractCrv( rotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
+         ! Calculate perturbation in WM parameters
+         CrvPerturb = 0.0_R8Ki
+         CrvPerturb(dof-3) = 4.0_R8Ki * tan(dx * perturb_sign / 4.0_R8Ki)
+
+         ! Get base rotation in WM parameters
+         CrvBase = x%q(4:6, node)
+
+         ! Compose pertubation and base rotation and store in state
+         call BD_CrvCompose(x%q(4:6, node), CrvPerturb, CrvBase, FLAG_R1R2)
       end if
    else
       x%dqdt( dof, node ) = x%dqdt( dof, node ) + dx * perturb_sign

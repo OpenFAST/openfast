@@ -151,8 +151,8 @@ The formulations of :math:`{\overline{D}}_{h}\ `\ and
 :math:`{\overline{D}}_{l}` are presented in :numref:`aa-directivity`.
 
 The current implementation offers two approaches to estimate
-:math:`I_{1}`. The first one is through a user-defined grid of
-:math:`I_{1}`; see :numref:`aa-sec-TIgrid`. The second option is to have the code
+:math:`I_{1}`. The first one is through a user-defined :math:`I_{1}`. 
+The second option is to have the code
 reconstructing :math:`I_{1}` from the turbulent wind grid, where the
 code computes the airfoil relative position of each blade section,
 :math:`i`, at every time instant and, given the rotor speed,

@@ -25,7 +25,7 @@ SET Modules_Loc=%Root_Loc%\modules
 SET Registry=..\..\build\bin\Registry.exe
 SET FAST_Loc=%Modules_Loc%\openfast-library\src
 SET ED_Loc=%Modules_Loc%\elastodyn\src
-SET AD14_Loc=%Modules_Loc%\aerodyn14\src
+SET SED_Loc=%Modules_Loc%\simple-elastodyn\src
 SET IfW_Loc=%Modules_Loc%\inflowwind\src
 SET HD_Loc=%Modules_Loc%\hydrodyn\src
 SET SEAST_Loc=%Modules_Loc%\seastate\src
@@ -36,6 +36,7 @@ SET IceF_Loc=%Modules_Loc%\icefloe\src\interfaces\FAST
 SET IceD_Loc=%Modules_Loc%\icedyn\src
 SET MD_Loc=%Modules_Loc%\moordyn\src
 SET ExtInfw_Loc=%Modules_Loc%\externalinflow\src
+SET ExtLoads_Loc=%Modules_Loc%\extloads\src
 SET Orca_Loc=%Modules_Loc%\orcaflex-interface\src
 SET NWTC_Lib_Loc=%Modules_Loc%\nwtc-library\src
 SET ExtPtfm_Loc=%Modules_Loc%\extptfm\src
@@ -43,15 +44,18 @@ SET AD_Loc=%Modules_Loc%\aerodyn\src
 SET SrvD_Loc=%Modules_Loc%\servodyn\src
 SET BD_Loc=%Modules_Loc%\beamdyn\src
 SET SC_Loc=%Modules_Loc%\supercontroller\src
+SET ADsk_Loc=%Modules_Loc%\aerodisk\src
+
+SET LD_Loc=%Modules_Loc%\lindyn\src
 
 SET AWAE_Loc=%Modules_Loc%\awae\src
 SET WD_Loc=%Modules_Loc%\wakedynamics\src
 SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
 
-SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SrvD_Loc%" -I "%AD14_Loc%" -I^
- "%AD_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
+SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SED_Loc%" -I^
+ "%SrvD_Loc%" -I "%AD_Loc%" -I "%ADsk_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
  "%IfW_Loc%" -I "%SD_Loc%" -I "%HD_Loc%" -I "%SEAST_Loc%" -I "%MAP_Loc%" -I "%FEAM_Loc%"  -I^
- "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%ExtInfw_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%"
+ "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%ExtInfw_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%" -I "%ExtLoads_Loc%" 
 
 
 SET ModuleName=%1
@@ -64,7 +68,7 @@ REM ----------------------------------------------------------------------------
 :NWTC_Lib
 SET CURR_LOC=%NWTC_Lib_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\Registry_NWTC_Library_typedef_nomesh.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
+%REGISTRY% "%CURR_LOC%\Registry_NWTC_Library_base.txt"  -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :MAP
@@ -111,6 +115,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
 GOTO checkError
 
+:SimpleElastoDyn
+SET CURR_LOC=%SED_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\SED_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
+GOTO checkError
+
 :StrucCtrl
 :ServoDyn
 SET CURR_LOC=%SrvD_Loc%
@@ -136,6 +146,18 @@ GOTO checkError
 SET CURR_LOC=%ExtInfw_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%" -ccode -O "%Output_Loc%"
+GOTO checkError
+
+:ExtLoads
+SET CURR_LOC=%ExtLoads_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -I "%IfW_Loc%" -O "%Output_Loc%"
+GOTO checkError
+
+:ExtLoadsDX
+SET CURR_LOC=%ExtLoads_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -ccode -O "%Output_Loc%"
 GOTO checkError
 
 :AeroDyn
@@ -171,6 +193,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\UnsteadyAero_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
 GOTO checkError
 
+:LD
+SET CURR_LOC=%LD_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\LinDyn_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+GOTO checkError
+
 :FVW
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
@@ -181,18 +209,6 @@ GOTO checkError
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\AeroAcoustics_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"  -noextrap
-GOTO checkError
-
-:AeroDyn14
-SET CURR_LOC=%AD14_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\Registry-AD14.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -I "%IfW_Loc%" -O "%Output_Loc%"
-GOTO checkError
-
-:DWM
-SET CURR_LOC=%AD14_Loc%
-SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\Registry-DWM.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%"  -O "%Output_Loc%"
 GOTO checkError
 
 :HydroDyn
@@ -211,7 +227,6 @@ GOTO checkError
 :Current
 :Waves
 :Waves2
-:SeaState_Interp
 :SeaSt_WaveField
 
 SET CURR_LOC=%SEAST_Loc%
@@ -285,6 +300,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\AWAE_Registry.txt" -I %NWTC_Lib_Loc% -I %IfW_Loc% -noextrap -O "%Output_Loc%"
 GOTO checkError
 
+:AeroDisk
+SET CURR_LOC=%ADsk_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\AeroDisk_Registry.txt" -I %NWTC_Lib_Loc% -I %IfW_Loc%  -I "%CURR_LOC%" -O "%Output_Loc%"
+GOTO checkError
+
 :Version
 DEL "%Root_Loc%\VersionInfo.obj" "%Root_Loc%\versioninfo.mod"
 GOTO end
@@ -316,8 +337,8 @@ SET FAST_Loc=
 SET Registry=
 
 SET ED_Loc=
+SET SED_Loc=
 SET BD_Loc=
-SET AD14_Loc=
 SET IfW_Loc=
 SET HD_Loc=
 SET SD_Loc=
@@ -331,6 +352,7 @@ SET Orca_Loc=
 SET NWTC_Lib_Loc=
 SET ExtPtfm_Loc=
 SET AD_Loc=
+SET ADsk_Loc=
 SET SrvD_Loc=
 
 SET MAP_Loc=

@@ -14,7 +14,7 @@ runs:
     - run: |
 
         if [[ ${{ inputs.test-target }} == "unit" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
-          ctest -VV -R fvw_utest
+          ctest -VV -R aerodyn_utest
         fi
 
         if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then

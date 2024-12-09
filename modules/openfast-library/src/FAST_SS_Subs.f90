@@ -99,10 +99,36 @@ SUBROUTINE FAST_InitializeSteadyState_T( Turbine, ErrStat, ErrMsg )
    Turbine%TurbID = 1
 
       CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
+                     Turbine%ED, Turbine%SED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%ADsk, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX, &
                      Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, CompAeroMaps, ErrStat, ErrMsg )
-                     
+
+      call InitFlowField()
+
+contains
+   !> AD15 now directly accesses FlowField data from IfW.  Since we don't use IfW, we need to manually set the FlowField data
+   !! NOTE: we deallocate(AD%p%FlowField) at the end of the simulation if CompAeroMaps is true
+   subroutine InitFlowField()
+      use InflowWind_IO, only: IfW_SteadyWind_Init
+      use InflowWind_IO_Types, only: InflowWind_IO_DestroySteady_InitInputType, InflowWind_IO_DestroyWindFileDat
+      type(Steady_InitInputType) :: InitInp
+      integer(IntKi)             :: SumFileUnit = -1
+      type(WindFileDat)          :: WFileDat          ! throw away data returned form init
+      integer(IntKi)             :: ErrStat2
+      character(ErrMsgLen)       :: ErrMsg2
+
+      allocate(Turbine%AD%p%FlowField)
+      Turbine%AD%p%FlowField%FieldType = 1  ! Steady wind, init below.
+      InitInp%RefHt      = 100.0_ReKi  ! Any value will do here.  No exponent, so this doesn't matter
+      InitInp%HWindSpeed = 8.0_ReKi    ! This gets overwritten later before used
+      InitInp%PLExp      = 0.0_ReKi    ! no shear used
+      call IfW_SteadyWind_Init(InitInp, SumFileUnit, Turbine%AD%p%FlowField%Uniform, WFileDat, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'FAST_InitializeSteadyState_T:InitFlowField')
+      if (ErrStat >= AbortErrLev) deallocate(Turbine%AD%p%FlowField)
+
+      call InflowWind_IO_DestroySteady_InitInputType(InitInp, ErrStat2, ErrMsg2)  ! ignore errors here because I'm lazy
+      call InflowWind_IO_DestroyWindFileDat(WFileDat,  ErrStat2, ErrMsg2)  ! ignore errors here because I'm lazy
+   end subroutine
 END SUBROUTINE FAST_InitializeSteadyState_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calls FAST_Solution for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
@@ -216,8 +242,8 @@ SUBROUTINE FAST_SteadyState(p_FAST, y_FAST, m_FAST, ED, BD, AD, MeshMapData, Err
       !----------------------------------------------------------------------------------------
       n_global = real(n_case, DbKi) ! n_global is double-precision so that we can reuse existing code.
       
-      CALL WrOutputLine( n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, ED%y%WriteOutput, &
-            AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
+      CALL WrOutputLine( n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, ED%y%WriteOutput, UnusedAry, &
+            AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
             UnusedAry, UnusedAry, UnusedAry, UnusedAry, y_IceD, BD%y, ErrStat2, ErrMsg2 )
 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

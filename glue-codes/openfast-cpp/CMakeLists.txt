@@ -26,53 +26,63 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(MPI REQUIRED)
 find_package(LibXml2 REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(HDF5 REQUIRED COMPONENTS C HL)
-find_package(yaml-cpp REQUIRED)
+find_package(HDF5 REQUIRED)
+find_package(NetCDF REQUIRED COMPONENTS C)
 
-add_library(openfastcpplib
-  src/OpenFAST.cpp
-  src/SC.cpp
-)
+add_library(openfastcpplib SHARED src/OpenFAST.cpp src/SC.cpp)
 set_property(TARGET openfastcpplib PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(openfastcpplib
   openfastlib
-  ${HDF5_C_LIBRARIES}
-  ${HDF5_HL_LIBRARIES}
+  ${HDF5_LIBRARIES}
+  ${NETCDF_LIBRARIES}
   ${ZLIB_LIBRARIES}
   ${LIBXML2_LIBRARIES}
   ${MPI_LIBRARIES}
 )
 target_include_directories(openfastcpplib PUBLIC 
-  ${HDF5_INCLUDES}
-  ${HDF5_INCLUDE_DIR}
+  ${HDF5_INCLUDE_DIRS}
+  ${NETCDF_INCLUDE_DIRS}
   ${ZLIB_INCLUDES}
   ${LIBXML2_INCLUDE_DIR}
   ${MPI_INCLUDE_PATH}
 )
 set_target_properties(openfastcpplib PROPERTIES PUBLIC_HEADER "src/OpenFAST.H;src/SC.h")
 
-add_executable(openfastcpp src/FAST_Prog.cpp)
-target_link_libraries(openfastcpp 
-  ${YAML_CPP_LIBRARIES}
-  openfastcpplib 
-)
-target_include_directories(openfastcpp PRIVATE ${YAML_CPP_INCLUDE_DIR})
-set_target_properties(openfastcpp PROPERTIES LINKER_LANGUAGE CXX)
-
-if(MPI_COMPILE_FLAGS)
-  set_target_properties(openfastcpp PROPERTIES
-    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
-endif(MPI_COMPILE_FLAGS)
-
-if(MPI_LINK_FLAGS)
-  set_target_properties(openfastcpp PROPERTIES
-    LINK_FLAGS "${MPI_LINK_FLAGS}")
-endif(MPI_LINK_FLAGS)
-
-install(TARGETS openfastcpp openfastcpplib
+install(TARGETS openfastcpplib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
-  RUNTIME DESTINATION lib
+  RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   PUBLIC_HEADER DESTINATION include
 )
+
+# Build driver if requested
+if (BUILD_OPENFAST_CPP_DRIVER)
+
+  find_package(yaml-cpp REQUIRED)
+  add_executable(openfastcpp src/FAST_Prog.cpp)
+  target_link_libraries(openfastcpp 
+    ${YAML_CPP_LIBRARIES}
+    openfastcpplib 
+  )
+  target_include_directories(openfastcpp PRIVATE ${YAML_CPP_INCLUDE_DIR})
+  set_target_properties(openfastcpp PROPERTIES LINKER_LANGUAGE CXX)
+
+  if(MPI_COMPILE_FLAGS)
+    set_target_properties(openfastcpp PROPERTIES
+      COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+  endif(MPI_COMPILE_FLAGS)
+
+  if(MPI_LINK_FLAGS)
+    set_target_properties(openfastcpp PROPERTIES
+      LINK_FLAGS "${MPI_LINK_FLAGS}")
+  endif(MPI_LINK_FLAGS)
+
+  install(TARGETS openfastcpp 
+    EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    PUBLIC_HEADER DESTINATION include
+  )
+endif()

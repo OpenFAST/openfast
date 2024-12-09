@@ -1,7 +1,7 @@
 END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
 ---------------------- NODE OUTPUTS --------------------------------------------
-          3   BldNd_BladesOut  - Blades to output
-         99   BldNd_BlOutNd   - Blade nodes on each blade (currently unused)
+          3   BldNd_BladesOut  - Number of blades to output all node information at.  Up to number of blades on turbine. (-)
+      "ALL"   BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
               OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, AeroDyn_Nodes tab for a listing of available output channels, (-)
 "VUndx"     - x-component of undisturbed wind velocity at each node
 "VUndy"     - y-component of undisturbed wind velocity at each node

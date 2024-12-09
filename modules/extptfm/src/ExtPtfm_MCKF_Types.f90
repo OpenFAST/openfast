@@ -180,31 +180,27 @@ subroutine ExtPtfm_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine ExtPtfm_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackInitInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%InputFile)
-   call RegPack(Buf, InData%Linearize)
-   call RegPack(Buf, InData%PtfmRefzt)
-   call RegPack(Buf, InData%RootName)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%InputFile)
+   call RegPack(RF, InData%Linearize)
+   call RegPack(RF, InData%PtfmRefzt)
+   call RegPack(RF, InData%RootName)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackInitInput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Linearize)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PtfmRefzt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RootName)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%InputFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefzt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
@@ -213,7 +209,7 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyInputFile'
    ErrStat = ErrID_None
@@ -225,8 +221,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    DstInputFileData%RedFileCst = SrcInputFileData%RedFileCst
    DstInputFileData%EquilStart = SrcInputFileData%EquilStart
    if (allocated(SrcInputFileData%ActiveCBDOF)) then
-      LB(1:1) = lbound(SrcInputFileData%ActiveCBDOF, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%ActiveCBDOF, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%ActiveCBDOF)
+      UB(1:1) = ubound(SrcInputFileData%ActiveCBDOF)
       if (.not. allocated(DstInputFileData%ActiveCBDOF)) then
          allocate(DstInputFileData%ActiveCBDOF(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -237,8 +233,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
       DstInputFileData%ActiveCBDOF = SrcInputFileData%ActiveCBDOF
    end if
    if (allocated(SrcInputFileData%InitPosList)) then
-      LB(1:1) = lbound(SrcInputFileData%InitPosList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%InitPosList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%InitPosList)
+      UB(1:1) = ubound(SrcInputFileData%InitPosList)
       if (.not. allocated(DstInputFileData%InitPosList)) then
          allocate(DstInputFileData%InitPosList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -249,8 +245,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
       DstInputFileData%InitPosList = SrcInputFileData%InitPosList
    end if
    if (allocated(SrcInputFileData%InitVelList)) then
-      LB(1:1) = lbound(SrcInputFileData%InitVelList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%InitVelList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%InitVelList)
+      UB(1:1) = ubound(SrcInputFileData%InitVelList)
       if (.not. allocated(DstInputFileData%InitVelList)) then
          allocate(DstInputFileData%InitVelList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -267,8 +263,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    DstInputFileData%Tstart = SrcInputFileData%Tstart
    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
    if (allocated(SrcInputFileData%OutList)) then
-      LB(1:1) = lbound(SrcInputFileData%OutList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%OutList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%OutList)
+      UB(1:1) = ubound(SrcInputFileData%OutList)
       if (.not. allocated(DstInputFileData%OutList)) then
          allocate(DstInputFileData%OutList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -301,134 +297,54 @@ subroutine ExtPtfm_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtPtfm_PackInputFile(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackInputFile(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_InputFile), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackInputFile'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DT)
-   call RegPack(Buf, InData%IntMethod)
-   call RegPack(Buf, InData%FileFormat)
-   call RegPack(Buf, InData%RedFile)
-   call RegPack(Buf, InData%RedFileCst)
-   call RegPack(Buf, InData%EquilStart)
-   call RegPack(Buf, allocated(InData%ActiveCBDOF))
-   if (allocated(InData%ActiveCBDOF)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ActiveCBDOF, kind=B8Ki), ubound(InData%ActiveCBDOF, kind=B8Ki))
-      call RegPack(Buf, InData%ActiveCBDOF)
-   end if
-   call RegPack(Buf, allocated(InData%InitPosList))
-   if (allocated(InData%InitPosList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%InitPosList, kind=B8Ki), ubound(InData%InitPosList, kind=B8Ki))
-      call RegPack(Buf, InData%InitPosList)
-   end if
-   call RegPack(Buf, allocated(InData%InitVelList))
-   if (allocated(InData%InitVelList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%InitVelList, kind=B8Ki), ubound(InData%InitVelList, kind=B8Ki))
-      call RegPack(Buf, InData%InitVelList)
-   end if
-   call RegPack(Buf, InData%SumPrint)
-   call RegPack(Buf, InData%OutFile)
-   call RegPack(Buf, InData%TabDelim)
-   call RegPack(Buf, InData%OutFmt)
-   call RegPack(Buf, InData%Tstart)
-   call RegPack(Buf, InData%NumOuts)
-   call RegPack(Buf, allocated(InData%OutList))
-   if (allocated(InData%OutList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutList, kind=B8Ki), ubound(InData%OutList, kind=B8Ki))
-      call RegPack(Buf, InData%OutList)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DT)
+   call RegPack(RF, InData%IntMethod)
+   call RegPack(RF, InData%FileFormat)
+   call RegPack(RF, InData%RedFile)
+   call RegPack(RF, InData%RedFileCst)
+   call RegPack(RF, InData%EquilStart)
+   call RegPackAlloc(RF, InData%ActiveCBDOF)
+   call RegPackAlloc(RF, InData%InitPosList)
+   call RegPackAlloc(RF, InData%InitVelList)
+   call RegPack(RF, InData%SumPrint)
+   call RegPack(RF, InData%OutFile)
+   call RegPack(RF, InData%TabDelim)
+   call RegPack(RF, InData%OutFmt)
+   call RegPack(RF, InData%Tstart)
+   call RegPack(RF, InData%NumOuts)
+   call RegPackAlloc(RF, InData%OutList)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackInputFile(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackInputFile(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackInputFile'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%IntMethod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%FileFormat)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RedFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RedFileCst)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%EquilStart)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%ActiveCBDOF)) deallocate(OutData%ActiveCBDOF)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%ActiveCBDOF(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ActiveCBDOF.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%ActiveCBDOF)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%InitPosList)) deallocate(OutData%InitPosList)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%InitPosList(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitPosList.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%InitPosList)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%InitVelList)) deallocate(OutData%InitVelList)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%InitVelList(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%InitVelList.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%InitVelList)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%SumPrint)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%OutFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%TabDelim)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%OutFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Tstart)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%OutList)) deallocate(OutData%OutList)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%OutList(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutList.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%OutList)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FileFormat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RedFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RedFileCst); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EquilStart); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ActiveCBDOF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%InitPosList); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%InitVelList); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SumPrint); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TabDelim); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFmt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Tstart); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%OutList); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -437,7 +353,7 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyInitOutput'
@@ -447,8 +363,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -459,8 +375,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -471,8 +387,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
    end if
    if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
       if (.not. allocated(DstInitOutputData%LinNames_y)) then
          allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -483,8 +399,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
    end if
    if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
       if (.not. allocated(DstInitOutputData%LinNames_x)) then
          allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -495,8 +411,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
       if (.not. allocated(DstInitOutputData%LinNames_u)) then
          allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -507,8 +423,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
    end if
    if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
       if (.not. allocated(DstInitOutputData%RotFrame_y)) then
          allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -519,8 +435,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
    end if
    if (allocated(SrcInitOutputData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x)
       if (.not. allocated(DstInitOutputData%RotFrame_x)) then
          allocate(DstInitOutputData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -531,8 +447,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
    end if
    if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
       if (.not. allocated(DstInitOutputData%RotFrame_u)) then
          allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -543,8 +459,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
+      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
       if (.not. allocated(DstInitOutputData%IsLoad_u)) then
          allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -555,8 +471,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
    end if
    if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
+      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
       if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
          allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -611,214 +527,44 @@ subroutine ExtPtfm_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtPtfm_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   call RegPack(Buf, allocated(InData%WriteOutputHdr))
-   if (allocated(InData%WriteOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr, kind=B8Ki), ubound(InData%WriteOutputHdr, kind=B8Ki))
-      call RegPack(Buf, InData%WriteOutputHdr)
-   end if
-   call RegPack(Buf, allocated(InData%WriteOutputUnt))
-   if (allocated(InData%WriteOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt, kind=B8Ki), ubound(InData%WriteOutputUnt, kind=B8Ki))
-      call RegPack(Buf, InData%WriteOutputUnt)
-   end if
-   call RegPack(Buf, allocated(InData%LinNames_y))
-   if (allocated(InData%LinNames_y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_y, kind=B8Ki), ubound(InData%LinNames_y, kind=B8Ki))
-      call RegPack(Buf, InData%LinNames_y)
-   end if
-   call RegPack(Buf, allocated(InData%LinNames_x))
-   if (allocated(InData%LinNames_x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_x, kind=B8Ki), ubound(InData%LinNames_x, kind=B8Ki))
-      call RegPack(Buf, InData%LinNames_x)
-   end if
-   call RegPack(Buf, allocated(InData%LinNames_u))
-   if (allocated(InData%LinNames_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_u, kind=B8Ki), ubound(InData%LinNames_u, kind=B8Ki))
-      call RegPack(Buf, InData%LinNames_u)
-   end if
-   call RegPack(Buf, allocated(InData%RotFrame_y))
-   if (allocated(InData%RotFrame_y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RotFrame_y, kind=B8Ki), ubound(InData%RotFrame_y, kind=B8Ki))
-      call RegPack(Buf, InData%RotFrame_y)
-   end if
-   call RegPack(Buf, allocated(InData%RotFrame_x))
-   if (allocated(InData%RotFrame_x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RotFrame_x, kind=B8Ki), ubound(InData%RotFrame_x, kind=B8Ki))
-      call RegPack(Buf, InData%RotFrame_x)
-   end if
-   call RegPack(Buf, allocated(InData%RotFrame_u))
-   if (allocated(InData%RotFrame_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%RotFrame_u, kind=B8Ki), ubound(InData%RotFrame_u, kind=B8Ki))
-      call RegPack(Buf, InData%RotFrame_u)
-   end if
-   call RegPack(Buf, allocated(InData%IsLoad_u))
-   if (allocated(InData%IsLoad_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u, kind=B8Ki), ubound(InData%IsLoad_u, kind=B8Ki))
-      call RegPack(Buf, InData%IsLoad_u)
-   end if
-   call RegPack(Buf, allocated(InData%DerivOrder_x))
-   if (allocated(InData%DerivOrder_x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%DerivOrder_x, kind=B8Ki), ubound(InData%DerivOrder_x, kind=B8Ki))
-      call RegPack(Buf, InData%DerivOrder_x)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPackAlloc(RF, InData%WriteOutputHdr)
+   call RegPackAlloc(RF, InData%WriteOutputUnt)
+   call RegPackAlloc(RF, InData%LinNames_y)
+   call RegPackAlloc(RF, InData%LinNames_x)
+   call RegPackAlloc(RF, InData%LinNames_u)
+   call RegPackAlloc(RF, InData%RotFrame_y)
+   call RegPackAlloc(RF, InData%RotFrame_x)
+   call RegPackAlloc(RF, InData%RotFrame_u)
+   call RegPackAlloc(RF, InData%IsLoad_u)
+   call RegPackAlloc(RF, InData%DerivOrder_x)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
-   if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WriteOutputHdr(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdr.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WriteOutputHdr)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WriteOutputUnt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUnt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WriteOutputUnt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%LinNames_y)) deallocate(OutData%LinNames_y)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LinNames_y(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_y.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LinNames_y)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%LinNames_x)) deallocate(OutData%LinNames_x)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LinNames_x(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_x.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LinNames_x)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%LinNames_u)) deallocate(OutData%LinNames_u)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LinNames_u(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_u.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LinNames_u)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%RotFrame_y)) deallocate(OutData%RotFrame_y)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%RotFrame_y(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%RotFrame_y.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%RotFrame_y)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%RotFrame_x)) deallocate(OutData%RotFrame_x)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%RotFrame_x(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%RotFrame_x.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%RotFrame_x)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%RotFrame_u)) deallocate(OutData%RotFrame_u)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%RotFrame_u(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%RotFrame_u.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%RotFrame_u)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%IsLoad_u)) deallocate(OutData%IsLoad_u)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%IsLoad_u(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%IsLoad_u.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%IsLoad_u)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%DerivOrder_x)) deallocate(OutData%DerivOrder_x)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%DerivOrder_x(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%DerivOrder_x.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%DerivOrder_x)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RotFrame_x); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -827,14 +573,14 @@ subroutine ExtPtfm_CopyContState(SrcContStateData, DstContStateData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%qm)) then
-      LB(1:1) = lbound(SrcContStateData%qm, kind=B8Ki)
-      UB(1:1) = ubound(SrcContStateData%qm, kind=B8Ki)
+      LB(1:1) = lbound(SrcContStateData%qm)
+      UB(1:1) = ubound(SrcContStateData%qm)
       if (.not. allocated(DstContStateData%qm)) then
          allocate(DstContStateData%qm(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -845,8 +591,8 @@ subroutine ExtPtfm_CopyContState(SrcContStateData, DstContStateData, CtrlCode, E
       DstContStateData%qm = SrcContStateData%qm
    end if
    if (allocated(SrcContStateData%qmdot)) then
-      LB(1:1) = lbound(SrcContStateData%qmdot, kind=B8Ki)
-      UB(1:1) = ubound(SrcContStateData%qmdot, kind=B8Ki)
+      LB(1:1) = lbound(SrcContStateData%qmdot)
+      UB(1:1) = ubound(SrcContStateData%qmdot)
       if (.not. allocated(DstContStateData%qmdot)) then
          allocate(DstContStateData%qmdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -873,60 +619,26 @@ subroutine ExtPtfm_DestroyContState(ContStateData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtPtfm_PackContState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackContState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackContState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%qm))
-   if (allocated(InData%qm)) then
-      call RegPackBounds(Buf, 1, lbound(InData%qm, kind=B8Ki), ubound(InData%qm, kind=B8Ki))
-      call RegPack(Buf, InData%qm)
-   end if
-   call RegPack(Buf, allocated(InData%qmdot))
-   if (allocated(InData%qmdot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%qmdot, kind=B8Ki), ubound(InData%qmdot, kind=B8Ki))
-      call RegPack(Buf, InData%qmdot)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%qm)
+   call RegPackAlloc(RF, InData%qmdot)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackContState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackContState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackContState'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%qm)) deallocate(OutData%qm)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%qm(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%qm.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%qm)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%qmdot)) deallocate(OutData%qmdot)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%qmdot(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%qmdot.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%qmdot)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%qm); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%qmdot); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
@@ -950,22 +662,21 @@ subroutine ExtPtfm_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine ExtPtfm_PackDiscState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackDiscState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackDiscState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DummyDiscState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DummyDiscState)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackDiscState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackDiscState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackDiscState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DummyDiscState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DummyDiscState); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -989,22 +700,21 @@ subroutine ExtPtfm_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    ErrMsg  = ''
 end subroutine
 
-subroutine ExtPtfm_PackConstrState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackConstrState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackConstrState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%DummyConstrState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%DummyConstrState)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackConstrState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackConstrState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackConstrState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%DummyConstrState)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%DummyConstrState); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1013,16 +723,16 @@ subroutine ExtPtfm_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOtherStateData%xdot)) then
-      LB(1:1) = lbound(SrcOtherStateData%xdot, kind=B8Ki)
-      UB(1:1) = ubound(SrcOtherStateData%xdot, kind=B8Ki)
+      LB(1:1) = lbound(SrcOtherStateData%xdot)
+      UB(1:1) = ubound(SrcOtherStateData%xdot)
       if (.not. allocated(DstOtherStateData%xdot)) then
          allocate(DstOtherStateData%xdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1043,16 +753,16 @@ subroutine ExtPtfm_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(ExtPtfm_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OtherStateData%xdot)) then
-      LB(1:1) = lbound(OtherStateData%xdot, kind=B8Ki)
-      UB(1:1) = ubound(OtherStateData%xdot, kind=B8Ki)
+      LB(1:1) = lbound(OtherStateData%xdot)
+      UB(1:1) = ubound(OtherStateData%xdot)
       do i1 = LB(1), UB(1)
          call ExtPtfm_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1061,52 +771,49 @@ subroutine ExtPtfm_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtPtfm_PackOtherState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackOtherState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%xdot))
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%xdot))
    if (allocated(InData%xdot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%xdot, kind=B8Ki), ubound(InData%xdot, kind=B8Ki))
-      LB(1:1) = lbound(InData%xdot, kind=B8Ki)
-      UB(1:1) = ubound(InData%xdot, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%xdot), ubound(InData%xdot))
+      LB(1:1) = lbound(InData%xdot)
+      UB(1:1) = ubound(InData%xdot)
       do i1 = LB(1), UB(1)
-         call ExtPtfm_PackContState(Buf, InData%xdot(i1)) 
+         call ExtPtfm_PackContState(RF, InData%xdot(i1)) 
       end do
    end if
-   call RegPack(Buf, InData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%n)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackOtherState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackOtherState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
+   if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%xdot)) deallocate(OutData%xdot)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%xdot(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%xdot.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%xdot.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call ExtPtfm_UnpackContState(Buf, OutData%xdot(i1)) ! xdot 
+         call ExtPtfm_UnpackContState(RF, OutData%xdot(i1)) ! xdot 
       end do
    end if
-   call RegUnpack(Buf, OutData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -1115,14 +822,14 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%xFlat)) then
-      LB(1:1) = lbound(SrcMiscData%xFlat, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%xFlat, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%xFlat)
+      UB(1:1) = ubound(SrcMiscData%xFlat)
       if (.not. allocated(DstMiscData%xFlat)) then
          allocate(DstMiscData%xFlat(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1134,8 +841,8 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstMiscData%uFlat = SrcMiscData%uFlat
    if (allocated(SrcMiscData%F_at_t)) then
-      LB(1:1) = lbound(SrcMiscData%F_at_t, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%F_at_t, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%F_at_t)
+      UB(1:1) = ubound(SrcMiscData%F_at_t)
       if (.not. allocated(DstMiscData%F_at_t)) then
          allocate(DstMiscData%F_at_t(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1148,8 +855,8 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%Indx = SrcMiscData%Indx
    DstMiscData%EquilStart = SrcMiscData%EquilStart
    if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%AllOuts, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%AllOuts)
+      UB(1:1) = ubound(SrcMiscData%AllOuts)
       if (.not. allocated(DstMiscData%AllOuts)) then
          allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1179,88 +886,34 @@ subroutine ExtPtfm_DestroyMisc(MiscData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtPtfm_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackMisc'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%xFlat))
-   if (allocated(InData%xFlat)) then
-      call RegPackBounds(Buf, 1, lbound(InData%xFlat, kind=B8Ki), ubound(InData%xFlat, kind=B8Ki))
-      call RegPack(Buf, InData%xFlat)
-   end if
-   call RegPack(Buf, InData%uFlat)
-   call RegPack(Buf, allocated(InData%F_at_t))
-   if (allocated(InData%F_at_t)) then
-      call RegPackBounds(Buf, 1, lbound(InData%F_at_t, kind=B8Ki), ubound(InData%F_at_t, kind=B8Ki))
-      call RegPack(Buf, InData%F_at_t)
-   end if
-   call RegPack(Buf, InData%Indx)
-   call RegPack(Buf, InData%EquilStart)
-   call RegPack(Buf, allocated(InData%AllOuts))
-   if (allocated(InData%AllOuts)) then
-      call RegPackBounds(Buf, 1, lbound(InData%AllOuts, kind=B8Ki), ubound(InData%AllOuts, kind=B8Ki))
-      call RegPack(Buf, InData%AllOuts)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%xFlat)
+   call RegPack(RF, InData%uFlat)
+   call RegPackAlloc(RF, InData%F_at_t)
+   call RegPack(RF, InData%Indx)
+   call RegPack(RF, InData%EquilStart)
+   call RegPackAlloc(RF, InData%AllOuts)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackMisc'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%xFlat)) deallocate(OutData%xFlat)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%xFlat(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%xFlat.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%xFlat)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%uFlat)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%F_at_t)) deallocate(OutData%F_at_t)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%F_at_t(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%F_at_t.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%F_at_t)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%Indx)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%EquilStart)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%AllOuts)) deallocate(OutData%AllOuts)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AllOuts(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AllOuts.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AllOuts)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%xFlat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%uFlat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_at_t); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Indx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EquilStart); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -1269,16 +922,16 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcParamData%Mass)) then
-      LB(1:2) = lbound(SrcParamData%Mass, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Mass, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Mass)
+      UB(1:2) = ubound(SrcParamData%Mass)
       if (.not. allocated(DstParamData%Mass)) then
          allocate(DstParamData%Mass(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1289,8 +942,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%Mass = SrcParamData%Mass
    end if
    if (allocated(SrcParamData%Damp)) then
-      LB(1:2) = lbound(SrcParamData%Damp, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Damp, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Damp)
+      UB(1:2) = ubound(SrcParamData%Damp)
       if (.not. allocated(DstParamData%Damp)) then
          allocate(DstParamData%Damp(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1301,8 +954,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%Damp = SrcParamData%Damp
    end if
    if (allocated(SrcParamData%Stff)) then
-      LB(1:2) = lbound(SrcParamData%Stff, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Stff, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Stff)
+      UB(1:2) = ubound(SrcParamData%Stff)
       if (.not. allocated(DstParamData%Stff)) then
          allocate(DstParamData%Stff(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1313,8 +966,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%Stff = SrcParamData%Stff
    end if
    if (allocated(SrcParamData%Forces)) then
-      LB(1:2) = lbound(SrcParamData%Forces, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Forces, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Forces)
+      UB(1:2) = ubound(SrcParamData%Forces)
       if (.not. allocated(DstParamData%Forces)) then
          allocate(DstParamData%Forces(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1325,8 +978,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%Forces = SrcParamData%Forces
    end if
    if (allocated(SrcParamData%times)) then
-      LB(1:1) = lbound(SrcParamData%times, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%times, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%times)
+      UB(1:1) = ubound(SrcParamData%times)
       if (.not. allocated(DstParamData%times)) then
          allocate(DstParamData%times(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1337,8 +990,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%times = SrcParamData%times
    end if
    if (allocated(SrcParamData%AMat)) then
-      LB(1:2) = lbound(SrcParamData%AMat, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%AMat, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%AMat)
+      UB(1:2) = ubound(SrcParamData%AMat)
       if (.not. allocated(DstParamData%AMat)) then
          allocate(DstParamData%AMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1349,8 +1002,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%AMat = SrcParamData%AMat
    end if
    if (allocated(SrcParamData%BMat)) then
-      LB(1:2) = lbound(SrcParamData%BMat, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%BMat, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%BMat)
+      UB(1:2) = ubound(SrcParamData%BMat)
       if (.not. allocated(DstParamData%BMat)) then
          allocate(DstParamData%BMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1361,8 +1014,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%BMat = SrcParamData%BMat
    end if
    if (allocated(SrcParamData%CMat)) then
-      LB(1:2) = lbound(SrcParamData%CMat, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%CMat, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%CMat)
+      UB(1:2) = ubound(SrcParamData%CMat)
       if (.not. allocated(DstParamData%CMat)) then
          allocate(DstParamData%CMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1373,8 +1026,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%CMat = SrcParamData%CMat
    end if
    if (allocated(SrcParamData%DMat)) then
-      LB(1:2) = lbound(SrcParamData%DMat, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%DMat, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%DMat)
+      UB(1:2) = ubound(SrcParamData%DMat)
       if (.not. allocated(DstParamData%DMat)) then
          allocate(DstParamData%DMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1385,8 +1038,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%DMat = SrcParamData%DMat
    end if
    if (allocated(SrcParamData%FX)) then
-      LB(1:1) = lbound(SrcParamData%FX, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%FX, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%FX)
+      UB(1:1) = ubound(SrcParamData%FX)
       if (.not. allocated(DstParamData%FX)) then
          allocate(DstParamData%FX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1397,8 +1050,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%FX = SrcParamData%FX
    end if
    if (allocated(SrcParamData%FY)) then
-      LB(1:1) = lbound(SrcParamData%FY, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%FY, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%FY)
+      UB(1:1) = ubound(SrcParamData%FY)
       if (.not. allocated(DstParamData%FY)) then
          allocate(DstParamData%FY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1409,8 +1062,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%FY = SrcParamData%FY
    end if
    if (allocated(SrcParamData%M11)) then
-      LB(1:2) = lbound(SrcParamData%M11, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%M11, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%M11)
+      UB(1:2) = ubound(SrcParamData%M11)
       if (.not. allocated(DstParamData%M11)) then
          allocate(DstParamData%M11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1421,8 +1074,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%M11 = SrcParamData%M11
    end if
    if (allocated(SrcParamData%M12)) then
-      LB(1:2) = lbound(SrcParamData%M12, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%M12, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%M12)
+      UB(1:2) = ubound(SrcParamData%M12)
       if (.not. allocated(DstParamData%M12)) then
          allocate(DstParamData%M12(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1433,8 +1086,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%M12 = SrcParamData%M12
    end if
    if (allocated(SrcParamData%M22)) then
-      LB(1:2) = lbound(SrcParamData%M22, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%M22, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%M22)
+      UB(1:2) = ubound(SrcParamData%M22)
       if (.not. allocated(DstParamData%M22)) then
          allocate(DstParamData%M22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1445,8 +1098,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%M22 = SrcParamData%M22
    end if
    if (allocated(SrcParamData%M21)) then
-      LB(1:2) = lbound(SrcParamData%M21, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%M21, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%M21)
+      UB(1:2) = ubound(SrcParamData%M21)
       if (.not. allocated(DstParamData%M21)) then
          allocate(DstParamData%M21(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1457,8 +1110,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%M21 = SrcParamData%M21
    end if
    if (allocated(SrcParamData%K11)) then
-      LB(1:2) = lbound(SrcParamData%K11, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%K11, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%K11)
+      UB(1:2) = ubound(SrcParamData%K11)
       if (.not. allocated(DstParamData%K11)) then
          allocate(DstParamData%K11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1469,8 +1122,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%K11 = SrcParamData%K11
    end if
    if (allocated(SrcParamData%K22)) then
-      LB(1:2) = lbound(SrcParamData%K22, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%K22, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%K22)
+      UB(1:2) = ubound(SrcParamData%K22)
       if (.not. allocated(DstParamData%K22)) then
          allocate(DstParamData%K22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1481,8 +1134,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%K22 = SrcParamData%K22
    end if
    if (allocated(SrcParamData%C11)) then
-      LB(1:2) = lbound(SrcParamData%C11, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%C11, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%C11)
+      UB(1:2) = ubound(SrcParamData%C11)
       if (.not. allocated(DstParamData%C11)) then
          allocate(DstParamData%C11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1493,8 +1146,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%C11 = SrcParamData%C11
    end if
    if (allocated(SrcParamData%C12)) then
-      LB(1:2) = lbound(SrcParamData%C12, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%C12, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%C12)
+      UB(1:2) = ubound(SrcParamData%C12)
       if (.not. allocated(DstParamData%C12)) then
          allocate(DstParamData%C12(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1505,8 +1158,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%C12 = SrcParamData%C12
    end if
    if (allocated(SrcParamData%C22)) then
-      LB(1:2) = lbound(SrcParamData%C22, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%C22, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%C22)
+      UB(1:2) = ubound(SrcParamData%C22)
       if (.not. allocated(DstParamData%C22)) then
          allocate(DstParamData%C22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1517,8 +1170,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%C22 = SrcParamData%C22
    end if
    if (allocated(SrcParamData%C21)) then
-      LB(1:2) = lbound(SrcParamData%C21, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%C21, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%C21)
+      UB(1:2) = ubound(SrcParamData%C21)
       if (.not. allocated(DstParamData%C21)) then
          allocate(DstParamData%C21(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1536,8 +1189,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%IntMethod = SrcParamData%IntMethod
    if (allocated(SrcParamData%ActiveCBDOF)) then
-      LB(1:1) = lbound(SrcParamData%ActiveCBDOF, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%ActiveCBDOF, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%ActiveCBDOF)
+      UB(1:1) = ubound(SrcParamData%ActiveCBDOF)
       if (.not. allocated(DstParamData%ActiveCBDOF)) then
          allocate(DstParamData%ActiveCBDOF(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1548,8 +1201,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%ActiveCBDOF = SrcParamData%ActiveCBDOF
    end if
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1564,8 +1217,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end do
    end if
    if (allocated(SrcParamData%OutParamLinIndx)) then
-      LB(1:2) = lbound(SrcParamData%OutParamLinIndx, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%OutParamLinIndx, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%OutParamLinIndx)
+      UB(1:2) = ubound(SrcParamData%OutParamLinIndx)
       if (.not. allocated(DstParamData%OutParamLinIndx)) then
          allocate(DstParamData%OutParamLinIndx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1581,8 +1234,8 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(ExtPtfm_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyParam'
@@ -1655,8 +1308,8 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%ActiveCBDOF)
    end if
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1668,507 +1321,107 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtPtfm_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%Mass))
-   if (allocated(InData%Mass)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Mass, kind=B8Ki), ubound(InData%Mass, kind=B8Ki))
-      call RegPack(Buf, InData%Mass)
-   end if
-   call RegPack(Buf, allocated(InData%Damp))
-   if (allocated(InData%Damp)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Damp, kind=B8Ki), ubound(InData%Damp, kind=B8Ki))
-      call RegPack(Buf, InData%Damp)
-   end if
-   call RegPack(Buf, allocated(InData%Stff))
-   if (allocated(InData%Stff)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Stff, kind=B8Ki), ubound(InData%Stff, kind=B8Ki))
-      call RegPack(Buf, InData%Stff)
-   end if
-   call RegPack(Buf, allocated(InData%Forces))
-   if (allocated(InData%Forces)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Forces, kind=B8Ki), ubound(InData%Forces, kind=B8Ki))
-      call RegPack(Buf, InData%Forces)
-   end if
-   call RegPack(Buf, allocated(InData%times))
-   if (allocated(InData%times)) then
-      call RegPackBounds(Buf, 1, lbound(InData%times, kind=B8Ki), ubound(InData%times, kind=B8Ki))
-      call RegPack(Buf, InData%times)
-   end if
-   call RegPack(Buf, allocated(InData%AMat))
-   if (allocated(InData%AMat)) then
-      call RegPackBounds(Buf, 2, lbound(InData%AMat, kind=B8Ki), ubound(InData%AMat, kind=B8Ki))
-      call RegPack(Buf, InData%AMat)
-   end if
-   call RegPack(Buf, allocated(InData%BMat))
-   if (allocated(InData%BMat)) then
-      call RegPackBounds(Buf, 2, lbound(InData%BMat, kind=B8Ki), ubound(InData%BMat, kind=B8Ki))
-      call RegPack(Buf, InData%BMat)
-   end if
-   call RegPack(Buf, allocated(InData%CMat))
-   if (allocated(InData%CMat)) then
-      call RegPackBounds(Buf, 2, lbound(InData%CMat, kind=B8Ki), ubound(InData%CMat, kind=B8Ki))
-      call RegPack(Buf, InData%CMat)
-   end if
-   call RegPack(Buf, allocated(InData%DMat))
-   if (allocated(InData%DMat)) then
-      call RegPackBounds(Buf, 2, lbound(InData%DMat, kind=B8Ki), ubound(InData%DMat, kind=B8Ki))
-      call RegPack(Buf, InData%DMat)
-   end if
-   call RegPack(Buf, allocated(InData%FX))
-   if (allocated(InData%FX)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FX, kind=B8Ki), ubound(InData%FX, kind=B8Ki))
-      call RegPack(Buf, InData%FX)
-   end if
-   call RegPack(Buf, allocated(InData%FY))
-   if (allocated(InData%FY)) then
-      call RegPackBounds(Buf, 1, lbound(InData%FY, kind=B8Ki), ubound(InData%FY, kind=B8Ki))
-      call RegPack(Buf, InData%FY)
-   end if
-   call RegPack(Buf, allocated(InData%M11))
-   if (allocated(InData%M11)) then
-      call RegPackBounds(Buf, 2, lbound(InData%M11, kind=B8Ki), ubound(InData%M11, kind=B8Ki))
-      call RegPack(Buf, InData%M11)
-   end if
-   call RegPack(Buf, allocated(InData%M12))
-   if (allocated(InData%M12)) then
-      call RegPackBounds(Buf, 2, lbound(InData%M12, kind=B8Ki), ubound(InData%M12, kind=B8Ki))
-      call RegPack(Buf, InData%M12)
-   end if
-   call RegPack(Buf, allocated(InData%M22))
-   if (allocated(InData%M22)) then
-      call RegPackBounds(Buf, 2, lbound(InData%M22, kind=B8Ki), ubound(InData%M22, kind=B8Ki))
-      call RegPack(Buf, InData%M22)
-   end if
-   call RegPack(Buf, allocated(InData%M21))
-   if (allocated(InData%M21)) then
-      call RegPackBounds(Buf, 2, lbound(InData%M21, kind=B8Ki), ubound(InData%M21, kind=B8Ki))
-      call RegPack(Buf, InData%M21)
-   end if
-   call RegPack(Buf, allocated(InData%K11))
-   if (allocated(InData%K11)) then
-      call RegPackBounds(Buf, 2, lbound(InData%K11, kind=B8Ki), ubound(InData%K11, kind=B8Ki))
-      call RegPack(Buf, InData%K11)
-   end if
-   call RegPack(Buf, allocated(InData%K22))
-   if (allocated(InData%K22)) then
-      call RegPackBounds(Buf, 2, lbound(InData%K22, kind=B8Ki), ubound(InData%K22, kind=B8Ki))
-      call RegPack(Buf, InData%K22)
-   end if
-   call RegPack(Buf, allocated(InData%C11))
-   if (allocated(InData%C11)) then
-      call RegPackBounds(Buf, 2, lbound(InData%C11, kind=B8Ki), ubound(InData%C11, kind=B8Ki))
-      call RegPack(Buf, InData%C11)
-   end if
-   call RegPack(Buf, allocated(InData%C12))
-   if (allocated(InData%C12)) then
-      call RegPackBounds(Buf, 2, lbound(InData%C12, kind=B8Ki), ubound(InData%C12, kind=B8Ki))
-      call RegPack(Buf, InData%C12)
-   end if
-   call RegPack(Buf, allocated(InData%C22))
-   if (allocated(InData%C22)) then
-      call RegPackBounds(Buf, 2, lbound(InData%C22, kind=B8Ki), ubound(InData%C22, kind=B8Ki))
-      call RegPack(Buf, InData%C22)
-   end if
-   call RegPack(Buf, allocated(InData%C21))
-   if (allocated(InData%C21)) then
-      call RegPackBounds(Buf, 2, lbound(InData%C21, kind=B8Ki), ubound(InData%C21, kind=B8Ki))
-      call RegPack(Buf, InData%C21)
-   end if
-   call RegPack(Buf, InData%EP_DeltaT)
-   call RegPack(Buf, InData%nTimeSteps)
-   call RegPack(Buf, InData%nCB)
-   call RegPack(Buf, InData%nCBFull)
-   call RegPack(Buf, InData%nTot)
-   call RegPack(Buf, InData%NumOuts)
-   call RegPack(Buf, InData%IntMethod)
-   call RegPack(Buf, allocated(InData%ActiveCBDOF))
-   if (allocated(InData%ActiveCBDOF)) then
-      call RegPackBounds(Buf, 1, lbound(InData%ActiveCBDOF, kind=B8Ki), ubound(InData%ActiveCBDOF, kind=B8Ki))
-      call RegPack(Buf, InData%ActiveCBDOF)
-   end if
-   call RegPack(Buf, allocated(InData%OutParam))
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%Mass)
+   call RegPackAlloc(RF, InData%Damp)
+   call RegPackAlloc(RF, InData%Stff)
+   call RegPackAlloc(RF, InData%Forces)
+   call RegPackAlloc(RF, InData%times)
+   call RegPackAlloc(RF, InData%AMat)
+   call RegPackAlloc(RF, InData%BMat)
+   call RegPackAlloc(RF, InData%CMat)
+   call RegPackAlloc(RF, InData%DMat)
+   call RegPackAlloc(RF, InData%FX)
+   call RegPackAlloc(RF, InData%FY)
+   call RegPackAlloc(RF, InData%M11)
+   call RegPackAlloc(RF, InData%M12)
+   call RegPackAlloc(RF, InData%M22)
+   call RegPackAlloc(RF, InData%M21)
+   call RegPackAlloc(RF, InData%K11)
+   call RegPackAlloc(RF, InData%K22)
+   call RegPackAlloc(RF, InData%C11)
+   call RegPackAlloc(RF, InData%C12)
+   call RegPackAlloc(RF, InData%C22)
+   call RegPackAlloc(RF, InData%C21)
+   call RegPack(RF, InData%EP_DeltaT)
+   call RegPack(RF, InData%nTimeSteps)
+   call RegPack(RF, InData%nCB)
+   call RegPack(RF, InData%nCBFull)
+   call RegPack(RF, InData%nTot)
+   call RegPack(RF, InData%NumOuts)
+   call RegPack(RF, InData%IntMethod)
+   call RegPackAlloc(RF, InData%ActiveCBDOF)
+   call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
-      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
+      LB(1:1) = lbound(InData%OutParam)
+      UB(1:1) = ubound(InData%OutParam)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
+         call NWTC_Library_PackOutParmType(RF, InData%OutParam(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%OutParamLinIndx))
-   if (allocated(InData%OutParamLinIndx)) then
-      call RegPackBounds(Buf, 2, lbound(InData%OutParamLinIndx, kind=B8Ki), ubound(InData%OutParamLinIndx, kind=B8Ki))
-      call RegPack(Buf, InData%OutParamLinIndx)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPackAlloc(RF, InData%OutParamLinIndx)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%Mass)) deallocate(OutData%Mass)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%Mass(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Mass.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%Mass)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%Damp)) deallocate(OutData%Damp)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%Damp(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Damp.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%Damp)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%Stff)) deallocate(OutData%Stff)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%Stff(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Stff.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%Stff)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%Forces)) deallocate(OutData%Forces)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%Forces(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Forces.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%Forces)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%times)) deallocate(OutData%times)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%times(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%times.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%times)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%AMat)) deallocate(OutData%AMat)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AMat(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AMat.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AMat)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%BMat)) deallocate(OutData%BMat)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%BMat(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BMat.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%BMat)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%CMat)) deallocate(OutData%CMat)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%CMat(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%CMat.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%CMat)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%DMat)) deallocate(OutData%DMat)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%DMat(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%DMat.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%DMat)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%FX)) deallocate(OutData%FX)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%FX(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FX.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%FX)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%FY)) deallocate(OutData%FY)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%FY(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FY.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%FY)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%M11)) deallocate(OutData%M11)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%M11(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%M11.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%M11)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%M12)) deallocate(OutData%M12)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%M12(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%M12.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%M12)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%M22)) deallocate(OutData%M22)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%M22(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%M22.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%M22)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%M21)) deallocate(OutData%M21)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%M21(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%M21.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%M21)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%K11)) deallocate(OutData%K11)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%K11(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%K11.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%K11)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%K22)) deallocate(OutData%K22)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%K22(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%K22.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%K22)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%C11)) deallocate(OutData%C11)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%C11(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%C11.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%C11)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%C12)) deallocate(OutData%C12)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%C12(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%C12.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%C12)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%C22)) deallocate(OutData%C22)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%C22(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%C22.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%C22)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%C21)) deallocate(OutData%C21)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%C21(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%C21.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%C21)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%EP_DeltaT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nTimeSteps)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nCB)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nCBFull)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nTot)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%IntMethod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%ActiveCBDOF)) deallocate(OutData%ActiveCBDOF)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%ActiveCBDOF(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ActiveCBDOF.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%ActiveCBDOF)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%Mass); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Damp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Stff); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Forces); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%times); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AMat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BMat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CMat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DMat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%FY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%M11); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%M12); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%M22); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%M21); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%K11); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%K22); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%C11); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%C12); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%C22); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%C21); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EP_DeltaT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nTimeSteps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nCB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nCBFull); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nTot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ActiveCBDOF); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%OutParam(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutParam.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutParam.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackOutParmType(Buf, OutData%OutParam(i1)) ! OutParam 
+         call NWTC_Library_UnpackOutParmType(RF, OutData%OutParam(i1)) ! OutParam 
       end do
    end if
-   if (allocated(OutData%OutParamLinIndx)) deallocate(OutData%OutParamLinIndx)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%OutParamLinIndx(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutParamLinIndx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%OutParamLinIndx)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   call RegUnpackAlloc(RF, OutData%OutParamLinIndx); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -2200,21 +1453,21 @@ subroutine ExtPtfm_DestroyInput(InputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine ExtPtfm_PackInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call MeshPack(Buf, InData%PtfmMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call MeshPack(RF, InData%PtfmMesh) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackInput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call MeshUnpack(Buf, OutData%PtfmMesh) ! PtfmMesh 
+   if (RF%ErrStat /= ErrID_None) return
+   call MeshUnpack(RF, OutData%PtfmMesh) ! PtfmMesh 
 end subroutine
 
 subroutine ExtPtfm_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -2223,7 +1476,7 @@ subroutine ExtPtfm_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyOutput'
@@ -2233,8 +1486,8 @@ subroutine ExtPtfm_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2262,43 +1515,26 @@ subroutine ExtPtfm_DestroyOutput(OutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine ExtPtfm_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine ExtPtfm_PackOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(ExtPtfm_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call MeshPack(Buf, InData%PtfmMesh) 
-   call RegPack(Buf, allocated(InData%WriteOutput))
-   if (allocated(InData%WriteOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput, kind=B8Ki), ubound(InData%WriteOutput, kind=B8Ki))
-      call RegPack(Buf, InData%WriteOutput)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call MeshPack(RF, InData%PtfmMesh) 
+   call RegPackAlloc(RF, InData%WriteOutput)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine ExtPtfm_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine ExtPtfm_UnPackOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call MeshUnpack(Buf, OutData%PtfmMesh) ! PtfmMesh 
-   if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WriteOutput(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WriteOutput)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call MeshUnpack(RF, OutData%PtfmMesh) ! PtfmMesh 
+   call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)

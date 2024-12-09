@@ -158,6 +158,8 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL DispNVD( SrvD_Ver )
    CALL GetPath( InitInp%InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
+    p%PriPath = PriPath
+
       !............................................................................................
       ! Read the input file and validate the data
       ! (note p%NumBl and p%RootName must be set first!)
@@ -1484,7 +1486,7 @@ subroutine StC_Blade_Setup(SrvD_InitInp,SrvD_p,InputFileData,SrvD_u,SrvD_y,SrvD_
          ! A little bit of information about the StC location
          if (unsum >0) then
             write(UnSum, '(A24,i2)')                  '    Blade StC instance: ',j
-            write(UnSum, '(10x,A)')                   'Input file: '//trim(InputFileData%NStCfiles(j))
+            write(UnSum, '(10x,A)')                   'Input file: '//trim(InputFileData%BStCfiles(j))
             do k=1,StC_InitInp%NumMeshPts
                write(UnSum, '(10x,A6,I1,A29)')        'Blade ',k,' location (global/inertial): '
                write(UnSum, '(20x,3(2x,ES10.3e2))')   u(1,j)%Mesh(k)%Position(1:3,1)
@@ -3322,7 +3324,7 @@ subroutine SrvD_Perturb_u( p, n, perturb_sign, u, du )
       case (13) ! TranslationDisp = 1;
          u%TStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
       case (14) ! Orientation     = 2;
-         CALL PerturbOrientationMatrix( u%TStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+         CALL PerturbOrientationMatrix( u%TStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx, UseSmlAngle=.false. )
       case (15) ! TranslationVel  = 3;
          u%TStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%TStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
       case (16) ! RotationVel     = 4;
@@ -3336,7 +3338,7 @@ subroutine SrvD_Perturb_u( p, n, perturb_sign, u, du )
       case (19) ! TranslationDisp = 1;
          u%SStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationDisp(fieldIndx,1) + du * perturb_sign
       case (20) ! Orientation     = 2;
-         CALL PerturbOrientationMatrix( u%SStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+         CALL PerturbOrientationMatrix( u%SStCMotionMesh(instance)%Orientation(:,:,1), du * perturb_sign, fieldIndx, UseSmlAngle=.false. )
       case (21) ! TranslationVel  = 3;
          u%SStCMotionMesh(instance)%TranslationVel( fieldIndx,1) = u%SStCMotionMesh(instance)%TranslationVel( fieldIndx,1) + du * perturb_sign
       case (22) ! RotationVel     = 4;
@@ -5199,6 +5201,10 @@ SUBROUTINE Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
               - p%YawDamp*( u%YawRate - YawRateCom )                ! {-f(qd,q,t)}DampYaw;
 
 
+   ! Return the commands directly from the controller (used by SED module)
+   y%YawPosCom  = YawPosCom
+   y%YawRateCom = YawRateCom
+
    !...................................................................
    ! Apply trim case for linearization:
    ! prescribed yaw will be wrong in this case.....
@@ -5241,7 +5247,7 @@ SUBROUTINE CalculateStandardYaw(t, u, p, m, YawPosCom, YawRateCom, YawPosComInt,
 
          CASE ( ControlMode_USER )              ! User-defined from routine UserYawCont().
 
-            CALL UserYawCont ( u%Yaw, u%YawRate, u%WindDir, u%YawErr, p%NumBl, t, p%DT, p%RootName, YawPosCom, YawRateCom )
+            CALL UserYawCont ( u%Yaw, u%YawRate, u%WindDir, u%YawErr, p%NumBl, t, p%DT, p%PriPath, YawPosCom, YawRateCom )
 
          CASE ( ControlMode_EXTERN )              ! User-defined from Simulink or LabVIEW
 
@@ -5380,7 +5386,7 @@ SUBROUTINE Pitch_CalcOutput( t, u, p, x, xd, z, OtherState, BlPitchCom, ElecPwr,
 
          CASE ( ControlMode_USER )              ! User-defined from routine PitchCntrl().
 
-            CALL PitchCntrl ( u%BlPitch, ElecPwr, u%LSS_Spd, u%TwrAccel, p%NumBl, t, p%DT, p%RootName, BlPitchCom )
+            CALL PitchCntrl ( u%BlPitch, ElecPwr, u%LSS_Spd, u%TwrAccel, p%NumBl, t, p%DT, p%PriPath, BlPitchCom )
 
          CASE ( ControlMode_EXTERN )              ! User-defined from Simulink or LabVIEW.
 
@@ -5733,7 +5739,7 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          CASE ( ControlMode_USER )                   ! User-defined HSS brake model.
 
-            CALL UserHSSBr ( y%GenTrq, y%ElecPwr, u%HSS_Spd, p%NumBl, t, p%DT, p%RootName, HSSBrFrac )
+            CALL UserHSSBr ( y%GenTrq, y%ElecPwr, u%HSS_Spd, p%NumBl, t, p%DT, p%PriPath, HSSBrFrac )
 
             IF ( ( HSSBrFrac < 0.0_ReKi ) .OR. ( HSSBrFrac > 1.0_ReKi ) )  THEN   ! 0 (off) <= HSSBrFrac <= 1 (full); else Abort.
                ErrStat = ErrID_Fatal
@@ -5938,8 +5944,8 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
                   CASE ( ControlMode_USER )                          ! User-defined generator model.
 
 
-            !        CALL UserGen ( u%HSS_Spd, u%LSS_Spd, p%NumBl, t, DT, p%GenEff, DelGenTrq, DirRoot, GenTrq, ElecPwr )
-                     CALL UserGen ( u%HSS_Spd, u%LSS_Spd, p%NumBl, t, p%DT, p%GenEff, 0.0_ReKi, p%RootName, GenTrq, ElecPwr )
+                     CALL UserGen ( u%HSS_Spd, u%LSS_Spd, p%NumBl, t, p%DT, p%GenEff, 0.0_ReKi, p%PriPath, GenTrq, ElecPwr )
+
 
                END SELECT
 
@@ -5974,7 +5980,7 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
             CASE ( ControlMode_USER )                              ! User-defined variable-speed control for routine UserVSCont().
 
 
-               CALL UserVSCont ( u%HSS_Spd, u%LSS_Spd, p%NumBl, t, p%DT, p%GenEff, 0.0_ReKi, p%RootName, GenTrq, ElecPwr )
+               CALL UserVSCont ( u%HSS_Spd, u%LSS_Spd, p%NumBl, t, p%DT, p%GenEff, 0.0_ReKi, p%PriPath, GenTrq, ElecPwr )
 
             CASE ( ControlMode_DLL )                                ! User-defined variable-speed control from Bladed-style DLL
 

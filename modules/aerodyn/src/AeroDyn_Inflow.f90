@@ -62,6 +62,10 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    ! Display the module information
    call DispNVD( ADI_Ver )
 
+   ! Clear writeoutputs
+   if (allocated(InitOut%WriteOutputHdr)) deallocate(InitOut%WriteOutputHdr)
+   if (allocated(InitOut%WriteOutputUnt)) deallocate(InitOut%WriteOutputUnt)
+
    ! Set parameters
    p%dt         = interval
    p%storeHHVel = InitInp%storeHHVel
@@ -69,22 +73,20 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%MHK        = InitInp%AD%MHK
    p%WtrDpth    = InitInp%AD%WtrDpth
 
+   ! --- Initialize Inflow Wind 
+   call ADI_InitInflowWind(InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOut_IW, errStat2, errMsg2); if (Failed()) return
+   ! Concatenate AD outputs to IW outputs
+   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_IW%WriteOutputHdr, InitOut_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+
    ! --- Initialize AeroDyn
-   if (allocated(InitOut%WriteOutputHdr)) deallocate(InitOut%WriteOutputHdr)
-   if (allocated(InitOut%WriteOutputUnt)) deallocate(InitOut%WriteOutputUnt)
+   ! Link InflowWind's FlowField to AeroDyn's FlowField
+   InitInp%AD%FlowField => InitOut_IW%FlowField
 
    call AD_Init(InitInp%AD, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, Interval, InitOut_AD, errStat2, errMsg2); if (Failed()) return
    InitOut%Ver = InitOut_AD%ver
    ! Add writeoutput units and headers to driver, same for all cases and rotors!
    !TODO: this header is too short if we add more rotors.  Should also add a rotor identifier
    call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_AD%rotors(1)%WriteOutputHdr, InitOut_AD%rotors(1)%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
-
-   ! --- Initialize Inflow Wind 
-   call ADI_InitInflowWind(InitInp%IW_InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOut_IW, errStat2, errMsg2); if (Failed()) return
-   ! Concatenate AD outputs to IW outputs
-   call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_IW%WriteOutputHdr, InitOut_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
-   ! Link InflowWind's FlowField to AeroDyn's FlowField
-   p%AD%FlowField => InitOut_IW%FlowField
 
    ! --- Initialize grouped outputs
    !TODO: assumes one rotor
@@ -228,10 +230,15 @@ subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
    call AD_UpdateStates(t, n, u_AD(:), utimes(:), p%AD, x%AD, xd%AD, z%AD, OtherState%AD, m%AD, errStat2, errMsg2); if(Failed()) return
 
+   call CleanUp()
+
 contains
 
    subroutine CleanUp()
       !call ADI_DestroyConstrState(z_guess, errStat2, errMsg2); if(Failed()) return
+      do it=1,size(utimes)
+         call AD_DestroyInput(u_AD(it), errStat2, errMsg2)  ! ignore errors here
+      enddo
    end subroutine
 
    logical function Failed()
@@ -292,9 +299,10 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
 
    ! --- Set outputs
    !TODO: this assumes one rotor!!!
-   associate(AD_NumOuts => p%AD%rotors(1)%NumOuts + p%AD%rotors(1)%BldNd_TotNumOuts)
-      y%WriteOutput(1:AD_NumOuts) = y%AD%rotors(1)%WriteOutput(1:AD_NumOuts)
-      y%WriteOutput(AD_NumOuts+1:p%NumOuts) = y%IW_WriteOutput(1:m%IW%p%NumOuts)
+   associate(AD_NumOuts => p%AD%rotors(1)%NumOuts + p%AD%rotors(1)%BldNd_TotNumOuts, &
+             IW_NumOuts => m%IW%p%NumOuts)
+      y%WriteOutput(1:IW_NumOuts) = y%IW_WriteOutput(1:IW_NumOuts)
+      y%WriteOutput(IW_NumOuts+1:p%NumOuts) = y%AD%rotors(1)%WriteOutput(1:AD_NumOuts)
    end associate
 
    !----------------------------------------------------------------------------
@@ -303,7 +311,7 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
 
    if (p%storeHHVel) then
       do iWT = 1, size(u%AD%rotors)
-         y%HHVel(:,iWT) = u%AD%rotors(iWT)%InflowOnHub(:,1)
+         y%HHVel(:,iWT) = m%AD%Inflow(1)%RotInflow(iWT)%InflowOnHub(:,1)
       end do
    endif
 
@@ -362,7 +370,7 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       call IfW_SteadyWind_Init(Steady_InitInput, 0, IW%p%FlowField%Uniform, &
                                FileDat, errStat2, errMsg2)
       if(Failed()) return
-      if (i_IW%MHK == 1 .or. i_IW%MHK == 2) then
+      if (i_IW%MHK == MHK_FixedBottom .or. i_IW%MHK == MHK_FLoating) then
          call IfW_UniformField_CalcAccel(IW%p%FlowField%Uniform, errStat2, errMsg2)
          if(Failed()) return
          IW%p%FlowField%AccFieldValid = .true.
@@ -371,12 +379,14 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       ! Initialze InflowWind module
       InitInData%InputFileName    = i_IW%InputFile
       InitInData%Linearize        = i_IW%Linearize
-      InitInData%UseInputFile     = i_IW%UseInputFile
+      InitInData%FilePassingMethod= i_IW%FilePassingMethod
       InitInData%WtrDpth          = i_IW%WtrDpth
       InitInData%MSL2SWL          = i_IW%MSL2SWL
       InitInData%NumWindPoints = 1
-      if (.not. i_IW%UseInputFile) then
-         call NWTC_Library_Copyfileinfotype( i_IW%PassedFileData, InitInData%PassedFileData, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
+      if (i_IW%FilePassingMethod == 1_IntKi) then     ! passing input file as an FileInfoType structure
+         call NWTC_Library_Copyfileinfotype( i_IW%PassedFileInfo, InitInData%PassedFileInfo, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
+      elseif (i_IW%FilePassingMethod == 2_IntKi) then ! passing input file as an IfW_InputFile structure
+         call InflowWind_CopyInputFile( i_IW%PassedFileData, InitInData%PassedFileData, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
       endif
       InitInData%RootName         = trim(Root)//'.IfW'
       InitInData%MHK              = i_IW%MHK
@@ -552,7 +562,7 @@ subroutine Init_MeshMap_For_ADI(FED, p, uAD, errStat, errMsg)
             pos         = y_ED%TwrPtMesh%Position(:,1)
             orientation = y_ED%TwrPtMesh%RefOrientation(:,:,1)
             call Eye(orientation, errStat2, errMsg2)
-            call CreatePointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
+            call CreateInputPointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
 
             ! TowerBase to AD tower base
             call MeshMapCreate(y_ED%TwrPtMesh, y_ED%TwrPtMeshAD, y_ED%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return

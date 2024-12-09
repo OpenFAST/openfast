@@ -42,6 +42,27 @@ typedef  ^   ElemPropType  ReKi    D      {2} -  -  "Diameter at node 1 and 2, f
 typedef  ^   ElemPropType  ReKi    Area    -  -  -  "Area of an element" m^2
 typedef  ^   ElemPropType  ReKi    Rho     -  -  -  "Density"        kg/m^3
 typedef  ^   ElemPropType  ReKi    T0      -  -  -  "Pretension "    N
+typedef  ^   ElemPropType  ReKi    k11     -  -  -  "Spring translational stiffness"     N/m
+typedef  ^   ElemPropType  ReKi    k12     -  -  -  "Spring cross-coupling stiffness"    N/m
+typedef  ^   ElemPropType  ReKi    k13     -  -  -  "Spring cross-coupling stiffness"    N/m
+typedef  ^   ElemPropType  ReKi    k14     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k15     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k16     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k22     -  -  -  "Spring translational stiffness"     N/m
+typedef  ^   ElemPropType  ReKi    k23     -  -  -  "Spring cross-coupling stiffness"    N/m
+typedef  ^   ElemPropType  ReKi    k24     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k25     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k26     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k33     -  -  -  "Spring translational stiffness"     N/m
+typedef  ^   ElemPropType  ReKi    k34     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k35     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k36     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k44     -  -  -  "Spring rotational stiffness"    	 Nm/rad
+typedef  ^   ElemPropType  ReKi    k45     -  -  -  "Spring cross-coupling stiffness"    Nm/rad
+typedef  ^   ElemPropType  ReKi    k46     -  -  -  "Spring cross-coupling stiffness"    Nm/rad
+typedef  ^   ElemPropType  ReKi    k55     -  -  -  "Spring rotational stiffness"        Nm/rad
+typedef  ^   ElemPropType  ReKi    k56     -  -  -  "Spring cross-coupling stiffness"    Nm/rad
+typedef  ^   ElemPropType  ReKi    k66     -  -  -  "Spring rotational stiffness"    Nm/rad
 typedef  ^   ElemPropType  R8Ki    DirCos  {3}{3}  -  -  "Element direction cosine matrix"
 
 # ============================== Input Initialization (from glue code)  ============================================================================================================================================
@@ -74,13 +95,14 @@ typedef  ^  ^               LOGICAL                CableCChanRqst  {:}  .FALSE. 
 typedef  ^  SD_InitType   CHARACTER(1024)    RootName - - -           "SubDyn rootname" 
 typedef  ^  SD_InitType   ReKi               TP_RefPoint  {3}  - -    "global position of transition piece reference point (could also be defined in SubDyn itself)" 
 typedef  ^  SD_InitType   ReKi               SubRotateZ - - -         "Rotation angle in degrees about global Z" 
-typedef  ^  SD_InitType   ReKi               g - - -                  "Gravity acceleration" 
+typedef  ^  SD_InitType   ReKi               g - - -                  "Gravity acceleration" m/s^2
 typedef  ^  SD_InitType   DbKi               DT - - -                 "Time step from Glue Code" seconds
 typedef  ^  SD_InitType   INTEGER            NJoints - - -            "Number of joints of the sub structure" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsX - - -         "Number of extended property sets" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsB - - -         "Number of property sets for beams" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsC - - -         "Number of property sets for cables" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsR - - -         "Number of property sets for rigid links" 
+typedef  ^  SD_InitType   INTEGER            NPropSetsS - - -         "Number of property sets for spring elements" 
 typedef  ^  SD_InitType   INTEGER            NCMass - - -             "Number of joints with concentrated mass" 
 typedef  ^  SD_InitType   INTEGER            NCOSMs - - -             "Number of independent cosine matrices" 
 typedef  ^  SD_InitType   INTEGER            FEMMod - - -             "FEM switch  element model in the FEM" 
@@ -90,6 +112,7 @@ typedef  ^  SD_InitType   ReKi               Joints {:}{:} - -        "Joints nu
 typedef  ^  SD_InitType   ReKi               PropSetsB {:}{:} - -     "Property sets number and values" 
 typedef  ^  SD_InitType   ReKi               PropSetsC {:}{:} - -     "Property ID and values for cables" 
 typedef  ^  SD_InitType   ReKi               PropSetsR {:}{:} - -     "Property ID and values for rigid link" 
+typedef  ^  SD_InitType   ReKi               PropSetsS {:}{:} - -     "Property ID and values for spring element" 
 typedef  ^  SD_InitType   ReKi               PropSetsX {:}{:} - -     "Extended property sets" 
 typedef  ^  SD_InitType   R8Ki               COSMs {:}{:} - -         "Independent direction cosine matrices" 
 typedef  ^  SD_InitType   ReKi               CMass {:}{:} - -         "Concentrated mass information" 
@@ -111,10 +134,12 @@ typedef  ^  SD_InitType   INTEGER            NElem - - -              "Total num
 typedef  ^  SD_InitType   INTEGER            NPropB  - - -            "Total number of property sets for Beams" 
 typedef  ^  SD_InitType   INTEGER            NPropC  - - -            "Total number of property sets for Cable" 
 typedef  ^  SD_InitType   INTEGER            NPropR  - - -            "Total number of property sets for Rigid" 
+typedef  ^  SD_InitType   INTEGER            NPropS  - - -            "Total number of property sets for Spring" 
 typedef  ^  SD_InitType   ReKi               Nodes {:}{:} - -         "Nodes number and coordinates           " 
 typedef  ^  SD_InitType   ReKi               PropsB     {:}{:} - -    "Property sets and values for Beams     " 
 typedef  ^  SD_InitType   ReKi               PropsC     {:}{:} - -    "Property sets and values for Cable     " 
 typedef  ^  SD_InitType   ReKi               PropsR     {:}{:} - -    "Property sets and values for Rigid link" 
+typedef  ^  SD_InitType   ReKi               PropsS     {:}{:} - -    "Property sets and values for Spring    "
 typedef  ^  SD_InitType   R8Ki               K {:}{:} - -             "System stiffness matrix                " 
 typedef  ^  SD_InitType   R8Ki               M {:}{:} - -             "System mass matrix                     " 
 typedef  ^  SD_InitType   ReKi               ElemProps {:}{:} - -     "Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) )" 
@@ -164,6 +189,7 @@ typedef  ^    MiscVarType    DbKi           LastOutTime -  -  -    "The time of 
 typedef  ^    MiscVarType    IntKi          Decimat     -  -  -    "Current output decimation counter"  "-"
 typedef  ^    MiscVarType    ReKi           Fext      {:} -  -     "External loads on unconstrained DOFs"  "-"
 typedef  ^    MiscVarType    ReKi           Fext_red  {:} -  -     "External loads on constrained DOFs, Fext_red= T^t Fext"  "-"
+typedef  ^    MiscVarType    R8Ki           FG        {:} -  -     "Gravity force vector (without initial cable force T0) based on the instantaneous platform orientation, not reduced (floating only)"  N
 # SIM
 typedef  ^    MiscVarType    ReKi           UL_SIM        {:}  -  -  "UL for SIM = PhiL qL0- PhiM qm0, size nL" 
 typedef  ^    MiscVarType    ReKi           UL_0m         {:}  -  -  "Intermediate UL term for SIM = PhiM qm0, size nL" 
@@ -171,6 +197,7 @@ typedef  ^    MiscVarType    ReKi           UL_0m         {:}  -  -  "Intermedia
 
 # ============================== Parameters ============================================================================================================================================
 # --- Parameters - Algo
+typedef  ^  ParameterType   ReKi           g             -  -  -  "Gravity acceleration"  m/s^2
 typedef  ^  ParameterType   DbKi           SDDeltaT      -  -  -  "Time step (for integration of continuous states)"  seconds
 typedef  ^  ParameterType   IntKi          IntMethod     -  -  -  "Integration Method (1/2/3)Length of y2 array"
 # --- Parameters - FEM
@@ -179,9 +206,14 @@ typedef  ^  ParameterType  INTEGER         nDOF_red      -  -  -  "Total degree 
 typedef  ^  ParameterType  IntKi           Nmembers      -  -  -  "Number of members of the sub structure"
 typedef  ^  ParameterType  IntKi           Elems  {:}{:}    -  -  "Element nodes connections"
 typedef  ^  ParameterType  ElemPropType    ElemProps   {:}   - -  "List of element properties"
-typedef  ^  ParameterType  R8Ki            FG         {:}    - -  "Gravity force vector (with initial cable force T0), not reduced"  N
+typedef  ^  ParameterType  R8Ki            FC         {:}    - -  "Initial cable force T0, not reduced"  N
+typedef  ^  ParameterType  R8Ki            FG         {:}    - -  "Gravity force vector, not reduced"  N
 typedef  ^  ParameterType  ReKi            DP0        {:}{:} - -  "Vector from TP to a Node at t=0, used for Floating Rigid Body motion"  m
+typedef  ^  ParameterType  ReKi            rPG        {:}    - -  "Vector from TP to rigid-body CoG in the Guyan (rigid-body) frame, used for Floating Rigid Body Motion"  m
 typedef  ^  ParameterType  IntKi           NodeID2JointID {:} - - "Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes)"  "-"
+typedef  ^  ParameterType  IntKi           CMassNode   {:}    - - "Node indices for concentrated masses"
+typedef  ^  ParameterType  ReKi            CMassWeight {:}    - - "Weight of concentrated masses" N
+typedef  ^  ParameterType  ReKi            CMassOffset {:}{:} - - "Concentrated mass CoG offset from attached nodes" m
 # --- Parameters - Constraints reduction
 typedef  ^  ParameterType  Logical reduced           -      -  -  "True if system has been reduced to account for constraints"  "-"
 typedef  ^  ParameterType  R8Ki    T_red             {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"  "-"

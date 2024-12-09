@@ -94,10 +94,6 @@ SUBROUTINE ReadInputFiles( InputFileName, AFI, InputFileData, Default_DT, OutFil
         if (Failed())return
     endif
 
-    IF(   (InputFileData%TICalcMeth==1) ) THEN
-        CALL REadTICalcTables(InputFileName,InputFileData,  ErrStat2, ErrMsg2); if(Failed()) return
-    ENDIF
-
 CONTAINS
     logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -203,7 +199,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     CALL ReadCom( UnIn, InputFile, 'Section Header: Aeroacoustic Models', ErrStat2, ErrMsg2, UnEc ); call check()
     CALL ReadVar(UnIn,InputFile,InputFileData%IInflow      ,"InflowMod"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
     CALL ReadVar(UnIn,InputFile,InputFileData%TICalcMeth   ,"TICalcMeth"   ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
-    CALL ReadVAr(UnIn,InputFile,InputFileData%TICalcTabFile,"TICalcTabFile","" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVAr(UnIn,InputFile,InputFileData%TI           ,"TI"           ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVAr(UnIn,InputFile,InputFileData%avgV         ,"avgV"         ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
     CALL ReadVar(UnIn,InputFile,InputFileData%Lturb        ,"Lturb"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
     CALL ReadVar(UnIn,InputFile,InputFileData%ITURB        ,"TurbMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check() ! ITURB - TBLTE NOISE
     CALL ReadVar(UnIn,InputFile,InputFileData%X_BLMethod   ,"BLMod"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
@@ -422,66 +419,6 @@ CONTAINS
         IF (UnIn > 0) CLOSE ( UnIn )
     END SUBROUTINE Cleanup
 END SUBROUTINE ReadBLTables
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadTICalcTables(InputFile, InputFileData, ErrStat, ErrMsg)
-    ! Passed variables
-    integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
-    character(*),       intent(out)     :: ErrMsg                              ! Error message
-    type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
-    character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
-    ! Local variables:
-    integer(IntKi)                :: UnIn                                      ! Unit number for reading file
-    character(1024)               :: FileName                                  ! name of the files containing obesever location
-    integer(IntKi)                :: ErrStat2                                  ! Temporary Error status
-    character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
-    character(1024)               :: PriPath                                   ! Path name of the primary file
-    character(*), parameter       :: RoutineName = 'REadTICalcTables'
-    integer(IntKi)                :: GridY                                     !
-    integer(IntKi)                :: GridZ                                    !
-    integer(IntKi)                :: cou1
-    ! Initialize some variables:
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
-
-    FileName = TRIM(PriPath)//InputFileData%TICalcTabFile
-
-    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2); call check()
-    CALL OpenFInpFile ( UnIn, FileName, ErrStat2, ErrMsg2 ); if(Failed()) return
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check()
-    CALL ReadVar(UnIn, FileName, InputFileData%AvgV, 'AvgV',   'Echo flag', ErrStat2, ErrMsg2); call check()
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check()
-    CALL ReadVar(UnIn, FileName, GridY, 'GridY',   'Echo flag', ErrStat2, ErrMsg2); call check()
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2);call check()
-    CALL ReadVar(UnIn, FileName, GridZ, 'GridZ',   'Echo flag', ErrStat2, ErrMsg2); call check()
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check()
-    CALL ReadVar(UnIn, FileName, InputFileData%dy_turb_in, 'InputFileData%dy_turb_in',   'Echo flag', ErrStat2, ErrMsg2); call check()
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check()
-    CALL ReadVar(UnIn, FileName, InputFileData%dz_turb_in, 'InputFileData%dz_turb_in',   'Echo flag', ErrStat2, ErrMsg2); call check()
-    if(Failed()) return
-
-    CALL AllocAry( InputFileData%TI_Grid_In,GridZ,GridY,'InputFileData%TI_Grid_In', ErrStat2, ErrMsg2);
-    if(Failed()) return
-    DO cou1=1,size(InputFileData%TI_Grid_In,1)
-        read(UnIn,*)  InputFileData%TI_Grid_In(cou1,:)
-    ENDDO
-    !---------------------- END OF FILE -----------------------------------------
-    CALL Cleanup( )
-
-CONTAINS
-    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        Failed =  ErrStat >= AbortErrLev
-        if(Failed) call cleanup()
-    end function Failed
-   SUBROUTINE Check()
-       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   END SUBROUTINE Check
-   SUBROUTINE Cleanup()
-       IF (UnIn > 0) CLOSE ( UnIn )
-   END SUBROUTINE Cleanup
-END SUBROUTINE REadTICalcTables
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the AeroDyn input files.
 SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )

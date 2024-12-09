@@ -26,6 +26,7 @@ import rtestlib as rtl
 import openfastDrivers
 import pass_fail
 from errorPlotting import exportCaseSummary
+import glob
 
 ##### Helper functions
 excludeExt=['.out','.outb','.ech','.sum','.log']
@@ -63,15 +64,14 @@ verbose = args.verbose
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
-
+    os.makedirs(buildDirectory, exist_ok=True)
 
 ### Build the filesystem navigation variables for running openfast on the test case
 rtest = os.path.join(sourceDirectory, "reg_tests", "r-test")
 moduleDirectory = os.path.join(rtest, "glue-codes", "openfast-cpp")
 openfast_gluecode_directory = os.path.join(rtest, "glue-codes", "openfast")
 inputsDirectory = os.path.join(moduleDirectory, caseName)
-targetOutputDirectory = os.path.join(openfast_gluecode_directory, caseName.replace('_cpp', ''))
+targetOutputDirectory = os.path.join(inputsDirectory)
 testBuildDirectory = os.path.join(buildDirectory, caseName)
 
 # verify all the required directories exist
@@ -106,16 +106,25 @@ if not os.path.isdir(testBuildDirectory):
 ### Run openfast on the test case
 if not noExec:
     cwd = os.getcwd()
+    caseInputFile = os.path.join(testBuildDirectory, "cDriver.yaml")
     os.chdir(testBuildDirectory)
-    caseInputFile = os.path.abspath("cDriver.yaml")
     returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
     if returnCode != 0:
         sys.exit(returnCode*10)
     os.chdir(cwd)
-    
+
+
+### If this is a restart test case
+if '_Restart' in caseName:
+    caseInputFile = os.path.join(testBuildDirectory, "cDriverRestart.yaml")
+    os.chdir(testBuildDirectory)
+    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
+    if returnCode != 0:
+        sys.exit(returnCode*10)
+
 ### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName.replace('_cpp', '') + ".outb")
+localOutFile = os.path.join(testBuildDirectory, "5MW_Land_DLL_WTurb_cpp.outb")
+baselineOutFile = os.path.join(inputsDirectory, "5MW_Land_DLL_WTurb_cpp.outb.gold")
 
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)

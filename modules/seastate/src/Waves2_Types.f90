@@ -64,7 +64,7 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Waves2_CopyInitInput'
    ErrStat = ErrID_None
@@ -74,8 +74,8 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
    DstInitInputData%NWaveKinGrid = SrcInitInputData%NWaveKinGrid
    if (allocated(SrcInitInputData%WaveKinGridxi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridxi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridxi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridxi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridxi)
       if (.not. allocated(DstInitInputData%WaveKinGridxi)) then
          allocate(DstInitInputData%WaveKinGridxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -86,8 +86,8 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%WaveKinGridxi = SrcInitInputData%WaveKinGridxi
    end if
    if (allocated(SrcInitInputData%WaveKinGridyi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridyi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridyi)
       if (.not. allocated(DstInitInputData%WaveKinGridyi)) then
          allocate(DstInitInputData%WaveKinGridyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -98,8 +98,8 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%WaveKinGridyi = SrcInitInputData%WaveKinGridyi
    end if
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi)
       if (.not. allocated(DstInitInputData%WaveKinGridzi)) then
          allocate(DstInitInputData%WaveKinGridzi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -131,97 +131,40 @@ subroutine Waves2_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine Waves2_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Waves2_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Waves2_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Waves2_PackInitInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%nGrid)
-   call RegPack(Buf, InData%NWaveElevGrid)
-   call RegPack(Buf, InData%NWaveKinGrid)
-   call RegPack(Buf, allocated(InData%WaveKinGridxi))
-   if (allocated(InData%WaveKinGridxi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridxi, kind=B8Ki), ubound(InData%WaveKinGridxi, kind=B8Ki))
-      call RegPack(Buf, InData%WaveKinGridxi)
-   end if
-   call RegPack(Buf, allocated(InData%WaveKinGridyi))
-   if (allocated(InData%WaveKinGridyi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridyi, kind=B8Ki), ubound(InData%WaveKinGridyi, kind=B8Ki))
-      call RegPack(Buf, InData%WaveKinGridyi)
-   end if
-   call RegPack(Buf, allocated(InData%WaveKinGridzi))
-   if (allocated(InData%WaveKinGridzi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi, kind=B8Ki), ubound(InData%WaveKinGridzi, kind=B8Ki))
-      call RegPack(Buf, InData%WaveKinGridzi)
-   end if
-   call RegPack(Buf, InData%WvDiffQTFF)
-   call RegPack(Buf, InData%WvSumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%Gravity)
+   call RegPack(RF, InData%nGrid)
+   call RegPack(RF, InData%NWaveElevGrid)
+   call RegPack(RF, InData%NWaveKinGrid)
+   call RegPackAlloc(RF, InData%WaveKinGridxi)
+   call RegPackAlloc(RF, InData%WaveKinGridyi)
+   call RegPackAlloc(RF, InData%WaveKinGridzi)
+   call RegPack(RF, InData%WvDiffQTFF)
+   call RegPack(RF, InData%WvSumQTFF)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Waves2_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Waves2_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Waves2_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Waves2_UnPackInitInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%nGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NWaveElevGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NWaveKinGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%WaveKinGridxi)) deallocate(OutData%WaveKinGridxi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveKinGridxi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinGridxi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveKinGridxi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveKinGridyi)) deallocate(OutData%WaveKinGridyi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveKinGridyi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinGridyi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveKinGridyi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveKinGridzi)) deallocate(OutData%WaveKinGridzi)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveKinGridzi(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinGridzi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveKinGridzi)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%WvDiffQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvSumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NWaveElevGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NWaveKinGrid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveKinGridxi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveKinGridyi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveKinGridzi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvDiffQTFF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WvSumQTFF); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -230,14 +173,14 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(5), UB(5)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Waves2_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WaveAcc2D)) then
-      LB(1:5) = lbound(SrcInitOutputData%WaveAcc2D, kind=B8Ki)
-      UB(1:5) = ubound(SrcInitOutputData%WaveAcc2D, kind=B8Ki)
+      LB(1:5) = lbound(SrcInitOutputData%WaveAcc2D)
+      UB(1:5) = ubound(SrcInitOutputData%WaveAcc2D)
       if (.not. allocated(DstInitOutputData%WaveAcc2D)) then
          allocate(DstInitOutputData%WaveAcc2D(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -248,8 +191,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveAcc2D = SrcInitOutputData%WaveAcc2D
    end if
    if (allocated(SrcInitOutputData%WaveDynP2D)) then
-      LB(1:4) = lbound(SrcInitOutputData%WaveDynP2D, kind=B8Ki)
-      UB(1:4) = ubound(SrcInitOutputData%WaveDynP2D, kind=B8Ki)
+      LB(1:4) = lbound(SrcInitOutputData%WaveDynP2D)
+      UB(1:4) = ubound(SrcInitOutputData%WaveDynP2D)
       if (.not. allocated(DstInitOutputData%WaveDynP2D)) then
          allocate(DstInitOutputData%WaveDynP2D(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -260,8 +203,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveDynP2D = SrcInitOutputData%WaveDynP2D
    end if
    if (allocated(SrcInitOutputData%WaveAcc2S)) then
-      LB(1:5) = lbound(SrcInitOutputData%WaveAcc2S, kind=B8Ki)
-      UB(1:5) = ubound(SrcInitOutputData%WaveAcc2S, kind=B8Ki)
+      LB(1:5) = lbound(SrcInitOutputData%WaveAcc2S)
+      UB(1:5) = ubound(SrcInitOutputData%WaveAcc2S)
       if (.not. allocated(DstInitOutputData%WaveAcc2S)) then
          allocate(DstInitOutputData%WaveAcc2S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -272,8 +215,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveAcc2S = SrcInitOutputData%WaveAcc2S
    end if
    if (allocated(SrcInitOutputData%WaveDynP2S)) then
-      LB(1:4) = lbound(SrcInitOutputData%WaveDynP2S, kind=B8Ki)
-      UB(1:4) = ubound(SrcInitOutputData%WaveDynP2S, kind=B8Ki)
+      LB(1:4) = lbound(SrcInitOutputData%WaveDynP2S)
+      UB(1:4) = ubound(SrcInitOutputData%WaveDynP2S)
       if (.not. allocated(DstInitOutputData%WaveDynP2S)) then
          allocate(DstInitOutputData%WaveDynP2S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -284,8 +227,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveDynP2S = SrcInitOutputData%WaveDynP2S
    end if
    if (allocated(SrcInitOutputData%WaveVel2D)) then
-      LB(1:5) = lbound(SrcInitOutputData%WaveVel2D, kind=B8Ki)
-      UB(1:5) = ubound(SrcInitOutputData%WaveVel2D, kind=B8Ki)
+      LB(1:5) = lbound(SrcInitOutputData%WaveVel2D)
+      UB(1:5) = ubound(SrcInitOutputData%WaveVel2D)
       if (.not. allocated(DstInitOutputData%WaveVel2D)) then
          allocate(DstInitOutputData%WaveVel2D(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -296,8 +239,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveVel2D = SrcInitOutputData%WaveVel2D
    end if
    if (allocated(SrcInitOutputData%WaveVel2S)) then
-      LB(1:5) = lbound(SrcInitOutputData%WaveVel2S, kind=B8Ki)
-      UB(1:5) = ubound(SrcInitOutputData%WaveVel2S, kind=B8Ki)
+      LB(1:5) = lbound(SrcInitOutputData%WaveVel2S)
+      UB(1:5) = ubound(SrcInitOutputData%WaveVel2S)
       if (.not. allocated(DstInitOutputData%WaveVel2S)) then
          allocate(DstInitOutputData%WaveVel2S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -336,136 +279,34 @@ subroutine Waves2_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine Waves2_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine Waves2_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(Waves2_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Waves2_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%WaveAcc2D))
-   if (allocated(InData%WaveAcc2D)) then
-      call RegPackBounds(Buf, 5, lbound(InData%WaveAcc2D, kind=B8Ki), ubound(InData%WaveAcc2D, kind=B8Ki))
-      call RegPack(Buf, InData%WaveAcc2D)
-   end if
-   call RegPack(Buf, allocated(InData%WaveDynP2D))
-   if (allocated(InData%WaveDynP2D)) then
-      call RegPackBounds(Buf, 4, lbound(InData%WaveDynP2D, kind=B8Ki), ubound(InData%WaveDynP2D, kind=B8Ki))
-      call RegPack(Buf, InData%WaveDynP2D)
-   end if
-   call RegPack(Buf, allocated(InData%WaveAcc2S))
-   if (allocated(InData%WaveAcc2S)) then
-      call RegPackBounds(Buf, 5, lbound(InData%WaveAcc2S, kind=B8Ki), ubound(InData%WaveAcc2S, kind=B8Ki))
-      call RegPack(Buf, InData%WaveAcc2S)
-   end if
-   call RegPack(Buf, allocated(InData%WaveDynP2S))
-   if (allocated(InData%WaveDynP2S)) then
-      call RegPackBounds(Buf, 4, lbound(InData%WaveDynP2S, kind=B8Ki), ubound(InData%WaveDynP2S, kind=B8Ki))
-      call RegPack(Buf, InData%WaveDynP2S)
-   end if
-   call RegPack(Buf, allocated(InData%WaveVel2D))
-   if (allocated(InData%WaveVel2D)) then
-      call RegPackBounds(Buf, 5, lbound(InData%WaveVel2D, kind=B8Ki), ubound(InData%WaveVel2D, kind=B8Ki))
-      call RegPack(Buf, InData%WaveVel2D)
-   end if
-   call RegPack(Buf, allocated(InData%WaveVel2S))
-   if (allocated(InData%WaveVel2S)) then
-      call RegPackBounds(Buf, 5, lbound(InData%WaveVel2S, kind=B8Ki), ubound(InData%WaveVel2S, kind=B8Ki))
-      call RegPack(Buf, InData%WaveVel2S)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%WaveAcc2D)
+   call RegPackAlloc(RF, InData%WaveDynP2D)
+   call RegPackAlloc(RF, InData%WaveAcc2S)
+   call RegPackAlloc(RF, InData%WaveDynP2S)
+   call RegPackAlloc(RF, InData%WaveVel2D)
+   call RegPackAlloc(RF, InData%WaveVel2S)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine Waves2_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine Waves2_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(Waves2_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Waves2_UnPackInitOutput'
-   integer(B8Ki)   :: LB(5), UB(5)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%WaveAcc2D)) deallocate(OutData%WaveAcc2D)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 5, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveAcc2D(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveAcc2D.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveAcc2D)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveDynP2D)) deallocate(OutData%WaveDynP2D)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 4, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveDynP2D(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveDynP2D.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveDynP2D)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveAcc2S)) deallocate(OutData%WaveAcc2S)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 5, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveAcc2S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveAcc2S.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveAcc2S)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveDynP2S)) deallocate(OutData%WaveDynP2S)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 4, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveDynP2S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveDynP2S.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveDynP2S)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveVel2D)) deallocate(OutData%WaveVel2D)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 5, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveVel2D(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveVel2D.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveVel2D)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveVel2S)) deallocate(OutData%WaveVel2S)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 5, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveVel2S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveVel2S.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveVel2S)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%WaveAcc2D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveDynP2D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveAcc2S); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveDynP2S); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveVel2D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WaveVel2S); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 END MODULE Waves2_Types
 !ENDOFREGISTRYGENERATEDFILE

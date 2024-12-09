@@ -37,7 +37,6 @@ USE SS_Excitation_Types
 USE WAMIT_Types
 USE WAMIT2_Types
 USE Morison_Types
-USE SeaState_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs = 510      ! The maximum number of output channels supported by this module [-]
@@ -78,6 +77,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UnSum = 0_IntKi      !< File unit for the HydroDyn summary file [-1 = no summary file] [-]
     CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    REAL(ReKi)  :: PtfmRefY = 0.0_ReKi      !< Initial reference yaw offset [(rad)]
+    REAL(ReKi)  :: PtfmYCutoff = 0.0_ReKi      !< Low-pass cutoff frequency for filtering the platform yaw motion to obtain the reference yaw offset [(Hz)]
   END TYPE HydroDyn_InputFile
 ! =======================
 ! =========  HydroDyn_InitInputType  =======
@@ -92,6 +94,7 @@ IMPLICIT NONE
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos = 0.0_ReKi      !< Initial platform position (6 DOFs) [-]
   END TYPE HydroDyn_InitInputType
 ! =======================
 ! =========  HydroDyn_InitOutputType  =======
@@ -124,6 +127,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: HydroDyn_DiscreteStateType
     TYPE(WAMIT_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: WAMIT      !< discrete states from the wamit module [-]
     TYPE(Morison_DiscreteStateType)  :: Morison      !< discrete states from the Morison module [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefY      !< Reference yaw position of the PRP relative to the inertial frame - Current step and two previous steps [(radians)]
   END TYPE HydroDyn_DiscreteStateType
 ! =======================
 ! =========  HydroDyn_ConstraintStateType  =======
@@ -187,6 +191,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
+    INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    REAL(ReKi)  :: CYawFilt = 0.0_ReKi      !< Low-pass filter constant for reference platform yaw position PtfmRefY [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
 ! =========  HydroDyn_InputType  =======
@@ -213,7 +219,7 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyInputFile'
@@ -221,8 +227,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
    ErrMsg  = ''
    DstInputFileData%EchoFlag = SrcInputFileData%EchoFlag
    if (allocated(SrcInputFileData%AddF0)) then
-      LB(1:2) = lbound(SrcInputFileData%AddF0, kind=B8Ki)
-      UB(1:2) = ubound(SrcInputFileData%AddF0, kind=B8Ki)
+      LB(1:2) = lbound(SrcInputFileData%AddF0)
+      UB(1:2) = ubound(SrcInputFileData%AddF0)
       if (.not. allocated(DstInputFileData%AddF0)) then
          allocate(DstInputFileData%AddF0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -233,8 +239,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%AddF0 = SrcInputFileData%AddF0
    end if
    if (allocated(SrcInputFileData%AddCLin)) then
-      LB(1:3) = lbound(SrcInputFileData%AddCLin, kind=B8Ki)
-      UB(1:3) = ubound(SrcInputFileData%AddCLin, kind=B8Ki)
+      LB(1:3) = lbound(SrcInputFileData%AddCLin)
+      UB(1:3) = ubound(SrcInputFileData%AddCLin)
       if (.not. allocated(DstInputFileData%AddCLin)) then
          allocate(DstInputFileData%AddCLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -245,8 +251,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%AddCLin = SrcInputFileData%AddCLin
    end if
    if (allocated(SrcInputFileData%AddBLin)) then
-      LB(1:3) = lbound(SrcInputFileData%AddBLin, kind=B8Ki)
-      UB(1:3) = ubound(SrcInputFileData%AddBLin, kind=B8Ki)
+      LB(1:3) = lbound(SrcInputFileData%AddBLin)
+      UB(1:3) = ubound(SrcInputFileData%AddBLin)
       if (.not. allocated(DstInputFileData%AddBLin)) then
          allocate(DstInputFileData%AddBLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -257,8 +263,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%AddBLin = SrcInputFileData%AddBLin
    end if
    if (allocated(SrcInputFileData%AddBQuad)) then
-      LB(1:3) = lbound(SrcInputFileData%AddBQuad, kind=B8Ki)
-      UB(1:3) = ubound(SrcInputFileData%AddBQuad, kind=B8Ki)
+      LB(1:3) = lbound(SrcInputFileData%AddBQuad)
+      UB(1:3) = ubound(SrcInputFileData%AddBQuad)
       if (.not. allocated(DstInputFileData%AddBQuad)) then
          allocate(DstInputFileData%AddBQuad(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -269,8 +275,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%AddBQuad = SrcInputFileData%AddBQuad
    end if
    if (allocated(SrcInputFileData%PotFile)) then
-      LB(1:1) = lbound(SrcInputFileData%PotFile, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%PotFile, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%PotFile)
+      UB(1:1) = ubound(SrcInputFileData%PotFile)
       if (.not. allocated(DstInputFileData%PotFile)) then
          allocate(DstInputFileData%PotFile(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -285,8 +291,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
    DstInputFileData%NBody = SrcInputFileData%NBody
    DstInputFileData%NBodyMod = SrcInputFileData%NBodyMod
    if (allocated(SrcInputFileData%PtfmVol0)) then
-      LB(1:1) = lbound(SrcInputFileData%PtfmVol0, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%PtfmVol0, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%PtfmVol0)
+      UB(1:1) = ubound(SrcInputFileData%PtfmVol0)
       if (.not. allocated(DstInputFileData%PtfmVol0)) then
          allocate(DstInputFileData%PtfmVol0(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -298,8 +304,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
    end if
    DstInputFileData%HasWAMIT = SrcInputFileData%HasWAMIT
    if (allocated(SrcInputFileData%WAMITULEN)) then
-      LB(1:1) = lbound(SrcInputFileData%WAMITULEN, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%WAMITULEN, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%WAMITULEN)
+      UB(1:1) = ubound(SrcInputFileData%WAMITULEN)
       if (.not. allocated(DstInputFileData%WAMITULEN)) then
          allocate(DstInputFileData%WAMITULEN(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -310,8 +316,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%WAMITULEN = SrcInputFileData%WAMITULEN
    end if
    if (allocated(SrcInputFileData%PtfmRefxt)) then
-      LB(1:1) = lbound(SrcInputFileData%PtfmRefxt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%PtfmRefxt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%PtfmRefxt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmRefxt)
       if (.not. allocated(DstInputFileData%PtfmRefxt)) then
          allocate(DstInputFileData%PtfmRefxt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -322,8 +328,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%PtfmRefxt = SrcInputFileData%PtfmRefxt
    end if
    if (allocated(SrcInputFileData%PtfmRefyt)) then
-      LB(1:1) = lbound(SrcInputFileData%PtfmRefyt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%PtfmRefyt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%PtfmRefyt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmRefyt)
       if (.not. allocated(DstInputFileData%PtfmRefyt)) then
          allocate(DstInputFileData%PtfmRefyt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -334,8 +340,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%PtfmRefyt = SrcInputFileData%PtfmRefyt
    end if
    if (allocated(SrcInputFileData%PtfmRefzt)) then
-      LB(1:1) = lbound(SrcInputFileData%PtfmRefzt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%PtfmRefzt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%PtfmRefzt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmRefzt)
       if (.not. allocated(DstInputFileData%PtfmRefzt)) then
          allocate(DstInputFileData%PtfmRefzt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -346,8 +352,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%PtfmRefzt = SrcInputFileData%PtfmRefzt
    end if
    if (allocated(SrcInputFileData%PtfmRefztRot)) then
-      LB(1:1) = lbound(SrcInputFileData%PtfmRefztRot, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%PtfmRefztRot, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%PtfmRefztRot)
+      UB(1:1) = ubound(SrcInputFileData%PtfmRefztRot)
       if (.not. allocated(DstInputFileData%PtfmRefztRot)) then
          allocate(DstInputFileData%PtfmRefztRot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -358,8 +364,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%PtfmRefztRot = SrcInputFileData%PtfmRefztRot
    end if
    if (allocated(SrcInputFileData%PtfmCOBxt)) then
-      LB(1:1) = lbound(SrcInputFileData%PtfmCOBxt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%PtfmCOBxt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%PtfmCOBxt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmCOBxt)
       if (.not. allocated(DstInputFileData%PtfmCOBxt)) then
          allocate(DstInputFileData%PtfmCOBxt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -370,8 +376,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       DstInputFileData%PtfmCOBxt = SrcInputFileData%PtfmCOBxt
    end if
    if (allocated(SrcInputFileData%PtfmCOByt)) then
-      LB(1:1) = lbound(SrcInputFileData%PtfmCOByt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%PtfmCOByt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%PtfmCOByt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmCOByt)
       if (.not. allocated(DstInputFileData%PtfmCOByt)) then
          allocate(DstInputFileData%PtfmCOByt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -394,8 +400,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
    DstInputFileData%PotMod = SrcInputFileData%PotMod
    DstInputFileData%NUserOutputs = SrcInputFileData%NUserOutputs
    if (allocated(SrcInputFileData%UserOutputs)) then
-      LB(1:1) = lbound(SrcInputFileData%UserOutputs, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%UserOutputs, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%UserOutputs)
+      UB(1:1) = ubound(SrcInputFileData%UserOutputs)
       if (.not. allocated(DstInputFileData%UserOutputs)) then
          allocate(DstInputFileData%UserOutputs(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -409,8 +415,8 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
    DstInputFileData%OutAll = SrcInputFileData%OutAll
    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
    if (allocated(SrcInputFileData%OutList)) then
-      LB(1:1) = lbound(SrcInputFileData%OutList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%OutList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%OutList)
+      UB(1:1) = ubound(SrcInputFileData%OutList)
       if (.not. allocated(DstInputFileData%OutList)) then
          allocate(DstInputFileData%OutList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -424,6 +430,9 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
    DstInputFileData%UnSum = SrcInputFileData%UnSum
    DstInputFileData%OutFmt = SrcInputFileData%OutFmt
    DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
+   DstInputFileData%PtfmYMod = SrcInputFileData%PtfmYMod
+   DstInputFileData%PtfmRefY = SrcInputFileData%PtfmRefY
+   DstInputFileData%PtfmYCutoff = SrcInputFileData%PtfmYCutoff
 end subroutine
 
 subroutine HydroDyn_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -488,361 +497,96 @@ subroutine HydroDyn_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine HydroDyn_PackInputFile(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackInputFile(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_InputFile), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInputFile'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%EchoFlag)
-   call RegPack(Buf, allocated(InData%AddF0))
-   if (allocated(InData%AddF0)) then
-      call RegPackBounds(Buf, 2, lbound(InData%AddF0, kind=B8Ki), ubound(InData%AddF0, kind=B8Ki))
-      call RegPack(Buf, InData%AddF0)
-   end if
-   call RegPack(Buf, allocated(InData%AddCLin))
-   if (allocated(InData%AddCLin)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AddCLin, kind=B8Ki), ubound(InData%AddCLin, kind=B8Ki))
-      call RegPack(Buf, InData%AddCLin)
-   end if
-   call RegPack(Buf, allocated(InData%AddBLin))
-   if (allocated(InData%AddBLin)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AddBLin, kind=B8Ki), ubound(InData%AddBLin, kind=B8Ki))
-      call RegPack(Buf, InData%AddBLin)
-   end if
-   call RegPack(Buf, allocated(InData%AddBQuad))
-   if (allocated(InData%AddBQuad)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AddBQuad, kind=B8Ki), ubound(InData%AddBQuad, kind=B8Ki))
-      call RegPack(Buf, InData%AddBQuad)
-   end if
-   call RegPack(Buf, allocated(InData%PotFile))
-   if (allocated(InData%PotFile)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PotFile, kind=B8Ki), ubound(InData%PotFile, kind=B8Ki))
-      call RegPack(Buf, InData%PotFile)
-   end if
-   call RegPack(Buf, InData%nWAMITObj)
-   call RegPack(Buf, InData%vecMultiplier)
-   call RegPack(Buf, InData%NBody)
-   call RegPack(Buf, InData%NBodyMod)
-   call RegPack(Buf, allocated(InData%PtfmVol0))
-   if (allocated(InData%PtfmVol0)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmVol0, kind=B8Ki), ubound(InData%PtfmVol0, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmVol0)
-   end if
-   call RegPack(Buf, InData%HasWAMIT)
-   call RegPack(Buf, allocated(InData%WAMITULEN))
-   if (allocated(InData%WAMITULEN)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMITULEN, kind=B8Ki), ubound(InData%WAMITULEN, kind=B8Ki))
-      call RegPack(Buf, InData%WAMITULEN)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefxt))
-   if (allocated(InData%PtfmRefxt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefxt, kind=B8Ki), ubound(InData%PtfmRefxt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefxt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefyt))
-   if (allocated(InData%PtfmRefyt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefyt, kind=B8Ki), ubound(InData%PtfmRefyt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefyt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefzt))
-   if (allocated(InData%PtfmRefzt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefzt, kind=B8Ki), ubound(InData%PtfmRefzt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefzt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmRefztRot))
-   if (allocated(InData%PtfmRefztRot)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot, kind=B8Ki), ubound(InData%PtfmRefztRot, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmRefztRot)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmCOBxt))
-   if (allocated(InData%PtfmCOBxt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmCOBxt, kind=B8Ki), ubound(InData%PtfmCOBxt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmCOBxt)
-   end if
-   call RegPack(Buf, allocated(InData%PtfmCOByt))
-   if (allocated(InData%PtfmCOByt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%PtfmCOByt, kind=B8Ki), ubound(InData%PtfmCOByt, kind=B8Ki))
-      call RegPack(Buf, InData%PtfmCOByt)
-   end if
-   call WAMIT_PackInitInput(Buf, InData%WAMIT) 
-   call WAMIT2_PackInitInput(Buf, InData%WAMIT2) 
-   call Morison_PackInitInput(Buf, InData%Morison) 
-   call RegPack(Buf, InData%Echo)
-   call RegPack(Buf, InData%PotMod)
-   call RegPack(Buf, InData%NUserOutputs)
-   call RegPack(Buf, allocated(InData%UserOutputs))
-   if (allocated(InData%UserOutputs)) then
-      call RegPackBounds(Buf, 1, lbound(InData%UserOutputs, kind=B8Ki), ubound(InData%UserOutputs, kind=B8Ki))
-      call RegPack(Buf, InData%UserOutputs)
-   end if
-   call RegPack(Buf, InData%OutSwtch)
-   call RegPack(Buf, InData%OutAll)
-   call RegPack(Buf, InData%NumOuts)
-   call RegPack(Buf, allocated(InData%OutList))
-   if (allocated(InData%OutList)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutList, kind=B8Ki), ubound(InData%OutList, kind=B8Ki))
-      call RegPack(Buf, InData%OutList)
-   end if
-   call RegPack(Buf, InData%HDSum)
-   call RegPack(Buf, InData%UnSum)
-   call RegPack(Buf, InData%OutFmt)
-   call RegPack(Buf, InData%OutSFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%EchoFlag)
+   call RegPackAlloc(RF, InData%AddF0)
+   call RegPackAlloc(RF, InData%AddCLin)
+   call RegPackAlloc(RF, InData%AddBLin)
+   call RegPackAlloc(RF, InData%AddBQuad)
+   call RegPackAlloc(RF, InData%PotFile)
+   call RegPack(RF, InData%nWAMITObj)
+   call RegPack(RF, InData%vecMultiplier)
+   call RegPack(RF, InData%NBody)
+   call RegPack(RF, InData%NBodyMod)
+   call RegPackAlloc(RF, InData%PtfmVol0)
+   call RegPack(RF, InData%HasWAMIT)
+   call RegPackAlloc(RF, InData%WAMITULEN)
+   call RegPackAlloc(RF, InData%PtfmRefxt)
+   call RegPackAlloc(RF, InData%PtfmRefyt)
+   call RegPackAlloc(RF, InData%PtfmRefzt)
+   call RegPackAlloc(RF, InData%PtfmRefztRot)
+   call RegPackAlloc(RF, InData%PtfmCOBxt)
+   call RegPackAlloc(RF, InData%PtfmCOByt)
+   call WAMIT_PackInitInput(RF, InData%WAMIT) 
+   call WAMIT2_PackInitInput(RF, InData%WAMIT2) 
+   call Morison_PackInitInput(RF, InData%Morison) 
+   call RegPack(RF, InData%Echo)
+   call RegPack(RF, InData%PotMod)
+   call RegPack(RF, InData%NUserOutputs)
+   call RegPackAlloc(RF, InData%UserOutputs)
+   call RegPack(RF, InData%OutSwtch)
+   call RegPack(RF, InData%OutAll)
+   call RegPack(RF, InData%NumOuts)
+   call RegPackAlloc(RF, InData%OutList)
+   call RegPack(RF, InData%HDSum)
+   call RegPack(RF, InData%UnSum)
+   call RegPack(RF, InData%OutFmt)
+   call RegPack(RF, InData%OutSFmt)
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%PtfmRefY)
+   call RegPack(RF, InData%PtfmYCutoff)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackInputFile(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackInputFile(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackInputFile'
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%EchoFlag)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%AddF0)) deallocate(OutData%AddF0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AddF0(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AddF0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AddF0)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%AddCLin)) deallocate(OutData%AddCLin)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AddCLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AddCLin.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AddCLin)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%AddBLin)) deallocate(OutData%AddBLin)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AddBLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AddBLin.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AddBLin)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%AddBQuad)) deallocate(OutData%AddBQuad)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AddBQuad(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AddBQuad.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AddBQuad)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PotFile)) deallocate(OutData%PotFile)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PotFile(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PotFile.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PotFile)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%nWAMITObj)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%vecMultiplier)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBodyMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%PtfmVol0)) deallocate(OutData%PtfmVol0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmVol0(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmVol0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmVol0)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%HasWAMIT)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%WAMITULEN)) deallocate(OutData%WAMITULEN)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WAMITULEN(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMITULEN.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WAMITULEN)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefxt)) deallocate(OutData%PtfmRefxt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefxt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefxt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefxt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefyt)) deallocate(OutData%PtfmRefyt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefyt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefyt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefyt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefzt)) deallocate(OutData%PtfmRefzt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefzt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefzt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefzt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmRefztRot)) deallocate(OutData%PtfmRefztRot)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmRefztRot(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmRefztRot.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmRefztRot)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmCOBxt)) deallocate(OutData%PtfmCOBxt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmCOBxt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmCOBxt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmCOBxt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%PtfmCOByt)) deallocate(OutData%PtfmCOByt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%PtfmCOByt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PtfmCOByt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%PtfmCOByt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call WAMIT_UnpackInitInput(Buf, OutData%WAMIT) ! WAMIT 
-   call WAMIT2_UnpackInitInput(Buf, OutData%WAMIT2) ! WAMIT2 
-   call Morison_UnpackInitInput(Buf, OutData%Morison) ! Morison 
-   call RegUnpack(Buf, OutData%Echo)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PotMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NUserOutputs)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%UserOutputs)) deallocate(OutData%UserOutputs)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%UserOutputs(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%UserOutputs.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%UserOutputs)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%OutSwtch)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%OutAll)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%OutList)) deallocate(OutData%OutList)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%OutList(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutList.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%OutList)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%HDSum)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%UnSum)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%OutFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%OutSFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%EchoFlag); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AddF0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AddCLin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AddBLin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AddBQuad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PotFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nWAMITObj); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vecMultiplier); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmVol0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HasWAMIT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WAMITULEN); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefxt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefyt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefzt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmRefztRot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmCOBxt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PtfmCOByt); if (RegCheckErr(RF, RoutineName)) return
+   call WAMIT_UnpackInitInput(RF, OutData%WAMIT) ! WAMIT 
+   call WAMIT2_UnpackInitInput(RF, OutData%WAMIT2) ! WAMIT2 
+   call Morison_UnpackInitInput(RF, OutData%Morison) ! Morison 
+   call RegUnpack(RF, OutData%Echo); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PotMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NUserOutputs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%UserOutputs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutSwtch); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutAll); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%OutList); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HDSum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UnSum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFmt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutSFmt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmYCutoff); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
@@ -851,7 +595,7 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(0), UB(0)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyInitInput'
@@ -869,6 +613,7 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
    DstInitInputData%WaveField => SrcInitInputData%WaveField
+   DstInitInputData%PlatformPos = SrcInitInputData%PlatformPos
 end subroutine
 
 subroutine HydroDyn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -885,78 +630,70 @@ subroutine HydroDyn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    nullify(InitInputData%WaveField)
 end subroutine
 
-subroutine HydroDyn_PackInitInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackInitInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInitInput'
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%InputFile)
-   call RegPack(Buf, InData%UseInputFile)
-   call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
-   call RegPack(Buf, InData%OutRootName)
-   call RegPack(Buf, InData%Linearize)
-   call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%TMax)
-   call RegPack(Buf, InData%VisMeshes)
-   call RegPack(Buf, InData%InvalidWithSSExctn)
-   call RegPack(Buf, associated(InData%WaveField))
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%InputFile)
+   call RegPack(RF, InData%UseInputFile)
+   call NWTC_Library_PackFileInfoType(RF, InData%PassedFileData) 
+   call RegPack(RF, InData%OutRootName)
+   call RegPack(RF, InData%Linearize)
+   call RegPack(RF, InData%Gravity)
+   call RegPack(RF, InData%TMax)
+   call RegPack(RF, InData%VisMeshes)
+   call RegPack(RF, InData%InvalidWithSSExctn)
+   call RegPack(RF, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
-      call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
+      call RegPackPointer(RF, c_loc(InData%WaveField), PtrInIndex)
       if (.not. PtrInIndex) then
-         call SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, InData%WaveField) 
+         call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%PlatformPos)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackInitInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackInitInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackInitInput'
-   integer(B8Ki)   :: LB(0), UB(0)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%UseInputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedFileData) ! PassedFileData 
-   call RegUnpack(Buf, OutData%OutRootName)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Linearize)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%TMax)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%VisMeshes)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%InvalidWithSSExctn)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%InputFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UseInputFile); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileData) ! PassedFileData 
+   call RegUnpack(RF, OutData%OutRootName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TMax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VisMeshes); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%InvalidWithSSExctn); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
       if (c_associated(Ptr)) then
          call c_f_pointer(Ptr, OutData%WaveField)
       else
          allocate(OutData%WaveField,stat=stat)
          if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', RF%ErrStat, RF%ErrMsg, RoutineName)
             return
          end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveField)
-         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(Buf, OutData%WaveField) ! WaveField 
+         RF%Pointers(PtrIdx) = c_loc(OutData%WaveField)
+         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(RF, OutData%WaveField) ! WaveField 
       end if
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PlatformPos); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -965,7 +702,7 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyInitOutput'
@@ -975,8 +712,8 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -987,8 +724,8 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1002,8 +739,8 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
       if (.not. allocated(DstInitOutputData%LinNames_y)) then
          allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1014,8 +751,8 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
    end if
    if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
       if (.not. allocated(DstInitOutputData%LinNames_x)) then
          allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1026,8 +763,8 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
       DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
       if (.not. allocated(DstInitOutputData%LinNames_u)) then
          allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1038,8 +775,8 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
    end if
    if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
+      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
       if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
          allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1050,8 +787,8 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
       DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
+      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
       if (.not. allocated(DstInitOutputData%IsLoad_u)) then
          allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1099,159 +836,40 @@ subroutine HydroDyn_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine HydroDyn_PackInitOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackInitOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInitOutput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call Morison_PackInitOutput(Buf, InData%Morison) 
-   call RegPack(Buf, allocated(InData%WriteOutputHdr))
-   if (allocated(InData%WriteOutputHdr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr, kind=B8Ki), ubound(InData%WriteOutputHdr, kind=B8Ki))
-      call RegPack(Buf, InData%WriteOutputHdr)
-   end if
-   call RegPack(Buf, allocated(InData%WriteOutputUnt))
-   if (allocated(InData%WriteOutputUnt)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt, kind=B8Ki), ubound(InData%WriteOutputUnt, kind=B8Ki))
-      call RegPack(Buf, InData%WriteOutputUnt)
-   end if
-   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   call RegPack(Buf, allocated(InData%LinNames_y))
-   if (allocated(InData%LinNames_y)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_y, kind=B8Ki), ubound(InData%LinNames_y, kind=B8Ki))
-      call RegPack(Buf, InData%LinNames_y)
-   end if
-   call RegPack(Buf, allocated(InData%LinNames_x))
-   if (allocated(InData%LinNames_x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_x, kind=B8Ki), ubound(InData%LinNames_x, kind=B8Ki))
-      call RegPack(Buf, InData%LinNames_x)
-   end if
-   call RegPack(Buf, allocated(InData%LinNames_u))
-   if (allocated(InData%LinNames_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%LinNames_u, kind=B8Ki), ubound(InData%LinNames_u, kind=B8Ki))
-      call RegPack(Buf, InData%LinNames_u)
-   end if
-   call RegPack(Buf, allocated(InData%DerivOrder_x))
-   if (allocated(InData%DerivOrder_x)) then
-      call RegPackBounds(Buf, 1, lbound(InData%DerivOrder_x, kind=B8Ki), ubound(InData%DerivOrder_x, kind=B8Ki))
-      call RegPack(Buf, InData%DerivOrder_x)
-   end if
-   call RegPack(Buf, allocated(InData%IsLoad_u))
-   if (allocated(InData%IsLoad_u)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u, kind=B8Ki), ubound(InData%IsLoad_u, kind=B8Ki))
-      call RegPack(Buf, InData%IsLoad_u)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call Morison_PackInitOutput(RF, InData%Morison) 
+   call RegPackAlloc(RF, InData%WriteOutputHdr)
+   call RegPackAlloc(RF, InData%WriteOutputUnt)
+   call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPackAlloc(RF, InData%LinNames_y)
+   call RegPackAlloc(RF, InData%LinNames_x)
+   call RegPackAlloc(RF, InData%LinNames_u)
+   call RegPackAlloc(RF, InData%DerivOrder_x)
+   call RegPackAlloc(RF, InData%IsLoad_u)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackInitOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackInitOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call Morison_UnpackInitOutput(Buf, OutData%Morison) ! Morison 
-   if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WriteOutputHdr(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdr.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WriteOutputHdr)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WriteOutputUnt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUnt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WriteOutputUnt)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
-   if (allocated(OutData%LinNames_y)) deallocate(OutData%LinNames_y)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LinNames_y(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_y.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LinNames_y)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%LinNames_x)) deallocate(OutData%LinNames_x)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LinNames_x(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_x.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LinNames_x)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%LinNames_u)) deallocate(OutData%LinNames_u)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%LinNames_u(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_u.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%LinNames_u)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%DerivOrder_x)) deallocate(OutData%DerivOrder_x)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%DerivOrder_x(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%DerivOrder_x.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%DerivOrder_x)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%IsLoad_u)) deallocate(OutData%IsLoad_u)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%IsLoad_u(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%IsLoad_u.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%IsLoad_u)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call Morison_UnpackInitOutput(RF, OutData%Morison) ! Morison 
+   call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyHD_ModuleMapType(SrcHD_ModuleMapTypeData, DstHD_ModuleMapTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -1293,25 +911,25 @@ subroutine HydroDyn_DestroyHD_ModuleMapType(HD_ModuleMapTypeData, ErrStat, ErrMs
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine HydroDyn_PackHD_ModuleMapType(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackHD_ModuleMapType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HD_ModuleMapType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackHD_ModuleMapType'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call NWTC_Library_PackMeshMapType(Buf, InData%uW_P_2_PRP_P) 
-   call NWTC_Library_PackMeshMapType(Buf, InData%W_P_2_PRP_P) 
-   call NWTC_Library_PackMeshMapType(Buf, InData%M_P_2_PRP_P) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackMeshMapType(RF, InData%uW_P_2_PRP_P) 
+   call NWTC_Library_PackMeshMapType(RF, InData%W_P_2_PRP_P) 
+   call NWTC_Library_PackMeshMapType(RF, InData%M_P_2_PRP_P) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackHD_ModuleMapType(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackHD_ModuleMapType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HD_ModuleMapType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackHD_ModuleMapType'
-   if (Buf%ErrStat /= ErrID_None) return
-   call NWTC_Library_UnpackMeshMapType(Buf, OutData%uW_P_2_PRP_P) ! uW_P_2_PRP_P 
-   call NWTC_Library_UnpackMeshMapType(Buf, OutData%W_P_2_PRP_P) ! W_P_2_PRP_P 
-   call NWTC_Library_UnpackMeshMapType(Buf, OutData%M_P_2_PRP_P) ! M_P_2_PRP_P 
+   if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%uW_P_2_PRP_P) ! uW_P_2_PRP_P 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%W_P_2_PRP_P) ! W_P_2_PRP_P 
+   call NWTC_Library_UnpackMeshMapType(RF, OutData%M_P_2_PRP_P) ! M_P_2_PRP_P 
 end subroutine
 
 subroutine HydroDyn_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1320,16 +938,16 @@ subroutine HydroDyn_CopyContState(SrcContStateData, DstContStateData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%WAMIT)) then
-      LB(1:1) = lbound(SrcContStateData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(SrcContStateData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(SrcContStateData%WAMIT)
+      UB(1:1) = ubound(SrcContStateData%WAMIT)
       if (.not. allocated(DstContStateData%WAMIT)) then
          allocate(DstContStateData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1352,16 +970,16 @@ subroutine HydroDyn_DestroyContState(ContStateData, ErrStat, ErrMsg)
    type(HydroDyn_ContinuousStateType), intent(inout) :: ContStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ContStateData%WAMIT)) then
-      LB(1:1) = lbound(ContStateData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(ContStateData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(ContStateData%WAMIT)
+      UB(1:1) = ubound(ContStateData%WAMIT)
       do i1 = LB(1), UB(1)
          call WAMIT_DestroyContState(ContStateData%WAMIT(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1372,51 +990,49 @@ subroutine HydroDyn_DestroyContState(ContStateData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine HydroDyn_PackContState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackContState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackContState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%WAMIT))
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMIT, kind=B8Ki), ubound(InData%WAMIT, kind=B8Ki))
-      LB(1:1) = lbound(InData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(InData%WAMIT, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
+      LB(1:1) = lbound(InData%WAMIT)
+      UB(1:1) = ubound(InData%WAMIT)
       do i1 = LB(1), UB(1)
-         call WAMIT_PackContState(Buf, InData%WAMIT(i1)) 
+         call WAMIT_PackContState(RF, InData%WAMIT(i1)) 
       end do
    end if
-   call Morison_PackContState(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   call Morison_PackContState(RF, InData%Morison) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackContState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackContState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackContState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
+   if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%WAMIT(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT_UnpackContState(Buf, OutData%WAMIT(i1)) ! WAMIT 
+         call WAMIT_UnpackContState(RF, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
-   call Morison_UnpackContState(Buf, OutData%Morison) ! Morison 
+   call Morison_UnpackContState(RF, OutData%Morison) ! Morison 
 end subroutine
 
 subroutine HydroDyn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1425,16 +1041,16 @@ subroutine HydroDyn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcDiscStateData%WAMIT)) then
-      LB(1:1) = lbound(SrcDiscStateData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(SrcDiscStateData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(SrcDiscStateData%WAMIT)
+      UB(1:1) = ubound(SrcDiscStateData%WAMIT)
       if (.not. allocated(DstDiscStateData%WAMIT)) then
          allocate(DstDiscStateData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1451,22 +1067,34 @@ subroutine HydroDyn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, 
    call Morison_CopyDiscState(SrcDiscStateData%Morison, DstDiscStateData%Morison, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcDiscStateData%PtfmRefY)) then
+      LB(1:1) = lbound(SrcDiscStateData%PtfmRefY)
+      UB(1:1) = ubound(SrcDiscStateData%PtfmRefY)
+      if (.not. allocated(DstDiscStateData%PtfmRefY)) then
+         allocate(DstDiscStateData%PtfmRefY(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%PtfmRefY.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDiscStateData%PtfmRefY = SrcDiscStateData%PtfmRefY
+   end if
 end subroutine
 
 subroutine HydroDyn_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    type(HydroDyn_DiscreteStateType), intent(inout) :: DiscStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(DiscStateData%WAMIT)) then
-      LB(1:1) = lbound(DiscStateData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(DiscStateData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(DiscStateData%WAMIT)
+      UB(1:1) = ubound(DiscStateData%WAMIT)
       do i1 = LB(1), UB(1)
          call WAMIT_DestroyDiscState(DiscStateData%WAMIT(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1475,53 +1103,56 @@ subroutine HydroDyn_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    end if
    call Morison_DestroyDiscState(DiscStateData%Morison, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(DiscStateData%PtfmRefY)) then
+      deallocate(DiscStateData%PtfmRefY)
+   end if
 end subroutine
 
-subroutine HydroDyn_PackDiscState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackDiscState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackDiscState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%WAMIT))
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMIT, kind=B8Ki), ubound(InData%WAMIT, kind=B8Ki))
-      LB(1:1) = lbound(InData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(InData%WAMIT, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
+      LB(1:1) = lbound(InData%WAMIT)
+      UB(1:1) = ubound(InData%WAMIT)
       do i1 = LB(1), UB(1)
-         call WAMIT_PackDiscState(Buf, InData%WAMIT(i1)) 
+         call WAMIT_PackDiscState(RF, InData%WAMIT(i1)) 
       end do
    end if
-   call Morison_PackDiscState(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   call Morison_PackDiscState(RF, InData%Morison) 
+   call RegPackAlloc(RF, InData%PtfmRefY)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackDiscState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackDiscState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackDiscState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
+   if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%WAMIT(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT_UnpackDiscState(Buf, OutData%WAMIT(i1)) ! WAMIT 
+         call WAMIT_UnpackDiscState(RF, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
-   call Morison_UnpackDiscState(Buf, OutData%Morison) ! Morison 
+   call Morison_UnpackDiscState(RF, OutData%Morison) ! Morison 
+   call RegUnpackAlloc(RF, OutData%PtfmRefY); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1558,23 +1189,23 @@ subroutine HydroDyn_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine HydroDyn_PackConstrState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackConstrState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackConstrState'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call WAMIT_PackConstrState(Buf, InData%WAMIT) 
-   call Morison_PackConstrState(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call WAMIT_PackConstrState(RF, InData%WAMIT) 
+   call Morison_PackConstrState(RF, InData%Morison) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackConstrState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackConstrState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackConstrState'
-   if (Buf%ErrStat /= ErrID_None) return
-   call WAMIT_UnpackConstrState(Buf, OutData%WAMIT) ! WAMIT 
-   call Morison_UnpackConstrState(Buf, OutData%Morison) ! Morison 
+   if (RF%ErrStat /= ErrID_None) return
+   call WAMIT_UnpackConstrState(RF, OutData%WAMIT) ! WAMIT 
+   call Morison_UnpackConstrState(RF, OutData%Morison) ! Morison 
 end subroutine
 
 subroutine HydroDyn_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1583,16 +1214,16 @@ subroutine HydroDyn_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCod
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOtherStateData%WAMIT)) then
-      LB(1:1) = lbound(SrcOtherStateData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(SrcOtherStateData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(SrcOtherStateData%WAMIT)
+      UB(1:1) = ubound(SrcOtherStateData%WAMIT)
       if (.not. allocated(DstOtherStateData%WAMIT)) then
          allocate(DstOtherStateData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1615,16 +1246,16 @@ subroutine HydroDyn_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(HydroDyn_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OtherStateData%WAMIT)) then
-      LB(1:1) = lbound(OtherStateData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(OtherStateData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(OtherStateData%WAMIT)
+      UB(1:1) = ubound(OtherStateData%WAMIT)
       do i1 = LB(1), UB(1)
          call WAMIT_DestroyOtherState(OtherStateData%WAMIT(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1635,51 +1266,49 @@ subroutine HydroDyn_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine HydroDyn_PackOtherState(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackOtherState(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%WAMIT))
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMIT, kind=B8Ki), ubound(InData%WAMIT, kind=B8Ki))
-      LB(1:1) = lbound(InData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(InData%WAMIT, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
+      LB(1:1) = lbound(InData%WAMIT)
+      UB(1:1) = ubound(InData%WAMIT)
       do i1 = LB(1), UB(1)
-         call WAMIT_PackOtherState(Buf, InData%WAMIT(i1)) 
+         call WAMIT_PackOtherState(RF, InData%WAMIT(i1)) 
       end do
    end if
-   call Morison_PackOtherState(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   call Morison_PackOtherState(RF, InData%Morison) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackOtherState(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackOtherState(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
+   if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%WAMIT(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT_UnpackOtherState(Buf, OutData%WAMIT(i1)) ! WAMIT 
+         call WAMIT_UnpackOtherState(RF, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
-   call Morison_UnpackOtherState(Buf, OutData%Morison) ! Morison 
+   call Morison_UnpackOtherState(RF, OutData%Morison) ! Morison 
 end subroutine
 
 subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -1688,8 +1317,8 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyMisc'
@@ -1704,8 +1333,8 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
    DstMiscData%Decimate = SrcMiscData%Decimate
    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
    if (allocated(SrcMiscData%F_PtfmAdd)) then
-      LB(1:1) = lbound(SrcMiscData%F_PtfmAdd, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%F_PtfmAdd, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%F_PtfmAdd)
+      UB(1:1) = ubound(SrcMiscData%F_PtfmAdd)
       if (.not. allocated(DstMiscData%F_PtfmAdd)) then
          allocate(DstMiscData%F_PtfmAdd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1717,8 +1346,8 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
    end if
    DstMiscData%F_Hydro = SrcMiscData%F_Hydro
    if (allocated(SrcMiscData%F_Waves)) then
-      LB(1:1) = lbound(SrcMiscData%F_Waves, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%F_Waves, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%F_Waves)
+      UB(1:1) = ubound(SrcMiscData%F_Waves)
       if (.not. allocated(DstMiscData%F_Waves)) then
          allocate(DstMiscData%F_Waves(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1729,8 +1358,8 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
       DstMiscData%F_Waves = SrcMiscData%F_Waves
    end if
    if (allocated(SrcMiscData%WAMIT)) then
-      LB(1:1) = lbound(SrcMiscData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%WAMIT)
+      UB(1:1) = ubound(SrcMiscData%WAMIT)
       if (.not. allocated(DstMiscData%WAMIT)) then
          allocate(DstMiscData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1745,8 +1374,8 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
       end do
    end if
    if (allocated(SrcMiscData%WAMIT2)) then
-      LB(1:1) = lbound(SrcMiscData%WAMIT2, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%WAMIT2, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%WAMIT2)
+      UB(1:1) = ubound(SrcMiscData%WAMIT2)
       if (.not. allocated(DstMiscData%WAMIT2)) then
          allocate(DstMiscData%WAMIT2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1764,8 +1393,8 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%u_WAMIT)) then
-      LB(1:1) = lbound(SrcMiscData%u_WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%u_WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%u_WAMIT)
+      UB(1:1) = ubound(SrcMiscData%u_WAMIT)
       if (.not. allocated(DstMiscData%u_WAMIT)) then
          allocate(DstMiscData%u_WAMIT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1785,8 +1414,8 @@ subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(HydroDyn_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyMisc'
@@ -1803,8 +1432,8 @@ subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%F_Waves)
    end if
    if (allocated(MiscData%WAMIT)) then
-      LB(1:1) = lbound(MiscData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%WAMIT)
+      UB(1:1) = ubound(MiscData%WAMIT)
       do i1 = LB(1), UB(1)
          call WAMIT_DestroyMisc(MiscData%WAMIT(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1812,8 +1441,8 @@ subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%WAMIT)
    end if
    if (allocated(MiscData%WAMIT2)) then
-      LB(1:1) = lbound(MiscData%WAMIT2, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%WAMIT2, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%WAMIT2)
+      UB(1:1) = ubound(MiscData%WAMIT2)
       do i1 = LB(1), UB(1)
          call WAMIT2_DestroyMisc(MiscData%WAMIT2(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1823,8 +1452,8 @@ subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call Morison_DestroyMisc(MiscData%Morison, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%u_WAMIT)) then
-      LB(1:1) = lbound(MiscData%u_WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%u_WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%u_WAMIT)
+      UB(1:1) = ubound(MiscData%u_WAMIT)
       do i1 = LB(1), UB(1)
          call WAMIT_DestroyInput(MiscData%u_WAMIT(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1833,148 +1462,105 @@ subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine HydroDyn_PackMisc(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call MeshPack(Buf, InData%AllHdroOrigin) 
-   call HydroDyn_PackHD_ModuleMapType(Buf, InData%HD_MeshMap) 
-   call RegPack(Buf, InData%Decimate)
-   call RegPack(Buf, InData%LastOutTime)
-   call RegPack(Buf, allocated(InData%F_PtfmAdd))
-   if (allocated(InData%F_PtfmAdd)) then
-      call RegPackBounds(Buf, 1, lbound(InData%F_PtfmAdd, kind=B8Ki), ubound(InData%F_PtfmAdd, kind=B8Ki))
-      call RegPack(Buf, InData%F_PtfmAdd)
-   end if
-   call RegPack(Buf, InData%F_Hydro)
-   call RegPack(Buf, allocated(InData%F_Waves))
-   if (allocated(InData%F_Waves)) then
-      call RegPackBounds(Buf, 1, lbound(InData%F_Waves, kind=B8Ki), ubound(InData%F_Waves, kind=B8Ki))
-      call RegPack(Buf, InData%F_Waves)
-   end if
-   call RegPack(Buf, allocated(InData%WAMIT))
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call MeshPack(RF, InData%AllHdroOrigin) 
+   call HydroDyn_PackHD_ModuleMapType(RF, InData%HD_MeshMap) 
+   call RegPack(RF, InData%Decimate)
+   call RegPack(RF, InData%LastOutTime)
+   call RegPackAlloc(RF, InData%F_PtfmAdd)
+   call RegPack(RF, InData%F_Hydro)
+   call RegPackAlloc(RF, InData%F_Waves)
+   call RegPack(RF, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMIT, kind=B8Ki), ubound(InData%WAMIT, kind=B8Ki))
-      LB(1:1) = lbound(InData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(InData%WAMIT, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
+      LB(1:1) = lbound(InData%WAMIT)
+      UB(1:1) = ubound(InData%WAMIT)
       do i1 = LB(1), UB(1)
-         call WAMIT_PackMisc(Buf, InData%WAMIT(i1)) 
+         call WAMIT_PackMisc(RF, InData%WAMIT(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%WAMIT2))
+   call RegPack(RF, allocated(InData%WAMIT2))
    if (allocated(InData%WAMIT2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMIT2, kind=B8Ki), ubound(InData%WAMIT2, kind=B8Ki))
-      LB(1:1) = lbound(InData%WAMIT2, kind=B8Ki)
-      UB(1:1) = ubound(InData%WAMIT2, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
+      LB(1:1) = lbound(InData%WAMIT2)
+      UB(1:1) = ubound(InData%WAMIT2)
       do i1 = LB(1), UB(1)
-         call WAMIT2_PackMisc(Buf, InData%WAMIT2(i1)) 
+         call WAMIT2_PackMisc(RF, InData%WAMIT2(i1)) 
       end do
    end if
-   call Morison_PackMisc(Buf, InData%Morison) 
-   call RegPack(Buf, allocated(InData%u_WAMIT))
+   call Morison_PackMisc(RF, InData%Morison) 
+   call RegPack(RF, allocated(InData%u_WAMIT))
    if (allocated(InData%u_WAMIT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%u_WAMIT, kind=B8Ki), ubound(InData%u_WAMIT, kind=B8Ki))
-      LB(1:1) = lbound(InData%u_WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(InData%u_WAMIT, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%u_WAMIT), ubound(InData%u_WAMIT))
+      LB(1:1) = lbound(InData%u_WAMIT)
+      UB(1:1) = ubound(InData%u_WAMIT)
       do i1 = LB(1), UB(1)
-         call WAMIT_PackInput(Buf, InData%u_WAMIT(i1)) 
+         call WAMIT_PackInput(RF, InData%u_WAMIT(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackMisc(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
-   call MeshUnpack(Buf, OutData%AllHdroOrigin) ! AllHdroOrigin 
-   call HydroDyn_UnpackHD_ModuleMapType(Buf, OutData%HD_MeshMap) ! HD_MeshMap 
-   call RegUnpack(Buf, OutData%Decimate)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%LastOutTime)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%F_PtfmAdd)) deallocate(OutData%F_PtfmAdd)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%F_PtfmAdd(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%F_PtfmAdd.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%F_PtfmAdd)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%F_Hydro)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%F_Waves)) deallocate(OutData%F_Waves)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%F_Waves(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%F_Waves.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%F_Waves)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   if (RF%ErrStat /= ErrID_None) return
+   call MeshUnpack(RF, OutData%AllHdroOrigin) ! AllHdroOrigin 
+   call HydroDyn_UnpackHD_ModuleMapType(RF, OutData%HD_MeshMap) ! HD_MeshMap 
+   call RegUnpack(RF, OutData%Decimate); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_PtfmAdd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%F_Hydro); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_Waves); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%WAMIT(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT_UnpackMisc(Buf, OutData%WAMIT(i1)) ! WAMIT 
+         call WAMIT_UnpackMisc(RF, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
    if (allocated(OutData%WAMIT2)) deallocate(OutData%WAMIT2)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%WAMIT2(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT2.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT2_UnpackMisc(Buf, OutData%WAMIT2(i1)) ! WAMIT2 
+         call WAMIT2_UnpackMisc(RF, OutData%WAMIT2(i1)) ! WAMIT2 
       end do
    end if
-   call Morison_UnpackMisc(Buf, OutData%Morison) ! Morison 
+   call Morison_UnpackMisc(RF, OutData%Morison) ! Morison 
    if (allocated(OutData%u_WAMIT)) deallocate(OutData%u_WAMIT)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%u_WAMIT(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_WAMIT.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT_UnpackInput(Buf, OutData%u_WAMIT(i1)) ! u_WAMIT 
+         call WAMIT_UnpackInput(RF, OutData%u_WAMIT(i1)) ! u_WAMIT 
       end do
    end if
 end subroutine
@@ -1985,8 +1571,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyParam'
@@ -1995,8 +1581,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%nWAMITObj = SrcParamData%nWAMITObj
    DstParamData%vecMultiplier = SrcParamData%vecMultiplier
    if (allocated(SrcParamData%WAMIT)) then
-      LB(1:1) = lbound(SrcParamData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%WAMIT)
+      UB(1:1) = ubound(SrcParamData%WAMIT)
       if (.not. allocated(DstParamData%WAMIT)) then
          allocate(DstParamData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2011,8 +1597,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
       end do
    end if
    if (allocated(SrcParamData%WAMIT2)) then
-      LB(1:1) = lbound(SrcParamData%WAMIT2, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%WAMIT2, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%WAMIT2)
+      UB(1:1) = ubound(SrcParamData%WAMIT2)
       if (.not. allocated(DstParamData%WAMIT2)) then
          allocate(DstParamData%WAMIT2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2037,8 +1623,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%totalExctnStates = SrcParamData%totalExctnStates
    DstParamData%totalRdtnStates = SrcParamData%totalRdtnStates
    if (allocated(SrcParamData%AddF0)) then
-      LB(1:2) = lbound(SrcParamData%AddF0, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%AddF0, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%AddF0)
+      UB(1:2) = ubound(SrcParamData%AddF0)
       if (.not. allocated(DstParamData%AddF0)) then
          allocate(DstParamData%AddF0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2049,8 +1635,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
       DstParamData%AddF0 = SrcParamData%AddF0
    end if
    if (allocated(SrcParamData%AddCLin)) then
-      LB(1:3) = lbound(SrcParamData%AddCLin, kind=B8Ki)
-      UB(1:3) = ubound(SrcParamData%AddCLin, kind=B8Ki)
+      LB(1:3) = lbound(SrcParamData%AddCLin)
+      UB(1:3) = ubound(SrcParamData%AddCLin)
       if (.not. allocated(DstParamData%AddCLin)) then
          allocate(DstParamData%AddCLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2061,8 +1647,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
       DstParamData%AddCLin = SrcParamData%AddCLin
    end if
    if (allocated(SrcParamData%AddBLin)) then
-      LB(1:3) = lbound(SrcParamData%AddBLin, kind=B8Ki)
-      UB(1:3) = ubound(SrcParamData%AddBLin, kind=B8Ki)
+      LB(1:3) = lbound(SrcParamData%AddBLin)
+      UB(1:3) = ubound(SrcParamData%AddBLin)
       if (.not. allocated(DstParamData%AddBLin)) then
          allocate(DstParamData%AddBLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2073,8 +1659,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
       DstParamData%AddBLin = SrcParamData%AddBLin
    end if
    if (allocated(SrcParamData%AddBQuad)) then
-      LB(1:3) = lbound(SrcParamData%AddBQuad, kind=B8Ki)
-      UB(1:3) = ubound(SrcParamData%AddBQuad, kind=B8Ki)
+      LB(1:3) = lbound(SrcParamData%AddBQuad)
+      UB(1:3) = ubound(SrcParamData%AddBQuad)
       if (.not. allocated(DstParamData%AddBQuad)) then
          allocate(DstParamData%AddBQuad(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2086,8 +1672,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    end if
    DstParamData%DT = SrcParamData%DT
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2110,8 +1696,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%UnOutFile = SrcParamData%UnOutFile
    DstParamData%OutDec = SrcParamData%OutDec
    if (allocated(SrcParamData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_u_indx, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Jac_u_indx, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
+      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
       if (.not. allocated(DstParamData%Jac_u_indx)) then
          allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2122,8 +1708,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
       DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
    end if
    if (allocated(SrcParamData%du)) then
-      LB(1:1) = lbound(SrcParamData%du, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%du, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%du)
+      UB(1:1) = ubound(SrcParamData%du)
       if (.not. allocated(DstParamData%du)) then
          allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2134,8 +1720,8 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
       DstParamData%du = SrcParamData%du
    end if
    if (allocated(SrcParamData%dx)) then
-      LB(1:1) = lbound(SrcParamData%dx, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%dx, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%dx)
+      UB(1:1) = ubound(SrcParamData%dx)
       if (.not. allocated(DstParamData%dx)) then
          allocate(DstParamData%dx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2148,22 +1734,24 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%VisMeshes = SrcParamData%VisMeshes
    DstParamData%WaveField => SrcParamData%WaveField
+   DstParamData%PtfmYMod = SrcParamData%PtfmYMod
+   DstParamData%CYawFilt = SrcParamData%CYawFilt
 end subroutine
 
 subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(HydroDyn_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ParamData%WAMIT)) then
-      LB(1:1) = lbound(ParamData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%WAMIT)
+      UB(1:1) = ubound(ParamData%WAMIT)
       do i1 = LB(1), UB(1)
          call WAMIT_DestroyParam(ParamData%WAMIT(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2171,8 +1759,8 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%WAMIT)
    end if
    if (allocated(ParamData%WAMIT2)) then
-      LB(1:1) = lbound(ParamData%WAMIT2, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%WAMIT2, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%WAMIT2)
+      UB(1:1) = ubound(ParamData%WAMIT2)
       do i1 = LB(1), UB(1)
          call WAMIT2_DestroyParam(ParamData%WAMIT2(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2194,8 +1782,8 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%AddBQuad)
    end if
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2214,322 +1802,179 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
    nullify(ParamData%WaveField)
 end subroutine
 
-subroutine HydroDyn_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackParam(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackParam'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    logical         :: PtrInIndex
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%nWAMITObj)
-   call RegPack(Buf, InData%vecMultiplier)
-   call RegPack(Buf, allocated(InData%WAMIT))
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%nWAMITObj)
+   call RegPack(RF, InData%vecMultiplier)
+   call RegPack(RF, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMIT, kind=B8Ki), ubound(InData%WAMIT, kind=B8Ki))
-      LB(1:1) = lbound(InData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(InData%WAMIT, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
+      LB(1:1) = lbound(InData%WAMIT)
+      UB(1:1) = ubound(InData%WAMIT)
       do i1 = LB(1), UB(1)
-         call WAMIT_PackParam(Buf, InData%WAMIT(i1)) 
+         call WAMIT_PackParam(RF, InData%WAMIT(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%WAMIT2))
+   call RegPack(RF, allocated(InData%WAMIT2))
    if (allocated(InData%WAMIT2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMIT2, kind=B8Ki), ubound(InData%WAMIT2, kind=B8Ki))
-      LB(1:1) = lbound(InData%WAMIT2, kind=B8Ki)
-      UB(1:1) = ubound(InData%WAMIT2, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
+      LB(1:1) = lbound(InData%WAMIT2)
+      UB(1:1) = ubound(InData%WAMIT2)
       do i1 = LB(1), UB(1)
-         call WAMIT2_PackParam(Buf, InData%WAMIT2(i1)) 
+         call WAMIT2_PackParam(RF, InData%WAMIT2(i1)) 
       end do
    end if
-   call RegPack(Buf, InData%WAMIT2used)
-   call Morison_PackParam(Buf, InData%Morison) 
-   call RegPack(Buf, InData%PotMod)
-   call RegPack(Buf, InData%NBody)
-   call RegPack(Buf, InData%NBodyMod)
-   call RegPack(Buf, InData%totalStates)
-   call RegPack(Buf, InData%totalExctnStates)
-   call RegPack(Buf, InData%totalRdtnStates)
-   call RegPack(Buf, allocated(InData%AddF0))
-   if (allocated(InData%AddF0)) then
-      call RegPackBounds(Buf, 2, lbound(InData%AddF0, kind=B8Ki), ubound(InData%AddF0, kind=B8Ki))
-      call RegPack(Buf, InData%AddF0)
-   end if
-   call RegPack(Buf, allocated(InData%AddCLin))
-   if (allocated(InData%AddCLin)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AddCLin, kind=B8Ki), ubound(InData%AddCLin, kind=B8Ki))
-      call RegPack(Buf, InData%AddCLin)
-   end if
-   call RegPack(Buf, allocated(InData%AddBLin))
-   if (allocated(InData%AddBLin)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AddBLin, kind=B8Ki), ubound(InData%AddBLin, kind=B8Ki))
-      call RegPack(Buf, InData%AddBLin)
-   end if
-   call RegPack(Buf, allocated(InData%AddBQuad))
-   if (allocated(InData%AddBQuad)) then
-      call RegPackBounds(Buf, 3, lbound(InData%AddBQuad, kind=B8Ki), ubound(InData%AddBQuad, kind=B8Ki))
-      call RegPack(Buf, InData%AddBQuad)
-   end if
-   call RegPack(Buf, InData%DT)
-   call RegPack(Buf, allocated(InData%OutParam))
+   call RegPack(RF, InData%WAMIT2used)
+   call Morison_PackParam(RF, InData%Morison) 
+   call RegPack(RF, InData%PotMod)
+   call RegPack(RF, InData%NBody)
+   call RegPack(RF, InData%NBodyMod)
+   call RegPack(RF, InData%totalStates)
+   call RegPack(RF, InData%totalExctnStates)
+   call RegPack(RF, InData%totalRdtnStates)
+   call RegPackAlloc(RF, InData%AddF0)
+   call RegPackAlloc(RF, InData%AddCLin)
+   call RegPackAlloc(RF, InData%AddBLin)
+   call RegPackAlloc(RF, InData%AddBQuad)
+   call RegPack(RF, InData%DT)
+   call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(Buf, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
-      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
+      LB(1:1) = lbound(InData%OutParam)
+      UB(1:1) = ubound(InData%OutParam)
       do i1 = LB(1), UB(1)
-         call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
+         call NWTC_Library_PackOutParmType(RF, InData%OutParam(i1)) 
       end do
    end if
-   call RegPack(Buf, InData%NumOuts)
-   call RegPack(Buf, InData%NumTotalOuts)
-   call RegPack(Buf, InData%OutSwtch)
-   call RegPack(Buf, InData%OutFmt)
-   call RegPack(Buf, InData%OutSFmt)
-   call RegPack(Buf, InData%Delim)
-   call RegPack(Buf, InData%UnOutFile)
-   call RegPack(Buf, InData%OutDec)
-   call RegPack(Buf, allocated(InData%Jac_u_indx))
-   if (allocated(InData%Jac_u_indx)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Jac_u_indx, kind=B8Ki), ubound(InData%Jac_u_indx, kind=B8Ki))
-      call RegPack(Buf, InData%Jac_u_indx)
-   end if
-   call RegPack(Buf, allocated(InData%du))
-   if (allocated(InData%du)) then
-      call RegPackBounds(Buf, 1, lbound(InData%du, kind=B8Ki), ubound(InData%du, kind=B8Ki))
-      call RegPack(Buf, InData%du)
-   end if
-   call RegPack(Buf, allocated(InData%dx))
-   if (allocated(InData%dx)) then
-      call RegPackBounds(Buf, 1, lbound(InData%dx, kind=B8Ki), ubound(InData%dx, kind=B8Ki))
-      call RegPack(Buf, InData%dx)
-   end if
-   call RegPack(Buf, InData%Jac_ny)
-   call RegPack(Buf, InData%VisMeshes)
-   call RegPack(Buf, associated(InData%WaveField))
+   call RegPack(RF, InData%NumOuts)
+   call RegPack(RF, InData%NumTotalOuts)
+   call RegPack(RF, InData%OutSwtch)
+   call RegPack(RF, InData%OutFmt)
+   call RegPack(RF, InData%OutSFmt)
+   call RegPack(RF, InData%Delim)
+   call RegPack(RF, InData%UnOutFile)
+   call RegPack(RF, InData%OutDec)
+   call RegPackAlloc(RF, InData%Jac_u_indx)
+   call RegPackAlloc(RF, InData%du)
+   call RegPackAlloc(RF, InData%dx)
+   call RegPack(RF, InData%Jac_ny)
+   call RegPack(RF, InData%VisMeshes)
+   call RegPack(RF, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
-      call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
+      call RegPackPointer(RF, c_loc(InData%WaveField), PtrInIndex)
       if (.not. PtrInIndex) then
-         call SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, InData%WaveField) 
+         call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%CYawFilt)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackParam(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackParam'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%nWAMITObj)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%vecMultiplier)
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%nWAMITObj); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%vecMultiplier); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%WAMIT(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT_UnpackParam(Buf, OutData%WAMIT(i1)) ! WAMIT 
+         call WAMIT_UnpackParam(RF, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
    if (allocated(OutData%WAMIT2)) deallocate(OutData%WAMIT2)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%WAMIT2(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT2.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT2_UnpackParam(Buf, OutData%WAMIT2(i1)) ! WAMIT2 
+         call WAMIT2_UnpackParam(RF, OutData%WAMIT2(i1)) ! WAMIT2 
       end do
    end if
-   call RegUnpack(Buf, OutData%WAMIT2used)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call Morison_UnpackParam(Buf, OutData%Morison) ! Morison 
-   call RegUnpack(Buf, OutData%PotMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NBodyMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%totalStates)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%totalExctnStates)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%totalRdtnStates)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%AddF0)) deallocate(OutData%AddF0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AddF0(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AddF0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AddF0)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%AddCLin)) deallocate(OutData%AddCLin)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AddCLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AddCLin.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AddCLin)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%AddBLin)) deallocate(OutData%AddBLin)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AddBLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AddBLin.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AddBLin)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%AddBQuad)) deallocate(OutData%AddBQuad)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%AddBQuad(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AddBQuad.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%AddBQuad)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%WAMIT2used); if (RegCheckErr(RF, RoutineName)) return
+   call Morison_UnpackParam(RF, OutData%Morison) ! Morison 
+   call RegUnpack(RF, OutData%PotMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBody); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NBodyMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%totalStates); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%totalExctnStates); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%totalRdtnStates); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AddF0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AddCLin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AddBLin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AddBQuad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%OutParam(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutParam.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutParam.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackOutParmType(Buf, OutData%OutParam(i1)) ! OutParam 
+         call NWTC_Library_UnpackOutParmType(RF, OutData%OutParam(i1)) ! OutParam 
       end do
    end if
-   call RegUnpack(Buf, OutData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NumTotalOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%OutSwtch)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%OutFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%OutSFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Delim)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%UnOutFile)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%OutDec)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%Jac_u_indx)) deallocate(OutData%Jac_u_indx)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Jac_u_indx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%Jac_u_indx)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%du)) deallocate(OutData%du)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%du(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%du.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%du)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%dx)) deallocate(OutData%dx)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%dx(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%dx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%dx)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%Jac_ny)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%VisMeshes)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumTotalOuts); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutSwtch); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutFmt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutSFmt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Delim); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%UnOutFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutDec); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VisMeshes); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
       if (c_associated(Ptr)) then
          call c_f_pointer(Ptr, OutData%WaveField)
       else
          allocate(OutData%WaveField,stat=stat)
          if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', RF%ErrStat, RF%ErrMsg, RoutineName)
             return
          end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveField)
-         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(Buf, OutData%WaveField) ! WaveField 
+         RF%Pointers(PtrIdx) = c_loc(OutData%WaveField)
+         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(RF, OutData%WaveField) ! WaveField 
       end if
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CYawFilt); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -2571,25 +2016,25 @@ subroutine HydroDyn_DestroyInput(InputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine HydroDyn_PackInput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackInput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInput'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call Morison_PackInput(Buf, InData%Morison) 
-   call MeshPack(Buf, InData%WAMITMesh) 
-   call MeshPack(Buf, InData%PRPMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
+   if (RF%ErrStat >= AbortErrLev) return
+   call Morison_PackInput(RF, InData%Morison) 
+   call MeshPack(RF, InData%WAMITMesh) 
+   call MeshPack(RF, InData%PRPMesh) 
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackInput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackInput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackInput'
-   if (Buf%ErrStat /= ErrID_None) return
-   call Morison_UnpackInput(Buf, OutData%Morison) ! Morison 
-   call MeshUnpack(Buf, OutData%WAMITMesh) ! WAMITMesh 
-   call MeshUnpack(Buf, OutData%PRPMesh) ! PRPMesh 
+   if (RF%ErrStat /= ErrID_None) return
+   call Morison_UnpackInput(RF, OutData%Morison) ! Morison 
+   call MeshUnpack(RF, OutData%WAMITMesh) ! WAMITMesh 
+   call MeshUnpack(RF, OutData%PRPMesh) ! PRPMesh 
 end subroutine
 
 subroutine HydroDyn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -2598,16 +2043,16 @@ subroutine HydroDyn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%WAMIT)) then
-      LB(1:1) = lbound(SrcOutputData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WAMIT)
+      UB(1:1) = ubound(SrcOutputData%WAMIT)
       if (.not. allocated(DstOutputData%WAMIT)) then
          allocate(DstOutputData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2622,8 +2067,8 @@ subroutine HydroDyn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, 
       end do
    end if
    if (allocated(SrcOutputData%WAMIT2)) then
-      LB(1:1) = lbound(SrcOutputData%WAMIT2, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WAMIT2, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WAMIT2)
+      UB(1:1) = ubound(SrcOutputData%WAMIT2)
       if (.not. allocated(DstOutputData%WAMIT2)) then
          allocate(DstOutputData%WAMIT2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2644,8 +2089,8 @@ subroutine HydroDyn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2661,16 +2106,16 @@ subroutine HydroDyn_DestroyOutput(OutputData, ErrStat, ErrMsg)
    type(HydroDyn_OutputType), intent(inout) :: OutputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OutputData%WAMIT)) then
-      LB(1:1) = lbound(OutputData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(OutputData%WAMIT, kind=B8Ki)
+      LB(1:1) = lbound(OutputData%WAMIT)
+      UB(1:1) = ubound(OutputData%WAMIT)
       do i1 = LB(1), UB(1)
          call WAMIT_DestroyOutput(OutputData%WAMIT(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2678,8 +2123,8 @@ subroutine HydroDyn_DestroyOutput(OutputData, ErrStat, ErrMsg)
       deallocate(OutputData%WAMIT)
    end if
    if (allocated(OutputData%WAMIT2)) then
-      LB(1:1) = lbound(OutputData%WAMIT2, kind=B8Ki)
-      UB(1:1) = ubound(OutputData%WAMIT2, kind=B8Ki)
+      LB(1:1) = lbound(OutputData%WAMIT2)
+      UB(1:1) = ubound(OutputData%WAMIT2)
       do i1 = LB(1), UB(1)
          call WAMIT2_DestroyOutput(OutputData%WAMIT2(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2695,96 +2140,75 @@ subroutine HydroDyn_DestroyOutput(OutputData, ErrStat, ErrMsg)
    end if
 end subroutine
 
-subroutine HydroDyn_PackOutput(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
+subroutine HydroDyn_PackOutput(RF, Indata)
+   type(RegFile), intent(inout) :: RF
    type(HydroDyn_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackOutput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%WAMIT))
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMIT, kind=B8Ki), ubound(InData%WAMIT, kind=B8Ki))
-      LB(1:1) = lbound(InData%WAMIT, kind=B8Ki)
-      UB(1:1) = ubound(InData%WAMIT, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
+      LB(1:1) = lbound(InData%WAMIT)
+      UB(1:1) = ubound(InData%WAMIT)
       do i1 = LB(1), UB(1)
-         call WAMIT_PackOutput(Buf, InData%WAMIT(i1)) 
+         call WAMIT_PackOutput(RF, InData%WAMIT(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%WAMIT2))
+   call RegPack(RF, allocated(InData%WAMIT2))
    if (allocated(InData%WAMIT2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WAMIT2, kind=B8Ki), ubound(InData%WAMIT2, kind=B8Ki))
-      LB(1:1) = lbound(InData%WAMIT2, kind=B8Ki)
-      UB(1:1) = ubound(InData%WAMIT2, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
+      LB(1:1) = lbound(InData%WAMIT2)
+      UB(1:1) = ubound(InData%WAMIT2)
       do i1 = LB(1), UB(1)
-         call WAMIT2_PackOutput(Buf, InData%WAMIT2(i1)) 
+         call WAMIT2_PackOutput(RF, InData%WAMIT2(i1)) 
       end do
    end if
-   call Morison_PackOutput(Buf, InData%Morison) 
-   call MeshPack(Buf, InData%WAMITMesh) 
-   call RegPack(Buf, allocated(InData%WriteOutput))
-   if (allocated(InData%WriteOutput)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput, kind=B8Ki), ubound(InData%WriteOutput, kind=B8Ki))
-      call RegPack(Buf, InData%WriteOutput)
-   end if
-   if (RegCheckErr(Buf, RoutineName)) return
+   call Morison_PackOutput(RF, InData%Morison) 
+   call MeshPack(RF, InData%WAMITMesh) 
+   call RegPackAlloc(RF, InData%WriteOutput)
+   if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine HydroDyn_UnPackOutput(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
+subroutine HydroDyn_UnPackOutput(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
    type(HydroDyn_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackOutput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   if (Buf%ErrStat /= ErrID_None) return
+   if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%WAMIT(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT_UnpackOutput(Buf, OutData%WAMIT(i1)) ! WAMIT 
+         call WAMIT_UnpackOutput(RF, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
    if (allocated(OutData%WAMIT2)) deallocate(OutData%WAMIT2)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
       allocate(OutData%WAMIT2(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT2.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
       do i1 = LB(1), UB(1)
-         call WAMIT2_UnpackOutput(Buf, OutData%WAMIT2(i1)) ! WAMIT2 
+         call WAMIT2_UnpackOutput(RF, OutData%WAMIT2(i1)) ! WAMIT2 
       end do
    end if
-   call Morison_UnpackOutput(Buf, OutData%Morison) ! Morison 
-   call MeshUnpack(Buf, OutData%WAMITMesh) ! WAMITMesh 
-   if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WriteOutput(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WriteOutput)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
+   call Morison_UnpackOutput(RF, OutData%Morison) ! Morison 
+   call MeshUnpack(RF, OutData%WAMITMesh) ! WAMITMesh 
+   call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
@@ -3049,13 +2473,13 @@ SUBROUTINE HydroDyn_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, E
    a2 = t_out/t(2)
    
    IF (ALLOCATED(y_out%WAMIT) .AND. ALLOCATED(y1%WAMIT)) THEN
-      DO i1 = LBOUND(y_out%WAMIT,1, kind=B8Ki),UBOUND(y_out%WAMIT,1, kind=B8Ki)
+      do i1 = lbound(y_out%WAMIT,1),ubound(y_out%WAMIT,1)
          CALL WAMIT_Output_ExtrapInterp1( y1%WAMIT(i1), y2%WAMIT(i1), tin, y_out%WAMIT(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
    IF (ALLOCATED(y_out%WAMIT2) .AND. ALLOCATED(y1%WAMIT2)) THEN
-      DO i1 = LBOUND(y_out%WAMIT2,1, kind=B8Ki),UBOUND(y_out%WAMIT2,1, kind=B8Ki)
+      do i1 = lbound(y_out%WAMIT2,1),ubound(y_out%WAMIT2,1)
          CALL WAMIT2_Output_ExtrapInterp1( y1%WAMIT2(i1), y2%WAMIT2(i1), tin, y_out%WAMIT2(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -3125,13 +2549,13 @@ SUBROUTINE HydroDyn_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrSta
    a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
    IF (ALLOCATED(y_out%WAMIT) .AND. ALLOCATED(y1%WAMIT)) THEN
-      DO i1 = LBOUND(y_out%WAMIT,1, kind=B8Ki),UBOUND(y_out%WAMIT,1, kind=B8Ki)
+      do i1 = lbound(y_out%WAMIT,1),ubound(y_out%WAMIT,1)
          CALL WAMIT_Output_ExtrapInterp2( y1%WAMIT(i1), y2%WAMIT(i1), y3%WAMIT(i1), tin, y_out%WAMIT(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
    IF (ALLOCATED(y_out%WAMIT2) .AND. ALLOCATED(y1%WAMIT2)) THEN
-      DO i1 = LBOUND(y_out%WAMIT2,1, kind=B8Ki),UBOUND(y_out%WAMIT2,1, kind=B8Ki)
+      do i1 = lbound(y_out%WAMIT2,1),ubound(y_out%WAMIT2,1)
          CALL WAMIT2_Output_ExtrapInterp2( y1%WAMIT2(i1), y2%WAMIT2(i1), y3%WAMIT2(i1), tin, y_out%WAMIT2(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO

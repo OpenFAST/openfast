@@ -2304,7 +2304,14 @@ MAP_ERROR_CODE push_variable_to_output_list(OutputList* y_list, const int i, dou
   size = list_size(&y_list->out_list_ptr);
   iter_vartype = (VarTypePtr*)list_get_at(&y_list->out_list_ptr, size-1);
   iter_vartype->value = variable_ref;
-  iter_vartype->name = bformat("%s[%d]", alias, i);
+  if (i >= 0)
+  {
+    iter_vartype->name = bformat("%s[%d]", alias, i);
+  }
+  else
+  {
+    iter_vartype->name = bformat(alias);
+  }
   iter_vartype->units = bformat("%s", units);      
 
   return MAP_SAFE;
@@ -2325,49 +2332,50 @@ MAP_ERROR_CODE set_output_list(Domain* domain, MAP_InitOutputType_t* io_type, ch
     line_iter = (Line*)list_iterator_next(&domain->line);    
     
     if (line_iter->options.gx_anchor_pos_flag) {
-      list_append(&y_list->out_list_ptr, &line_iter->anchor->position_ptr.x);      
+      success = push_variable_to_output_list(y_list, -1, line_iter->anchor->position_ptr.x.value, line_iter->anchor->position_ptr.x.name->data, line_iter->anchor->position_ptr.x.units->data);      
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
 
     if (line_iter->options.gy_anchor_pos_flag) {
-      list_append(&y_list->out_list_ptr, &line_iter->anchor->position_ptr.y);
+      success = push_variable_to_output_list(y_list, -1, line_iter->anchor->position_ptr.x.value, line_iter->anchor->position_ptr.x.name->data, line_iter->anchor->position_ptr.x.units->data);
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
 
     if (line_iter->options.gz_anchor_pos_flag) {
-      list_append(&y_list->out_list_ptr, &line_iter->anchor->position_ptr.z);
+      success = push_variable_to_output_list(y_list, -1, line_iter->anchor->position_ptr.x.value, line_iter->anchor->position_ptr.x.name->data, line_iter->anchor->position_ptr.x.units->data);
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
 
     if (line_iter->options.gx_pos_flag) {
       list_append(&y_list->out_list_ptr, &line_iter->fairlead->position_ptr.x);
+      success = push_variable_to_output_list(y_list, -1, line_iter->fairlead->position_ptr.x.value, line_iter->fairlead->position_ptr.x.name->data, line_iter->fairlead->position_ptr.x.units->data);
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
 
     if (line_iter->options.gy_pos_flag) {
-      list_append(&y_list->out_list_ptr, &line_iter->fairlead->position_ptr.y);
+      success = push_variable_to_output_list(y_list, -1, line_iter->fairlead->position_ptr.y.value, line_iter->fairlead->position_ptr.y.name->data, line_iter->fairlead->position_ptr.y.units->data);
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
 
     if (line_iter->options.gz_pos_flag) {
-      list_append(&y_list->out_list_ptr, &line_iter->fairlead->position_ptr.z);
+      success = push_variable_to_output_list(y_list, -1, line_iter->fairlead->position_ptr.z.value, line_iter->fairlead->position_ptr.z.name->data, line_iter->fairlead->position_ptr.z.units->data);
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
 
     if (line_iter->options.H_flag) {
-      list_append(&y_list->out_list_ptr, &line_iter->H);
+      success = push_variable_to_output_list(y_list, -1, line_iter->H.value, line_iter->H.name->data, line_iter->H.units->data);
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
 
     if (line_iter->options.V_flag) {
-      list_append(&y_list->out_list_ptr, &line_iter->V);
+      success = push_variable_to_output_list(y_list, -1, line_iter->V.value, line_iter->V.name->data, line_iter->V.units->data);
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
@@ -2673,7 +2681,6 @@ void log_initialization_information(MAP_InitInputType_t* init_type, MAP_Paramete
     success = write_summary_file(init_data, p_type, domain, map_msg, ierr); CHECKERRQ(MAP_FATAL_37); 
   }
 
-  success = write_summary_file(init_data, p_type, domain, map_msg, ierr); CHECKERRQ(MAP_FATAL_37);           
   success = get_iteration_output_stream(y_type, other_type, map_msg, ierr); // @todo CHECKERRQ()    
   MAP_END_ERROR_LOG; 
 };

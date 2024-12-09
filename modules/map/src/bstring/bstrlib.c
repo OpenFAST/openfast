@@ -39,7 +39,7 @@
 #include "config.h"
 #endif
 
-#if defined (_MSC_VER)
+#if defined _MSC_VER && !defined _CRT_SECURE_NO_WARNINGS
 /* These warnings from MSVC++ are totally pointless. */
 # define _CRT_SECURE_NO_WARNINGS
 #endif

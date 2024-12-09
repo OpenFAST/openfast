@@ -64,12 +64,14 @@ reported as failed. The failure criteria is outlined below.
 
 Dependencies
 ------------
-The following packages are required for regression testing:
+The following packages are required for regression testing (see also the
+``requirements.txt`` file in the root directory for the python modules):
 
-- Python 3.7+
-- Numpy
 - CMake and CTest (Optional)
-- Bokeh 2.4+ (Optional)
+- Python >=3.7,<=3.11
+- numpy
+- vtk
+- bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3 (Optional)
 
 .. _python_driver:
 
@@ -222,11 +224,11 @@ Flags can be compounded making useful variations such as
 
 .. code-block:: bash
 
-    # Run all cases that use AeroDyn14 with verbose output
-    ctest -V -L aerodyn14
+    # Run all cases that use SubDyn with verbose output
+    ctest -V -L subdyn
 
-    # Run all cases that use AeroDyn14 in 16 concurrent processes
-    ctest -j 16 -L aerodyn14
+    # Run all cases that use SubDyn in 16 concurrent processes
+    ctest -j 16 -L subdyn
 
     # Run the case with name "5MW_DLL_Potential_WTurb" with verbose output
     ctest -V -R 5MW_DLL_Potential_WTurb

@@ -16,13 +16,16 @@ usefrom   AirfoilInfo_Registry.txt
 usefrom   UnsteadyAero_Registry.txt
 usefrom   DBEMT_Registry.txt
 
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Orthogonal          -      0     -   "Inflow orthogonal to rotor [-]" -
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Uncoupled           -      1     -   "Uncoupled (no correction)" -
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters          -      2     -   "Pitt/Peters" -
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Coupled             -      3     -   "Coupled" -
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters_Cont     -      4     -   "Pitt/Peters continuous formulation" -
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_Orthogonal         -     -1     -   "Inflow orthogonal to rotor [-]" -
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_None               -      0     -   "No skew model" -
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_Active             -      1     -   "Skew model active" - 
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_PittPeters_Cont    -      4     -   "Pitt/Peters continuous formulation" -
 
-param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      0     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_None         -      0     -   "No redistribution" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_PittPeters   -      1     -   "Pitt/Peters/Glauert redistribution" -
+#param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_VCyl        -      2     -   "Vortex cylinder redistribution" -
+
+param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      1     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
 param     BEMT/BEMT                   -                              INTEGER                 BEMMod_3D                   -      2     -   "3D BEM assuming a momentum balance system, and an airfoil system" -
 
 #
@@ -35,7 +38,8 @@ typedef   BEMT/BEMT                    InitInputType                 ReKi       
 typedef   ^                            ^                             INTEGER                  numBlades                       -          -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled}"  -
+typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Type of skewed-wake model [switch] {0=None, 1=Glauert}"  -
+typedef   ^                            ^                             INTEGER                  skewRedistrMod                  -          -         -        "Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef   ^                            ^                             ReKi                     aTol                            -          -         -        "Tolerance for the induction solution" -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -
@@ -53,18 +57,14 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     zTip                            {:}        -         -        "Distance to blade tip, measured along the blade" m
 typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}     -         -        "Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT" m
 typedef   ^                            ^                             ReKi                     rTipFix                         {:}        -         -        "Nominally the coned rotor diameter (without prebend), used to align with Bladed calculations" m
-typedef   ^                            ^                             INTEGER                  UAMod                           -          -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -          -         -        "logical flag indicating whether to use UnsteadyAero"        -
-typedef   ^                            ^                             LOGICAL                  Flookup                         -          -         -        "Use table lookup for f' and f'' "    -
-typedef   ^                            ^                             ReKi                     a_s                             -          -         -        "speed of sound"        m/s
 typedef   ^                            ^                             IntKi                    DBEMT_Mod                       -          -         -        "DBEMT model.  1 = constant tau1, 2 = time dependent tau1" -
 typedef   ^                            ^                             ReKi                     tau1_const                      -          -         -        "DBEMT time constant (when DBEMT_Mod=1)"        s
 typedef   ^                            ^                             ReKi                     yawCorrFactor                   -          -         -        "constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
-typedef   ^                            ^                             INTEGER                  UAOff_innerNode                 {:}        -         -        "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
-typedef   ^                            ^                             INTEGER                  UAOff_outerNode                 {:}        -         -        "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
 typedef   ^                            ^                             CHARACTER(1024)          RootName                         -         -         -        "RootName for writing output files" -
 typedef   ^                            ^                             LOGICAL                  SumPrint                         -         -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             IntKi                    BEM_Mod                          -         -         -        "BEM Model 0=OpenFAST 2=Envision " -
+typedef   ^                            ^                             UA_InitInputType         UA_Init                          -         -         -        "InitInput data for UA model"
 #
 #
 # Define outputs from the initialization routine here:
@@ -139,7 +139,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -             -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -             -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             INTEGER                  skewWakeMod                     -             -         -        "Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled}"  -
+typedef   ^                            ^                             INTEGER                  skewWakeMod                     -             -         -        "Type of skewed-wake correction model [switch] {0=None, 1=Glauert/Pitt/Peters}"  -
+typedef   ^                            ^                             INTEGER                  skewRedistrMod                  -             -         -        "Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef   ^                            ^                             ReKi                     aTol                            -             -         -        "Tolerance for the induction solution" -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -             -         -        "Use the Prandtl tip-loss model?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useHubLoss                      -             -         -        "Use the Prandtl hub-loss model?  [flag]"        -

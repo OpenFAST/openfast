@@ -951,8 +951,9 @@ END SUBROUTINE GetRigidTransformation
 !!
 !! bjj: note that this is the transpose of what is normally considered the Direction Cosine Matrix  
 !!      in the FAST framework.
-SUBROUTINE GetDirCos(P1, P2, DirCos, L_out, ErrStat, ErrMsg)
+SUBROUTINE GetDirCos(P1, P2, eType, DirCos, L_out, ErrStat, ErrMsg)
    REAL(ReKi) ,      INTENT(IN   )  :: P1(3), P2(3)      ! (x,y,z) global positions of two nodes making up an element
+   INTEGER(IntKi),   INTENT(IN   )  :: eType             ! element type (1:beam circ., 2:cable, 3:rigid, 4:beam arb., 5:spring)
    REAL(FEKi) ,      INTENT(  OUT)  :: DirCos(3, 3)      ! calculated direction cosine matrix
    REAL(ReKi) ,      INTENT(  OUT)  :: L_out             ! length of element
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat           ! Error status of the operation
@@ -966,9 +967,16 @@ SUBROUTINE GetDirCos(P1, P2, DirCos, L_out, ErrStat, ErrMsg)
    Dz=P2(3)-P1(3)
    Dxy = sqrt( Dx**2 + Dy**2 )
    L   = sqrt( Dx**2 + Dy**2 + Dz**2)
+
+   ! The spring element should have the same starting and ending location. P1 and P2 must be coincident (L must be 0).
+   IF ( .not. EqualRealNos(L, 0.0_FEKi) .and. eType == 5) THEN
+      ErrMsg = ' Spring(s) must be defined with the same starting and ending locations in the element.' 
+      ErrStat = ErrID_Fatal
+      RETURN
+   ENDIF
    
-   IF ( EqualRealNos(L, 0.0_FEKi) ) THEN
-      ErrMsg = ' Same starting and ending location in the element.'
+   IF ( EqualRealNos(L, 0.0_FEKi) .and. eType/= 5) THEN
+      ErrMsg = ' Same starting and ending location in a beam, cable or rigid element.'
       ErrStat = ErrID_Fatal
       RETURN
    ENDIF
@@ -1131,20 +1139,21 @@ SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
    K(1:12,1:12)=0.0_FEKi
 
    ! Note: only translational DOF involved (1-3, 7-9)
-   K(1,1)= EE
-   K(2,2)= EE
+   !   Comment out geometric stiffness from pre-tension to avoid unphysical results
+   ! K(1,1)= EE
+   ! K(2,2)= EE
    K(3,3)= EAL0
 
-   K(1,7)= -EE
-   K(2,8)= -EE
+   ! K(1,7)= -EE
+   ! K(2,8)= -EE
    K(3,9)= -EAL0
 
-   K(7,1)= -EE
-   K(8,2)= -EE
+   ! K(7,1)= -EE
+   ! K(8,2)= -EE
    K(9,3)= -EAL0
 
-   K(7,7)= EE
-   K(8,8)= EE
+   ! K(7,7)= EE
+   ! K(8,8)= EE
    K(9,9)= EAL0
 
 
@@ -1156,6 +1165,159 @@ SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
    
    K = MATMUL( MATMUL(DC, K), TRANSPOSE(DC) ) ! TODO: change me if DirCos convention is  transposed
 END SUBROUTINE ElemK_Cable
+!------------------------------------------------------------------------------------------------------
+!> Element stiffness matrix for spring
+!! The spring element can include diagnal and cross-coupling positions. 
+!! Assuming that the stiffness is symmetric (21 stiffness coefficients). The stiffness matrix could also be non-symmetric, if desired.  
+SUBROUTINE ElemK_Spring(k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k33, k34, k35, k36, k44, k45, k46, k55, k56, k66, DirCos, K)
+   REAL(ReKi), INTENT( IN) :: k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k33, k34, k35, k36, k44, k45, k46, k55, k56, k66
+   REAL(FEKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
+   REAL(FEKi), INTENT(OUT) :: K(12, 12) 
+   ! Local variables
+   REAL(FEKi)                            :: DC(12, 12)
+   
+   K(1:12,1:12) = 0.0_FEKi
+      
+   K( 1,  1) = k11
+   K( 1,  7) = -K(1,1)
+   K( 7,  1) = -K(1,1)
+   K( 7,  7) = K(1,1)
+   
+   K( 1,  2) = k12
+   K( 1,  8) = -K(1,2)
+   K( 7,  2) = -K(1,2)
+   K( 7,  8) = K(1,2)
+   
+   K( 1,  3) = k13
+   K( 1,  9) = -K(1,3)
+   K( 7,  3) = -K(1,3)
+   K( 7,  9) = K(1,3)
+
+   K( 1,  4) = k14
+   K( 1, 10) = -K(1,4)
+   K( 7,  4) = -K(1,4)
+   K( 7, 10) = K(1,4)   
+
+   K( 1,  5) = k15
+   K( 1, 11) = -K(1,5)
+   K( 7,  5) = -K(1,5)
+   K( 7, 11) = K(1,5)   
+
+   K( 1,  6) = k16
+   K( 1, 12) = -K(1,6)
+   K( 7,  6) = -K(1,6)
+   K( 7, 12) = K(1,6)
+   
+   K( 2,  2) = k22
+   K( 2,  8) = -K(2,2)
+   K( 8,  2) = -K(2,2)
+   K( 8,  8) = K(2,2)
+
+   K( 2,  3) = k23
+   K( 2,  9) = -K(2,3)
+   K( 8,  3) = -K(2,3)
+   K( 8,  9) = K(2,3)   
+
+   K( 2,  4) = k24
+   K( 2, 10) = -K(2,4)
+   K( 8,  4) = -K(2,4)
+   K( 8, 10) = K(2,4)
+
+   K( 2,  5) = k25
+   K( 2, 11) = -K(2,5)
+   K( 8,  5) = -K(2,5)
+   K( 8, 11) = K(2,5)
+
+   K( 2,  6) = k26
+   K( 2, 12) = -K(2,6)
+   K( 8,  6) = -K(2,6)
+   K( 8, 12) = K(2,6)
+
+   K( 3,  3) = k33
+   K( 3,  9) = -K(3,3)
+   K( 9,  3) = -K(3,3)
+   K( 9,  9) = K(3,3)
+   
+   K( 3,  4) = k34
+   K( 3, 10) = -K(3,4)
+   K( 9,  4) = -K(3,4)
+   K( 9,  10) = K(3,4)   
+
+   K( 3,  5) = k35
+   K( 3, 11) = -K(3,5)
+   K( 9,  5) = -K(3,5)
+   K( 9, 11) = K(3,5)
+
+   K( 3,  6) = k36
+   K( 3, 12) = -K(3,6)
+   K( 9,  6) = -K(3,6)
+   K( 9, 12) = K(3,6)
+
+   K( 4,  4) = k44
+   K( 4, 10) = -K(4,4)
+   K(10,  4) = -K(4,4)
+   K(10, 10) = K(4,4)   
+
+   K( 4,  5) = k45
+   K( 4, 11) = -K(4,5)
+   K(10,  5) = -K(4,5)
+   K(10, 11) = K(4,5) 
+
+   K( 4,  6) = k46
+   K( 4, 12) = -K(4,6)
+   K(10,  6) = -K(4,6)
+   K(10, 12) = K(4,6)
+
+   K( 5,  5) = k55
+   K( 5, 11) = -K(5,5)
+   K(11,  5) = -K(5,5)
+   K(11, 11) = K(5,5)
+
+   K( 5,  6) = k56
+   K( 5, 12) = -K(5,6)
+   K(11,  6) = -K(5,6)
+   K(11, 12) = K(5,6)
+
+   K( 6,  6) = k66
+   K( 6, 12) = -K(6,6)
+   K(12,  6) = -K(6,6)
+   K(12, 12) = K(6,6)
+   
+   ! Stiffness matrix symmetry:
+   K(2:6, 1) = K(1,2:6)
+   K(2:6, 7) = K(1,8:12)
+   K(8:12, 1) = K(7,2:6)   
+   K(8:12, 7) = K(7,8:12)
+   
+   K(3:6, 2) = K(2,3:6)
+   K(3:6, 8) = K(2,9:12)
+   K(9:12, 2) = K(8,3:6)   
+   K(9:12, 8) = K(8,9:12)
+
+   K(4:6, 3) = K(3,4:6)
+   K(4:6, 9) = K(3,10:12)
+   K(10:12, 3) = K(9,4:6)   
+   K(10:12, 9) = K(9,10:12)   
+
+   K(5:6, 4) = K(4,5:6)
+   K(5:6, 10) = K(4,11:12)
+   K(11:12, 4) = K(10,5:6)   
+   K(11:12, 10) = K(10,11:12)   
+
+   K(6, 5) = K(5,6)
+   K(6, 11) = K(5,12)
+   K(12, 5) = K(11,6)   
+   K(12, 11) = K(11,12)  
+   
+   DC = 0.0_FEKi
+   DC( 1: 3,  1: 3) = DirCos
+   DC( 4: 6,  4: 6) = DirCos
+   DC( 7: 9,  7: 9) = DirCos
+   DC(10:12, 10:12) = DirCos
+   
+   K = MATMUL( MATMUL(DC, K), TRANSPOSE(DC) ) ! TODO: change me if DirCos convention is  transposed
+   
+END SUBROUTINE ElemK_Spring
 !------------------------------------------------------------------------------------------------------
 !> Element mass matrix for classical beam elements
 SUBROUTINE ElemM_Beam(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)

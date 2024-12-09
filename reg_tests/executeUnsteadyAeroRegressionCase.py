@@ -69,7 +69,7 @@ verbose = args.verbose
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 ### Build the filesystem navigation variables for running the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
@@ -90,7 +90,7 @@ if not os.path.isdir(inputsDirectory):
 
 
 # create the local output directory and initialize it with input files 
-renameDict={'UA'+str(i)+'.UA.out':'UA'+str(i)+'.UA_ref.out' for i in [2,3,4,5,6,7]}
+renameDict={'UA'+str(i)+'.outb':'UA'+str(i)+'_ref.outb' for i in [2,3,4,5,6,7]}
 
 rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict=renameDict
        , excludeExt=['.sum'])
@@ -116,8 +116,8 @@ if not noExec:
 ### Compare output with 
 for dvrf in dvrFiles:
     simName = os.path.splitext(os.path.basename(dvrf))[0]
-    localOutFile    = os.path.join(testBuildDirectory, simName + '.UA.out')
-    baselineOutFile = os.path.join(inputsDirectory,    simName + '.UA.out')
+    localOutFile    = os.path.join(testBuildDirectory, simName + '.outb')
+    baselineOutFile = os.path.join(inputsDirectory,    simName + '.outb')  # TODO TODO
 
     if not os.path.exists(localOutFile):
         Error('File does not exist: {}'.format(localOutFile))
