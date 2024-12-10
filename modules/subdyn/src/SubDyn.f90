@@ -3258,7 +3258,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    real(ReKi), dimension(3) ::  duP  ! Displacement of node due to rigid rotation
    real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global
    real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
-   real(ReKi), dimension(3,3) :: orientation ! Nodal orientation matrix
+   real(R8Ki), dimension(3,3) :: orientation ! Nodal orientation matrix
 
    INTEGER(IntKi)           :: ErrStat2      ! Error status of the operation
    CHARACTER(ErrMsgLen)     :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
