@@ -1111,9 +1111,9 @@ SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, A
       Cd     = CoefDpths(indx1)%DpthCd*(1-s)     + CoefDpths(indx2)%DpthCd*s
       Ca     = CoefDpths(indx1)%DpthCa*(1-s)     + CoefDpths(indx2)%DpthCa*s
       Cp     = CoefDpths(indx1)%DpthCp*(1-s)     + CoefDpths(indx2)%DpthCp*s
-      AxCd   = CoefDpths(indx1)%DpthCd*(1-s)     + CoefDpths(indx2)%DpthAxCd*s
-      AxCa   = CoefDpths(indx1)%DpthCa*(1-s)     + CoefDpths(indx2)%DpthAxCa*s
-      AxCp   = CoefDpths(indx1)%DpthCp*(1-s)     + CoefDpths(indx2)%DpthAxCp*s
+      AxCd   = CoefDpths(indx1)%DpthAxCd*(1-s)   + CoefDpths(indx2)%DpthAxCd*s
+      AxCa   = CoefDpths(indx1)%DpthAxCa*(1-s)   + CoefDpths(indx2)%DpthAxCa*s
+      AxCp   = CoefDpths(indx1)%DpthAxCp*(1-s)   + CoefDpths(indx2)%DpthAxCp*s
       Cb     = CoefDpths(indx1)%DpthCb*(1-s)     + CoefDpths(indx2)%DpthCb*s
    end if
    

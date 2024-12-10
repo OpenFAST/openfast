@@ -111,7 +111,7 @@ subroutine Conv_Rdtn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Conv_Rdtn_CopyInitInput'
    ErrStat = ErrID_None
@@ -122,8 +122,8 @@ subroutine Conv_Rdtn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode,
    DstInitInputData%HighFreq = SrcInitInputData%HighFreq
    DstInitInputData%WAMITFile = SrcInitInputData%WAMITFile
    if (allocated(SrcInitInputData%HdroAddMs)) then
-      LB(1:3) = lbound(SrcInitInputData%HdroAddMs, kind=B8Ki)
-      UB(1:3) = ubound(SrcInitInputData%HdroAddMs, kind=B8Ki)
+      LB(1:3) = lbound(SrcInitInputData%HdroAddMs)
+      UB(1:3) = ubound(SrcInitInputData%HdroAddMs)
       if (.not. allocated(DstInitInputData%HdroAddMs)) then
          allocate(DstInitInputData%HdroAddMs(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -134,8 +134,8 @@ subroutine Conv_Rdtn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode,
       DstInitInputData%HdroAddMs = SrcInitInputData%HdroAddMs
    end if
    if (allocated(SrcInitInputData%HdroFreq)) then
-      LB(1:1) = lbound(SrcInitInputData%HdroFreq, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%HdroFreq, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%HdroFreq)
+      UB(1:1) = ubound(SrcInitInputData%HdroFreq)
       if (.not. allocated(DstInitInputData%HdroFreq)) then
          allocate(DstInitInputData%HdroFreq(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -146,8 +146,8 @@ subroutine Conv_Rdtn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode,
       DstInitInputData%HdroFreq = SrcInitInputData%HdroFreq
    end if
    if (allocated(SrcInitInputData%HdroDmpng)) then
-      LB(1:3) = lbound(SrcInitInputData%HdroDmpng, kind=B8Ki)
-      UB(1:3) = ubound(SrcInitInputData%HdroDmpng, kind=B8Ki)
+      LB(1:3) = lbound(SrcInitInputData%HdroDmpng)
+      UB(1:3) = ubound(SrcInitInputData%HdroDmpng)
       if (.not. allocated(DstInitInputData%HdroDmpng)) then
          allocate(DstInitInputData%HdroDmpng(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -201,7 +201,7 @@ subroutine Conv_Rdtn_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackInitInput'
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -299,14 +299,14 @@ subroutine Conv_Rdtn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Conv_Rdtn_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcDiscStateData%XDHistory)) then
-      LB(1:2) = lbound(SrcDiscStateData%XDHistory, kind=B8Ki)
-      UB(1:2) = ubound(SrcDiscStateData%XDHistory, kind=B8Ki)
+      LB(1:2) = lbound(SrcDiscStateData%XDHistory)
+      UB(1:2) = ubound(SrcDiscStateData%XDHistory)
       if (.not. allocated(DstDiscStateData%XDHistory)) then
          allocate(DstDiscStateData%XDHistory(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -345,7 +345,7 @@ subroutine Conv_Rdtn_UnPackDiscState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackDiscState'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -473,7 +473,7 @@ subroutine Conv_Rdtn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Conv_Rdtn_CopyParam'
    ErrStat = ErrID_None
@@ -482,8 +482,8 @@ subroutine Conv_Rdtn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Er
    DstParamData%RdtnDT = SrcParamData%RdtnDT
    DstParamData%NBody = SrcParamData%NBody
    if (allocated(SrcParamData%RdtnKrnl)) then
-      LB(1:3) = lbound(SrcParamData%RdtnKrnl, kind=B8Ki)
-      UB(1:3) = ubound(SrcParamData%RdtnKrnl, kind=B8Ki)
+      LB(1:3) = lbound(SrcParamData%RdtnKrnl)
+      UB(1:3) = ubound(SrcParamData%RdtnKrnl)
       if (.not. allocated(DstParamData%RdtnKrnl)) then
          allocate(DstParamData%RdtnKrnl(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -527,7 +527,7 @@ subroutine Conv_Rdtn_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackParam'
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -545,14 +545,14 @@ subroutine Conv_Rdtn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Conv_Rdtn_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInputData%Velocity)) then
-      LB(1:1) = lbound(SrcInputData%Velocity, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%Velocity, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%Velocity)
+      UB(1:1) = ubound(SrcInputData%Velocity)
       if (.not. allocated(DstInputData%Velocity)) then
          allocate(DstInputData%Velocity(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -589,7 +589,7 @@ subroutine Conv_Rdtn_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -602,14 +602,14 @@ subroutine Conv_Rdtn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Conv_Rdtn_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%F_Rdtn)) then
-      LB(1:1) = lbound(SrcOutputData%F_Rdtn, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%F_Rdtn, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%F_Rdtn)
+      UB(1:1) = ubound(SrcOutputData%F_Rdtn)
       if (.not. allocated(DstOutputData%F_Rdtn)) then
          allocate(DstOutputData%F_Rdtn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -646,7 +646,7 @@ subroutine Conv_Rdtn_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Conv_Rdtn_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Conv_Rdtn_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

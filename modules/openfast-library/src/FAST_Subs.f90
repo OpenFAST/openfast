@@ -518,56 +518,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       END IF
 
    case (Module_ExtInfw)
-
-      IF ( PRESENT(ExternInitData) ) THEN
-         Init%InData_ExtInfw%NumActForcePtsBlade = ExternInitData%NumActForcePtsBlade
-         Init%InData_ExtInfw%NumActForcePtsTower = ExternInitData%NumActForcePtsTower
-      ELSE
-         CALL SetErrStat( ErrID_Fatal, 'ExternalInflow integration can be used only with external input data (not the stand-alone executable).', ErrStat, ErrMsg, RoutineName )
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! get blade and tower info from AD.  Assumption made that all blades have same spanwise characteristics
-      Init%InData_ExtInfw%BladeLength = Init%OutData_AD%rotors(1)%BladeProps(1)%BlSpn(Init%OutData_AD%rotors(1)%BladeProps(1)%NumBlNds)
-      if (allocated(Init%OutData_AD%rotors(1)%TwrElev)) then
-         Init%InData_ExtInfw%TowerHeight     = Init%OutData_AD%rotors(1)%TwrElev(SIZE(Init%OutData_AD%rotors(1)%TwrElev)) - Init%OutData_AD%rotors(1)%TwrElev(1)   ! TwrElev is based on ground or MSL.  Need flexible tower length and first node
-         Init%InData_ExtInfw%TowerBaseHeight = Init%OutData_AD%rotors(1)%TwrElev(1)
-         ALLOCATE(Init%InData_ExtInfw%StructTwrHNodes( SIZE(Init%OutData_AD%rotors(1)%TwrElev)),  STAT=ErrStat2)
-         if (FailedAlloc("Init%InData_ExtInfw%StructTwrHNodes")) return
-         Init%InData_ExtInfw%StructTwrHNodes(:) = Init%OutData_AD%rotors(1)%TwrElev(:)
-      else
-         Init%InData_ExtInfw%TowerHeight     = 0.0_ReKi
-         Init%InData_ExtInfw%TowerBaseHeight = 0.0_ReKi
-      endif
-
-      allocate(Init%InData_ExtInfw%StructBldRNodes(Init%OutData_AD%rotors(1)%BladeProps(1)%NumBlNds), stat=ErrStat2)
-      if (FailedAlloc("Init%InData_ExtInfw%StructBldRNodes")) return
-
-      Init%InData_ExtInfw%StructBldRNodes(:) = Init%OutData_AD%rotors(1)%BladeProps(1)%BlSpn(:)
-
-      ! Set node clustering type
-      Init%InData_ExtInfw%NodeClusterType = ExternInitData%NodeClusterType
-
-      ! set up the data structures for integration with ExternalInflow
-      CALL Init_ExtInfw( Init%InData_ExtInfw, p_FAST, AirDens, AD%Input(1), Init%OutData_AD, AD%y, ExtInfw, Init%OutData_ExtInfw, ErrStat2, ErrMsg2 )
-      if (Failed()) return
-      p_FAST%ModuleInitialized(Module_ExtInfw) = .TRUE.
-
-      ! Add module to list of modules, return on error
-      CALL MV_AddModule(m_Glue%ModData, Module_ExtInfw, 'ExtInfw', 1, p_FAST%dt_module(Module_ExtInfw), p_FAST%DT, &
-                        Init%OutData_ExtInfw%Vars, .false., ErrStat2, ErrMsg2)
-      if (Failed()) return
-
-      !bjj: fix me!!! to do
-      Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi
-
-      ! Set pointer to flowfield
-      IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtInfw%FlowField
-
-   case default   ! No wind
-
-      ! Set mean wind speed to zero
+      ! ExtInfw requires initialization of AD first, so nothing executed here
+   case default
       Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi
 
    end select   ! CompInflow
@@ -767,6 +719,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_ADsk%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
 
+      ! AeroDisk may override the AirDens value.  Store this to inform other modules
+      AirDens = Init%OutData_ADsk%AirDens
+
    end select ! CompAero
 
    !----------------------------------------------------------------------------
@@ -787,16 +742,69 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_ExtLd%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      AirDens = Init%OutData_ExtLd%AirDens
+         ! ExtLd may override the AirDens value.  Store this to inform other modules
+         AirDens = Init%OutData_ExtLd%AirDens
 
    END IF
 
    ! No aero of any sort
    ! ........................
-   IF ( (p_FAST%CompAero /= Module_AD) .and. (p_FAST%CompAero /= Module_ExtLd) ) THEN
-   ELSE
+   IF ( (p_FAST%CompAero == Module_None) .or. (p_FAST%CompAero == Module_Unknown)) THEN
       AirDens = 0.0_ReKi
+   ENDIF
+
+
+   ! ........................
+   ! initialize ExtInfw
+   !     Ideally this would be initialized in the same logic as InflowWind above.  However AD outputs are required
+   ! ........................
+   IF ( p_FAST%CompInflow == Module_ExtInfw ) THEN
+
+      IF ( PRESENT(ExternInitData) ) THEN
+         Init%InData_ExtInfw%NumActForcePtsBlade = ExternInitData%NumActForcePtsBlade
+         Init%InData_ExtInfw%NumActForcePtsTower = ExternInitData%NumActForcePtsTower
+      ELSE
+         CALL SetErrStat( ErrID_Fatal, 'ExternalInflow integration can be used only with external input data (not the stand-alone executable).', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      END IF
+      ! get blade and tower info from AD.  Assumption made that all blades have same spanwise characteristics
+      Init%InData_ExtInfw%BladeLength = Init%OutData_AD%rotors(1)%BladeProps(1)%BlSpn(Init%OutData_AD%rotors(1)%BladeProps(1)%NumBlNds)
+      if (allocated(Init%OutData_AD%rotors(1)%TwrElev)) then
+         Init%InData_ExtInfw%TowerHeight     = Init%OutData_AD%rotors(1)%TwrElev(SIZE(Init%OutData_AD%rotors(1)%TwrElev)) - Init%OutData_AD%rotors(1)%TwrElev(1)   ! TwrElev is based on ground or MSL.  Need flexible tower length and first node
+         Init%InData_ExtInfw%TowerBaseHeight = Init%OutData_AD%rotors(1)%TwrElev(1)
+         ALLOCATE(Init%InData_ExtInfw%StructTwrHNodes( SIZE(Init%OutData_AD%rotors(1)%TwrElev)),  STAT=ErrStat2)
+         Init%InData_ExtInfw%StructTwrHNodes(:) = Init%OutData_AD%rotors(1)%TwrElev(:)
+      else
+         Init%InData_ExtInfw%TowerHeight     = 0.0_ReKi
+         Init%InData_ExtInfw%TowerBaseHeight = 0.0_ReKi
+      endif
+      ALLOCATE(Init%InData_ExtInfw%StructBldRNodes(Init%OutData_AD%rotors(1)%BladeProps(1)%NumBlNds),  STAT=ErrStat2)
+      Init%InData_ExtInfw%StructBldRNodes(:) = Init%OutData_AD%rotors(1)%BladeProps(1)%BlSpn(:)
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating ExtInfw%InitInput.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      !Set node clustering type
+      Init%InData_ExtInfw%NodeClusterType = ExternInitData%NodeClusterType
+         ! set up the data structures for integration with ExternalInflow
+      CALL Init_ExtInfw( Init%InData_ExtInfw, p_FAST, AirDens, AD%Input(1), Init%OutData_AD, AD%y, ExtInfw, Init%OutData_ExtInfw, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
+      !bjj: fix me!!! to do
+      Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi
+
+      ! Set pointer to flowfield -- I would prefer that we did this through the AD_Init, but AD_InitOut results are required for ExtInfw_Init
+      IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtInfw%FlowField
    endif
+
 
    !----------------------------------------------------------------------------
    ! Initialize SuperController
@@ -830,15 +838,19 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    IF (p_FAST%CompHydro == Module_HD) THEN
 
-      Init%InData_HD%Gravity              = p_FAST%Gravity
-      Init%InData_HD%UseInputFile         = .TRUE.
-      Init%InData_HD%InputFile            = p_FAST%HydroFile
-      Init%InData_HD%OutRootName          = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))
-      Init%InData_HD%TMax                 = p_FAST%TMax
-      Init%InData_HD%Linearize            = p_FAST%Linearize
-      Init%InData_HD%InvalidWithSSExctn   = Init%OutData_SeaSt%InvalidWithSSExctn
-      Init%InData_HD%WaveField => Init%OutData_SeaSt%WaveField
-      if (p_FAST%WrVTK /= VTK_None) Init%InData_HD%VisMeshes = .true.
+      Init%InData_HD%Gravity       = p_FAST%Gravity
+      Init%InData_HD%UseInputFile  = .TRUE.
+      Init%InData_HD%InputFile     = p_FAST%HydroFile
+      Init%InData_HD%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))
+      Init%InData_HD%TMax          = p_FAST%TMax
+      Init%InData_HD%Linearize     = p_FAST%Linearize
+      Init%InData_HD%PlatformPos   = Init%OutData_ED%PlatformPos ! Initial platform position; PlatformPos(1:3) is effectively the initial position of the HD origin
+      if (p_FAST%WrVTK /= VTK_None) Init%InData_HD%VisMeshes=.true.
+      
+      ! if ( p_FAST%CompSeaSt == Module_SeaSt ) then  ! this is always true
+         Init%InData_HD%InvalidWithSSExctn = Init%OutData_SeaSt%InvalidWithSSExctn
+         Init%InData_HD%WaveField => Init%OutData_SeaSt%WaveField
+      ! end if
       
       ! Call module initialization routine
       CALL HydroDyn_Init(Init%InData_HD, HD%Input(1), HD%p,  HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), &
@@ -1327,60 +1339,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    CALL FAST_InitOutput(p_FAST, y_FAST, Init, ErrStat2, ErrMsg2)
    if (Failed()) return
-
-   !----------------------------------------------------------------------------
-   ! Init low-pass-filtered displacements of HydroDyn potential-flow bodies
-   !----------------------------------------------------------------------------
-
-   IF ( (p_FAST%CompHydro == Module_HD) .AND. (HD%p%PotMod == 1_IntKi) ) THEN
-      IF ( HD%p%WAMIT(1)%ExctnDisp == 2_IntKi ) THEN
-         ! Set the initial displacement of ED%PlatformPtMesh here to use MeshMapping
-         ED%y%PlatformPtMesh%TranslationDisp(:,1) = Init%OutData_ED%PlatformPos(1:3)
-         CALL SmllRotTrans( 'initial platform rotation ', &
-                             REAL(Init%OutData_ED%PlatformPos(4),R8Ki), &
-                             REAL(Init%OutData_ED%PlatformPos(5),R8Ki), &
-                             REAL(Init%OutData_ED%PlatformPos(6),R8Ki), &
-                             ED%y%PlatformPtMesh%Orientation(:,:,1), '', ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-         ED%y%PlatformPtMesh%TranslationDisp(1,1) = ED%y%PlatformPtMesh%TranslationDisp(1,1) + ED%y%PlatformPtMesh%Orientation(3,1,1) * ED%p%PtfmRefzt
-         ED%y%PlatformPtMesh%TranslationDisp(2,1) = ED%y%PlatformPtMesh%TranslationDisp(2,1) + ED%y%PlatformPtMesh%Orientation(3,2,1) * ED%p%PtfmRefzt
-         ED%y%PlatformPtMesh%TranslationDisp(3,1) = ED%y%PlatformPtMesh%TranslationDisp(3,1) + ED%y%PlatformPtMesh%Orientation(3,3,1) * ED%p%PtfmRefzt - ED%p%PtfmRefzt
-         
-         ! Transfer the ED outputs of the platform motions to the HD input of which represents the same data
-         call MeshMapCreate(ED%y%PlatformPtMesh, HD%Input(1)%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2); if (Failed()) return
-         CALL Transfer_Point_to_Point(ED%y%PlatformPtMesh, HD%Input(1)%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2); if (Failed()) return
-         
-         ! These are the motions for the lumped point loads associated viscous drag on the WAMIT body and/or filled/flooded lumped forces of the WAMIT body
-         IF (HD%Input(1)%WAMITMesh%Committed ) THEN 
-            CALL MeshMapCreate(ED%y%PlatformPtMesh, HD%Input(1)%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2); if (Failed()) return
-            CALL Transfer_Point_to_Point(ED%y%PlatformPtMesh, HD%Input(1)%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2); if (Failed()) return
-         END IF
-
-         ! These are the motions for the lumped point loads associated viscous drag on the WAMIT body and/or filled/flooded lumped forces of the WAMIT body
-         IF (HD%Input(1)%Morison%Mesh%Committed ) THEN 
-            CALL MeshMapCreate(ED%y%PlatformPtMesh, HD%Input(1)%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2); if (Failed()) return
-            CALL Transfer_Point_to_Point(ED%y%PlatformPtMesh, HD%Input(1)%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2); if (Failed()) return
-         END IF
-
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-         IF (HD%p%NBodyMod == 1_IntKi) THEN ! One instance of WAMIT with NBody
-            DO i = 1,HD%p%NBody
-               HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(1,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
-               HD%xd(STATE_CURR)%WAMIT(1)%BdyPosFilt(2,i,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)
-            END DO
-         ELSE IF (HD%p%NBodyMod > 1_IntKi) THEN ! NBody instances of WAMIT with one body each
-            DO i = 1,HD%p%NBody
-               HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(1,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(1,i)
-               HD%xd(STATE_CURR)%WAMIT(i)%BdyPosFilt(2,1,:) = HD%Input(1)%WAMITMesh%TranslationDisp(2,i)
-            END DO
-         END IF
-      END IF
-   END IF
 
    !----------------------------------------------------------------------------
    ! Initialize data for VTK output
@@ -1940,6 +1898,8 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    IF (p%CompAero == Module_ADsk .and. p%MHK /= MHK_None) CALL SetErrStat( ErrID_Fatal, 'AeroDisk cannot be used with an MHK turbine. Change CompAero or MHK in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%MHK /= MHK_None .and. p%MHK /= MHK_FixedBottom .and. p%MHK /= MHK_Floating) CALL SetErrStat( ErrID_Fatal, 'MHK switch is invalid. Set MHK to 0, 1, or 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
+
+   IF (p%MHK /= MHK_None .and. p%Linearize) CALL SetErrStat( ErrID_Warn, 'Linearization is not fully implemented for an MHK turbine (buoyancy not included in perturbations, and added mass not included anywhere).', ErrStat, ErrMsg, RoutineName )
 
    IF (p%Gravity < 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'Gravity must not be negative.', ErrStat, ErrMsg, RoutineName )
 

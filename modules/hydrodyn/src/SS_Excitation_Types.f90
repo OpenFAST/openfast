@@ -115,7 +115,7 @@ subroutine SS_Exc_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SS_Exc_CopyInitInput'
@@ -125,8 +125,8 @@ subroutine SS_Exc_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%NBody = SrcInitInputData%NBody
    DstInitInputData%ExctnDisp = SrcInitInputData%ExctnDisp
    if (allocated(SrcInitInputData%PtfmRefztRot)) then
-      LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%PtfmRefztRot, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefztRot)
       if (.not. allocated(DstInitInputData%PtfmRefztRot)) then
          allocate(DstInitInputData%PtfmRefztRot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -178,7 +178,7 @@ subroutine SS_Exc_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SS_Exc_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Exc_UnPackInitInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -214,14 +214,14 @@ subroutine SS_Exc_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SS_Exc_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -232,8 +232,8 @@ subroutine SS_Exc_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -274,7 +274,7 @@ subroutine SS_Exc_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SS_Exc_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Exc_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -288,14 +288,14 @@ subroutine SS_Exc_CopyContState(SrcContStateData, DstContStateData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SS_Exc_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%x)) then
-      LB(1:1) = lbound(SrcContStateData%x, kind=B8Ki)
-      UB(1:1) = ubound(SrcContStateData%x, kind=B8Ki)
+      LB(1:1) = lbound(SrcContStateData%x)
+      UB(1:1) = ubound(SrcContStateData%x)
       if (.not. allocated(DstContStateData%x)) then
          allocate(DstContStateData%x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -332,7 +332,7 @@ subroutine SS_Exc_UnPackContState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SS_Exc_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Exc_UnPackContState'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -421,16 +421,16 @@ subroutine SS_Exc_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SS_Exc_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstOtherStateData%n = SrcOtherStateData%n
-   LB(1:1) = lbound(SrcOtherStateData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(SrcOtherStateData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(SrcOtherStateData%xdot)
+   UB(1:1) = ubound(SrcOtherStateData%xdot)
    do i1 = LB(1), UB(1)
       call SS_Exc_CopyContState(SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -442,15 +442,15 @@ subroutine SS_Exc_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(SS_Exc_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SS_Exc_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   LB(1:1) = lbound(OtherStateData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(OtherStateData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(OtherStateData%xdot)
+   UB(1:1) = ubound(OtherStateData%xdot)
    do i1 = LB(1), UB(1)
       call SS_Exc_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -461,12 +461,12 @@ subroutine SS_Exc_PackOtherState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SS_Exc_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Exc_PackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%n)
-   LB(1:1) = lbound(InData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(InData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(InData%xdot)
+   UB(1:1) = ubound(InData%xdot)
    do i1 = LB(1), UB(1)
       call SS_Exc_PackContState(RF, InData%xdot(i1)) 
    end do
@@ -477,12 +477,12 @@ subroutine SS_Exc_UnPackOtherState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SS_Exc_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Exc_UnPackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
-   LB(1:1) = lbound(OutData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(OutData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(OutData%xdot)
+   UB(1:1) = ubound(OutData%xdot)
    do i1 = LB(1), UB(1)
       call SS_Exc_UnpackContState(RF, OutData%xdot(i1)) ! xdot 
    end do
@@ -543,7 +543,7 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SS_Exc_CopyParam'
@@ -553,8 +553,8 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    DstParamData%NBody = SrcParamData%NBody
    DstParamData%ExctnDisp = SrcParamData%ExctnDisp
    if (allocated(SrcParamData%spDOF)) then
-      LB(1:1) = lbound(SrcParamData%spDOF, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%spDOF, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%spDOF)
+      UB(1:1) = ubound(SrcParamData%spDOF)
       if (.not. allocated(DstParamData%spDOF)) then
          allocate(DstParamData%spDOF(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -565,8 +565,8 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
       DstParamData%spDOF = SrcParamData%spDOF
    end if
    if (allocated(SrcParamData%A)) then
-      LB(1:2) = lbound(SrcParamData%A, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%A, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%A)
+      UB(1:2) = ubound(SrcParamData%A)
       if (.not. allocated(DstParamData%A)) then
          allocate(DstParamData%A(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -577,8 +577,8 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
       DstParamData%A = SrcParamData%A
    end if
    if (allocated(SrcParamData%B)) then
-      LB(1:1) = lbound(SrcParamData%B, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%B, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%B)
+      UB(1:1) = ubound(SrcParamData%B)
       if (.not. allocated(DstParamData%B)) then
          allocate(DstParamData%B(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -589,8 +589,8 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
       DstParamData%B = SrcParamData%B
    end if
    if (allocated(SrcParamData%C)) then
-      LB(1:2) = lbound(SrcParamData%C, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%C, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%C)
+      UB(1:2) = ubound(SrcParamData%C)
       if (.not. allocated(DstParamData%C)) then
          allocate(DstParamData%C(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -658,7 +658,7 @@ subroutine SS_Exc_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SS_Exc_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Exc_UnPackParam'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -699,14 +699,14 @@ subroutine SS_Exc_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SS_Exc_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInputData%PtfmPos)) then
-      LB(1:2) = lbound(SrcInputData%PtfmPos, kind=B8Ki)
-      UB(1:2) = ubound(SrcInputData%PtfmPos, kind=B8Ki)
+      LB(1:2) = lbound(SrcInputData%PtfmPos)
+      UB(1:2) = ubound(SrcInputData%PtfmPos)
       if (.not. allocated(DstInputData%PtfmPos)) then
          allocate(DstInputData%PtfmPos(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -743,7 +743,7 @@ subroutine SS_Exc_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SS_Exc_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Exc_UnPackInput'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -756,14 +756,14 @@ subroutine SS_Exc_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SS_Exc_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%y)) then
-      LB(1:1) = lbound(SrcOutputData%y, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%y, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%y)
+      UB(1:1) = ubound(SrcOutputData%y)
       if (.not. allocated(DstOutputData%y)) then
          allocate(DstOutputData%y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -774,8 +774,8 @@ subroutine SS_Exc_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Er
       DstOutputData%y = SrcOutputData%y
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -816,7 +816,7 @@ subroutine SS_Exc_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SS_Exc_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Exc_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

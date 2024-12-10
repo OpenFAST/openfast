@@ -76,13 +76,13 @@ typedef   HydroDyn/HydroDyn            InitInputType                 CHARACTER(1
 typedef   ^                            ^                             LOGICAL                  UseInputFile                    -       .TRUE.        -         "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
 typedef   ^                            ^                             FileInfoType             PassedFileData                  -          -          -         "If we don't use the input file, pass everything through this"   -
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -          -          -         "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
-typedef	  ^	                           ^                             Logical	              Linearize                       -       .FALSE.       -         "Flag that tells this module if the glue code wants to linearize."	-
+typedef	  ^	                       ^                             Logical	              Linearize                       -       .FALSE.       -         "Flag that tells this module if the glue code wants to linearize."	-
 typedef   ^                            ^                             ReKi                     Gravity                         -          -          -         "Supplied by Driver:  Gravitational acceleration"  "(m/s^2)"
 typedef   ^                            ^                             DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
 typedef   ^                            ^                             logical                  VisMeshes                       -       .false.       -         "Output visualization meshes" -
-#
 typedef   ^                            ^                             LOGICAL                  InvalidWithSSExctn              -          -          -         "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -          -         "Pointer to SeaState wave field" -
+typedef   ^                            ^                             ReKi                     PlatformPos                    {6}         -          -         "Initial platform position (6 DOFs)"
 #
 #
 # Define outputs from the initialization routine here:

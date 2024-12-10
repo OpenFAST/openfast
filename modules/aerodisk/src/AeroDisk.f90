@@ -265,7 +265,8 @@ contains
          InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
       end do
       ! Version
-      InitOut%Ver = ADsk_Ver
+      InitOut%Ver     = ADsk_Ver
+      InitOut%AirDens = p%AirDens
    end subroutine Init_InitY
 END SUBROUTINE ADsk_Init
 

@@ -58,14 +58,14 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyMeshMapLinearizationType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMeshMapLinearizationTypeData%mi)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%mi, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%mi, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%mi)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%mi)
       if (.not. allocated(DstMeshMapLinearizationTypeData%mi)) then
          allocate(DstMeshMapLinearizationTypeData%mi(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -76,8 +76,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%mi = SrcMeshMapLinearizationTypeData%mi
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%fx_p)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%fx_p, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%fx_p, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%fx_p)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%fx_p)
       if (.not. allocated(DstMeshMapLinearizationTypeData%fx_p)) then
          allocate(DstMeshMapLinearizationTypeData%fx_p(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -88,8 +88,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%fx_p = SrcMeshMapLinearizationTypeData%fx_p
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%tv_uD)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%tv_uD, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%tv_uD, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%tv_uD)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%tv_uD)
       if (.not. allocated(DstMeshMapLinearizationTypeData%tv_uD)) then
          allocate(DstMeshMapLinearizationTypeData%tv_uD(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -100,8 +100,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%tv_uD = SrcMeshMapLinearizationTypeData%tv_uD
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%tv_uS)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%tv_uS, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%tv_uS, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%tv_uS)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%tv_uS)
       if (.not. allocated(DstMeshMapLinearizationTypeData%tv_uS)) then
          allocate(DstMeshMapLinearizationTypeData%tv_uS(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -112,8 +112,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%tv_uS = SrcMeshMapLinearizationTypeData%tv_uS
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%ta_uD)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%ta_uD, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%ta_uD, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%ta_uD)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%ta_uD)
       if (.not. allocated(DstMeshMapLinearizationTypeData%ta_uD)) then
          allocate(DstMeshMapLinearizationTypeData%ta_uD(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -124,8 +124,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%ta_uD = SrcMeshMapLinearizationTypeData%ta_uD
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%ta_uS)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%ta_uS, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%ta_uS, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%ta_uS)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%ta_uS)
       if (.not. allocated(DstMeshMapLinearizationTypeData%ta_uS)) then
          allocate(DstMeshMapLinearizationTypeData%ta_uS(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -136,8 +136,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%ta_uS = SrcMeshMapLinearizationTypeData%ta_uS
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%ta_rv)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%ta_rv, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%ta_rv, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%ta_rv)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%ta_rv)
       if (.not. allocated(DstMeshMapLinearizationTypeData%ta_rv)) then
          allocate(DstMeshMapLinearizationTypeData%ta_rv(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -148,8 +148,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%ta_rv = SrcMeshMapLinearizationTypeData%ta_rv
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%li)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%li, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%li, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%li)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%li)
       if (.not. allocated(DstMeshMapLinearizationTypeData%li)) then
          allocate(DstMeshMapLinearizationTypeData%li(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -160,8 +160,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%li = SrcMeshMapLinearizationTypeData%li
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%M_uS)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%M_uS, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%M_uS, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%M_uS)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%M_uS)
       if (.not. allocated(DstMeshMapLinearizationTypeData%M_uS)) then
          allocate(DstMeshMapLinearizationTypeData%M_uS(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -172,8 +172,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%M_uS = SrcMeshMapLinearizationTypeData%M_uS
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%M_uD)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%M_uD, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%M_uD, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%M_uD)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%M_uD)
       if (.not. allocated(DstMeshMapLinearizationTypeData%M_uD)) then
          allocate(DstMeshMapLinearizationTypeData%M_uD(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -184,8 +184,8 @@ subroutine NWTC_Library_CopyMeshMapLinearizationType(SrcMeshMapLinearizationType
       DstMeshMapLinearizationTypeData%M_uD = SrcMeshMapLinearizationTypeData%M_uD
    end if
    if (allocated(SrcMeshMapLinearizationTypeData%M_f)) then
-      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%M_f, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%M_f, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapLinearizationTypeData%M_f)
+      UB(1:2) = ubound(SrcMeshMapLinearizationTypeData%M_f)
       if (.not. allocated(DstMeshMapLinearizationTypeData%M_f)) then
          allocate(DstMeshMapLinearizationTypeData%M_f(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -262,7 +262,7 @@ subroutine NWTC_Library_UnPackMeshMapLinearizationType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(MeshMapLinearizationType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackMeshMapLinearizationType'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -285,16 +285,16 @@ subroutine NWTC_Library_CopyMeshMapType(SrcMeshMapTypeData, DstMeshMapTypeData, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyMeshMapType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMeshMapTypeData%MapLoads)) then
-      LB(1:1) = lbound(SrcMeshMapTypeData%MapLoads, kind=B8Ki)
-      UB(1:1) = ubound(SrcMeshMapTypeData%MapLoads, kind=B8Ki)
+      LB(1:1) = lbound(SrcMeshMapTypeData%MapLoads)
+      UB(1:1) = ubound(SrcMeshMapTypeData%MapLoads)
       if (.not. allocated(DstMeshMapTypeData%MapLoads)) then
          allocate(DstMeshMapTypeData%MapLoads(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -309,8 +309,8 @@ subroutine NWTC_Library_CopyMeshMapType(SrcMeshMapTypeData, DstMeshMapTypeData, 
       end do
    end if
    if (allocated(SrcMeshMapTypeData%MapMotions)) then
-      LB(1:1) = lbound(SrcMeshMapTypeData%MapMotions, kind=B8Ki)
-      UB(1:1) = ubound(SrcMeshMapTypeData%MapMotions, kind=B8Ki)
+      LB(1:1) = lbound(SrcMeshMapTypeData%MapMotions)
+      UB(1:1) = ubound(SrcMeshMapTypeData%MapMotions)
       if (.not. allocated(DstMeshMapTypeData%MapMotions)) then
          allocate(DstMeshMapTypeData%MapMotions(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -325,8 +325,8 @@ subroutine NWTC_Library_CopyMeshMapType(SrcMeshMapTypeData, DstMeshMapTypeData, 
       end do
    end if
    if (allocated(SrcMeshMapTypeData%MapSrcToAugmt)) then
-      LB(1:1) = lbound(SrcMeshMapTypeData%MapSrcToAugmt, kind=B8Ki)
-      UB(1:1) = ubound(SrcMeshMapTypeData%MapSrcToAugmt, kind=B8Ki)
+      LB(1:1) = lbound(SrcMeshMapTypeData%MapSrcToAugmt)
+      UB(1:1) = ubound(SrcMeshMapTypeData%MapSrcToAugmt)
       if (.not. allocated(DstMeshMapTypeData%MapSrcToAugmt)) then
          allocate(DstMeshMapTypeData%MapSrcToAugmt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -347,8 +347,8 @@ subroutine NWTC_Library_CopyMeshMapType(SrcMeshMapTypeData, DstMeshMapTypeData, 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMeshMapTypeData%LoadLn2_A_Mat_Piv)) then
-      LB(1:1) = lbound(SrcMeshMapTypeData%LoadLn2_A_Mat_Piv, kind=B8Ki)
-      UB(1:1) = ubound(SrcMeshMapTypeData%LoadLn2_A_Mat_Piv, kind=B8Ki)
+      LB(1:1) = lbound(SrcMeshMapTypeData%LoadLn2_A_Mat_Piv)
+      UB(1:1) = ubound(SrcMeshMapTypeData%LoadLn2_A_Mat_Piv)
       if (.not. allocated(DstMeshMapTypeData%LoadLn2_A_Mat_Piv)) then
          allocate(DstMeshMapTypeData%LoadLn2_A_Mat_Piv(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -359,8 +359,8 @@ subroutine NWTC_Library_CopyMeshMapType(SrcMeshMapTypeData, DstMeshMapTypeData, 
       DstMeshMapTypeData%LoadLn2_A_Mat_Piv = SrcMeshMapTypeData%LoadLn2_A_Mat_Piv
    end if
    if (allocated(SrcMeshMapTypeData%DisplacedPosition)) then
-      LB(1:3) = lbound(SrcMeshMapTypeData%DisplacedPosition, kind=B8Ki)
-      UB(1:3) = ubound(SrcMeshMapTypeData%DisplacedPosition, kind=B8Ki)
+      LB(1:3) = lbound(SrcMeshMapTypeData%DisplacedPosition)
+      UB(1:3) = ubound(SrcMeshMapTypeData%DisplacedPosition)
       if (.not. allocated(DstMeshMapTypeData%DisplacedPosition)) then
          allocate(DstMeshMapTypeData%DisplacedPosition(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -371,8 +371,8 @@ subroutine NWTC_Library_CopyMeshMapType(SrcMeshMapTypeData, DstMeshMapTypeData, 
       DstMeshMapTypeData%DisplacedPosition = SrcMeshMapTypeData%DisplacedPosition
    end if
    if (allocated(SrcMeshMapTypeData%LoadLn2_A_Mat)) then
-      LB(1:2) = lbound(SrcMeshMapTypeData%LoadLn2_A_Mat, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapTypeData%LoadLn2_A_Mat, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapTypeData%LoadLn2_A_Mat)
+      UB(1:2) = ubound(SrcMeshMapTypeData%LoadLn2_A_Mat)
       if (.not. allocated(DstMeshMapTypeData%LoadLn2_A_Mat)) then
          allocate(DstMeshMapTypeData%LoadLn2_A_Mat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -383,8 +383,8 @@ subroutine NWTC_Library_CopyMeshMapType(SrcMeshMapTypeData, DstMeshMapTypeData, 
       DstMeshMapTypeData%LoadLn2_A_Mat = SrcMeshMapTypeData%LoadLn2_A_Mat
    end if
    if (allocated(SrcMeshMapTypeData%LoadLn2_F)) then
-      LB(1:2) = lbound(SrcMeshMapTypeData%LoadLn2_F, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapTypeData%LoadLn2_F, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapTypeData%LoadLn2_F)
+      UB(1:2) = ubound(SrcMeshMapTypeData%LoadLn2_F)
       if (.not. allocated(DstMeshMapTypeData%LoadLn2_F)) then
          allocate(DstMeshMapTypeData%LoadLn2_F(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -395,8 +395,8 @@ subroutine NWTC_Library_CopyMeshMapType(SrcMeshMapTypeData, DstMeshMapTypeData, 
       DstMeshMapTypeData%LoadLn2_F = SrcMeshMapTypeData%LoadLn2_F
    end if
    if (allocated(SrcMeshMapTypeData%LoadLn2_M)) then
-      LB(1:2) = lbound(SrcMeshMapTypeData%LoadLn2_M, kind=B8Ki)
-      UB(1:2) = ubound(SrcMeshMapTypeData%LoadLn2_M, kind=B8Ki)
+      LB(1:2) = lbound(SrcMeshMapTypeData%LoadLn2_M)
+      UB(1:2) = ubound(SrcMeshMapTypeData%LoadLn2_M)
       if (.not. allocated(DstMeshMapTypeData%LoadLn2_M)) then
          allocate(DstMeshMapTypeData%LoadLn2_M(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -415,16 +415,16 @@ subroutine NWTC_Library_DestroyMeshMapType(MeshMapTypeData, ErrStat, ErrMsg)
    type(MeshMapType), intent(inout) :: MeshMapTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyMeshMapType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(MeshMapTypeData%MapLoads)) then
-      LB(1:1) = lbound(MeshMapTypeData%MapLoads, kind=B8Ki)
-      UB(1:1) = ubound(MeshMapTypeData%MapLoads, kind=B8Ki)
+      LB(1:1) = lbound(MeshMapTypeData%MapLoads)
+      UB(1:1) = ubound(MeshMapTypeData%MapLoads)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyMapType(MeshMapTypeData%MapLoads(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -432,8 +432,8 @@ subroutine NWTC_Library_DestroyMeshMapType(MeshMapTypeData, ErrStat, ErrMsg)
       deallocate(MeshMapTypeData%MapLoads)
    end if
    if (allocated(MeshMapTypeData%MapMotions)) then
-      LB(1:1) = lbound(MeshMapTypeData%MapMotions, kind=B8Ki)
-      UB(1:1) = ubound(MeshMapTypeData%MapMotions, kind=B8Ki)
+      LB(1:1) = lbound(MeshMapTypeData%MapMotions)
+      UB(1:1) = ubound(MeshMapTypeData%MapMotions)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyMapType(MeshMapTypeData%MapMotions(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -441,8 +441,8 @@ subroutine NWTC_Library_DestroyMeshMapType(MeshMapTypeData, ErrStat, ErrMsg)
       deallocate(MeshMapTypeData%MapMotions)
    end if
    if (allocated(MeshMapTypeData%MapSrcToAugmt)) then
-      LB(1:1) = lbound(MeshMapTypeData%MapSrcToAugmt, kind=B8Ki)
-      UB(1:1) = ubound(MeshMapTypeData%MapSrcToAugmt, kind=B8Ki)
+      LB(1:1) = lbound(MeshMapTypeData%MapSrcToAugmt)
+      UB(1:1) = ubound(MeshMapTypeData%MapSrcToAugmt)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyMapType(MeshMapTypeData%MapSrcToAugmt(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -476,32 +476,32 @@ subroutine NWTC_Library_PackMeshMapType(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(MeshMapType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackMeshMapType'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%MapLoads))
    if (allocated(InData%MapLoads)) then
-      call RegPackBounds(RF, 1, lbound(InData%MapLoads, kind=B8Ki), ubound(InData%MapLoads, kind=B8Ki))
-      LB(1:1) = lbound(InData%MapLoads, kind=B8Ki)
-      UB(1:1) = ubound(InData%MapLoads, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%MapLoads), ubound(InData%MapLoads))
+      LB(1:1) = lbound(InData%MapLoads)
+      UB(1:1) = ubound(InData%MapLoads)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackMapType(RF, InData%MapLoads(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%MapMotions))
    if (allocated(InData%MapMotions)) then
-      call RegPackBounds(RF, 1, lbound(InData%MapMotions, kind=B8Ki), ubound(InData%MapMotions, kind=B8Ki))
-      LB(1:1) = lbound(InData%MapMotions, kind=B8Ki)
-      UB(1:1) = ubound(InData%MapMotions, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%MapMotions), ubound(InData%MapMotions))
+      LB(1:1) = lbound(InData%MapMotions)
+      UB(1:1) = ubound(InData%MapMotions)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackMapType(RF, InData%MapMotions(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%MapSrcToAugmt))
    if (allocated(InData%MapSrcToAugmt)) then
-      call RegPackBounds(RF, 1, lbound(InData%MapSrcToAugmt, kind=B8Ki), ubound(InData%MapSrcToAugmt, kind=B8Ki))
-      LB(1:1) = lbound(InData%MapSrcToAugmt, kind=B8Ki)
-      UB(1:1) = ubound(InData%MapSrcToAugmt, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%MapSrcToAugmt), ubound(InData%MapSrcToAugmt))
+      LB(1:1) = lbound(InData%MapSrcToAugmt)
+      UB(1:1) = ubound(InData%MapSrcToAugmt)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackMapType(RF, InData%MapSrcToAugmt(i1)) 
       end do
@@ -521,8 +521,8 @@ subroutine NWTC_Library_UnPackMeshMapType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(MeshMapType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackMeshMapType'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

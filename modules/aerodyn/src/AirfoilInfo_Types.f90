@@ -535,15 +535,15 @@ subroutine AFI_CopyTable_Type(SrcTable_TypeData, DstTable_TypeData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AFI_CopyTable_Type'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcTable_TypeData%Alpha)) then
-      LB(1:1) = lbound(SrcTable_TypeData%Alpha, kind=B8Ki)
-      UB(1:1) = ubound(SrcTable_TypeData%Alpha, kind=B8Ki)
+      LB(1:1) = lbound(SrcTable_TypeData%Alpha)
+      UB(1:1) = ubound(SrcTable_TypeData%Alpha)
       if (.not. allocated(DstTable_TypeData%Alpha)) then
          allocate(DstTable_TypeData%Alpha(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -554,8 +554,8 @@ subroutine AFI_CopyTable_Type(SrcTable_TypeData, DstTable_TypeData, CtrlCode, Er
       DstTable_TypeData%Alpha = SrcTable_TypeData%Alpha
    end if
    if (allocated(SrcTable_TypeData%Coefs)) then
-      LB(1:2) = lbound(SrcTable_TypeData%Coefs, kind=B8Ki)
-      UB(1:2) = ubound(SrcTable_TypeData%Coefs, kind=B8Ki)
+      LB(1:2) = lbound(SrcTable_TypeData%Coefs)
+      UB(1:2) = ubound(SrcTable_TypeData%Coefs)
       if (.not. allocated(DstTable_TypeData%Coefs)) then
          allocate(DstTable_TypeData%Coefs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -566,8 +566,8 @@ subroutine AFI_CopyTable_Type(SrcTable_TypeData, DstTable_TypeData, CtrlCode, Er
       DstTable_TypeData%Coefs = SrcTable_TypeData%Coefs
    end if
    if (allocated(SrcTable_TypeData%SplineCoefs)) then
-      LB(1:3) = lbound(SrcTable_TypeData%SplineCoefs, kind=B8Ki)
-      UB(1:3) = ubound(SrcTable_TypeData%SplineCoefs, kind=B8Ki)
+      LB(1:3) = lbound(SrcTable_TypeData%SplineCoefs)
+      UB(1:3) = ubound(SrcTable_TypeData%SplineCoefs)
       if (.not. allocated(DstTable_TypeData%SplineCoefs)) then
          allocate(DstTable_TypeData%SplineCoefs(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -630,7 +630,7 @@ subroutine AFI_UnPackTable_Type(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AFI_Table_Type), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AFI_UnPackTable_Type'
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -756,8 +756,8 @@ subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AFI_CopyParam'
@@ -770,8 +770,8 @@ subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%ColUAf = SrcParamData%ColUAf
    DstParamData%AFTabMod = SrcParamData%AFTabMod
    if (allocated(SrcParamData%secondVals)) then
-      LB(1:1) = lbound(SrcParamData%secondVals, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%secondVals, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%secondVals)
+      UB(1:1) = ubound(SrcParamData%secondVals)
       if (.not. allocated(DstParamData%secondVals)) then
          allocate(DstParamData%secondVals(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -786,8 +786,8 @@ subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NonDimArea = SrcParamData%NonDimArea
    DstParamData%NumCoords = SrcParamData%NumCoords
    if (allocated(SrcParamData%X_Coord)) then
-      LB(1:1) = lbound(SrcParamData%X_Coord, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%X_Coord, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%X_Coord)
+      UB(1:1) = ubound(SrcParamData%X_Coord)
       if (.not. allocated(DstParamData%X_Coord)) then
          allocate(DstParamData%X_Coord(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -798,8 +798,8 @@ subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%X_Coord = SrcParamData%X_Coord
    end if
    if (allocated(SrcParamData%Y_Coord)) then
-      LB(1:1) = lbound(SrcParamData%Y_Coord, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%Y_Coord, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%Y_Coord)
+      UB(1:1) = ubound(SrcParamData%Y_Coord)
       if (.not. allocated(DstParamData%Y_Coord)) then
          allocate(DstParamData%Y_Coord(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -811,8 +811,8 @@ subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%NumTabs = SrcParamData%NumTabs
    if (allocated(SrcParamData%Table)) then
-      LB(1:1) = lbound(SrcParamData%Table, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%Table, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%Table)
+      UB(1:1) = ubound(SrcParamData%Table)
       if (.not. allocated(DstParamData%Table)) then
          allocate(DstParamData%Table(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -834,8 +834,8 @@ subroutine AFI_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(AFI_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AFI_DestroyParam'
@@ -851,8 +851,8 @@ subroutine AFI_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%Y_Coord)
    end if
    if (allocated(ParamData%Table)) then
-      LB(1:1) = lbound(ParamData%Table, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%Table, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%Table)
+      UB(1:1) = ubound(ParamData%Table)
       do i1 = LB(1), UB(1)
          call AFI_DestroyTable_Type(ParamData%Table(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -865,8 +865,8 @@ subroutine AFI_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AFI_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AFI_PackParam'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%ColCd)
    call RegPack(RF, InData%ColCl)
@@ -884,9 +884,9 @@ subroutine AFI_PackParam(RF, Indata)
    call RegPack(RF, InData%NumTabs)
    call RegPack(RF, allocated(InData%Table))
    if (allocated(InData%Table)) then
-      call RegPackBounds(RF, 1, lbound(InData%Table, kind=B8Ki), ubound(InData%Table, kind=B8Ki))
-      LB(1:1) = lbound(InData%Table, kind=B8Ki)
-      UB(1:1) = ubound(InData%Table, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%Table), ubound(InData%Table))
+      LB(1:1) = lbound(InData%Table)
+      UB(1:1) = ubound(InData%Table)
       do i1 = LB(1), UB(1)
          call AFI_PackTable_Type(RF, InData%Table(i1)) 
       end do
@@ -900,8 +900,8 @@ subroutine AFI_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AFI_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AFI_UnPackParam'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

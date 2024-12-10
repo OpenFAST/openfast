@@ -178,15 +178,15 @@ subroutine IceFloe_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'IceFloe_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -197,8 +197,8 @@ subroutine IceFloe_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -253,7 +253,7 @@ subroutine IceFloe_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(IceFloe_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IceFloe_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -421,14 +421,14 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'IceFloe_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcParamData%loadSeries)) then
-      LB(1:2) = lbound(SrcParamData%loadSeries, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%loadSeries, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%loadSeries)
+      UB(1:2) = ubound(SrcParamData%loadSeries)
       if (.not. allocated(DstParamData%loadSeries)) then
          allocate(DstParamData%loadSeries(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -449,8 +449,8 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%dt = SrcParamData%dt
    DstParamData%rampTime = SrcParamData%rampTime
    if (allocated(SrcParamData%legX)) then
-      LB(1:1) = lbound(SrcParamData%legX, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%legX, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%legX)
+      UB(1:1) = ubound(SrcParamData%legX)
       if (.not. allocated(DstParamData%legX)) then
          allocate(DstParamData%legX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -461,8 +461,8 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%legX = SrcParamData%legX
    end if
    if (allocated(SrcParamData%legY)) then
-      LB(1:1) = lbound(SrcParamData%legY, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%legY, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%legY)
+      UB(1:1) = ubound(SrcParamData%legY)
       if (.not. allocated(DstParamData%legY)) then
          allocate(DstParamData%legY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -473,8 +473,8 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%legY = SrcParamData%legY
    end if
    if (allocated(SrcParamData%ks)) then
-      LB(1:1) = lbound(SrcParamData%ks, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%ks, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%ks)
+      UB(1:1) = ubound(SrcParamData%ks)
       if (.not. allocated(DstParamData%ks)) then
          allocate(DstParamData%ks(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -543,7 +543,7 @@ subroutine IceFloe_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(IceFloe_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IceFloe_UnPackParam'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -620,7 +620,7 @@ subroutine IceFloe_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'IceFloe_CopyOutput'
@@ -630,8 +630,8 @@ subroutine IceFloe_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -673,7 +673,7 @@ subroutine IceFloe_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(IceFloe_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IceFloe_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

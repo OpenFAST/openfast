@@ -222,7 +222,7 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyInputFile'
    ErrStat = ErrID_None
@@ -234,8 +234,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    DstInputFileData%RedFileCst = SrcInputFileData%RedFileCst
    DstInputFileData%EquilStart = SrcInputFileData%EquilStart
    if (allocated(SrcInputFileData%ActiveCBDOF)) then
-      LB(1:1) = lbound(SrcInputFileData%ActiveCBDOF, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%ActiveCBDOF, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%ActiveCBDOF)
+      UB(1:1) = ubound(SrcInputFileData%ActiveCBDOF)
       if (.not. allocated(DstInputFileData%ActiveCBDOF)) then
          allocate(DstInputFileData%ActiveCBDOF(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -246,8 +246,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
       DstInputFileData%ActiveCBDOF = SrcInputFileData%ActiveCBDOF
    end if
    if (allocated(SrcInputFileData%InitPosList)) then
-      LB(1:1) = lbound(SrcInputFileData%InitPosList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%InitPosList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%InitPosList)
+      UB(1:1) = ubound(SrcInputFileData%InitPosList)
       if (.not. allocated(DstInputFileData%InitPosList)) then
          allocate(DstInputFileData%InitPosList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -258,8 +258,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
       DstInputFileData%InitPosList = SrcInputFileData%InitPosList
    end if
    if (allocated(SrcInputFileData%InitVelList)) then
-      LB(1:1) = lbound(SrcInputFileData%InitVelList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%InitVelList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%InitVelList)
+      UB(1:1) = ubound(SrcInputFileData%InitVelList)
       if (.not. allocated(DstInputFileData%InitVelList)) then
          allocate(DstInputFileData%InitVelList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -276,8 +276,8 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
    DstInputFileData%Tstart = SrcInputFileData%Tstart
    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
    if (allocated(SrcInputFileData%OutList)) then
-      LB(1:1) = lbound(SrcInputFileData%OutList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%OutList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%OutList)
+      UB(1:1) = ubound(SrcInputFileData%OutList)
       if (.not. allocated(DstInputFileData%OutList)) then
          allocate(DstInputFileData%OutList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -338,7 +338,7 @@ subroutine ExtPtfm_UnPackInputFile(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackInputFile'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -366,7 +366,7 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyInitOutput'
@@ -376,8 +376,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -388,8 +388,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -400,8 +400,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
    end if
    if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
       if (.not. allocated(DstInitOutputData%LinNames_y)) then
          allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -412,8 +412,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
    end if
    if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
       if (.not. allocated(DstInitOutputData%LinNames_x)) then
          allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -424,8 +424,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
       if (.not. allocated(DstInitOutputData%LinNames_u)) then
          allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -436,8 +436,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
    end if
    if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
       if (.not. allocated(DstInitOutputData%RotFrame_y)) then
          allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -448,8 +448,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
    end if
    if (allocated(SrcInitOutputData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x)
       if (.not. allocated(DstInitOutputData%RotFrame_x)) then
          allocate(DstInitOutputData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -460,8 +460,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
    end if
    if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
       if (.not. allocated(DstInitOutputData%RotFrame_u)) then
          allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -472,8 +472,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
+      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
       if (.not. allocated(DstInitOutputData%IsLoad_u)) then
          allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -484,8 +484,8 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
    end if
    if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
+      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
       if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
          allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -569,7 +569,7 @@ subroutine ExtPtfm_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -593,14 +593,14 @@ subroutine ExtPtfm_CopyContState(SrcContStateData, DstContStateData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%qm)) then
-      LB(1:1) = lbound(SrcContStateData%qm, kind=B8Ki)
-      UB(1:1) = ubound(SrcContStateData%qm, kind=B8Ki)
+      LB(1:1) = lbound(SrcContStateData%qm)
+      UB(1:1) = ubound(SrcContStateData%qm)
       if (.not. allocated(DstContStateData%qm)) then
          allocate(DstContStateData%qm(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -611,8 +611,8 @@ subroutine ExtPtfm_CopyContState(SrcContStateData, DstContStateData, CtrlCode, E
       DstContStateData%qm = SrcContStateData%qm
    end if
    if (allocated(SrcContStateData%qmdot)) then
-      LB(1:1) = lbound(SrcContStateData%qmdot, kind=B8Ki)
-      UB(1:1) = ubound(SrcContStateData%qmdot, kind=B8Ki)
+      LB(1:1) = lbound(SrcContStateData%qmdot)
+      UB(1:1) = ubound(SrcContStateData%qmdot)
       if (.not. allocated(DstContStateData%qmdot)) then
          allocate(DstContStateData%qmdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -653,7 +653,7 @@ subroutine ExtPtfm_UnPackContState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackContState'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -743,16 +743,16 @@ subroutine ExtPtfm_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOtherStateData%xdot)) then
-      LB(1:1) = lbound(SrcOtherStateData%xdot, kind=B8Ki)
-      UB(1:1) = ubound(SrcOtherStateData%xdot, kind=B8Ki)
+      LB(1:1) = lbound(SrcOtherStateData%xdot)
+      UB(1:1) = ubound(SrcOtherStateData%xdot)
       if (.not. allocated(DstOtherStateData%xdot)) then
          allocate(DstOtherStateData%xdot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -773,16 +773,16 @@ subroutine ExtPtfm_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(ExtPtfm_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OtherStateData%xdot)) then
-      LB(1:1) = lbound(OtherStateData%xdot, kind=B8Ki)
-      UB(1:1) = ubound(OtherStateData%xdot, kind=B8Ki)
+      LB(1:1) = lbound(OtherStateData%xdot)
+      UB(1:1) = ubound(OtherStateData%xdot)
       do i1 = LB(1), UB(1)
          call ExtPtfm_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -795,14 +795,14 @@ subroutine ExtPtfm_PackOtherState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ExtPtfm_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%xdot))
    if (allocated(InData%xdot)) then
-      call RegPackBounds(RF, 1, lbound(InData%xdot, kind=B8Ki), ubound(InData%xdot, kind=B8Ki))
-      LB(1:1) = lbound(InData%xdot, kind=B8Ki)
-      UB(1:1) = ubound(InData%xdot, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%xdot), ubound(InData%xdot))
+      LB(1:1) = lbound(InData%xdot)
+      UB(1:1) = ubound(InData%xdot)
       do i1 = LB(1), UB(1)
          call ExtPtfm_PackContState(RF, InData%xdot(i1)) 
       end do
@@ -815,8 +815,8 @@ subroutine ExtPtfm_UnPackOtherState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -842,16 +842,16 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcParamData%Mass)) then
-      LB(1:2) = lbound(SrcParamData%Mass, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Mass, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Mass)
+      UB(1:2) = ubound(SrcParamData%Mass)
       if (.not. allocated(DstParamData%Mass)) then
          allocate(DstParamData%Mass(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -862,8 +862,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%Mass = SrcParamData%Mass
    end if
    if (allocated(SrcParamData%Damp)) then
-      LB(1:2) = lbound(SrcParamData%Damp, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Damp, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Damp)
+      UB(1:2) = ubound(SrcParamData%Damp)
       if (.not. allocated(DstParamData%Damp)) then
          allocate(DstParamData%Damp(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -874,8 +874,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%Damp = SrcParamData%Damp
    end if
    if (allocated(SrcParamData%Stff)) then
-      LB(1:2) = lbound(SrcParamData%Stff, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Stff, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Stff)
+      UB(1:2) = ubound(SrcParamData%Stff)
       if (.not. allocated(DstParamData%Stff)) then
          allocate(DstParamData%Stff(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -886,8 +886,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%Stff = SrcParamData%Stff
    end if
    if (allocated(SrcParamData%Forces)) then
-      LB(1:2) = lbound(SrcParamData%Forces, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Forces, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Forces)
+      UB(1:2) = ubound(SrcParamData%Forces)
       if (.not. allocated(DstParamData%Forces)) then
          allocate(DstParamData%Forces(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -898,8 +898,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%Forces = SrcParamData%Forces
    end if
    if (allocated(SrcParamData%times)) then
-      LB(1:1) = lbound(SrcParamData%times, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%times, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%times)
+      UB(1:1) = ubound(SrcParamData%times)
       if (.not. allocated(DstParamData%times)) then
          allocate(DstParamData%times(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -910,8 +910,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%times = SrcParamData%times
    end if
    if (allocated(SrcParamData%AMat)) then
-      LB(1:2) = lbound(SrcParamData%AMat, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%AMat, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%AMat)
+      UB(1:2) = ubound(SrcParamData%AMat)
       if (.not. allocated(DstParamData%AMat)) then
          allocate(DstParamData%AMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -922,8 +922,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%AMat = SrcParamData%AMat
    end if
    if (allocated(SrcParamData%BMat)) then
-      LB(1:2) = lbound(SrcParamData%BMat, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%BMat, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%BMat)
+      UB(1:2) = ubound(SrcParamData%BMat)
       if (.not. allocated(DstParamData%BMat)) then
          allocate(DstParamData%BMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -934,8 +934,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%BMat = SrcParamData%BMat
    end if
    if (allocated(SrcParamData%CMat)) then
-      LB(1:2) = lbound(SrcParamData%CMat, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%CMat, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%CMat)
+      UB(1:2) = ubound(SrcParamData%CMat)
       if (.not. allocated(DstParamData%CMat)) then
          allocate(DstParamData%CMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -946,8 +946,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%CMat = SrcParamData%CMat
    end if
    if (allocated(SrcParamData%DMat)) then
-      LB(1:2) = lbound(SrcParamData%DMat, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%DMat, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%DMat)
+      UB(1:2) = ubound(SrcParamData%DMat)
       if (.not. allocated(DstParamData%DMat)) then
          allocate(DstParamData%DMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -958,8 +958,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%DMat = SrcParamData%DMat
    end if
    if (allocated(SrcParamData%FX)) then
-      LB(1:1) = lbound(SrcParamData%FX, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%FX, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%FX)
+      UB(1:1) = ubound(SrcParamData%FX)
       if (.not. allocated(DstParamData%FX)) then
          allocate(DstParamData%FX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -970,8 +970,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%FX = SrcParamData%FX
    end if
    if (allocated(SrcParamData%FY)) then
-      LB(1:1) = lbound(SrcParamData%FY, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%FY, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%FY)
+      UB(1:1) = ubound(SrcParamData%FY)
       if (.not. allocated(DstParamData%FY)) then
          allocate(DstParamData%FY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -982,8 +982,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%FY = SrcParamData%FY
    end if
    if (allocated(SrcParamData%M11)) then
-      LB(1:2) = lbound(SrcParamData%M11, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%M11, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%M11)
+      UB(1:2) = ubound(SrcParamData%M11)
       if (.not. allocated(DstParamData%M11)) then
          allocate(DstParamData%M11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -994,8 +994,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%M11 = SrcParamData%M11
    end if
    if (allocated(SrcParamData%M12)) then
-      LB(1:2) = lbound(SrcParamData%M12, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%M12, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%M12)
+      UB(1:2) = ubound(SrcParamData%M12)
       if (.not. allocated(DstParamData%M12)) then
          allocate(DstParamData%M12(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1006,8 +1006,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%M12 = SrcParamData%M12
    end if
    if (allocated(SrcParamData%M22)) then
-      LB(1:2) = lbound(SrcParamData%M22, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%M22, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%M22)
+      UB(1:2) = ubound(SrcParamData%M22)
       if (.not. allocated(DstParamData%M22)) then
          allocate(DstParamData%M22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1018,8 +1018,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%M22 = SrcParamData%M22
    end if
    if (allocated(SrcParamData%M21)) then
-      LB(1:2) = lbound(SrcParamData%M21, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%M21, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%M21)
+      UB(1:2) = ubound(SrcParamData%M21)
       if (.not. allocated(DstParamData%M21)) then
          allocate(DstParamData%M21(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1030,8 +1030,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%M21 = SrcParamData%M21
    end if
    if (allocated(SrcParamData%K11)) then
-      LB(1:2) = lbound(SrcParamData%K11, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%K11, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%K11)
+      UB(1:2) = ubound(SrcParamData%K11)
       if (.not. allocated(DstParamData%K11)) then
          allocate(DstParamData%K11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1042,8 +1042,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%K11 = SrcParamData%K11
    end if
    if (allocated(SrcParamData%K22)) then
-      LB(1:2) = lbound(SrcParamData%K22, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%K22, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%K22)
+      UB(1:2) = ubound(SrcParamData%K22)
       if (.not. allocated(DstParamData%K22)) then
          allocate(DstParamData%K22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1054,8 +1054,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%K22 = SrcParamData%K22
    end if
    if (allocated(SrcParamData%C11)) then
-      LB(1:2) = lbound(SrcParamData%C11, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%C11, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%C11)
+      UB(1:2) = ubound(SrcParamData%C11)
       if (.not. allocated(DstParamData%C11)) then
          allocate(DstParamData%C11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1066,8 +1066,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%C11 = SrcParamData%C11
    end if
    if (allocated(SrcParamData%C12)) then
-      LB(1:2) = lbound(SrcParamData%C12, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%C12, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%C12)
+      UB(1:2) = ubound(SrcParamData%C12)
       if (.not. allocated(DstParamData%C12)) then
          allocate(DstParamData%C12(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1078,8 +1078,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%C12 = SrcParamData%C12
    end if
    if (allocated(SrcParamData%C22)) then
-      LB(1:2) = lbound(SrcParamData%C22, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%C22, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%C22)
+      UB(1:2) = ubound(SrcParamData%C22)
       if (.not. allocated(DstParamData%C22)) then
          allocate(DstParamData%C22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1090,8 +1090,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%C22 = SrcParamData%C22
    end if
    if (allocated(SrcParamData%C21)) then
-      LB(1:2) = lbound(SrcParamData%C21, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%C21, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%C21)
+      UB(1:2) = ubound(SrcParamData%C21)
       if (.not. allocated(DstParamData%C21)) then
          allocate(DstParamData%C21(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1109,8 +1109,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%IntMethod = SrcParamData%IntMethod
    if (allocated(SrcParamData%ActiveCBDOF)) then
-      LB(1:1) = lbound(SrcParamData%ActiveCBDOF, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%ActiveCBDOF, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%ActiveCBDOF)
+      UB(1:1) = ubound(SrcParamData%ActiveCBDOF)
       if (.not. allocated(DstParamData%ActiveCBDOF)) then
          allocate(DstParamData%ActiveCBDOF(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1121,8 +1121,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%ActiveCBDOF = SrcParamData%ActiveCBDOF
    end if
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1137,8 +1137,8 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end do
    end if
    if (allocated(SrcParamData%OutParamLinIndx)) then
-      LB(1:2) = lbound(SrcParamData%OutParamLinIndx, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%OutParamLinIndx, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%OutParamLinIndx)
+      UB(1:2) = ubound(SrcParamData%OutParamLinIndx)
       if (.not. allocated(DstParamData%OutParamLinIndx)) then
          allocate(DstParamData%OutParamLinIndx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1154,8 +1154,8 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(ExtPtfm_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyParam'
@@ -1228,8 +1228,8 @@ subroutine ExtPtfm_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%ActiveCBDOF)
    end if
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1245,8 +1245,8 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ExtPtfm_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtPtfm_PackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%Mass)
    call RegPackAlloc(RF, InData%Damp)
@@ -1279,9 +1279,9 @@ subroutine ExtPtfm_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%ActiveCBDOF)
    call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(RF, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
-      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
+      LB(1:1) = lbound(InData%OutParam)
+      UB(1:1) = ubound(InData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(RF, InData%OutParam(i1)) 
       end do
@@ -1294,8 +1294,8 @@ subroutine ExtPtfm_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1396,7 +1396,7 @@ subroutine ExtPtfm_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyOutput'
@@ -1406,8 +1406,8 @@ subroutine ExtPtfm_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1449,7 +1449,7 @@ subroutine ExtPtfm_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1463,15 +1463,15 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtPtfm_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%xFlat)) then
-      LB(1:1) = lbound(SrcMiscData%xFlat, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%xFlat, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%xFlat)
+      UB(1:1) = ubound(SrcMiscData%xFlat)
       if (.not. allocated(DstMiscData%xFlat)) then
          allocate(DstMiscData%xFlat(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1483,8 +1483,8 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstMiscData%uFlat = SrcMiscData%uFlat
    if (allocated(SrcMiscData%F_at_t)) then
-      LB(1:1) = lbound(SrcMiscData%F_at_t, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%F_at_t, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%F_at_t)
+      UB(1:1) = ubound(SrcMiscData%F_at_t)
       if (.not. allocated(DstMiscData%F_at_t)) then
          allocate(DstMiscData%F_at_t(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1497,8 +1497,8 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%Indx = SrcMiscData%Indx
    DstMiscData%EquilStart = SrcMiscData%EquilStart
    if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%AllOuts, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%AllOuts)
+      UB(1:1) = ubound(SrcMiscData%AllOuts)
       if (.not. allocated(DstMiscData%AllOuts)) then
          allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1578,7 +1578,7 @@ subroutine ExtPtfm_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtPtfm_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackMisc'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

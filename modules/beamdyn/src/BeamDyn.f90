@@ -1655,6 +1655,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
          ! Array for storing the position information for the quadrature points.
       CALL AllocAry(m%qp%uuu,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%uuu displacement at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%uup,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%uup displacement prime at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(m%qp%uup,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%uup displacement prime at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%vvv,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%vvv velocity at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%vvp,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%vvp velocity prime at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%aaa,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%aaa acceleration at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3009,7 +3010,8 @@ SUBROUTINE BD_QPDataAcceleration( p, OtherState, m )
       elem_start = p%node_elem_idx(nelem,1)
 
       ! Interpolate the acceleration term at t+dt (OtherState%acc is at t+dt) to quadrature points
-      call LAPACK_DGEMM('N','N', 1.0_BDKi, OtherState%acc(:,elem_start:elem_start+p%nodes_per_elem-1), p%Shp, 0.0_BDKi,  m%qp%aaa(:,:,nelem), ErrStat, ErrMsg)
+      ! NOTE: errors from LAPACK_GEMM can only be due to matrix size mismatch, so they can be safely ignored if matrices are correct size
+      call LAPACK_GEMM('N','N', 1.0_BDKi, OtherState%acc(:,elem_start:elem_start+p%nodes_per_elem-1), p%Shp, 0.0_BDKi,  m%qp%aaa(:,:,nelem), ErrStat, ErrMsg)
       
    end do
 

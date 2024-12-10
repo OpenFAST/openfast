@@ -86,6 +86,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density [kg/m^3]
     TYPE(ModVarsType)  :: Vars      !< Module variables [-]
   END TYPE ADsk_InitOutputType
 ! =======================
@@ -190,7 +191,7 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(5), UB(5)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ADsk_CopyAeroTable'
    ErrStat = ErrID_None
@@ -201,8 +202,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
    DstAeroTableData%N_Pitch = SrcAeroTableData%N_Pitch
    DstAeroTableData%N_Skew = SrcAeroTableData%N_Skew
    if (allocated(SrcAeroTableData%TSR)) then
-      LB(1:1) = lbound(SrcAeroTableData%TSR, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroTableData%TSR, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroTableData%TSR)
+      UB(1:1) = ubound(SrcAeroTableData%TSR)
       if (.not. allocated(DstAeroTableData%TSR)) then
          allocate(DstAeroTableData%TSR(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -213,8 +214,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%TSR = SrcAeroTableData%TSR
    end if
    if (allocated(SrcAeroTableData%RtSpd)) then
-      LB(1:1) = lbound(SrcAeroTableData%RtSpd, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroTableData%RtSpd, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroTableData%RtSpd)
+      UB(1:1) = ubound(SrcAeroTableData%RtSpd)
       if (.not. allocated(DstAeroTableData%RtSpd)) then
          allocate(DstAeroTableData%RtSpd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -225,8 +226,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%RtSpd = SrcAeroTableData%RtSpd
    end if
    if (allocated(SrcAeroTableData%VRel)) then
-      LB(1:1) = lbound(SrcAeroTableData%VRel, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroTableData%VRel, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroTableData%VRel)
+      UB(1:1) = ubound(SrcAeroTableData%VRel)
       if (.not. allocated(DstAeroTableData%VRel)) then
          allocate(DstAeroTableData%VRel(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -237,8 +238,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%VRel = SrcAeroTableData%VRel
    end if
    if (allocated(SrcAeroTableData%Pitch)) then
-      LB(1:1) = lbound(SrcAeroTableData%Pitch, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroTableData%Pitch, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroTableData%Pitch)
+      UB(1:1) = ubound(SrcAeroTableData%Pitch)
       if (.not. allocated(DstAeroTableData%Pitch)) then
          allocate(DstAeroTableData%Pitch(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -249,8 +250,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%Pitch = SrcAeroTableData%Pitch
    end if
    if (allocated(SrcAeroTableData%Skew)) then
-      LB(1:1) = lbound(SrcAeroTableData%Skew, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroTableData%Skew, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroTableData%Skew)
+      UB(1:1) = ubound(SrcAeroTableData%Skew)
       if (.not. allocated(DstAeroTableData%Skew)) then
          allocate(DstAeroTableData%Skew(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -261,8 +262,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%Skew = SrcAeroTableData%Skew
    end if
    if (allocated(SrcAeroTableData%C_Fx)) then
-      LB(1:5) = lbound(SrcAeroTableData%C_Fx, kind=B8Ki)
-      UB(1:5) = ubound(SrcAeroTableData%C_Fx, kind=B8Ki)
+      LB(1:5) = lbound(SrcAeroTableData%C_Fx)
+      UB(1:5) = ubound(SrcAeroTableData%C_Fx)
       if (.not. allocated(DstAeroTableData%C_Fx)) then
          allocate(DstAeroTableData%C_Fx(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -273,8 +274,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%C_Fx = SrcAeroTableData%C_Fx
    end if
    if (allocated(SrcAeroTableData%C_Fy)) then
-      LB(1:5) = lbound(SrcAeroTableData%C_Fy, kind=B8Ki)
-      UB(1:5) = ubound(SrcAeroTableData%C_Fy, kind=B8Ki)
+      LB(1:5) = lbound(SrcAeroTableData%C_Fy)
+      UB(1:5) = ubound(SrcAeroTableData%C_Fy)
       if (.not. allocated(DstAeroTableData%C_Fy)) then
          allocate(DstAeroTableData%C_Fy(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -285,8 +286,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%C_Fy = SrcAeroTableData%C_Fy
    end if
    if (allocated(SrcAeroTableData%C_Fz)) then
-      LB(1:5) = lbound(SrcAeroTableData%C_Fz, kind=B8Ki)
-      UB(1:5) = ubound(SrcAeroTableData%C_Fz, kind=B8Ki)
+      LB(1:5) = lbound(SrcAeroTableData%C_Fz)
+      UB(1:5) = ubound(SrcAeroTableData%C_Fz)
       if (.not. allocated(DstAeroTableData%C_Fz)) then
          allocate(DstAeroTableData%C_Fz(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -297,8 +298,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%C_Fz = SrcAeroTableData%C_Fz
    end if
    if (allocated(SrcAeroTableData%C_Mx)) then
-      LB(1:5) = lbound(SrcAeroTableData%C_Mx, kind=B8Ki)
-      UB(1:5) = ubound(SrcAeroTableData%C_Mx, kind=B8Ki)
+      LB(1:5) = lbound(SrcAeroTableData%C_Mx)
+      UB(1:5) = ubound(SrcAeroTableData%C_Mx)
       if (.not. allocated(DstAeroTableData%C_Mx)) then
          allocate(DstAeroTableData%C_Mx(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -309,8 +310,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%C_Mx = SrcAeroTableData%C_Mx
    end if
    if (allocated(SrcAeroTableData%C_My)) then
-      LB(1:5) = lbound(SrcAeroTableData%C_My, kind=B8Ki)
-      UB(1:5) = ubound(SrcAeroTableData%C_My, kind=B8Ki)
+      LB(1:5) = lbound(SrcAeroTableData%C_My)
+      UB(1:5) = ubound(SrcAeroTableData%C_My)
       if (.not. allocated(DstAeroTableData%C_My)) then
          allocate(DstAeroTableData%C_My(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -321,8 +322,8 @@ subroutine ADsk_CopyAeroTable(SrcAeroTableData, DstAeroTableData, CtrlCode, ErrS
       DstAeroTableData%C_My = SrcAeroTableData%C_My
    end if
    if (allocated(SrcAeroTableData%C_Mz)) then
-      LB(1:5) = lbound(SrcAeroTableData%C_Mz, kind=B8Ki)
-      UB(1:5) = ubound(SrcAeroTableData%C_Mz, kind=B8Ki)
+      LB(1:5) = lbound(SrcAeroTableData%C_Mz)
+      UB(1:5) = ubound(SrcAeroTableData%C_Mz)
       if (.not. allocated(DstAeroTableData%C_Mz)) then
          allocate(DstAeroTableData%C_Mz(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -404,7 +405,7 @@ subroutine ADsk_UnPackAeroTable(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADsk_AeroTable), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADsk_UnPackAeroTable'
-   integer(B8Ki)   :: LB(5), UB(5)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -432,7 +433,7 @@ subroutine ADsk_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADsk_CopyInputFile'
@@ -445,8 +446,8 @@ subroutine ADsk_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
    DstInputFileData%SumPrint = SrcInputFileData%SumPrint
    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
    if (allocated(SrcInputFileData%OutList)) then
-      LB(1:1) = lbound(SrcInputFileData%OutList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%OutList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%OutList)
+      UB(1:1) = ubound(SrcInputFileData%OutList)
       if (.not. allocated(DstInputFileData%OutList)) then
          allocate(DstInputFileData%OutList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -497,7 +498,7 @@ subroutine ADsk_UnPackInputFile(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADsk_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADsk_UnPackInputFile'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -517,7 +518,7 @@ subroutine ADsk_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADsk_CopyInitInput'
@@ -580,7 +581,7 @@ subroutine ADsk_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADsk_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADsk_UnPackInitInput'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -621,15 +622,15 @@ subroutine ADsk_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADsk_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -640,8 +641,8 @@ subroutine ADsk_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -654,6 +655,7 @@ subroutine ADsk_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%AirDens = SrcInitOutputData%AirDens
    call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -688,6 +690,7 @@ subroutine ADsk_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call RegPack(RF, InData%AirDens)
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -696,13 +699,14 @@ subroutine ADsk_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADsk_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADsk_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
@@ -764,7 +768,7 @@ subroutine ADsk_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADsk_CopyOutput'
@@ -780,8 +784,8 @@ subroutine ADsk_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
    DstOutputData%Ct = SrcOutputData%Ct
    DstOutputData%Cq = SrcOutputData%Cq
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -829,7 +833,7 @@ subroutine ADsk_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADsk_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADsk_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1001,8 +1005,8 @@ subroutine ADsk_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADsk_CopyParam'
@@ -1019,8 +1023,8 @@ subroutine ADsk_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    DstParamData%UseTSR = SrcParamData%UseTSR
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1036,8 +1040,8 @@ subroutine ADsk_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%FlowField => SrcParamData%FlowField
    if (allocated(SrcParamData%DiskWindPosRel)) then
-      LB(1:2) = lbound(SrcParamData%DiskWindPosRel, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%DiskWindPosRel, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%DiskWindPosRel)
+      UB(1:2) = ubound(SrcParamData%DiskWindPosRel)
       if (.not. allocated(DstParamData%DiskWindPosRel)) then
          allocate(DstParamData%DiskWindPosRel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1053,8 +1057,8 @@ subroutine ADsk_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(ADsk_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADsk_DestroyParam'
@@ -1063,8 +1067,8 @@ subroutine ADsk_DestroyParam(ParamData, ErrStat, ErrMsg)
    call ADsk_DestroyAeroTable(ParamData%AeroTable, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1081,8 +1085,8 @@ subroutine ADsk_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ADsk_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ADsk_PackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%RootName)
@@ -1095,9 +1099,9 @@ subroutine ADsk_PackParam(RF, Indata)
    call RegPack(RF, InData%UseTSR)
    call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(RF, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
-      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
+      LB(1:1) = lbound(InData%OutParam)
+      UB(1:1) = ubound(InData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(RF, InData%OutParam(i1)) 
       end do
@@ -1117,8 +1121,8 @@ subroutine ADsk_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADsk_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADsk_UnPackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -1172,7 +1176,7 @@ subroutine ADsk_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ADsk_CopyMisc'
@@ -1180,8 +1184,8 @@ subroutine ADsk_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    ErrMsg  = ''
    DstMiscData%idx_last = SrcMiscData%idx_last
    if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%AllOuts, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%AllOuts)
+      UB(1:1) = ubound(SrcMiscData%AllOuts)
       if (.not. allocated(DstMiscData%AllOuts)) then
          allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1203,8 +1207,8 @@ subroutine ADsk_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    DstMiscData%Force = SrcMiscData%Force
    DstMiscData%Moment = SrcMiscData%Moment
    if (allocated(SrcMiscData%DiskWindPosAbs)) then
-      LB(1:2) = lbound(SrcMiscData%DiskWindPosAbs, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%DiskWindPosAbs, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%DiskWindPosAbs)
+      UB(1:2) = ubound(SrcMiscData%DiskWindPosAbs)
       if (.not. allocated(DstMiscData%DiskWindPosAbs)) then
          allocate(DstMiscData%DiskWindPosAbs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1215,8 +1219,8 @@ subroutine ADsk_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%DiskWindPosAbs = SrcMiscData%DiskWindPosAbs
    end if
    if (allocated(SrcMiscData%DiskWindVel)) then
-      LB(1:2) = lbound(SrcMiscData%DiskWindVel, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%DiskWindVel, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%DiskWindVel)
+      UB(1:2) = ubound(SrcMiscData%DiskWindVel)
       if (.not. allocated(DstMiscData%DiskWindVel)) then
          allocate(DstMiscData%DiskWindVel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1307,7 +1311,7 @@ subroutine ADsk_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ADsk_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ADsk_UnPackMisc'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

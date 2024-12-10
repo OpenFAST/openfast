@@ -11,7 +11,7 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 
 
 
-OpenFAST v3.5.3 to OpenFAST dev
+OpenFAST v3.5.4 to OpenFAST dev
 ----------------------------------
 
 The HydroDyn module was split into HydroDyn and SeaState.  This results in a
@@ -29,6 +29,8 @@ OpenFAST                                      15      CompAero\**          2   C
 OpenFAST                                      13      CompElast            3   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades; 3=Simplified ElastoDyn}
 AeroDyn                                       40      IntegrationMethod    3   IntegrationMethod  - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2)
 AeroDyn                                       140\*   BldNd_BlOutNd        "All"  BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
+AeroDyn Aeroacoustics                         11\*    TI                   0.1 TI   - Rotor-incident wind turbulence intensity (-) [Only used if TiCalcMeth == 1]
+AeroDyn Aeroacoustics                         12\*    avgV                 8 avgV   - Average wind speed used to compute the section-incident turbulence intensity (m/s) [Only used if TiCalcMeth == 1]
 ElastoDyn blade file                          15                           Removal of the `PitchAxis` input column
 HydroDyn                                       all                         Complete restructuring of input file
 SeaState                                       all                         New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
@@ -104,6 +106,10 @@ Old inputs                  Corresponding new inputs
 
 
 
+OpenFAST v3.5.3 to OpenFAST v3.5.4 
+----------------------------------
+
+No input file changes were made.
 
 
 OpenFAST v3.5.2 to OpenFAST v3.5.3 

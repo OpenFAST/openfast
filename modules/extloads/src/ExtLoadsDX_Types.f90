@@ -134,14 +134,14 @@ subroutine ExtLdDX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ExtLdDX_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcInputData%twrDef)) then
-      LB(1:1) = lbound(SrcInputData%twrDef, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%twrDef, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%twrDef)
+      UB(1:1) = ubound(SrcInputData%twrDef)
       if (.not. associated(DstInputData%twrDef)) then
          allocate(DstInputData%twrDef(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -155,8 +155,8 @@ subroutine ExtLdDX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
       DstInputData%twrDef = SrcInputData%twrDef
    end if
    if (associated(SrcInputData%bldDef)) then
-      LB(1:1) = lbound(SrcInputData%bldDef, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%bldDef, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%bldDef)
+      UB(1:1) = ubound(SrcInputData%bldDef)
       if (.not. associated(DstInputData%bldDef)) then
          allocate(DstInputData%bldDef(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -170,8 +170,8 @@ subroutine ExtLdDX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
       DstInputData%bldDef = SrcInputData%bldDef
    end if
    if (associated(SrcInputData%hubDef)) then
-      LB(1:1) = lbound(SrcInputData%hubDef, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%hubDef, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%hubDef)
+      UB(1:1) = ubound(SrcInputData%hubDef)
       if (.not. associated(DstInputData%hubDef)) then
          allocate(DstInputData%hubDef(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -185,8 +185,8 @@ subroutine ExtLdDX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
       DstInputData%hubDef = SrcInputData%hubDef
    end if
    if (associated(SrcInputData%nacDef)) then
-      LB(1:1) = lbound(SrcInputData%nacDef, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%nacDef, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%nacDef)
+      UB(1:1) = ubound(SrcInputData%nacDef)
       if (.not. associated(DstInputData%nacDef)) then
          allocate(DstInputData%nacDef(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -200,8 +200,8 @@ subroutine ExtLdDX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
       DstInputData%nacDef = SrcInputData%nacDef
    end if
    if (associated(SrcInputData%bldRootDef)) then
-      LB(1:1) = lbound(SrcInputData%bldRootDef, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%bldRootDef, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%bldRootDef)
+      UB(1:1) = ubound(SrcInputData%bldRootDef)
       if (.not. associated(DstInputData%bldRootDef)) then
          allocate(DstInputData%bldRootDef(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -215,8 +215,8 @@ subroutine ExtLdDX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrM
       DstInputData%bldRootDef = SrcInputData%bldRootDef
    end if
    if (associated(SrcInputData%bldPitch)) then
-      LB(1:1) = lbound(SrcInputData%bldPitch, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%bldPitch, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%bldPitch)
+      UB(1:1) = ubound(SrcInputData%bldPitch)
       if (.not. associated(DstInputData%bldPitch)) then
          allocate(DstInputData%bldPitch(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -299,7 +299,7 @@ subroutine ExtLdDX_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtLdDX_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtLdDX_UnPackInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -432,7 +432,7 @@ SUBROUTINE ExtLdDX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%twrDef_Len = SIZE(InputData%twrDef)
          IF (InputData%C_obj%twrDef_Len > 0) &
-            InputData%C_obj%twrDef = C_LOC(InputData%twrDef(LBOUND(InputData%twrDef,1, kind=B8Ki)))
+            InputData%C_obj%twrDef = C_LOC(InputData%twrDef(lbound(InputData%twrDef,1)))
       END IF
    END IF
    
@@ -444,7 +444,7 @@ SUBROUTINE ExtLdDX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%bldDef_Len = SIZE(InputData%bldDef)
          IF (InputData%C_obj%bldDef_Len > 0) &
-            InputData%C_obj%bldDef = C_LOC(InputData%bldDef(LBOUND(InputData%bldDef,1, kind=B8Ki)))
+            InputData%C_obj%bldDef = C_LOC(InputData%bldDef(lbound(InputData%bldDef,1)))
       END IF
    END IF
    
@@ -456,7 +456,7 @@ SUBROUTINE ExtLdDX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%hubDef_Len = SIZE(InputData%hubDef)
          IF (InputData%C_obj%hubDef_Len > 0) &
-            InputData%C_obj%hubDef = C_LOC(InputData%hubDef(LBOUND(InputData%hubDef,1, kind=B8Ki)))
+            InputData%C_obj%hubDef = C_LOC(InputData%hubDef(lbound(InputData%hubDef,1)))
       END IF
    END IF
    
@@ -468,7 +468,7 @@ SUBROUTINE ExtLdDX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%nacDef_Len = SIZE(InputData%nacDef)
          IF (InputData%C_obj%nacDef_Len > 0) &
-            InputData%C_obj%nacDef = C_LOC(InputData%nacDef(LBOUND(InputData%nacDef,1, kind=B8Ki)))
+            InputData%C_obj%nacDef = C_LOC(InputData%nacDef(lbound(InputData%nacDef,1)))
       END IF
    END IF
    
@@ -480,7 +480,7 @@ SUBROUTINE ExtLdDX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%bldRootDef_Len = SIZE(InputData%bldRootDef)
          IF (InputData%C_obj%bldRootDef_Len > 0) &
-            InputData%C_obj%bldRootDef = C_LOC(InputData%bldRootDef(LBOUND(InputData%bldRootDef,1, kind=B8Ki)))
+            InputData%C_obj%bldRootDef = C_LOC(InputData%bldRootDef(lbound(InputData%bldRootDef,1)))
       END IF
    END IF
    
@@ -492,7 +492,7 @@ SUBROUTINE ExtLdDX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          InputData%C_obj%bldPitch_Len = SIZE(InputData%bldPitch)
          IF (InputData%C_obj%bldPitch_Len > 0) &
-            InputData%C_obj%bldPitch = C_LOC(InputData%bldPitch(LBOUND(InputData%bldPitch,1, kind=B8Ki)))
+            InputData%C_obj%bldPitch = C_LOC(InputData%bldPitch(lbound(InputData%bldPitch,1)))
       END IF
    END IF
 END SUBROUTINE
@@ -503,14 +503,14 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ExtLdDX_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcParamData%nBlades)) then
-      LB(1:1) = lbound(SrcParamData%nBlades, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%nBlades, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%nBlades)
+      UB(1:1) = ubound(SrcParamData%nBlades)
       if (.not. associated(DstParamData%nBlades)) then
          allocate(DstParamData%nBlades(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -524,8 +524,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%nBlades = SrcParamData%nBlades
    end if
    if (associated(SrcParamData%nBladeNodes)) then
-      LB(1:1) = lbound(SrcParamData%nBladeNodes, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%nBladeNodes, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%nBladeNodes)
+      UB(1:1) = ubound(SrcParamData%nBladeNodes)
       if (.not. associated(DstParamData%nBladeNodes)) then
          allocate(DstParamData%nBladeNodes(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -539,8 +539,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%nBladeNodes = SrcParamData%nBladeNodes
    end if
    if (associated(SrcParamData%nTowerNodes)) then
-      LB(1:1) = lbound(SrcParamData%nTowerNodes, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%nTowerNodes, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%nTowerNodes)
+      UB(1:1) = ubound(SrcParamData%nTowerNodes)
       if (.not. associated(DstParamData%nTowerNodes)) then
          allocate(DstParamData%nTowerNodes(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -554,8 +554,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%nTowerNodes = SrcParamData%nTowerNodes
    end if
    if (associated(SrcParamData%twrRefPos)) then
-      LB(1:1) = lbound(SrcParamData%twrRefPos, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%twrRefPos, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%twrRefPos)
+      UB(1:1) = ubound(SrcParamData%twrRefPos)
       if (.not. associated(DstParamData%twrRefPos)) then
          allocate(DstParamData%twrRefPos(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -569,8 +569,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%twrRefPos = SrcParamData%twrRefPos
    end if
    if (associated(SrcParamData%bldRefPos)) then
-      LB(1:1) = lbound(SrcParamData%bldRefPos, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%bldRefPos, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%bldRefPos)
+      UB(1:1) = ubound(SrcParamData%bldRefPos)
       if (.not. associated(DstParamData%bldRefPos)) then
          allocate(DstParamData%bldRefPos(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -584,8 +584,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%bldRefPos = SrcParamData%bldRefPos
    end if
    if (associated(SrcParamData%hubRefPos)) then
-      LB(1:1) = lbound(SrcParamData%hubRefPos, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%hubRefPos, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%hubRefPos)
+      UB(1:1) = ubound(SrcParamData%hubRefPos)
       if (.not. associated(DstParamData%hubRefPos)) then
          allocate(DstParamData%hubRefPos(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -599,8 +599,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%hubRefPos = SrcParamData%hubRefPos
    end if
    if (associated(SrcParamData%nacRefPos)) then
-      LB(1:1) = lbound(SrcParamData%nacRefPos, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%nacRefPos, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%nacRefPos)
+      UB(1:1) = ubound(SrcParamData%nacRefPos)
       if (.not. associated(DstParamData%nacRefPos)) then
          allocate(DstParamData%nacRefPos(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -614,8 +614,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%nacRefPos = SrcParamData%nacRefPos
    end if
    if (associated(SrcParamData%bldRootRefPos)) then
-      LB(1:1) = lbound(SrcParamData%bldRootRefPos, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%bldRootRefPos, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%bldRootRefPos)
+      UB(1:1) = ubound(SrcParamData%bldRootRefPos)
       if (.not. associated(DstParamData%bldRootRefPos)) then
          allocate(DstParamData%bldRootRefPos(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -629,8 +629,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%bldRootRefPos = SrcParamData%bldRootRefPos
    end if
    if (associated(SrcParamData%bldChord)) then
-      LB(1:1) = lbound(SrcParamData%bldChord, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%bldChord, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%bldChord)
+      UB(1:1) = ubound(SrcParamData%bldChord)
       if (.not. associated(DstParamData%bldChord)) then
          allocate(DstParamData%bldChord(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -644,8 +644,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%bldChord = SrcParamData%bldChord
    end if
    if (associated(SrcParamData%bldRloc)) then
-      LB(1:1) = lbound(SrcParamData%bldRloc, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%bldRloc, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%bldRloc)
+      UB(1:1) = ubound(SrcParamData%bldRloc)
       if (.not. associated(DstParamData%bldRloc)) then
          allocate(DstParamData%bldRloc(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -659,8 +659,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%bldRloc = SrcParamData%bldRloc
    end if
    if (associated(SrcParamData%twrDia)) then
-      LB(1:1) = lbound(SrcParamData%twrDia, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%twrDia, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%twrDia)
+      UB(1:1) = ubound(SrcParamData%twrDia)
       if (.not. associated(DstParamData%twrDia)) then
          allocate(DstParamData%twrDia(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -674,8 +674,8 @@ subroutine ExtLdDX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       DstParamData%twrDia = SrcParamData%twrDia
    end if
    if (associated(SrcParamData%twrHloc)) then
-      LB(1:1) = lbound(SrcParamData%twrHloc, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%twrHloc, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%twrHloc)
+      UB(1:1) = ubound(SrcParamData%twrHloc)
       if (.not. associated(DstParamData%twrHloc)) then
          allocate(DstParamData%twrHloc(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -800,7 +800,7 @@ subroutine ExtLdDX_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtLdDX_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtLdDX_UnPackParam'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -1017,7 +1017,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%nBlades_Len = SIZE(ParamData%nBlades)
          IF (ParamData%C_obj%nBlades_Len > 0) &
-            ParamData%C_obj%nBlades = C_LOC(ParamData%nBlades(LBOUND(ParamData%nBlades,1, kind=B8Ki)))
+            ParamData%C_obj%nBlades = C_LOC(ParamData%nBlades(lbound(ParamData%nBlades,1)))
       END IF
    END IF
    
@@ -1029,7 +1029,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%nBladeNodes_Len = SIZE(ParamData%nBladeNodes)
          IF (ParamData%C_obj%nBladeNodes_Len > 0) &
-            ParamData%C_obj%nBladeNodes = C_LOC(ParamData%nBladeNodes(LBOUND(ParamData%nBladeNodes,1, kind=B8Ki)))
+            ParamData%C_obj%nBladeNodes = C_LOC(ParamData%nBladeNodes(lbound(ParamData%nBladeNodes,1)))
       END IF
    END IF
    
@@ -1041,7 +1041,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%nTowerNodes_Len = SIZE(ParamData%nTowerNodes)
          IF (ParamData%C_obj%nTowerNodes_Len > 0) &
-            ParamData%C_obj%nTowerNodes = C_LOC(ParamData%nTowerNodes(LBOUND(ParamData%nTowerNodes,1, kind=B8Ki)))
+            ParamData%C_obj%nTowerNodes = C_LOC(ParamData%nTowerNodes(lbound(ParamData%nTowerNodes,1)))
       END IF
    END IF
    
@@ -1053,7 +1053,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%twrRefPos_Len = SIZE(ParamData%twrRefPos)
          IF (ParamData%C_obj%twrRefPos_Len > 0) &
-            ParamData%C_obj%twrRefPos = C_LOC(ParamData%twrRefPos(LBOUND(ParamData%twrRefPos,1, kind=B8Ki)))
+            ParamData%C_obj%twrRefPos = C_LOC(ParamData%twrRefPos(lbound(ParamData%twrRefPos,1)))
       END IF
    END IF
    
@@ -1065,7 +1065,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%bldRefPos_Len = SIZE(ParamData%bldRefPos)
          IF (ParamData%C_obj%bldRefPos_Len > 0) &
-            ParamData%C_obj%bldRefPos = C_LOC(ParamData%bldRefPos(LBOUND(ParamData%bldRefPos,1, kind=B8Ki)))
+            ParamData%C_obj%bldRefPos = C_LOC(ParamData%bldRefPos(lbound(ParamData%bldRefPos,1)))
       END IF
    END IF
    
@@ -1077,7 +1077,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%hubRefPos_Len = SIZE(ParamData%hubRefPos)
          IF (ParamData%C_obj%hubRefPos_Len > 0) &
-            ParamData%C_obj%hubRefPos = C_LOC(ParamData%hubRefPos(LBOUND(ParamData%hubRefPos,1, kind=B8Ki)))
+            ParamData%C_obj%hubRefPos = C_LOC(ParamData%hubRefPos(lbound(ParamData%hubRefPos,1)))
       END IF
    END IF
    
@@ -1089,7 +1089,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%nacRefPos_Len = SIZE(ParamData%nacRefPos)
          IF (ParamData%C_obj%nacRefPos_Len > 0) &
-            ParamData%C_obj%nacRefPos = C_LOC(ParamData%nacRefPos(LBOUND(ParamData%nacRefPos,1, kind=B8Ki)))
+            ParamData%C_obj%nacRefPos = C_LOC(ParamData%nacRefPos(lbound(ParamData%nacRefPos,1)))
       END IF
    END IF
    
@@ -1101,7 +1101,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%bldRootRefPos_Len = SIZE(ParamData%bldRootRefPos)
          IF (ParamData%C_obj%bldRootRefPos_Len > 0) &
-            ParamData%C_obj%bldRootRefPos = C_LOC(ParamData%bldRootRefPos(LBOUND(ParamData%bldRootRefPos,1, kind=B8Ki)))
+            ParamData%C_obj%bldRootRefPos = C_LOC(ParamData%bldRootRefPos(lbound(ParamData%bldRootRefPos,1)))
       END IF
    END IF
    
@@ -1113,7 +1113,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%bldChord_Len = SIZE(ParamData%bldChord)
          IF (ParamData%C_obj%bldChord_Len > 0) &
-            ParamData%C_obj%bldChord = C_LOC(ParamData%bldChord(LBOUND(ParamData%bldChord,1, kind=B8Ki)))
+            ParamData%C_obj%bldChord = C_LOC(ParamData%bldChord(lbound(ParamData%bldChord,1)))
       END IF
    END IF
    
@@ -1125,7 +1125,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%bldRloc_Len = SIZE(ParamData%bldRloc)
          IF (ParamData%C_obj%bldRloc_Len > 0) &
-            ParamData%C_obj%bldRloc = C_LOC(ParamData%bldRloc(LBOUND(ParamData%bldRloc,1, kind=B8Ki)))
+            ParamData%C_obj%bldRloc = C_LOC(ParamData%bldRloc(lbound(ParamData%bldRloc,1)))
       END IF
    END IF
    
@@ -1137,7 +1137,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%twrDia_Len = SIZE(ParamData%twrDia)
          IF (ParamData%C_obj%twrDia_Len > 0) &
-            ParamData%C_obj%twrDia = C_LOC(ParamData%twrDia(LBOUND(ParamData%twrDia,1, kind=B8Ki)))
+            ParamData%C_obj%twrDia = C_LOC(ParamData%twrDia(lbound(ParamData%twrDia,1)))
       END IF
    END IF
    
@@ -1149,7 +1149,7 @@ SUBROUTINE ExtLdDX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          ParamData%C_obj%twrHloc_Len = SIZE(ParamData%twrHloc)
          IF (ParamData%C_obj%twrHloc_Len > 0) &
-            ParamData%C_obj%twrHloc = C_LOC(ParamData%twrHloc(LBOUND(ParamData%twrHloc,1, kind=B8Ki)))
+            ParamData%C_obj%twrHloc = C_LOC(ParamData%twrHloc(lbound(ParamData%twrHloc,1)))
       END IF
    END IF
 END SUBROUTINE
@@ -1160,14 +1160,14 @@ subroutine ExtLdDX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'ExtLdDX_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcOutputData%twrLd)) then
-      LB(1:1) = lbound(SrcOutputData%twrLd, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%twrLd, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%twrLd)
+      UB(1:1) = ubound(SrcOutputData%twrLd)
       if (.not. associated(DstOutputData%twrLd)) then
          allocate(DstOutputData%twrLd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1181,8 +1181,8 @@ subroutine ExtLdDX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
       DstOutputData%twrLd = SrcOutputData%twrLd
    end if
    if (associated(SrcOutputData%bldLd)) then
-      LB(1:1) = lbound(SrcOutputData%bldLd, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%bldLd, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%bldLd)
+      UB(1:1) = ubound(SrcOutputData%bldLd)
       if (.not. associated(DstOutputData%bldLd)) then
          allocate(DstOutputData%bldLd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1237,7 +1237,7 @@ subroutine ExtLdDX_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ExtLdDX_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'ExtLdDX_UnPackOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -1314,7 +1314,7 @@ SUBROUTINE ExtLdDX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%twrLd_Len = SIZE(OutputData%twrLd)
          IF (OutputData%C_obj%twrLd_Len > 0) &
-            OutputData%C_obj%twrLd = C_LOC(OutputData%twrLd(LBOUND(OutputData%twrLd,1, kind=B8Ki)))
+            OutputData%C_obj%twrLd = C_LOC(OutputData%twrLd(lbound(OutputData%twrLd,1)))
       END IF
    END IF
    
@@ -1326,7 +1326,7 @@ SUBROUTINE ExtLdDX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
       ELSE
          OutputData%C_obj%bldLd_Len = SIZE(OutputData%bldLd)
          IF (OutputData%C_obj%bldLd_Len > 0) &
-            OutputData%C_obj%bldLd = C_LOC(OutputData%bldLd(LBOUND(OutputData%bldLd,1, kind=B8Ki)))
+            OutputData%C_obj%bldLd = C_LOC(OutputData%bldLd(lbound(OutputData%bldLd,1)))
       END IF
    END IF
 END SUBROUTINE

@@ -157,7 +157,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    call ParseVar( FileInfo_In, CurLine, 'PtfmYCutOff', InputFileData%PtfmYCutOff, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
 
-      ! NExctnHdg  - Number of PRP headings/yaw offset evenly distributed in the range of [-180, 180) deg to precompute [used only when PtfmYMod = 1 in the HD driver or ElastoDyn]
+      ! NExctnHdg  - Number of PRP headings/yaw offset evenly distributed in the range of [-180, 180) deg to precompute [used only when PtfmYMod = 1]
    call ParseVar( FileInfo_In, CurLine, 'NExctnHdg', InputFileData%WAMIT%NExctnHdg, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
    InputFileData%WAMIT2%NExctnHdg = InputFileData%WAMIT%NExctnHdg
@@ -1911,19 +1911,19 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCa1 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCa1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCa1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCa2 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCa2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCa2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCaMG1 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCaMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCaMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCaMG2 < 0 ) THEN 
-            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberAxCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberCb1 < 0 ) THEN
@@ -2226,11 +2226,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          CALL SetErrStat( ErrID_Fatal, 'PtfmYCutOff must be greater than 0 Hz.',ErrStat,ErrMsg,RoutineName)
       end if
       if ( InputFileData%Morison%WaveDisp == 0 .AND. InputFileData%Morison%NMembers > 0 ) then
-         call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) in ElastoDyn or HydroDyn driver cannot be used with WaveDisp=0. Set WaveDisp=1.',ErrStat,ErrMsg,RoutineName)
+         call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with WaveDisp=0. Set WaveDisp=1.',ErrStat,ErrMsg,RoutineName)
          return
       end if
       if ( InputFileData%PotMod > 0 .AND. InputFileData%WAMIT%ExctnMod == 2 ) then
-         call SetErrStat( ErrID_Fatal, 'Dynamic reference yaw offset (PtfmYMod=1) in ElastoDyn or HydroDyn driver cannot be used with State-space wave excitations. Set ExctnMod=0 or 1.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal,'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with state-space wave excitations. Set ExctnMod=0 or 1.', ErrStat, ErrMsg, RoutineName )
          return
       end if
       if ( InputFileData%PotMod > 0 .AND. InputFileData%WAMIT%NExctnHdg < 2 ) then
@@ -2238,7 +2238,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          return
       end if
       if ( InputFileData%WAMIT2%SumQTFF .OR. InputFileData%WAMIT2%DiffQTFF ) then
-         call SetErrStat( ErrID_Fatal, 'Dynamic reference yaw offset (PtfmYMod=1) in ElastoDyn or HydroDyn driver cannot be used with full sum-frequency or difference-frequency QTFs. Set SumQTF and DiffQTF to 0.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Dynamic reference yaw offset (PtfmYMod=1) cannot be used with full sum-frequency or difference-frequency QTFs. Set SumQTF and DiffQTF to 0.', ErrStat, ErrMsg, RoutineName )
          return
       end if
    END IF

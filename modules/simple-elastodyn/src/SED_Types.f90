@@ -218,7 +218,7 @@ subroutine SED_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SED_CopyInputFile'
    ErrStat = ErrID_None
@@ -247,8 +247,8 @@ subroutine SED_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSt
    DstInputFileData%SumPrint = SrcInputFileData%SumPrint
    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
    if (allocated(SrcInputFileData%OutList)) then
-      LB(1:1) = lbound(SrcInputFileData%OutList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%OutList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%OutList)
+      UB(1:1) = ubound(SrcInputFileData%OutList)
       if (.not. allocated(DstInputFileData%OutList)) then
          allocate(DstInputFileData%OutList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -308,7 +308,7 @@ subroutine SED_UnPackInputFile(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SED_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SED_UnPackInputFile'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -402,15 +402,15 @@ subroutine SED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -421,8 +421,8 @@ subroutine SED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -437,8 +437,8 @@ subroutine SED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%NumBl = SrcInitOutputData%NumBl
    if (allocated(SrcInitOutputData%BlPitch)) then
-      LB(1:1) = lbound(SrcInitOutputData%BlPitch, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%BlPitch, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%BlPitch)
+      UB(1:1) = ubound(SrcInitOutputData%BlPitch)
       if (.not. allocated(DstInitOutputData%BlPitch)) then
          allocate(DstInitOutputData%BlPitch(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -509,7 +509,7 @@ subroutine SED_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SED_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SED_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -534,7 +534,7 @@ subroutine SED_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_CopyInput'
@@ -546,8 +546,8 @@ subroutine SED_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    DstInputData%HSSBrTrqC = SrcInputData%HSSBrTrqC
    DstInputData%GenTrq = SrcInputData%GenTrq
    if (allocated(SrcInputData%BlPitchCom)) then
-      LB(1:1) = lbound(SrcInputData%BlPitchCom, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputData%BlPitchCom, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputData%BlPitchCom)
+      UB(1:1) = ubound(SrcInputData%BlPitchCom)
       if (.not. allocated(DstInputData%BlPitchCom)) then
          allocate(DstInputData%BlPitchCom(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -595,7 +595,7 @@ subroutine SED_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SED_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SED_UnPackInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -613,16 +613,16 @@ subroutine SED_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%BladeRootMotion)) then
-      LB(1:1) = lbound(SrcOutputData%BladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%BladeRootMotion, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%BladeRootMotion)
+      UB(1:1) = ubound(SrcOutputData%BladeRootMotion)
       if (.not. allocated(DstOutputData%BladeRootMotion)) then
          allocate(DstOutputData%BladeRootMotion(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -656,8 +656,8 @@ subroutine SED_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
    DstOutputData%Yaw = SrcOutputData%Yaw
    DstOutputData%YawRate = SrcOutputData%YawRate
    if (allocated(SrcOutputData%BlPitch)) then
-      LB(1:1) = lbound(SrcOutputData%BlPitch, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%BlPitch, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%BlPitch)
+      UB(1:1) = ubound(SrcOutputData%BlPitch)
       if (.not. allocated(DstOutputData%BlPitch)) then
          allocate(DstOutputData%BlPitch(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -668,8 +668,8 @@ subroutine SED_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%BlPitch = SrcOutputData%BlPitch
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -685,16 +685,16 @@ subroutine SED_DestroyOutput(OutputData, ErrStat, ErrMsg)
    type(SED_OutputType), intent(inout) :: OutputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OutputData%BladeRootMotion)) then
-      LB(1:1) = lbound(OutputData%BladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(OutputData%BladeRootMotion, kind=B8Ki)
+      LB(1:1) = lbound(OutputData%BladeRootMotion)
+      UB(1:1) = ubound(OutputData%BladeRootMotion)
       do i1 = LB(1), UB(1)
          call MeshDestroy( OutputData%BladeRootMotion(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -721,14 +721,14 @@ subroutine SED_PackOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SED_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SED_PackOutput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%BladeRootMotion))
    if (allocated(InData%BladeRootMotion)) then
-      call RegPackBounds(RF, 1, lbound(InData%BladeRootMotion, kind=B8Ki), ubound(InData%BladeRootMotion, kind=B8Ki))
-      LB(1:1) = lbound(InData%BladeRootMotion, kind=B8Ki)
-      UB(1:1) = ubound(InData%BladeRootMotion, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%BladeRootMotion), ubound(InData%BladeRootMotion))
+      LB(1:1) = lbound(InData%BladeRootMotion)
+      UB(1:1) = ubound(InData%BladeRootMotion)
       do i1 = LB(1), UB(1)
          call MeshPack(RF, InData%BladeRootMotion(i1)) 
       end do
@@ -753,8 +753,8 @@ subroutine SED_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SED_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SED_UnPackOutput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -792,14 +792,14 @@ subroutine SED_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSt
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SED_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%QT)) then
-      LB(1:1) = lbound(SrcContStateData%QT, kind=B8Ki)
-      UB(1:1) = ubound(SrcContStateData%QT, kind=B8Ki)
+      LB(1:1) = lbound(SrcContStateData%QT)
+      UB(1:1) = ubound(SrcContStateData%QT)
       if (.not. allocated(DstContStateData%QT)) then
          allocate(DstContStateData%QT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -810,8 +810,8 @@ subroutine SED_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSt
       DstContStateData%QT = SrcContStateData%QT
    end if
    if (allocated(SrcContStateData%QDT)) then
-      LB(1:1) = lbound(SrcContStateData%QDT, kind=B8Ki)
-      UB(1:1) = ubound(SrcContStateData%QDT, kind=B8Ki)
+      LB(1:1) = lbound(SrcContStateData%QDT)
+      UB(1:1) = ubound(SrcContStateData%QDT)
       if (.not. allocated(DstContStateData%QDT)) then
          allocate(DstContStateData%QDT(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -852,7 +852,7 @@ subroutine SED_UnPackContState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SED_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SED_UnPackContState'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -942,16 +942,16 @@ subroutine SED_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstOtherStateData%n = SrcOtherStateData%n
-   LB(1:1) = lbound(SrcOtherStateData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(SrcOtherStateData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(SrcOtherStateData%xdot)
+   UB(1:1) = ubound(SrcOtherStateData%xdot)
    do i1 = LB(1), UB(1)
       call SED_CopyContState(SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -968,15 +968,15 @@ subroutine SED_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(SED_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   LB(1:1) = lbound(OtherStateData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(OtherStateData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(OtherStateData%xdot)
+   UB(1:1) = ubound(OtherStateData%xdot)
    do i1 = LB(1), UB(1)
       call SED_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -987,12 +987,12 @@ subroutine SED_PackOtherState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SED_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SED_PackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%n)
-   LB(1:1) = lbound(InData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(InData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(InData%xdot)
+   UB(1:1) = ubound(InData%xdot)
    do i1 = LB(1), UB(1)
       call SED_PackContState(RF, InData%xdot(i1)) 
    end do
@@ -1008,12 +1008,12 @@ subroutine SED_UnPackOtherState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SED_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SED_UnPackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
-   LB(1:1) = lbound(OutData%xdot, kind=B8Ki)
-   UB(1:1) = ubound(OutData%xdot, kind=B8Ki)
+   LB(1:1) = lbound(OutData%xdot)
+   UB(1:1) = ubound(OutData%xdot)
    do i1 = LB(1), UB(1)
       call SED_UnpackContState(RF, OutData%xdot(i1)) ! xdot 
    end do
@@ -1030,8 +1030,8 @@ subroutine SED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_CopyParam'
@@ -1062,8 +1062,8 @@ subroutine SED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%HubHt = SrcParamData%HubHt
    DstParamData%NumOuts = SrcParamData%NumOuts
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1083,16 +1083,16 @@ subroutine SED_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(SED_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1105,8 +1105,8 @@ subroutine SED_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SED_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SED_PackParam'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%RootName)
    call RegPack(RF, InData%GenDOF)
@@ -1134,9 +1134,9 @@ subroutine SED_PackParam(RF, Indata)
    call RegPack(RF, InData%NumOuts)
    call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(RF, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
-      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
+      LB(1:1) = lbound(InData%OutParam)
+      UB(1:1) = ubound(InData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(RF, InData%OutParam(i1)) 
       end do
@@ -1148,8 +1148,8 @@ subroutine SED_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SED_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SED_UnPackParam'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1198,16 +1198,16 @@ subroutine SED_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%AllOuts, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%AllOuts)
+      UB(1:1) = ubound(SrcMiscData%AllOuts)
       if (.not. allocated(DstMiscData%AllOuts)) then
          allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1221,8 +1221,8 @@ subroutine SED_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%mapHub2Root)) then
-      LB(1:1) = lbound(SrcMiscData%mapHub2Root, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%mapHub2Root, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%mapHub2Root)
+      UB(1:1) = ubound(SrcMiscData%mapHub2Root)
       if (.not. allocated(DstMiscData%mapHub2Root)) then
          allocate(DstMiscData%mapHub2Root(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1237,8 +1237,8 @@ subroutine SED_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcMiscData%QD2T)) then
-      LB(1:1) = lbound(SrcMiscData%QD2T, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%QD2T, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%QD2T)
+      UB(1:1) = ubound(SrcMiscData%QD2T)
       if (.not. allocated(DstMiscData%QD2T)) then
          allocate(DstMiscData%QD2T(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1270,8 +1270,8 @@ subroutine SED_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(SED_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SED_DestroyMisc'
@@ -1283,8 +1283,8 @@ subroutine SED_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call NWTC_Library_DestroyMeshMapType(MiscData%mapNac2Hub, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%mapHub2Root)) then
-      LB(1:1) = lbound(MiscData%mapHub2Root, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%mapHub2Root, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%mapHub2Root)
+      UB(1:1) = ubound(MiscData%mapHub2Root)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyMeshMapType(MiscData%mapHub2Root(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1310,16 +1310,16 @@ subroutine SED_PackMisc(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SED_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SED_PackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%AllOuts)
    call NWTC_Library_PackMeshMapType(RF, InData%mapNac2Hub) 
    call RegPack(RF, allocated(InData%mapHub2Root))
    if (allocated(InData%mapHub2Root)) then
-      call RegPackBounds(RF, 1, lbound(InData%mapHub2Root, kind=B8Ki), ubound(InData%mapHub2Root, kind=B8Ki))
-      LB(1:1) = lbound(InData%mapHub2Root, kind=B8Ki)
-      UB(1:1) = ubound(InData%mapHub2Root, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%mapHub2Root), ubound(InData%mapHub2Root))
+      LB(1:1) = lbound(InData%mapHub2Root)
+      UB(1:1) = ubound(InData%mapHub2Root)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackMeshMapType(RF, InData%mapHub2Root(i1)) 
       end do
@@ -1338,8 +1338,8 @@ subroutine SED_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SED_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SED_UnPackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1469,7 +1469,7 @@ SUBROUTINE SED_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg 
    u_out%HSSBrTrqC = a1*u1%HSSBrTrqC + a2*u2%HSSBrTrqC
    u_out%GenTrq = a1*u1%GenTrq + a2*u2%GenTrq
    IF (ALLOCATED(u_out%BlPitchCom) .AND. ALLOCATED(u1%BlPitchCom)) THEN
-      DO i1 = LBOUND(u_out%BlPitchCom,1, kind=B8Ki),UBOUND(u_out%BlPitchCom,1, kind=B8Ki)
+      do i1 = lbound(u_out%BlPitchCom,1),ubound(u_out%BlPitchCom,1)
          CALL Angles_ExtrapInterp( u1%BlPitchCom(i1), u2%BlPitchCom(i1), tin, u_out%BlPitchCom(i1), tin_out )
       END DO
    END IF ! check if allocated
@@ -1537,7 +1537,7 @@ SUBROUTINE SED_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, Err
    u_out%HSSBrTrqC = a1*u1%HSSBrTrqC + a2*u2%HSSBrTrqC + a3*u3%HSSBrTrqC
    u_out%GenTrq = a1*u1%GenTrq + a2*u2%GenTrq + a3*u3%GenTrq
    IF (ALLOCATED(u_out%BlPitchCom) .AND. ALLOCATED(u1%BlPitchCom)) THEN
-      DO i1 = LBOUND(u_out%BlPitchCom,1, kind=B8Ki),UBOUND(u_out%BlPitchCom,1, kind=B8Ki)
+      do i1 = lbound(u_out%BlPitchCom,1),ubound(u_out%BlPitchCom,1)
          CALL Angles_ExtrapInterp( u1%BlPitchCom(i1), u2%BlPitchCom(i1), u3%BlPitchCom(i1), tin, u_out%BlPitchCom(i1), tin_out )
       END DO
    END IF ! check if allocated
@@ -1643,7 +1643,7 @@ SUBROUTINE SED_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg
    a2 = t_out/t(2)
    
    IF (ALLOCATED(y_out%BladeRootMotion) .AND. ALLOCATED(y1%BladeRootMotion)) THEN
-      DO i1 = LBOUND(y_out%BladeRootMotion,1, kind=B8Ki),UBOUND(y_out%BladeRootMotion,1, kind=B8Ki)
+      do i1 = lbound(y_out%BladeRootMotion,1),ubound(y_out%BladeRootMotion,1)
          CALL MeshExtrapInterp1(y1%BladeRootMotion(i1), y2%BladeRootMotion(i1), tin, y_out%BladeRootMotion(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -1664,7 +1664,7 @@ SUBROUTINE SED_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg
    y_out%Yaw = a1*y1%Yaw + a2*y2%Yaw
    y_out%YawRate = a1*y1%YawRate + a2*y2%YawRate
    IF (ALLOCATED(y_out%BlPitch) .AND. ALLOCATED(y1%BlPitch)) THEN
-      DO i1 = LBOUND(y_out%BlPitch,1, kind=B8Ki),UBOUND(y_out%BlPitch,1, kind=B8Ki)
+      do i1 = lbound(y_out%BlPitch,1),ubound(y_out%BlPitch,1)
          CALL Angles_ExtrapInterp( y1%BlPitch(i1), y2%BlPitch(i1), tin, y_out%BlPitch(i1), tin_out )
       END DO
    END IF ! check if allocated
@@ -1729,7 +1729,7 @@ SUBROUTINE SED_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
    a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
    IF (ALLOCATED(y_out%BladeRootMotion) .AND. ALLOCATED(y1%BladeRootMotion)) THEN
-      DO i1 = LBOUND(y_out%BladeRootMotion,1, kind=B8Ki),UBOUND(y_out%BladeRootMotion,1, kind=B8Ki)
+      do i1 = lbound(y_out%BladeRootMotion,1),ubound(y_out%BladeRootMotion,1)
          CALL MeshExtrapInterp2(y1%BladeRootMotion(i1), y2%BladeRootMotion(i1), y3%BladeRootMotion(i1), tin, y_out%BladeRootMotion(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
@@ -1750,7 +1750,7 @@ SUBROUTINE SED_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
    y_out%Yaw = a1*y1%Yaw + a2*y2%Yaw + a3*y3%Yaw
    y_out%YawRate = a1*y1%YawRate + a2*y2%YawRate + a3*y3%YawRate
    IF (ALLOCATED(y_out%BlPitch) .AND. ALLOCATED(y1%BlPitch)) THEN
-      DO i1 = LBOUND(y_out%BlPitch,1, kind=B8Ki),UBOUND(y_out%BlPitch,1, kind=B8Ki)
+      do i1 = lbound(y_out%BlPitch,1),ubound(y_out%BlPitch,1)
          CALL Angles_ExtrapInterp( y1%BlPitch(i1), y2%BlPitch(i1), y3%BlPitch(i1), tin, y_out%BlPitch(i1), tin_out )
       END DO
    END IF ! check if allocated

@@ -274,14 +274,14 @@ subroutine AWAE_CopyHighWindGrid(SrcHighWindGridData, DstHighWindGridData, CtrlC
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(5), UB(5)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'AWAE_CopyHighWindGrid'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (associated(SrcHighWindGridData%data)) then
-      LB(1:5) = lbound(SrcHighWindGridData%data, kind=B8Ki)
-      UB(1:5) = ubound(SrcHighWindGridData%data, kind=B8Ki)
+      LB(1:5) = lbound(SrcHighWindGridData%data)
+      UB(1:5) = ubound(SrcHighWindGridData%data)
       if (.not. associated(DstHighWindGridData%data)) then
          allocate(DstHighWindGridData%data(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -320,7 +320,7 @@ subroutine AWAE_UnPackHighWindGrid(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_HighWindGrid), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackHighWindGrid'
-   integer(B8Ki)   :: LB(5), UB(5)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -335,7 +335,7 @@ subroutine AWAE_CopyHighWindGridPtr(SrcHighWindGridPtrData, DstHighWindGridPtrDa
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(5), UB(5)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'AWAE_CopyHighWindGridPtr'
    ErrStat = ErrID_None
@@ -367,7 +367,7 @@ subroutine AWAE_UnPackHighWindGridPtr(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_HighWindGridPtr), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackHighWindGridPtr'
-   integer(B8Ki)   :: LB(5), UB(5)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -382,7 +382,7 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'AWAE_CopyInputFileType'
    ErrStat = ErrID_None
@@ -396,8 +396,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
    DstInputFileTypeData%WrDisWind = SrcInputFileTypeData%WrDisWind
    DstInputFileTypeData%NOutDisWindXY = SrcInputFileTypeData%NOutDisWindXY
    if (allocated(SrcInputFileTypeData%OutDisWindZ)) then
-      LB(1:1) = lbound(SrcInputFileTypeData%OutDisWindZ, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileTypeData%OutDisWindZ, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileTypeData%OutDisWindZ)
+      UB(1:1) = ubound(SrcInputFileTypeData%OutDisWindZ)
       if (.not. allocated(DstInputFileTypeData%OutDisWindZ)) then
          allocate(DstInputFileTypeData%OutDisWindZ(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -409,8 +409,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
    end if
    DstInputFileTypeData%NOutDisWindYZ = SrcInputFileTypeData%NOutDisWindYZ
    if (allocated(SrcInputFileTypeData%OutDisWindX)) then
-      LB(1:1) = lbound(SrcInputFileTypeData%OutDisWindX, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileTypeData%OutDisWindX, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileTypeData%OutDisWindX)
+      UB(1:1) = ubound(SrcInputFileTypeData%OutDisWindX)
       if (.not. allocated(DstInputFileTypeData%OutDisWindX)) then
          allocate(DstInputFileTypeData%OutDisWindX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -422,8 +422,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
    end if
    DstInputFileTypeData%NOutDisWindXZ = SrcInputFileTypeData%NOutDisWindXZ
    if (allocated(SrcInputFileTypeData%OutDisWindY)) then
-      LB(1:1) = lbound(SrcInputFileTypeData%OutDisWindY, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileTypeData%OutDisWindY, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileTypeData%OutDisWindY)
+      UB(1:1) = ubound(SrcInputFileTypeData%OutDisWindY)
       if (.not. allocated(DstInputFileTypeData%OutDisWindY)) then
          allocate(DstInputFileTypeData%OutDisWindY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -441,8 +441,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
    DstInputFileTypeData%InflowFile = SrcInputFileTypeData%InflowFile
    DstInputFileTypeData%dt_high = SrcInputFileTypeData%dt_high
    if (allocated(SrcInputFileTypeData%X0_high)) then
-      LB(1:1) = lbound(SrcInputFileTypeData%X0_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileTypeData%X0_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileTypeData%X0_high)
+      UB(1:1) = ubound(SrcInputFileTypeData%X0_high)
       if (.not. allocated(DstInputFileTypeData%X0_high)) then
          allocate(DstInputFileTypeData%X0_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -453,8 +453,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
       DstInputFileTypeData%X0_high = SrcInputFileTypeData%X0_high
    end if
    if (allocated(SrcInputFileTypeData%Y0_high)) then
-      LB(1:1) = lbound(SrcInputFileTypeData%Y0_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileTypeData%Y0_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileTypeData%Y0_high)
+      UB(1:1) = ubound(SrcInputFileTypeData%Y0_high)
       if (.not. allocated(DstInputFileTypeData%Y0_high)) then
          allocate(DstInputFileTypeData%Y0_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -465,8 +465,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
       DstInputFileTypeData%Y0_high = SrcInputFileTypeData%Y0_high
    end if
    if (allocated(SrcInputFileTypeData%Z0_high)) then
-      LB(1:1) = lbound(SrcInputFileTypeData%Z0_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileTypeData%Z0_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileTypeData%Z0_high)
+      UB(1:1) = ubound(SrcInputFileTypeData%Z0_high)
       if (.not. allocated(DstInputFileTypeData%Z0_high)) then
          allocate(DstInputFileTypeData%Z0_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -477,8 +477,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
       DstInputFileTypeData%Z0_high = SrcInputFileTypeData%Z0_high
    end if
    if (allocated(SrcInputFileTypeData%dX_high)) then
-      LB(1:1) = lbound(SrcInputFileTypeData%dX_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileTypeData%dX_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileTypeData%dX_high)
+      UB(1:1) = ubound(SrcInputFileTypeData%dX_high)
       if (.not. allocated(DstInputFileTypeData%dX_high)) then
          allocate(DstInputFileTypeData%dX_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -489,8 +489,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
       DstInputFileTypeData%dX_high = SrcInputFileTypeData%dX_high
    end if
    if (allocated(SrcInputFileTypeData%dY_high)) then
-      LB(1:1) = lbound(SrcInputFileTypeData%dY_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileTypeData%dY_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileTypeData%dY_high)
+      UB(1:1) = ubound(SrcInputFileTypeData%dY_high)
       if (.not. allocated(DstInputFileTypeData%dY_high)) then
          allocate(DstInputFileTypeData%dY_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -501,8 +501,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
       DstInputFileTypeData%dY_high = SrcInputFileTypeData%dY_high
    end if
    if (allocated(SrcInputFileTypeData%dZ_high)) then
-      LB(1:1) = lbound(SrcInputFileTypeData%dZ_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileTypeData%dZ_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileTypeData%dZ_high)
+      UB(1:1) = ubound(SrcInputFileTypeData%dZ_high)
       if (.not. allocated(DstInputFileTypeData%dZ_high)) then
          allocate(DstInputFileTypeData%dZ_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -525,8 +525,8 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
    DstInputFileTypeData%Y0_low = SrcInputFileTypeData%Y0_low
    DstInputFileTypeData%Z0_low = SrcInputFileTypeData%Z0_low
    if (allocated(SrcInputFileTypeData%WT_Position)) then
-      LB(1:2) = lbound(SrcInputFileTypeData%WT_Position, kind=B8Ki)
-      UB(1:2) = ubound(SrcInputFileTypeData%WT_Position, kind=B8Ki)
+      LB(1:2) = lbound(SrcInputFileTypeData%WT_Position)
+      UB(1:2) = ubound(SrcInputFileTypeData%WT_Position)
       if (.not. allocated(DstInputFileTypeData%WT_Position)) then
          allocate(DstInputFileTypeData%WT_Position(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -630,7 +630,7 @@ subroutine AWAE_UnPackInputFileType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_InputFileType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackInputFileType'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -682,7 +682,7 @@ subroutine AWAE_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(0), UB(0)
+   integer(B4Ki)                  :: LB(0), UB(0)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyInitInput'
@@ -737,7 +737,7 @@ subroutine AWAE_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackInitInput'
-   integer(B8Ki)   :: LB(0), UB(0)
+   integer(B4Ki)   :: LB(0), UB(0)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -774,8 +774,8 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyInitOutput'
@@ -785,8 +785,8 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%X0_high)) then
-      LB(1:1) = lbound(SrcInitOutputData%X0_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%X0_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%X0_high)
+      UB(1:1) = ubound(SrcInitOutputData%X0_high)
       if (.not. allocated(DstInitOutputData%X0_high)) then
          allocate(DstInitOutputData%X0_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -797,8 +797,8 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
       DstInitOutputData%X0_high = SrcInitOutputData%X0_high
    end if
    if (allocated(SrcInitOutputData%Y0_high)) then
-      LB(1:1) = lbound(SrcInitOutputData%Y0_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%Y0_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%Y0_high)
+      UB(1:1) = ubound(SrcInitOutputData%Y0_high)
       if (.not. allocated(DstInitOutputData%Y0_high)) then
          allocate(DstInitOutputData%Y0_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -809,8 +809,8 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
       DstInitOutputData%Y0_high = SrcInitOutputData%Y0_high
    end if
    if (allocated(SrcInitOutputData%Z0_high)) then
-      LB(1:1) = lbound(SrcInitOutputData%Z0_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%Z0_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%Z0_high)
+      UB(1:1) = ubound(SrcInitOutputData%Z0_high)
       if (.not. allocated(DstInitOutputData%Z0_high)) then
          allocate(DstInitOutputData%Z0_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -821,8 +821,8 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
       DstInitOutputData%Z0_high = SrcInitOutputData%Z0_high
    end if
    if (allocated(SrcInitOutputData%dX_high)) then
-      LB(1:1) = lbound(SrcInitOutputData%dX_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%dX_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%dX_high)
+      UB(1:1) = ubound(SrcInitOutputData%dX_high)
       if (.not. allocated(DstInitOutputData%dX_high)) then
          allocate(DstInitOutputData%dX_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -833,8 +833,8 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
       DstInitOutputData%dX_high = SrcInitOutputData%dX_high
    end if
    if (allocated(SrcInitOutputData%dY_high)) then
-      LB(1:1) = lbound(SrcInitOutputData%dY_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%dY_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%dY_high)
+      UB(1:1) = ubound(SrcInitOutputData%dY_high)
       if (.not. allocated(DstInitOutputData%dY_high)) then
          allocate(DstInitOutputData%dY_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -845,8 +845,8 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
       DstInitOutputData%dY_high = SrcInitOutputData%dY_high
    end if
    if (allocated(SrcInitOutputData%dZ_high)) then
-      LB(1:1) = lbound(SrcInitOutputData%dZ_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%dZ_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%dZ_high)
+      UB(1:1) = ubound(SrcInitOutputData%dZ_high)
       if (.not. allocated(DstInitOutputData%dZ_high)) then
          allocate(DstInitOutputData%dZ_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -869,8 +869,8 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    DstInitOutputData%Y0_low = SrcInitOutputData%Y0_low
    DstInitOutputData%Z0_low = SrcInitOutputData%Z0_low
    if (allocated(SrcInitOutputData%Vdist_High)) then
-      LB(1:1) = lbound(SrcInitOutputData%Vdist_High, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%Vdist_High, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%Vdist_High)
+      UB(1:1) = ubound(SrcInitOutputData%Vdist_High)
       if (.not. allocated(DstInitOutputData%Vdist_High)) then
          allocate(DstInitOutputData%Vdist_High(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -890,8 +890,8 @@ subroutine AWAE_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    type(AWAE_InitOutputType), intent(inout) :: InitOutputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_DestroyInitOutput'
@@ -918,8 +918,8 @@ subroutine AWAE_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
       deallocate(InitOutputData%dZ_high)
    end if
    if (allocated(InitOutputData%Vdist_High)) then
-      LB(1:1) = lbound(InitOutputData%Vdist_High, kind=B8Ki)
-      UB(1:1) = ubound(InitOutputData%Vdist_High, kind=B8Ki)
+      LB(1:1) = lbound(InitOutputData%Vdist_High)
+      UB(1:1) = ubound(InitOutputData%Vdist_High)
       do i1 = LB(1), UB(1)
          call AWAE_DestroyHighWindGridPtr(InitOutputData%Vdist_High(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -932,8 +932,8 @@ subroutine AWAE_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AWAE_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackInitOutput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call RegPackAlloc(RF, InData%X0_high)
@@ -956,9 +956,9 @@ subroutine AWAE_PackInitOutput(RF, Indata)
    call RegPack(RF, InData%Z0_low)
    call RegPack(RF, allocated(InData%Vdist_High))
    if (allocated(InData%Vdist_High)) then
-      call RegPackBounds(RF, 1, lbound(InData%Vdist_High, kind=B8Ki), ubound(InData%Vdist_High, kind=B8Ki))
-      LB(1:1) = lbound(InData%Vdist_High, kind=B8Ki)
-      UB(1:1) = ubound(InData%Vdist_High, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%Vdist_High), ubound(InData%Vdist_High))
+      LB(1:1) = lbound(InData%Vdist_High)
+      UB(1:1) = ubound(InData%Vdist_High)
       do i1 = LB(1), UB(1)
          call AWAE_PackHighWindGridPtr(RF, InData%Vdist_High(i1)) 
       end do
@@ -970,8 +970,8 @@ subroutine AWAE_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackInitOutput'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1015,16 +1015,16 @@ subroutine AWAE_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrS
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcContStateData%IfW)) then
-      LB(1:1) = lbound(SrcContStateData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(SrcContStateData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(SrcContStateData%IfW)
+      UB(1:1) = ubound(SrcContStateData%IfW)
       if (.not. allocated(DstContStateData%IfW)) then
          allocate(DstContStateData%IfW(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1044,16 +1044,16 @@ subroutine AWAE_DestroyContState(ContStateData, ErrStat, ErrMsg)
    type(AWAE_ContinuousStateType), intent(inout) :: ContStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ContStateData%IfW)) then
-      LB(1:1) = lbound(ContStateData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(ContStateData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(ContStateData%IfW)
+      UB(1:1) = ubound(ContStateData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_DestroyContState(ContStateData%IfW(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1066,14 +1066,14 @@ subroutine AWAE_PackContState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AWAE_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackContState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%IfW))
    if (allocated(InData%IfW)) then
-      call RegPackBounds(RF, 1, lbound(InData%IfW, kind=B8Ki), ubound(InData%IfW, kind=B8Ki))
-      LB(1:1) = lbound(InData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(InData%IfW, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%IfW), ubound(InData%IfW))
+      LB(1:1) = lbound(InData%IfW)
+      UB(1:1) = ubound(InData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_PackContState(RF, InData%IfW(i1)) 
       end do
@@ -1085,8 +1085,8 @@ subroutine AWAE_UnPackContState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackContState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1111,16 +1111,16 @@ subroutine AWAE_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrS
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcDiscStateData%IfW)) then
-      LB(1:1) = lbound(SrcDiscStateData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(SrcDiscStateData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(SrcDiscStateData%IfW)
+      UB(1:1) = ubound(SrcDiscStateData%IfW)
       if (.not. allocated(DstDiscStateData%IfW)) then
          allocate(DstDiscStateData%IfW(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1142,16 +1142,16 @@ subroutine AWAE_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    type(AWAE_DiscreteStateType), intent(inout) :: DiscStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_DestroyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(DiscStateData%IfW)) then
-      LB(1:1) = lbound(DiscStateData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(DiscStateData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(DiscStateData%IfW)
+      UB(1:1) = ubound(DiscStateData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_DestroyDiscState(DiscStateData%IfW(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1164,14 +1164,14 @@ subroutine AWAE_PackDiscState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AWAE_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackDiscState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%IfW))
    if (allocated(InData%IfW)) then
-      call RegPackBounds(RF, 1, lbound(InData%IfW, kind=B8Ki), ubound(InData%IfW, kind=B8Ki))
-      LB(1:1) = lbound(InData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(InData%IfW, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%IfW), ubound(InData%IfW))
+      LB(1:1) = lbound(InData%IfW)
+      UB(1:1) = ubound(InData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_PackDiscState(RF, InData%IfW(i1)) 
       end do
@@ -1185,8 +1185,8 @@ subroutine AWAE_UnPackDiscState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackDiscState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1213,16 +1213,16 @@ subroutine AWAE_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcConstrStateData%IfW)) then
-      LB(1:1) = lbound(SrcConstrStateData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(SrcConstrStateData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(SrcConstrStateData%IfW)
+      UB(1:1) = ubound(SrcConstrStateData%IfW)
       if (.not. allocated(DstConstrStateData%IfW)) then
          allocate(DstConstrStateData%IfW(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1242,16 +1242,16 @@ subroutine AWAE_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    type(AWAE_ConstraintStateType), intent(inout) :: ConstrStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_DestroyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ConstrStateData%IfW)) then
-      LB(1:1) = lbound(ConstrStateData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(ConstrStateData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(ConstrStateData%IfW)
+      UB(1:1) = ubound(ConstrStateData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_DestroyConstrState(ConstrStateData%IfW(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1264,14 +1264,14 @@ subroutine AWAE_PackConstrState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AWAE_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackConstrState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%IfW))
    if (allocated(InData%IfW)) then
-      call RegPackBounds(RF, 1, lbound(InData%IfW, kind=B8Ki), ubound(InData%IfW, kind=B8Ki))
-      LB(1:1) = lbound(InData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(InData%IfW, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%IfW), ubound(InData%IfW))
+      LB(1:1) = lbound(InData%IfW)
+      UB(1:1) = ubound(InData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_PackConstrState(RF, InData%IfW(i1)) 
       end do
@@ -1283,8 +1283,8 @@ subroutine AWAE_UnPackConstrState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackConstrState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1309,16 +1309,16 @@ subroutine AWAE_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOtherStateData%IfW)) then
-      LB(1:1) = lbound(SrcOtherStateData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(SrcOtherStateData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(SrcOtherStateData%IfW)
+      UB(1:1) = ubound(SrcOtherStateData%IfW)
       if (.not. allocated(DstOtherStateData%IfW)) then
          allocate(DstOtherStateData%IfW(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1338,16 +1338,16 @@ subroutine AWAE_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    type(AWAE_OtherStateType), intent(inout) :: OtherStateData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OtherStateData%IfW)) then
-      LB(1:1) = lbound(OtherStateData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(OtherStateData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(OtherStateData%IfW)
+      UB(1:1) = ubound(OtherStateData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_DestroyOtherState(OtherStateData%IfW(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1360,14 +1360,14 @@ subroutine AWAE_PackOtherState(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AWAE_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%IfW))
    if (allocated(InData%IfW)) then
-      call RegPackBounds(RF, 1, lbound(InData%IfW, kind=B8Ki), ubound(InData%IfW, kind=B8Ki))
-      LB(1:1) = lbound(InData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(InData%IfW, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%IfW), ubound(InData%IfW))
+      LB(1:1) = lbound(InData%IfW)
+      UB(1:1) = ubound(InData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_PackOtherState(RF, InData%IfW(i1)) 
       end do
@@ -1379,8 +1379,8 @@ subroutine AWAE_UnPackOtherState(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackOtherState'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1405,16 +1405,16 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3, i4
-   integer(B8Ki)                  :: LB(4), UB(4)
+   integer(B4Ki)   :: i1, i2, i3, i4
+   integer(B4Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%Vamb_low)) then
-      LB(1:4) = lbound(SrcMiscData%Vamb_low, kind=B8Ki)
-      UB(1:4) = ubound(SrcMiscData%Vamb_low, kind=B8Ki)
+      LB(1:4) = lbound(SrcMiscData%Vamb_low)
+      UB(1:4) = ubound(SrcMiscData%Vamb_low)
       if (.not. allocated(DstMiscData%Vamb_low)) then
          allocate(DstMiscData%Vamb_low(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1425,8 +1425,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Vamb_low = SrcMiscData%Vamb_low
    end if
    if (allocated(SrcMiscData%Vamb_lowpol)) then
-      LB(1:2) = lbound(SrcMiscData%Vamb_lowpol, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%Vamb_lowpol, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%Vamb_lowpol)
+      UB(1:2) = ubound(SrcMiscData%Vamb_lowpol)
       if (.not. allocated(DstMiscData%Vamb_lowpol)) then
          allocate(DstMiscData%Vamb_lowpol(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1437,8 +1437,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Vamb_lowpol = SrcMiscData%Vamb_lowpol
    end if
    if (allocated(SrcMiscData%Vdist_low)) then
-      LB(1:4) = lbound(SrcMiscData%Vdist_low, kind=B8Ki)
-      UB(1:4) = ubound(SrcMiscData%Vdist_low, kind=B8Ki)
+      LB(1:4) = lbound(SrcMiscData%Vdist_low)
+      UB(1:4) = ubound(SrcMiscData%Vdist_low)
       if (.not. allocated(DstMiscData%Vdist_low)) then
          allocate(DstMiscData%Vdist_low(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1449,8 +1449,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Vdist_low = SrcMiscData%Vdist_low
    end if
    if (allocated(SrcMiscData%Vdist_low_full)) then
-      LB(1:4) = lbound(SrcMiscData%Vdist_low_full, kind=B8Ki)
-      UB(1:4) = ubound(SrcMiscData%Vdist_low_full, kind=B8Ki)
+      LB(1:4) = lbound(SrcMiscData%Vdist_low_full)
+      UB(1:4) = ubound(SrcMiscData%Vdist_low_full)
       if (.not. allocated(DstMiscData%Vdist_low_full)) then
          allocate(DstMiscData%Vdist_low_full(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1461,8 +1461,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%Vdist_low_full = SrcMiscData%Vdist_low_full
    end if
    if (allocated(SrcMiscData%Vamb_High)) then
-      LB(1:1) = lbound(SrcMiscData%Vamb_High, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%Vamb_High, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%Vamb_High)
+      UB(1:1) = ubound(SrcMiscData%Vamb_High)
       if (.not. allocated(DstMiscData%Vamb_High)) then
          allocate(DstMiscData%Vamb_High(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1477,8 +1477,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcMiscData%parallelFlag)) then
-      LB(1:2) = lbound(SrcMiscData%parallelFlag, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%parallelFlag, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%parallelFlag)
+      UB(1:2) = ubound(SrcMiscData%parallelFlag)
       if (.not. allocated(DstMiscData%parallelFlag)) then
          allocate(DstMiscData%parallelFlag(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1489,8 +1489,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%parallelFlag = SrcMiscData%parallelFlag
    end if
    if (allocated(SrcMiscData%r_s)) then
-      LB(1:2) = lbound(SrcMiscData%r_s, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%r_s, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%r_s)
+      UB(1:2) = ubound(SrcMiscData%r_s)
       if (.not. allocated(DstMiscData%r_s)) then
          allocate(DstMiscData%r_s(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1501,8 +1501,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%r_s = SrcMiscData%r_s
    end if
    if (allocated(SrcMiscData%r_e)) then
-      LB(1:2) = lbound(SrcMiscData%r_e, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%r_e, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%r_e)
+      UB(1:2) = ubound(SrcMiscData%r_e)
       if (.not. allocated(DstMiscData%r_e)) then
          allocate(DstMiscData%r_e(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1513,8 +1513,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%r_e = SrcMiscData%r_e
    end if
    if (allocated(SrcMiscData%rhat_s)) then
-      LB(1:3) = lbound(SrcMiscData%rhat_s, kind=B8Ki)
-      UB(1:3) = ubound(SrcMiscData%rhat_s, kind=B8Ki)
+      LB(1:3) = lbound(SrcMiscData%rhat_s)
+      UB(1:3) = ubound(SrcMiscData%rhat_s)
       if (.not. allocated(DstMiscData%rhat_s)) then
          allocate(DstMiscData%rhat_s(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1525,8 +1525,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%rhat_s = SrcMiscData%rhat_s
    end if
    if (allocated(SrcMiscData%rhat_e)) then
-      LB(1:3) = lbound(SrcMiscData%rhat_e, kind=B8Ki)
-      UB(1:3) = ubound(SrcMiscData%rhat_e, kind=B8Ki)
+      LB(1:3) = lbound(SrcMiscData%rhat_e)
+      UB(1:3) = ubound(SrcMiscData%rhat_e)
       if (.not. allocated(DstMiscData%rhat_e)) then
          allocate(DstMiscData%rhat_e(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1537,8 +1537,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%rhat_e = SrcMiscData%rhat_e
    end if
    if (allocated(SrcMiscData%pvec_cs)) then
-      LB(1:3) = lbound(SrcMiscData%pvec_cs, kind=B8Ki)
-      UB(1:3) = ubound(SrcMiscData%pvec_cs, kind=B8Ki)
+      LB(1:3) = lbound(SrcMiscData%pvec_cs)
+      UB(1:3) = ubound(SrcMiscData%pvec_cs)
       if (.not. allocated(DstMiscData%pvec_cs)) then
          allocate(DstMiscData%pvec_cs(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1549,8 +1549,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%pvec_cs = SrcMiscData%pvec_cs
    end if
    if (allocated(SrcMiscData%pvec_ce)) then
-      LB(1:3) = lbound(SrcMiscData%pvec_ce, kind=B8Ki)
-      UB(1:3) = ubound(SrcMiscData%pvec_ce, kind=B8Ki)
+      LB(1:3) = lbound(SrcMiscData%pvec_ce)
+      UB(1:3) = ubound(SrcMiscData%pvec_ce)
       if (.not. allocated(DstMiscData%pvec_ce)) then
          allocate(DstMiscData%pvec_ce(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1561,8 +1561,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%pvec_ce = SrcMiscData%pvec_ce
    end if
    if (allocated(SrcMiscData%outVizXYPlane)) then
-      LB(1:4) = lbound(SrcMiscData%outVizXYPlane, kind=B8Ki)
-      UB(1:4) = ubound(SrcMiscData%outVizXYPlane, kind=B8Ki)
+      LB(1:4) = lbound(SrcMiscData%outVizXYPlane)
+      UB(1:4) = ubound(SrcMiscData%outVizXYPlane)
       if (.not. allocated(DstMiscData%outVizXYPlane)) then
          allocate(DstMiscData%outVizXYPlane(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1573,8 +1573,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%outVizXYPlane = SrcMiscData%outVizXYPlane
    end if
    if (allocated(SrcMiscData%outVizYZPlane)) then
-      LB(1:4) = lbound(SrcMiscData%outVizYZPlane, kind=B8Ki)
-      UB(1:4) = ubound(SrcMiscData%outVizYZPlane, kind=B8Ki)
+      LB(1:4) = lbound(SrcMiscData%outVizYZPlane)
+      UB(1:4) = ubound(SrcMiscData%outVizYZPlane)
       if (.not. allocated(DstMiscData%outVizYZPlane)) then
          allocate(DstMiscData%outVizYZPlane(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1585,8 +1585,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%outVizYZPlane = SrcMiscData%outVizYZPlane
    end if
    if (allocated(SrcMiscData%outVizXZPlane)) then
-      LB(1:4) = lbound(SrcMiscData%outVizXZPlane, kind=B8Ki)
-      UB(1:4) = ubound(SrcMiscData%outVizXZPlane, kind=B8Ki)
+      LB(1:4) = lbound(SrcMiscData%outVizXZPlane)
+      UB(1:4) = ubound(SrcMiscData%outVizXZPlane)
       if (.not. allocated(DstMiscData%outVizXZPlane)) then
          allocate(DstMiscData%outVizXZPlane(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1597,8 +1597,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%outVizXZPlane = SrcMiscData%outVizXZPlane
    end if
    if (allocated(SrcMiscData%IfW)) then
-      LB(1:1) = lbound(SrcMiscData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%IfW)
+      UB(1:1) = ubound(SrcMiscData%IfW)
       if (.not. allocated(DstMiscData%IfW)) then
          allocate(DstMiscData%IfW(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1625,8 +1625,8 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%V_amb_low_disk)) then
-      LB(1:2) = lbound(SrcMiscData%V_amb_low_disk, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%V_amb_low_disk, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%V_amb_low_disk)
+      UB(1:2) = ubound(SrcMiscData%V_amb_low_disk)
       if (.not. allocated(DstMiscData%V_amb_low_disk)) then
          allocate(DstMiscData%V_amb_low_disk(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1642,8 +1642,8 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(AWAE_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3, i4
-   integer(B8Ki)   :: LB(4), UB(4)
+   integer(B4Ki)   :: i1, i2, i3, i4
+   integer(B4Ki)   :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_DestroyMisc'
@@ -1662,8 +1662,8 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%Vdist_low_full)
    end if
    if (allocated(MiscData%Vamb_High)) then
-      LB(1:1) = lbound(MiscData%Vamb_High, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%Vamb_High, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%Vamb_High)
+      UB(1:1) = ubound(MiscData%Vamb_High)
       do i1 = LB(1), UB(1)
          call AWAE_DestroyHighWindGrid(MiscData%Vamb_High(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1701,8 +1701,8 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%outVizXZPlane)
    end if
    if (allocated(MiscData%IfW)) then
-      LB(1:1) = lbound(MiscData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%IfW)
+      UB(1:1) = ubound(MiscData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_DestroyMisc(MiscData%IfW(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1726,8 +1726,8 @@ subroutine AWAE_PackMisc(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AWAE_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackMisc'
-   integer(B8Ki)   :: i1, i2, i3, i4
-   integer(B8Ki)   :: LB(4), UB(4)
+   integer(B4Ki)   :: i1, i2, i3, i4
+   integer(B4Ki)   :: LB(4), UB(4)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%Vamb_low)
    call RegPackAlloc(RF, InData%Vamb_lowpol)
@@ -1735,9 +1735,9 @@ subroutine AWAE_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%Vdist_low_full)
    call RegPack(RF, allocated(InData%Vamb_High))
    if (allocated(InData%Vamb_High)) then
-      call RegPackBounds(RF, 1, lbound(InData%Vamb_High, kind=B8Ki), ubound(InData%Vamb_High, kind=B8Ki))
-      LB(1:1) = lbound(InData%Vamb_High, kind=B8Ki)
-      UB(1:1) = ubound(InData%Vamb_High, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%Vamb_High), ubound(InData%Vamb_High))
+      LB(1:1) = lbound(InData%Vamb_High)
+      UB(1:1) = ubound(InData%Vamb_High)
       do i1 = LB(1), UB(1)
          call AWAE_PackHighWindGrid(RF, InData%Vamb_High(i1)) 
       end do
@@ -1754,9 +1754,9 @@ subroutine AWAE_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%outVizXZPlane)
    call RegPack(RF, allocated(InData%IfW))
    if (allocated(InData%IfW)) then
-      call RegPackBounds(RF, 1, lbound(InData%IfW, kind=B8Ki), ubound(InData%IfW, kind=B8Ki))
-      LB(1:1) = lbound(InData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(InData%IfW, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%IfW), ubound(InData%IfW))
+      LB(1:1) = lbound(InData%IfW)
+      UB(1:1) = ubound(InData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_PackMisc(RF, InData%IfW(i1)) 
       end do
@@ -1773,8 +1773,8 @@ subroutine AWAE_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackMisc'
-   integer(B8Ki)   :: i1, i2, i3, i4
-   integer(B8Ki)   :: LB(4), UB(4)
+   integer(B4Ki)   :: i1, i2, i3, i4
+   integer(B4Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1831,8 +1831,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyParam'
@@ -1843,8 +1843,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumRadii = SrcParamData%NumRadii
    DstParamData%NumPlanes = SrcParamData%NumPlanes
    if (allocated(SrcParamData%y)) then
-      LB(1:1) = lbound(SrcParamData%y, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%y, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%y)
+      UB(1:1) = ubound(SrcParamData%y)
       if (.not. allocated(DstParamData%y)) then
          allocate(DstParamData%y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1855,8 +1855,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%y = SrcParamData%y
    end if
    if (allocated(SrcParamData%z)) then
-      LB(1:1) = lbound(SrcParamData%z, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%z, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%z)
+      UB(1:1) = ubound(SrcParamData%z)
       if (.not. allocated(DstParamData%z)) then
          allocate(DstParamData%z(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1881,8 +1881,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%Y0_low = SrcParamData%Y0_low
    DstParamData%Z0_low = SrcParamData%Z0_low
    if (allocated(SrcParamData%X0_high)) then
-      LB(1:1) = lbound(SrcParamData%X0_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%X0_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%X0_high)
+      UB(1:1) = ubound(SrcParamData%X0_high)
       if (.not. allocated(DstParamData%X0_high)) then
          allocate(DstParamData%X0_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1893,8 +1893,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%X0_high = SrcParamData%X0_high
    end if
    if (allocated(SrcParamData%Y0_high)) then
-      LB(1:1) = lbound(SrcParamData%Y0_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%Y0_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%Y0_high)
+      UB(1:1) = ubound(SrcParamData%Y0_high)
       if (.not. allocated(DstParamData%Y0_high)) then
          allocate(DstParamData%Y0_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1905,8 +1905,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Y0_high = SrcParamData%Y0_high
    end if
    if (allocated(SrcParamData%Z0_high)) then
-      LB(1:1) = lbound(SrcParamData%Z0_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%Z0_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%Z0_high)
+      UB(1:1) = ubound(SrcParamData%Z0_high)
       if (.not. allocated(DstParamData%Z0_high)) then
          allocate(DstParamData%Z0_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1917,8 +1917,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Z0_high = SrcParamData%Z0_high
    end if
    if (allocated(SrcParamData%dX_high)) then
-      LB(1:1) = lbound(SrcParamData%dX_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%dX_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%dX_high)
+      UB(1:1) = ubound(SrcParamData%dX_high)
       if (.not. allocated(DstParamData%dX_high)) then
          allocate(DstParamData%dX_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1929,8 +1929,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%dX_high = SrcParamData%dX_high
    end if
    if (allocated(SrcParamData%dY_high)) then
-      LB(1:1) = lbound(SrcParamData%dY_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%dY_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%dY_high)
+      UB(1:1) = ubound(SrcParamData%dY_high)
       if (.not. allocated(DstParamData%dY_high)) then
          allocate(DstParamData%dY_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1941,8 +1941,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%dY_high = SrcParamData%dY_high
    end if
    if (allocated(SrcParamData%dZ_high)) then
-      LB(1:1) = lbound(SrcParamData%dZ_high, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%dZ_high, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%dZ_high)
+      UB(1:1) = ubound(SrcParamData%dZ_high)
       if (.not. allocated(DstParamData%dZ_high)) then
          allocate(DstParamData%dZ_high(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1956,8 +1956,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nY_high = SrcParamData%nY_high
    DstParamData%nZ_high = SrcParamData%nZ_high
    if (allocated(SrcParamData%Grid_low)) then
-      LB(1:2) = lbound(SrcParamData%Grid_low, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%Grid_low, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%Grid_low)
+      UB(1:2) = ubound(SrcParamData%Grid_low)
       if (.not. allocated(DstParamData%Grid_low)) then
          allocate(DstParamData%Grid_low(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1968,8 +1968,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Grid_low = SrcParamData%Grid_low
    end if
    if (allocated(SrcParamData%Grid_high)) then
-      LB(1:3) = lbound(SrcParamData%Grid_high, kind=B8Ki)
-      UB(1:3) = ubound(SrcParamData%Grid_high, kind=B8Ki)
+      LB(1:3) = lbound(SrcParamData%Grid_high)
+      UB(1:3) = ubound(SrcParamData%Grid_high)
       if (.not. allocated(DstParamData%Grid_high)) then
          allocate(DstParamData%Grid_high(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1980,8 +1980,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%Grid_high = SrcParamData%Grid_high
    end if
    if (allocated(SrcParamData%WT_Position)) then
-      LB(1:2) = lbound(SrcParamData%WT_Position, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%WT_Position, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%WT_Position)
+      UB(1:2) = ubound(SrcParamData%WT_Position)
       if (.not. allocated(DstParamData%WT_Position)) then
          allocate(DstParamData%WT_Position(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2000,8 +2000,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%C_ScaleDiam = SrcParamData%C_ScaleDiam
    DstParamData%Mod_Projection = SrcParamData%Mod_Projection
    if (allocated(SrcParamData%IfW)) then
-      LB(1:1) = lbound(SrcParamData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%IfW)
+      UB(1:1) = ubound(SrcParamData%IfW)
       if (.not. allocated(DstParamData%IfW)) then
          allocate(DstParamData%IfW(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2019,8 +2019,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%WrDisWind = SrcParamData%WrDisWind
    DstParamData%NOutDisWindXY = SrcParamData%NOutDisWindXY
    if (allocated(SrcParamData%OutDisWindZ)) then
-      LB(1:1) = lbound(SrcParamData%OutDisWindZ, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutDisWindZ, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutDisWindZ)
+      UB(1:1) = ubound(SrcParamData%OutDisWindZ)
       if (.not. allocated(DstParamData%OutDisWindZ)) then
          allocate(DstParamData%OutDisWindZ(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2032,8 +2032,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%NOutDisWindYZ = SrcParamData%NOutDisWindYZ
    if (allocated(SrcParamData%OutDisWindX)) then
-      LB(1:1) = lbound(SrcParamData%OutDisWindX, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutDisWindX, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutDisWindX)
+      UB(1:1) = ubound(SrcParamData%OutDisWindX)
       if (.not. allocated(DstParamData%OutDisWindX)) then
          allocate(DstParamData%OutDisWindX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2045,8 +2045,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%NOutDisWindXZ = SrcParamData%NOutDisWindXZ
    if (allocated(SrcParamData%OutDisWindY)) then
-      LB(1:1) = lbound(SrcParamData%OutDisWindY, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutDisWindY, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutDisWindY)
+      UB(1:1) = ubound(SrcParamData%OutDisWindY)
       if (.not. allocated(DstParamData%OutDisWindY)) then
          allocate(DstParamData%OutDisWindY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2067,8 +2067,8 @@ subroutine AWAE_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(AWAE_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_DestroyParam'
@@ -2108,8 +2108,8 @@ subroutine AWAE_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%WT_Position)
    end if
    if (allocated(ParamData%IfW)) then
-      LB(1:1) = lbound(ParamData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%IfW, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%IfW)
+      UB(1:1) = ubound(ParamData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_DestroyParam(ParamData%IfW(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2132,8 +2132,8 @@ subroutine AWAE_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AWAE_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackParam'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%WindFilePath)
@@ -2178,9 +2178,9 @@ subroutine AWAE_PackParam(RF, Indata)
    call RegPack(RF, InData%Mod_Projection)
    call RegPack(RF, allocated(InData%IfW))
    if (allocated(InData%IfW)) then
-      call RegPackBounds(RF, 1, lbound(InData%IfW, kind=B8Ki), ubound(InData%IfW, kind=B8Ki))
-      LB(1:1) = lbound(InData%IfW, kind=B8Ki)
-      UB(1:1) = ubound(InData%IfW, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%IfW), ubound(InData%IfW))
+      LB(1:1) = lbound(InData%IfW)
+      UB(1:1) = ubound(InData%IfW)
       do i1 = LB(1), UB(1)
          call InflowWind_PackParam(RF, InData%IfW(i1)) 
       end do
@@ -2211,8 +2211,8 @@ subroutine AWAE_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackParam'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -2309,16 +2309,16 @@ subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%Vdist_High)) then
-      LB(1:1) = lbound(SrcOutputData%Vdist_High, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%Vdist_High, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%Vdist_High)
+      UB(1:1) = ubound(SrcOutputData%Vdist_High)
       if (.not. allocated(DstOutputData%Vdist_High)) then
          allocate(DstOutputData%Vdist_High(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2333,8 +2333,8 @@ subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       end do
    end if
    if (allocated(SrcOutputData%V_plane)) then
-      LB(1:3) = lbound(SrcOutputData%V_plane, kind=B8Ki)
-      UB(1:3) = ubound(SrcOutputData%V_plane, kind=B8Ki)
+      LB(1:3) = lbound(SrcOutputData%V_plane)
+      UB(1:3) = ubound(SrcOutputData%V_plane)
       if (.not. allocated(DstOutputData%V_plane)) then
          allocate(DstOutputData%V_plane(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2345,8 +2345,8 @@ subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       DstOutputData%V_plane = SrcOutputData%V_plane
    end if
    if (allocated(SrcOutputData%TI_amb)) then
-      LB(1:1) = lbound(SrcOutputData%TI_amb, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%TI_amb, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%TI_amb)
+      UB(1:1) = ubound(SrcOutputData%TI_amb)
       if (.not. allocated(DstOutputData%TI_amb)) then
          allocate(DstOutputData%TI_amb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2357,8 +2357,8 @@ subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       DstOutputData%TI_amb = SrcOutputData%TI_amb
    end if
    if (allocated(SrcOutputData%Vx_wind_disk)) then
-      LB(1:1) = lbound(SrcOutputData%Vx_wind_disk, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%Vx_wind_disk, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%Vx_wind_disk)
+      UB(1:1) = ubound(SrcOutputData%Vx_wind_disk)
       if (.not. allocated(DstOutputData%Vx_wind_disk)) then
          allocate(DstOutputData%Vx_wind_disk(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2374,16 +2374,16 @@ subroutine AWAE_DestroyOutput(OutputData, ErrStat, ErrMsg)
    type(AWAE_OutputType), intent(inout) :: OutputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(OutputData%Vdist_High)) then
-      LB(1:1) = lbound(OutputData%Vdist_High, kind=B8Ki)
-      UB(1:1) = ubound(OutputData%Vdist_High, kind=B8Ki)
+      LB(1:1) = lbound(OutputData%Vdist_High)
+      UB(1:1) = ubound(OutputData%Vdist_High)
       do i1 = LB(1), UB(1)
          call AWAE_DestroyHighWindGrid(OutputData%Vdist_High(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2405,14 +2405,14 @@ subroutine AWAE_PackOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(AWAE_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackOutput'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%Vdist_High))
    if (allocated(InData%Vdist_High)) then
-      call RegPackBounds(RF, 1, lbound(InData%Vdist_High, kind=B8Ki), ubound(InData%Vdist_High, kind=B8Ki))
-      LB(1:1) = lbound(InData%Vdist_High, kind=B8Ki)
-      UB(1:1) = ubound(InData%Vdist_High, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%Vdist_High), ubound(InData%Vdist_High))
+      LB(1:1) = lbound(InData%Vdist_High)
+      UB(1:1) = ubound(InData%Vdist_High)
       do i1 = LB(1), UB(1)
          call AWAE_PackHighWindGrid(RF, InData%Vdist_High(i1)) 
       end do
@@ -2427,8 +2427,8 @@ subroutine AWAE_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackOutput'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -2456,14 +2456,14 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(4), UB(4)
+   integer(B4Ki)                  :: LB(4), UB(4)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'AWAE_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInputData%xhat_plane)) then
-      LB(1:3) = lbound(SrcInputData%xhat_plane, kind=B8Ki)
-      UB(1:3) = ubound(SrcInputData%xhat_plane, kind=B8Ki)
+      LB(1:3) = lbound(SrcInputData%xhat_plane)
+      UB(1:3) = ubound(SrcInputData%xhat_plane)
       if (.not. allocated(DstInputData%xhat_plane)) then
          allocate(DstInputData%xhat_plane(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2474,8 +2474,8 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%xhat_plane = SrcInputData%xhat_plane
    end if
    if (allocated(SrcInputData%p_plane)) then
-      LB(1:3) = lbound(SrcInputData%p_plane, kind=B8Ki)
-      UB(1:3) = ubound(SrcInputData%p_plane, kind=B8Ki)
+      LB(1:3) = lbound(SrcInputData%p_plane)
+      UB(1:3) = ubound(SrcInputData%p_plane)
       if (.not. allocated(DstInputData%p_plane)) then
          allocate(DstInputData%p_plane(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2486,8 +2486,8 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%p_plane = SrcInputData%p_plane
    end if
    if (allocated(SrcInputData%Vx_wake)) then
-      LB(1:4) = lbound(SrcInputData%Vx_wake, kind=B8Ki)
-      UB(1:4) = ubound(SrcInputData%Vx_wake, kind=B8Ki)
+      LB(1:4) = lbound(SrcInputData%Vx_wake)
+      UB(1:4) = ubound(SrcInputData%Vx_wake)
       if (.not. allocated(DstInputData%Vx_wake)) then
          allocate(DstInputData%Vx_wake(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2498,8 +2498,8 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%Vx_wake = SrcInputData%Vx_wake
    end if
    if (allocated(SrcInputData%Vy_wake)) then
-      LB(1:4) = lbound(SrcInputData%Vy_wake, kind=B8Ki)
-      UB(1:4) = ubound(SrcInputData%Vy_wake, kind=B8Ki)
+      LB(1:4) = lbound(SrcInputData%Vy_wake)
+      UB(1:4) = ubound(SrcInputData%Vy_wake)
       if (.not. allocated(DstInputData%Vy_wake)) then
          allocate(DstInputData%Vy_wake(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2510,8 +2510,8 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%Vy_wake = SrcInputData%Vy_wake
    end if
    if (allocated(SrcInputData%Vz_wake)) then
-      LB(1:4) = lbound(SrcInputData%Vz_wake, kind=B8Ki)
-      UB(1:4) = ubound(SrcInputData%Vz_wake, kind=B8Ki)
+      LB(1:4) = lbound(SrcInputData%Vz_wake)
+      UB(1:4) = ubound(SrcInputData%Vz_wake)
       if (.not. allocated(DstInputData%Vz_wake)) then
          allocate(DstInputData%Vz_wake(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2522,8 +2522,8 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%Vz_wake = SrcInputData%Vz_wake
    end if
    if (allocated(SrcInputData%D_wake)) then
-      LB(1:2) = lbound(SrcInputData%D_wake, kind=B8Ki)
-      UB(1:2) = ubound(SrcInputData%D_wake, kind=B8Ki)
+      LB(1:2) = lbound(SrcInputData%D_wake)
+      UB(1:2) = ubound(SrcInputData%D_wake)
       if (.not. allocated(DstInputData%D_wake)) then
          allocate(DstInputData%D_wake(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2534,8 +2534,8 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%D_wake = SrcInputData%D_wake
    end if
    if (allocated(SrcInputData%WAT_k)) then
-      LB(1:4) = lbound(SrcInputData%WAT_k, kind=B8Ki)
-      UB(1:4) = ubound(SrcInputData%WAT_k, kind=B8Ki)
+      LB(1:4) = lbound(SrcInputData%WAT_k)
+      UB(1:4) = ubound(SrcInputData%WAT_k)
       if (.not. allocated(DstInputData%WAT_k)) then
          allocate(DstInputData%WAT_k(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2596,7 +2596,7 @@ subroutine AWAE_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(AWAE_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackInput'
-   integer(B8Ki)   :: LB(4), UB(4)
+   integer(B4Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

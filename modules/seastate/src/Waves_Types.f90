@@ -85,7 +85,7 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Waves_CopyInitInput'
@@ -109,8 +109,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
    DstInitInputData%NWaveKinGrid = SrcInitInputData%NWaveKinGrid
    if (allocated(SrcInitInputData%WaveKinGridxi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridxi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridxi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridxi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridxi)
       if (.not. allocated(DstInitInputData%WaveKinGridxi)) then
          allocate(DstInitInputData%WaveKinGridxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -121,8 +121,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%WaveKinGridxi = SrcInitInputData%WaveKinGridxi
    end if
    if (allocated(SrcInitInputData%WaveKinGridyi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridyi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridyi)
       if (.not. allocated(DstInitInputData%WaveKinGridyi)) then
          allocate(DstInitInputData%WaveKinGridyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -133,8 +133,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%WaveKinGridyi = SrcInitInputData%WaveKinGridyi
    end if
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi)
       if (.not. allocated(DstInitInputData%WaveKinGridzi)) then
          allocate(DstInitInputData%WaveKinGridzi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -145,8 +145,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
    end if
    if (allocated(SrcInitInputData%CurrVxi)) then
-      LB(1:1) = lbound(SrcInitInputData%CurrVxi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%CurrVxi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%CurrVxi)
+      UB(1:1) = ubound(SrcInitInputData%CurrVxi)
       if (.not. allocated(DstInitInputData%CurrVxi)) then
          allocate(DstInitInputData%CurrVxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -157,8 +157,8 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
       DstInitInputData%CurrVxi = SrcInitInputData%CurrVxi
    end if
    if (allocated(SrcInitInputData%CurrVyi)) then
-      LB(1:1) = lbound(SrcInitInputData%CurrVyi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%CurrVyi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%CurrVyi)
+      UB(1:1) = ubound(SrcInitInputData%CurrVyi)
       if (.not. allocated(DstInitInputData%CurrVyi)) then
          allocate(DstInitInputData%CurrVyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -256,7 +256,7 @@ subroutine Waves_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Waves_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Waves_UnPackInitInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

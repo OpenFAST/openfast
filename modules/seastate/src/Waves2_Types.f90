@@ -65,7 +65,7 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Waves2_CopyInitInput'
    ErrStat = ErrID_None
@@ -75,8 +75,8 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
    DstInitInputData%NWaveKinGrid = SrcInitInputData%NWaveKinGrid
    if (allocated(SrcInitInputData%WaveKinGridxi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridxi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridxi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridxi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridxi)
       if (.not. allocated(DstInitInputData%WaveKinGridxi)) then
          allocate(DstInitInputData%WaveKinGridxi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -87,8 +87,8 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%WaveKinGridxi = SrcInitInputData%WaveKinGridxi
    end if
    if (allocated(SrcInitInputData%WaveKinGridyi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridyi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridyi)
       if (.not. allocated(DstInitInputData%WaveKinGridyi)) then
          allocate(DstInitInputData%WaveKinGridyi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -99,8 +99,8 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%WaveKinGridyi = SrcInitInputData%WaveKinGridyi
    end if
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi)
       if (.not. allocated(DstInitInputData%WaveKinGridzi)) then
          allocate(DstInitInputData%WaveKinGridzi(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -153,7 +153,7 @@ subroutine Waves2_UnPackInitInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Waves2_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Waves2_UnPackInitInput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -174,14 +174,14 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(5), UB(5)
+   integer(B4Ki)                  :: LB(5), UB(5)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Waves2_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WaveAcc2D)) then
-      LB(1:5) = lbound(SrcInitOutputData%WaveAcc2D, kind=B8Ki)
-      UB(1:5) = ubound(SrcInitOutputData%WaveAcc2D, kind=B8Ki)
+      LB(1:5) = lbound(SrcInitOutputData%WaveAcc2D)
+      UB(1:5) = ubound(SrcInitOutputData%WaveAcc2D)
       if (.not. allocated(DstInitOutputData%WaveAcc2D)) then
          allocate(DstInitOutputData%WaveAcc2D(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -192,8 +192,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveAcc2D = SrcInitOutputData%WaveAcc2D
    end if
    if (allocated(SrcInitOutputData%WaveDynP2D)) then
-      LB(1:4) = lbound(SrcInitOutputData%WaveDynP2D, kind=B8Ki)
-      UB(1:4) = ubound(SrcInitOutputData%WaveDynP2D, kind=B8Ki)
+      LB(1:4) = lbound(SrcInitOutputData%WaveDynP2D)
+      UB(1:4) = ubound(SrcInitOutputData%WaveDynP2D)
       if (.not. allocated(DstInitOutputData%WaveDynP2D)) then
          allocate(DstInitOutputData%WaveDynP2D(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -204,8 +204,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveDynP2D = SrcInitOutputData%WaveDynP2D
    end if
    if (allocated(SrcInitOutputData%WaveAcc2S)) then
-      LB(1:5) = lbound(SrcInitOutputData%WaveAcc2S, kind=B8Ki)
-      UB(1:5) = ubound(SrcInitOutputData%WaveAcc2S, kind=B8Ki)
+      LB(1:5) = lbound(SrcInitOutputData%WaveAcc2S)
+      UB(1:5) = ubound(SrcInitOutputData%WaveAcc2S)
       if (.not. allocated(DstInitOutputData%WaveAcc2S)) then
          allocate(DstInitOutputData%WaveAcc2S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -216,8 +216,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveAcc2S = SrcInitOutputData%WaveAcc2S
    end if
    if (allocated(SrcInitOutputData%WaveDynP2S)) then
-      LB(1:4) = lbound(SrcInitOutputData%WaveDynP2S, kind=B8Ki)
-      UB(1:4) = ubound(SrcInitOutputData%WaveDynP2S, kind=B8Ki)
+      LB(1:4) = lbound(SrcInitOutputData%WaveDynP2S)
+      UB(1:4) = ubound(SrcInitOutputData%WaveDynP2S)
       if (.not. allocated(DstInitOutputData%WaveDynP2S)) then
          allocate(DstInitOutputData%WaveDynP2S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -228,8 +228,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveDynP2S = SrcInitOutputData%WaveDynP2S
    end if
    if (allocated(SrcInitOutputData%WaveVel2D)) then
-      LB(1:5) = lbound(SrcInitOutputData%WaveVel2D, kind=B8Ki)
-      UB(1:5) = ubound(SrcInitOutputData%WaveVel2D, kind=B8Ki)
+      LB(1:5) = lbound(SrcInitOutputData%WaveVel2D)
+      UB(1:5) = ubound(SrcInitOutputData%WaveVel2D)
       if (.not. allocated(DstInitOutputData%WaveVel2D)) then
          allocate(DstInitOutputData%WaveVel2D(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -240,8 +240,8 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       DstInitOutputData%WaveVel2D = SrcInitOutputData%WaveVel2D
    end if
    if (allocated(SrcInitOutputData%WaveVel2S)) then
-      LB(1:5) = lbound(SrcInitOutputData%WaveVel2S, kind=B8Ki)
-      UB(1:5) = ubound(SrcInitOutputData%WaveVel2S, kind=B8Ki)
+      LB(1:5) = lbound(SrcInitOutputData%WaveVel2S)
+      UB(1:5) = ubound(SrcInitOutputData%WaveVel2S)
       if (.not. allocated(DstInitOutputData%WaveVel2S)) then
          allocate(DstInitOutputData%WaveVel2S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -298,7 +298,7 @@ subroutine Waves2_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Waves2_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Waves2_UnPackInitOutput'
-   integer(B8Ki)   :: LB(5), UB(5)
+   integer(B4Ki)   :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

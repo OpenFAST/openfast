@@ -994,7 +994,7 @@ CHARACTER(1024)              :: Line, Dummy_Str  ! String to temporarially hold 
 CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo  
 LOGICAL                      :: LegacyFormat
-LOGICAL                      :: bNumeric, bInteger
+LOGICAL                      :: bNumeric, bInteger, bCableHasPretension
 INTEGER(IntKi)               :: UnIn
 INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
 INTEGER(IntKi)               :: IOS
@@ -1377,6 +1377,7 @@ if (.not. LegacyFormat) then
    CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    IF (Check( Init%NPropSetsC < 0, 'NPropSetsCable must be >=0')) return
    CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
+   bCableHasPretension = .false.
    DO I = 1, Init%NPropSetsC
       !CALL ReadAry( UnIn, SDInputFile, Init%PropSetsC(I,:), PropSetsCCol, 'PropSetsC', 'PropSetsC ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
       READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading cable property line'; if (Failed()) return
@@ -1389,7 +1390,18 @@ if (.not. LegacyFormat) then
          call LegacyWarning('Using 4 values instead of 5 for cable properties. Cable will have constant properties and wont be controllable.')
          Init%PropSetsC(:,5:PropSetsCCol)=0 ! No CtrlChannel
       endif
+      if (Init%PropSetsC(I,4)>0.0) then
+         bCableHasPretension = .true.
+      end if
    ENDDO   
+   if (bCableHasPretension) then
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      call WrScr('Warning: Cable with non-zero pretension specified.')
+      call WrScr('         SubDyn currently does not account for geometric stiffness from pretension.' )
+      call WrScr('         Avoid non-zero cable pretension if possible.' )
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+   end if
+
    !----------------------- RIGID LINK PROPERTIES ------------------------------------
    CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsR, 'NPropSetsR', 'Number of rigid link properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -3237,7 +3249,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    real(ReKi)                    :: CableTension ! Controllable Cable force
    real(ReKi)                    :: DeltaL ! Change of length
    real(ReKi)                    :: rotations(3)
-   real(ReKi)                    :: du(3), Moment(3), Force(3) 
+   real(ReKi)                    :: du(3), Moment(3), Force(3), CMassOffset(3), CMassWeight(3)
    real(ReKi)                    :: u_TP(6)
    real(FEKi)                    :: FGe(12) ! element gravity force vector
    ! Variables for Guyan Rigid motion
@@ -3246,6 +3258,10 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    real(ReKi), dimension(3) ::  duP  ! Displacement of node due to rigid rotation
    real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global
    real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
+   real(ReKi), dimension(3,3) :: orientation ! Nodal orientation matrix
+
+   INTEGER(IntKi)           :: ErrStat2      ! Error status of the operation
+   CHARACTER(ErrMsgLen)     :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -3309,9 +3325,9 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    ! --- Build vector of external moment
    ! For floating structure with potentially large Guyan (rigid-body) rotation, nodal self-weight needs to be recomputed based on the current rigid-body orientation
    m%FG = 0.0_R8Ki
-   if ( RotateLoads ) then
+   if ( RotateLoads ) then ! if and only if floating
       Rb2g = transpose(Rg2b) ! Body (Guyan) to global
-      do i = 1, size(p%ElemProps)
+      do i = 1, size(p%ElemProps) ! Loop through all elements
          ! --- Element Fg in the earth-fixed frame
          CALL ElemG(p%ElemProps(i)%Area, p%ElemProps(i)%Length, p%ElemProps(i)%Rho, matmul(Rb2g,p%ElemProps(i)%DirCos), FGe, p%g)
          ! --- Element Fg in the Guyan rigid-body frame
@@ -3322,6 +3338,25 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
          ! --- Assembly in global unconstrained system
          IDOF = p%ElemsDOF(1:12,i)
          m%FG( IDOF ) = m%FG( IDOF ) + FGe(1:12)
+      end do
+      do i = 1,size(p%CMassNode) ! Loop through all concentrated masses
+         iNode       = p%CMassNode(i)
+         IDOF(1:6)   = p%NodesDOF(iNode)%List(1:6)
+         CMassOffset = p%CMassOffset(i,:)
+         CMassWeight = matmul(Rg2b, (/0.0,0.0,-p%CMassWeight(i)/) )
+         m%FG(IDOF(1:3)) = m%FG(IDOF(1:3)) + CMassWeight
+         m%FG(IDOF(4:6)) = m%FG(IDOF(4:6)) + cross_product(CMassOffset,CMassWeight)
+      end do
+   end if
+
+   if (GuyanLoadCorrection) then ! if and only if fixed-bottom
+      ! Additional GuyanLoadCorrection coming from the weight of concentrated masses with CoG offset
+      do i = 1,size(p%CMassNode) ! Loop through all concentrated masses
+         iNode       = p%CMassNode(i)
+         IDOF(4:6)   = p%NodesDOF(iNode)%List(4:6)
+         call SmllRotTrans('Nodal rotation',m%DU_full(IDOF(4)),m%DU_full(IDOF(5)),m%DU_full(IDOF(6)),orientation,'',ErrStat2,ErrMsg2); if(Failed()) return
+         CMassOffset = matmul(p%CMassOffset(i,:),orientation)
+         m%Fext(IDOF(4:6)) = m%Fext(IDOF(4:6)) + cross_product( CMassOffset-p%CMassOffset(i,:), (/0.0,0.0,-p%CMassWeight(i)/) )
       end do
    end if
 
@@ -3337,7 +3372,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)
-      if (GuyanLoadCorrection) then
+      if (GuyanLoadCorrection) then ! if and only if fixed-bottom
          du = m%DU_full(p%NodesDOF(iNode)%List(1:3)) ! Lever arm
          Moment(1) = Moment(1) + du(2) * Force(3) - du(3) * Force(2)
          Moment(2) = Moment(2) + du(3) * Force(1) - du(1) * Force(3)
@@ -3362,8 +3397,14 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
 contains
    subroutine Fatal(ErrMsg_in)
       character(len=*), intent(in) :: ErrMsg_in
-      call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'GetExtForce');
+      call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'GetExtForceOnInternalDOF');
    end subroutine Fatal
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetExtForceOnInternalDOF')
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+
 END SUBROUTINE GetExtForceOnInternalDOF
 
 !------------------------------------------------------------------------------------------------------

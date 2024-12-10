@@ -311,8 +311,8 @@ subroutine Glue_CopyModGlueType(SrcModGlueTypeData, DstModGlueTypeData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_CopyModGlueType'
@@ -320,8 +320,8 @@ subroutine Glue_CopyModGlueType(SrcModGlueTypeData, DstModGlueTypeData, CtrlCode
    ErrMsg  = ''
    DstModGlueTypeData%Name = SrcModGlueTypeData%Name
    if (allocated(SrcModGlueTypeData%ModData)) then
-      LB(1:1) = lbound(SrcModGlueTypeData%ModData, kind=B8Ki)
-      UB(1:1) = ubound(SrcModGlueTypeData%ModData, kind=B8Ki)
+      LB(1:1) = lbound(SrcModGlueTypeData%ModData)
+      UB(1:1) = ubound(SrcModGlueTypeData%ModData)
       if (.not. allocated(DstModGlueTypeData%ModData)) then
          allocate(DstModGlueTypeData%ModData(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -342,8 +342,8 @@ subroutine Glue_CopyModGlueType(SrcModGlueTypeData, DstModGlueTypeData, CtrlCode
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcModGlueTypeData%VarMaps)) then
-      LB(1:1) = lbound(SrcModGlueTypeData%VarMaps, kind=B8Ki)
-      UB(1:1) = ubound(SrcModGlueTypeData%VarMaps, kind=B8Ki)
+      LB(1:1) = lbound(SrcModGlueTypeData%VarMaps)
+      UB(1:1) = ubound(SrcModGlueTypeData%VarMaps)
       if (.not. allocated(DstModGlueTypeData%VarMaps)) then
          allocate(DstModGlueTypeData%VarMaps(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -363,16 +363,16 @@ subroutine Glue_DestroyModGlueType(ModGlueTypeData, ErrStat, ErrMsg)
    type(ModGlueType), intent(inout) :: ModGlueTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_DestroyModGlueType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ModGlueTypeData%ModData)) then
-      LB(1:1) = lbound(ModGlueTypeData%ModData, kind=B8Ki)
-      UB(1:1) = ubound(ModGlueTypeData%ModData, kind=B8Ki)
+      LB(1:1) = lbound(ModGlueTypeData%ModData)
+      UB(1:1) = ubound(ModGlueTypeData%ModData)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyModDataType(ModGlueTypeData%ModData(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -384,8 +384,8 @@ subroutine Glue_DestroyModGlueType(ModGlueTypeData, ErrStat, ErrMsg)
    call NWTC_Library_DestroyModLinType(ModGlueTypeData%Lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModGlueTypeData%VarMaps)) then
-      LB(1:1) = lbound(ModGlueTypeData%VarMaps, kind=B8Ki)
-      UB(1:1) = ubound(ModGlueTypeData%VarMaps, kind=B8Ki)
+      LB(1:1) = lbound(ModGlueTypeData%VarMaps)
+      UB(1:1) = ubound(ModGlueTypeData%VarMaps)
       do i1 = LB(1), UB(1)
          call Glue_DestroyVarMapType(ModGlueTypeData%VarMaps(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -398,15 +398,15 @@ subroutine Glue_PackModGlueType(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ModGlueType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Glue_PackModGlueType'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%Name)
    call RegPack(RF, allocated(InData%ModData))
    if (allocated(InData%ModData)) then
-      call RegPackBounds(RF, 1, lbound(InData%ModData, kind=B8Ki), ubound(InData%ModData, kind=B8Ki))
-      LB(1:1) = lbound(InData%ModData, kind=B8Ki)
-      UB(1:1) = ubound(InData%ModData, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%ModData), ubound(InData%ModData))
+      LB(1:1) = lbound(InData%ModData)
+      UB(1:1) = ubound(InData%ModData)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackModDataType(RF, InData%ModData(i1)) 
       end do
@@ -415,9 +415,9 @@ subroutine Glue_PackModGlueType(RF, Indata)
    call NWTC_Library_PackModLinType(RF, InData%Lin) 
    call RegPack(RF, allocated(InData%VarMaps))
    if (allocated(InData%VarMaps)) then
-      call RegPackBounds(RF, 1, lbound(InData%VarMaps, kind=B8Ki), ubound(InData%VarMaps, kind=B8Ki))
-      LB(1:1) = lbound(InData%VarMaps, kind=B8Ki)
-      UB(1:1) = ubound(InData%VarMaps, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%VarMaps), ubound(InData%VarMaps))
+      LB(1:1) = lbound(InData%VarMaps)
+      UB(1:1) = ubound(InData%VarMaps)
       do i1 = LB(1), UB(1)
          call Glue_PackVarMapType(RF, InData%VarMaps(i1)) 
       end do
@@ -429,8 +429,8 @@ subroutine Glue_UnPackModGlueType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ModGlueType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackModGlueType'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -471,7 +471,7 @@ subroutine Glue_CopyMappingType(SrcMappingTypeData, DstMappingTypeData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_CopyMappingType'
@@ -503,8 +503,8 @@ subroutine Glue_CopyMappingType(SrcMappingTypeData, DstMappingTypeData, CtrlCode
    DstMappingTypeData%Ready = SrcMappingTypeData%Ready
    DstMappingTypeData%DstUsesSibling = SrcMappingTypeData%DstUsesSibling
    if (allocated(SrcMappingTypeData%TmpMatrix)) then
-      LB(1:2) = lbound(SrcMappingTypeData%TmpMatrix, kind=B8Ki)
-      UB(1:2) = ubound(SrcMappingTypeData%TmpMatrix, kind=B8Ki)
+      LB(1:2) = lbound(SrcMappingTypeData%TmpMatrix)
+      UB(1:2) = ubound(SrcMappingTypeData%TmpMatrix)
       if (.not. allocated(DstMappingTypeData%TmpMatrix)) then
          allocate(DstMappingTypeData%TmpMatrix(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -515,8 +515,8 @@ subroutine Glue_CopyMappingType(SrcMappingTypeData, DstMappingTypeData, CtrlCode
       DstMappingTypeData%TmpMatrix = SrcMappingTypeData%TmpMatrix
    end if
    if (allocated(SrcMappingTypeData%VarData)) then
-      LB(1:1) = lbound(SrcMappingTypeData%VarData, kind=B8Ki)
-      UB(1:1) = ubound(SrcMappingTypeData%VarData, kind=B8Ki)
+      LB(1:1) = lbound(SrcMappingTypeData%VarData)
+      UB(1:1) = ubound(SrcMappingTypeData%VarData)
       if (.not. allocated(DstMappingTypeData%VarData)) then
          allocate(DstMappingTypeData%VarData(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -620,7 +620,7 @@ subroutine Glue_UnPackMappingType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(MappingType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackMappingType'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -657,7 +657,7 @@ subroutine Glue_CopyLinParam(SrcLinParamData, DstLinParamData, CtrlCode, ErrStat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Glue_CopyLinParam'
    ErrStat = ErrID_None
@@ -666,8 +666,8 @@ subroutine Glue_CopyLinParam(SrcLinParamData, DstLinParamData, CtrlCode, ErrStat
    DstLinParamData%InterpOrder = SrcLinParamData%InterpOrder
    DstLinParamData%SaveOPs = SrcLinParamData%SaveOPs
    if (allocated(SrcLinParamData%iMod)) then
-      LB(1:1) = lbound(SrcLinParamData%iMod, kind=B8Ki)
-      UB(1:1) = ubound(SrcLinParamData%iMod, kind=B8Ki)
+      LB(1:1) = lbound(SrcLinParamData%iMod)
+      UB(1:1) = ubound(SrcLinParamData%iMod)
       if (.not. allocated(DstLinParamData%iMod)) then
          allocate(DstLinParamData%iMod(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -707,7 +707,7 @@ subroutine Glue_UnPackLinParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Glue_LinParam), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackLinParam'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -723,7 +723,7 @@ subroutine Glue_CopyTCParam(SrcTCParamData, DstTCParamData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Glue_CopyTCParam'
    ErrStat = ErrID_None
@@ -758,8 +758,8 @@ subroutine Glue_CopyTCParam(SrcTCParamData, DstTCParamData, CtrlCode, ErrStat, E
    DstTCParamData%iJUT = SrcTCParamData%iJUT
    DstTCParamData%iJL = SrcTCParamData%iJL
    if (allocated(SrcTCParamData%iModInit)) then
-      LB(1:1) = lbound(SrcTCParamData%iModInit, kind=B8Ki)
-      UB(1:1) = ubound(SrcTCParamData%iModInit, kind=B8Ki)
+      LB(1:1) = lbound(SrcTCParamData%iModInit)
+      UB(1:1) = ubound(SrcTCParamData%iModInit)
       if (.not. allocated(DstTCParamData%iModInit)) then
          allocate(DstTCParamData%iModInit(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -770,8 +770,8 @@ subroutine Glue_CopyTCParam(SrcTCParamData, DstTCParamData, CtrlCode, ErrStat, E
       DstTCParamData%iModInit = SrcTCParamData%iModInit
    end if
    if (allocated(SrcTCParamData%iModTC)) then
-      LB(1:1) = lbound(SrcTCParamData%iModTC, kind=B8Ki)
-      UB(1:1) = ubound(SrcTCParamData%iModTC, kind=B8Ki)
+      LB(1:1) = lbound(SrcTCParamData%iModTC)
+      UB(1:1) = ubound(SrcTCParamData%iModTC)
       if (.not. allocated(DstTCParamData%iModTC)) then
          allocate(DstTCParamData%iModTC(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -782,8 +782,8 @@ subroutine Glue_CopyTCParam(SrcTCParamData, DstTCParamData, CtrlCode, ErrStat, E
       DstTCParamData%iModTC = SrcTCParamData%iModTC
    end if
    if (allocated(SrcTCParamData%iModOpt1)) then
-      LB(1:1) = lbound(SrcTCParamData%iModOpt1, kind=B8Ki)
-      UB(1:1) = ubound(SrcTCParamData%iModOpt1, kind=B8Ki)
+      LB(1:1) = lbound(SrcTCParamData%iModOpt1)
+      UB(1:1) = ubound(SrcTCParamData%iModOpt1)
       if (.not. allocated(DstTCParamData%iModOpt1)) then
          allocate(DstTCParamData%iModOpt1(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -794,8 +794,8 @@ subroutine Glue_CopyTCParam(SrcTCParamData, DstTCParamData, CtrlCode, ErrStat, E
       DstTCParamData%iModOpt1 = SrcTCParamData%iModOpt1
    end if
    if (allocated(SrcTCParamData%iModOpt2)) then
-      LB(1:1) = lbound(SrcTCParamData%iModOpt2, kind=B8Ki)
-      UB(1:1) = ubound(SrcTCParamData%iModOpt2, kind=B8Ki)
+      LB(1:1) = lbound(SrcTCParamData%iModOpt2)
+      UB(1:1) = ubound(SrcTCParamData%iModOpt2)
       if (.not. allocated(DstTCParamData%iModOpt2)) then
          allocate(DstTCParamData%iModOpt2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -806,8 +806,8 @@ subroutine Glue_CopyTCParam(SrcTCParamData, DstTCParamData, CtrlCode, ErrStat, E
       DstTCParamData%iModOpt2 = SrcTCParamData%iModOpt2
    end if
    if (allocated(SrcTCParamData%iModPost)) then
-      LB(1:1) = lbound(SrcTCParamData%iModPost, kind=B8Ki)
-      UB(1:1) = ubound(SrcTCParamData%iModPost, kind=B8Ki)
+      LB(1:1) = lbound(SrcTCParamData%iModPost)
+      UB(1:1) = ubound(SrcTCParamData%iModPost)
       if (.not. allocated(DstTCParamData%iModPost)) then
          allocate(DstTCParamData%iModPost(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -889,7 +889,7 @@ subroutine Glue_UnPackTCParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Glue_TCParam), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackTCParam'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -988,14 +988,14 @@ subroutine Glue_CopyLinSave(SrcLinSaveData, DstLinSaveData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Glue_CopyLinSave'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcLinSaveData%Times)) then
-      LB(1:1) = lbound(SrcLinSaveData%Times, kind=B8Ki)
-      UB(1:1) = ubound(SrcLinSaveData%Times, kind=B8Ki)
+      LB(1:1) = lbound(SrcLinSaveData%Times)
+      UB(1:1) = ubound(SrcLinSaveData%Times)
       if (.not. allocated(DstLinSaveData%Times)) then
          allocate(DstLinSaveData%Times(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1006,8 +1006,8 @@ subroutine Glue_CopyLinSave(SrcLinSaveData, DstLinSaveData, CtrlCode, ErrStat, E
       DstLinSaveData%Times = SrcLinSaveData%Times
    end if
    if (allocated(SrcLinSaveData%u)) then
-      LB(1:2) = lbound(SrcLinSaveData%u, kind=B8Ki)
-      UB(1:2) = ubound(SrcLinSaveData%u, kind=B8Ki)
+      LB(1:2) = lbound(SrcLinSaveData%u)
+      UB(1:2) = ubound(SrcLinSaveData%u)
       if (.not. allocated(DstLinSaveData%u)) then
          allocate(DstLinSaveData%u(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1018,8 +1018,8 @@ subroutine Glue_CopyLinSave(SrcLinSaveData, DstLinSaveData, CtrlCode, ErrStat, E
       DstLinSaveData%u = SrcLinSaveData%u
    end if
    if (allocated(SrcLinSaveData%x)) then
-      LB(1:2) = lbound(SrcLinSaveData%x, kind=B8Ki)
-      UB(1:2) = ubound(SrcLinSaveData%x, kind=B8Ki)
+      LB(1:2) = lbound(SrcLinSaveData%x)
+      UB(1:2) = ubound(SrcLinSaveData%x)
       if (.not. allocated(DstLinSaveData%x)) then
          allocate(DstLinSaveData%x(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1030,8 +1030,8 @@ subroutine Glue_CopyLinSave(SrcLinSaveData, DstLinSaveData, CtrlCode, ErrStat, E
       DstLinSaveData%x = SrcLinSaveData%x
    end if
    if (allocated(SrcLinSaveData%xd)) then
-      LB(1:2) = lbound(SrcLinSaveData%xd, kind=B8Ki)
-      UB(1:2) = ubound(SrcLinSaveData%xd, kind=B8Ki)
+      LB(1:2) = lbound(SrcLinSaveData%xd)
+      UB(1:2) = ubound(SrcLinSaveData%xd)
       if (.not. allocated(DstLinSaveData%xd)) then
          allocate(DstLinSaveData%xd(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1042,8 +1042,8 @@ subroutine Glue_CopyLinSave(SrcLinSaveData, DstLinSaveData, CtrlCode, ErrStat, E
       DstLinSaveData%xd = SrcLinSaveData%xd
    end if
    if (allocated(SrcLinSaveData%z)) then
-      LB(1:2) = lbound(SrcLinSaveData%z, kind=B8Ki)
-      UB(1:2) = ubound(SrcLinSaveData%z, kind=B8Ki)
+      LB(1:2) = lbound(SrcLinSaveData%z)
+      UB(1:2) = ubound(SrcLinSaveData%z)
       if (.not. allocated(DstLinSaveData%z)) then
          allocate(DstLinSaveData%z(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1054,8 +1054,8 @@ subroutine Glue_CopyLinSave(SrcLinSaveData, DstLinSaveData, CtrlCode, ErrStat, E
       DstLinSaveData%z = SrcLinSaveData%z
    end if
    if (allocated(SrcLinSaveData%OtherSt)) then
-      LB(1:2) = lbound(SrcLinSaveData%OtherSt, kind=B8Ki)
-      UB(1:2) = ubound(SrcLinSaveData%OtherSt, kind=B8Ki)
+      LB(1:2) = lbound(SrcLinSaveData%OtherSt)
+      UB(1:2) = ubound(SrcLinSaveData%OtherSt)
       if (.not. allocated(DstLinSaveData%OtherSt)) then
          allocate(DstLinSaveData%OtherSt(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1112,7 +1112,7 @@ subroutine Glue_UnPackLinSave(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Glue_LinSave), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackLinSave'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1176,14 +1176,14 @@ subroutine Glue_CopyCalcSteady(SrcCalcSteadyData, DstCalcSteadyData, CtrlCode, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Glue_CopyCalcSteady'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcCalcSteadyData%AzimuthTarget)) then
-      LB(1:1) = lbound(SrcCalcSteadyData%AzimuthTarget, kind=B8Ki)
-      UB(1:1) = ubound(SrcCalcSteadyData%AzimuthTarget, kind=B8Ki)
+      LB(1:1) = lbound(SrcCalcSteadyData%AzimuthTarget)
+      UB(1:1) = ubound(SrcCalcSteadyData%AzimuthTarget)
       if (.not. allocated(DstCalcSteadyData%AzimuthTarget)) then
          allocate(DstCalcSteadyData%AzimuthTarget(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1200,8 +1200,8 @@ subroutine Glue_CopyCalcSteady(SrcCalcSteadyData, DstCalcSteadyData, CtrlCode, E
    DstCalcSteadyData%NumRotations = SrcCalcSteadyData%NumRotations
    DstCalcSteadyData%NumOutputs = SrcCalcSteadyData%NumOutputs
    if (allocated(SrcCalcSteadyData%psi_buffer)) then
-      LB(1:1) = lbound(SrcCalcSteadyData%psi_buffer, kind=B8Ki)
-      UB(1:1) = ubound(SrcCalcSteadyData%psi_buffer, kind=B8Ki)
+      LB(1:1) = lbound(SrcCalcSteadyData%psi_buffer)
+      UB(1:1) = ubound(SrcCalcSteadyData%psi_buffer)
       if (.not. allocated(DstCalcSteadyData%psi_buffer)) then
          allocate(DstCalcSteadyData%psi_buffer(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1212,8 +1212,8 @@ subroutine Glue_CopyCalcSteady(SrcCalcSteadyData, DstCalcSteadyData, CtrlCode, E
       DstCalcSteadyData%psi_buffer = SrcCalcSteadyData%psi_buffer
    end if
    if (allocated(SrcCalcSteadyData%y_buffer)) then
-      LB(1:2) = lbound(SrcCalcSteadyData%y_buffer, kind=B8Ki)
-      UB(1:2) = ubound(SrcCalcSteadyData%y_buffer, kind=B8Ki)
+      LB(1:2) = lbound(SrcCalcSteadyData%y_buffer)
+      UB(1:2) = ubound(SrcCalcSteadyData%y_buffer)
       if (.not. allocated(DstCalcSteadyData%y_buffer)) then
          allocate(DstCalcSteadyData%y_buffer(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1224,8 +1224,8 @@ subroutine Glue_CopyCalcSteady(SrcCalcSteadyData, DstCalcSteadyData, CtrlCode, E
       DstCalcSteadyData%y_buffer = SrcCalcSteadyData%y_buffer
    end if
    if (allocated(SrcCalcSteadyData%y_azimuth)) then
-      LB(1:2) = lbound(SrcCalcSteadyData%y_azimuth, kind=B8Ki)
-      UB(1:2) = ubound(SrcCalcSteadyData%y_azimuth, kind=B8Ki)
+      LB(1:2) = lbound(SrcCalcSteadyData%y_azimuth)
+      UB(1:2) = ubound(SrcCalcSteadyData%y_azimuth)
       if (.not. allocated(DstCalcSteadyData%y_azimuth)) then
          allocate(DstCalcSteadyData%y_azimuth(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1236,8 +1236,8 @@ subroutine Glue_CopyCalcSteady(SrcCalcSteadyData, DstCalcSteadyData, CtrlCode, E
       DstCalcSteadyData%y_azimuth = SrcCalcSteadyData%y_azimuth
    end if
    if (allocated(SrcCalcSteadyData%y_interp)) then
-      LB(1:1) = lbound(SrcCalcSteadyData%y_interp, kind=B8Ki)
-      UB(1:1) = ubound(SrcCalcSteadyData%y_interp, kind=B8Ki)
+      LB(1:1) = lbound(SrcCalcSteadyData%y_interp)
+      UB(1:1) = ubound(SrcCalcSteadyData%y_interp)
       if (.not. allocated(DstCalcSteadyData%y_interp)) then
          allocate(DstCalcSteadyData%y_interp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1248,8 +1248,8 @@ subroutine Glue_CopyCalcSteady(SrcCalcSteadyData, DstCalcSteadyData, CtrlCode, E
       DstCalcSteadyData%y_interp = SrcCalcSteadyData%y_interp
    end if
    if (allocated(SrcCalcSteadyData%y_diff)) then
-      LB(1:1) = lbound(SrcCalcSteadyData%y_diff, kind=B8Ki)
-      UB(1:1) = ubound(SrcCalcSteadyData%y_diff, kind=B8Ki)
+      LB(1:1) = lbound(SrcCalcSteadyData%y_diff)
+      UB(1:1) = ubound(SrcCalcSteadyData%y_diff)
       if (.not. allocated(DstCalcSteadyData%y_diff)) then
          allocate(DstCalcSteadyData%y_diff(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1260,8 +1260,8 @@ subroutine Glue_CopyCalcSteady(SrcCalcSteadyData, DstCalcSteadyData, CtrlCode, E
       DstCalcSteadyData%y_diff = SrcCalcSteadyData%y_diff
    end if
    if (allocated(SrcCalcSteadyData%y_ref)) then
-      LB(1:1) = lbound(SrcCalcSteadyData%y_ref, kind=B8Ki)
-      UB(1:1) = ubound(SrcCalcSteadyData%y_ref, kind=B8Ki)
+      LB(1:1) = lbound(SrcCalcSteadyData%y_ref)
+      UB(1:1) = ubound(SrcCalcSteadyData%y_ref)
       if (.not. allocated(DstCalcSteadyData%y_ref)) then
          allocate(DstCalcSteadyData%y_ref(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1328,7 +1328,7 @@ subroutine Glue_UnPackCalcSteady(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Glue_CalcSteady), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackCalcSteady'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1400,16 +1400,16 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)                  :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_CopyAeroMap'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcAeroMapData%iModOrder)) then
-      LB(1:1) = lbound(SrcAeroMapData%iModOrder, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroMapData%iModOrder, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroMapData%iModOrder)
+      UB(1:1) = ubound(SrcAeroMapData%iModOrder)
       if (.not. allocated(DstAeroMapData%iModOrder)) then
          allocate(DstAeroMapData%iModOrder(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1423,8 +1423,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcAeroMapData%Jac11)) then
-      LB(1:2) = lbound(SrcAeroMapData%Jac11, kind=B8Ki)
-      UB(1:2) = ubound(SrcAeroMapData%Jac11, kind=B8Ki)
+      LB(1:2) = lbound(SrcAeroMapData%Jac11)
+      UB(1:2) = ubound(SrcAeroMapData%Jac11)
       if (.not. allocated(DstAeroMapData%Jac11)) then
          allocate(DstAeroMapData%Jac11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1435,8 +1435,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       DstAeroMapData%Jac11 = SrcAeroMapData%Jac11
    end if
    if (allocated(SrcAeroMapData%Jac12)) then
-      LB(1:2) = lbound(SrcAeroMapData%Jac12, kind=B8Ki)
-      UB(1:2) = ubound(SrcAeroMapData%Jac12, kind=B8Ki)
+      LB(1:2) = lbound(SrcAeroMapData%Jac12)
+      UB(1:2) = ubound(SrcAeroMapData%Jac12)
       if (.not. allocated(DstAeroMapData%Jac12)) then
          allocate(DstAeroMapData%Jac12(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1447,8 +1447,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       DstAeroMapData%Jac12 = SrcAeroMapData%Jac12
    end if
    if (allocated(SrcAeroMapData%Jac21)) then
-      LB(1:2) = lbound(SrcAeroMapData%Jac21, kind=B8Ki)
-      UB(1:2) = ubound(SrcAeroMapData%Jac21, kind=B8Ki)
+      LB(1:2) = lbound(SrcAeroMapData%Jac21)
+      UB(1:2) = ubound(SrcAeroMapData%Jac21)
       if (.not. allocated(DstAeroMapData%Jac21)) then
          allocate(DstAeroMapData%Jac21(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1459,8 +1459,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       DstAeroMapData%Jac21 = SrcAeroMapData%Jac21
    end if
    if (allocated(SrcAeroMapData%Jac22)) then
-      LB(1:2) = lbound(SrcAeroMapData%Jac22, kind=B8Ki)
-      UB(1:2) = ubound(SrcAeroMapData%Jac22, kind=B8Ki)
+      LB(1:2) = lbound(SrcAeroMapData%Jac22)
+      UB(1:2) = ubound(SrcAeroMapData%Jac22)
       if (.not. allocated(DstAeroMapData%Jac22)) then
          allocate(DstAeroMapData%Jac22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1471,8 +1471,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       DstAeroMapData%Jac22 = SrcAeroMapData%Jac22
    end if
    if (allocated(SrcAeroMapData%JacPivot)) then
-      LB(1:1) = lbound(SrcAeroMapData%JacPivot, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroMapData%JacPivot, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroMapData%JacPivot)
+      UB(1:1) = ubound(SrcAeroMapData%JacPivot)
       if (.not. allocated(DstAeroMapData%JacPivot)) then
          allocate(DstAeroMapData%JacPivot(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1485,8 +1485,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
    DstAeroMapData%JacScale = SrcAeroMapData%JacScale
    DstAeroMapData%SolveTolerance = SrcAeroMapData%SolveTolerance
    if (allocated(SrcAeroMapData%HubOrientation)) then
-      LB(1:3) = lbound(SrcAeroMapData%HubOrientation, kind=B8Ki)
-      UB(1:3) = ubound(SrcAeroMapData%HubOrientation, kind=B8Ki)
+      LB(1:3) = lbound(SrcAeroMapData%HubOrientation)
+      UB(1:3) = ubound(SrcAeroMapData%HubOrientation)
       if (.not. allocated(DstAeroMapData%HubOrientation)) then
          allocate(DstAeroMapData%HubOrientation(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1497,8 +1497,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       DstAeroMapData%HubOrientation = SrcAeroMapData%HubOrientation
    end if
    if (allocated(SrcAeroMapData%u1)) then
-      LB(1:1) = lbound(SrcAeroMapData%u1, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroMapData%u1, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroMapData%u1)
+      UB(1:1) = ubound(SrcAeroMapData%u1)
       if (.not. allocated(DstAeroMapData%u1)) then
          allocate(DstAeroMapData%u1(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1509,8 +1509,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       DstAeroMapData%u1 = SrcAeroMapData%u1
    end if
    if (allocated(SrcAeroMapData%u2)) then
-      LB(1:1) = lbound(SrcAeroMapData%u2, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroMapData%u2, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroMapData%u2)
+      UB(1:1) = ubound(SrcAeroMapData%u2)
       if (.not. allocated(DstAeroMapData%u2)) then
          allocate(DstAeroMapData%u2(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1521,8 +1521,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       DstAeroMapData%u2 = SrcAeroMapData%u2
    end if
    if (allocated(SrcAeroMapData%Residual)) then
-      LB(1:1) = lbound(SrcAeroMapData%Residual, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroMapData%Residual, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroMapData%Residual)
+      UB(1:1) = ubound(SrcAeroMapData%Residual)
       if (.not. allocated(DstAeroMapData%Residual)) then
          allocate(DstAeroMapData%Residual(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1533,8 +1533,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       DstAeroMapData%Residual = SrcAeroMapData%Residual
    end if
    if (allocated(SrcAeroMapData%SolveDelta)) then
-      LB(1:1) = lbound(SrcAeroMapData%SolveDelta, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroMapData%SolveDelta, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroMapData%SolveDelta)
+      UB(1:1) = ubound(SrcAeroMapData%SolveDelta)
       if (.not. allocated(DstAeroMapData%SolveDelta)) then
          allocate(DstAeroMapData%SolveDelta(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1545,8 +1545,8 @@ subroutine Glue_CopyAeroMap(SrcAeroMapData, DstAeroMapData, CtrlCode, ErrStat, E
       DstAeroMapData%SolveDelta = SrcAeroMapData%SolveDelta
    end if
    if (allocated(SrcAeroMapData%Cases)) then
-      LB(1:1) = lbound(SrcAeroMapData%Cases, kind=B8Ki)
-      UB(1:1) = ubound(SrcAeroMapData%Cases, kind=B8Ki)
+      LB(1:1) = lbound(SrcAeroMapData%Cases)
+      UB(1:1) = ubound(SrcAeroMapData%Cases)
       if (.not. allocated(DstAeroMapData%Cases)) then
          allocate(DstAeroMapData%Cases(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1567,8 +1567,8 @@ subroutine Glue_DestroyAeroMap(AeroMapData, ErrStat, ErrMsg)
    type(Glue_AeroMap), intent(inout) :: AeroMapData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_DestroyAeroMap'
@@ -1610,8 +1610,8 @@ subroutine Glue_DestroyAeroMap(AeroMapData, ErrStat, ErrMsg)
       deallocate(AeroMapData%SolveDelta)
    end if
    if (allocated(AeroMapData%Cases)) then
-      LB(1:1) = lbound(AeroMapData%Cases, kind=B8Ki)
-      UB(1:1) = ubound(AeroMapData%Cases, kind=B8Ki)
+      LB(1:1) = lbound(AeroMapData%Cases)
+      UB(1:1) = ubound(AeroMapData%Cases)
       do i1 = LB(1), UB(1)
          call Glue_DestroyAeroMapCase(AeroMapData%Cases(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1624,8 +1624,8 @@ subroutine Glue_PackAeroMap(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(Glue_AeroMap), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Glue_PackAeroMap'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%iModOrder)
    call Glue_PackModGlueType(RF, InData%Mod) 
@@ -1643,9 +1643,9 @@ subroutine Glue_PackAeroMap(RF, Indata)
    call RegPackAlloc(RF, InData%SolveDelta)
    call RegPack(RF, allocated(InData%Cases))
    if (allocated(InData%Cases)) then
-      call RegPackBounds(RF, 1, lbound(InData%Cases, kind=B8Ki), ubound(InData%Cases, kind=B8Ki))
-      LB(1:1) = lbound(InData%Cases, kind=B8Ki)
-      UB(1:1) = ubound(InData%Cases, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%Cases), ubound(InData%Cases))
+      LB(1:1) = lbound(InData%Cases)
+      UB(1:1) = ubound(InData%Cases)
       do i1 = LB(1), UB(1)
          call Glue_PackAeroMapCase(RF, InData%Cases(i1)) 
       end do
@@ -1658,8 +1658,8 @@ subroutine Glue_UnPackAeroMap(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Glue_AeroMap), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackAeroMap'
-   integer(B8Ki)   :: i1, i2, i3
-   integer(B8Ki)   :: LB(3), UB(3)
+   integer(B4Ki)   :: i1, i2, i3
+   integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1699,14 +1699,14 @@ subroutine Glue_CopyTC_State(SrcTC_StateData, DstTC_StateData, CtrlCode, ErrStat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Glue_CopyTC_State'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcTC_StateData%q_prev)) then
-      LB(1:1) = lbound(SrcTC_StateData%q_prev, kind=B8Ki)
-      UB(1:1) = ubound(SrcTC_StateData%q_prev, kind=B8Ki)
+      LB(1:1) = lbound(SrcTC_StateData%q_prev)
+      UB(1:1) = ubound(SrcTC_StateData%q_prev)
       if (.not. allocated(DstTC_StateData%q_prev)) then
          allocate(DstTC_StateData%q_prev(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1717,8 +1717,8 @@ subroutine Glue_CopyTC_State(SrcTC_StateData, DstTC_StateData, CtrlCode, ErrStat
       DstTC_StateData%q_prev = SrcTC_StateData%q_prev
    end if
    if (allocated(SrcTC_StateData%x)) then
-      LB(1:1) = lbound(SrcTC_StateData%x, kind=B8Ki)
-      UB(1:1) = ubound(SrcTC_StateData%x, kind=B8Ki)
+      LB(1:1) = lbound(SrcTC_StateData%x)
+      UB(1:1) = ubound(SrcTC_StateData%x)
       if (.not. allocated(DstTC_StateData%x)) then
          allocate(DstTC_StateData%x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1729,8 +1729,8 @@ subroutine Glue_CopyTC_State(SrcTC_StateData, DstTC_StateData, CtrlCode, ErrStat
       DstTC_StateData%x = SrcTC_StateData%x
    end if
    if (allocated(SrcTC_StateData%q)) then
-      LB(1:1) = lbound(SrcTC_StateData%q, kind=B8Ki)
-      UB(1:1) = ubound(SrcTC_StateData%q, kind=B8Ki)
+      LB(1:1) = lbound(SrcTC_StateData%q)
+      UB(1:1) = ubound(SrcTC_StateData%q)
       if (.not. allocated(DstTC_StateData%q)) then
          allocate(DstTC_StateData%q(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1741,8 +1741,8 @@ subroutine Glue_CopyTC_State(SrcTC_StateData, DstTC_StateData, CtrlCode, ErrStat
       DstTC_StateData%q = SrcTC_StateData%q
    end if
    if (allocated(SrcTC_StateData%v)) then
-      LB(1:1) = lbound(SrcTC_StateData%v, kind=B8Ki)
-      UB(1:1) = ubound(SrcTC_StateData%v, kind=B8Ki)
+      LB(1:1) = lbound(SrcTC_StateData%v)
+      UB(1:1) = ubound(SrcTC_StateData%v)
       if (.not. allocated(DstTC_StateData%v)) then
          allocate(DstTC_StateData%v(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1753,8 +1753,8 @@ subroutine Glue_CopyTC_State(SrcTC_StateData, DstTC_StateData, CtrlCode, ErrStat
       DstTC_StateData%v = SrcTC_StateData%v
    end if
    if (allocated(SrcTC_StateData%vd)) then
-      LB(1:1) = lbound(SrcTC_StateData%vd, kind=B8Ki)
-      UB(1:1) = ubound(SrcTC_StateData%vd, kind=B8Ki)
+      LB(1:1) = lbound(SrcTC_StateData%vd)
+      UB(1:1) = ubound(SrcTC_StateData%vd)
       if (.not. allocated(DstTC_StateData%vd)) then
          allocate(DstTC_StateData%vd(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1765,8 +1765,8 @@ subroutine Glue_CopyTC_State(SrcTC_StateData, DstTC_StateData, CtrlCode, ErrStat
       DstTC_StateData%vd = SrcTC_StateData%vd
    end if
    if (allocated(SrcTC_StateData%a)) then
-      LB(1:1) = lbound(SrcTC_StateData%a, kind=B8Ki)
-      UB(1:1) = ubound(SrcTC_StateData%a, kind=B8Ki)
+      LB(1:1) = lbound(SrcTC_StateData%a)
+      UB(1:1) = ubound(SrcTC_StateData%a)
       if (.not. allocated(DstTC_StateData%a)) then
          allocate(DstTC_StateData%a(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1823,7 +1823,7 @@ subroutine Glue_UnPackTC_State(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(TC_State), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackTC_State'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1841,7 +1841,7 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_CopyTCMisc'
@@ -1857,8 +1857,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcTCMiscData%UCalc)) then
-      LB(1:1) = lbound(SrcTCMiscData%UCalc, kind=B8Ki)
-      UB(1:1) = ubound(SrcTCMiscData%UCalc, kind=B8Ki)
+      LB(1:1) = lbound(SrcTCMiscData%UCalc)
+      UB(1:1) = ubound(SrcTCMiscData%UCalc)
       if (.not. allocated(DstTCMiscData%UCalc)) then
          allocate(DstTCMiscData%UCalc(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1869,8 +1869,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       DstTCMiscData%UCalc = SrcTCMiscData%UCalc
    end if
    if (allocated(SrcTCMiscData%XB)) then
-      LB(1:2) = lbound(SrcTCMiscData%XB, kind=B8Ki)
-      UB(1:2) = ubound(SrcTCMiscData%XB, kind=B8Ki)
+      LB(1:2) = lbound(SrcTCMiscData%XB)
+      UB(1:2) = ubound(SrcTCMiscData%XB)
       if (.not. allocated(DstTCMiscData%XB)) then
          allocate(DstTCMiscData%XB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1881,8 +1881,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       DstTCMiscData%XB = SrcTCMiscData%XB
    end if
    if (allocated(SrcTCMiscData%IPIV)) then
-      LB(1:1) = lbound(SrcTCMiscData%IPIV, kind=B8Ki)
-      UB(1:1) = ubound(SrcTCMiscData%IPIV, kind=B8Ki)
+      LB(1:1) = lbound(SrcTCMiscData%IPIV)
+      UB(1:1) = ubound(SrcTCMiscData%IPIV)
       if (.not. allocated(DstTCMiscData%IPIV)) then
          allocate(DstTCMiscData%IPIV(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1897,8 +1897,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
    DstTCMiscData%UJacStepsRemain = SrcTCMiscData%UJacStepsRemain
    DstTCMiscData%ConvWarn = SrcTCMiscData%ConvWarn
    if (allocated(SrcTCMiscData%XB_IO)) then
-      LB(1:2) = lbound(SrcTCMiscData%XB_IO, kind=B8Ki)
-      UB(1:2) = ubound(SrcTCMiscData%XB_IO, kind=B8Ki)
+      LB(1:2) = lbound(SrcTCMiscData%XB_IO)
+      UB(1:2) = ubound(SrcTCMiscData%XB_IO)
       if (.not. allocated(DstTCMiscData%XB_IO)) then
          allocate(DstTCMiscData%XB_IO(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1909,8 +1909,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       DstTCMiscData%XB_IO = SrcTCMiscData%XB_IO
    end if
    if (allocated(SrcTCMiscData%Jac_IO)) then
-      LB(1:2) = lbound(SrcTCMiscData%Jac_IO, kind=B8Ki)
-      UB(1:2) = ubound(SrcTCMiscData%Jac_IO, kind=B8Ki)
+      LB(1:2) = lbound(SrcTCMiscData%Jac_IO)
+      UB(1:2) = ubound(SrcTCMiscData%Jac_IO)
       if (.not. allocated(DstTCMiscData%Jac_IO)) then
          allocate(DstTCMiscData%Jac_IO(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1921,8 +1921,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       DstTCMiscData%Jac_IO = SrcTCMiscData%Jac_IO
    end if
    if (allocated(SrcTCMiscData%J11)) then
-      LB(1:2) = lbound(SrcTCMiscData%J11, kind=B8Ki)
-      UB(1:2) = ubound(SrcTCMiscData%J11, kind=B8Ki)
+      LB(1:2) = lbound(SrcTCMiscData%J11)
+      UB(1:2) = ubound(SrcTCMiscData%J11)
       if (.not. allocated(DstTCMiscData%J11)) then
          allocate(DstTCMiscData%J11(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1933,8 +1933,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       DstTCMiscData%J11 = SrcTCMiscData%J11
    end if
    if (allocated(SrcTCMiscData%J12)) then
-      LB(1:2) = lbound(SrcTCMiscData%J12, kind=B8Ki)
-      UB(1:2) = ubound(SrcTCMiscData%J12, kind=B8Ki)
+      LB(1:2) = lbound(SrcTCMiscData%J12)
+      UB(1:2) = ubound(SrcTCMiscData%J12)
       if (.not. allocated(DstTCMiscData%J12)) then
          allocate(DstTCMiscData%J12(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1945,8 +1945,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       DstTCMiscData%J12 = SrcTCMiscData%J12
    end if
    if (allocated(SrcTCMiscData%J21)) then
-      LB(1:2) = lbound(SrcTCMiscData%J21, kind=B8Ki)
-      UB(1:2) = ubound(SrcTCMiscData%J21, kind=B8Ki)
+      LB(1:2) = lbound(SrcTCMiscData%J21)
+      UB(1:2) = ubound(SrcTCMiscData%J21)
       if (.not. allocated(DstTCMiscData%J21)) then
          allocate(DstTCMiscData%J21(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1957,8 +1957,8 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       DstTCMiscData%J21 = SrcTCMiscData%J21
    end if
    if (allocated(SrcTCMiscData%J22)) then
-      LB(1:2) = lbound(SrcTCMiscData%J22, kind=B8Ki)
-      UB(1:2) = ubound(SrcTCMiscData%J22, kind=B8Ki)
+      LB(1:2) = lbound(SrcTCMiscData%J22)
+      UB(1:2) = ubound(SrcTCMiscData%J22)
       if (.not. allocated(DstTCMiscData%J22)) then
          allocate(DstTCMiscData%J22(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2042,7 +2042,7 @@ subroutine Glue_UnPackTCMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Glue_TCMisc), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackTCMisc'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -2114,16 +2114,16 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%ModData)) then
-      LB(1:1) = lbound(SrcMiscData%ModData, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%ModData, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%ModData)
+      UB(1:1) = ubound(SrcMiscData%ModData)
       if (.not. allocated(DstMiscData%ModData)) then
          allocate(DstMiscData%ModData(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2138,8 +2138,8 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcMiscData%Mappings)) then
-      LB(1:1) = lbound(SrcMiscData%Mappings, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%Mappings, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%Mappings)
+      UB(1:1) = ubound(SrcMiscData%Mappings)
       if (.not. allocated(DstMiscData%Mappings)) then
          allocate(DstMiscData%Mappings(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -2174,16 +2174,16 @@ subroutine Glue_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Glue_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(MiscData%ModData)) then
-      LB(1:1) = lbound(MiscData%ModData, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%ModData, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%ModData)
+      UB(1:1) = ubound(MiscData%ModData)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyModDataType(MiscData%ModData(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2191,8 +2191,8 @@ subroutine Glue_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%ModData)
    end if
    if (allocated(MiscData%Mappings)) then
-      LB(1:1) = lbound(MiscData%Mappings, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%Mappings, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%Mappings)
+      UB(1:1) = ubound(MiscData%Mappings)
       do i1 = LB(1), UB(1)
          call Glue_DestroyMappingType(MiscData%Mappings(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2215,23 +2215,23 @@ subroutine Glue_PackMisc(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(Glue_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Glue_PackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%ModData))
    if (allocated(InData%ModData)) then
-      call RegPackBounds(RF, 1, lbound(InData%ModData, kind=B8Ki), ubound(InData%ModData, kind=B8Ki))
-      LB(1:1) = lbound(InData%ModData, kind=B8Ki)
-      UB(1:1) = ubound(InData%ModData, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%ModData), ubound(InData%ModData))
+      LB(1:1) = lbound(InData%ModData)
+      UB(1:1) = ubound(InData%ModData)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackModDataType(RF, InData%ModData(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%Mappings))
    if (allocated(InData%Mappings)) then
-      call RegPackBounds(RF, 1, lbound(InData%Mappings, kind=B8Ki), ubound(InData%Mappings, kind=B8Ki))
-      LB(1:1) = lbound(InData%Mappings, kind=B8Ki)
-      UB(1:1) = ubound(InData%Mappings, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%Mappings), ubound(InData%Mappings))
+      LB(1:1) = lbound(InData%Mappings)
+      UB(1:1) = ubound(InData%Mappings)
       do i1 = LB(1), UB(1)
          call Glue_PackMappingType(RF, InData%Mappings(i1)) 
       end do
@@ -2248,8 +2248,8 @@ subroutine Glue_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Glue_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Glue_UnPackMisc'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

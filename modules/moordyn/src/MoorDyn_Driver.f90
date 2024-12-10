@@ -144,7 +144,7 @@ PROGRAM MoorDyn_Driver
    CALL CPU_TIME ( ProgStrtCPU )                                    ! Initial time (this zeros the start time when used as a MATLAB function)
    
 
-   CALL WrScr('MD Driver updated '//TRIM( version%Date ))
+   CALL WrScr('MD Driver last updated '//TRIM( version%Date ))
 
    ! Parse the driver input file and run the simulation based on that file
    CALL get_command_argument(1, drvrFilename)

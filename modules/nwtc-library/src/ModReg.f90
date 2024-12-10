@@ -340,7 +340,7 @@ contains
    subroutine RegPackBounds(RF, R, LB, UB)
       type(RegFile), intent(inout)  :: RF
       integer(B4Ki), intent(in)     :: R
-      integer(B8Ki), intent(in)     :: LB(:), UB(:)
+      integer(B4Ki), intent(in)     :: LB(:), UB(:)
 
       ! If has an error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -354,7 +354,7 @@ contains
    subroutine RegUnpackBounds(RF, R, LB, UB)
       type(RegFile), intent(inout)  :: RF
       integer(B4Ki), intent(in)     :: R
-      integer(B8Ki), intent(out)    :: LB(:), UB(:)
+      integer(B4Ki), intent(out)    :: LB(:), UB(:)
 
       ! If has an error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -576,7 +576,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -588,7 +588,7 @@ contains
       character(*), allocatable, intent(out)  :: Data(:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(1), UB(1)
+      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -632,7 +632,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -647,7 +647,7 @@ contains
    subroutine UnpackPtr_C1_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -737,7 +737,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -749,7 +749,7 @@ contains
       character(*), allocatable, intent(out)  :: Data(:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(2), UB(2)
+      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -793,7 +793,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -808,7 +808,7 @@ contains
    subroutine UnpackPtr_C1_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -898,7 +898,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -910,7 +910,7 @@ contains
       character(*), allocatable, intent(out)  :: Data(:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(3), UB(3)
+      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -954,7 +954,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -969,7 +969,7 @@ contains
    subroutine UnpackPtr_C1_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -1059,7 +1059,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -1071,7 +1071,7 @@ contains
       character(*), allocatable, intent(out)  :: Data(:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(4), UB(4)
+      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1115,7 +1115,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -1130,7 +1130,7 @@ contains
    subroutine UnpackPtr_C1_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -1220,7 +1220,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -1232,7 +1232,7 @@ contains
       character(*), allocatable, intent(out)  :: Data(:,:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(5), UB(5)
+      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1276,7 +1276,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -1291,7 +1291,7 @@ contains
    subroutine UnpackPtr_C1_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       character(*), pointer, intent(out)    :: Data(:,:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -1527,7 +1527,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -1539,7 +1539,7 @@ contains
       logical, allocatable, intent(out)    :: Data(:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(1), UB(1)
+      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1583,7 +1583,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -1598,7 +1598,7 @@ contains
    subroutine UnpackPtr_L1_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -1688,7 +1688,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -1700,7 +1700,7 @@ contains
       logical, allocatable, intent(out)    :: Data(:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(2), UB(2)
+      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1744,7 +1744,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -1759,7 +1759,7 @@ contains
    subroutine UnpackPtr_L1_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -1849,7 +1849,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -1861,7 +1861,7 @@ contains
       logical, allocatable, intent(out)    :: Data(:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(3), UB(3)
+      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -1905,7 +1905,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -1920,7 +1920,7 @@ contains
    subroutine UnpackPtr_L1_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -2010,7 +2010,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -2022,7 +2022,7 @@ contains
       logical, allocatable, intent(out)    :: Data(:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(4), UB(4)
+      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2066,7 +2066,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -2081,7 +2081,7 @@ contains
    subroutine UnpackPtr_L1_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -2171,7 +2171,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -2183,7 +2183,7 @@ contains
       logical, allocatable, intent(out)    :: Data(:,:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(5), UB(5)
+      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2227,7 +2227,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -2242,7 +2242,7 @@ contains
    subroutine UnpackPtr_L1_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       logical, pointer, intent(out)         :: Data(:,:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -2478,7 +2478,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -2490,7 +2490,7 @@ contains
       integer(B4Ki), allocatable, intent(out)  :: Data(:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(1), UB(1)
+      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2534,7 +2534,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -2549,7 +2549,7 @@ contains
    subroutine UnpackPtr_I4_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -2639,7 +2639,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -2651,7 +2651,7 @@ contains
       integer(B4Ki), allocatable, intent(out)  :: Data(:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(2), UB(2)
+      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2695,7 +2695,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -2710,7 +2710,7 @@ contains
    subroutine UnpackPtr_I4_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -2800,7 +2800,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -2812,7 +2812,7 @@ contains
       integer(B4Ki), allocatable, intent(out)  :: Data(:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(3), UB(3)
+      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -2856,7 +2856,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -2871,7 +2871,7 @@ contains
    subroutine UnpackPtr_I4_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -2961,7 +2961,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -2973,7 +2973,7 @@ contains
       integer(B4Ki), allocatable, intent(out)  :: Data(:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(4), UB(4)
+      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3017,7 +3017,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -3032,7 +3032,7 @@ contains
    subroutine UnpackPtr_I4_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -3122,7 +3122,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -3134,7 +3134,7 @@ contains
       integer(B4Ki), allocatable, intent(out)  :: Data(:,:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(5), UB(5)
+      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3178,7 +3178,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -3193,7 +3193,7 @@ contains
    subroutine UnpackPtr_I4_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B4Ki), pointer, intent(out)   :: Data(:,:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -3429,7 +3429,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -3441,7 +3441,7 @@ contains
       integer(B8Ki), allocatable, intent(out)  :: Data(:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(1), UB(1)
+      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3485,7 +3485,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -3500,7 +3500,7 @@ contains
    subroutine UnpackPtr_I8_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -3590,7 +3590,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -3602,7 +3602,7 @@ contains
       integer(B8Ki), allocatable, intent(out)  :: Data(:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(2), UB(2)
+      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3646,7 +3646,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -3661,7 +3661,7 @@ contains
    subroutine UnpackPtr_I8_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -3751,7 +3751,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -3763,7 +3763,7 @@ contains
       integer(B8Ki), allocatable, intent(out)  :: Data(:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(3), UB(3)
+      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3807,7 +3807,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -3822,7 +3822,7 @@ contains
    subroutine UnpackPtr_I8_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -3912,7 +3912,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -3924,7 +3924,7 @@ contains
       integer(B8Ki), allocatable, intent(out)  :: Data(:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(4), UB(4)
+      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -3968,7 +3968,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -3983,7 +3983,7 @@ contains
    subroutine UnpackPtr_I8_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -4073,7 +4073,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -4085,7 +4085,7 @@ contains
       integer(B8Ki), allocatable, intent(out)  :: Data(:,:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(5), UB(5)
+      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4129,7 +4129,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -4144,7 +4144,7 @@ contains
    subroutine UnpackPtr_I8_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       integer(B8Ki), pointer, intent(out)   :: Data(:,:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -4380,7 +4380,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -4392,7 +4392,7 @@ contains
       real(R4Ki), allocatable, intent(out)  :: Data(:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(1), UB(1)
+      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4436,7 +4436,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -4451,7 +4451,7 @@ contains
    subroutine UnpackPtr_R4_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -4541,7 +4541,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -4553,7 +4553,7 @@ contains
       real(R4Ki), allocatable, intent(out)  :: Data(:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(2), UB(2)
+      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4597,7 +4597,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -4612,7 +4612,7 @@ contains
    subroutine UnpackPtr_R4_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -4702,7 +4702,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -4714,7 +4714,7 @@ contains
       real(R4Ki), allocatable, intent(out)  :: Data(:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(3), UB(3)
+      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4758,7 +4758,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -4773,7 +4773,7 @@ contains
    subroutine UnpackPtr_R4_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -4863,7 +4863,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -4875,7 +4875,7 @@ contains
       real(R4Ki), allocatable, intent(out)  :: Data(:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(4), UB(4)
+      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -4919,7 +4919,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -4934,7 +4934,7 @@ contains
    subroutine UnpackPtr_R4_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -5024,7 +5024,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -5036,7 +5036,7 @@ contains
       real(R4Ki), allocatable, intent(out)  :: Data(:,:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(5), UB(5)
+      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5080,7 +5080,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -5095,7 +5095,7 @@ contains
    subroutine UnpackPtr_R4_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R4Ki), pointer, intent(out)      :: Data(:,:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -5331,7 +5331,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -5343,7 +5343,7 @@ contains
       real(R8Ki), allocatable, intent(out)  :: Data(:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(1), UB(1)
+      integer(B4Ki)                        :: LB(1), UB(1)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5387,7 +5387,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 1, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 1, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -5402,7 +5402,7 @@ contains
    subroutine UnpackPtr_R8_Rank1(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -5492,7 +5492,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -5504,7 +5504,7 @@ contains
       real(R8Ki), allocatable, intent(out)  :: Data(:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(2), UB(2)
+      integer(B4Ki)                        :: LB(2), UB(2)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5548,7 +5548,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 2, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 2, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -5563,7 +5563,7 @@ contains
    subroutine UnpackPtr_R8_Rank2(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -5653,7 +5653,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -5665,7 +5665,7 @@ contains
       real(R8Ki), allocatable, intent(out)  :: Data(:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(3), UB(3)
+      integer(B4Ki)                        :: LB(3), UB(3)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5709,7 +5709,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 3, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 3, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -5724,7 +5724,7 @@ contains
    subroutine UnpackPtr_R8_Rank3(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -5814,7 +5814,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -5826,7 +5826,7 @@ contains
       real(R8Ki), allocatable, intent(out)  :: Data(:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(4), UB(4)
+      integer(B4Ki)                        :: LB(4), UB(4)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -5870,7 +5870,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 4, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 4, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -5885,7 +5885,7 @@ contains
    subroutine UnpackPtr_R8_Rank4(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
@@ -5975,7 +5975,7 @@ contains
       if (.not. allocated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write data to file
       call RegPack(RF, Data)
@@ -5987,7 +5987,7 @@ contains
       real(R8Ki), allocatable, intent(out)  :: Data(:,:,:,:,:)
       integer(IntKi)                       :: stat
       logical                              :: IsAllocated
-      integer(B8Ki)                        :: LB(5), UB(5)
+      integer(B4Ki)                        :: LB(5), UB(5)
 
       ! If error, return
       if (RF%ErrStat /= ErrID_None) return
@@ -6031,7 +6031,7 @@ contains
       if (.not. associated(Data)) return
 
       ! Write array bounds
-      call RegPackBounds(RF, 5, lbound(Data, kind=B8Ki), ubound(Data, kind=B8Ki))
+      call RegPackBounds(RF, 5, lbound(Data), ubound(Data))
 
       ! Write pointer info
       call RegPackPointer(RF, c_loc(Data), PtrInIndex)
@@ -6046,7 +6046,7 @@ contains
    subroutine UnpackPtr_R8_Rank5(RF, Data, LB, UB)
       type(RegFile), intent(inout)          :: RF
       real(R8Ki), pointer, intent(out)      :: Data(:,:,:,:,:)
-      integer(B8Ki), intent(out)            :: LB(:), UB(:)
+      integer(B4Ki), intent(out)            :: LB(:), UB(:)
       integer(IntKi)                        :: stat
       integer(B8Ki)                         :: PtrIdx
       logical                               :: IsAssociated
