@@ -1655,7 +1655,6 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
          ! Array for storing the position information for the quadrature points.
       CALL AllocAry(m%qp%uuu,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%uuu displacement at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%uup,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%uup displacement prime at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry(m%qp%uup,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%uup displacement prime at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%vvv,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%vvv velocity at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%vvp,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%vvp velocity prime at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%aaa,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%aaa acceleration at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
