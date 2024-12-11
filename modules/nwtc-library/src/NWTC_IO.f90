@@ -62,7 +62,7 @@ MODULE NWTC_IO
    CHARACTER(99)                 :: ProgVer  = ' '                               !< The version (including date) of the calling program. DO NOT USE THIS IN NEW PROGRAMS
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         !< The tab character.
    CHARACTER(*), PARAMETER       :: CommChars = '!#%'                            !< Comment characters that mark the end of useful input
-   INTEGER(IntKi), PARAMETER     :: NWTC_SizeOfNumWord = 200                     !< maximum length of the words containing numeric input (for ParseVar routines)
+   INTEGER(IntKi), PARAMETER     :: NWTC_SizeOfNumWord = 256                     !< maximum length of the words containing numeric input (for ParseVar routines)
 
 
       ! Parameters for writing to echo files (in this module only)
@@ -2068,70 +2068,87 @@ END SUBROUTINE CheckR8Var
    INTEGER, INTENT(IN)            :: NumWords                                     !< The maximum number of words to look for (and size of Words)
 
    CHARACTER(*), INTENT(IN)       :: Line                                         !< The string to search.
-   CHARACTER(*), INTENT(OUT)      :: Words(NumWords)                              !< The array of found words.
+   CHARACTER(*), INTENT(OUT)      :: Words(:)                                     !< The array of found words.
    INTEGER, OPTIONAL, INTENT(OUT) :: NumFound                                     !< The number of words found
 
-      ! Local declarations.
+   INTEGER                        :: iWord                                        ! Word index.
+   INTEGER                        :: i                                            ! Character index in line.
+   INTEGER                        :: iChar                                        ! Character index in word.
+   CHARACTER(len=1)               :: Char                                         ! Current character
+   LOGICAL                        :: InQuotes                                     ! Flag indicating text is within quotes
 
-   INTEGER                        :: Ch                                           ! Character position within the string.
-   INTEGER                        :: IW                                           ! Word index.
-   INTEGER                        :: NextWhite                                    ! The location of the next whitespace in the string.
+   ! If no text on line, return
+   if (len_trim(Line) == 0) return
 
+   ! Let's prefill the array with blanks.
+   do iWord = 1, NumWords
+      Words(iWord) = ' '
+   end do
 
+   ! Initialize number of words found to zero if present
+   if (present(NumFound)) NumFound = 0
 
-      ! Let's prefill the array with blanks.
+   ! If no text on line, return
+   if (len_trim(Line) == 0) return
 
-   DO IW=1,NumWords
-      Words(IW) = ' '
-   END DO ! IW
-
-   IW = 0
-
+   ! Initialize word index to first word
+   iWord = 1
    
-      ! Let's make sure we have text on this line.
+   ! Initialize index within word
+   iChar = 0
 
-   IF ( LEN_TRIM( Line ) > 0 )  THEN
+   ! Initialize in quotes to false
+   InQuotes = .false.
 
-         ! Parse words separated by any combination of spaces, tabs, commas,
-         ! semicolons, single quotes, and double quotes ("whitespace").
+   ! Loop through characters in line
+   do i = 1, len_trim(line)
 
-      Ch = 0
+      ! Get current character
+      Char = Line(i:i)
 
-      DO
+      ! Select based on character
+      select case (Char)
+      case ('"', "'")               ! Double quotes, single quotes
+         if (InQuotes) then
+            InQuotes = .false.
+            if (iChar > 0) then
+               iWord = iWord + 1
+               iChar = 0
+            end if
+         else
+            InQuotes = .true.
+         end if
+         cycle
 
-         NextWhite = SCAN( Line(Ch+1:) , ' ,;''"'//Tab )
+      case (' ', ',', ';', Tab)     ! Whitespace, comma, semicolon
+         if (.not. InQuotes) then
+            if (iChar > 0) then
+               iWord = iWord + 1
+               iChar = 0
+            end if
+            cycle
+         end if
+      end select
 
-         IF ( NextWhite > 1 )  THEN
+      ! If sufficient words have been collected, exit loop
+      if (iWord > NumWords) exit
 
-            IW        = IW + 1
-            Words(IW) = Line(Ch+1:Ch+NextWhite-1)
-            if (NextWhite > len(words(iw)) ) then 
-               call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.') 
-            end if 
+      ! Increment character index
+      iChar = iChar + 1
 
-            IF ( IW == NumWords )  EXIT
+      ! If index is larger than length of word, continue
+      if (iChar > len(words(iWord))) then 
+         call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.')
+         cycle
+      end if
 
-            Ch = Ch + NextWhite
+      ! Add character to word
+      Words(iWord)(iChar:iChar) = Char
 
-         ELSE IF ( NextWhite == 1 )  THEN
-
-            Ch = Ch + 1
-
-            CYCLE
-
-         ELSE
-
-            EXIT
-
-         END IF
-
-      END DO
-      
-   END IF
+   end do
    
-   IF (PRESENT(NumFound)) NumFound = IW
+   if (present(NumFound)) NumFound = iWord
 
-   RETURN
    END SUBROUTINE GetWords
 !=======================================================================
 !> This routine converts an ASCII array of integers into an equivalent string
