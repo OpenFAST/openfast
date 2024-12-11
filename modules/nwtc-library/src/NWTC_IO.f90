@@ -2068,7 +2068,7 @@ END SUBROUTINE CheckR8Var
    INTEGER, INTENT(IN)            :: NumWords                                     !< The maximum number of words to look for (and size of Words)
 
    CHARACTER(*), INTENT(IN)       :: Line                                         !< The string to search.
-   CHARACTER(*), INTENT(OUT)      :: Words(:)                                     !< The array of found words.
+   CHARACTER(*), INTENT(OUT)      :: Words(NumWords)                              !< The array of found words.
    INTEGER, OPTIONAL, INTENT(OUT) :: NumFound                                     !< The number of words found
 
    INTEGER                        :: iWord                                        ! Word index.
