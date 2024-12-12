@@ -2115,7 +2115,7 @@ SUBROUTINE StC_ParseInputFileInfo( PriPath, InputFile, RootName, NumMeshPts, Fil
    call ParseVar( FileInfo_In, Curline, 'PrescribedForcesCoordSys', InputFileData%PrescribedForcesCoordSys, ErrStat2, ErrMsg2 )
       If (Failed()) return;
       ! Prescribed input time series
-   call ParseVar( FileInfo_In, Curline, 'PrescribedForcesFile', InputFileData%PrescribedForcesFile, ErrStat2, ErrMsg2 )
+   call ParseVar( FileInfo_In, Curline, 'PrescribedForcesFile', InputFileData%PrescribedForcesFile, ErrStat2, ErrMsg2, IsPath=.true. )
       if (Failed()) return;
       if ( PathIsRelative( InputFileData%PrescribedForcesFile ) ) InputFileData%PrescribedForcesFile = TRIM(PriPath)//TRIM(InputFileData%PrescribedForcesFile)
 
