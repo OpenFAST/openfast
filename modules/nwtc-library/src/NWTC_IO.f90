@@ -2061,7 +2061,7 @@ END SUBROUTINE CheckR8Var
 !! It uses spaces, tabs, commas, semicolons, single quotes, and double quotes ("whitespace")
 !! as word separators. If there aren't NumWords in the line, the remaining array elements will remain empty.
 !! Use CountWords (nwtc_io::countwords) to count the number of words in a line.
-   SUBROUTINE GetWords ( Line, Words, NumWords, NumFound )
+   SUBROUTINE GetWords ( Line, Words, NumWords, NumFound, IgnoreQuotes )
 
       ! Argument declarations.
 
@@ -2070,15 +2070,24 @@ END SUBROUTINE CheckR8Var
    CHARACTER(*), INTENT(IN)       :: Line                                         !< The string to search.
    CHARACTER(*), INTENT(OUT)      :: Words(NumWords)                              !< The array of found words.
    INTEGER, OPTIONAL, INTENT(OUT) :: NumFound                                     !< The number of words found
+   LOGICAL, OPTIONAL, INTENT(OUT) :: IgnoreQuotes                                 !< Flag to ignore quotes (process as whitespace)
 
    INTEGER                        :: iWord                                        ! Word index.
    INTEGER                        :: i                                            ! Character index in line.
    INTEGER                        :: iChar                                        ! Character index in word.
    CHARACTER(len=1)               :: Char                                         ! Current character
    LOGICAL                        :: InQuotes                                     ! Flag indicating text is within quotes
+   LOGICAL                        :: IgnoreQuotesLoc                              ! Local flag to ignore quotes
 
    ! If no text on line, return
    if (len_trim(Line) == 0) return
+
+   ! If ignore quotes is present, set local flag, otherwise true
+   if (present(IgnoreQuotes)) then
+      IgnoreQuotesLoc = IgnoreQuotes
+   else
+      IgnoreQuotesLoc = .true. 
+   end if
 
    ! Let's prefill the array with blanks.
    do iWord = 1, NumWords
@@ -2109,9 +2118,11 @@ END SUBROUTINE CheckR8Var
       ! Select based on character
       select case (Char)
       case ('"', "'")               ! Double quotes, single quotes
-         if (InQuotes) then
+         if (IgnoreQuotesLoc .or. InQuotes) then
             InQuotes = .false.
             if (iChar > 0) then
+               ! If requested number of words found, exit
+               if (iWord == NumWords) exit
                iWord = iWord + 1
                iChar = 0
             end if
@@ -2124,6 +2135,8 @@ END SUBROUTINE CheckR8Var
          ! If between quotes, keep whitespace; otherwise separate words
          if (.not. InQuotes) then
             if (iChar > 0) then
+               ! If requested number of words found, exit
+               if (iWord == NumWords) exit
                iWord = iWord + 1
                iChar = 0
             end if
@@ -2133,14 +2146,13 @@ END SUBROUTINE CheckR8Var
       case (',', ';')               ! Comma, semicolon
          ! Always separate words on these characters
          if (iChar > 0) then
+            ! If requested number of words found, exit
+            if (iWord == NumWords) exit
             iWord = iWord + 1
             iChar = 0
          end if
          cycle
       end select
-
-      ! If sufficient words have been collected, exit loop
-      if (iWord > NumWords) exit
 
       ! Increment character index
       iChar = iChar + 1
@@ -2910,7 +2922,7 @@ END SUBROUTINE CheckR8Var
 !!
 !! WARNING: This routine assumes the "words" containing the variable name and value are <= 20 characters. \n
 !! Use ParseVar (nwtc_io::parsevar) instead of directly calling a specific routine in the generic interface.   
-   SUBROUTINE ParseChVar ( FileInfo, LineNum, ExpVarName, Var, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ParseChVar ( FileInfo, LineNum, ExpVarName, Var, ErrStat, ErrMsg, UnEc, IsPath )
 
          ! Arguments declarations.
 
@@ -2919,6 +2931,7 @@ END SUBROUTINE CheckR8Var
       INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       !< The number of the line to parse.
 
       INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          !< I/O unit for echo file. If present and > 0, write to UnEc.
+      LOGICAL,        INTENT(IN), OPTIONAL   :: IsPath                        !< Flag indicating that string is a path.
 
       CHARACTER(*),   INTENT(OUT)            :: Var                           !< The variable to receive the input value.
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
@@ -2931,6 +2944,7 @@ END SUBROUTINE CheckR8Var
 
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
+      LOGICAL                                :: IgnoreQuotes
 
       CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
@@ -2950,8 +2964,12 @@ END SUBROUTINE CheckR8Var
          RETURN
       END IF
       
-      
-      CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                     ! Read the first two words in Line.
+      if (present(IsPath)) then
+         IgnoreQuotes = .not. IsPath
+      else
+         IgnoreQuotes = .true.
+      end if
+      CALL GetWords ( FileInfo%Lines(LineNum), Words, 2, IgnoreQuotes=IgnoreQuotes )                     ! Read the first two words in Line.
       IF ( Words(2) == '' .and. (LEN_TRIM(ExpVarName) > 0) )  THEN
          CALL SetErrStat ( ErrID_Fatal, 'A fatal error occurred when parsing data from "' &
                    //TRIM( FileInfo%FileList(FileInfo%FileIndx(LineNum)) )//'".'//NewLine//  &
