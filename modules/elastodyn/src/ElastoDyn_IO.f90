@@ -3259,7 +3259,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
-       !---------------------- YAW-FRICTION --------------------------------------------
+      !---------------------- YAW-FRICTION --------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Yaw-Friction', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -3283,6 +3283,22 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
       
+      ! M_FCSmax - Maximum Coulomb friction torque proportional to yaw bearing shear force (N-m):
+   CALL ReadVar( UnIn, InputFile, InputFileData%M_FCSmax, "M_FCSmax", "Maximum Coulomb friction torque proportional to yaw bearing shear force (N-m)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+      ! M_MCSmax - Maximum Coulomb friction torque proportional to yaw bearing bending moment (N-m):
+   CALL ReadVar( UnIn, InputFile, InputFileData%M_MCSmax, "M_MCSmax", "Maximum Coulomb friction torque proportional to yaw bearing bending moment (N-m)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
       ! M_CD - Dynamic friction moment at null yaw rate (N-m):
    CALL ReadVar( UnIn, InputFile, InputFileData%M_CD, "M_CD", "Dynamic friction moment at null yaw rate (N-m)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3291,14 +3307,37 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
       
-      ! sig_v - Viscous friction coefficiant (N-m s/rad):
-   CALL ReadVar( UnIn, InputFile, InputFileData%sig_v, "sig_v", "Viscous friction coefficient (N-m/(rad/s))", ErrStat2, ErrMsg2, UnEc)
+      ! M_FCD - Dynamic friction moment at null yaw rate proportional to yaw bearing shear force (N-m):
+   CALL ReadVar( UnIn, InputFile, InputFileData%M_FCD, "M_FCD", "Dynamic friction moment at null yaw rate proportional to yaw bearing shear force (N-m)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
+      ! M_MCD - Dynamic friction moment at null yaw rate proportional to yaw bearing bending moment (N-m):
+   CALL ReadVar( UnIn, InputFile, InputFileData%M_MCD, "M_MCD", "Dynamic friction moment at null yaw rate proportional to yaw bearing bending moment (N-m)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+      ! sig_v - Linear viscous friction coefficiant (N-m s/rad):
+   CALL ReadVar( UnIn, InputFile, InputFileData%sig_v, "sig_v", "Linear viscous friction coefficient (N-m/(rad/s))", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+      ! sig_v2 - Quadratic viscous friction coefficiant (N-m (s/rad)^2):
+   CALL ReadVar( UnIn, InputFile, InputFileData%sig_v2, "sig_v2", "Quadratic viscous friction coefficient (N-m/(rad/s)^2)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
 
    !---------------------- DRIVETRAIN ----------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Drivetrain', ErrStat2, ErrMsg2, UnEc )
@@ -4332,8 +4371,13 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
            ( InputFileData%YawFrctMod /= 2_IntKi )  .AND. ( InputFileData%YawFrctMod /= 3_IntKi )) &
          CALL SetErrStat( ErrID_Fatal, 'YawFrctMod must be 0, 1, 2, or 3',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%M_CD < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_CD must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_FCD < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_FCD must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_MCD < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_MCD must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
    IF ( InputFileData%M_CSmax < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_CSmax must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_FCSmax < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_FCSmax must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_MCSmax < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_MCSmax must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
    IF ( InputFileData%sig_v < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'sig_v must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%sig_v2 < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'sig_v2 must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
 
    !bjj: since ED doesn't actually use OutFmt at this point, I'm going to remove this check and warning message
    !!!!   ! Check that InputFileData%OutFmt is a valid format specifier and will fit over the column headings
