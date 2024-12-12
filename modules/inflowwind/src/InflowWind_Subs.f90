@@ -317,7 +317,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FileName_Uni", InputFileData%Uniform_FileName, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_Uni", InputFileData%Uniform_FileName, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%Uniform_FileName ) ) InputFileData%Uniform_FileName = TRIM(PriPath)//TRIM(InputFileData%Uniform_FileName)
    IF ( FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
@@ -339,7 +339,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FileName_BTS", InputFileData%TSFF_FileName, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_BTS", InputFileData%TSFF_FileName, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%TSFF_FileName ) ) InputFileData%TSFF_FileName = TRIM(PriPath)//TRIM(InputFileData%TSFF_FileName)
    IF ( FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
@@ -355,7 +355,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FilenameRoot", InputFileData%BladedFF_FileName, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FilenameRoot", InputFileData%BladedFF_FileName, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%BladedFF_FileName ) ) InputFileData%BladedFF_FileName = TRIM(PriPath)//TRIM(InputFileData%BladedFF_FileName)
 
@@ -383,15 +383,15 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FileName_u", InputFileData%HAWC_FileName_u, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_u", InputFileData%HAWC_FileName_u, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_u ) ) InputFileData%HAWC_FileName_u = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_u)
 
-   CALL ParseVar( InFileInfo, CurLine, "FileName_v", InputFileData%HAWC_FileName_v, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_v", InputFileData%HAWC_FileName_v, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_v ) ) InputFileData%HAWC_FileName_v = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_v)
 
-   CALL ParseVar( InFileInfo, CurLine, "FileName_w", InputFileData%HAWC_FileName_w, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_w", InputFileData%HAWC_FileName_w, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_w ) ) InputFileData%HAWC_FileName_w = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_w)
    
