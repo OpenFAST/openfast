@@ -2120,7 +2120,8 @@ END SUBROUTINE CheckR8Var
          end if
          cycle
 
-      case (' ', ',', ';', Tab)     ! Whitespace, comma, semicolon
+      case (' ', Tab)               ! Whitespace
+         ! If between quotes, keep whitespace; otherwise separate words
          if (.not. InQuotes) then
             if (iChar > 0) then
                iWord = iWord + 1
@@ -2128,6 +2129,14 @@ END SUBROUTINE CheckR8Var
             end if
             cycle
          end if
+
+      case (',', ';')               ! Comma, semicolon
+         ! Always separate words on these characters
+         if (iChar > 0) then
+            iWord = iWord + 1
+            iChar = 0
+         end if
+         cycle
       end select
 
       ! If sufficient words have been collected, exit loop
@@ -2138,7 +2147,7 @@ END SUBROUTINE CheckR8Var
 
       ! If index is larger than length of word, continue
       if (iChar > len(words(iWord))) then 
-         call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.')
+         call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated. '//Line)
          cycle
       end if
 
