@@ -3339,6 +3339,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
+      ! OmgCut - Yaw angular velocity cutoff below which viscous friction is to be linearized (rad/s):
+   CALL ReadVar( UnIn, InputFile, InputFileData%OmgCut, "OmgCut", "Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized (rad/s)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+
    !---------------------- DRIVETRAIN ----------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Drivetrain', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4378,6 +4386,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
    IF ( InputFileData%M_MCSmax < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_MCSmax must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
    IF ( InputFileData%sig_v < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'sig_v must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
    IF ( InputFileData%sig_v2 < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'sig_v2 must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%OmgCut < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'OmgCut must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
 
    !bjj: since ED doesn't actually use OutFmt at this point, I'm going to remove this check and warning message
    !!!!   ! Check that InputFileData%OutFmt is a valid format specifier and will fit over the column headings

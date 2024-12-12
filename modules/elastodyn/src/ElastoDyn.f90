@@ -3343,6 +3343,7 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%M_MCSmax    = InputFileData%M_MCSmax
    p%sig_v       = InputFileData%sig_v
    p%sig_v2      = InputFileData%sig_v2
+   p%OmgCut      = InputFileData%OmgCut
 
    
    CALL AllocAry( p%TipMass, p%NumBl, 'TipMass', ErrStat, ErrMsg )
@@ -6421,7 +6422,7 @@ SUBROUTINE YawFriction( t, p, F, M, Mzz, Omg, OmgDot, YawFriMf )
    REAL(ReKi), INTENT(OUT)            :: YawFriMf                                !< The total friction torque (Coulomb + viscous).
 
       ! Local variables:
-   REAL(ReKi)                         :: temp, Fs, Mb                            ! It takes the value of Fz or -1.
+   REAL(ReKi)                         :: temp, Fs, Mb, Mf_vis                    ! temp takes the value of Fz or -1.
 
    
    SELECT CASE ( p%YawFrctMod  ) 
@@ -6429,9 +6430,7 @@ SUBROUTINE YawFriction( t, p, F, M, Mzz, Omg, OmgDot, YawFriMf )
 
    CASE ( 0_IntKi )              ! None!
 
-
       YawFriMf = 0.0_ReKi
-
 
    CASE ( 1_IntKi, 2_IntKi )              ! 1 = F and M not used. 2 = F and M used
 
@@ -6445,26 +6444,28 @@ SUBROUTINE YawFriction( t, p, F, M, Mzz, Omg, OmgDot, YawFriMf )
         Mb = SQRT(M(1)**2+M(2)**2)  ! Effective bending moment on yaw bearing
       ENDIF
       
-      IF  (EqualRealNos( Omg, 0.0_R8Ki ) )THEN
+      IF  (EqualRealNos( Omg, 0.0_R8Ki )) THEN
            IF (EqualRealNos( OmgDot, 0.0_R8Ki )) THEN
                 YawFriMf =  -MIN( real(p%M_CSmax,ReKi) * ABS(temp) + real(p%M_FCSmax,ReKi) * Fs + real(p%M_MCSmax,ReKi) * Mb, ABS(real(Mzz,ReKi)) ) * SIGN(1.0_ReKi, real(Mzz,ReKi))
            ELSE
                 YawFriMf =  -MIN( real(p%M_CD,   ReKi) * ABS(temp) + real(p%M_FCD,   ReKi) * Fs + real(p%M_MCD,   ReKi) * Mb, ABS(real(Mzz,ReKi)) ) * SIGN(1.0_ReKi, real(Mzz,ReKi))
            ENDIF    
       ELSE
-            YawFriMf = ( real(p%M_CD,ReKi) * temp - real(p%M_FCD,ReKi) * Fs - real(p%M_MCD,ReKi) * Mb ) * sign(1.0_ReKi, real(Omg,ReKi)) &  ! Coulomb friction
-                       - real(p%sig_v,ReKi) * real(Omg,ReKi) - real(p%sig_v2,ReKi) * real(Omg,ReKi) * ABS(real(Omg,ReKi))                   ! Viscous friction
+           ! Viscous friction
+           IF ( ABS(Omg) > p%OmgCut ) THEN ! Full quadratic viscous friction
+                Mf_vis = - real(p%sig_v,ReKi) * real(Omg,ReKi) - real(p%sig_v2,ReKi) * real(Omg,ReKi) * ABS(real(Omg,ReKi))
+           ELSE ! Linearized viscous friction
+                Mf_vis = - ( real(p%sig_v,ReKi) + real(p%sig_v2,ReKi) * real(p%OmgCut,ReKi) ) * real(Omg,ReKi)
+           ENDIF
+           YawFriMf = ( real(p%M_CD,ReKi) * temp - real(p%M_FCD,ReKi) * Fs - real(p%M_MCD,ReKi) * Mb ) * sign(1.0_ReKi, real(Omg,ReKi)) &  ! Coulomb friction
+                        + Mf_vis
       ENDIF
-
 
    CASE ( 3_IntKi )              ! User-defined YawFriMf model. >>>> NOT IMPLEMENTED YET
 
-
       CALL UserYawFrict ( t, F, M, Mzz, Omg, OmgDot, p%RootName, YawFriMf )
 
-
    END SELECT
-
 
    RETURN
 END SUBROUTINE YawFriction

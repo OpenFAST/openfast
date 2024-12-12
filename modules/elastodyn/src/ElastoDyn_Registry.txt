@@ -176,6 +176,7 @@ typedef ^       ED_InputFile    R8Ki    M_FCSMAX -      -       -       "Maximum
 typedef ^       ED_InputFile    R8Ki    M_MCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing bending moment" N-m
 typedef ^       ED_InputFile    R8Ki    sig_v   -       -       -       "Linear viscous friction coefficient"     N-m/(rad/s)
 typedef ^       ED_InputFile    R8Ki    sig_v2  -       -       -       "Quadratic viscous friction coefficient"  N-m/(rad/s)^2
+typedef ^       ED_InputFile    R8Ki    OmgCut  -       -       -       "Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized"  rad/s
 typedef	^	ED_InputFile	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"	%
 typedef	^	ED_InputFile	ReKi	GBRatio	-	-	-	"Gearbox ratio"	-
 typedef	^	ED_InputFile	ReKi	DTTorSpr	-	-	-	"Drivetrain torsional spring"	N-m/rad
@@ -794,6 +795,7 @@ typedef ^       ParameterType   R8Ki    M_FCSMAX -      -       -       "Maximum
 typedef ^       ParameterType   R8Ki    M_MCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing bending moment"    N-m
 typedef ^       ParameterType   R8Ki    sig_v   -       -       -       "Linear viscous friction coefficient"     N-m/(rad/s)
 typedef ^       ParameterType   R8Ki    sig_v2  -       -       -       "Quadratic viscous friction coefficient"  N-m/(rad/s)^2
+typedef ^       ParameterType   R8Ki    OmgCut  -       -       -       "Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized"  rad/s
 #typedef        ^       ParameterType   R8Ki    thr_omg -       -       -       "Yaw rate stiction threshold"   rad/s
 #typedef        ^       ParameterType   R8Ki    thr_omgdot      -       -       -       "Yaw acceleration stiction threshold"   rad/s^2
 
