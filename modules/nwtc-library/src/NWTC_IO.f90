@@ -2079,6 +2079,9 @@ END SUBROUTINE CheckR8Var
    LOGICAL                        :: InQuotes                                     ! Flag indicating text is within quotes
    LOGICAL                        :: IgnoreQuotesLoc                              ! Local flag to ignore quotes
 
+   ! Initialize number of words found to zero if present
+   if (present(NumFound)) NumFound = 0
+
    ! If no text on line, return
    if (len_trim(Line) == 0) return
 
@@ -2089,16 +2092,10 @@ END SUBROUTINE CheckR8Var
       IgnoreQuotesLoc = .true. 
    end if
 
-   ! Let's prefill the array with blanks.
+   ! Let's prefill the array with blanks
    do iWord = 1, NumWords
       Words(iWord) = ' '
    end do
-
-   ! Initialize number of words found to zero if present
-   if (present(NumFound)) NumFound = 0
-
-   ! If no text on line, return
-   if (len_trim(Line) == 0) return
 
    ! Initialize word index to first word
    iWord = 1
@@ -2121,7 +2118,7 @@ END SUBROUTINE CheckR8Var
          if (IgnoreQuotesLoc .or. InQuotes) then
             InQuotes = .false.
             if (iChar > 0) then
-               ! If requested number of words found, exit
+               ! If requested number of words found, exit; otherwise, new word
                if (iWord == NumWords) exit
                iWord = iWord + 1
                iChar = 0
@@ -2131,11 +2128,12 @@ END SUBROUTINE CheckR8Var
          end if
          cycle
 
-      case (' ', Tab)               ! Whitespace
-         ! If between quotes, keep whitespace; otherwise separate words
+      ! Word separator
+      case (',', ';', ' ', Tab)   ! Comma, semicolon, space, tab
+         ! If in quotes, keep these in word
          if (.not. InQuotes) then
             if (iChar > 0) then
-               ! If requested number of words found, exit
+               ! If requested number of words found, exit; otherwise, new word
                if (iWord == NumWords) exit
                iWord = iWord + 1
                iChar = 0
@@ -2143,15 +2141,6 @@ END SUBROUTINE CheckR8Var
             cycle
          end if
 
-      case (',', ';')               ! Comma, semicolon
-         ! Always separate words on these characters
-         if (iChar > 0) then
-            ! If requested number of words found, exit
-            if (iWord == NumWords) exit
-            iWord = iWord + 1
-            iChar = 0
-         end if
-         cycle
       end select
 
       ! Increment character index
