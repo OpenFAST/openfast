@@ -101,7 +101,7 @@ TeetMom = 0.0
 RETURN
 END SUBROUTINE UserTeet
 !=======================================================================
-SUBROUTINE UserYawFrict ( ZTime, Fz, Mzz, Omg, OmgDot, DirRoot, YawFriMf )
+SUBROUTINE UserYawFrict ( ZTime, F, M, Mzz, Omg, OmgDot, DirRoot, YawFriMf )
 
    ! This is a dummy routine for holding the place of a user-specified
    ! Yaw Friction.  Modify this code to create your own device.
@@ -115,7 +115,8 @@ IMPLICIT                        NONE
 
    ! Passed Variables:
 REAL(DbKi), INTENT(IN )      :: ZTime     ! Current simulation time, sec.
-REAL(R8Ki), INTENT(IN )      :: Fz, Mzz   ! Yaw Bering normal force (positive if upward) and torque, N and N*m
+REAL(R8Ki), INTENT(IN )      :: F(3),M(3) ! Yaw bearing force and moment N and N*m
+REAL(R8Ki), INTENT(IN )      :: Mzz       ! External axial yaw bearing torque N*m
 REAL(R8Ki), INTENT(IN )      :: Omg       ! Yaw rotational speed, rad/s.
 REAL(R8Ki), INTENT(IN )      :: OmgDot    ! Yaw rotational acceleration, rad/s^2.
 
