@@ -168,7 +168,7 @@ The yaw-friction moment as a function of yaw rate (:math:`\omega`) is shown belo
            
    Yaw-friction model
 
-When ``YawFrctMod``=1, the maximum static or dynamic Coulomb friction does not depend on the external load on the yaw bearing. The yaw-friction torque :math:`M_f` can be calculated as follows.
+When ``YawFrctMod`` = 1, the maximum static or dynamic Coulomb friction does not depend on the external load on the yaw bearing. The yaw-friction torque :math:`M_f` can be calculated as follows.
 If :math:`\omega\neq0`, we have dynamic friction of the form
 
 .. math::
@@ -201,13 +201,13 @@ If :math:`\omega=0` and :math:`\dot{\omega}=0`, we have static Coulomb friction 
 where :math:`\mu_s` is the static Coulomb friction coefficient. The product :math:`\mu_s\bar{D}` is specified in the input file through ``M_CSmax``.
 
 
-When ``YawFrctMod``=2, the maximum static or dynamic Coulomb friction depends on the external load on the yaw bearing, with proportional contributions from :math:`|F_z|`, the magnitude of the bearing axial load, if :math:`F_z<0`, from the bearing shear force magnitude, :math:`\sqrt{F_x^2+F_y^2}`, and from the bearing bending moment magnitude, :math:`\sqrt{M_x^2+M_y^2}`.
+When ``YawFrctMod`` = 2, the maximum static or dynamic Coulomb friction depends on the external load on the yaw bearing, with proportional contributions from :math:`|F_z|`, the magnitude of the bearing axial load, if :math:`F_z<0`, from the bearing shear force magnitude, :math:`\sqrt{F_x^2+F_y^2}`, and from the bearing bending moment magnitude, :math:`\sqrt{M_x^2+M_y^2}`.
 If :math:`\omega\neq0`, we have dynamic friction of the form
 
 .. math::
    M_f = \left(\mu_d\bar{D}\text{min}(0,F_z)-\mu_{df}\bar{D}\sqrt{F_x^2+F_y^2}-\mu_{dm}\sqrt{M_x^2+M_y^2}\right)\times\text{sign}(\omega) - M_{f,vis},
 
-where :math:`M_{f,vis}` is defined in the same way as when ``YawFrctMod``=1. The product :math:`\mu_{df}\bar{D}` and :math:`\mu_{dm}` are specified in the input file through ``M_FCD`` and ``M_MCD``, respectively. 
+where :math:`M_{f,vis}` is defined in the same way as when ``YawFrctMod`` = 1. The product :math:`\mu_{df}\bar{D}` and :math:`\mu_{dm}` are specified in the input file through ``M_FCD`` and ``M_MCD``, respectively. 
 If :math:`\omega=0` and :math:`\dot{\omega}\neq 0`, we have a modified dynamic Coulomb friction of the form
 
 .. math::
@@ -216,14 +216,14 @@ If :math:`\omega=0` and :math:`\dot{\omega}\neq 0`, we have a modified dynamic C
 If :math:`\omega=0` and :math:`\dot{\omega}=0`, we have static Coulomb friction of the form
 
 .. math::
-   M_f = -\text{min}\left(\mu_s\bar{D}|\text{min}(0,F_z)| + \mu_{sf}\bar{D}\sqrt{F_x^2+F_y^2} + \mu_{sm}\sqrt{M_x^2+M_y^2},|M_z|\right)\times\text{sign}(M_z).
+   M_f = -\text{min}\left(\mu_s\bar{D}|\text{min}(0,F_z)| + \mu_{sf}\bar{D}\sqrt{F_x^2+F_y^2} + \mu_{sm}\sqrt{M_x^2+M_y^2},|M_z|\right)\times\text{sign}(M_z),
 
 where the product :math:`\mu_{sf}\bar{D}` and :math:`\mu_{sm}` are specified in the input file through ``M_FCSmax`` and ``M_MCSmax``, respectively.
 
 The static 'stiction' (where the static contribution exceeds the dynamic Coulomb friction) is only applied if both the yaw rotational velocity and acceleration at the current time-step are zero.
 The static portion of the friction is omitted if the rotational acceleration is not null.
 This is to account for the fact that a 'warm' joint may not feel stiction when crossing through zero velocity in a dynamic sense :cite:`ed-hammam2023`.
-When :math:`\omega=0`, the yaw-bearing static or dynamic friction is formulated such that the frictional resistance opposes the external applied moment, :math:M_z`, without overcoming it.
+When :math:`\omega=0`, the yaw-bearing static or dynamic friction is formulated such that the frictional resistance opposes the external applied moment, :math:`M_z`, without overcoming it.
 
 .. _ed_dev_notes:
 
