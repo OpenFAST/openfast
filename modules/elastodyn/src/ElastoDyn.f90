@@ -6415,7 +6415,7 @@ SUBROUTINE YawFriction( t, p, F, M, Mzz, Omg, OmgDot, YawFriMf )
       ! Passed Variables:
    REAL(DbKi), INTENT(IN)             :: t                                       !< simulation time
    TYPE(ED_ParameterType), INTENT(IN) :: p                                       !< parameters from the structural dynamics module
-   REAL(R8Ki), INTENT(IN )            :: F(3), M(3)                              !< Effective yaw bearing force and moment
+   REAL(ReKi), INTENT(IN )            :: F(3), M(3)                              !< Effective yaw bearing force and moment
    REAL(R8Ki), INTENT(IN )            :: Mzz                                     !< External yaw bearing torque
    REAL(R8Ki), INTENT(IN )            :: Omg                                     !< The yaw rate (rotational speed), x%QDT(DOF_Yaw).
    REAL(R8Ki), INTENT(IN )            :: OmgDot                                  !< The yaw acceleration (derivative of rotational speed), x%QD2T(DOF_Yaw).
@@ -6439,7 +6439,7 @@ SUBROUTINE YawFriction( t, p, F, M, Mzz, Omg, OmgDot, YawFriMf )
       Mb   =  0.0_ReKi
 
       IF  (p%YawFrctMod .EQ. 2) THEN   
-        temp = MIN(0.0_R8Ki, F(3))  ! In the case of YawFrctMod=2
+        temp = MIN(0.0_ReKi, F(3))  ! In the case of YawFrctMod=2
         Fs = SQRT(F(1)**2+F(2)**2)  ! Effective shear force on yaw bearing
         Mb = SQRT(M(1)**2+M(2)**2)  ! Effective bending moment on yaw bearing
       ENDIF

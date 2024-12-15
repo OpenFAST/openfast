@@ -115,7 +115,7 @@ IMPLICIT                        NONE
 
    ! Passed Variables:
 REAL(DbKi), INTENT(IN )      :: ZTime     ! Current simulation time, sec.
-REAL(R8Ki), INTENT(IN )      :: F(3),M(3) ! Yaw bearing force and moment N and N*m
+REAL(ReKi), INTENT(IN )      :: F(3),M(3) ! Yaw bearing force and moment N and N*m
 REAL(R8Ki), INTENT(IN )      :: Mzz       ! External axial yaw bearing torque N*m
 REAL(R8Ki), INTENT(IN )      :: Omg       ! Yaw rotational speed, rad/s.
 REAL(R8Ki), INTENT(IN )      :: OmgDot    ! Yaw rotational acceleration, rad/s^2.
