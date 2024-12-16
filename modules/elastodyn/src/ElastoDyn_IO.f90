@@ -4378,15 +4378,20 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
    IF ( ( InputFileData%YawFrctMod /= 0_IntKi ) .AND. ( InputFileData%YawFrctMod /= 1_IntKi ) .AND. &
            ( InputFileData%YawFrctMod /= 2_IntKi )  .AND. ( InputFileData%YawFrctMod /= 3_IntKi )) &
          CALL SetErrStat( ErrID_Fatal, 'YawFrctMod must be 0, 1, 2, or 3',ErrStat,ErrMsg,RoutineName)
-   IF ( InputFileData%M_CD < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_CD must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
-   IF ( InputFileData%M_FCD < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_FCD must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
-   IF ( InputFileData%M_MCD < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_MCD must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
-   IF ( InputFileData%M_CSmax < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_CSmax must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_CD     < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_CD must be greater than or equal to 0.',    ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_FCD    < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_FCD must be greater than or equal to 0.',   ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_MCD    < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_MCD must be greater than or equal to 0.',   ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_CSmax  < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_CSmax must be greater than or equal to 0.', ErrStat,ErrMsg,RoutineName )
    IF ( InputFileData%M_FCSmax < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_FCSmax must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
    IF ( InputFileData%M_MCSmax < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'M_MCSmax must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
-   IF ( InputFileData%sig_v < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'sig_v must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
-   IF ( InputFileData%sig_v2 < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'sig_v2 must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
-   IF ( InputFileData%OmgCut < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'OmgCut must be greater than or equal to 0.',ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%sig_v    < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'sig_v must be greater than or equal to 0.',   ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%sig_v2   < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'sig_v2 must be greater than or equal to 0.',  ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%OmgCut   < 0_R8Ki ) CALL SetErrStat( ErrID_Fatal, 'OmgCut must be greater than or equal to 0.',  ErrStat,ErrMsg,RoutineName )
+
+   ! The static Coulomb friction coefficients must be greater than or equal to their dynamic counterparts.
+   IF ( InputFileData%M_CSmax  < InputFileData%M_CD  ) CALL SetErrStat( ErrID_Fatal, 'M_CSmax must be greater than or equal to M_CD.',  ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_FCSmax < InputFileData%M_FCD ) CALL SetErrStat( ErrID_Fatal, 'M_FCSmax must be greater than or equal to M_FCD.',ErrStat,ErrMsg,RoutineName )
+   IF ( InputFileData%M_MCSmax < InputFileData%M_MCD ) CALL SetErrStat( ErrID_Fatal, 'M_MCSmax must be greater than or equal to M_MCD.',ErrStat,ErrMsg,RoutineName )
 
    !bjj: since ED doesn't actually use OutFmt at this point, I'm going to remove this check and warning message
    !!!!   ! Check that InputFileData%OutFmt is a valid format specifier and will fit over the column headings
