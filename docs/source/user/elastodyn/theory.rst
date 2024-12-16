@@ -172,51 +172,51 @@ When ``YawFrctMod`` = 1, the maximum static or dynamic Coulomb friction does not
 If :math:`\omega\neq0`, we have dynamic friction of the form
 
 .. math::
-   M_f = -(\mu_d\bar{D})\times\text{sign}(\omega) - M_{f,vis},
+   M_f = -(\mu_d\bar{D})\cdot\textrm{sign}(\omega) - M_{f,vis},
 
 where :math:`\bar{D}` is the effective yaw-bearing diameter and :math:`\mu_d` is the dynamic Coulomb friction coefficient. Their product, :math:`\mu_d\bar{D}`, is specified in the input file through ``M_CD``. The first term on the right-hand side is the dynamic Coulomb friction.
 The viscous friction, :math:`M_{f,vis}`, is of the form
 
 .. math::
-   M_{f,vis} = \sigma_v\omega + \sigma_{v2}\omega|\omega|\text{   if }|\omega|\ge\omega_c,
+   M_{f,vis} = \sigma_v\omega + \sigma_{v2}\omega\left|\omega\right|\qquad\qquad\text{if}~\left|\omega\right|\ge\omega_c,
 
 or 
 
 .. math::
-   M_{f,vis} = (\sigma_v + \sigma_{v2}\omega_c)\omega\text{   if }|\omega|\le\omega_c,
+   M_{f,vis} = (\sigma_v + \sigma_{v2}\omega_c)\omega\qquad\qquad\text{if}~\left|\omega\right|\le\omega_c,
 
 where :math:`\sigma_v` and :math:`\sigma_{v2}` are the linear and quadratic viscous friction coefficients and :math:`\omega_c` is the cutoff yaw rate below which viscous friction is linearized. Setting :math:`\omega_c=0` disables the linearization of viscous friction.
 
 If :math:`\omega=0` and :math:`\dot{\omega}\neq 0`, we have a slightly modified dynamic Coulomb friction of the form
 
 .. math::
-   M_f = -\text{min}(\mu_d\bar{D},|M_z|)\times\text{sign}(M_z),
+   M_f = -\textrm{min}\!\left(\mu_d\bar{D},\left|M_z\right|\right)\cdot\textrm{sign}(M_z),
 
 where :math:`M_z` is the external yaw torque.
 If :math:`\omega=0` and :math:`\dot{\omega}=0`, we have static Coulomb friction of the form
 
 .. math::
-   M_f = -\text{min}(\mu_s\bar{D},|M_z|)\times\text{sign}(M_z),
+   M_f = -\textrm{min}\!\left(\mu_s\bar{D},\left|M_z\right|\right)\cdot\textrm{sign}(M_z),
 
 where :math:`\mu_s` is the static Coulomb friction coefficient. The product :math:`\mu_s\bar{D}` is specified in the input file through ``M_CSmax``.
 
 
-When ``YawFrctMod`` = 2, the maximum static or dynamic Coulomb friction depends on the external load on the yaw bearing, with proportional contributions from :math:`|F_z|`, the magnitude of the bearing axial load, if :math:`F_z<0`, from the bearing shear force magnitude, :math:`\sqrt{F_x^2+F_y^2}`, and from the bearing bending moment magnitude, :math:`\sqrt{M_x^2+M_y^2}`.
+When ``YawFrctMod`` = 2, the maximum static or dynamic Coulomb friction depends on the external load on the yaw bearing, with proportional contributions from :math:`\left|F_z\right|`, the magnitude of the bearing axial load, if :math:`F_z<0`, from the bearing shear force magnitude, :math:`\sqrt{F_x^2+F_y^2}`, and from the bearing bending moment magnitude, :math:`\sqrt{M_x^2+M_y^2}`.
 If :math:`\omega\neq0`, we have dynamic friction of the form
 
 .. math::
-   M_f = \left(\mu_d\bar{D}\text{min}(0,F_z)-\mu_{df}\bar{D}\sqrt{F_x^2+F_y^2}-\mu_{dm}\sqrt{M_x^2+M_y^2}\right)\times\text{sign}(\omega) - M_{f,vis},
+   M_f = \left(\mu_d\bar{D}\cdot\textrm{min}\!\left(0,F_z\right)-\mu_{df}\bar{D}\sqrt{F_x^2+F_y^2}-\mu_{dm}\sqrt{M_x^2+M_y^2}\right)\cdot\textrm{sign}(\omega) - M_{f,vis},
 
 where :math:`M_{f,vis}` is defined in the same way as when ``YawFrctMod`` = 1. The product :math:`\mu_{df}\bar{D}` and :math:`\mu_{dm}` are specified in the input file through ``M_FCD`` and ``M_MCD``, respectively. 
 If :math:`\omega=0` and :math:`\dot{\omega}\neq 0`, we have a modified dynamic Coulomb friction of the form
 
 .. math::
-   M_f = -\text{min}\left(\mu_d\bar{D}|\text{min}(0,F_z)| + \mu_{df}\bar{D}\sqrt{F_x^2+F_y^2} + \mu_{dm}\sqrt{M_x^2+M_y^2},|M_z|\right)\times\text{sign}(M_z).
+   M_f = -\textrm{min}\!\left(\mu_d\bar{D}\left|\textrm{min}(0,F_z)\right| + \mu_{df}\bar{D}\sqrt{F_x^2+F_y^2} + \mu_{dm}\sqrt{M_x^2+M_y^2},\left|M_z\right|\right)\cdot\textrm{sign}(M_z).
 
 If :math:`\omega=0` and :math:`\dot{\omega}=0`, we have static Coulomb friction of the form
 
 .. math::
-   M_f = -\text{min}\left(\mu_s\bar{D}|\text{min}(0,F_z)| + \mu_{sf}\bar{D}\sqrt{F_x^2+F_y^2} + \mu_{sm}\sqrt{M_x^2+M_y^2},|M_z|\right)\times\text{sign}(M_z),
+   M_f = -\textrm{min}\!\left(\mu_s\bar{D}\left|\textrm{min}(0,F_z)\right| + \mu_{sf}\bar{D}\sqrt{F_x^2+F_y^2} + \mu_{sm}\sqrt{M_x^2+M_y^2},\left|M_z\right|\right)\cdot\textrm{sign}(M_z),
 
 where the product :math:`\mu_{sf}\bar{D}` and :math:`\mu_{sm}` are specified in the input file through ``M_FCSmax`` and ``M_MCSmax``, respectively.
 
