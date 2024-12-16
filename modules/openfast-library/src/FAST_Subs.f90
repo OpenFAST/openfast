@@ -732,7 +732,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
       endif
 
       ! Note: not passing tailfin position and orientation at init
-      Init%InData_AD%rotors(1)%AeroProjMod        = APM_BEM_NoSweepPitchTwist
+      Init%InData_AD%rotors(1)%AeroProjMod  = -1  ! -1 means AeroDyn will decide based on BEM_Mod
 
       ! Set pointers to flowfield
       IF (p_FAST%CompInflow == Module_IfW) Init%InData_AD%FlowField => Init%OutData_IfW%FlowField
