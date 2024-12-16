@@ -158,7 +158,7 @@ The total moment on the given degree of freedom is:
 .. _ed_yawfriction_theory:
 
 Yaw-friction model
-------------
+------------------
 A yaw-friction model is implemented in ElastoDyn based on a Coulomb-viscous approach.
 The yaw-friction moment as a function of yaw rate (:math:`\omega`) is shown below in :numref:`figYawFriction`
 
