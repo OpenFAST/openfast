@@ -1575,8 +1575,10 @@ SUBROUTINE InflowWind_OpenSumFile( SumFileUnit, SummaryName, IfW_Prog, WindType,
    ErrMsg  = ""
 
    SumFileUnit = -1
+   !$OMP critical(fileopen)
    CALL GetNewUnit( SumFileUnit )
    CALL OpenFOutFile ( SumFileUnit, SummaryName, ErrStat, ErrMsg )
+   !$OMP end critical(fileopen)
    IF (ErrStat >=AbortErrLev) RETURN
 
 
