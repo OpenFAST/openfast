@@ -2070,7 +2070,7 @@ END SUBROUTINE CheckR8Var
    CHARACTER(*), INTENT(IN)       :: Line                                         !< The string to search.
    CHARACTER(*), INTENT(OUT)      :: Words(NumWords)                              !< The array of found words.
    INTEGER, OPTIONAL, INTENT(OUT) :: NumFound                                     !< The number of words found
-   LOGICAL, OPTIONAL, INTENT(OUT) :: IgnoreQuotes                                 !< Flag to ignore quotes (process as whitespace)
+   LOGICAL, OPTIONAL, INTENT(IN)  :: IgnoreQuotes                                 !< Flag to ignore quotes (process as whitespace)
 
    INTEGER                        :: iWord                                        ! Word index.
    INTEGER                        :: i                                            ! Character index in line.
