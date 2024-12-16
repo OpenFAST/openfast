@@ -1651,17 +1651,47 @@ SUBROUTINE ConvertLineToCols(Line, i, Indx, BladeKInputFileData, ErrStat, ErrMsg
 
    c=Indx(8)
    IF (c > 0) THEN
-      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCb(I)
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%t_c(I)
    END IF
 
    c=Indx(9)
    IF (c > 0) THEN
-      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCenBn(I)
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCb(I)
    END IF
 
    c=Indx(10)
    IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCenBn(I)
+   END IF
+
+   c=Indx(11)
+   IF (c > 0) THEN
       READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCenBt(I)
+   END IF
+
+   c=Indx(12)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCpn(I)
+   END IF
+
+   c=Indx(13)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCpt(I)
+   END IF
+
+   c=Indx(14)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCan(I)
+   END IF
+
+   c=Indx(15)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCat(I)
+   END IF
+
+   c=Indx(16)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCam(I)
    END IF
 
    IF (ANY(IOS /= 0)) THEN
