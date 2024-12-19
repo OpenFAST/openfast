@@ -271,6 +271,15 @@ class AeroDynInflowLib(CDLL):
         self.ADI_C_GetRotorLoads.restype = c_int
 
 
+        self.ADI_C_GetDiskAvgVel.argtypes = [
+            POINTER(c_int),                     # iturb
+            POINTER(c_float),                   # Disk average vel vector
+            POINTER(c_int),                     # ErrStat_C
+            POINTER(c_char)                     # ErrMsg_C
+        ]
+        self.ADI_C_GetDiskAvgVel.restype = c_int
+
+
         self.ADI_C_CalcOutput.argtypes = [
             POINTER(c_double),                  # Time_C
             POINTER(c_float),                   # Output Channel Values
@@ -497,7 +506,7 @@ class AeroDynInflowLib(CDLL):
         self.check_error()
 
 
-    # adi_calcOutput ------------------------------------------------------------------------------------------------------------
+    # adi_getrotorloads ---------------------------------------------------------------------------------------------------------
     def adi_getrotorloads(self, iturb, meshFrcMom, hhVel=None):
         # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
         _meshFrc_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
@@ -531,6 +540,28 @@ class AeroDynInflowLib(CDLL):
             hhVel[0] = _hhVel_flat_c[0]
             hhVel[1] = _hhVel_flat_c[1]
             hhVel[2] = _hhVel_flat_c[2]
+
+
+    # adi_getdiskavgvel ---------------------------------------------------------------------------------------------------------
+    def adi_getdiskavgvel(self, iturb, diskAvgVel):
+        # Resulting disk average velocity [Vx,Vy,Vz]
+        _diskAvgVel_flat_c = (c_float * 3)(0.0,)
+
+        # Run ADI_GetDiskAvgVel
+        self.ADI_C_GetDiskAvgVel(
+            c_int(iturb),                           # IN: iturb -- current turbine number
+            _diskAvgVel_flat_c,                     # OUT: disk average velocity [Vx, Vy, Vz]
+            byref(self.error_status_c),             # OUT: ErrStat_C
+            self.error_message_c                    # OUT: ErrMsg_C
+        )
+
+        self.check_error()
+
+        ## Disk average wind speed
+        diskAvgVel[0] = _diskAvgVel_flat_c[0]
+        diskAvgVel[1] = _diskAvgVel_flat_c[1]
+        diskAvgVel[2] = _diskAvgVel_flat_c[2]
+
 
     # adi_calcOutput ------------------------------------------------------------------------------------------------------------
     def adi_calcOutput(self, time, outputChannelValues):
@@ -914,6 +945,9 @@ class DriverDbg():
             self.DbgFile.write(f_string.format(f_num+"Mx" ))
             self.DbgFile.write(f_string.format(f_num+"My" ))
             self.DbgFile.write(f_string.format(f_num+"Mz" ))
+        self.DbgFile.write(f_string.format(f_num+"DskAvgVx" ))
+        self.DbgFile.write(f_string.format(f_num+"DskAvgVy" ))
+        self.DbgFile.write(f_string.format(f_num+"DskAvgVz" ))
         self.DbgFile.write("\n")
         self.DbgFile.write("       (s)     ")
         for i in range(1,self.numMeshPts+1):
@@ -941,10 +975,13 @@ class DriverDbg():
             self.DbgFile.write(f_string.format("(N-m)"    ))
             self.DbgFile.write(f_string.format("(N-m)"    ))
             self.DbgFile.write(f_string.format("(N-m)"    ))
+        self.DbgFile.write(f_string.format("(m/s)"    ))
+        self.DbgFile.write(f_string.format("(m/s)"    ))
+        self.DbgFile.write(f_string.format("(m/s)"    ))
         self.DbgFile.write("\n")
         self.opened = True
 
-    def write(self,t,meshPos,meshVel,meshAcc,meshFrc):
+    def write(self,t,meshPos,meshVel,meshAcc,meshFrc,DiskAvgVel):
         t_string  = "{:10.4f}"
         f_string3 = "{:25.7e}"*3
         f_string6 = "{:25.7e}"*6
@@ -954,6 +991,7 @@ class DriverDbg():
             self.DbgFile.write(f_string6.format(*meshVel[i,:]))
             self.DbgFile.write(f_string6.format(*meshAcc[i,:]))
             self.DbgFile.write(f_string6.format(*meshFrc[i,:]))
+        self.DbgFile.write(f_string3.format(*DiskAvgVel[:]))
         self.DbgFile.write("\n")
 
     def end(self):
