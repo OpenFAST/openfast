@@ -125,17 +125,18 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     the glue code.  However, here we do not pass state information through the
    !     interface and therefore must store it here analogously to how it is handled
    !     in the OpenFAST glue code.
-   integer(IntKi)                         :: n_Global          ! global timestep
-   integer(IntKi)                         :: n_VTK             ! VTK timestep
-   real(DbKi)                             :: InputTimePrev     ! input time of last UpdateStates call
+   integer(IntKi)                         :: n_Global             ! global timestep
+   integer(IntKi)                         :: n_VTK                ! VTK timestep
+   real(DbKi)                             :: InputTimePrev        ! input time of last UpdateStates call
+   real(DbKi)                             :: InputTimePrev_Calc   ! input time of last CalcOutput call
    ! Note that we are including the previous state info here (not done in OF this way)
-   integer(IntKi),   parameter            :: STATE_LAST = 0    ! Index for previous state (not needed in OF, but necessary here)
-   integer(IntKi),   parameter            :: STATE_CURR = 1    ! Index for current state
-   integer(IntKi),   parameter            :: STATE_PRED = 2    ! Index for predicted state
+   integer(IntKi),   parameter            :: STATE_LAST = 0       ! Index for previous state (not needed in OF, but necessary here)
+   integer(IntKi),   parameter            :: STATE_CURR = 1       ! Index for current state
+   integer(IntKi),   parameter            :: STATE_PRED = 2       ! Index for predicted state
    ! Note the indexing is different on inputs (no clue why, but thats how OF handles it)
-   integer(IntKi),   parameter            :: INPUT_LAST = 3    ! Index for previous  input at t-dt
-   integer(IntKi),   parameter            :: INPUT_CURR = 2    ! Index for current   input at t
-   integer(IntKi),   parameter            :: INPUT_PRED = 1    ! Index for predicted input at t+dt
+   integer(IntKi),   parameter            :: INPUT_LAST = 3       ! Index for previous  input at t-dt
+   integer(IntKi),   parameter            :: INPUT_CURR = 2       ! Index for current   input at t
+   integer(IntKi),   parameter            :: INPUT_PRED = 1       ! Index for predicted input at t+dt
 
    !------------------------------------------------------------------------------------
    !  Meshes for motions and loads
@@ -387,7 +388,8 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
                defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                &
                InterpOrder_C, DT_C, TMax_C,                               &
                storeHHVel,                                                &
-               WrVTK_in, WrVTK_inType, VTKNacDim_in, VTKHubRad_in,        &
+               WrVTK_in, WrVTK_inType, WrVTK_inDT,                        &
+               VTKNacDim_in, VTKHubRad_in,                                &
                wrOuts_C, DT_Outs_C,                                       &
                NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_Init')
@@ -423,6 +425,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    ! VTK
    integer(c_int),            intent(in   )  :: WrVTK_in                               !< Write VTK outputs [0: none, 1: init only, 2: animation]
    integer(c_int),            intent(in   )  :: WrVTK_inType                           !< Write VTK outputs as [1: surface, 2: lines, 3: both]
+   real(c_double),            intent(in   )  :: WrVTK_inDT                             !< Timestep between VTK writes
    real(c_float),             intent(in   )  :: VTKNacDim_in(6)                        !< Nacelle dimension passed in for VTK surface rendering [0,y0,z0,Lx,Ly,Lz] (m)
    real(c_float),             intent(in   )  :: VTKHubrad_in                           !< Hub radius for VTK surface rendering
    integer(c_int),            intent(in   )  :: wrOuts_C                               !< Write ADI output file
@@ -554,18 +557,19 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    Sim%root                = trim(OutRootName)
    ! Timekeeping
    n_Global                = 0_IntKi                     ! Assume we are on timestep 0 at start
-   n_VTK                   = -1_IntKi                    ! Set VTK output to T=0 at first call
+   n_VTK                   = -1_IntKi                    ! counter advance just before writing
    ! Interpolation order
    InterpOrder             = int(InterpOrder_C, IntKi)
 
    ! VTK outputs
    WrOutputsData%WrVTK        = int(WrVTK_in,     IntKi)
    WrOutputsData%WrVTK_Type   = int(WrVTK_inType, IntKi)
+   WrOutputsData%VTK_dt       = real(WrVTK_inDT,   DbKi)
    WrOutputsData%VTKNacDim    = real(VTKNacDim_in, SiKi)
    WrOutputsData%VTKHubrad    = real(VTKHubrad_in, SiKi)
    WrOutputsData%VTKRefPoint  = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)    !TODO: should this be an input?
    WrOutputsData%root         = trim(OutRootName)
-   WrOutputsData%n_VTKTime = 1   ! output every timestep
+   WrOutputsData%n_VTKTime        = 1   ! output every timestep
 
    ! Write outputs to file
    WrOutputsData%fileFmt = int(wrOuts_C, IntKi)
@@ -658,15 +662,18 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    !     us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation
    !     for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as
    !     order = SIZE(Input)
+   ! Tracking of previous input times
+   !     Since we may run correction steps, there are some things we don't want to do
    !-------------------------------------------------------------
    do i=2,InterpOrder+1
       call ADI_CopyInput (ADI%u(1),  ADI%u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
          if (Failed())  return
    enddo
    do i = 1, InterpOrder + 1
-      ADI%InputTimes(i) = 0.0_DbKi - (i - 1) * Sim%dT      ! assume start at T=0
+      ADI%InputTimes(i) = 0.0_DbKi - (i - 1) * Sim%dT    ! assume start at T=0
    enddo
-   InputTimePrev = ADI%InputTimes(1) - Sim%dT    ! Initialize for UpdateStates
+   InputTimePrev      = ADI%InputTimes(1) - Sim%dT       ! Initialize for UpdateStates
+   InputTimePrev_Calc = ADI%InputTimes(1) - Sim%dT       ! Initialize for CalcOutput
 
    !-------------------------------------------------------------
    ! copy of ADI inputs. AD_SetInputMotion will set this mesh.  When CalcOutput is called,
@@ -806,6 +813,19 @@ CONTAINS
             call SetErrStat(ErrID_Warn,"Requested DT_Outs is not an integer multiple of DT.  Changing DT_Outs to "//trim(Num2LStr(WrOutputsData%DT_Outs))//".",ErrStat3,ErrMsg3,RoutineName)
          endif
       endif
+      if (WrOutputsData%WrVTK > 1_IntKi) then   ! only if writing during simulation is requested (ignore init or no outputs)
+         ! If a smaller timestep between outputs is requested than the simulation runs at, change to DT
+         if (WrOutputsData%VTK_DT < Sim%dT) then
+            WrOutputsData%VTK_DT = Sim%dT
+            call SetErrStat(ErrID_Warn,"Requested VTK_DT is smaller than timestep DT.  Setting VTK_DT to DT.",ErrStat3,ErrMsg3,RoutineName)
+         endif
+         ! If not an integer multiple of DT, adjust
+         WrOutputsData%n_VTKtime = NINT( WrOutputsData%VTK_DT / Sim%dT )
+         if (.NOT. EqualRealNos( WrOutputsData%VTK_DT, Sim%dT * WrOutputsData%n_VTKtime )) then
+            WrOutputsData%VTK_DT = real(WrOutputsData%n_VTKtime, DbKi) * Sim%dT
+            call SetErrStat(ErrID_Warn,"Requested VTK_DT is not an integer multiple of DT.  Changing VTK_DT to "//trim(Num2LStr(WrOutputsData%VTK_DT))//".",ErrStat3,ErrMsg3,RoutineName)
+         endif
+      endif
    end subroutine ValidateSetInputs
 
    !> allocate data storage for file outputs
@@ -875,6 +895,7 @@ CONTAINS
       call WrScr("       storeHHVel                     "//TmpFlag )
       call WrScr("       WrVTK_in                       "//trim(Num2LStr( WrVTK_in      )) )
       call WrScr("       WrVTK_inType                   "//trim(Num2LStr( WrVTK_inType  )) )
+      call WrScr("       WrVTK_inDT                     "//trim(Num2LStr( WrVTK_inDT    )) )
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
 
@@ -1049,7 +1070,16 @@ SUBROUTINE ADI_C_CalcOutput(Time_C, &
    ! write outputs
    !-------------------------------------------------------
    ! Write VTK if requested (animation=2)
-   if (WrOutputsData%WrVTK > 1_IntKi)    call WrVTK_Meshes(ADI%u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
+   if (WrOutputsData%WrVTK > 1_IntKi) then
+      ! Check if writing this step (note this may overwrite if we rerun a step in a correction loop)
+      if ( mod( n_Global, WrOutputsData%n_VTKTime ) == 0 ) THEN
+         ! increment the current VTK output number if not a correction step, otherwise overwrite previous
+         if (.not. EqualRealNos( real(Time,DbKi), InputTimePrev_Calc ) ) then
+            n_VTK = n_VTK + 1_IntKi ! Increment for this write
+         endif
+         call WrVTK_Meshes(ADI%u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
+      endif
+   endif
 
    if (WrOutputsData%fileFmt > idFmtNone) then
 !FIXME: need some way to overwrite the correction timesteps (for text file)!
@@ -1058,6 +1088,9 @@ SUBROUTINE ADI_C_CalcOutput(Time_C, &
 
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
+   ! Store info what time we just ran calcs for
+   InputTimePrev_Calc = Time
 
 CONTAINS
    logical function Failed()
@@ -2254,7 +2287,7 @@ contains
 
       ! Blade point motion (structural mesh from driver)
       do iBlade=1,Sim%WT(iWT)%NumBlades
-         call MeshWrVTK(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(num2lstr(iBlade)), n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+         call MeshWrVTK(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(num2lstr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
          if (ErrStat3 >= AbortErrLev) return
       enddo
 
@@ -2262,20 +2295,20 @@ contains
       if (allocated(rot_u(iWT)%BladeRootMotion)) then
          do iBlade=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeRootMotion(iBlade)%Committed) then
-               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeRootMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(iBlade)), n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeRootMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
                   if (ErrStat3 >= AbortErrLev) return
             endif
          enddo
       endif
 
       ! Nacelle (structural point input
-      if ( rot_u(iWT)%NacelleMotion%Committed ) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.NacelleMotion', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+      if ( rot_u(iWT)%NacelleMotion%Committed ) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.NacelleMotion', n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Free wake
       if (allocated(ADI%m%AD%FVW_u) .and. iWT==1) then
          if (allocated(ADI%m%AD%FVW_u(1)%WingsMesh)) then
-            call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(STATE_CURR)%AD%FVW, ADI%z(STATE_CURR)%AD%FVW, ADI%m%AD%FVW, trim(WrOutputsData%VTK_OutFileRoot)//'.FVW', n_Global, WrOutputsData%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+            call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(STATE_CURR)%AD%FVW, ADI%z(STATE_CURR)%AD%FVW, ADI%m%AD%FVW, trim(WrOutputsData%VTK_OutFileRoot)//'.FVW', n_VTK, WrOutputsData%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
          endif
       end if
    end subroutine WrVTK_Points
@@ -2291,11 +2324,11 @@ contains
       ErrMsg3  =  ''
 
       ! TODO: use this routine when it is moved out of the driver and into ADI
-      ! call AD_WrVTK_Surfaces(ADI%u(1)%AD, ADI%y%AD, RefPoint, ADI%m%VTK_Surfaces, n_Global, WrOutputsData%Root, WrOutputsData%VTK_tWidth, 25, WrOutputsData%VTKHubRad)
+      ! call AD_WrVTK_Surfaces(ADI%u(1)%AD, ADI%y%AD, RefPoint, ADI%m%VTK_Surfaces, n_VTK, WrOutputsData%Root, WrOutputsData%VTK_tWidth, 25, WrOutputsData%VTKHubRad)
 
       ! Nacelle
       if ( rot_u(iWT)%NacelleMotion%Committed ) then
-         call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', n_Global, &
+         call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', n_VTK, &
                                       OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, verts=WrOutputsData%VTK_Surface(iWT)%NacelleBox)
          if (ErrStat3 >= AbortErrLev) return
       endif
@@ -2303,14 +2336,14 @@ contains
       ! Tower
       if (rot_u(iWT)%TowerMotion%Committed) then
          call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
-                                    n_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, numSectors, ADI%m%VTK_Surfaces(iWT)%TowerRad )
+                                    n_VTK, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, numSectors, ADI%m%VTK_Surfaces(iWT)%TowerRad )
          if (ErrStat3 >= AbortErrLev) return
       endif
 
       ! Hub
       if (rot_u(iWT)%HubMotion%Committed) then
          call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%HubMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
-                                      n_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, &
+                                      n_VTK, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, &
                                       NumSegments=numSectors, radius=WrOutputsData%VTKHubRad)
          if (ErrStat3 >= AbortErrLev) return
       endif
@@ -2320,7 +2353,7 @@ contains
          do iBlade=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeMotion(iBlade)%Committed) then
                call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%BladeMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(iBlade))//'Surface', &
-                                          n_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth , verts=ADI%m%VTK_Surfaces(iWT)%BladeShape(iBlade)%AirfoilCoords, &
+                                          n_VTK, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth , verts=ADI%m%VTK_Surfaces(iWT)%BladeShape(iBlade)%AirfoilCoords, &
                                           Sib=ADI%y%AD%rotors(iWT)%BladeLoad(iBlade) )
                   if (ErrStat3 >= AbortErrLev) return
             endif
@@ -2336,22 +2369,22 @@ contains
       ErrMsg3  =  ''
 
       ! Tower
-      if (rot_u(iWT)%TowerMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Tower', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+      if (rot_u(iWT)%TowerMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Tower', n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Nacelle meshes
-      if (rot_u(iWT)%NacelleMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Nacelle', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+      if (rot_u(iWT)%NacelleMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Nacelle', n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Hub
-      if (rot_u(iWT)%HubMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%HubMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Hub', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+      if (rot_u(iWT)%HubMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%HubMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Hub', n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Blades
       if (allocated(rot_u(iWT)%BladeMotion)) then
          do iBlade=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeMotion(iBlade)%Committed) then
-               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(iBlade)), n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
                   if (ErrStat3 >= AbortErrLev) return
             endif
          enddo
