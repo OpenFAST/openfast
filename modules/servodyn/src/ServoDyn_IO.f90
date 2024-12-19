@@ -1332,15 +1332,15 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
    if ( InputFileData%Echo )   WRITE(UnEcho, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
       !  DLL_FileName  - Name/location of the dynamic library {.dll [Windows] or .so [Linux]} in the Bladed-DLL format (-) [used only with Bladed Interface]
-   call ParseVar( FileInfo_In, CurLine, 'DLL_FileName', InputFileData%DLL_FileName, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, CurLine, 'DLL_FileName', InputFileData%DLL_FileName, ErrStat2, ErrMsg2, UnEcho, IsPath=.true. )
       if (Failed())  return;
    IF ( PathIsRelative( InputFileData%DLL_FileName ) ) InputFileData%DLL_FileName = TRIM(PriPath)//TRIM(InputFileData%DLL_FileName)
       !  DLL_InFile  - Name of input file sent to the DLL (-) [used only with Bladed Interface]
-   call ParseVar( FileInfo_In, CurLine, 'DLL_InFile', InputFileData%DLL_InFile, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, CurLine, 'DLL_InFile', InputFileData%DLL_InFile, ErrStat2, ErrMsg2, UnEcho, IsPath=.true. )
       if (Failed())  return;
    IF ( PathIsRelative( InputFileData%DLL_InFile ) ) InputFileData%DLL_InFile = TRIM(PriPath)//TRIM(InputFileData%DLL_InFile)   
       !  DLL_ProcName  - Name of procedure in DLL to be called (-) [case sensitive; used only with DLL Interface]
-   call ParseVar( FileInfo_In, CurLine, 'DLL_ProcName', InputFileData%DLL_ProcName, ErrStat2, ErrMsg2, UnEcho )
+   call ParseVar( FileInfo_In, CurLine, 'DLL_ProcName', InputFileData%DLL_ProcName, ErrStat2, ErrMsg2, UnEcho, IsPath=.true. )
       if (Failed())  return;
       !  DLL_DT  - Communication interval for dynamic library (s) (or "default") [used only with Bladed Interface]
    call ParseVarWDefault( FileInfo_In, CurLine, 'DLL_DT', InputFileData%DLL_DT, InputFileData%DT, ErrStat2, ErrMsg2, UnEcho )
@@ -2400,8 +2400,10 @@ subroutine InitializeSummaryFile(InputFileData,OutfileRoot,UnSum,ErrStat,ErrMsg)
    ErrStat  =  ErrID_None
    ErrMsg   =  ''
    if ( InputFileData%SumPrint ) then
+      !$OMP critical(fileopen)
       call GetNewUnit( UnSum )
       CALL OpenEcho ( UnSum, TRIM(OutFileRoot)//'.sum', ErrStat2, ErrMsg2 )
+      !$OMP end critical(fileopen)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
    else

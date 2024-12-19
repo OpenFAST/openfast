@@ -3649,20 +3649,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !------------------------------------------------------------------------------
 
          ! Find a unit number to use
+      !$OMP critical(fileopen)
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
-         RETURN
-      ENDIF
-
-         ! Open the file
-      CALL OpenFInpFile(  UnitDataFile, TRIM(Filename3D), ErrStat, ErrMsg )  ! Open file containing mean drift information
+      if (ErrStatTmp < AbortErrLev) then
+            ! Open the file
+         CALL OpenFInpFile(  UnitDataFile, TRIM(Filename3D), ErrStat, ErrMsg )  ! Open file containing mean drift information
+      endif
+      !$OMP end critical(fileopen)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
@@ -4423,21 +4416,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !------------------------------------------------------------------------------
 
          ! Find a unit number to use
+      !$OMP critical(fileopen)
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
-         RETURN
-      ENDIF
-
+      if (ErrStatTmp < AbortErrLev) then
          ! Open the file
-      CALL OpenFInpFile(  UnitDataFile, TRIM(Filename4D), ErrStat, ErrMsg )  ! Open file containing mean drift information
+         CALL OpenFInpFile(  UnitDataFile, TRIM(Filename4D), ErrStat, ErrMsg )  ! Open file containing mean drift information
+      endif
+      !$OMP end critical(fileopen)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )

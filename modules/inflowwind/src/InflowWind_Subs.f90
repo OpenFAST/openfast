@@ -317,7 +317,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FileName_Uni", InputFileData%Uniform_FileName, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_Uni", InputFileData%Uniform_FileName, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%Uniform_FileName ) ) InputFileData%Uniform_FileName = TRIM(PriPath)//TRIM(InputFileData%Uniform_FileName)
    IF ( FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
@@ -339,7 +339,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FileName_BTS", InputFileData%TSFF_FileName, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_BTS", InputFileData%TSFF_FileName, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%TSFF_FileName ) ) InputFileData%TSFF_FileName = TRIM(PriPath)//TRIM(InputFileData%TSFF_FileName)
    IF ( FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
@@ -355,7 +355,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FilenameRoot", InputFileData%BladedFF_FileName, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FilenameRoot", InputFileData%BladedFF_FileName, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%BladedFF_FileName ) ) InputFileData%BladedFF_FileName = TRIM(PriPath)//TRIM(InputFileData%BladedFF_FileName)
 
@@ -383,15 +383,15 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    !-------------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break
-   CALL ParseVar( InFileInfo, CurLine, "FileName_u", InputFileData%HAWC_FileName_u, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_u", InputFileData%HAWC_FileName_u, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_u ) ) InputFileData%HAWC_FileName_u = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_u)
 
-   CALL ParseVar( InFileInfo, CurLine, "FileName_v", InputFileData%HAWC_FileName_v, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_v", InputFileData%HAWC_FileName_v, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_v ) ) InputFileData%HAWC_FileName_v = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_v)
 
-   CALL ParseVar( InFileInfo, CurLine, "FileName_w", InputFileData%HAWC_FileName_w, TmpErrStat, TmpErrMsg, UnEc )
+   CALL ParseVar( InFileInfo, CurLine, "FileName_w", InputFileData%HAWC_FileName_w, TmpErrStat, TmpErrMsg, UnEc, IsPath=.true. )
    if (Failed()) return
    IF ( PathIsRelative( InputFileData%HAWC_FileName_w ) ) InputFileData%HAWC_FileName_w = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_w)
    
@@ -967,6 +967,7 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
       ! Temporary variables
    INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status  for subroutine and function calls
    CHARACTER(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message for subroutine and function calls
+   integer(IntKi)                                     :: NumPtsAvg            !< Number of points to use for disk average vel (1 if no radius)
 
       ! Local variables
    INTEGER(IntKi)                                     :: I                    !< Generic counter
@@ -1029,28 +1030,34 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    CALL AllocAry( m%y_Hub%VelocityUVW, 3, 1, "Array of velocities for hub values", TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       
-   CALL AllocAry( m%u_Avg%PositionXYZ, 3, IfW_NumPtsAvg, "Array of positions for rotor-averaged values", TmpErrStat, TmpErrMsg )
+   ! Disk Velocity calculations
+   if (InitInp%RadAvg < 0.0_ReKi)  then
+      NumPtsAvg = 1_IntKi              ! Use only hub point
+   else
+      NumPtsAvg = IfW_NumPtsAvg        ! Use a field of points for disk average calculations
+   endif
+
+   CALL AllocAry( m%u_Avg%PositionXYZ, 3, NumPtsAvg, "Array of positions for rotor-averaged values", TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   CALL AllocAry( m%y_Avg%VelocityUVW, 3, IfW_NumPtsAvg, "Array of velocities for rotor-averaged values", TmpErrStat, TmpErrMsg )
+   CALL AllocAry( m%y_Avg%VelocityUVW, 3, NumPtsAvg, "Array of velocities for rotor-averaged values", TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   CALL AllocAry( p%PositionAvg, 3, IfW_NumPtsAvg, "Array of positions for computing average wind speed", TmpErrStat, TmpErrMsg )
+   CALL AllocAry( p%PositionAvg, 3, NumPtsAvg, "Array of positions for computing average wind speed", TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat>= AbortErrLev ) RETURN
       
       
    if (InitInp%RadAvg < 0.0_ReKi)  then
-      R  =  max(1.0_ReKi, InputFileData%Uniform_RefLength)/2.0_ReKi    ! We'll use this as a guess for the rotor radius
+      p%PositionAvg = 0.0_ReKi         ! Use only hub
    else
-      R = InitInp%RadAvg
+      ! Calculate a ring of points at 70 rotor radius
+      R = InitInp%RadAvg * 0.7_ReKi !70% radius
+      do i=1,NumPtsAvg
+         theta = pi +(i-1)*TwoPi/NumPtsAvg
+         p%PositionAvg(1,i) = 0.0_ReKi          ! Hub X (perpindicular to rotor plane)
+         p%PositionAvg(2,i) = R*cos(theta)      ! Hub Y
+         p%PositionAvg(3,i) = R*sin(theta)      ! Hub Z (in vertical plane when azimuth=0)
+      end do
    end if
-   R = R * 0.7_ReKi !70% radius
-   
-   do i=1,IfW_NumPtsAvg
-      theta = pi +(i-1)*TwoPi/IfW_NumPtsAvg
-      p%PositionAvg(1,i) = R*cos(theta)
-      p%PositionAvg(2,i) = R*sin(theta)
-      p%PositionAvg(3,i) = 0.0_ReKi
-   end do
    
    p%OutputAccel = InitInp%OutputAccel
 
@@ -1568,8 +1575,10 @@ SUBROUTINE InflowWind_OpenSumFile( SumFileUnit, SummaryName, IfW_Prog, WindType,
    ErrMsg  = ""
 
    SumFileUnit = -1
+   !$OMP critical(fileopen)
    CALL GetNewUnit( SumFileUnit )
    CALL OpenFOutFile ( SumFileUnit, SummaryName, ErrStat, ErrMsg )
+   !$OMP end critical(fileopen)
    IF (ErrStat >=AbortErrLev) RETURN
 
 
@@ -1709,17 +1718,17 @@ SUBROUTINE InflowWind_GetSpatialAverage( Time, InputData, p, x, xd, z, OtherStat
    m%u_Avg%HubPosition    = InputData%HubPosition
    m%u_Avg%HubOrientation = InputData%HubOrientation
    
-   do i=1,IfW_NumPtsAvg
+   do i=1,size(m%u_Avg%PositionXYZ,DIM=2)
       m%u_Avg%PositionXYZ(:,i) = matmul(InputData%HubOrientation,p%PositionAvg(:,i)) + InputData%HubPosition
    end do
 
    CALL CalculateOutput( Time, m%u_Avg, p, x, xd, z, OtherStates, m%y_Avg, m, FillWrOut, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   do i=1,IfW_NumPtsAvg
+   do i=1,size(m%u_Avg%PositionXYZ,DIM=2)
       MeanVelocity = MeanVelocity + m%y_Avg%VelocityUVW(:,i)
    end do
-   MeanVelocity = MeanVelocity / REAL(IfW_NumPtsAvg,ReKi)
+   MeanVelocity = MeanVelocity / REAL(size(m%u_Avg%PositionXYZ,DIM=2),ReKi)
         
    
    RETURN

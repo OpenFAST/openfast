@@ -6610,9 +6610,11 @@ SUBROUTINE MrsnOut_OpenOutput( ProgName, OutRootName,  p, InitOut, ErrStat, ErrM
       
          ! Open the file for output
       OutFileName = TRIM(OutRootName)//'.MRSN.out'
+      !$OMP critical(fileopen)
       CALL GetNewUnit( p%UnOutFile )
    
       CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
+      !$OMP end critical(fileopen)
       IF (ErrStat >=AbortErrLev) RETURN
       
       

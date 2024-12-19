@@ -42,7 +42,7 @@ option(CTEST_NO_RUN_FLAG  "Complete the regression test comparison but do not ex
 # Set the OpenFAST executable configuration option and default
 set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
-if(BUILD_OPENFAST_CPP_API)
+if(BUILD_OPENFAST_CPP_DRIVER)
   # Set the OpenFAST executable configuration option and default
   set(CTEST_OPENFASTCPP_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast-cpp/openfastcpp${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the OpenFAST C++ executable to use in testing.")
 endif()
