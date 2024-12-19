@@ -384,6 +384,7 @@ end subroutine ADI_C_PreInit
 !===============================================================================================================
 SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileStringLength_C, &
                IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,  &
+               OutVTKDir_C,                                               &
                gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,      &
                defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                &
                InterpOrder_C, DT_C, TMax_C,                               &
@@ -406,6 +407,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
    integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
    character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
+   character(kind=c_char),    intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
    ! Environmental
    real(c_float),             intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
    real(c_float),             intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
@@ -447,6 +449,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
+   character(IntfStrLen)                                          :: OutVTKdir         !< Output directory for files (relative to current location)
    integer(IntKi)                                                 :: i,j,k             !< generic index variables
    integer(IntKi)                                                 :: iWT               !< current turbine number (iterate through during setup for ADI_Init call)
    integer(IntKi)                                                 :: AeroProjMod       !< for checking that all turbines use the same AeroProjMod
@@ -497,6 +500,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
    if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
 
+   ! OutVTKdir -- output directory
+   OutVTKdir = TRANSFER( OutVTKdir_C, OutVTKdir )
+   i = INDEX(OutVTKdir,C_NULL_CHAR) - 1               ! if this has a c null character at the end...
+   if ( i > 0 ) OutVTKdir = OutVTKdir(1:I)            ! remove it
 
    ! For debugging the interface:
    if (DebugLevel > 0) then
@@ -645,7 +652,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    call SetupMotionLoadsInterfaceMeshes();    if (Failed())  return
    ! setup meshes
    if (WrOutputsData%WrVTK > 0_IntKi) then
-      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, 'vtk-ADI')
+      if (len_trim(OutVTKdir) <= 0) then
+         OutVTKdir = 'vtk-ADI'
+      endif
+      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, OutVTKdir)
       if (Failed())  return
    endif
    ! write meshes for this rotor
@@ -873,6 +883,7 @@ CONTAINS
       call WrScr("       IfWinputFileString_C (ptr addr)"//trim(Num2LStr(LOC(IfWinputFileString_C))) )
       call WrScr("       IfWinputFileStringLength_C     "//trim(Num2LStr( IfWinputFileStringLength_C )) )
       call WrScr("       OutRootName                    "//trim(OutRootName) )
+      call WrScr("       OutVTKDir                      "//trim(OutVTKDir)   )
       call WrScr("   Environment variables")
       call WrScr("       gravity_C                      "//trim(Num2LStr( gravity_C     )) )
       call WrScr("       defFldDens_C                   "//trim(Num2LStr( defFldDens_C  )) )

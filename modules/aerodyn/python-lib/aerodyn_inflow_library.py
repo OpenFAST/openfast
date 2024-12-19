@@ -157,6 +157,7 @@ class AeroDynInflowLib(CDLL):
         #   If HD writes a file (echo, summary, or other), use this for the
         #   root of the file name.
         self.outRootName = "Output_ADIlib_default"
+        self.outVTKdir   = ""       # Set to specify a directory relative to the input files (created if doesn't exist)
 
     # _initialize_routines() ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
@@ -200,6 +201,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_char_p),                  # IfW input file as string
             POINTER(c_int),                     # IfW input file string length
             POINTER(c_char),                    # OutRootName
+            POINTER(c_char),                    # OutVTKdir
             POINTER(c_float),                   # gravity
             POINTER(c_float),                   # defFldDens
             POINTER(c_float),                   # defKinVisc
@@ -372,6 +374,7 @@ class AeroDynInflowLib(CDLL):
 
         # Rootname for ADI output files (echo etc).
         _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
+        _outVTKdir_c   = create_string_buffer((self.outVTKdir.ljust(self.default_str_c_len)).encode('utf-8'))
 
         #   Flatten arrays to pass
         #       [x2,y1,z1, x2,y2,z2 ...]
@@ -386,6 +389,7 @@ class AeroDynInflowLib(CDLL):
             c_char_p(IfW_input_string),             # IN: IfW input file as string (or filename if IfWinputPass is false)
             byref(c_int(IfW_input_string_length)),  # IN: IfW input file string length
             _outRootName_c,                         # IN: rootname for ADI file writing
+            _outVTKdir_c,                           # IN: directory for vtk output files (relative to input file)
             byref(c_float(self.gravity)),           # IN: gravity
             byref(c_float(self.defFldDens)),        # IN: defFldDens
             byref(c_float(self.defKinVisc)),        # IN: defKinVisc
