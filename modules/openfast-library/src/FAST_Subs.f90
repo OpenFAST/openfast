@@ -583,6 +583,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF
 
       ! lidar
+      Init%InData_IfW%LidarDisable                 = .false.   ! allowed with OF, but not FF
       Init%InData_IfW%lidar%Tmax                   = p_FAST%TMax
       Init%InData_IfW%lidar%HubPosition            = ED%y%HubPtMotion%Position(:,1)
 
