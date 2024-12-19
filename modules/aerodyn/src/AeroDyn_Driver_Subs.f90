@@ -1727,7 +1727,11 @@ subroutine setVTKParameters(DVR_Outs, dvr, ADI, errStat, errMsg, dirname)
    ! get the name of the output directory for vtk files (in a subdirectory called "vtk" of the output directory), and
    ! create the VTK directory if it does not exist
    call GetPath ( DVR_Outs%root, DVR_Outs%VTK_OutFileRoot, vtkroot ) ! the returned DVR_Outs%VTK_OutFileRoot includes a file separator character at the end
-   DVR_Outs%VTK_OutFileRoot = trim(DVR_Outs%VTK_OutFileRoot) // trim(dir)
+   if (PathIsRelative(trim(dir))) then
+      DVR_Outs%VTK_OutFileRoot = trim(DVR_Outs%VTK_OutFileRoot) // trim(dir)
+   else
+      DVR_Outs%VTK_OutFileRoot = trim(dir)
+   endif
    call MKDIR( trim(DVR_Outs%VTK_OutFileRoot) )
    DVR_Outs%VTK_OutFileRoot = trim( DVR_Outs%VTK_OutFileRoot ) // PathSep // trim(vtkroot)
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
