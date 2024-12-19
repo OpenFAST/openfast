@@ -107,6 +107,7 @@ class AeroDynInflowLib(CDLL):
         # VTK
         self.WrVTK       = 0          # default of no vtk output
         self.WrVTK_Type  = 1          # default of surface meshes
+        self.WrVTK_DT    = 0.0        # default to all
         self.VTKNacDim   = np.array([-2.5,-2.5,0,10,5,5], dtype="float32")        # default nacelle dimension for VTK surface rendering [x0,y0,z0,Lx,Ly,Lz] (m)
         self.VTKHubRad   = 1.5        # default hub radius for VTK surface rendering
 
@@ -156,6 +157,7 @@ class AeroDynInflowLib(CDLL):
         #   If HD writes a file (echo, summary, or other), use this for the
         #   root of the file name.
         self.outRootName = "Output_ADIlib_default"
+        self.outVTKdir   = ""       # Set to specify a directory relative to the input files (created if doesn't exist)
 
     # _initialize_routines() ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
@@ -199,6 +201,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_char_p),                  # IfW input file as string
             POINTER(c_int),                     # IfW input file string length
             POINTER(c_char),                    # OutRootName
+            POINTER(c_char),                    # OutVTKdir
             POINTER(c_float),                   # gravity
             POINTER(c_float),                   # defFldDens
             POINTER(c_float),                   # defKinVisc
@@ -213,6 +216,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # storeHHVel
             POINTER(c_int),                     # WrVTK
             POINTER(c_int),                     # WrVTK_Type
+            POINTER(c_double),                  # WrVTK_DT  -- 0 or negative to do every step
             POINTER(c_float),                   # VTKNacDim
             POINTER(c_float),                   # VTKHubRad
             POINTER(c_int),                     # wrOuts -- file format for writing outputs
@@ -370,6 +374,7 @@ class AeroDynInflowLib(CDLL):
 
         # Rootname for ADI output files (echo etc).
         _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
+        _outVTKdir_c   = create_string_buffer((self.outVTKdir.ljust(self.default_str_c_len)).encode('utf-8'))
 
         #   Flatten arrays to pass
         #       [x2,y1,z1, x2,y2,z2 ...]
@@ -384,6 +389,7 @@ class AeroDynInflowLib(CDLL):
             c_char_p(IfW_input_string),             # IN: IfW input file as string (or filename if IfWinputPass is false)
             byref(c_int(IfW_input_string_length)),  # IN: IfW input file string length
             _outRootName_c,                         # IN: rootname for ADI file writing
+            _outVTKdir_c,                           # IN: directory for vtk output files (relative to input file)
             byref(c_float(self.gravity)),           # IN: gravity
             byref(c_float(self.defFldDens)),        # IN: defFldDens
             byref(c_float(self.defKinVisc)),        # IN: defKinVisc
@@ -398,6 +404,7 @@ class AeroDynInflowLib(CDLL):
             byref(c_int(self.storeHHVel)),          # IN: storeHHVel
             byref(c_int(self.WrVTK)),               # IN: WrVTK
             byref(c_int(self.WrVTK_Type)),          # IN: WrVTK_Type
+            byref(c_double(self.WrVTK_DT)),         # IN: WrVTK_DT
             VTKNacDim_c,                            # IN: VTKNacDim
             byref(c_float(self.VTKHubRad)),         # IN: VTKHubRad
             byref(c_int(self.wrOuts)),              # IN: wrOuts -- file format for writing outputs
