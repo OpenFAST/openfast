@@ -101,7 +101,7 @@ target_link_libraries(unsteadyaero_driver basicaerolib lindynlib versioninfolib)
 add_library(aerodyn_inflow_c_binding SHARED 
   src/AeroDyn_Inflow_C_Binding.f90
 )
-target_link_libraries(aerodyn_inflow_c_binding adilib aerodyn_driver_subs versioninfolib)
+target_link_libraries(aerodyn_inflow_c_binding aerodyn_driver_subs versioninfolib)
 if(APPLE OR UNIX)
    target_compile_definitions(aerodyn_inflow_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
