@@ -578,11 +578,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          ! Wake -- we allow the wake positions to exceed the wind box
          if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
             Init%InData_IfW%BoxExceedAllowF = .true.
-            Init%InData_IfW%BoxExceedAllowIdx = min(Init%InData_IfW%BoxExceedAllowIdx, AD_BoxExceedPointsIdx(AD%Input(1), AD%OtherSt(STATE_CURR)))
+            Init%InData_IfW%BoxExceedAllowIdx = AD_BoxExceedPointsIdx(AD%Input(1), AD%OtherSt(STATE_CURR))
          endif
       END IF
 
       ! lidar
+      Init%InData_IfW%LidarEnabled                 = .true.    ! allowed with OF, but not FF
       Init%InData_IfW%lidar%Tmax                   = p_FAST%TMax
       Init%InData_IfW%lidar%HubPosition            = ED%y%HubPtMotion%Position(:,1)
 
@@ -2280,11 +2281,13 @@ end do
          y_FAST%OutFmt_a = trim(y_FAST%OutFmt_a)//','//trim(num2lstr(y_FAST%ActualChanLen - p_FAST%FmtWidth))//'x'
       end if
 
+      !$OMP critical(fileopen)
       CALL GetNewUnit( y_FAST%UnOu, ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-      CALL OpenFOutFile ( y_FAST%UnOu, TRIM(p_FAST%OutFileRoot)//'.out', ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat < AbortErrLev ) then
+         CALL OpenFOutFile ( y_FAST%UnOu, TRIM(p_FAST%OutFileRoot)//'.out', ErrStat, ErrMsg )
+      ENDIF
+      !$OMP end critical(fileopen)
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Add some file information:
 
@@ -2415,18 +2418,18 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
 
       ! Get an available unit number for the file.
 
+   !$OMP critical(fileopen)
    CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
+   if ( ErrStat < AbortErrLev ) then
       ! Open the Primary input file.
-
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+      CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN
-      end if
+   endif
+   !$OMP end critical(fileopen)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
 
 
    ! Read the lines up/including to the "Echo" simulation control variable
@@ -3929,11 +3932,13 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
 
       ! Get a unit number and open the file:
 
+   !$OMP critical(fileopen)
    CALL GetNewUnit( y_FAST%UnSum, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   CALL OpenFOutFile ( y_FAST%UnSum, TRIM(p_FAST%OutFileRoot)//'.sum', ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) RETURN
+   if ( ErrStat < AbortErrLev ) then
+      CALL OpenFOutFile ( y_FAST%UnSum, TRIM(p_FAST%OutFileRoot)//'.sum', ErrStat, ErrMsg )
+   endif
+   !$OMP end critical(fileopen)
+   IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Add some file information:
 
@@ -6173,8 +6178,10 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
 
       ! Open the binary output file:
    unOut=-1
+   !$OMP critical(fileopen)
    CALL GetNewUnit( unOut, ErrStat, ErrMsg )
    CALL OpenBOutFile ( unOut, TRIM(FileName), ErrStat, ErrMsg )
+   !$OMP end critical(fileopen)
       IF (ErrStat /= ErrID_None) RETURN
 
    ! note that I'm not doing anything with the errors here, so it won't tell
@@ -6252,9 +6259,11 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_
 
       ! Open the binary output file and write a header:
    if (unOut<0) then
+      !$OMP critical(fileopen)
       CALL GetNewUnit( unOut, ErrStat, ErrMsg )
 
       CALL OpenBOutFile ( unOut, TRIM(FileName), ErrStat, ErrMsg )
+      !$OMP end critical(fileopen)
          IF (ErrStat /= ErrID_None) RETURN
 
          ! Add a file identification number (in case we ever have to change this):
@@ -7045,8 +7054,10 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
 
    IF ( unOut < 0 ) THEN
 
+      !$OMP critical(fileopen)
       CALL GetNewUnit( unOut, ErrStat2, ErrMsg2 )
       CALL OpenBOutFile ( unOut, FileName, ErrStat2, ErrMsg2)
+      !$OMP end critical(fileopen)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev ) then
             call cleanup()
@@ -7213,9 +7224,11 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
 
    IF ( unIn < 0 ) THEN
 
+      !$OMP critical(fileopen)
       CALL GetNewUnit( unIn, ErrStat2, ErrMsg2 )
 
       CALL OpenBInpFile ( unIn, FileName, ErrStat2, ErrMsg2)
+      !$OMP end critical(fileopen)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev ) RETURN
 
@@ -7617,9 +7630,11 @@ SUBROUTINE ReadModeShapeMatlabFile(p_FAST, ErrStat, ErrMsg)
    ErrMsg  = ""
 
       !  Open data file.
+   !$OMP critical(fileopen)
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
 
    CALL OpenBInpFile ( UnIn, trim(p_FAST%VTK_modes%MatlabFileName), ErrStat2, ErrMsg2 )
+   !$OMP end critical(fileopen)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7743,9 +7758,11 @@ SUBROUTINE ReadModeShapeFile(p_FAST, InputFile, ErrStat, ErrMsg, checkpointOnly)
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
       !  Open data file.
+   !$OMP critical(fileopen)
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
 
    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+   !$OMP end critical(fileopen)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 

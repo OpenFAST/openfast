@@ -4,7 +4,7 @@ module AeroDyn_Inflow
    use NWTC_Library
    use AeroDyn_Inflow_Types
    use AeroDyn_Types
-   use AeroDyn, only: AD_Init, AD_ReInit, AD_CalcOutput, AD_UpdateStates, AD_End
+   use AeroDyn, only: AD_Init, AD_ReInit, AD_CalcOutput, AD_UpdateStates, AD_End, AD_BoxExceedPointsIdx
    use AeroDyn, only: AD_NumWindPoints, AD_GetExternalWind, AD_SetExternalWindPositions
    use AeroDyn_IO, only: AD_SetVTKSurface
    use InflowWind, only: InflowWind_Init, InflowWind_CalcOutput, InflowWind_End
@@ -344,6 +344,11 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       InitInData%InputFileName    = i_IW%InputFile
       InitInData%Linearize        = i_IW%Linearize
       InitInData%UseInputFile     = i_IW%UseInputFile
+      ! Box exceed allow for OLAF poitns
+      if (allocated(o_AD%WakeLocationPoints)) then
+         InitInData%BoxExceedAllowF = .true.
+         InitInData%BoxExceedAllowIdx = AD_BoxExceedPointsIdx(u_AD, o_AD)
+      endif
       if (.not. i_IW%UseInputFile) then
          call NWTC_Library_Copyfileinfotype( i_IW%PassedFileData, InitInData%PassedFileData, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
       endif
@@ -488,16 +493,12 @@ subroutine ADI_CalcOutput_IW(t, u_IfW, IW, errStat, errMsg)
       call InflowWind_CalcOutput(t, u_IfW, IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_CalcOutput_IW') 
    else
-      !$OMP PARALLEL DEFAULT(SHARED)
-      !$OMP DO PRIVATE(j,z) schedule(runtime)
       do j=1,size(u_IfW%PositionXYZ,2)
          z = u_IfW%PositionXYZ(3,j)
          IW%y%VelocityUVW(1,j) = IW%HWindSpeed*(z/IW%RefHt)**IW%PLExp
          IW%y%VelocityUVW(2,j) = 0.0_ReKi !V
          IW%y%VelocityUVW(3,j) = 0.0_ReKi !W      
       end do 
-      !$OMP END DO 
-      !$OMP END PARALLEL
    endif
 end subroutine ADI_CalcOutput_IW
 !----------------------------------------------------------------------------------------------------------------------------------
