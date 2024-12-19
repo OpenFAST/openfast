@@ -24,6 +24,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    USE AeroDyn_Inflow_Types
    USE AeroDyn_Driver_Types,  only: Dvr_SimData, Dvr_Outputs
    USE AeroDyn_Driver_Subs,   only: Dvr_InitializeOutputs, Dvr_WriteOutputs, SetVTKParameters   !, WrVTK_Surfaces, WrVTK_Lines, WrVTK_Ground
+   USE IfW_FlowField, only: IfW_FlowField_GetVelAcc
    USE NWTC_Library
    USE VersionInfo
 
@@ -39,6 +40,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    PUBLIC :: ADI_C_SetupRotor         ! Initial node positions etc for a rotor
    PUBLIC :: ADI_C_SetRotorMotion     ! Set motions for a given rotor
    PUBLIC :: ADI_C_GetRotorLoads      ! Retrieve loads for a given rotor
+   PUBLIC :: ADI_C_GetDiskAvgVel      ! Get the disk average velocity for the rotor
 
    !------------------------------------------------------------------------------------
    !  Version info for display
@@ -96,7 +98,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    integer(IntKi)                         :: InterpOrder
    !------------------------------
    !  Primary ADI data derived data types
-   type(ADI_Data)                         :: ADI
+   type(ADI_Data), target                 :: ADI               !< all ADI data (target for using pointers to simplify code)
    type(ADI_InitInputType)                :: InitInp           !< Initialization data
    type(ADI_InitOutputType)               :: InitOutData       !< Initial output data -- Names, units, and version info.
    type(ADI_InputType)                    :: ADI_u             !< ADI inputs -- set by AD_SetInputMotion.  Copied as needed (necessary for correction steps)
@@ -137,6 +139,17 @@ MODULE AeroDyn_Inflow_C_BINDING
    integer(IntKi),   parameter            :: INPUT_LAST = 3       ! Index for previous  input at t-dt
    integer(IntKi),   parameter            :: INPUT_CURR = 2       ! Index for current   input at t
    integer(IntKi),   parameter            :: INPUT_PRED = 1       ! Index for predicted input at t+dt
+
+   !-------------------------------
+   !  Variables for disk average velocity calculations
+   integer(IntKi),  parameter             :: NumPtsDiskAvg = 144
+   type :: DiskAvgVelData_Type
+      real(ReKi)                          :: DiskWindPosRel(3,NumPtsDiskAvg)
+      real(ReKi)                          :: DiskWindPosAbs(3,NumPtsDiskAvg)
+      real(ReKi)                          :: DiskWindVel(3,NumPtsDiskAvg)
+      real(ReKi)                          :: DiskAvgVel(3)
+   end type DiskAvgVelData_Type
+   type(DiskAvgVelData_Type), allocatable :: DiskAvgVelVars(:)
 
    !------------------------------------------------------------------------------------
    !  Meshes for motions and loads
@@ -303,6 +316,10 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, Deb
    ! Allocate arrays and meshes for the number of turbines
    if (allocated(InitInp%AD%rotors))   deallocate(InitInp%AD%rotors)
    allocate(InitInp%AD%rotors(Sim%NumTurbines),stat=errStat2); if (Failed0('rotors')) return
+
+   ! allocate data storage for DiskAvgVel retrieval
+   if (allocated(DiskAvgVelVars))   deallocate(DiskAvgVelVars)
+   allocate(DiskAvgVelVars(Sim%NumTurbines), STAT=ErrStat2); if (Failed0('DiskAvgVelVars')) return
 
    ! Allocate data storage for turbine info
    if (allocated(Sim%WT))  deallocate(Sim%WT)
@@ -666,6 +683,12 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
       if (Failed())  return
    endif
 
+   ! Setup points for calculating disk average velocity
+   do iWT=1,Sim%NumTurbines
+      call SetDiskAvgPoints(iWT)
+      if (Failed())  return
+   enddo
+
    !-------------------------------------------------------------
    ! Setup other prior timesteps
    !     We fill InputTimes with negative times, but the Input values are identical for each of those times; this allows
@@ -985,6 +1008,24 @@ CONTAINS
       !     - some check that nodes make some sense -- might be caught in meshmapping
       !     - some checks on hub/nacelle being near middle of the rotor?  Not sure if that matters
    end subroutine CheckNodes
+
+   !> Setup points for disk average velocity calculations
+   subroutine SetDiskAvgPoints(iWT)
+      integer(IntKi), intent(in) :: iWT
+      integer(IntKi) :: i,BlNds
+      real(ReKi)     :: R,theta,BLength
+      ! Calculate relative points on disk (do this once up front to save computational time).
+      ! NOTE: this is in the XY plane, and will be multiplied by the hub orientation vector
+      BlNds = ADI%p%AD%rotors(iWT)%NumBlNds
+      BLength = TwoNorm(ADI%u(1)%AD%rotors(iWT)%BladeMotion(1)%Position(:,BlNds) - ADI%u(1)%AD%rotors(iWT)%HubMotion%Position(:,1))
+      R = real(BLength,ReKi) * 0.7_reKi !70% radius
+      do i=1,NumPtsDiskAvg
+         theta = pi +(i-1)*TwoPi/NumPtsDiskAvg
+         DiskAvgVelVars(iWT)%DiskWindPosRel(1,i) = 0.0_ReKi          ! Hub X (perpindicular to rotor plane)
+         DiskAvgVelVars(iWT)%DiskWindPosRel(2,i) = R*cos(theta)      ! Hub Y
+         DiskAvgVelVars(iWT)%DiskWindPosRel(3,i) = R*sin(theta)      ! Hub Z (in vertical plane when azimuth=0)
+      end do
+   end subroutine SetDiskAvgPoints
 
 END SUBROUTINE ADI_C_Init
 
@@ -1948,6 +1989,76 @@ CONTAINS
 end subroutine ADI_C_GetRotorLoads
 
 
+!===============================================================================================================
+!--------------------------------------------- GetDiskAvgVel ---------------------------------------------------
+!===============================================================================================================
+!> Get the disk average velocity for a single rotor (uses the IfW DiskAvgVel routine)
+subroutine ADI_C_GetDiskAvgVel(iWT_C, &
+               DiskAvgVel_C, &
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_GetDiskAvgVel')
+   implicit none
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_GetDiskAvgVel
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_GetDiskAvgVel
+#endif
+   integer(c_int),            intent(in   )  :: iWT_C                         !< Wind turbine / rotor number
+   real(c_float),             intent(  out)  :: DiskAvgVel_C(3)               !< Wind speed vector for disk average [Vx,Vy,Vz] -- (m/s) (global)
+   integer(c_int),            intent(  out)  :: ErrStat_C
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+
+   ! Local variables
+   type(MeshType), pointer                   :: Hub                           ! HubMotion mesh pointer, for simplicity in code reading
+   integer(IntKi)                            :: iWT                           !< current wind turbine / rotor
+   integer(IntKi)                            :: i
+   integer(IntKi), parameter                 :: StartNode = 1                 ! so all points are calculated
+   real(ReKi), allocatable                   :: NoAcc(:,:)                    ! Placeholder array not used when accelerations not required.
+   real(ReKi)                                :: DiskAvgVel(3)                 !< Wind speed vector for disk average [Vx,Vy,Vz] -- (m/s) (global)
+   integer(IntKi)                            :: ErrStat                       !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
+   character(*), parameter                   :: RoutineName = 'ADI_C_GetDiskAvgVel' !< for error handling
+
+   ! Initialize error handling
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
+
+   ! For debugging the interface:
+   if (DebugLevel > 0) then
+      call ShowPassedData()
+   endif
+
+   ! current turbine number
+   iWT = int(iWT_c, IntKi)
+
+   ! pointer to make code more readable
+   Hub => ADI%u(1)%AD%rotors(iWT)%HubMotion
+
+   ! Calculate Disk Avg Velocity
+   do i=1,NumPtsDiskAvg
+      DiskAvgVelVars(iWT)%DiskWindPosAbs(:,i) = real(Hub%Position(1:3,1)+Hub%TranslationDisp(1:3,1),ReKi)  &
+                           + matmul(real(Hub%Orientation(1:3,1:3,1),ReKi),DiskAvgVelVars(iWT)%DiskWindPosRel(:,i))
+   enddo
+   call IfW_FlowField_GetVelAcc(ADI%m%IW%p%FlowField, StartNode, InputTimePrev_Calc, DiskAvgVelVars(iWT)%DiskWindPosAbs, DiskAvgVelVars(iWT)%DiskWindVel, NoAcc, ErrStat, ErrMsg)
+
+   ! calculate average
+   DiskAvgVel   = sum(DiskAvgVelVars(iWT)%DiskWindVel, dim=2) / REAL(NumPtsDiskAvg,SiKi)
+   DiskAvgVel_C = real(DiskAvgVel, c_float)
+
+   ! Set error status
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
+CONTAINS
+   !> This subroutine prints out all the variables that are passed in.  Use this only
+   !! for debugging the interface on the Fortran side.
+   subroutine ShowPassedData()
+      call WrSCr("")
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("Interface debugging:  Variables passed in through interface")
+      call WrScr("   ADI_C_GetDiskAvgVel -- rotor "//trim(Num2LStr(iWT_c)))
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowPassedData
+end subroutine ADI_C_GetDiskAvgVel
+
+
 !===================================================================================================================================
 ! Internal routines for setting meshes etc.
 !===================================================================================================================================
@@ -2490,6 +2601,8 @@ subroutine ClearTmpStorage()
    ! if (allocated(NacMotionMesh    ))   call ClearMeshArr1(NacMotionMesh    )
    ! if (allocated(NacLoadMesh      ))   call ClearMeshArr1(NacLoadMesh      )
    if (allocated(Map_BldStrMotion_2_AD_Blade  ))   call ClearMeshMapArr2(Map_BldStrMotion_2_AD_Blade  )
+   ! other stuff
+   if (allocated(DiskAvgVelVars))   deallocate(DiskAvgVelVars)
 contains
    subroutine ClearMeshArr1(MeshName)
       type(MeshType), allocatable :: MeshName(:)
