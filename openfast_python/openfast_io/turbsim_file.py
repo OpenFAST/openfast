@@ -308,9 +308,7 @@ class TurbSimFile(File):
             yy, zz = np.meshgrid(self['y'], self['z'])
             rotor_ind = (yy**2 + (zz - z_hub)**2) < R**2
 
-            u_rot = []
-            for u_plane in u_:
-                u_rot.append(u_plane[rotor_ind].mean())
+            u_rot = [u_plane[rotor_ind].mean() for u_plane in u_]
 
             self['rot_avg'][i,:] = u_rot
 
