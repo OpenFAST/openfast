@@ -198,6 +198,7 @@ jobs:
             -DVARIABLE_TRACKING=OFF \
             -DBUILD_FASTFARM:BOOL=ON \
             -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_OPENFAST_LIB_DRIVER:BOOL=ON \
             -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
@@ -242,7 +243,7 @@ jobs:
       - name: Build OpenFAST C-Interfaces
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target openfastlib openfast_cpp_driver openfastcpp aerodyn_inflow_c_binding moordyn_c_binding ifw_c_binding hydrodyn_c_binding regression_test_controllers
+          cmake --build . --target openfastlib openfast_lib_driver openfastcpp aerodyn_inflow_c_binding moordyn_c_binding ifw_c_binding hydrodyn_c_binding regression_test_controllers
       - name: Cache the workspace
         uses: actions/cache@v4
         with:

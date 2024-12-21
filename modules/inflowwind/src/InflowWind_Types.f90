@@ -119,6 +119,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: MSL2SWL      !< Mean sea level to still water level [m]
     INTEGER(IntKi)  :: BoxExceedAllowIdx = -1      !< Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
     LOGICAL  :: BoxExceedAllowF = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
+    LOGICAL  :: LidarEnabled = .false.      !< Enable LiDAR for this instance of InflowWind? (FAST.Farm, ADI, and InflowWind driver/library are not compatible) [-]
   END TYPE InflowWind_InitInputType
 ! =======================
 ! =========  InflowWind_InitOutputType  =======
@@ -1110,6 +1111,7 @@ ENDIF
     DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
     DstInitInputData%BoxExceedAllowIdx = SrcInitInputData%BoxExceedAllowIdx
     DstInitInputData%BoxExceedAllowF = SrcInitInputData%BoxExceedAllowF
+    DstInitInputData%LidarEnabled = SrcInitInputData%LidarEnabled
  END SUBROUTINE InflowWind_CopyInitInput
 
  SUBROUTINE InflowWind_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1263,6 +1265,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowIdx
       Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowF
+      Int_BufSz  = Int_BufSz  + 1  ! LidarEnabled
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1437,6 +1440,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%BoxExceedAllowIdx
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%BoxExceedAllowF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%LidarEnabled, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE InflowWind_PackInitInput
 
@@ -1661,6 +1666,8 @@ ENDIF
     OutData%BoxExceedAllowIdx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%BoxExceedAllowF = TRANSFER(IntKiBuf(Int_Xferred), OutData%BoxExceedAllowF)
+    Int_Xferred = Int_Xferred + 1
+    OutData%LidarEnabled = TRANSFER(IntKiBuf(Int_Xferred), OutData%LidarEnabled)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE InflowWind_UnPackInitInput
 

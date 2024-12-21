@@ -730,7 +730,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ParseVar( FileInfo_In, CurLine, "CompAA", InputFileData%CompAA, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! AA_InputFile - Aeroacoustics input file
-   call ParseVar( FileInfo_In, CurLine, "AA_InputFile", InputFileData%AA_InputFile, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, "AA_InputFile", InputFileData%AA_InputFile, ErrStat2, ErrMsg2, UnEc, IsPath=.true. )
       if (Failed()) return
       IF ( PathIsRelative( InputFileData%AA_InputFile ) ) InputFileData%AA_InputFile = TRIM(PriPath)//TRIM(InputFileData%AA_InputFile)
 
@@ -802,7 +802,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
       ! OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
-   call ParseVar( FileInfo_In, CurLine, "OLAFInputFileName", InputFileData%FVWFileName, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, "OLAFInputFileName", InputFileData%FVWFileName, ErrStat2, ErrMsg2, UnEc, IsPath=.true. )
       if (Failed()) return
       IF ( PathIsRelative( InputFileData%FVWFileName ) ) InputFileData%FVWFileName = TRIM(PriPath)//TRIM(InputFileData%FVWFileName)
 
@@ -906,7 +906,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! NOTE: being nice with legacy input file. Uncomment in next release
       call ParseVar(FileInfo_In, CurLine, "TFinAero", InputFileData%rotors(iR)%TFinAero, ErrStat2, ErrMsg2, UnEc); 
       if (ErrStat2==ErrID_None) then
-         call ParseVar(FileInfo_In, CurLine, "TFinFile", InputFileData%rotors(iR)%TFinFile, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+         call ParseVar(FileInfo_In, CurLine, "TFinFile", InputFileData%rotors(iR)%TFinFile, ErrStat2, ErrMsg2, UnEc, IsPath=.true.); if (Failed()) return
          InputFileData%rotors(iR)%TFinFile = trim(PriPath) // trim(InputFileData%rotors(iR)%TFinFile)
       else
          call LegacyWarning('Tail Fin section (TFinAero, TFinFile) is missing from input file.')
@@ -1080,6 +1080,7 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
    ErrMsg  = ""
    UnIn = -1
    
+   !$OMP critical(filename)
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -1087,6 +1088,7 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
       ! Open the input file for blade K.
 
    CALL OpenFInpFile ( UnIn, ADBlFile, ErrStat2, ErrMsg2 )
+   !$OMP end critical(filename)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -1324,8 +1326,10 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
 
    ! Open the summary file and give it a heading.
       
+   !$OMP critical(filename)
    CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
    CALL OpenFOutFile ( UnSu, TRIM( p%RootName )//'.sum', ErrStat, ErrMsg )
+   !$OMP end critical(filename)
    IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! Heading:
