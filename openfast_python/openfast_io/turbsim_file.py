@@ -5,6 +5,7 @@ copied with love from the python-toolbox
 """
 import pandas as pd
 import numpy as np
+import argparse
 import os
 import struct
 import time
@@ -311,5 +312,27 @@ class TurbSimFile(File):
             self['rot_avg'][i,:] = u_rot
 
 
+def main():
+    # Create argument parser
+    parser = argparse.ArgumentParser(
+        description="Read an OpenFAST .bts wind field files")
+    parser.add_argument(
+        "input_file",
+        type=str,
+        help="Path to the input .bts file."
+    )
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Process input and output files
+    input_file = args.input_file
+    # ts = TurbSimFile('../_tests/TurbSim.bts')
+    ts = TurbSimFile(input_file)
+    df = ts.toDataFrame()
+    print(df['VertProfile'].info())
+    print(df['MidLine'].info())
+
+
 if __name__=='__main__':
-    ts = TurbSimFile('../_tests/TurbSim.bts')
+    main()
