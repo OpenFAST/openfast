@@ -16,13 +16,13 @@ except:
     File=dict
 
 class TurbSimFile(File):
-    """ 
+    """
     Read/write a TurbSim turbulence file (.bts). The object behaves as a dictionary.
 
     Main keys
     ---------
     - 'u': velocity field, shape (3 x nt x ny x nz)
-    - 'y', 'z', 't': space and time coordinates 
+    - 'y', 'z', 't': space and time coordinates
     - 'dt', 'ID', 'info'
     - 'zTwr', 'uTwr': tower coordinates and field if present (3 x nt x nTwr)
     - 'zHub', 'uHub': height and velocity at a reference point (usually not hub)
@@ -36,7 +36,7 @@ class TurbSimFile(File):
 
         ts = TurbSimFile('Turb.bts')
         print(ts.keys())
-        print(ts['u'].shape)  
+        print(ts['u'].shape)
 
 
     """
@@ -55,7 +55,7 @@ class TurbSimFile(File):
             self.read(filename, **kwargs)
 
     def read(self, filename=None, header_only=False):
-        """ read BTS file, with field: 
+        """ read BTS file, with field:
                      u    (3 x nt x ny x nz)
                      uTwr (3 x nt x nTwr)
         """
@@ -69,7 +69,7 @@ class TurbSimFile(File):
             raise EmptyFileError('File is empty:',self.filename)
 
         scl = np.zeros(3, np.float32); off = np.zeros(3, np.float32)
-        with open(self.filename, mode='rb') as f:            
+        with open(self.filename, mode='rb') as f:
             # Reading header info
             ID, nz, ny, nTwr, nt                      = struct.unpack('<h4l', f.read(2+4*4))
             dz, dy, dt, uHub, zHub, zBottom           = struct.unpack('<6f' , f.read(6*4)  )
@@ -77,7 +77,7 @@ class TurbSimFile(File):
             nChar, = struct.unpack('<l',  f.read(4))
             info = (f.read(nChar)).decode()
             # Reading turbulence field
-            if not header_only: 
+            if not header_only:
                 u    = np.zeros((3,nt,ny,nz))
                 uTwr = np.zeros((3,nt,nTwr))
                 # For loop on time (acts as buffer reading, and only possible way when nTwr>0)
@@ -95,7 +95,7 @@ class TurbSimFile(File):
         self['info'] = info
         self['ID']   = ID
         self['dt']   = dt
-        self['y']    = np.arange(ny)*dy 
+        self['y']    = np.arange(ny)*dy
         self['y']   -= np.mean(self['y']) # y always centered on 0
         self['z']    = np.arange(nz)*dz +zBottom
         self['t']    = np.arange(nt)*dt
@@ -104,7 +104,7 @@ class TurbSimFile(File):
         self['uHub'] = uHub
 
     def write(self, filename=None):
-        """ 
+        """
         write a BTS file, using the following keys: 'u','z','y','t','uTwr'
                      u    (3 x nt x ny x nz)
                      uTwr (3 x nt x nTwr)
@@ -151,7 +151,7 @@ class TurbSimFile(File):
         # Providing estimates of uHub and zHub even if these fields are not used
         zHub,uHub, bHub = self.hubValues()
 
-        with open(self.filename, mode='wb') as f:            
+        with open(self.filename, mode='wb') as f:
             f.write(struct.pack('<h4l', self['ID'], nz, ny, nTwr, nt))
             f.write(struct.pack('<6f', dz, dy, dt, uHub, zHub, z0)) # NOTE uHub, zHub maybe not used
             f.write(struct.pack('<6f', scl[0],off[0],scl[1],off[1],scl[2],off[2]))
@@ -258,7 +258,7 @@ class TurbSimFile(File):
             s+='    ux: min: {}, max: {}, mean: {} \n'.format(np.min(ux), np.max(ux), np.mean(ux))
             s+='    uy: min: {}, max: {}, mean: {} \n'.format(np.min(uy), np.max(uy), np.mean(uy))
             s+='    uz: min: {}, max: {}, mean: {} \n'.format(np.min(uz), np.max(uz), np.mean(uz))
-            
+
         return s
 
     def toDataFrame(self):
@@ -275,13 +275,13 @@ class TurbSimFile(File):
         ti = s/m*100
         Cols=['z_[m]','u_[m/s]','v_[m/s]','w_[m/s]','sigma_u_[m/s]','sigma_v_[m/s]','sigma_w_[m/s]','TI_[%]']
         data = np.column_stack((self['z'],m[0,:],m[1,:],m[2,:],s[0,:],s[1,:],s[2,:],ti[0,:]))
-        dfs['VertProfile'] = pd.DataFrame(data = data ,columns = Cols)
+        dfs['VertProfile'] = pd.DataFrame(data = data, columns = Cols)
 
         # Mid time series
         u = self['u'][:,:,iy,iz]
         Cols=['t_[s]','u_[m/s]','v_[m/s]','w_[m/s]']
         data = np.column_stack((self['t'],u[0,:],u[1,:],u[2,:]))
-        dfs['MidLine'] = pd.DataFrame(data = data ,columns = Cols)
+        dfs['MidLine'] = pd.DataFrame(data = data, columns = Cols)
 
         # Hub time series
         #try:
@@ -295,18 +295,18 @@ class TurbSimFile(File):
         #    pass
         return dfs
 
-    def compute_rot_avg(self,R):
-        ''' 
+    def compute_rot_avg(self, R):
+        '''
         Compute rotor average wind speed, where R is the rotor radius
         '''
 
         self['rot_avg'] = np.zeros((3,len(self['t'])))
-        
+
         for i in range(3):
             u_      = self['u'][i,:,:,:]
             z_hub = self['zHub']
-            yy, zz = np.meshgrid(self['y'],self['z'])
-            rotor_ind = np.sqrt(yy**2 + (zz - z_hub)**2) < R
+            yy, zz = np.meshgrid(self['y'], self['z'])
+            rotor_ind = (yy**2 + (zz - z_hub)**2) < R**2
 
             u_rot = []
             for u_plane in u_:
