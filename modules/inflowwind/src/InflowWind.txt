@@ -101,6 +101,7 @@ typedef  ^                       ^                 IntKi             MHK        
 typedef  ^                       ^                 ReKi              WtrDpth           -     -     -     "Water depth" m
 typedef  ^                       ^                 ReKi              MSL2SWL           -     -     -     "Mean sea level to still water level" m
 typedef  ^                       ^                 LOGICAL           BoxExceedAllow    -  .FALSE.  -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
+typedef  ^                       ^                 LOGICAL           LidarEnabled      -  .false.  -     "Enable LiDAR for this instance of InflowWind? (FAST.Farm, ADI, and InflowWind driver/library are not compatible)" -
 
 
 # Init Output
