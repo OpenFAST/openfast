@@ -264,8 +264,6 @@ class TurbSimFile(File):
     def toDataFrame(self):
         dfs={}
 
-        ny = len(self['y'])
-        nz = len(self['y'])
         # Index at mid box
         iy,iz = self._iMid()
 
