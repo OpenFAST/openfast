@@ -1308,6 +1308,40 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ENDIF
 
 
+   !-------------------------------------------------------------------------------------------------
+   !  XY slice output
+   !-------------------------------------------------------------------------------------------------
+
+      ! Header
+   CALL ReadCom( UnIn, FileName,' XY slice output, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   ENDIF
+
+
+       ! XYslice     -- Output a VTK slice in XY
+   CALL ReadVar( UnIn, FileName,DvrFlags%XYslice,'XYslice',' VTK slice in XY?',   &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   ENDIF
+
+       ! XYslice_height     -- Height for XY slice
+   CALL ReadVar( UnIn, FileName,DvrSettings%XYslice_height,'XYslice_height',' VTK slice height',   &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   ENDIF
+
 
       ! Close the echo and input file
    CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
@@ -2623,6 +2657,49 @@ subroutine IfW_WriteVTK(FF, FileRootName, ErrStat, ErrMsg)
 end subroutine IfW_WriteVTK
 
 
+subroutine IfW_WriteXYslice(FF, FileRootName, XYslice_height, ErrStat, ErrMsg)
+   type(FlowFieldType), intent(in)  :: FF             !< Parameters
+   character(*), intent(in)         :: FileRootName   !< RootName for output files
+   real(ReKi),    intent(in)           :: XYslice_height
+   integer(IntKi), intent(out)      :: ErrStat        !< Error status of the operation
+   character(*), intent(out)        :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter          :: RoutineName = "IfW_WriteXYslice"
+   type(Grid3DFieldType)            :: G3D
+   integer(IntKi)                   :: unit
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Get new unit for writing file
+   call GetNewUnit(unit, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Switch based on field type
+   select case (FF%FieldType)
+
+   case (Uniform_FieldType)
+      call Uniform_to_Grid3D(FF%Uniform, FF%VelInterpCubic, G3D, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat < AbortErrLev) then
+         call Grid3D_WriteVTKsliceXY(G3D, FileRootName, XYslice_height, unit, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+
+   case (Grid3D_FieldType)
+      call Grid3D_WriteVTKsliceXY(FF%Grid3D, FileRootName, XYslice_height, unit, ErrStat, ErrMsg)
+
+   case default
+      ErrStat = ErrID_Warn
+      ErrMsg = RoutineName//': Field type '//TRIM(Num2LStr(FF%FieldType))// &
+               ' cannot be converted to VTK format.'
+   end select
+end subroutine IfW_WriteXYslice
+
+
 !> This routine exists only to support the development of the module.  It will not be needed after the module is complete.
 SUBROUTINE  printSettings( DvrFlags, DvrSettings )
       ! The arguments
@@ -2671,6 +2748,10 @@ end if
    CALL WrScr(' FFTOutputInit:       '//FLAG(DvrSettings%FFTOutput%Initialized)//        '      Unit #:  '//TRIM(Num2LStr(DvrSettings%FFTOutput%Unit)))
    CALL WrScr(' PointsVelOutputInit: '//FLAG(DvrSettings%PointsVelOutput%Initialized)//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsVelOutput%Unit)))
    CALL WrScr(' PointsAccOutputInit: '//FLAG(DvrSettings%PointsVelOutput%Initialized)//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsVelOutput%Unit)))
+   CALL WrScr(' XYslice:             '//FLAG(DvrFlags%XYslice))
+if (DvrFlags%XYslice) then
+   CALL WrScr(' XYslice_height                '//TRIM(Num2LStr(DvrSettings%XYslice_height)))
+end if
 END SUBROUTINE printSettings
 
 

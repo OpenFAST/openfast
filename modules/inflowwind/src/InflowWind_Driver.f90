@@ -505,6 +505,23 @@ PROGRAM InflowWind_Driver
       END IF
    END IF
    
+
+   IF (SettingsFlags%XYslice) THEN
+      CALL IfW_WriteXYslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, Settings%XYslice_height, ErrStat, ErrMsg )
+      IF (ErrStat > ErrID_None) THEN
+         CALL WrScr( TRIM(ErrMsg) )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+            CALL WrScr(NewLine//' IfW_WriteXYslice returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
+         END IF
+      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
+         CALL WrScr(NewLine//'IfW_WriteXYslice CALL returned without errors.'//NewLine)
+      END IF
+   END IF
+
+
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Other Setup -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------

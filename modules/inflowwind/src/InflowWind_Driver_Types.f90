@@ -76,6 +76,8 @@ MODULE InflowWind_Driver_Types
       LOGICAL                 :: WrBladed             = .FALSE.      !< Requested file conversion to Bladed format?
       LOGICAL                 :: WrVTK                = .FALSE.      !< Requested file output as VTK?
       LOGICAL                 :: WrUniform            = .FALSE.      !< Requested file output as Uniform wind format?
+
+      LOGICAL                 :: XYslice              = .FALSE.      !< Take XY slice at one elevation
    END TYPE IfWDriver_Flags
 
 
@@ -105,6 +107,7 @@ MODULE InflowWind_Driver_Types
       TYPE(OutputFile)        :: FFTOutput
       TYPE(OutputFile)        :: PointsVelOutput
 
+      REAL(ReKi)              :: XYslice_height       = 0.0_ReKi  !< height to take XY slice
    END TYPE IfWDriver_Settings
 
 
