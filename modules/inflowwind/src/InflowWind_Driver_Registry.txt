@@ -1,0 +1,91 @@
+#----------------------------------------------------------------------------------------------------------------------------------
+# Registry for IfW_Interp, creates MODULE IfW_Interp_Types
+# Module IfW_Interp_Types contains all of the user-defined types needed in IfW_FF. It also contains copy, destroy, pack, and
+# unpack routines associated with each defined data types.
+#----------------------------------------------------------------------------------------------------------------------------------
+# keyword <Module>              <TypeName>        <FieldType>     <FieldName>     <Dims>    <Ctrl>  <DNA ME>  <DESCRIP> <UNITS>
+#----------------------------------------------------------------------------------------------------------------------------------
+
+include Registry_NWTC_Library.txt
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  InflowWind_Driver OutputFile character(1024)    Name                 -  "" -  "Filename for output from points read in from points file"  -
+typedef  ^           ^          integer                  Unit                 -  -1 -  "Unit number for the output file for the Points file output" -
+typedef  ^           ^          logical                  Initialized          - .false. - "Flag indicating that file has been initialized" -
+
+# This contains flags to note if the settings were made.  This same data structure is
+# used both during the driver input file and the command line options.
+#
+# NOTE: The WindFileType is only set if it is given as a command line option.  Otherwise
+#       it is handled internally by InflowWInd.
+#
+# NOTE: The wind direction is specified by the InflowWind input file.
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  InflowWind_Driver IfWDriver_Flags logical       DvrIptFile           - .false. -    "Was an input file name given on the command line?" -
+typedef  ^           ^           logical                 IfWIptFile           - .false. -    "Was an InflowWind input file requested?" -
+typedef  ^           ^           logical                 Summary              - .false. -    "create a summary at command line? (data extents in the wind file)" -
+typedef  ^           ^           logical                 SummaryFile          - .false. -    "create a summary file of the output?" -
+typedef  ^           ^           logical                 TStart               - .false. -    "specified a start time" -
+typedef  ^           ^           logical                 NumTimeSteps         - .false. -    "specified a number of timesteps to process" -
+typedef  ^           ^           logical                 NumTimeStepsDefault  - .false. -    "specified a 'DEFAULT' for number of timesteps to process" -
+typedef  ^           ^           logical                 DT                   - .false. -    "specified a resolution in time" -
+typedef  ^           ^           logical                 DTDefault            - .false. -    "specified a 'DEFAULT' for the time resolution" -
+
+typedef  ^           ^           logical                 FFTcalc              - .false. -    "do an FFT" -
+
+typedef  ^           ^           logical                 WindGrid             - .false. -    "Requested output of wind data on a grid -- input file option only" -
+typedef  ^           ^           logical                 XRange               - .false. -    "specified a range of x      -- command line option only -- stored as GridCtrCoord and GridDelta" -
+typedef  ^           ^           logical                 YRange               - .false. -    "specified a range of y      -- command line option only -- stored as GridCtrCoord and GridDelta" -
+typedef  ^           ^           logical                 ZRange               - .false. -    "specified a range of z      -- command line option only -- stored as GridCtrCoord and GridDelta" -
+typedef  ^           ^           logical                 Dx                   - .false. -    "specified a resolution in x -- command line option only, 0.0 otherwise" -
+typedef  ^           ^           logical                 Dy                   - .false. -    "speficied a resolution in y" -
+typedef  ^           ^           logical                 Dz                   - .false. -    "specified a resolution in z" -
+
+typedef  ^           ^           logical                 PointsFile           - .false. -    "points filename to read in" -
+typedef  ^           ^           logical                 OutputAccel          - .false. -    "flag to calculate and output wind acceleration in addition to velocity" -
+
+typedef  ^           ^           logical                 Verbose              - .false. -    "Verbose error reporting" -
+typedef  ^           ^           logical                 VVerbose             - .false. -    "Very Verbose error reporting" -
+typedef  ^           ^           logical                 BoxExceedAllowF      - .false. -    "set flag to allow exceeding wind box boundaries for FF files (for diagnostic purposes)" -
+
+typedef  ^           ^           logical                 WrHAWC               - .false. -    "Requested file conversion to HAWC2 format?" -
+typedef  ^           ^           logical                 WrBladed             - .false. -    "Requested file conversion to Bladed format?" -
+typedef  ^           ^           logical                 WrVTK                - .false. -    "Requested file output as VTK?" -
+typedef  ^           ^           logical                 WrUniform            - .false. -    "Requested file output as Uniform wind format?" -
+
+typedef  ^           ^           logical                 XYslice              - .false. -    "Take XY slice at one elevation" -
+
+
+
+# This contains all the settings (possible passed in arguments).
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  InflowWind_Driver IfWDriver_Settings character(1024) DvrIptFileName  -  "" -        "Driver input file name" -
+typedef  ^           ^           character(1024)         IfWIptFileName       -  "" -        "Filename of InflowWind input file to read (if no driver input file)" -
+typedef  ^           ^           character(1024)         SummaryFileName      -  "" -        "Filename for the summary information output" -
+
+typedef  ^           ^           character(1024)         PointsFileName       -  "" -        "Filename of points file to read in" -
+
+typedef  ^           ^           IntKi                   NumTimeSteps         -  0  -        "Number of timesteps" -
+typedef  ^           ^           DbKi                    DT                   -  0.0_DbKi -  "resolution of time" s
+typedef  ^           ^           DbKi                    TStart               -  0.0_DbKi -  "range of time -- end time converted from TRange (command line option only)" s
+
+typedef  ^           ^           ReKi                    FFTcoord(1:3)        -  0.0_ReKi -  "(x,y,z) coordinate to do an FFT at" (m)
+
+typedef  ^           ^           ReKi                    GridDelta(1:3)       -  0.0_ReKi -  "(GridDx,GridDy,GridDz) -- grid point spacing" (m)
+typedef  ^           ^           IntKi                   GridN(1:3)           -  1_IntKi  -  "(GridNx,GridNy,GridNz) -- number of grid points" -
+
+typedef  ^           ^           ReKi                    XRange(1:2)          -  0.0_ReKi -  "Range in the x-direction for the gridded data" (m)
+typedef  ^           ^           ReKi                    YRange(1:2)          -  0.0_ReKi -  "Range in the y-direction for the gridded data" (m)
+typedef  ^           ^           ReKi                    ZRange(1:2)          -  0.0_ReKi -  "Range in the z-direction for the gridded data" (m)
+
+typedef  ^           ^           ProgDesc                ProgInfo             -  -  -        "Program info" -
+typedef  ^           ^           OutputFile              WindGridOutput       -  -  -        "Wind grid file handling" -
+typedef  ^           ^           OutputFile              FFTOutput            -  -  -        "FFT file handling" -
+typedef  ^           ^           OutputFile              PointsVelOutput      -  -  -        "Points output velocity file handling" -
+
+typedef  ^           ^           IntKi                   NOutWindXY           -  0  -        "Number of XY planes for output <RootName>.XY<loc>.t<n>.vtk [0 to 9]" -
+typedef  ^           ^           ReKi                    OutWindZ             :  -  -        "Z coordinates of XY planes for output [1 to NOutWindXY] [unused for NOutWindXY=0]" (m)
+typedef  ^           ^           IntKi                   NOutWindXZ           -  0  -        "Number of YZ planes for output <RootName>.YZ<loc>.t<n>.vtk [0 to 9]" -
+typedef  ^           ^           ReKi                    OutWindY             :  -  -        "Y coordinates of YZ planes for output [1 to NOutWindYZ] [unused for NOutWindYZ=0]" (m)
+typedef  ^           ^           IntKi                   NOutWindYZ           -  0  -        "Number of YZ planes for output <RootName>.YZ<loc>.t<n>.vtk [0 to 9]" -
+typedef  ^           ^           ReKi                    OutWindX             :  -  -        "X coordinates of YZ planes for output [1 to NOutWindYZ] [unused for NOutWindYZ=0]" (m)
