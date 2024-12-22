@@ -419,20 +419,7 @@ PROGRAM InflowWind_Driver
       InflowWind_p%FlowField%Grid3D%BoxExceedAllowDrv = .true.
    end if
 
-      ! Make sure no errors occured that give us reason to terminate now.
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL DriverCleanup()
-      CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= ErrID_None ) THEN
-      IF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-         CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
-                    NewLine//'                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
-      ELSEIF ( ErrStat >= ErrID_Warn ) THEN
-         CALL ProgWarn( ErrMsg )
-      ELSE
-         CALL WrScr(TRIM(ErrMsg))
-      ENDIF
-   ENDIF
+   call CheckCallErr('InflowWind_Init')
 
 
 
@@ -443,82 +430,50 @@ PROGRAM InflowWind_Driver
       ! Convert InflowWind file to HAWC format
    IF (SettingsFlags%WrHAWC) THEN
       CALL IfW_WriteHAWC( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
-      IF (ErrStat > ErrID_None) THEN
-         CALL WrScr( TRIM(ErrMsg) )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( ErrMsg )
-         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-            CALL WrScr(NewLine//' IfW_WriteHAWC returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
-         END IF
-      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
-         CALL WrScr(NewLine//'IfW_WriteHAWC CALL returned without errors.'//NewLine)
-      END IF
+      call CheckCallErr('IfW_WriteHAWC')
    END IF
    
 
       ! Convert InflowWind file to Native Bladed format
    IF (SettingsFlags%WrBladed) THEN
       CALL IfW_WriteBladed( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
-      IF (ErrStat > ErrID_None) THEN
-         CALL WrScr( TRIM(ErrMsg) )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( ErrMsg )
-         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-            CALL WrScr(NewLine//' InflowWind_Convert2Bladed returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
-         END IF
-      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
-         CALL WrScr(NewLine//'InflowWind_Convert2Bladed CALL returned without errors.'//NewLine)
-      END IF
+      call CheckCallErr('IfW_WriteBladed')
    END IF
+
 
    IF (SettingsFlags%WrVTK) THEN
       CALL IfW_WriteVTK( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
-      IF (ErrStat > ErrID_None) THEN
-         CALL WrScr( TRIM(ErrMsg) )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( ErrMsg )
-         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-            CALL WrScr(NewLine//' IfW_WriteVTK returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
-         END IF
-      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
-         CALL WrScr(NewLine//'IfW_WriteVTK CALL returned without errors.'//NewLine)
-      END IF
-   
+      call CheckCallErr('IfW_WriteVTK')
    END IF
    
    
    IF (SettingsFlags%WrUniform) THEN
       CALL IfW_WriteUniform( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
-      IF (ErrStat > ErrID_None) THEN
-         CALL WrScr( TRIM(ErrMsg) )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( ErrMsg )
-         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-            CALL WrScr(NewLine//' IfW_WriteUniform returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
-         END IF
-      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
-         CALL WrScr(NewLine//'IfW_WriteUniform CALL returned without errors.'//NewLine)
-      END IF
+      call CheckCallErr('IfW_WriteUniform')
    END IF
    
 
-   IF (SettingsFlags%XYslice) THEN
-      CALL IfW_WriteXYslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, Settings%XYslice_height, ErrStat, ErrMsg )
-      IF (ErrStat > ErrID_None) THEN
-         CALL WrScr( TRIM(ErrMsg) )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( ErrMsg )
-         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-            CALL WrScr(NewLine//' IfW_WriteXYslice returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
-         END IF
-      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
-         CALL WrScr(NewLine//'IfW_WriteXYslice CALL returned without errors.'//NewLine)
-      END IF
+   IF (Settings%NOutWindXY>0) THEN
+      do i=1,Settings%NOutWindXY
+         CALL IfW_WriteXYslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, Settings%OutWindZ(i), ErrStat, ErrMsg )
+         call CheckCallErr('IfW_WriteXYslice'//trim(Num2LStr(i)))
+      enddo
+   END IF
+
+
+   IF (Settings%NOutWindXZ>0) THEN
+      do i=1,Settings%NOutWindXZ
+!         CALL IfW_WriteXZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, Settings%OutWindY(i), ErrStat, ErrMsg )
+!         call CheckCallErr('IfW_WriteXZslice'//trim(Num2LStr(i)))
+      enddo
+   END IF
+
+
+   IF (Settings%NOutWindYZ>0) THEN
+      do i=1,Settings%NOutWindYZ
+!         CALL IfW_WriteYZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, Settings%OutWindX(i), ErrStat, ErrMsg )
+!         call CheckCallErr('IfW_WriteYZslice'//trim(Num2LStr(i)))
+      enddo
    END IF
 
 
@@ -958,6 +913,22 @@ CONTAINS
 
 
    END SUBROUTINE DriverCleanup
+
+   subroutine CheckCallErr(RoutineName)
+      character(*), intent(in) :: RoutineName
+      if (ErrStat > ErrID_None) then
+         call WrScr( trim(ErrMsg) )
+         if ( ErrStat >= AbortErrLev ) then
+            call DriverCleanup()
+            call ProgAbort( ErrMsg )
+         elseif ( IfWDriver_Verbose >= 7_IntKi ) then
+            call WrScr(NewLine//' '//trim(RoutineName)//' returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
+         endif
+      elseif ( IfWDriver_Verbose >= 5_IntKi ) then
+         CALL WrScr(NewLine//trim(RoutineName)//' CALL returned without errors.'//NewLine)
+      endif
+   end subroutine CheckCallErr
+
 
 END PROGRAM InflowWind_Driver
 
