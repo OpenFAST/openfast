@@ -475,20 +475,21 @@ PROGRAM InflowWind_Driver
    END IF
 
 
-   IF (Settings%NOutWindXZ>0) THEN
-      do i=1,Settings%NOutWindXZ
+!FIXME: future developent
+!   IF (Settings%NOutWindXZ>0) THEN
+!      do i=1,Settings%NOutWindXZ
 !         CALL IfW_WriteXZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, VTKsliceDir, Settings%OutWindY(i), ErrStat, ErrMsg )
 !         call CheckCallErr('IfW_WriteXZslice'//trim(Num2LStr(i)))
-      enddo
-   END IF
+!      enddo
+!   END IF
 
 
-   IF (Settings%NOutWindYZ>0) THEN
-      do i=1,Settings%NOutWindYZ
+!   IF (Settings%NOutWindYZ>0) THEN
+!      do i=1,Settings%NOutWindYZ
 !         CALL IfW_WriteYZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, VTKsliceDir, Settings%OutWindX(i), ErrStat, ErrMsg )
 !         call CheckCallErr('IfW_WriteYZslice'//trim(Num2LStr(i)))
-      enddo
-   END IF
+!      enddo
+!   END IF
 
 
    !--------------------------------------------------------------------------------------------------------------------------------

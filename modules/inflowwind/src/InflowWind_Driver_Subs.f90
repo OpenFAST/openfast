@@ -1042,23 +1042,24 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadCom( UnIn, FileName,' Skipping OutWindZ', ErrStatTmp,ErrMsgTmp,UnEchoLocal);  if (Failed())  return
    endif
 
-   ! NOutWindXZ    -- Number of XZ planes for output <RootName>.XZ<loc>.t<n>.vtk (-) [0 to 9]
-   CALL ReadVar( UnIn, FileName,DvrSettings%NOutWindXZ,  'NOutWindXZ','Number of VTK slices in XZ?',       ErrStatTmp,ErrMsgTmp, UnEchoLocal );   if (Failed())  return
-   if (DvrSettings%NOutWindXZ > 0_IntKi) then
-      CALL AllocAry( DvrSettings%OutWindY, DvrSettings%NOutWindXZ, "Y coordinates of XZ planes for output",ErrStatTmp,ErrMsgTmp );                if (Failed())  return
-      CALL ReadAry( UnIn, FileName,DvrSettings%OutWindY,DvrSettings%NOutWindXZ,'OutWindY','Y coordinates' ,ErrStatTmp,ErrMsgTmp, UnEchoLocal );   if (Failed())  return
-   else
-      CALL ReadCom( UnIn, FileName,' Skipping OutWindY', ErrStatTmp,ErrMsgTmp,UnEchoLocal);  if (Failed())  return
-   endif
-
-   ! NOutWindYZ    -- Number of YZ planes for output <RootName>.YZ<loc>.t<n>.vtk (-) [0 to 9]
-   CALL ReadVar( UnIn, FileName,DvrSettings%NOutWindYZ,  'NOutWindYZ','Number of VTK slices in YZ?',        ErrStatTmp,ErrMsgTmp, UnEchoLocal );   if (Failed())  return
-   if (DvrSettings%NOutWindYZ > 0_IntKi) then
-      CALL AllocAry( DvrSettings%OutWindX, DvrSettings%NOutWindYZ, "X coordinates of YZ planes for output", ErrStatTmp,ErrMsgTmp );                if (Failed())  return
-      CALL ReadAry( UnIn, FileName,DvrSettings%OutWindX,DvrSettings%NOutWindYZ,'OutWindX','X coordinates',  ErrStatTmp,ErrMsgTmp, UnEchoLocal );   if (Failed())  return
-   else
-      CALL ReadCom( UnIn, FileName,' Skipping OutWindX', ErrStatTmp,ErrMsgTmp,UnEchoLocal);  if (Failed())  return
-   endif
+!FIXME: future development
+!   ! NOutWindXZ    -- Number of XZ planes for output <RootName>.XZ<loc>.t<n>.vtk (-) [0 to 9]
+!   CALL ReadVar( UnIn, FileName,DvrSettings%NOutWindXZ,  'NOutWindXZ','Number of VTK slices in XZ?',       ErrStatTmp,ErrMsgTmp, UnEchoLocal );   if (Failed())  return
+!   if (DvrSettings%NOutWindXZ > 0_IntKi) then
+!      CALL AllocAry( DvrSettings%OutWindY, DvrSettings%NOutWindXZ, "Y coordinates of XZ planes for output",ErrStatTmp,ErrMsgTmp );                if (Failed())  return
+!      CALL ReadAry( UnIn, FileName,DvrSettings%OutWindY,DvrSettings%NOutWindXZ,'OutWindY','Y coordinates' ,ErrStatTmp,ErrMsgTmp, UnEchoLocal );   if (Failed())  return
+!   else
+!      CALL ReadCom( UnIn, FileName,' Skipping OutWindY', ErrStatTmp,ErrMsgTmp,UnEchoLocal);  if (Failed())  return
+!   endif
+!
+!   ! NOutWindYZ    -- Number of YZ planes for output <RootName>.YZ<loc>.t<n>.vtk (-) [0 to 9]
+!   CALL ReadVar( UnIn, FileName,DvrSettings%NOutWindYZ,  'NOutWindYZ','Number of VTK slices in YZ?',        ErrStatTmp,ErrMsgTmp, UnEchoLocal );   if (Failed())  return
+!   if (DvrSettings%NOutWindYZ > 0_IntKi) then
+!      CALL AllocAry( DvrSettings%OutWindX, DvrSettings%NOutWindYZ, "X coordinates of YZ planes for output", ErrStatTmp,ErrMsgTmp );                if (Failed())  return
+!      CALL ReadAry( UnIn, FileName,DvrSettings%OutWindX,DvrSettings%NOutWindYZ,'OutWindX','X coordinates',  ErrStatTmp,ErrMsgTmp, UnEchoLocal );   if (Failed())  return
+!   else
+!      CALL ReadCom( UnIn, FileName,' Skipping OutWindX', ErrStatTmp,ErrMsgTmp,UnEchoLocal);  if (Failed())  return
+!   endif
 
 
       ! Close the echo and input file
