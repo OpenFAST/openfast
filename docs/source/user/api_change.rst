@@ -11,7 +11,7 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 
 
 
-OpenFAST v3.5.4 to OpenFAST dev
+OpenFAST v3.5.5 to OpenFAST dev
 ----------------------------------
 
 The HydroDyn module was split into HydroDyn and SeaState.  This results in a
@@ -105,6 +105,11 @@ Old inputs                  Corresponding new inputs
 `UAMod={2-7}`               `UA_Mod={2-7}` and `AoA34=True`                           
 =========================== ========================================================= 
 
+
+OpenFAST v3.5.4 to OpenFAST v3.5.5
+----------------------------------
+
+No input file changes were made.
 
 
 OpenFAST v3.5.3 to OpenFAST v3.5.4 

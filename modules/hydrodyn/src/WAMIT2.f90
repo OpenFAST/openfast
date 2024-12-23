@@ -3106,16 +3106,13 @@ END SUBROUTINE WAMIT2_Init
          !------------------------------------------------------------------------------
 
          ! Find a unit number to use
+      !$OMP critical(fileopen)
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         UnitDataFile = -1
-         CALL CleanUp()
-         RETURN
-      ENDIF
-
-         ! Open the file
-      CALL OpenFInpFile(  UnitDataFile, TRIM(Filename3D), ErrStat, ErrMsg )  ! Open file containing mean drift information
+      if (ErrStatTmp < AbortErrLev) then
+            ! Open the file
+         CALL OpenFInpFile(  UnitDataFile, TRIM(Filename3D), ErrStat, ErrMsg )  ! Open file containing mean drift information
+      endif
+      !$OMP end critical(fileopen)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          UnitDataFile = -1
@@ -3780,15 +3777,13 @@ END SUBROUTINE WAMIT2_Init
          !------------------------------------------------------------------------------
 
          ! Find a unit number to use
+      !$OMP critical(fileopen)
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp()
-         RETURN
-      ENDIF
-
+      if (ErrStatTmp < AbortErrLev) then
          ! Open the file
-      CALL OpenFInpFile(  UnitDataFile, TRIM(Filename4D), ErrStatTmp, ErrMsgTmp )  ! Open file containing mean drift information
+         CALL OpenFInpFile(  UnitDataFile, TRIM(Filename4D), ErrStatTmp, ErrMsgTmp )  ! Open file containing mean drift information
+      endif
+      !$OMP end critical(fileopen)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )

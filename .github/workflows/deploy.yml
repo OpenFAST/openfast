@@ -41,7 +41,7 @@ jobs:
     env:
       DOCKERFILE_PATH: share/docker/Dockerfile
       DOCKERHUB_REPOSITORY: nrel/openfast
-      GH_REGISTRY: ghcr.io/OpenFAST/openfast
+      GH_REGISTRY: ghcr.io/openfast/openfast
     permissions:
       contents: read
       packages: write
@@ -68,7 +68,11 @@ jobs:
 
       - name: Extract tag from release candidate branch name
         id: extract-tag
-        run: echo "openfast-tag=$(expr substr "${{ github.head_ref }}" 4 100)" >> $GITHUB_OUTPUT
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          CLEAN_TAG="${TAG#v}"
+          echo "openfast-tag=$CLEAN_TAG" >> $GITHUB_OUTPUT
+          echo "Extracted tag  $CLEAN_TAG"
 
       - name: Build and push to registry
         uses: docker/build-push-action@v5
@@ -77,7 +81,7 @@ jobs:
           file: ${{ env.DOCKERFILE_PATH }}
           platforms: linux/amd64,linux/aarch64
           tags: |
-            ${{ env.GH_REGISTRY }}:${{ steps.extract-tag.outputs.openfast-tag }},${{ env.DOCKERHUB_REPOSITORY }}:latest
+            ${{ env.GH_REGISTRY }}:${{ steps.extract-tag.outputs.openfast-tag }},${{ env.GH_REGISTRY }}:latest
 # ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.extract-tag.outputs.openfast-tag }},${{ env.DOCKERHUB_REPOSITORY }}:latest
           push: true
           cache-from: type=gha

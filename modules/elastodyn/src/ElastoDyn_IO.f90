@@ -2064,12 +2064,13 @@ SUBROUTINE ReadTowerFile( TwrFile, InputFileData, UnEc, ErrStat, ErrMsg )
    ErrMsg   =  ""
 
 
+   !$OMP critical(filename)
    CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
+   IF ( ErrStat < AbortErrLev ) THEN
       ! Open the tower input file.
-
-   CALL OpenFInpFile ( UnIn, TwrFile, ErrStat2, ErrMsg2 )
+      CALL OpenFInpFile ( UnIn, TwrFile, ErrStat2, ErrMsg2 )
+   ENDIF
+   !$OMP end critical(filename)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -2406,14 +2407,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
 
 
       ! Get an available unit number for the file.
-
+   !$OMP critical(filename)
    CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
+   IF ( ErrStat < AbortErrLev ) THEN
       ! Open the Primary input file.
-
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+      CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+   ENDIF
+   !$OMP end critical(filename)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
