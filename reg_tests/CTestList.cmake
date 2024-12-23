@@ -121,12 +121,13 @@ function(of_regression_aeroacoustic TESTNAME LABEL)
 endfunction(of_regression_aeroacoustic)
 
 # FAST Farm
-function(ff_regression TESTNAME LABEL)
+function(ff_regression TESTNAME OTHER_FLAGS LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeFASTFarmRegressionCase.py")
   set(FASTFARM_EXECUTABLE "${CTEST_FASTFARM_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/fast-farm")
-  regression(${TEST_SCRIPT} ${FASTFARM_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}" " ")
+  set(OTHER_FLAGS "${OTHER_FLAGS}")    # Set name of file to compare, otherwise default
+  regression(${TEST_SCRIPT} ${FASTFARM_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}" "${OTHER_FLAGS}")
 endfunction(ff_regression)
 
 # openfast linearized
@@ -386,12 +387,13 @@ of_regression_linear("5MW_OC3Mnpl_Linear"             ""                "openfas
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)
-  ff_regression("TSinflow"  "fastfarm")
-  ff_regression("LESinflow"  "fastfarm")
-#   ff_regression("Uninflow_curl"  "fastfarm")
-  ff_regression("TSinflow_curl"  "fastfarm")
-  ff_regression("ModAmb_3"  "fastfarm")
-  ff_regression("TSinflowADskSED"  "fastfarm;aerodisk;simple-elastodyn")
+  ff_regression("TSinflow"          ""                               "fastfarm")
+  ff_regression("LESinflow"         ""                               "fastfarm")
+# ff_regression("Uninflow_curl"     ""                               "fastfarm")
+  ff_regression("TSinflow_curl"     ""                               "fastfarm")
+  ff_regression("ModAmb_3"          ""                               "fastfarm")
+  ff_regression("TSinflowADskSED"   ""                               "fastfarm;aerodisk;simple-elastodyn")
+  ff_regression("MD_Shared"         "-compFile=FAST.Farm.FarmMD.MD"  "fastfarm;moordyn")
 endif()
 
 # AeroDyn regression tests

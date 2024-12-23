@@ -41,6 +41,7 @@ typedef  ^               ParameterType         LOGICAL         UseSC           -
 typedef  ^               ParameterType         ReKi            WT_Position   {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
 typedef  ^               ParameterType         IntKi           WaveFieldMod    -    - - "Wave field handling (-) (switch) {0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin}"   -
 typedef  ^               ParameterType         IntKi           MooringMod      -    - - "Mod_SharedMooring is a flag for array-level mooring. (switch) {0: none, 3: yes/MoorDyn}" -
+typedef  ^               ParameterType         logical         WrMooringVis    -    - - "Write shared mooring visualization (-) [only used for Mod_SharedMooring=3]" -
 typedef  ^               ParameterType         CHARACTER(1024) MD_FileName    -    - -  "Name/location of the farm-level MoorDyn input file" -
 typedef  ^               ParameterType         DbKi            DT_mooring      -    - - "Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0]"  seconds
 typedef  ^               ParameterType         IntKi           n_mooring       -    - - "Number of FAST and MoorDyn time steps per FAST.Farm timestep when mooring > 0" -
@@ -157,6 +158,9 @@ typedef    ^    ^                 DbKi                      InputTimes   {:}  - 
 typedef    ^    ^                 MD_OutputType             y             -   -         -   "System outputs"
 typedef    ^    ^                 MD_MiscVarType            m             -   -         -   "Misc/optimization variables"
 typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has MD_Init been called"
+typedef    ^    ^                 IntKi                     VTK_count     -   0         -   "Counter for VTK output of shared moorings"
+typedef    ^    ^                 IntKi                     VTK_TWidth    -   -         -   "width for VTK_count field in output name"
+typedef    ^    ^                 character(1024)           VTK_OutFileRoot   -   -         -   "Rootfilename for VTK output"
 # ..... WAT InflowWind data ............................................................................................
 typedef    ^    WAT_IfW_data      InflowWind_ContinuousStateType  x             -   -         -   "Continuous states"
 typedef    ^    ^                 InflowWind_DiscreteStateType    xd            -   -         -   "Discrete states"

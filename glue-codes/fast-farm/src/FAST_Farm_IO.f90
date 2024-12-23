@@ -643,6 +643,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadVar( UnIn, InputFile, p%MD_FileName, "MD_FileName", "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    IF ( PathIsRelative( p%MD_FileName ) ) p%MD_FileName = TRIM(PriPath)//TRIM(p%MD_FileName)
    CALL ReadVar( UnIn, InputFile, p%DT_mooring, "DT_Mooring", "Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, p%WrMooringVis, "MooringVis","Write shared mooring visualization, at DT_Mooring timestep (-) [only used for Mod_SharedMooring=3]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
    !---------------------- AMBIENT WIND: PRECURSOR IN VTK FORMAT ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: Precursor in VTK Format', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
