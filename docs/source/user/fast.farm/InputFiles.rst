@@ -138,6 +138,10 @@ documentation for details on the input file at the farm level.
 **DT_Mooring** (sec) sets the timestep for the shared mooring connections with
 MoorDyn. 
 
+**WrMooringVis** [swithch]   Write shared mooring line visualization, at
+DT_Mooring timestep
+
+
 .. _FF:Input:VTK:
 
 Ambient Wind: Precursor in Visualization Toolkit Format

@@ -386,12 +386,13 @@ of_regression_linear("5MW_OC3Mnpl_Linear"             ""                "openfas
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)
-  ff_regression("TSinflow"  "fastfarm")
-  ff_regression("LESinflow"  "fastfarm")
-#   ff_regression("Uninflow_curl"  "fastfarm")
-  ff_regression("TSinflow_curl"  "fastfarm")
-  ff_regression("ModAmb_3"  "fastfarm")
-  ff_regression("TSinflowADskSED"  "fastfarm;aerodisk;simple-elastodyn")
+  ff_regression("TSinflow"          "fastfarm")
+  ff_regression("LESinflow"         "fastfarm")
+# ff_regression("Uninflow_curl"     "fastfarm")
+  ff_regression("TSinflow_curl"     "fastfarm")
+  ff_regression("ModAmb_3"          "fastfarm")
+  ff_regression("TSinflowADskSED"   "fastfarm;aerodisk;simple-elastodyn")
+  ff_regression("MD_Shared"         "fastfarm;moordyn")
 endif()
 
 # AeroDyn regression tests
