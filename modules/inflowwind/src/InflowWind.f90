@@ -176,6 +176,15 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    CALL InflowWind_ValidateInput( InitInp, InputFileData, TmpErrStat, TmpErrMsg ); if (Failed()) return
 
       
+   ! Disable Lidar if not allowed (FAST.Farm doesn't allow this)
+   if (.not. InitInp%LidarEnabled) then
+      if (p%lidar%SensorType /= SensorType_None) then
+         call WrScr('  WARNING: LiDAR cannot be used with this instance of InflowWind (not usable with FAST.Farm).')
+         call WrScr('   --> Disabling LiDAR.')
+         p%lidar%SensorType = SensorType_None
+      end if
+   endif
+
    ! initialize sensor data:
    p%lidar%SensorType         = InputFileData%SensorType
    IF (InputFileData%SensorType /= SensorType_None) THEN
