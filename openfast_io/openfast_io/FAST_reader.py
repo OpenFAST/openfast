@@ -497,10 +497,16 @@ class InputReader_OpenFAST(object):
 
         # Yaw friction
         f.readline()
-        self.fst_vt['ElastoDyn']['YawFrctMod']  = int(f.readline().split()[0])
-        self.fst_vt['ElastoDyn']['M_CSmax']     = float_read(f.readline().split()[0])
-        self.fst_vt['ElastoDyn']['M_CD']        = float_read(f.readline().split()[0])
-        self.fst_vt['ElastoDyn']['sig_v']       = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['YawFrctMod'] = int(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['M_CSmax'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['M_FCSmax'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['M_MCSmax'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['M_CD'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['M_FCD'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['M_MCD'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['sig_v'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['sig_v2'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['OmgCut'] = float_read(f.readline().split()[0])
 
         # Drivetrain (drivetrain)
         f.readline()
