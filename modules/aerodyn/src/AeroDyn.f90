@@ -1929,7 +1929,7 @@ subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, StartNode, ErrStat, 
 
 contains
    logical function Failed()
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'AD_CalcWind')
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'AD_CalcWindRotor')
       Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine
