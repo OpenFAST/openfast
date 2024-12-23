@@ -520,6 +520,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          Init%InData_IfW%Use4Dext                  = .false.
       END IF
 
+      ! OLAF might be used in AD, in which case we need to allow out of bounds for some calcs. To do that
+      ! the average values for the entire wind profile must be calculated and stored (we don't know if OLAF
+      ! is used until after AD_Init below).
+      if (p_FAST%CompAero == Module_AD) then
+         Init%InData_IfW%BoxExceedAllow = .true.
+      endif
+
       CALL InflowWind_Init( Init%InData_IfW, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR),  &
                      IfW%OtherSt(STATE_CURR), IfW%y, IfW%m, p_FAST%dt_module( MODULE_IfW ), Init%OutData_IfW, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
