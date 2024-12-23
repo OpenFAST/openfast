@@ -329,9 +329,7 @@ def main():
     input_file = args.input_file
     # ts = TurbSimFile('../_tests/TurbSim.bts')
     ts = TurbSimFile(input_file)
-    df = ts.toDataFrame()
-    print(df['VertProfile'].info())
-    print(df['MidLine'].info())
+    print(f'{ts}')
 
 
 if __name__=='__main__':
