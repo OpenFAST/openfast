@@ -4,45 +4,17 @@
 # repository. The build cache is stored in GitHub actions.
 name: deploy
 
-# on:
+on:
+  push:
+
   # workflow_dispatch:
 
   # release:
   #   types:
   #     - released
-on:
-  push:
+
 
 jobs:
-  # publish-to-pypi:
-    # runs-on: ubuntu-latest
-    # permissions:
-    #   id-token: write
-    #   contents: read
-
-    # steps:
-    #   - name: Checkout Repository
-    #     uses: actions/checkout@v4
-
-    #   - name: Install Poetry
-    #     uses: snok/install-poetry@v1.3.4
-
-    #   - name: Build a binary wheel and a source tarball
-    #     run: poetry build
-    #     working-directory: openfast_python
-
-    #   - name: Publish package distributions to PyPI
-    #     uses: pypa/gh-action-pypi-publish@v1.8.14
-    #     with:
-    #       packages-dir: openfast_python/dist
-
-# name: Build and publish python package
-
-# on:
-#   release:
-#     types: [ published ]
-
-# jobs:
   publish-to-test-pypi:
     runs-on: ubuntu-latest
 
@@ -65,12 +37,19 @@ jobs:
         run: hatch build
         working-directory: openfast_io
 
-      - name: Publish to PyPI
+      - name: Publish to PyPI test
         env:
           HATCH_INDEX_USER: __token__
           HATCH_INDEX_AUTH: ${{ secrets.PYPI_TEST_TOKEN }}
         run: hatch publish -r test
         working-directory: openfast_io
+
+      # - name: Publish to PyPI
+      #   env:
+      #     HATCH_INDEX_USER: __token__
+      #     HATCH_INDEX_AUTH: ${{ secrets.PYPI_TOKEN }}
+      #   run: hatch publish 
+      #   working-directory: openfast_io
 
   docker-build-and-push:
     runs-on: ubuntu-latest
