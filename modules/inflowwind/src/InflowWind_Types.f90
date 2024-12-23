@@ -120,6 +120,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean sea level to still water level [m]
     LOGICAL  :: BoxExceedAllow = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
+    LOGICAL  :: LidarEnabled = .false.      !< Enable LiDAR for this instance of InflowWind? (FAST.Farm, ADI, and InflowWind driver/library are not compatible) [-]
   END TYPE InflowWind_InitInputType
 ! =======================
 ! =========  InflowWind_InitOutputType  =======
@@ -527,6 +528,7 @@ subroutine InflowWind_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
    DstInitInputData%BoxExceedAllow = SrcInitInputData%BoxExceedAllow
+   DstInitInputData%LidarEnabled = SrcInitInputData%LidarEnabled
 end subroutine
 
 subroutine InflowWind_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -575,6 +577,7 @@ subroutine InflowWind_PackInitInput(RF, Indata)
    call RegPack(RF, InData%WtrDpth)
    call RegPack(RF, InData%MSL2SWL)
    call RegPack(RF, InData%BoxExceedAllow)
+   call RegPack(RF, InData%LidarEnabled)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -603,6 +606,7 @@ subroutine InflowWind_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSL2SWL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BoxExceedAllow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LidarEnabled); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
