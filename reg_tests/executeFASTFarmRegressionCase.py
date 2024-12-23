@@ -69,9 +69,9 @@ noExec = args.noExec
 verbose = args.verbose
 # file to use for comparison (ending not included)
 if args.compFile is None:
-    compFile = caseName
+    compFile = "FAST.Farm"
 elif args.compFile == 'arg_was_not_given':
-    compFile = caseName
+    compFile = "FAST.Farm"
 else:
     compFile = args.compFile
 
