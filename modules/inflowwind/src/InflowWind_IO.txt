@@ -40,7 +40,6 @@ typedef  ^              ^                     ReKi                    RefHt     
 typedef  ^              ^                     ReKi                    RefLength               -     -     -     "Reference length for linear horizontal and vertical sheer"     -
 typedef  ^              ^                     ReKi                    PropagationDir          -     -     -     "Direction of wind propagation"                                 radians
 typedef  ^              ^                     logical                 UseInputFile            -   .true.  -     "Flag for toggling file based IO in wind type 2."               -
-typedef  ^              ^                     FileInfoType            PassedFileInfo          -     -     -     "Optional slot for wind type 2 data if file IO is not used."    -
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              Grid3D_InitInputType  IntKi                   ScaleMethod             -     0     -     "Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation]"  -
