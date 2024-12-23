@@ -70,8 +70,8 @@ class AeroDynInflowLib(CDLL):
         self.ended = False                  # For error handling at end
 
         # Input file handling
-        self.ADinputPass  = True            # Assume passing of input file as a string
-        self.IfWinputPass = True            # Assume passing of input file as a string
+        self.ADinputPass  = 1               # Assume passing of input file as a string
+        self.IfWinputPass = 1               # Assume passing of input file as a string
 
         # Create buffers for class data
         self.abort_error_level = 4
