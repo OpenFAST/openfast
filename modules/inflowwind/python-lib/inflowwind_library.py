@@ -52,12 +52,19 @@ class InflowWindLib(CDLL):
     #           here.
     error_msg_c_len = 1025
 
+    #   NOTE:   the length of the name used for any output file written by the
+    #           IfW Fortran code is 1025.
+    default_str_c_len = 1025
+
     def __init__(self, library_path):
         super().__init__(library_path)
         self.library_path = library_path
 
         self._initialize_routines()
         self.ended = False                  # For error handling at end
+
+        # Input file handling
+        self.IfWinputPass = 1               # Assume passing of input file as a string
 
         # Create buffers for class data
         self.abort_error_level = 4
@@ -84,18 +91,27 @@ class InflowWindLib(CDLL):
 
         self.numChannels = 0                # Number of channels returned
 
+        # flags
+        self.debuglevel  = 0                # 0-4 levels
+
+        # OutRootName
+        #   If HD writes a file (echo, summary, or other), use this for the
+        #   root of the file name.
+        self.outRootName = "Output_ifwlib_default"
+
         
     def _initialize_routines(self):
         """
         Initialize the Python handles to necessary routines in the InflowWind library.
         """
         self.IfW_C_Init.argtypes = [
+            POINTER(c_int),                       # IfW input file passed as string
             POINTER(c_char_p),                    # input file string
             POINTER(c_int),                       # input file string length
-            POINTER(c_char_p),                    # uniform file string
-            POINTER(c_int),                       # uniform file string length
+            POINTER(c_char),                      # OutRootName
             POINTER(c_int),                       # numWindPts
             POINTER(c_double),                    # dt
+            POINTER(c_int),                       # debuglevel
             POINTER(c_int),                       # number of channels
             POINTER(c_char),                      # output channel names
             POINTER(c_char),                      # output channel units
@@ -121,29 +137,29 @@ class InflowWindLib(CDLL):
         self.IfW_C_End.restype = c_int
 
 
-    def ifw_init(self, input_string_array, uniform_string_array):
+    def ifw_init(self, IfW_input_string_array):
         """
         Call the initialization routine in the InflowWind library.
         """
 
         # Set up inputs: Pass single NULL joined string
-        input_string = '\x00'.join(input_string_array)
-        input_string = input_string.encode('utf-8')
-        input_string_length = len(input_string)
-        
-        uniform_string = '\x00'.join(uniform_string_array)
-        uniform_string = uniform_string.encode('utf-8')
-        uniform_string_length = len(uniform_string)
-        
+        IfW_input_string = '\x00'.join(IfW_input_string_array)
+        IfW_input_string = IfW_input_string.encode('utf-8')
+        IfW_input_string_length = len(IfW_input_string)
+         
+        # Rootname for ADI output files (echo etc).
+        _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
+
         self._numChannels_c = c_int(0)
 
         self.IfW_C_Init(
-            c_char_p(input_string),                # IN: input file string
-            byref(c_int(input_string_length)),     # IN: input file string length
-            c_char_p(uniform_string),              # IN: uniform file string
-            byref(c_int(uniform_string_length)),   # IN: uniform file string length
+            byref(c_int(self.IfWinputPass)),       # IN: IfW input file is passed
+            c_char_p(IfW_input_string),            # IN: input file string
+            byref(c_int(IfW_input_string_length)), # IN: input file string length
+            _outRootName_c,                        # IN: rootname for ADI file writing
             byref(c_int(self.numWindPts)),         # IN: number of wind points
             byref(c_double(self.dt)),              # IN: time step (dt)
+            byref(c_int(self.debuglevel)),         # IN: debuglevel
             byref(self._numChannels_c),            # OUT: number of channels
             self._channel_names_c,                 # OUT: output channel names as c_char
             self._channel_units_c,                 # OUT: output channel units as c_char

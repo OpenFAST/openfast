@@ -24,6 +24,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    USE AeroDyn_Inflow_Types
    USE AeroDyn_Driver_Types,  only: Dvr_SimData, Dvr_Outputs
    USE AeroDyn_Driver_Subs,   only: Dvr_InitializeOutputs, Dvr_WriteOutputs, SetVTKParameters   !, WrVTK_Surfaces, WrVTK_Lines, WrVTK_Ground
+   USE IfW_FlowField, only: IfW_FlowField_GetVelAcc
    USE NWTC_Library
    USE VersionInfo
 
@@ -39,6 +40,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    PUBLIC :: ADI_C_SetupRotor         ! Initial node positions etc for a rotor
    PUBLIC :: ADI_C_SetRotorMotion     ! Set motions for a given rotor
    PUBLIC :: ADI_C_GetRotorLoads      ! Retrieve loads for a given rotor
+   PUBLIC :: ADI_C_GetDiskAvgVel      ! Get the disk average velocity for the rotor
 
    !------------------------------------------------------------------------------------
    !  Version info for display
@@ -96,7 +98,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    integer(IntKi)                         :: InterpOrder
    !------------------------------
    !  Primary ADI data derived data types
-   type(ADI_Data)                         :: ADI
+   type(ADI_Data), target                 :: ADI               !< all ADI data (target for using pointers to simplify code)
    type(ADI_InitInputType)                :: InitInp           !< Initialization data
    type(ADI_InitOutputType)               :: InitOutData       !< Initial output data -- Names, units, and version info.
    type(ADI_InputType)                    :: ADI_u             !< ADI inputs -- set by AD_SetInputMotion.  Copied as needed (necessary for correction steps)
@@ -125,17 +127,29 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     the glue code.  However, here we do not pass state information through the
    !     interface and therefore must store it here analogously to how it is handled
    !     in the OpenFAST glue code.
-   integer(IntKi)                         :: n_Global          ! global timestep
-   integer(IntKi)                         :: n_VTK             ! VTK timestep
-   real(DbKi)                             :: InputTimePrev     ! input time of last UpdateStates call
+   integer(IntKi)                         :: n_Global             ! global timestep
+   integer(IntKi)                         :: n_VTK                ! VTK timestep
+   real(DbKi)                             :: InputTimePrev        ! input time of last UpdateStates call
+   real(DbKi)                             :: InputTimePrev_Calc   ! input time of last CalcOutput call
    ! Note that we are including the previous state info here (not done in OF this way)
-   integer(IntKi),   parameter            :: STATE_LAST = 0    ! Index for previous state (not needed in OF, but necessary here)
-   integer(IntKi),   parameter            :: STATE_CURR = 1    ! Index for current state
-   integer(IntKi),   parameter            :: STATE_PRED = 2    ! Index for predicted state
+   integer(IntKi),   parameter            :: STATE_LAST = 0       ! Index for previous state (not needed in OF, but necessary here)
+   integer(IntKi),   parameter            :: STATE_CURR = 1       ! Index for current state
+   integer(IntKi),   parameter            :: STATE_PRED = 2       ! Index for predicted state
    ! Note the indexing is different on inputs (no clue why, but thats how OF handles it)
-   integer(IntKi),   parameter            :: INPUT_LAST = 3    ! Index for previous  input at t-dt
-   integer(IntKi),   parameter            :: INPUT_CURR = 2    ! Index for current   input at t
-   integer(IntKi),   parameter            :: INPUT_PRED = 1    ! Index for predicted input at t+dt
+   integer(IntKi),   parameter            :: INPUT_LAST = 3       ! Index for previous  input at t-dt
+   integer(IntKi),   parameter            :: INPUT_CURR = 2       ! Index for current   input at t
+   integer(IntKi),   parameter            :: INPUT_PRED = 1       ! Index for predicted input at t+dt
+
+   !-------------------------------
+   !  Variables for disk average velocity calculations
+   integer(IntKi),  parameter             :: NumPtsDiskAvg = 144
+   type :: DiskAvgVelData_Type
+      real(ReKi)                          :: DiskWindPosRel(3,NumPtsDiskAvg)
+      real(ReKi)                          :: DiskWindPosAbs(3,NumPtsDiskAvg)
+      real(ReKi)                          :: DiskWindVel(3,NumPtsDiskAvg)
+      real(ReKi)                          :: DiskAvgVel(3)
+   end type DiskAvgVelData_Type
+   type(DiskAvgVelData_Type), allocatable :: DiskAvgVelVars(:)
 
    !------------------------------------------------------------------------------------
    !  Meshes for motions and loads
@@ -276,9 +290,9 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, Deb
    endif
 
    ! check valid debug level
-   if (DebugLevel < 0_IntKi .or. DebugLevel > 4_IntKi) then
+   if (DebugLevel < 0_IntKi) then
       ErrStat2 = ErrID_Fatal
-      ErrMsg2  = "Interface debug level must be between 0 and 4"//NewLine// &
+      ErrMsg2  = "Interface debug level must be 0 or greater"//NewLine// &
          "  0  - none"//NewLine// &
          "  1  - some summary info and variables passed through interface"//NewLine// &
          "  2  - above + all position/orientation info"//NewLine// &
@@ -302,6 +316,10 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, Deb
    ! Allocate arrays and meshes for the number of turbines
    if (allocated(InitInp%AD%rotors))   deallocate(InitInp%AD%rotors)
    allocate(InitInp%AD%rotors(Sim%NumTurbines),stat=errStat2); if (Failed0('rotors')) return
+
+   ! allocate data storage for DiskAvgVel retrieval
+   if (allocated(DiskAvgVelVars))   deallocate(DiskAvgVelVars)
+   allocate(DiskAvgVelVars(Sim%NumTurbines), STAT=ErrStat2); if (Failed0('DiskAvgVelVars')) return
 
    ! Allocate data storage for turbine info
    if (allocated(Sim%WT))  deallocate(Sim%WT)
@@ -383,11 +401,13 @@ end subroutine ADI_C_PreInit
 !===============================================================================================================
 SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileStringLength_C, &
                IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,  &
+               OutVTKDir_C,                                               &
                gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,      &
                defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                &
                InterpOrder_C, DT_C, TMax_C,                               &
                storeHHVel,                                                &
-               WrVTK_in, WrVTK_inType, VTKNacDim_in, VTKHubRad_in,        &
+               WrVTK_in, WrVTK_inType, WrVTK_inDT,                        &
+               VTKNacDim_in, VTKHubRad_in,                                &
                wrOuts_C, DT_Outs_C,                                       &
                NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_Init')
@@ -404,6 +424,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
    integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
    character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
+   character(kind=c_char),    intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
    ! Environmental
    real(c_float),             intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
    real(c_float),             intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
@@ -423,6 +444,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    ! VTK
    integer(c_int),            intent(in   )  :: WrVTK_in                               !< Write VTK outputs [0: none, 1: init only, 2: animation]
    integer(c_int),            intent(in   )  :: WrVTK_inType                           !< Write VTK outputs as [1: surface, 2: lines, 3: both]
+   real(c_double),            intent(in   )  :: WrVTK_inDT                             !< Timestep between VTK writes
    real(c_float),             intent(in   )  :: VTKNacDim_in(6)                        !< Nacelle dimension passed in for VTK surface rendering [0,y0,z0,Lx,Ly,Lz] (m)
    real(c_float),             intent(in   )  :: VTKHubrad_in                           !< Hub radius for VTK surface rendering
    integer(c_int),            intent(in   )  :: wrOuts_C                               !< Write ADI output file
@@ -444,6 +466,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
+   character(IntfStrLen)                                          :: OutVTKdir         !< Output directory for files (relative to current location)
    integer(IntKi)                                                 :: i,j,k             !< generic index variables
    integer(IntKi)                                                 :: iWT               !< current turbine number (iterate through during setup for ADI_Init call)
    integer(IntKi)                                                 :: AeroProjMod       !< for checking that all turbines use the same AeroProjMod
@@ -494,6 +517,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
    if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
 
+   ! OutVTKdir -- output directory
+   OutVTKdir = TRANSFER( OutVTKdir_C, OutVTKdir )
+   i = INDEX(OutVTKdir,C_NULL_CHAR) - 1               ! if this has a c null character at the end...
+   if ( i > 0 ) OutVTKdir = OutVTKdir(1:I)            ! remove it
 
    ! For debugging the interface:
    if (DebugLevel > 0) then
@@ -554,18 +581,19 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    Sim%root                = trim(OutRootName)
    ! Timekeeping
    n_Global                = 0_IntKi                     ! Assume we are on timestep 0 at start
-   n_VTK                   = -1_IntKi                    ! Set VTK output to T=0 at first call
+   n_VTK                   = -1_IntKi                    ! counter advance just before writing
    ! Interpolation order
    InterpOrder             = int(InterpOrder_C, IntKi)
 
    ! VTK outputs
    WrOutputsData%WrVTK        = int(WrVTK_in,     IntKi)
    WrOutputsData%WrVTK_Type   = int(WrVTK_inType, IntKi)
+   WrOutputsData%VTK_dt       = real(WrVTK_inDT,   DbKi)
    WrOutputsData%VTKNacDim    = real(VTKNacDim_in, SiKi)
    WrOutputsData%VTKHubrad    = real(VTKHubrad_in, SiKi)
    WrOutputsData%VTKRefPoint  = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)    !TODO: should this be an input?
    WrOutputsData%root         = trim(OutRootName)
-   WrOutputsData%n_VTKTime = 1   ! output every timestep
+   WrOutputsData%n_VTKTime        = 1   ! output every timestep
 
    ! Write outputs to file
    WrOutputsData%fileFmt = int(wrOuts_C, IntKi)
@@ -641,7 +669,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    call SetupMotionLoadsInterfaceMeshes();    if (Failed())  return
    ! setup meshes
    if (WrOutputsData%WrVTK > 0_IntKi) then
-      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, 'vtk-ADI')
+      if (len_trim(OutVTKdir) <= 0) then
+         OutVTKdir = 'vtk-ADI'
+      endif
+      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, OutVTKdir)
       if (Failed())  return
    endif
    ! write meshes for this rotor
@@ -652,21 +683,30 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
       if (Failed())  return
    endif
 
+   ! Setup points for calculating disk average velocity
+   do iWT=1,Sim%NumTurbines
+      call SetDiskAvgPoints(iWT)
+      if (Failed())  return
+   enddo
+
    !-------------------------------------------------------------
    ! Setup other prior timesteps
    !     We fill InputTimes with negative times, but the Input values are identical for each of those times; this allows
    !     us to use, e.g., quadratic interpolation that effectively acts as a zeroth-order extrapolation and first-order extrapolation
    !     for the first and second time steps.  (The interpolation order in the ExtrapInput routines are determined as
    !     order = SIZE(Input)
+   ! Tracking of previous input times
+   !     Since we may run correction steps, there are some things we don't want to do
    !-------------------------------------------------------------
    do i=2,InterpOrder+1
       call ADI_CopyInput (ADI%u(1),  ADI%u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
          if (Failed())  return
    enddo
    do i = 1, InterpOrder + 1
-      ADI%InputTimes(i) = 0.0_DbKi - (i - 1) * Sim%dT      ! assume start at T=0
+      ADI%InputTimes(i) = 0.0_DbKi - (i - 1) * Sim%dT    ! assume start at T=0
    enddo
-   InputTimePrev = ADI%InputTimes(1) - Sim%dT    ! Initialize for UpdateStates
+   InputTimePrev      = ADI%InputTimes(1) - Sim%dT       ! Initialize for UpdateStates
+   InputTimePrev_Calc = ADI%InputTimes(1) - Sim%dT       ! Initialize for CalcOutput
 
    !-------------------------------------------------------------
    ! copy of ADI inputs. AD_SetInputMotion will set this mesh.  When CalcOutput is called,
@@ -806,6 +846,19 @@ CONTAINS
             call SetErrStat(ErrID_Warn,"Requested DT_Outs is not an integer multiple of DT.  Changing DT_Outs to "//trim(Num2LStr(WrOutputsData%DT_Outs))//".",ErrStat3,ErrMsg3,RoutineName)
          endif
       endif
+      if (WrOutputsData%WrVTK > 1_IntKi) then   ! only if writing during simulation is requested (ignore init or no outputs)
+         ! If a smaller timestep between outputs is requested than the simulation runs at, change to DT
+         if (WrOutputsData%VTK_DT < Sim%dT) then
+            WrOutputsData%VTK_DT = Sim%dT
+            call SetErrStat(ErrID_Warn,"Requested VTK_DT is smaller than timestep DT.  Setting VTK_DT to DT.",ErrStat3,ErrMsg3,RoutineName)
+         endif
+         ! If not an integer multiple of DT, adjust
+         WrOutputsData%n_VTKtime = NINT( WrOutputsData%VTK_DT / Sim%dT )
+         if (.NOT. EqualRealNos( WrOutputsData%VTK_DT, Sim%dT * WrOutputsData%n_VTKtime )) then
+            WrOutputsData%VTK_DT = real(WrOutputsData%n_VTKtime, DbKi) * Sim%dT
+            call SetErrStat(ErrID_Warn,"Requested VTK_DT is not an integer multiple of DT.  Changing VTK_DT to "//trim(Num2LStr(WrOutputsData%VTK_DT))//".",ErrStat3,ErrMsg3,RoutineName)
+         endif
+      endif
    end subroutine ValidateSetInputs
 
    !> allocate data storage for file outputs
@@ -853,6 +906,7 @@ CONTAINS
       call WrScr("       IfWinputFileString_C (ptr addr)"//trim(Num2LStr(LOC(IfWinputFileString_C))) )
       call WrScr("       IfWinputFileStringLength_C     "//trim(Num2LStr( IfWinputFileStringLength_C )) )
       call WrScr("       OutRootName                    "//trim(OutRootName) )
+      call WrScr("       OutVTKDir                      "//trim(OutVTKDir)   )
       call WrScr("   Environment variables")
       call WrScr("       gravity_C                      "//trim(Num2LStr( gravity_C     )) )
       call WrScr("       defFldDens_C                   "//trim(Num2LStr( defFldDens_C  )) )
@@ -875,6 +929,7 @@ CONTAINS
       call WrScr("       storeHHVel                     "//TmpFlag )
       call WrScr("       WrVTK_in                       "//trim(Num2LStr( WrVTK_in      )) )
       call WrScr("       WrVTK_inType                   "//trim(Num2LStr( WrVTK_inType  )) )
+      call WrScr("       WrVTK_inDT                     "//trim(Num2LStr( WrVTK_inDT    )) )
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
 
@@ -953,6 +1008,24 @@ CONTAINS
       !     - some check that nodes make some sense -- might be caught in meshmapping
       !     - some checks on hub/nacelle being near middle of the rotor?  Not sure if that matters
    end subroutine CheckNodes
+
+   !> Setup points for disk average velocity calculations
+   subroutine SetDiskAvgPoints(iWT)
+      integer(IntKi), intent(in) :: iWT
+      integer(IntKi) :: i,BlNds
+      real(ReKi)     :: R,theta,BLength
+      ! Calculate relative points on disk (do this once up front to save computational time).
+      ! NOTE: this is in the XY plane, and will be multiplied by the hub orientation vector
+      BlNds = ADI%p%AD%rotors(iWT)%NumBlNds
+      BLength = TwoNorm(ADI%u(1)%AD%rotors(iWT)%BladeMotion(1)%Position(:,BlNds) - ADI%u(1)%AD%rotors(iWT)%HubMotion%Position(:,1))
+      R = real(BLength,ReKi) * 0.7_reKi !70% radius
+      do i=1,NumPtsDiskAvg
+         theta = pi +(i-1)*TwoPi/NumPtsDiskAvg
+         DiskAvgVelVars(iWT)%DiskWindPosRel(1,i) = 0.0_ReKi          ! Hub X (perpindicular to rotor plane)
+         DiskAvgVelVars(iWT)%DiskWindPosRel(2,i) = R*cos(theta)      ! Hub Y
+         DiskAvgVelVars(iWT)%DiskWindPosRel(3,i) = R*sin(theta)      ! Hub Z (in vertical plane when azimuth=0)
+      end do
+   end subroutine SetDiskAvgPoints
 
 END SUBROUTINE ADI_C_Init
 
@@ -1049,7 +1122,16 @@ SUBROUTINE ADI_C_CalcOutput(Time_C, &
    ! write outputs
    !-------------------------------------------------------
    ! Write VTK if requested (animation=2)
-   if (WrOutputsData%WrVTK > 1_IntKi)    call WrVTK_Meshes(ADI%u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
+   if (WrOutputsData%WrVTK > 1_IntKi) then
+      ! Check if writing this step (note this may overwrite if we rerun a step in a correction loop)
+      if ( mod( n_Global, WrOutputsData%n_VTKTime ) == 0 ) THEN
+         ! increment the current VTK output number if not a correction step, otherwise overwrite previous
+         if (.not. EqualRealNos( real(Time,DbKi), InputTimePrev_Calc ) ) then
+            n_VTK = n_VTK + 1_IntKi ! Increment for this write
+         endif
+         call WrVTK_Meshes(ADI%u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
+      endif
+   endif
 
    if (WrOutputsData%fileFmt > idFmtNone) then
 !FIXME: need some way to overwrite the correction timesteps (for text file)!
@@ -1058,6 +1140,9 @@ SUBROUTINE ADI_C_CalcOutput(Time_C, &
 
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
+   ! Store info what time we just ran calcs for
+   InputTimePrev_Calc = Time
 
 CONTAINS
    logical function Failed()
@@ -1904,6 +1989,76 @@ CONTAINS
 end subroutine ADI_C_GetRotorLoads
 
 
+!===============================================================================================================
+!--------------------------------------------- GetDiskAvgVel ---------------------------------------------------
+!===============================================================================================================
+!> Get the disk average velocity for a single rotor (uses the IfW DiskAvgVel routine)
+subroutine ADI_C_GetDiskAvgVel(iWT_C, &
+               DiskAvgVel_C, &
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_GetDiskAvgVel')
+   implicit none
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_GetDiskAvgVel
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_GetDiskAvgVel
+#endif
+   integer(c_int),            intent(in   )  :: iWT_C                         !< Wind turbine / rotor number
+   real(c_float),             intent(  out)  :: DiskAvgVel_C(3)               !< Wind speed vector for disk average [Vx,Vy,Vz] -- (m/s) (global)
+   integer(c_int),            intent(  out)  :: ErrStat_C
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+
+   ! Local variables
+   type(MeshType), pointer                   :: Hub                           ! HubMotion mesh pointer, for simplicity in code reading
+   integer(IntKi)                            :: iWT                           !< current wind turbine / rotor
+   integer(IntKi)                            :: i
+   integer(IntKi), parameter                 :: StartNode = 1                 ! so all points are calculated
+   real(ReKi), allocatable                   :: NoAcc(:,:)                    ! Placeholder array not used when accelerations not required.
+   real(ReKi)                                :: DiskAvgVel(3)                 !< Wind speed vector for disk average [Vx,Vy,Vz] -- (m/s) (global)
+   integer(IntKi)                            :: ErrStat                       !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
+   character(*), parameter                   :: RoutineName = 'ADI_C_GetDiskAvgVel' !< for error handling
+
+   ! Initialize error handling
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
+
+   ! For debugging the interface:
+   if (DebugLevel > 0) then
+      call ShowPassedData()
+   endif
+
+   ! current turbine number
+   iWT = int(iWT_c, IntKi)
+
+   ! pointer to make code more readable
+   Hub => ADI%u(1)%AD%rotors(iWT)%HubMotion
+
+   ! Calculate Disk Avg Velocity
+   do i=1,NumPtsDiskAvg
+      DiskAvgVelVars(iWT)%DiskWindPosAbs(:,i) = real(Hub%Position(1:3,1)+Hub%TranslationDisp(1:3,1),ReKi)  &
+                           + matmul(real(Hub%Orientation(1:3,1:3,1),ReKi),DiskAvgVelVars(iWT)%DiskWindPosRel(:,i))
+   enddo
+   call IfW_FlowField_GetVelAcc(ADI%m%IW%p%FlowField, StartNode, InputTimePrev_Calc, DiskAvgVelVars(iWT)%DiskWindPosAbs, DiskAvgVelVars(iWT)%DiskWindVel, NoAcc, ErrStat, ErrMsg)
+
+   ! calculate average
+   DiskAvgVel   = sum(DiskAvgVelVars(iWT)%DiskWindVel, dim=2) / REAL(NumPtsDiskAvg,SiKi)
+   DiskAvgVel_C = real(DiskAvgVel, c_float)
+
+   ! Set error status
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
+CONTAINS
+   !> This subroutine prints out all the variables that are passed in.  Use this only
+   !! for debugging the interface on the Fortran side.
+   subroutine ShowPassedData()
+      call WrSCr("")
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("Interface debugging:  Variables passed in through interface")
+      call WrScr("   ADI_C_GetDiskAvgVel -- rotor "//trim(Num2LStr(iWT_c)))
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowPassedData
+end subroutine ADI_C_GetDiskAvgVel
+
+
 !===================================================================================================================================
 ! Internal routines for setting meshes etc.
 !===================================================================================================================================
@@ -2254,7 +2409,7 @@ contains
 
       ! Blade point motion (structural mesh from driver)
       do iBlade=1,Sim%WT(iWT)%NumBlades
-         call MeshWrVTK(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(num2lstr(iBlade)), n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+         call MeshWrVTK(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(num2lstr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
          if (ErrStat3 >= AbortErrLev) return
       enddo
 
@@ -2262,20 +2417,20 @@ contains
       if (allocated(rot_u(iWT)%BladeRootMotion)) then
          do iBlade=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeRootMotion(iBlade)%Committed) then
-               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeRootMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(iBlade)), n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeRootMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
                   if (ErrStat3 >= AbortErrLev) return
             endif
          enddo
       endif
 
       ! Nacelle (structural point input
-      if ( rot_u(iWT)%NacelleMotion%Committed ) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.NacelleMotion', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+      if ( rot_u(iWT)%NacelleMotion%Committed ) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.NacelleMotion', n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Free wake
       if (allocated(ADI%m%AD%FVW_u) .and. iWT==1) then
          if (allocated(ADI%m%AD%FVW_u(1)%WingsMesh)) then
-            call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(STATE_CURR)%AD%FVW, ADI%z(STATE_CURR)%AD%FVW, ADI%m%AD%FVW, trim(WrOutputsData%VTK_OutFileRoot)//'.FVW', n_Global, WrOutputsData%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+            call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(STATE_CURR)%AD%FVW, ADI%z(STATE_CURR)%AD%FVW, ADI%m%AD%FVW, trim(WrOutputsData%VTK_OutFileRoot)//'.FVW', n_VTK, WrOutputsData%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
          endif
       end if
    end subroutine WrVTK_Points
@@ -2291,11 +2446,11 @@ contains
       ErrMsg3  =  ''
 
       ! TODO: use this routine when it is moved out of the driver and into ADI
-      ! call AD_WrVTK_Surfaces(ADI%u(1)%AD, ADI%y%AD, RefPoint, ADI%m%VTK_Surfaces, n_Global, WrOutputsData%Root, WrOutputsData%VTK_tWidth, 25, WrOutputsData%VTKHubRad)
+      ! call AD_WrVTK_Surfaces(ADI%u(1)%AD, ADI%y%AD, RefPoint, ADI%m%VTK_Surfaces, n_VTK, WrOutputsData%Root, WrOutputsData%VTK_tWidth, 25, WrOutputsData%VTKHubRad)
 
       ! Nacelle
       if ( rot_u(iWT)%NacelleMotion%Committed ) then
-         call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', n_Global, &
+         call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', n_VTK, &
                                       OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, verts=WrOutputsData%VTK_Surface(iWT)%NacelleBox)
          if (ErrStat3 >= AbortErrLev) return
       endif
@@ -2303,14 +2458,14 @@ contains
       ! Tower
       if (rot_u(iWT)%TowerMotion%Committed) then
          call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
-                                    n_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, numSectors, ADI%m%VTK_Surfaces(iWT)%TowerRad )
+                                    n_VTK, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, numSectors, ADI%m%VTK_Surfaces(iWT)%TowerRad )
          if (ErrStat3 >= AbortErrLev) return
       endif
 
       ! Hub
       if (rot_u(iWT)%HubMotion%Committed) then
          call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%HubMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
-                                      n_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, &
+                                      n_VTK, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, &
                                       NumSegments=numSectors, radius=WrOutputsData%VTKHubRad)
          if (ErrStat3 >= AbortErrLev) return
       endif
@@ -2320,7 +2475,7 @@ contains
          do iBlade=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeMotion(iBlade)%Committed) then
                call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%BladeMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(iBlade))//'Surface', &
-                                          n_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth , verts=ADI%m%VTK_Surfaces(iWT)%BladeShape(iBlade)%AirfoilCoords, &
+                                          n_VTK, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth , verts=ADI%m%VTK_Surfaces(iWT)%BladeShape(iBlade)%AirfoilCoords, &
                                           Sib=ADI%y%AD%rotors(iWT)%BladeLoad(iBlade) )
                   if (ErrStat3 >= AbortErrLev) return
             endif
@@ -2336,22 +2491,22 @@ contains
       ErrMsg3  =  ''
 
       ! Tower
-      if (rot_u(iWT)%TowerMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Tower', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+      if (rot_u(iWT)%TowerMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Tower', n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Nacelle meshes
-      if (rot_u(iWT)%NacelleMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Nacelle', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+      if (rot_u(iWT)%NacelleMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Nacelle', n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Hub
-      if (rot_u(iWT)%HubMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%HubMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Hub', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+      if (rot_u(iWT)%HubMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%HubMotion, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Hub', n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Blades
       if (allocated(rot_u(iWT)%BladeMotion)) then
          do iBlade=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeMotion(iBlade)%Committed) then
-               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(iBlade)), n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeMotion(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
                   if (ErrStat3 >= AbortErrLev) return
             endif
          enddo
@@ -2446,6 +2601,8 @@ subroutine ClearTmpStorage()
    ! if (allocated(NacMotionMesh    ))   call ClearMeshArr1(NacMotionMesh    )
    ! if (allocated(NacLoadMesh      ))   call ClearMeshArr1(NacLoadMesh      )
    if (allocated(Map_BldStrMotion_2_AD_Blade  ))   call ClearMeshMapArr2(Map_BldStrMotion_2_AD_Blade  )
+   ! other stuff
+   if (allocated(DiskAvgVelVars))   deallocate(DiskAvgVelVars)
 contains
    subroutine ClearMeshArr1(MeshName)
       type(MeshType), allocatable :: MeshName(:)
