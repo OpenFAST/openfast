@@ -144,14 +144,14 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
-   ! Get a unit number for reading in the file
-   CALL GetNewUnit( WaveElevUnit )
-
    ! Assemble the filename for the wave elevation data.
    WaveElevData%FileName   =  TRIM(InitInp%WvKinFile)//'.Elev'
 
    ! Open the file containing the wave elevation timeseries
+   !$OMP critical(fileopen)
+   CALL GetNewUnit( WaveElevUnit )
    CALL OpenFInpFile(  WaveElevUnit, WaveElevData%FileName, ErrStatTmp, ErrMsgTmp )
+   !$OMP end critical(fileopen)
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat,ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
       CLOSE ( WaveElevUnit )
@@ -492,11 +492,13 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    
    ! Read the first file and set the initial values of the 
    DO iFile = 1,7
-      CALL GetNewUnit( UnWv )
 
       FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(iFile))
    
+      !$OMP critical(fileopen)
+      CALL GetNewUnit( UnWv )
       CALL OpenFInpFile ( UnWv, FileName, ErrStatTmp, ErrMsgTmp )
+      !$OMP end critical(fileopen)
       IF ( ErrStatTmp /= 0 ) THEN
          ErrMsgTmp  = 'Failed to open wave kinematics file, ' //  TRIM(FileName) 
          CALL SetErrStat( ErrID_Fatal, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
@@ -552,11 +554,13 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    end do
    
    ! WaveElev
-   CALL GetNewUnit( UnWv )
 
    FileName = TRIM(InitInp%WvKinFile) // '.Elev'
    
+   !$OMP critical(fileopen)
+   CALL GetNewUnit( UnWv )
    CALL OpenFInpFile ( UnWv, FileName, ErrStatTmp, ErrMsgTmp ) 
+   !$OMP end critical(fileopen)
    IF ( ErrStatTmp /= 0 ) THEN
       ErrMsgTmp  = 'Failed to open wave elevation file, ' //  TRIM(FileName) 
       CALL SetErrStat( ErrID_Fatal, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
@@ -691,14 +695,14 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, WaveDOmega, WaveCompData, ErrStat, ErrMs
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
-   ! Get a unit number for reading in the file
-   CALL GetNewUnit( WaveCompUnit )
-
    ! Assemble the filename for the wave component data.
    WaveCompData%FileName   =  TRIM(InitInp%WvKinFile)
 
    ! Open the file containing the list of wave components
+   !$OMP critical(fileopen)
+   CALL GetNewUnit( WaveCompUnit )
    CALL OpenFInpFile(  WaveCompUnit, WaveCompData%FileName, ErrStatTmp, ErrMsgTmp )
+   !$OMP end critical(fileopen)
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat,ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
       CALL CleanUpError() 
