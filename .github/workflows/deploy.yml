@@ -59,7 +59,7 @@ jobs:
         uses: pypa/hatch@install
 
       - name: Install dependencies
-        run: pip install keyring
+        run: pip install keyring[file]
 
       - name: Build package
         run: hatch build

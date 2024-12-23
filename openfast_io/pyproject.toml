@@ -72,3 +72,10 @@ source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "openfast_io/_version.py"
+
+[settings.publish]
+index = "test"
+
+[settings.publish.indexes.test]
+auth = "keyring"
+keyring-backend = "keyring.backends.file.PlaintextKeyring"
