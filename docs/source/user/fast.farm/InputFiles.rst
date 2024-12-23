@@ -139,7 +139,7 @@ documentation for details on the input file at the farm level.
 MoorDyn. 
 
 **WrMooringVis** [swithch]   Write shared mooring line visualization, at
-the globale FAST.Farm time step
+the global FAST.Farm time step
 
 
 .. _FF:Input:VTK:
