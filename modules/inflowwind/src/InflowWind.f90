@@ -255,8 +255,6 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Uniform_InitInput%RefHt          = InputFileData%Uniform_RefHt
       Uniform_InitInput%RefLength      = InputFileData%Uniform_RefLength
       Uniform_InitInput%PropagationDir = InputFileData%PropagationDir
-      Uniform_InitInput%UseInputFile   =  InitInp%WindType2UseInputFile
-      Uniform_InitInput%PassedFileInfo =  InitInp%WindType2Info
 
       p%FlowField%FieldType = Uniform_FieldType
       call IfW_UniformWind_Init(Uniform_InitInput, SumFileUnit, p%FlowField%Uniform, InitOutData%WindFileInfo, TmpErrStat, TmpErrMsg); if (Failed()) return

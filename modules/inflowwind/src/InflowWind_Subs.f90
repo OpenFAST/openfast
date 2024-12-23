@@ -699,7 +699,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
          CALL Steady_ValidateInput()
 
       CASE ( Uniform_WindNumber )
-         IF ( InitInp%WindType2UseInputFile ) CALL Uniform_ValidateInput()
+         CALL Uniform_ValidateInput()
 
       CASE ( TSFF_WindNumber )
          CALL TSFF_ValidateInput()
