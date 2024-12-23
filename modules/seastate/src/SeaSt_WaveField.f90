@@ -836,10 +836,10 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
    isopc   = -1.0
    Indx_Lo = 0
    Indx_Hi = 0
-   if ( Time < 0.0_DbKi ) then
-      CALL SetErrStat(ErrID_Fatal,'Time value must be greater than or equal to zero!',ErrStat,ErrMsg,'SetTimeIndex') !error out if time is outside the lower bounds
-      RETURN
-   end if
+   !if ( Time < 0.0_DbKi ) then
+   !   CALL SetErrStat(ErrID_Fatal,'Time value must be greater than or equal to zero!',ErrStat,ErrMsg,'SetTimeIndex') !error out if time is outside the lower bounds
+   !   RETURN
+   !end if
 
    ! if there are no timesteps, don't proceed
    if (EqualRealNos(deltaT,0.0_ReKi) .or. deltaT < 0.0_ReKi)  return;
@@ -850,7 +850,7 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
 !                    wrap it back to index 0, if Indx_Lo = 11 we want to wrap back to index 1.
 
    Tmp =  real( (Time/ real(deltaT,DbKi)) ,ReKi)
-   Tmp =  MOD(Tmp,real((nMax), ReKi))
+   Tmp =  MODULO(Tmp,real((nMax), ReKi))
    Indx_Lo = INT( Tmp )     ! convert REAL to INTEGER
 
    isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo , ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
