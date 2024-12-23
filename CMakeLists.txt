@@ -44,7 +44,8 @@ option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
 option(BUILD_FASTFARM "Enable building FAST.Farm" off)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
-option(BUILD_OPENFAST_CPP_DRIVER "Enable building OpenFAST C++ driver using C++ API" off)
+option(BUILD_OPENFAST_CPP_DRIVER "Enable building OpenFAST C++ driver using C++ CFD API" off)
+option(BUILD_OPENFAST_LIB_DRIVER "Enable building OpenFAST driver using C++ Library API" off)
 option(BUILD_OPENFAST_SIMULINK_API "Enable building OpenFAST for use with Simulink" off)
 option(OPENMP "Enable OpenMP support" off)
 option(USE_LOCAL_STATIC_LAPACK "Enable downloading and building static LAPACK and BLAS libs" off)
@@ -231,8 +232,8 @@ endforeach(IDIR IN ITEMS ${OPENFAST_MODULES})
 add_subdirectory(glue-codes)
 
 # Install fortran .mod files also to installation directory
-install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/openfast/
+install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}
+  DESTINATION include/openfast/
   FILES_MATCHING PATTERN "*.mod"
 )
 
