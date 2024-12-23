@@ -3154,7 +3154,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    !..........................
    ! Set main geometry parameters (orientatioAnnulus, Twist, Toe, Cant, rLocal)
    !..........................
-   ! TODO (EB): For harmonization between BEM and OLAF we should always compute R_li, r_Local, Twist, Toe, Cant
+   ! TODO (EB): For harmonization between BEM and OLAF we should always compute R_li, r_Local, Twist, Toe, Cant, drdz
    !            BEM would then switch below between an "orientationMomentum", either Annulus (R_li) or NoPitchSweepPitch (R_wi)
    if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
 
