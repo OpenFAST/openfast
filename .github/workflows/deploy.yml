@@ -5,13 +5,11 @@
 name: deploy
 
 on:
-  push:
-
-  # workflow_dispatch:
-
-  # release:
-  #   types:
-  #     - released
+  workflow_dispatch:
+  
+  release:
+    types:
+      - released
 
 
 jobs:
