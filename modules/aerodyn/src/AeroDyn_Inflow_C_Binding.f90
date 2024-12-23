@@ -290,9 +290,9 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, Deb
    endif
 
    ! check valid debug level
-   if (DebugLevel < 0_IntKi .or. DebugLevel > 4_IntKi) then
+   if (DebugLevel < 0_IntKi) then
       ErrStat2 = ErrID_Fatal
-      ErrMsg2  = "Interface debug level must be between 0 and 4"//NewLine// &
+      ErrMsg2  = "Interface debug level must be 0 or greater"//NewLine// &
          "  0  - none"//NewLine// &
          "  1  - some summary info and variables passed through interface"//NewLine// &
          "  2  - above + all position/orientation info"//NewLine// &
