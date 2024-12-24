@@ -306,7 +306,7 @@ def cleanup_fstvt(fst_vt, ignoreVars=None, removeFileRef=False, removeArrayProps
                     'EDFile',
                     'ServoFile',
                     'BldFile',
-                    'SeaStateFile',
+                    'SeaStFile',
                     'HydroFile',
                     'SubFile',
                     'MooringFile',

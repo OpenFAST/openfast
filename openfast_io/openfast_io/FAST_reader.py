@@ -181,10 +181,8 @@ class InputReader_OpenFAST(object):
         self.fst_vt['ElastoDynTower'] = {}
         self.fst_vt['InflowWind'] = {}
         self.fst_vt['AeroDyn'] = {}
-        self.fst_vt['AeroDyn14'] = {}
         self.fst_vt['AeroDisk'] = {}
         self.fst_vt['AeroDynBlade'] = {}
-        self.fst_vt['AeroDynTower'] = {}
         self.fst_vt['AeroDynPolar'] = {}
         self.fst_vt['ServoDyn'] = {}
         self.fst_vt['DISCON_in'] = {}
@@ -290,7 +288,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['CompInflow'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompAero'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompServo'] = int(f.readline().split()[0])
-        self.fst_vt['Fst']['CompSeaState'] = int(f.readline().split()[0])
+        self.fst_vt['Fst']['CompSeaSt'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompHydro'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompSub'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompMooring'] = int(f.readline().split()[0])
@@ -318,7 +316,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['InflowFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['AeroFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['ServoFile'] = quoted_read(f.readline().split()[0])
-        self.fst_vt['Fst']['SeaStateFile'] = quoted_read(f.readline().split()[0])
+        self.fst_vt['Fst']['SeaStFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['HydroFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['SubFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['MooringFile'] = quoted_read(f.readline().split()[0])
@@ -940,11 +938,11 @@ class InputReader_OpenFAST(object):
         f.readline()
         self.fst_vt['InflowWind']['HWindSpeed'] = float_read(f.readline().split()[0])
         self.fst_vt['InflowWind']['RefHt'] = float_read(f.readline().split()[0])
-        self.fst_vt['InflowWind']['PLexp'] = float_read(f.readline().split()[0])
+        self.fst_vt['InflowWind']['PLExp'] = float_read(f.readline().split()[0])
 
         # Parameters for Uniform wind file   [used only for WindType = 2] (uniform_wind_params)
         f.readline()
-        self.fst_vt['InflowWind']['Filename_Uni'] = os.path.join(os.path.split(inflow_file)[0], quoted_read(f.readline().split()[0]))
+        self.fst_vt['InflowWind']['FileName_Uni'] = os.path.join(os.path.split(inflow_file)[0], quoted_read(f.readline().split()[0]))
         self.fst_vt['InflowWind']['RefHt_Uni'] = float_read(f.readline().split()[0])
         self.fst_vt['InflowWind']['RefLength'] = float_read(f.readline().split()[0])
 
@@ -953,7 +951,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['InflowWind']['FileName_BTS'] = os.path.join(os.path.split(inflow_file)[0], quoted_read(f.readline().split()[0]))
         # Parameters for Binary Bladed-style Full-Field files   [used only for WindType = 4] (bladed_wind_params)
         f.readline()
-        self.fst_vt['InflowWind']['FilenameRoot'] = os.path.join(os.path.split(inflow_file)[0], quoted_read(f.readline().split()[0]))
+        self.fst_vt['InflowWind']['FileNameRoot'] = os.path.join(os.path.split(inflow_file)[0], quoted_read(f.readline().split()[0]))
         self.fst_vt['InflowWind']['TowerFile'] = bool_read(f.readline().split()[0])
 
         # Parameters for HAWC-format binary files  [Only used with WindType = 5] (hawc_wind_params)
@@ -1250,6 +1248,9 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDynBlade']['BlTwist']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
         self.fst_vt['AeroDynBlade']['BlChord']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
         self.fst_vt['AeroDynBlade']['BlAFID']         = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
+        self.fst_vt['AeroDynBlade']['BlCb']           = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
+        self.fst_vt['AeroDynBlade']['BlCenBn']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
+        self.fst_vt['AeroDynBlade']['BlCenBt']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
         for i in range(self.fst_vt['AeroDynBlade']['NumBlNds']):
             data = [float(val) for val in f.readline().split()]
             self.fst_vt['AeroDynBlade']['BlSpn'][i]   = data[0] 
@@ -1259,6 +1260,15 @@ class InputReader_OpenFAST(object):
             self.fst_vt['AeroDynBlade']['BlTwist'][i] = data[4]
             self.fst_vt['AeroDynBlade']['BlChord'][i] = data[5]
             self.fst_vt['AeroDynBlade']['BlAFID'][i]  = data[6]
+            if len(data) == 9:
+                self.fst_vt['AeroDynBlade']['BlCb'][i]    = data[7]
+                self.fst_vt['AeroDynBlade']['BlCenBn'][i] = data[8]
+                self.fst_vt['AeroDynBlade']['BlCenBt'][i] = data[9]
+            else:
+                self.fst_vt['AeroDynBlade']['BlCb'][i]    = 0.0
+                self.fst_vt['AeroDynBlade']['BlCenBn'][i] = 0.0
+                self.fst_vt['AeroDynBlade']['BlCenBt'][i] = 0.0
+
         
         f.close()
 
@@ -1289,7 +1299,7 @@ class InputReader_OpenFAST(object):
 
             for tab in range(polar['NumTabs']): # For multiple tables
                 polar['Re']             = float_read(readline_filterComments(f).split()[0]) * 1.e+6
-                polar['Ctrl']           = int_read(readline_filterComments(f).split()[0])
+                polar['UserProp']           = int_read(readline_filterComments(f).split()[0])
                 polar['InclUAdata']     = bool_read(readline_filterComments(f).split()[0])
 
                 # Unsteady Aero Data
@@ -3161,7 +3171,7 @@ class InputReader_OpenFAST(object):
         hd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['HydroFile']))
         if os.path.isfile(hd_file): 
             self.read_HydroDyn(hd_file)
-        ss_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['SeaStateFile']))
+        ss_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['SeaStFile']))
         if os.path.isfile(ss_file):
             self.read_SeaState(ss_file)
         sd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['SubFile']))
