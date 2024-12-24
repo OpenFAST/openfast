@@ -18,62 +18,76 @@
 # -- OpenFAST Unit Testing
 # -----------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.12)
-project(OpenFAST_UnitTest Fortran)
-
 include(CTest)
 
-if(NOT ${Python_Interpreter_FOUND})
-  message(FATAL_ERROR "CMake did not find a Python interpreter. Python is required for unit tests." )
-endif()
-if (${Python_VERSION} VERSION_GREATER_EQUAL "3.12.0")
-  message(FATAL_ERROR "Unit testing with pfunit not currently possible with Python 3.12 or greater." )
-endif()
+# Test-Drive library
+add_library(testdrivelib test-drive/testdrive.F90 test-drive/testdrive_version.f90)
 
-
-
-### pfunit
-include(ExternalProject)
-
-set(PFUNIT_INSTALL ${PROJECT_BINARY_DIR}/pfunit)
-set(PFUNIT_LIB_PATH ${PROJECT_BINARY_DIR}/pfunit/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pfunit${CMAKE_STATIC_LIBRARY_SUFFIX})
-set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
-set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules)
-set(pfunit_directory ${PFUNIT_INSTALL})
-
-ExternalProject_Add(pfunit
-  SOURCE_DIR ${PROJECT_SOURCE_DIR}/pfunit
-  BINARY_DIR ${PROJECT_BINARY_DIR}/pfunit-build
-  STAMP_DIR ${PROJECT_BINARY_DIR}/pfunit-stamp
-  TMP_DIR ${PROJECT_BINARY_DIR}/pfunit-tmp
-  INSTALL_DIR ${PFUNIT_INSTALL}
-  CMAKE_ARGS 
-    -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/pfunit
-    -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
-    -DPYTHON_EXECUTABLE=${Python_EXECUTABLE}
-    -DROBUST=OFF
-  BUILD_BYPRODUCTS 
-    ${PFUNIT_LIB_PATH}
-    ${PFUNIT_INSTALL}/include/driver.F90
+# AeroDyn Unit Tests
+add_executable(aerodyn_utest 
+  ${PROJECT_SOURCE_DIR}/modules/aerodyn/tests/aerodyn_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/aerodyn/tests/test_AD_FVW.F90
 )
-add_library(pfunit_lib STATIC IMPORTED)
-set_target_properties(pfunit_lib PROPERTIES IMPORTED_LOCATION ${PFUNIT_LIB_PATH})
+target_link_libraries(aerodyn_utest aerodynlib versioninfolib testdrivelib)
+add_test(NAME aerodyn_utest COMMAND aerodyn_utest)
 
-include_directories(
-  ${PROJECT_SOURCE_DIR}
-  ${PROJECT_BINARY_DIR}/pfunit/mod
-  ${PROJECT_BINARY_DIR}/tests
-  ${PFUNIT_INSTALL}/mod
+# BeamDyn Unit Tests
+add_executable(beamdyn_utest 
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/beamdyn_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_Crv.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_Misc.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_diffmtc.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_MemberEta.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_QuadraturePointData.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_ShapeFuncs.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_TrapezoidalPointWeight.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_BD_InitializeNodalLocations.F90
+  ${PROJECT_SOURCE_DIR}/modules/beamdyn/tests/test_tools.F90
 )
+target_link_libraries(beamdyn_utest beamdynlib versioninfolib testdrivelib)
+add_test(NAME beamdyn_utest COMMAND beamdyn_utest)
 
-### Add the unit tests here
-add_subdirectory("beamdyn")
-add_subdirectory("nwtc-library")
-add_subdirectory("aerodyn")
-add_subdirectory("inflowwind")
-add_subdirectory("version")
+# InflowWind Unit Tests
+add_executable(inflowwind_utest 
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/inflowwind_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_bladed_wind.F90
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_hawc_wind.F90
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_outputs.F90
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_steady_wind.F90
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_turbsim_wind.F90
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/test_uniform_wind.F90
+  ${PROJECT_SOURCE_DIR}/modules/inflowwind/tests/ifw_test_tools.F90
+)
+target_link_libraries(inflowwind_utest ifwlib versioninfolib testdrivelib)
+add_test(NAME inflowwind_utest COMMAND inflowwind_utest)
 
+# NWTC Library Unit Tests
+add_executable(nwtc_library_utest 
+  ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/nwtc_library_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/NWTC_Library_test_tools.F90
+  ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/test_NWTC_IO_FileInfo.F90
+  ${PROJECT_SOURCE_DIR}/modules/nwtc-library/tests/test_NWTC_RandomNumber.F90
+)
+target_link_libraries(nwtc_library_utest nwtclibs testdrivelib)
+
+add_test(NAME nwtc_library_utest COMMAND nwtc_library_utest)
+
+# Version Info Unit Tests
+add_executable(versioninfo_utest 
+  ${PROJECT_SOURCE_DIR}/modules/version/tests/versioninfo_utest.F90
+  ${PROJECT_SOURCE_DIR}/modules/version/tests/VersionInfo_test_tools.F90
+  ${PROJECT_SOURCE_DIR}/modules/version/tests/test_VersionInfo_CheckArgs.F90
+)
+target_link_libraries(versioninfo_utest versioninfolib testdrivelib)
+add_test(NAME versioninfo_utest COMMAND versioninfo_utest)
+
+# Custom target combining all the unit tests
 add_custom_target(
   unit_tests
-  DEPENDS beamdyn_utest nwtc_library_utest fvw_utest inflowwind_utest versioninfo_utest
+  DEPENDS 
+    nwtc_library_utest 
+    versioninfo_utest
+    beamdyn_utest 
+    aerodyn_utest 
+    inflowwind_utest 
 )

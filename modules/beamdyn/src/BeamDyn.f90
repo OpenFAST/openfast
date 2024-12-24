@@ -244,9 +244,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    z%DummyConstrState = 0.0_BDKi
 
-   ! copy data for BeamDyn driver:
-   call move_alloc ( InputFileData%kp_coordinate, InitOut%kp_coordinate)
-   InitOut%kp_total = InputFileData%kp_total
 
       !............................................................................................
       ! Initialize Jacobian:
@@ -817,7 +814,6 @@ subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
 
    InitOut%Ver = BeamDyn_Ver
 
-
       ! Set the info in WriteOutputHdr and WriteOutputUnt for BldNd sections.
    CALL BldNdOuts_InitOut( InitOut, p, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -901,7 +897,8 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
+   p%CompAeroMaps = InitInp%CompAeroMaps
+   
       ! Gravity vector -- inertial frame!  This must be multiplied by OtherState%GlbRot to get into the BD rotating reference frame
    p%gravity = InitInp%gravity
 
@@ -1005,6 +1002,14 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
 
 
+   if (p%CompAeroMaps) then
+      if (p%BldMotionNodeLoc /= BD_MESH_FE) then
+!         call SetErrStat(ErrID_Warn, "BeamDyn aero maps must have outputs at FEA nodes; this is different than time-series behavior.", ErrStat, ErrMsg, RoutineName )
+         p%BldMotionNodeLoc = BD_MESH_FE
+         call SetErrStat(ErrID_Fatal, "BeamDyn aero maps must have outputs at FEA nodes, which requires Gaussian quadrature. Update the input file.", ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+   end if
 
    !...............................................
    ! Set start and end node index for each elements
@@ -5985,59 +5990,64 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          end if
       end if
       
+      if (p%CompAeroMaps) then
+         dYdu = 0.0_R8Ki
+      else
       
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call BD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call BD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-         
-      do i=1,size(p%Jac_u_indx,1)
-         
-            ! get u_op + delta_p u
-         call BD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_u( p, i, 1, u_perturb, delta_p )
-      
-            ! compute y at u_op + delta_p u
-         call BD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-            
-            ! get u_op - delta_m u
-         call BD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call Perturb_u( p, i, -1, u_perturb, delta_m )
-         
-            ! compute y at u_op - delta_m u
-         call BD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-      
-            ! get central difference:
-         call Compute_dY( p, y_p, y_m, delta_p, dYdu(:,i) )
-         
-      end do
-      
-      
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      call BD_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call BD_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      
-      if (p%RelStates) then
-         call BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx=m%lin_C )
+            ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+         call BD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call BD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             if (ErrStat>=AbortErrLev) then
                call cleanup()
                return
             end if
-         dYdu = dYdu + matmul(m%lin_C, RelState_x)
-      end if
+         
+         do i=1,size(p%Jac_u_indx,1)
+         
+               ! get u_op + delta_p u
+            call BD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+            call Perturb_u( p, i, 1, u_perturb, delta_p )
+      
+               ! compute y at u_op + delta_p u
+            call BD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+            
+               ! get u_op - delta_m u
+            call BD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+            call Perturb_u( p, i, -1, u_perturb, delta_m )
+         
+               ! compute y at u_op - delta_m u
+            call BD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+      
+               ! get central difference:
+            call Compute_dY( p, y_p, y_m, delta_p, dYdu(:,i) )
+         
+         end do
+      
+      
+         if (ErrStat>=AbortErrLev) then
+            call cleanup()
+            return
+         end if
+         call BD_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
+         call BD_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
+      
+         if (p%RelStates) then
+            call BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx=m%lin_C )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               if (ErrStat>=AbortErrLev) then
+                  call cleanup()
+                  return
+               end if
+            dYdu = dYdu + matmul(m%lin_C, RelState_x)
+         end if
+         
+      end if ! CompAeroMaps
       
    END IF
 
@@ -6653,16 +6663,19 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       
    
       index = 1
-      FieldMask = .false.
-      FieldMask(MASKID_TranslationDisp) = .true.
-      FieldMask(MASKID_Orientation)     = .true.
-      FieldMask(MASKID_TranslationVel)  = .true.
-      FieldMask(MASKID_RotationVel)     = .true.
-      FieldMask(MASKID_TranslationAcc)  = .true.
-      FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(u%RootMotion, u_op, index, FieldMask=FieldMask)
+      if (.not. p%CompAeroMaps) then
+         FieldMask = .false.
+         FieldMask(MASKID_TranslationDisp) = .true.
+         FieldMask(MASKID_Orientation)     = .true.
+         FieldMask(MASKID_TranslationVel)  = .true.
+         FieldMask(MASKID_RotationVel)     = .true.
+         FieldMask(MASKID_TranslationAcc)  = .true.
+         FieldMask(MASKID_RotationAcc)     = .true.
+         call PackMotionMesh(u%RootMotion, u_op, index, FieldMask=FieldMask)
    
-      call PackLoadMesh(u%PointLoad, u_op, index)
+         call PackLoadMesh(u%PointLoad, u_op, index)
+      end if
+      
       call PackLoadMesh(u%DistrLoad, u_op, index)
       
    END IF
@@ -6687,22 +6700,28 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       if (ReturnTrimOP) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
       
       index = 1
-      call PackLoadMesh(y%ReactionForce, y_op, index)
-
       FieldMask = .false.
       FieldMask(MASKID_TranslationDisp) = .true.
       FieldMask(MASKID_Orientation)     = .true.
       FieldMask(MASKID_TranslationVel)  = .true.
-      FieldMask(MASKID_RotationVel)     = .true.
-      FieldMask(MASKID_TranslationAcc)  = .true.
-      FieldMask(MASKID_RotationAcc)     = .true.
+
+      if (.not. p%CompAeroMaps) then
+      
+         call PackLoadMesh(y%ReactionForce, y_op, index)
+
+         FieldMask(MASKID_RotationVel)     = .true.
+         FieldMask(MASKID_TranslationAcc)  = .true.
+         FieldMask(MASKID_RotationAcc)     = .true.
+      end if
       call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, TrimOP=ReturnTrimOP)
    
-      index = index - 1
-      do i=1,p%NumOuts + p%BldNd_TotNumOuts
-         y_op(i+index) = y%WriteOutput(i)
-      end do
-         
+      if (.not. p%CompAeroMaps) then
+         index = index - 1
+         do i=1,p%NumOuts + p%BldNd_TotNumOuts
+            y_op(i+index) = y%WriteOutput(i)
+         end do
+      end if
+      
       
    END IF
 

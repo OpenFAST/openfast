@@ -40,6 +40,7 @@ configuration as described in the following sections.
 
 In both modes of execution a directory is created in the build directory
 called ``reg_tests`` where all of the input files for the test cases are copied
+(but not overwritten) 
 and all of the locally generated outputs are stored. Ultimately, both CTest and
 the manual execution program call a series of Python scripts and libraries in
 ``reg_tests`` and ``reg_tests/lib``. One such script is ``lib/pass_fail.py``
@@ -223,11 +224,11 @@ Flags can be compounded making useful variations such as
 
 .. code-block:: bash
 
-    # Run all cases that use AeroDyn14 with verbose output
-    ctest -V -L aerodyn14
+    # Run all cases that use SubDyn with verbose output
+    ctest -V -L subdyn
 
-    # Run all cases that use AeroDyn14 in 16 concurrent processes
-    ctest -j 16 -L aerodyn14
+    # Run all cases that use SubDyn in 16 concurrent processes
+    ctest -j 16 -L subdyn
 
     # Run the case with name "5MW_DLL_Potential_WTurb" with verbose output
     ctest -V -R 5MW_DLL_Potential_WTurb

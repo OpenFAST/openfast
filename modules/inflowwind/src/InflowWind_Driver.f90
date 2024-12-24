@@ -39,6 +39,9 @@ PROGRAM InflowWind_Driver
    TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","","")
    INTEGER(IntKi)                                     :: IfWDriver_Verbose =  5  ! Verbose level.  0 = none, 5 = some, 10 = lots
 
+      ! output paths hard coded
+   CHARACTER(*), PARAMETER                            :: VTKsliceDir = "vtk"     ! Directory to place the output VTK slices
+
       ! Types needed here (from InflowWind module)
    TYPE(InflowWind_InitInputType)                     :: InflowWind_InitInp      ! Data for initialization -- this is where the input info goes
    TYPE(InflowWind_InputType)                         :: InflowWind_u1           ! input     -- contains xyz coords of interest -- set 1
@@ -116,8 +119,23 @@ PROGRAM InflowWind_Driver
    CALL CPU_TIME( Timer(1) )
 
       ! Set some CLSettings to null/default values
-    CLSettings%ProgInfo = ProgInfo       
-    Settings%ProgInfo   = ProgInfo
+   CLSettings%ProgInfo = ProgInfo
+   Settings%ProgInfo   = ProgInfo
+      ! Set the filenames to empty strings -- otherwise prints garbage with the -vv option
+   CLSettings%DvrIptFileName        = ''
+   CLSettings%IfWIptFileName        = ''
+   CLSettings%SummaryFileName       = ''
+   CLSettings%PointsFileName        = ''
+   CLSettings%WindGridOutput%Name   = ''
+   CLSettings%FFTOutput%Name        = ''
+   CLSettings%PointsVelOutput%Name  = ''
+   Settings%DvrIptFileName          = ''
+   Settings%IfWIptFileName          = ''
+   Settings%SummaryFileName         = ''
+   Settings%PointsFileName          = ''
+   Settings%WindGridOutput%Name     = ''
+   Settings%FFTOutput%Name          = ''
+   Settings%PointsVelOutput%Name    = ''
 
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Parse the command line inputs -=-=-
@@ -395,7 +413,7 @@ PROGRAM InflowWind_Driver
       ! Some other settings
    InflowWind_InitInp%InputFileName    =  Settings%IfWIptFileName       ! For now, IfW cannot work without an input file.
    !InflowWind_InitInp%DT               =  Settings%DT
-   InflowWind_InitInp%UseInputFile     =  .TRUE.
+   InflowWind_InitInp%FilePassingMethod   =  0_IntKi
    IF ( SettingsFlags%DvrIptFile )  THEN
       CALL GetRoot( Settings%DvrIptFileName, InflowWind_InitInp%RootName )
    ELSE
@@ -404,8 +422,7 @@ PROGRAM InflowWind_Driver
    END IF
    InflowWind_InitInp%RootName = trim(InflowWind_InitInp%RootName)//'.IfW'
    InflowWind_InitInp%RadAvg = -1.0_ReKi ! let the IfW code guess what to use
-   InflowWind_InitInp%BoxExceedAllowF  = SettingsFlags%BoxExceedAllowF  ! Set flag for allowing points outside the wind box (alternate interpolation method for FF)
-   if (InflowWind_InitInp%BoxExceedAllowF) InflowWind_InitInp%BoxExceedAllowIdx = 1_IntKi
+   InflowWind_InitInp%BoxExceedAllow  = SettingsFlags%BoxExceedAllowF  ! Set flag for allowing points outside the wind box (alternate interpolation method for FF)
    
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
 
@@ -416,93 +433,65 @@ PROGRAM InflowWind_Driver
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y1, InflowWind_MiscVars, Settings%DT,  InflowWind_InitOut, ErrStat, ErrMsg )
 
+   if (InflowWind_InitInp%BoxExceedAllow) then
+      InflowWind_p%FlowField%Grid3D%BoxExceedAllowDrv = .true.
+   end if
 
-      ! Make sure no errors occured that give us reason to terminate now.
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL DriverCleanup()
-      CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= ErrID_None ) THEN
-      IF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-         CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
-                    NewLine//'                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
-      ELSEIF ( ErrStat >= ErrID_Warn ) THEN
-         CALL ProgWarn( ErrMsg )
-      ELSE
-         CALL WrScr(TRIM(ErrMsg))
-      ENDIF
-   ENDIF
+   call CheckCallErr('InflowWind_Init')
 
-
-
-      ! Let user know we returned from the InflowWind code if verbose
-   IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr(NewLine//'InflowWind_Init CALL returned without errors.'//NewLine)
 
 
       ! Convert InflowWind file to HAWC format
    IF (SettingsFlags%WrHAWC) THEN
       CALL IfW_WriteHAWC( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
-      IF (ErrStat > ErrID_None) THEN
-         CALL WrScr( TRIM(ErrMsg) )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( ErrMsg )
-         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-            CALL WrScr(NewLine//' IfW_WriteHAWC returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
-         END IF
-      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
-         CALL WrScr(NewLine//'IfW_WriteHAWC CALL returned without errors.'//NewLine)
-      END IF
+      call CheckCallErr('IfW_WriteHAWC')
    END IF
    
 
       ! Convert InflowWind file to Native Bladed format
    IF (SettingsFlags%WrBladed) THEN
       CALL IfW_WriteBladed( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
-      IF (ErrStat > ErrID_None) THEN
-         CALL WrScr( TRIM(ErrMsg) )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( ErrMsg )
-         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-            CALL WrScr(NewLine//' InflowWind_Convert2Bladed returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
-         END IF
-      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
-         CALL WrScr(NewLine//'InflowWind_Convert2Bladed CALL returned without errors.'//NewLine)
-      END IF
+      call CheckCallErr('IfW_WriteBladed')
    END IF
+
 
    IF (SettingsFlags%WrVTK) THEN
       CALL IfW_WriteVTK( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
-      IF (ErrStat > ErrID_None) THEN
-         CALL WrScr( TRIM(ErrMsg) )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( ErrMsg )
-         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-            CALL WrScr(NewLine//' IfW_WriteVTK returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
-         END IF
-      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
-         CALL WrScr(NewLine//'IfW_WriteVTK CALL returned without errors.'//NewLine)
-      END IF
-   
+      call CheckCallErr('IfW_WriteVTK')
    END IF
    
    
    IF (SettingsFlags%WrUniform) THEN
       CALL IfW_WriteUniform( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
-      IF (ErrStat > ErrID_None) THEN
-         CALL WrScr( TRIM(ErrMsg) )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( ErrMsg )
-         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
-            CALL WrScr(NewLine//' IfW_WriteUniform returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
-         END IF
-      ELSE IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
-         CALL WrScr(NewLine//'IfW_WriteUniform CALL returned without errors.'//NewLine)
-      END IF
+      call CheckCallErr('IfW_WriteUniform')
    END IF
    
+
+   IF (Settings%NOutWindXY>0) THEN
+      do i=1,Settings%NOutWindXY
+         CALL IfW_WriteXYslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, VTKsliceDir, Settings%OutWindZ(i), ErrStat, ErrMsg )
+         call CheckCallErr('IfW_WriteXYslice'//trim(Num2LStr(i)))
+      enddo
+   END IF
+
+
+!FIXME: future developent
+!   IF (Settings%NOutWindXZ>0) THEN
+!      do i=1,Settings%NOutWindXZ
+!         CALL IfW_WriteXZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, VTKsliceDir, Settings%OutWindY(i), ErrStat, ErrMsg )
+!         call CheckCallErr('IfW_WriteXZslice'//trim(Num2LStr(i)))
+!      enddo
+!   END IF
+
+
+!   IF (Settings%NOutWindYZ>0) THEN
+!      do i=1,Settings%NOutWindYZ
+!         CALL IfW_WriteYZslice( InflowWind_p%FlowField, InflowWind_InitInp%RootName, VTKsliceDir, Settings%OutWindX(i), ErrStat, ErrMsg )
+!         call CheckCallErr('IfW_WriteYZslice'//trim(Num2LStr(i)))
+!      enddo
+!   END IF
+
+
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Other Setup -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -861,8 +850,6 @@ end if
 !FFT calculations occur here.  Output to file.
 
 
-
-
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- We are done, so close everything down -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -924,8 +911,6 @@ end if
       CALL WrScr(' InflowWind_End call 3 of 3:    ok')
    ENDIF
 
-
-
    CALL DriverCleanup()
 
 CONTAINS
@@ -943,6 +928,21 @@ CONTAINS
 
 
    END SUBROUTINE DriverCleanup
+
+   subroutine CheckCallErr(RoutineName)
+      character(*), intent(in) :: RoutineName
+      if (ErrStat > ErrID_None) then
+         call WrScr( trim(ErrMsg) )
+         if ( ErrStat >= AbortErrLev ) then
+            call DriverCleanup()
+            call ProgAbort( ErrMsg )
+         elseif ( IfWDriver_Verbose >= 7_IntKi ) then
+            call WrScr(NewLine//' '//trim(RoutineName)//' returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
+         endif
+      elseif ( IfWDriver_Verbose >= 5_IntKi ) then
+         CALL WrScr(NewLine//trim(RoutineName)//' CALL returned without errors.'//NewLine)
+      endif
+   end subroutine CheckCallErr
 
 
 END PROGRAM InflowWind_Driver

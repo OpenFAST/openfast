@@ -37,6 +37,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: PropSetsXCol    = 10                    ! Number of columns in XPropSets (PropSetID,YoungE,ShearG,MatDens,XsecA,XsecAsx,XsecAsy,XsecJxx,XsecJyy,XsecJ0)
   INTEGER(IntKi),   PARAMETER  :: PropSetsCCol    = 5                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0)
   INTEGER(IntKi),   PARAMETER  :: PropSetsRCol    = 2                     ! Number of columns in RigidPropSet (PropSetID, MatDens)
+  INTEGER(IntKi),   PARAMETER  :: PropSetsSCol    = 22                    ! Number of columns in SpringPropSet (PropSetID, k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k33, k34, k35, k36, k44, k45, k46, k55, k56, k66)
   INTEGER(IntKi),   PARAMETER  :: COSMsCol        = 10                    ! Number of columns in (cosine matrices) COSMs (COSMID,COSM11,COSM12,COSM13,COSM21,COSM22,COSM23,COSM31,COSM32,COSM33)
   INTEGER(IntKi),   PARAMETER  :: CMassCol        = 11                    ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ, Optional:JMXY,JMXZ,JMYZ,CGX,CGY,CGZ)
   ! Indices in Members table
@@ -60,6 +61,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idMemberCable      = 2
   INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
   INTEGER(IntKi),   PARAMETER  :: idMemberBeamArb    = 4
+  INTEGER(IntKi),   PARAMETER  :: idMemberSpring     = 5
 
   ! Types of Boundary Conditions
   INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11 ! Fixed BC
@@ -374,7 +376,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
             ! Check that rigid links are not connected to the interface
             iInterf = FINDLOCI(p%Nodes_I(:,1), iJoint )
             if (iInterf>=1) then
-               CALL WrScr('[WARNING] There might be a bug when rigid links are connected to the interface nodes (mostly if cables are involved). The problematic member is MemberID='//TRIM(Num2LStr(mID))//' (which is a rigid link) involving joint JointID='// TRIM(Num2LStr(JointID))// ' (which is in an interface joint).')
+               CALL WrScr('[WARNING] There might be a bug when one beam and one rigid link are connected to the interface nodes. The problematic member might be MemberID='//TRIM(Num2LStr(mID))//' (which is a rigid link) involving joint JointID='// TRIM(Num2LStr(JointID))// ' (which is in an interface joint).')
             endif
          endif
       enddo
@@ -394,6 +396,9 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
          else if (mType==idMemberBeamArb) then
             sType='Member arbitrary cross-section property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsX(:,1), Init%Members(iMem, n) )
+         else if (mType==idMemberSpring) then
+            sType='Spring property'
+            p%Elems(iMem,n) = FINDLOCI(Init%PropSetsS(:,1), Init%Members(iMem, n) )
          else
             ! Should not happen
             print*,'Element type unknown',mType
@@ -403,7 +408,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
          if (mType/=idMemberBeamCirc) then
              if (Init%Members(iMem, iMProp)/=Init%Members(iMem, iMProp+1)) then
                 ! NOTE: for non circular beams, we could just check that E, rho, G are the same for both properties
-                call Fatal('Property IDs should be the same at both joints for arbitrary beams, rigid links, and cables. Check member with ID: '//TRIM(Num2LStr(Init%Members(iMem,1))))
+                call Fatal('Property IDs should be the same at both joints for arbitrary beams, rigid links, cables, and springs. Check member with ID: '//TRIM(Num2LStr(Init%Members(iMem,1))))
                 return
              endif
          endif
@@ -454,7 +459,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER                       :: iDirCos
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: CreateNewProp
-   INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeamCirc, nMemberBeamArb !< Number of memebers per type
+   INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberSpring, nMemberBeamCirc, nMemberBeamArb !< Number of members per type
    INTEGER(IntKi)                :: eType !< Element Type
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
@@ -473,9 +478,10 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    nMemberCable    = count(Init%Members(:,iMType) == idMemberCable)
    nMemberRigid    = count(Init%Members(:,iMType) == idMemberRigid)
    nMemberBeamArb  = count(Init%Members(:,iMType) == idMemberBeamArb)
-   Init%NElem = (nMemberBeamCirc + nMemberBeamArb)*Init%NDiv + nMemberCable + nMemberRigid  ! NOTE: only Beams are divided
-   IF ( (nMemberBeamCirc+nMemberRigid+nMemberCable+nMemberBeamArb) /= size(Init%Members,1)) then
-      CALL Fatal(' Member list contains an element which is not a beam, a cable or a rigid link'); return
+   nMemberSpring   = count(Init%Members(:,iMType) == idMemberSpring)
+   Init%NElem = (nMemberBeamCirc + nMemberBeamArb)*Init%NDiv + nMemberCable + nMemberRigid + nMemberSpring ! NOTE: only Beams are divided
+   IF ( (nMemberBeamCirc+nMemberRigid+nMemberCable+nMemberBeamArb+nMemberSpring) /= size(Init%Members,1)) then
+      CALL Fatal(' Member list contains an element which is not a beam, a cable, a rigid link or a spring'); return
    ENDIF
 
    ! Total number of nodes - Depends on division and number of nodes per element
@@ -569,8 +575,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           eType = TempMembers(I, iMType  )
           iDirCos = TempMembers(I,  iMDirCosID)
           
-          if (eType==idMemberRigid .OR. eType==idMemberCable) then
-             ! --- Cables and rigid links are not subdivided and have same prop at nodes
+          if (eType==idMemberRigid .OR. eType==idMemberCable .OR. eType==idMemberSpring) then
+             ! --- Cables, rigid links and springs are not subdivided and have same prop at nodes
              ! No need to create new properties or new nodes
              Init%MemberNodes(I, 1) = Node1
              Init%MemberNodes(I, 2) = Node2
@@ -681,13 +687,16 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
        Init%PropsB(1:Init%NPropB, 1:PropSetsBCol) = TempProps(1:Init%NPropB, 1:PropSetsBCol)
     endif
 
-    ! --- Cables and rigid link properties (these cannot be subdivided, so direct copy of inputs)
+    ! --- Cables, rigid link and spring properties (these cannot be subdivided, so direct copy of inputs)
     Init%NPropC = Init%NPropSetsC
     Init%NPropR = Init%NPropSetsR
+    Init%NPropS = Init%NPropSetsS
     CALL AllocAry(Init%PropsC, Init%NPropC, PropSetsCCol, 'Init%PropsCable', ErrStat2, ErrMsg2); if(Failed()) return
     CALL AllocAry(Init%PropsR, Init%NPropR, PropSetsRCol, 'Init%PropsRigid', ErrStat2, ErrMsg2); if(Failed()) return
+    CALL AllocAry(Init%PropsS, Init%NPropS, PropSetsSCol, 'Init%PropsSpring', ErrStat2, ErrMsg2); if(Failed()) return
     Init%PropsC(1:Init%NPropC, 1:PropSetsCCol) = Init%PropSetsC(1:Init%NPropC, 1:PropSetsCCol)
     Init%PropsR(1:Init%NPropR, 1:PropSetsRCol) = Init%PropSetsR(1:Init%NPropR, 1:PropSetsRCol)
+    Init%PropsS(1:Init%NPropS, 1:PropSetsSCol) = Init%PropSetsS(1:Init%NPropS, 1:PropSetsSCol)
 
     CALL CleanUp_Discrt()
 
@@ -818,6 +827,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    REAL(FEKi)               :: DirCos(3, 3)              ! direction cosine matrices
    REAL(ReKi)               :: L                         ! length of the element
    REAL(ReKi)               :: r1, r2, t, Iyy, Jzz, Ixx, A, kappa, kappa_x, kappa_y, nu, ratioSq, D_inner, D_outer
+   REAL(ReKi)               :: k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k33, k34, k35, k36, k44, k45, k46, k55, k56, k66
    LOGICAL                  :: shear
    INTEGER(IntKi)           :: eType !< Member type
    REAL(ReKi)               :: Point1(3), Point2(3) ! (x,y,z) positions of two nodes making up an element
@@ -844,7 +854,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       Point2 = Init%Nodes(N2,2:4)
 
       if (iDirCos/=-1) then
-         CALL GetDirCos(Point1, Point2, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! sets L
+         CALL GetDirCos(Point1, Point2, eType, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! sets L
          
          ! overwrites direction cosines
          DirCos(1, 1) =  Init%COSMs(iDirCos, 2)
@@ -858,7 +868,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          DirCos(3, 3) =  Init%COSMs(iDirCos, 10)
 
       else
-         CALL GetDirCos(Point1, Point2, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
+         CALL GetDirCos(Point1, Point2, eType, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
       endif
 
 
@@ -878,7 +888,28 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       p%ElemProps(i)%Area    = -9.99e+36
       p%ElemProps(i)%Rho     = -9.99e+36
       p%ElemProps(i)%T0      = -9.99e+36
-
+      p%ElemProps(i)%k11     = -9.99e+36
+      p%ElemProps(i)%k12     = -9.99e+36
+      p%ElemProps(i)%k13     = -9.99e+36
+      p%ElemProps(i)%k14     = -9.99e+36
+      p%ElemProps(i)%k15     = -9.99e+36
+      p%ElemProps(i)%k16     = -9.99e+36
+      p%ElemProps(i)%k22     = -9.99e+36
+      p%ElemProps(i)%k23     = -9.99e+36
+      p%ElemProps(i)%k24     = -9.99e+36
+      p%ElemProps(i)%k25     = -9.99e+36
+      p%ElemProps(i)%k26     = -9.99e+36
+      p%ElemProps(i)%k33     = -9.99e+36
+      p%ElemProps(i)%k34     = -9.99e+36
+      p%ElemProps(i)%k35     = -9.99e+36
+      p%ElemProps(i)%k36     = -9.99e+36
+      p%ElemProps(i)%k44     = -9.99e+36
+      p%ElemProps(i)%k45     = -9.99e+36
+      p%ElemProps(i)%k46     = -9.99e+36
+      p%ElemProps(i)%k55     = -9.99e+36
+      p%ElemProps(i)%k56     = -9.99e+36
+      p%ElemProps(i)%k66     = -9.99e+36
+  
       ! --- Properties that are specific to some elements
       if (eType==idMemberBeamCirc) then
          E   = Init%PropsB(P1, 2) ! TODO E2 
@@ -972,7 +1003,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%YoungE = Init%PropsC(P1, 2)/1    ! Young's modulus, E=EA/A  [N/m^2]
          p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Material density [kg/m3]
          p%ElemProps(i)%T0     = Init%PropsC(P1, 4)      ! Pretension force [N]
-         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05) ! For plotting only
+         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05_ReKi) ! For plotting only
 
       else if (eType==idMemberRigid) then
          if (DEV_VERSION) then
@@ -980,8 +1011,36 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          endif
          p%ElemProps(i)%Area   = 1                  ! Arbitrary set to 1
          p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)
-         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05) ! For plotting only
+         p%ElemProps(i)%D      = min(sqrt(1/Pi)*4, L*0.05_ReKi) ! For plotting only
 
+      else if (eType==idMemberSpring) then
+         if (DEV_VERSION) then
+            print*,'Member',I,'is a spring element'
+         endif
+         p%ElemProps(i)%Area = 0        ! Spring elements have no area
+         p%ElemProps(i)%Rho  = 0        ! Spring elements have no mass
+         p%ElemProps(i)%k11  = Init%PropsS(P1, 2)
+         p%ElemProps(i)%k12  = Init%PropsS(P1, 3)
+         p%ElemProps(i)%k13  = Init%PropsS(P1, 4)
+         p%ElemProps(i)%k14  = Init%PropsS(P1, 5)
+         p%ElemProps(i)%k15  = Init%PropsS(P1, 6)
+         p%ElemProps(i)%k16  = Init%PropsS(P1, 7)
+         p%ElemProps(i)%k22  = Init%PropsS(P1, 8)
+         p%ElemProps(i)%k23  = Init%PropsS(P1, 9)
+         p%ElemProps(i)%k24  = Init%PropsS(P1,10)
+         p%ElemProps(i)%k25  = Init%PropsS(P1,11)
+         p%ElemProps(i)%k26  = Init%PropsS(P1,12)
+         p%ElemProps(i)%k33  = Init%PropsS(P1,13)
+         p%ElemProps(i)%k34  = Init%PropsS(P1,14)
+         p%ElemProps(i)%k35  = Init%PropsS(P1,15)
+         p%ElemProps(i)%k36  = Init%PropsS(P1,16)
+         p%ElemProps(i)%k44  = Init%PropsS(P1,17)
+         p%ElemProps(i)%k45  = Init%PropsS(P1,18)
+         p%ElemProps(i)%k46  = Init%PropsS(P1,19)
+         p%ElemProps(i)%k55  = Init%PropsS(P1,20)
+         p%ElemProps(i)%k56  = Init%PropsS(P1,21)
+         p%ElemProps(i)%k66  = Init%PropsS(P1,22)
+         
       else
          ! Should not happen
          print*,'Element type unknown',eType
@@ -1167,10 +1226,12 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
    CALL AllocAry( Init%K, p%nDOF, p%nDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, p%nDOF, p%nDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( p%FG,   p%nDOF,          'p%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( p%FG,   p%nDOF,          'p%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector with line pretension
+   CALL AllocAry( p%FC,   p%nDOF,          'p%FC'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! line pretension only
    Init%K  = 0.0_FEKi
    Init%M  = 0.0_FEKi
    p%FG    = 0.0_FEKi
+   p%FC    = 0.0_FEKi
 
    ! loop over all elements, compute element matrices and assemble into global matrices
    DO i = 1, Init%NElem
@@ -1181,12 +1242,16 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
 
       ! --- Assembly in global unconstrained system
       IDOF = p%ElemsDOF(1:12, i)
-      p%FG     ( IDOF )  = p%FG( IDOF )   + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
+      p%FC     ( IDOF )  = p%FC( IDOF ) + FCe(1:12)             ! Note: Pretension cable forces only
+      p%FG     ( IDOF )  = p%FG( IDOF ) + FGe(1:12)             ! Note: Gravity forces only
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO
       
    ! Add concentrated mass to mass matrix
+   CALL AllocAry( p%CMassNode,   Init%nCMass,    'p%CMassNode',   ErrStat2, ErrMsg2); if(Failed()) return;
+   CALL AllocAry( p%CMassWeight, Init%nCMass,    'p%CMassWeight', ErrStat2, ErrMsg2); if(Failed()) return;
+   CALL AllocAry( p%CMassOffset, Init%nCMass, 3, 'p%CMassOffset', ErrStat2, ErrMsg2); if(Failed()) return;
    DO I = 1, Init%nCMass
       iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
       ! Safety check (otherwise we might have more than 6 DOF)
@@ -1209,14 +1274,20 @@ SUBROUTINE AssembleKM(Init, p, ErrStat, ErrMsg)
             Init%M(jGlob, kGlob) = Init%M(jGlob, kGlob) + M66(J,K)
          ENDDO
       ENDDO
-   ENDDO ! Loop on concentrated mass
 
-   ! Add concentrated mass induced gravity force
-   DO I = 1, Init%nCMass
-       iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
-       iGlob = p%NodesDOF(iNode)%List(3) ! uz
-       p%FG(iGlob) = p%FG(iGlob) - Init%CMass(I, 2)*Init%g 
-   ENDDO
+      ! Add concentrated mass contribution to gravity force and moment
+      iGlob = p%NodesDOF(iNode)%List(3); p%FG(iGlob) = p%FG(iGlob) - m*Init%g     ! uz: -mg
+      iGlob = p%NodesDOF(iNode)%List(4); p%FG(iGlob) = p%FG(iGlob) - m*Init%g * y ! tx: -mgy
+      iGlob = p%NodesDOF(iNode)%List(5); p%FG(iGlob) = p%FG(iGlob) + m*Init%g * x ! ty:  mgx
+
+      ! Save concentrated mass information for GuyanLoadCorrection
+      p%CMassNode(I)     = iNode
+      p%CMassWeight(I)   = m*Init%g
+      p%CMassOffset(I,1) = x
+      p%CMassOffset(I,2) = y
+      p%CMassOffset(I,3) = z
+
+   ENDDO ! Loop on concentrated mass
 
    CALL CleanUp_AssembleKM()
    
@@ -2283,7 +2354,11 @@ SUBROUTINE ElemM(ep, Me)
          CALL ElemM_Cable(ep%Area, real(ep%Length,FEKi), ep%rho, ep%DirCos, Me)
          !CALL ElemM_(A, L, rho, DirCos, Me)
       endif
-   endif
+   
+   else if (ep%eType==idMemberSpring) then
+         Me=0.0_FEKi     ! Spring element has no mass associated. Consider using a lumped mass at JointID, if desired.
+   endif   
+   
 END SUBROUTINE ElemM
 
 SUBROUTINE ElemK(ep, Ke)
@@ -2298,6 +2373,10 @@ SUBROUTINE ElemK(ep, Ke)
 
    else if (ep%eType==idMemberRigid) then
       Ke = 0.0_FEKi
+
+   else if (ep%eType==idMemberSpring) then
+      CALL ElemK_Spring(eP%k11, eP%k12, eP%k13, eP%k14, eP%k15, eP%k16, eP%k22, eP%k23, eP%k24, eP%k25, eP%k26, eP%k33, eP%k34, eP%k35, eP%k36, eP%k44, eP%k45, eP%k46, eP%k55, eP%k56, eP%k66, eP%DirCos, Ke)
+  
    endif
 END SUBROUTINE ElemK
 
@@ -2312,6 +2391,8 @@ SUBROUTINE ElemF(ep, gravity, Fg, Fo)
       CALL ElemF_Cable(ep%T0, ep%DirCos, Fo)
    else if (ep%eType==idMemberRigid) then
       Fo(1:12)=0.0_FEKi
+   else if (ep%eType==idMemberSpring) then
+      Fo(1:12)=0.0_FEKi  
    endif
    CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )
 END SUBROUTINE ElemF

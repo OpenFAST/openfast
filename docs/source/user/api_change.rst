@@ -9,7 +9,125 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v3.5.4 to OpenFAST v3.5.5 
+
+
+OpenFAST v3.5.5 to OpenFAST 4.0.0
+---------------------------------
+
+The HydroDyn module was split into HydroDyn and SeaState.  This results in a
+completely new input file for SeaState, and complete revision of the HydroDyn
+input file.  See examples in the regression tests for the new formats.
+
+New modules AeroDisk (see :numref:`ADsk`), Simplified-ElastoDyn (see
+:numref:`SED`), and SeaState (see :numref:`SeaSt`) were added.  See
+documentation on those modules for exmple input files.
+
+============================================= ======== ==================== ========================================================================================================================================================================================================
+Modified in OpenFAST `dev`                             
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ========================================================================================================================================================================================================
+OpenFAST                                      13       CompElast            3   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades; 3=Simplified ElastoDyn}
+OpenFAST                                      15       CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
+OpenFAST                                      17       CompSeaSt            0   CompSeaSt       - Compute sea state information (switch) {0=None; 1=SeaState}
+OpenFAST                                      41       SeaStFile            "unused"      SeaStFile       - Name of file containing sea state input parameters (quoted string)
+AeroDyn                                        all                          Complete restructuring of input file (see notes below)
+AeroDyn Aeroacoustics                         11\*     TI                   0.1 TI   - Rotor-incident wind turbulence intensity (-) [Only used if TiCalcMeth == 1]
+AeroDyn Aeroacoustics                         12\*     avgV                 8 avgV   - Average wind speed used to compute the section-incident turbulence intensity (m/s) [Only used if TiCalcMeth == 1]
+HydroDyn                                       all                          Complete restructuring of input file
+SeaState                                       all                          New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
+AeroDisk                                       all                          New module
+Simplified-ElastoDyn                           all                          New module
+ElastoDyn                                     84       PtfmXYIner           0   PtfmXYIner  - Platform xy moment of inertia about the platform CM (=-int(xydm)) (kg m^2)
+ElastoDyn                                     84       PtfmYZIner           0   PtfmYZIner  - Platform yz moment of inertia about the platform CM (=-int(yzdm)) (kg m^2)
+ElastoDyn                                     84       PtfmXZIner           0   PtfmXZIner  - Platform xz moment of inertia about the platform CM (=-int(xzdm)) (kg m^2)
+ElastoDyn                                     101                           ---------------------- YAW-FRICTION --------------------------------------------
+ElastoDyn                                     102      YawFrctMod             0   YawFrctMod  - Yaw-friction model {0: none, 1: friction independent of yaw-bearing force and bending moment, 2: friction with Coulomb terms depending on yaw-bearing force and bending moment...
+ElastoDyn                                     103      M_CSmax              300   M_CSmax     - Maximum static Coulomb friction torque (N-m) [M_CSmax when YawFrctMod=1; abs(Fz)*M_CSmax when YawFrctMod=2 and Fz<0]
+ElastoDyn                                     104      M_FCSmax               0   M_FCSmax    - Maximum static Coulomb friction torque proportional to yaw bearing shear force (N-m) [sqrt(Fx^2+Fy^2)*M_FCSmax; only used when YawFrctMod=2]
+ElastoDyn                                     105      M_MCSmax               0   M_MCSmax    - Maximum static Coulomb friction torque proportional to yaw bearing bending moment (N-m) [sqrt(Mx^2+My^2)*M_MCSmax; only used when YawFrctMod=2]
+ElastoDyn                                     106      M_CD                  40   M_CD        - Dynamic Coulomb friction moment (N-m) [M_CD when YawFrctMod=1; abs(Fz)*M_CD when YawFrctMod=2 and Fz<0]
+ElastoDyn                                     107      M_FCD                  0   M_FCD       - Dynamic Coulomb friction moment proportional to yaw bearing shear force (N-m) [sqrt(Fx^2+Fy^2)*M_FCD; only used when YawFrctMod=2]
+ElastoDyn                                     108      M_MCD                  0   M_MCD       - Dynamic Coulomb friction moment proportional to yaw bearing bending moment (N-m) [sqrt(Mx^2+My^2)*M_MCD; only used when YawFrctMod=2]
+ElastoDyn                                     109      sig_v                  0   sig_v       - Linear viscous friction coefficient (N-m/(rad/s))
+ElastoDyn                                     110      sig_v2                 0   sig_v2      - Quadratic viscous friction coefficient (N-m/(rad/s)^2)
+ElastoDyn                                     111      OmgCut                 0   OmgCut      - Yaw angular velocity cutoff below which viscous friction is linearized (rad/s)
+ElastoDyn blade file                          15                            Removal of the `PitchAxis` input column
+InflowWind driver                             27                            ----  Output VTK slices  ------------------------------------------------------
+InflowWind driver                             28       NOutWindXY           0            NOutWindXY    -- Number of XY planes for output <RootName>.XY<loc>.t<n>.vtk (-) [0 to 9]
+InflowWind driver                             29       OutWindZ             90           OutWindZ      -- Z coordinates of XY planes for output (m) [1 to NOutWindXY] [unused for NOutWindXY=0]
+MoorDyn                                       --                            New optional sections (freeform file).  See MoorDyn documentation for details
+SubDyn                                        8         --removed--         removed: GuyanLoadCorrection
+SubDyn                                        12        --removed--         removed: CBMod
+SubDyn                                        56\*                                              ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------
+SubDyn                                        57\*     NSpringPropSets  0                         - Number of spring properties
+SubDyn                                        58\*                                              PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66
+SubDyn                                        59\*                                              (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)  
+FAST.Farm                                     16       WrMooringVis         true          WrMooringVis       - Write shared mooring visualization, at DT_Mooring timestep (-) [only used for Mod_SharedMooring=3]
+FAST.Farm                                     48\*     RotorDiamRef         125           RotorDiamRef       - Reference turbine rotor diameter for wake calculations (m) [>0.0]
+FAST.Farm                                     53\*     k_vAmb               DEFAULT       k_vAmb        - Calibrated parameters for the influence of the ambient turbulence in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.05, 1.0, 0.0, 1.0, 0.01]
+FAST.Farm                                     54\*     kvShr                DEFAULT       k_vShr        - Calibrated parameters for the influence of the shear layer in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.016, 0.2, 3.0, 25.0, 0.1]
+FAST.Farm                                     55-62\*  --removed--
+FAST.Farm                                     69\*                          --- WAKE-ADDED TURBULENCE ---
+FAST.Farm                                     70\*      WAT                 2                  WAT                - Switch between wake-added turbulence box options {0: no wake added turbulence, 1: predefined turbulence box, 2: user defined turbulence box} (switch)
+FAST.Farm                                     71\*      WAT_BoxFile         "../WAT_MannBoxDB/FFDB_D100_512x512x64.u" WAT_BoxFile  - Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined) (quoted string)
+FAST.Farm                                     72\*      WAT_NxNyNz          512, 512, 64       WAT_NxNyNz         - Number of points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2, derived value if WAT=1] (-)
+FAST.Farm                                     73\*      WAT_DxDyDz          5.0, 5.0, 5.0      WAT_DxDyDz         - Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2, derived value if WAT=1] (m)
+FAST.Farm                                     74\*      WAT_ScaleBox        default            WAT_ScaleBox       - Flag to scale the input turbulence box to zero mean and unit standard deviation at every node [DEFAULT=False] (flag)
+FAST.Farm                                     75\*      WAT_k_Def           default            WAT_k_Def          - Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]
+FAST.Farm                                     76\*      WAT_k_Grad          default            WAT_k_Grad         - Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]                   
+============================================= ======== ==================== ========================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+\*\* The AeroDyn 14 module has been removed and replaced with AeroDisk.  AeroDyn15 renamed to AeroDyn
+
+New Modules
+~~~~~~~~~~~
+
+- AeroDisk             -- reduced order actuator disk model  (see :numref:`ADsk`)
+- Simplified ElastoDyn -- a reduced order structural model with only yaw and rotor speed degrees of freedom (see :numref:`SED`)
+- SeaState             -- wave dynamics calculations (previously part of HydroDyn)
+
+
+.. _api_change_ad4x:
+
+AeroDyn changes starting from v4.x
+----------------------------------
+
+The table below shows how to convert from the Old AeroDyn inputs to the new AeroDyn inputs.
+Additional ressources:
+
+- The AeroDyn input file description (:numref:`ad_input`) for more details on the new inputs.
+
+- The `discussion <https://github.com/OpenFAST/openfast/discussions/1895>`__ that led to these new inputs.
+
+- An example of AeroDyn input file at it's latest format: :download:`Example <aerodyn/examples/ad_primary_example.dat>`: 
+
+- A directory with a working example: `here <https://github.com/OpenFAST/r-test/blob/dev/modules/aerodyn/ad_BAR_OLAF/OpenFAST_BAR_00_AeroDyn.dat>`__
+
+- An example python converter (v3.5.x to 4.x): `here <https://github.com/OpenFAST/openfast_toolbox/blob/dev/openfast_toolbox/converters/examples/Main_AD30_AD40.py>`__
+
+
+=========================== ========================================================= 
+Old inputs                  Corresponding new inputs                                  
+=========================== ========================================================= 
+`WakeMod=0`                 `Wake_Mod=0`                                              
+`WakeMod=1` ("BEM")         `Wake_Mod=1` and `DBEMT_Mod=0` and `BEM_Mod=1`            
+`WakeMod=2` ("DBEMT")       `Wake_Mod=1` and `DBEMT_Mod={1,2,3}`                      
+`WakeMod=3` ("OLAF")        `Wake_Mod=3`                                              
+`AFAeroMod=1`               `UA_Mod=0` and `AoA34=False`                              
+`AFAeroMod=2`               `UA_Mod>0` and `AoA34=True` and `UA_Mod=UAMod`
+`FrozenWake=True`           `DBEMT_Mod=-1`                                            
+`FrozenWake=False`          `DBEMT_Mod=0` (quasi-steady) or `DBEMT_Mod>0` (dynamic)   
+`SkewMod=2` (Glauert)       `Skew_Mod=1` and `SkewRedistr_Mod=1`                      
+`SkewMod=0` (Orthogonal)    `Skew_Mod=-1`                                             
+`SkewModFactor`             `SkewRedistrFactor`
+`UAMod={2-7}`               `UA_Mod={2-7}` and `AoA34=True`                           
+=========================== ========================================================= 
+
+
+OpenFAST v3.5.4 to OpenFAST v3.5.5
 ----------------------------------
 
 No input file changes were made.
@@ -39,6 +157,7 @@ OpenFAST v3.5.0 to OpenFAST v3.5.1
 No input file changes were made.  Some input files now include additional
 output channels:  AeroDyn nodal outputs for another coordinate system, new
 MoorDyn output names (Connect changed to Point).
+
 
 
 OpenFAST v3.4.0 to OpenFAST v3.5.0 
@@ -76,6 +195,23 @@ OpenFAST v3.4.0 to OpenFAST v3.4.1
 Restored the AeroDyn channel names with `Aero` in the name.  These had be
 changed to `Fld` in v3.4.0 which caused headaches for users.  The `Fld` names
 are now aliases to the `Aero` names.
+
+
+OpenFAST v3.4.0 to OpenFAST dev
+----------------------------------
+
+AeroDyn14 has been removed!
+
+============================================= ==== ================= ========================================================================================================================================================================================================
+Changed in OpenFAST `dev`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ========================================================================================================================================================================================================
+OpenFAST                                      15   CompAero             2   CompAero        - Compute aerodynamic loads (switch) {0=None; 2=AeroDyn v15}
+============================================= ==== ================= ========================================================================================================================================================================================================
+
+
+
 
 
 OpenFAST v3.3.0 to OpenFAST v3.4.0 
@@ -512,7 +648,7 @@ InflowWind      49    InitPosition(x)  XOffset        0                 XOffset 
 OpenFAST v2.3.0 to OpenFAST v2.4.0
 ----------------------------------
 
-Additional nodal output channels added for :ref:`AeroDyn15<AD-Nodal-Outputs>`, :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
+Additional nodal output channels added for :ref:`AeroDyn<AD-Nodal-Outputs>`, :ref:`BeamDyn<BD-Nodal-Outputs>`, and :ref:`ElastoDyn<ED-Nodal-Outputs>`.
 
 ============== ==== ================== =============================================================================================================================================================================
 Added in OpenFAST v2.4.0

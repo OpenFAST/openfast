@@ -39,7 +39,8 @@ public :: IfW_SteadyWind_Init, &
 public :: Uniform_WriteHH, &
           Grid3D_WriteBladed, &
           Grid3D_WriteHAWC, &
-          Grid3D_WriteVTK
+          Grid3D_WriteVTK, &
+          Grid3D_WriteVTKsliceXY
 
 type(ProgDesc), parameter :: InflowWind_IO_Ver = ProgDesc('InflowWind_IO', '', '')
 
@@ -181,12 +182,8 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
    UF%RefHeight = InitInp%RefHt
    UF%RefLength = InitInp%RefLength
 
-   ! Read wind data from file or init input data
-   if (InitInp%UseInputFile) then
-      call ProcessComFile(InitInp%WindFileName, WindFileInfo, TmpErrStat, TmpErrMsg)
-   else
-      call NWTC_Library_CopyFileInfoType(InitInp%PassedFileData, WindFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
-   end if
+   ! Read wind data from file
+   call ProcessComFile(InitInp%WindFileName, WindFileInfo, TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -256,6 +253,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
          call SetErrStat(ErrID_Fatal, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       end if
    end do
+   if (ErrStat >= AbortErrLev) return
 
    !----------------------------------------------------------------------------
    ! Find out information on the timesteps and range
@@ -276,6 +274,24 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
       WindFileConstantDT = .false.
       WindFileDT = 0.0_ReKi
    end if
+
+   !----------------------------------------------------------------------------
+   ! Check that time is always increasing
+   !----------------------------------------------------------------------------
+
+   ! Check that last timestep is always increasing
+   if (UF%DataSize > 2) then
+      do I = 2, UF%DataSize
+         if (UF%Time(I)<=UF%Time(I-1)) then
+            TmpErrMsg = ' Time vector must always increase in the uniform wind file. Error around wind step ' &
+                        //TRIM(Num2LStr(I))//' at time '//TRIM(Num2LStr(UF%Time(I)))//' in wind file ' &
+                        //TRIM(InitInp%WindFileName)//'.'
+            call SetErrStat(ErrID_Fatal, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            exit
+         endif
+      end do
+      if (ErrStat >= AbortErrLev) return
+   endif
 
    !----------------------------------------------------------------------------
    ! Store wind file metadata
@@ -748,7 +764,7 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -972,7 +988,7 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
       write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
          TRIM(Num2LStr(G3D%GridBase))//' : '//TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2.0))//' ]'
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -1025,8 +1041,6 @@ subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
    character(*), intent(out)              :: ErrMsg
 
    character(*), parameter                :: RoutineName = "IfW_Grid4D_Init"
-   integer(IntKi)                         :: TmpErrStat
-   character(ErrMsgLen)                   :: TmpErrMsg
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1037,15 +1051,7 @@ subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
    G4D%pZero = InitInp%pZero
    G4D%TimeStart = 0.0_ReKi
    G4D%RefHeight = InitInp%pZero(3) + (InitInp%n(3)/2) * InitInp%delta(3)
-
-   ! uvw velocity components at x,y,z,t coordinates
-   call AllocAry(G4D%Vel, 3, G4D%n(1), G4D%n(2), G4D%n(3), G4D%n(4), &
-                 'External Grid Velocity', TmpErrStat, TmpErrMsg)
-   call SetErrStat(ErrStat, ErrMsg, TmpErrStat, TmpErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
-   ! Initialize velocities to zero
-   G4D%Vel = 0.0_SiKi
+   G4D%Vel => InitInp%Vel
 
 end subroutine
 
@@ -1403,7 +1409,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -2409,7 +2415,7 @@ subroutine Grid3D_PopulateWindFileDat(Grid3DField, FileName, WindType, HasTower,
    if (HasTower) then
       FileDat%ZRange = [0.0_Reki, Grid3DField%RefHeight + Grid3DField%ZHWid]
    else
-      FileDat%ZRange = [Grid3DField%GridBase, Grid3DField%GridBase + Grid3DField%ZHWid*2.0]
+      FileDat%ZRange = [Grid3DField%GridBase, Grid3DField%GridBase + Grid3DField%ZHWid*2.0_ReKi]
    end if
 
    FileDat%ZRange_Limited = .true.
@@ -2937,5 +2943,88 @@ subroutine Grid3D_WriteHAWC(G3D, FileRootName, unit, ErrStat, ErrMsg)
    end do
 
 end subroutine Grid3D_WriteHAWC
+
+
+!> This subroutine writes a VTK slice in the XY plane at a designated height (rounds to nearest point)
+!! This feature is mostly useful for testing when a grid is needed for comparison elsewhere
+subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, vtk_dir, XYslice_height, unit, ErrStat, ErrMsg)
+   type(Grid3DFieldType),  intent(in   )  :: G3D            !< Parameters
+   character(*),           intent(in   )  :: FileRootName   !< RootName for output files
+   character(*),           intent(in   )  :: vtk_dir        !< directory for vtk file for output files
+   real(ReKi),             intent(in   )  :: XYslice_height
+   integer(IntKi),         intent(in   )  :: unit           !< Error status of the operation
+   integer(IntKi),         intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),           intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter                :: RoutineName = 'Grid3D_WriteVTKsliceXY'
+   character(1024)                        :: RootPathName
+   character(1024)                        :: FileName
+   character(3)                           :: ht_str
+   character(8)                           :: t_str, t_fmt
+   integer                                :: it, ix, iy, iz, twidth
+   real(ReKi)                             :: time        !< time for this slice
+   real(ReKi)                             :: ht          !< nearest grid slice elevation
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   call GetPath(FileRootName, RootPathName)
+   RootPathName = trim(RootPathName)//PathSep//vtk_dir
+   call MkDir(trim(RootPathName))  ! make this directory if it doesn't already exist
+
+   ! get indices for this slice
+   iz    = nint((G3D%GridBase + XYslice_height)*G3D%InvDZ)
+   ht    = real(iz,ReKi) / G3D%InvDZ + G3D%GridBase         ! nearest height index
+   write(ht_str,'(i0.3)') nint(ht)
+
+   ! get width of string for time
+   twidth=ceiling(log10(real(G3D%NSteps)))
+   t_fmt='(i0.'//trim(Num2LStr(twidth))//')'
+
+   ! check for errors in slice height
+   if (iz <= 0_IntKi .or. iz > G3D%NZGrids) then
+      call SetErrStat(ErrID_Warn,"No grid points near XY slice height of "//trim(num2lstr(XYslice_height))//".  Skipping writing slice file.",ErrStat,ErrMsg,RoutineName)
+      return
+   endif
+
+   ! Loop through time steps
+   do it = 1, G3D%NSteps
+      time  = real(it - 1, ReKi)*G3D%DTime
+
+      ! time string
+      write(t_str,t_fmt) it
+
+      ! Create the output vtk file with naming <WindFilePath>/vtk/DisYZ.t<i>.vtk
+      FileName = trim(RootPathName)//PathSep//"DisXY.Z"//ht_str//".t"//trim(t_str)//".vtp"
+ 
+      ! see WrVTK_SP_header
+      call OpenFOutFile(unit, TRIM(FileName), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+ 
+      write (unit, '(A)') '# vtk DataFile Version 3.0'
+      write (unit, '(A)') "InflowWind XY Slice at T= "//trim(num2lstr(time))//" s"
+      write (unit, '(A)') 'ASCII'
+      write (unit, '(A)') 'DATASET STRUCTURED_POINTS'
+ 
+      ! Note: gridVals must be stored such that the left-most dimension is X
+      ! and the right-most dimension is Z (see WrVTK_SP_vectors3D)
+      write (unit, '(A,3(i5,1X))') 'DIMENSIONS ', G3D%NSteps, G3D%NYGrids, 1
+      write (unit, '(A,3(f10.2,1X))') 'ORIGIN ', G3D%InitXPosition+time*G3D%MeanWS, -G3D%YHWid, ht
+      write (unit, '(A,3(f10.2,1X))') 'SPACING ', -G3D%Dtime*G3D%MeanWS, 1.0_ReKi/G3D%InvDY, 0.0_ReKi
+      write (unit, '(A,i9)') 'POINT_DATA ', G3D%NSteps*G3D%NYGrids
+      write (unit, '(A)') 'VECTORS DisXY float'
+
+      do iy = 1, G3D%NYGrids
+         do ix = 1, G3D%NSteps      ! time and X are interchangeable
+            write (unit, '(3(f10.2,1X))') G3D%Vel(:, iy, iz, ix)
+         end do
+      end do
+
+      close (unit)
+   enddo
+end subroutine Grid3D_WriteVTKsliceXY
 
 end module InflowWind_IO

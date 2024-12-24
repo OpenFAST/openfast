@@ -69,7 +69,7 @@ verbose = args.verbose if args.verbose is False else True
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 ### Build the filesystem navigation variables for running the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
@@ -101,7 +101,7 @@ if not os.path.isdir(testBuildDirectory):
 
 ### Run inflowwind on the test case
 if not noExec:
-    caseInputFile = os.path.join(testBuildDirectory, "inflowWind_testDriver.py")
+    caseInputFile = os.path.join(testBuildDirectory, "py_ifw_driver.py")
     returnCode = openfastDrivers.runInflowwindDriverCase(caseInputFile, executable)
     if returnCode != 0:
         sys.exit(returnCode*10)

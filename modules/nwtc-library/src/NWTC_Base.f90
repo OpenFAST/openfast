@@ -81,5 +81,30 @@ MODULE NWTC_Base
 
    END TYPE DLL_Type
 
+contains
+
+   !=======================================================================
+   !> This routine sets the error status and error message for a routine      
+   !!  that may set non-AbortErrLev errors. It concatenates error messages
+   !!  and has the ability to provide a sort of traceback message of called
+   !!  routines (if this is called consistently).
+   !!  Modules in the FAST framework are recommended to use it.
+   subroutine SetErrStat (ErrStatLcl, ErrMessLcl, ErrStat, ErrMess, RoutineName)
+      
+      INTEGER(IntKi), INTENT(IN   )  :: ErrStatLcl   ! Error status of the operation
+      CHARACTER(*),   INTENT(IN   )  :: ErrMessLcl   ! Error message if ErrStat /= ErrID_None
+                                                                        
+      INTEGER(IntKi), INTENT(INOUT)  :: ErrStat      ! Error status of the operation
+      CHARACTER(*),   INTENT(INOUT)  :: ErrMess      ! Error message if ErrStat /= ErrID_None
+   
+      CHARACTER(*),   INTENT(IN   )  :: RoutineName  ! Name of the routine error occurred in
+      
+      IF ( ErrStatLcl /= ErrID_None ) THEN
+         IF (ErrStat /= ErrID_None) ErrMess = TRIM(ErrMess)//new_line('a')
+         ErrMess = TRIM(ErrMess)//TRIM(RoutineName)//':'//TRIM(ErrMessLcl)
+         ErrStat = MAX(ErrStat,ErrStatLcl)
+      END IF
+         
+   end subroutine    
 
 END MODULE NWTC_Base

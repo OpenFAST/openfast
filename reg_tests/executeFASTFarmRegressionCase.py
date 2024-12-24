@@ -54,6 +54,7 @@ parser.add_argument("atol", metavar="Absolute-Tolerance", type=float, nargs=1, h
 parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
+parser.add_argument("-compFile", dest="compFile", metavar="comparison-file", type=str, nargs='?', const='arg_was_not_given', help="File to use for comparison (no extension)")
 
 args = parser.parse_args()
 
@@ -66,12 +67,19 @@ atol = args.atol[0]
 plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
+# file to use for comparison (ending not included)
+if args.compFile is None:
+    compFile = "FAST.Farm"
+elif args.compFile == 'arg_was_not_given':
+    compFile = "FAST.Farm"
+else:
+    compFile = args.compFile
 
 # validate inputs
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 
 ### Build the filesystem navigation variables for running openfast on the test case
@@ -91,7 +99,7 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
-# create the local output directory if it does not already exist
+# create the local copy of the common files for FAST.Farm cases
 dst = os.path.join(buildDirectory, "5MW_Baseline")
 src = os.path.join(moduleDirectory, "5MW_Baseline")
 if not os.path.isdir(dst):
@@ -109,6 +117,13 @@ else:
         else:
             shutil.copy2(srcname, dstname)
 
+# create the local output directory for the turbulence library.
+dst = os.path.join(buildDirectory, "WAT_MannBoxDB")
+src = os.path.join(moduleDirectory, "WAT_MannBoxDB")
+if not os.path.isdir(dst):
+    rtl.copyTree(src, dst, excludeExt=excludeExt)
+
+# create the local output directory if it does not already exist
 if not os.path.isdir(testBuildDirectory):
     rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
 
@@ -122,8 +137,8 @@ if not noExec:
         sys.exit(returnCode*10)
     
 ### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, caseName + ".out")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".out")
+localOutFile = os.path.join(testBuildDirectory, compFile + ".out")
+baselineOutFile = os.path.join(targetOutputDirectory, compFile + ".out")
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 

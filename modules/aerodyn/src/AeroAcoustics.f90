@@ -55,7 +55,7 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(AA_OutputType),          intent(  out) :: y             !< Initial system outputs (outputs are not calculated;
                                                                 !!   only the output mesh is initialized)
    type(AA_MiscVarType),         intent(  out) :: m             !< Initial misc/optimization variables
-   real(DbKi),                   intent(inout) :: interval      !< Coupling interval in seconds: the rate that
+   real(DbKi),                   intent(in   ) :: interval      !< Coupling interval in seconds: the rate that
                                                                 !!   (1) AA_UpdateStates() is called in loose coupling &
                                                                 !!   (2) AA_UpdateDiscState() is called in tight coupling.
                                                                 !!   Input is the suggested time from the glue code;
@@ -177,17 +177,10 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%SpdSound         = InitInp%SpdSound
     p%HubHeight        = InitInp%HubHeight
     p%Lturb            = InputFileData%Lturb
-    p%dy_turb_in       = InputFileData%dy_turb_in
-    p%dz_turb_in       = InputFileData%dz_turb_in
     p%NrObsLoc         = InputFileData%NrObsLoc
     p%FTitle           = InputFileData%FTitle
-
-    IF ((InputFileData%TICalcMeth==1)) THEN
-        call AllocAry(p%TI_Grid_In,size(InputFileData%TI_Grid_In,1), size(InputFileData%TI_Grid_In,2),  'p%TI_Grid_In', errStat2, errMsg2); if(Failed()) return
-        p%TI_Grid_In=InputFileData%TI_Grid_In
-    ENDIF
-
-    p%AvgV=InputFileData%AvgV
+    p%TI               = InputFileData%TI
+    p%avgV             = InputFileData%avgV
 
     ! Copy AFInfo into AA module
     ! TODO Allocate AFInfo   and AFindx variables (DONE AND DONE) 
@@ -733,30 +726,9 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
    ELSE! interpolate from the user given ti values
        do i=1,p%NumBlades
            do j=1,p%NumBlNds
-               zi_a=ABS(m%LE_Location(3,j,i)  -  (FLOOR(p%HubHeight-maxval(p%BlSpn(:,1))))  )   /p%dz_turb_in
-               z0_a=floor(zi_a)
-               z1_a=ceiling(zi_a)
-               zd_a=zi_a-z0_a  
-               yi_a=ABS(m%LE_Location(2,j,i)  + maxval(p%BlSpn(:,1)) )  /p%dy_turb_in
-               y0_a=floor(yi_a)
-               y1_a=ceiling(yi_a)
-               yd_a=yi_a-y0_a
-               c00_a=(1.0_ReKi-yd_a)*p%TI_Grid_In(z0_a+1,y0_a+1)+yd_a*p%TI_Grid_In(z0_a+1,y1_a+1)
-               c10_a=(1.0_ReKi-yd_a)*p%TI_Grid_In(z1_a+1,y0_a+1)+yd_a*p%TI_Grid_In(z1_a+1,y1_a+1)
-               
-               ! This is the turbulence intensity of the wind at the location of the blade i at node j
-               ti_vx = (1.0_ReKi-zd_a)*c00_a+zd_a*c10_a
-               ! With some velocity triangles, we convert it into the incident turbulence intensity, i.e. the TI used by the Amiet model
-               U1 = u%Vrel(J,I) 
-               U2 = SQRT((p%AvgV*(1.+ti_vx))**2 + U1**2 - p%AvgV**2)
-               ! xd%TIVx(j,i)=(U2-U1)/U1
-               xd%TIVx(j,i)=p%AvgV*ti_vx/U1
-               
-               
-               if (i.eq.p%NumBlades) then 
-                   if (j.eq.p%NumBlNds) then 
-                   endif
-               endif
+               ! We scale the incident turbulence intensity by the ratio of average to incident wind speed
+                ! The scaled TI is used by the Amiet model
+                xd%TIVx(j,i)=p%TI*p%avgV/u%Vrel(J,I) 
            enddo
        enddo
    endif
@@ -1508,7 +1480,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,StallVa
     IF (ALPSTAR .GT. StallVal)                           ST2 = 4.72 * ST1
     ST1PRIM = (ST1+ST2)/2.                                                             ! Eq 33 from BPM Airfoil Self-noise and Prediction paper
     CALL A0COMP(RC,A0)      ! compute -20 dB dropout   (returns A0)
-    CALL A0COMP(3.*RC,A02)   ! compute -20 dB dropout for AoA > AoA_0   (returns A02)
+    CALL A0COMP(3.0_ReKi*RC,A02)   ! compute -20 dB dropout for AoA > AoA_0   (returns A02)
     ! Evaluate minimum and maximum 'a' curves at a0
     CALL AMIN(A0,AMINA0)
     CALL AMAX(A0,AMAXA0)
@@ -2332,7 +2304,7 @@ SUBROUTINE TBLTE_TNO(U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS,SPLALPH
     Mach = U  / p%SpdSound
 
     ! Directivity function
-    CALL DIRECTH_TE(REAL(Mach),THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(REAL(Mach,ReKi),THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsgn, RoutineName )
  
     do i_omega = 1,n_freq

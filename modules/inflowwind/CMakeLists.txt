@@ -19,10 +19,11 @@ if (GENERATE_TYPES)
   generate_f90_types(src/InflowWind_IO.txt ${CMAKE_CURRENT_LIST_DIR}/src/InflowWind_IO_Types.f90 -noextrap)
   generate_f90_types(src/Lidar.txt ${CMAKE_CURRENT_LIST_DIR}/src/Lidar_Types.f90)
   generate_f90_types(src/InflowWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/InflowWind_Types.f90)
+  generate_f90_types(src/InflowWind_Driver_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/InflowWind_Driver_Types.f90 -noextrap)
 endif()
 
 # InflowWind object library
-add_library(ifwlib 
+add_library(ifwlib STATIC
   src/IfW_FlowField_Types.f90
   src/IfW_FlowField.f90
   src/InflowWind_IO_Types.f90

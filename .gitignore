@@ -48,6 +48,7 @@ vs-build/
 # backup files
 *.asv
 ~$*.xlsx
+.*.swp
 
 # LaTeX compiling files
 *.aux
@@ -57,3 +58,7 @@ vs-build/
 #Simulink cache files
 varcache
 *.slxc
+
+# Python cache files
+openfast_io/dist/
+openfast_io/openfast_io/_version.py

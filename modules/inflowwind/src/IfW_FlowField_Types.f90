@@ -41,9 +41,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: User_FieldType = 5      ! User FieldType configured by the user [-]
 ! =========  UniformFieldType  =======
   TYPE, PUBLIC :: UniformFieldType
-    REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
-    REAL(ReKi)  :: RefLength      !< reference length used to scale the linear shear [meters]
-    INTEGER(IntKi)  :: DataSize      !< size of data in HH file [-]
+    REAL(ReKi)  :: RefHeight = 0.0_ReKi      !< reference height; used to center the wind [meters]
+    REAL(ReKi)  :: RefLength = 0.0_ReKi      !< reference length used to scale the linear shear [meters]
+    INTEGER(IntKi)  :: DataSize = 0_IntKi      !< size of data in HH file [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Time      !< HH time array [seconds]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelH      !< HH horizontal wind speed [meters/sec]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelHDot      !< Derivative of HH horizontal wind speed wrt time [meters/sec]
@@ -65,31 +65,31 @@ IMPLICIT NONE
 ! =======================
 ! =========  UniformField_Interp  =======
   TYPE, PUBLIC :: UniformField_Interp
-    REAL(ReKi)  :: VelH      !< HH horizontal wind speed [meters/sec]
-    REAL(ReKi)  :: VelHDot      !< derivative of HH horizontal wind speed wrt Time [meters/sec]
-    REAL(ReKi)  :: VelV      !< HH vertical wind speed, including tower shadow [meters/sec]
-    REAL(ReKi)  :: VelVDot      !< derivative of HH vertical wind speed wrt Time [meters/sec]
-    REAL(ReKi)  :: VelGust      !< HH wind gust speed [-]
-    REAL(ReKi)  :: VelGustDot      !< derivative of HH wind gust speed wrt Time [-]
-    REAL(ReKi)  :: AngleH      !< HH wind direction angle [degrees]
-    REAL(ReKi)  :: AngleHDot      !< derivative of HH wind direction angle wrt Time [degrees]
-    REAL(ReKi)  :: AngleV      !< HH upflow angle [degrees]
-    REAL(ReKi)  :: AngleVDot      !< derivative of HH upflow angle wrt Time [degrees]
-    REAL(ReKi)  :: ShrH      !< HH horizontal linear shear [-]
-    REAL(ReKi)  :: ShrHDot      !< derivative of HH horizontal linear shear wrt Time [-]
-    REAL(ReKi)  :: ShrV      !< HH vertical shear exponent [-]
-    REAL(ReKi)  :: ShrVDot      !< derivative of HH vertical shear exponent wrt Time [-]
-    REAL(ReKi)  :: LinShrV      !< HH vertical linear shear [seconds]
-    REAL(ReKi)  :: LinShrVDot      !< derivative of HH vertical linear shear wrt Time [seconds]
-    REAL(ReKi)  :: CosAngleH      !< Horizontal angle components [-]
-    REAL(ReKi)  :: SinAngleH      !< Horizontal angle components [-]
-    REAL(ReKi)  :: CosAngleV      !< Vertical angle components [-]
-    REAL(ReKi)  :: SinAngleV      !< Vertical angle components [-]
+    REAL(ReKi)  :: VelH = 0.0_ReKi      !< HH horizontal wind speed [meters/sec]
+    REAL(ReKi)  :: VelHDot = 0.0_ReKi      !< derivative of HH horizontal wind speed wrt Time [meters/sec]
+    REAL(ReKi)  :: VelV = 0.0_ReKi      !< HH vertical wind speed, including tower shadow [meters/sec]
+    REAL(ReKi)  :: VelVDot = 0.0_ReKi      !< derivative of HH vertical wind speed wrt Time [meters/sec]
+    REAL(ReKi)  :: VelGust = 0.0_ReKi      !< HH wind gust speed [-]
+    REAL(ReKi)  :: VelGustDot = 0.0_ReKi      !< derivative of HH wind gust speed wrt Time [-]
+    REAL(ReKi)  :: AngleH = 0.0_ReKi      !< HH wind direction angle [degrees]
+    REAL(ReKi)  :: AngleHDot = 0.0_ReKi      !< derivative of HH wind direction angle wrt Time [degrees]
+    REAL(ReKi)  :: AngleV = 0.0_ReKi      !< HH upflow angle [degrees]
+    REAL(ReKi)  :: AngleVDot = 0.0_ReKi      !< derivative of HH upflow angle wrt Time [degrees]
+    REAL(ReKi)  :: ShrH = 0.0_ReKi      !< HH horizontal linear shear [-]
+    REAL(ReKi)  :: ShrHDot = 0.0_ReKi      !< derivative of HH horizontal linear shear wrt Time [-]
+    REAL(ReKi)  :: ShrV = 0.0_ReKi      !< HH vertical shear exponent [-]
+    REAL(ReKi)  :: ShrVDot = 0.0_ReKi      !< derivative of HH vertical shear exponent wrt Time [-]
+    REAL(ReKi)  :: LinShrV = 0.0_ReKi      !< HH vertical linear shear [seconds]
+    REAL(ReKi)  :: LinShrVDot = 0.0_ReKi      !< derivative of HH vertical linear shear wrt Time [seconds]
+    REAL(ReKi)  :: CosAngleH = 0.0_ReKi      !< Horizontal angle components [-]
+    REAL(ReKi)  :: SinAngleH = 0.0_ReKi      !< Horizontal angle components [-]
+    REAL(ReKi)  :: CosAngleV = 0.0_ReKi      !< Vertical angle components [-]
+    REAL(ReKi)  :: SinAngleV = 0.0_ReKi      !< Vertical angle components [-]
   END TYPE UniformField_Interp
 ! =======================
 ! =========  Grid3DFieldType  =======
   TYPE, PUBLIC :: Grid3DFieldType
-    INTEGER(IntKi)  :: WindFileFormat      !< Binary file format description number [-]
+    INTEGER(IntKi)  :: WindFileFormat = 0_IntKi      !< Binary file format description number [-]
     INTEGER(IntKi)  :: WindProfileType = -1      !< Wind profile type (0=constant;1=logarithmic;2=power law) [-]
     LOGICAL  :: Periodic = .false.      !< Flag to indicate if the wind file is periodic [-]
     LOGICAL  :: InterpTower = .false.      !< Flag to indicate if we should interpolate wind speeds below the tower [-]
@@ -122,19 +122,18 @@ IMPLICIT NONE
     REAL(ReKi)  :: Z0 = 0      !< Surface roughness length (used for LOG wind profile type only) [-]
     REAL(ReKi)  :: VLinShr = 0      !< Vertical linear wind shear coefficient (used for vertical linear wind profile type only) [-]
     REAL(ReKi)  :: HLinShr = 0      !< Horizontal linear wind shear coefficient (used for horizontal wind profile type only) [-]
-    LOGICAL  :: BoxExceedAllowF = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
-    INTEGER(IntKi)  :: BoxExceedAllowIdx = -1      !< Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
-    LOGICAL  :: BoxExceedWarned = .FALSE.      !< Has a warning been issued for points extrapolated beyond FFWind grid [-]
+    LOGICAL  :: BoxExceedAllow = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
+    LOGICAL  :: BoxExceedAllowDrv = .FALSE.      !< Flag to allow Extrapolation winds outside box set by driver [-]
   END TYPE Grid3DFieldType
 ! =======================
 ! =========  Grid4DFieldType  =======
   TYPE, PUBLIC :: Grid4DFieldType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of evenly-spaced grid points in the x, y, z, and t directions [-]
-    REAL(DbKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
-    REAL(ReKi) , DIMENSION(1:3)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: Vel      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt] [-]
-    REAL(DbKi)  :: TimeStart      !< this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1)) [s]
-    REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the x, y, z, and t directions [-]
+    REAL(DbKi) , DIMENSION(1:4)  :: delta = 0.0_R8Ki      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
+    REAL(ReKi) , DIMENSION(1:3)  :: pZero = 0.0_ReKi      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vel => NULL()      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt] [-]
+    REAL(ReKi)  :: TimeStart = 0.0_ReKi      !< this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1)) [s]
+    REAL(ReKi)  :: RefHeight = 0.0_ReKi      !< reference height; used to center the wind [meters]
   END TYPE Grid4DFieldType
 ! =======================
 ! =========  PointsFieldType  =======
@@ -144,20 +143,20 @@ IMPLICIT NONE
 ! =======================
 ! =========  UserFieldType  =======
   TYPE, PUBLIC :: UserFieldType
-    REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
+    REAL(ReKi)  :: RefHeight = 0.0_ReKi      !< reference height; used to center the wind [meters]
   END TYPE UserFieldType
 ! =======================
 ! =========  FlowFieldType  =======
   TYPE, PUBLIC :: FlowFieldType
     INTEGER(IntKi)  :: FieldType = 0      !< Switch for flow field type {1=Uniform, 2=Grid, 3=User, 4=External} [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: RefPosition      !< Reference position (point where box is rotated) [meters]
-    REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation [radians]
-    REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [radians]
+    REAL(ReKi) , DIMENSION(1:3)  :: RefPosition = 0.0_ReKi      !< Reference position (point where box is rotated) [meters]
+    REAL(ReKi)  :: PropagationDir = 0.0_ReKi      !< Direction of wind propagation [radians]
+    REAL(ReKi)  :: VFlowAngle = 0.0_ReKi      !< Vertical (upflow) angle [radians]
     LOGICAL  :: VelInterpCubic = .false.      !< Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7] [-]
     LOGICAL  :: RotateWindBox = .false.      !< flag indicating if the wind will be rotated [-]
     LOGICAL  :: AccFieldValid = .false.      !< flag indicating that acceleration field has been calculated [-]
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotToWind      !< Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X') [-]
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotFromWind      !< Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind) [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotToWind = 0.0_ReKi      !< Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X') [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotFromWind = 0.0_ReKi      !< Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind) [-]
     TYPE(UniformFieldType)  :: Uniform      !< Uniform Flow Data [-]
     TYPE(Grid3DFieldType)  :: Grid3D      !< Grid Field Wind Data [-]
     TYPE(Grid4DFieldType)  :: Grid4D      !< External Grid Flow Data [-]
@@ -166,3418 +165,925 @@ IMPLICIT NONE
   END TYPE FlowFieldType
 ! =======================
 CONTAINS
- SUBROUTINE IfW_FlowField_CopyUniformFieldType( SrcUniformFieldTypeData, DstUniformFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(UniformFieldType), INTENT(IN) :: SrcUniformFieldTypeData
-   TYPE(UniformFieldType), INTENT(INOUT) :: DstUniformFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyUniformFieldType'
-! 
+
+subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUniformFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(UniformFieldType), intent(in) :: SrcUniformFieldTypeData
+   type(UniformFieldType), intent(inout) :: DstUniformFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyUniformFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUniformFieldTypeData%RefHeight = SrcUniformFieldTypeData%RefHeight
-    DstUniformFieldTypeData%RefLength = SrcUniformFieldTypeData%RefLength
-    DstUniformFieldTypeData%DataSize = SrcUniformFieldTypeData%DataSize
-IF (ALLOCATED(SrcUniformFieldTypeData%Time)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%Time,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%Time,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%Time)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%Time(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%Time.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%Time = SrcUniformFieldTypeData%Time
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelH)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelH,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelH,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelH)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelH(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelH.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelH = SrcUniformFieldTypeData%VelH
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelHDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelHDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelHDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelHDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelHDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelHDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelHDot = SrcUniformFieldTypeData%VelHDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelV)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelV,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelV,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelV)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelV.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelV = SrcUniformFieldTypeData%VelV
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelVDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelVDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelVDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelVDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelVDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelVDot = SrcUniformFieldTypeData%VelVDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelGust)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelGust,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelGust,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelGust)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelGust(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelGust.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelGust = SrcUniformFieldTypeData%VelGust
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelGustDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelGustDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelGustDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelGustDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelGustDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelGustDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelGustDot = SrcUniformFieldTypeData%VelGustDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%AngleH)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%AngleH,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%AngleH,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleH)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%AngleH(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleH.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%AngleH = SrcUniformFieldTypeData%AngleH
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%AngleHDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%AngleHDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%AngleHDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleHDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%AngleHDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleHDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%AngleHDot = SrcUniformFieldTypeData%AngleHDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%AngleV)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%AngleV,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%AngleV,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleV)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%AngleV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleV.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%AngleV = SrcUniformFieldTypeData%AngleV
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%AngleVDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%AngleVDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%AngleVDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleVDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%AngleVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleVDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%AngleVDot = SrcUniformFieldTypeData%AngleVDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%ShrH)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%ShrH,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%ShrH,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrH)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%ShrH(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrH.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%ShrH = SrcUniformFieldTypeData%ShrH
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%ShrHDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%ShrHDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%ShrHDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrHDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%ShrHDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrHDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%ShrHDot = SrcUniformFieldTypeData%ShrHDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%ShrV)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%ShrV,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%ShrV,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrV)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%ShrV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrV.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%ShrV = SrcUniformFieldTypeData%ShrV
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%ShrVDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%ShrVDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%ShrVDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrVDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%ShrVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrVDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%ShrVDot = SrcUniformFieldTypeData%ShrVDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%LinShrV)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%LinShrV,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%LinShrV,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%LinShrV)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%LinShrV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%LinShrV.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%LinShrV = SrcUniformFieldTypeData%LinShrV
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%LinShrVDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%LinShrVDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%LinShrVDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%LinShrVDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%LinShrVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%LinShrVDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%LinShrVDot = SrcUniformFieldTypeData%LinShrVDot
-ENDIF
- END SUBROUTINE IfW_FlowField_CopyUniformFieldType
+   ErrMsg  = ''
+   DstUniformFieldTypeData%RefHeight = SrcUniformFieldTypeData%RefHeight
+   DstUniformFieldTypeData%RefLength = SrcUniformFieldTypeData%RefLength
+   DstUniformFieldTypeData%DataSize = SrcUniformFieldTypeData%DataSize
+   if (allocated(SrcUniformFieldTypeData%Time)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%Time)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%Time)
+      if (.not. allocated(DstUniformFieldTypeData%Time)) then
+         allocate(DstUniformFieldTypeData%Time(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%Time.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%Time = SrcUniformFieldTypeData%Time
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelH)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelH)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelH)
+      if (.not. allocated(DstUniformFieldTypeData%VelH)) then
+         allocate(DstUniformFieldTypeData%VelH(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelH.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelH = SrcUniformFieldTypeData%VelH
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelHDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelHDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelHDot)
+      if (.not. allocated(DstUniformFieldTypeData%VelHDot)) then
+         allocate(DstUniformFieldTypeData%VelHDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelHDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelHDot = SrcUniformFieldTypeData%VelHDot
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelV)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelV)
+      if (.not. allocated(DstUniformFieldTypeData%VelV)) then
+         allocate(DstUniformFieldTypeData%VelV(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelV.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelV = SrcUniformFieldTypeData%VelV
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelVDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelVDot)
+      if (.not. allocated(DstUniformFieldTypeData%VelVDot)) then
+         allocate(DstUniformFieldTypeData%VelVDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelVDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelVDot = SrcUniformFieldTypeData%VelVDot
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelGust)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelGust)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelGust)
+      if (.not. allocated(DstUniformFieldTypeData%VelGust)) then
+         allocate(DstUniformFieldTypeData%VelGust(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelGust.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelGust = SrcUniformFieldTypeData%VelGust
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelGustDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelGustDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelGustDot)
+      if (.not. allocated(DstUniformFieldTypeData%VelGustDot)) then
+         allocate(DstUniformFieldTypeData%VelGustDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelGustDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelGustDot = SrcUniformFieldTypeData%VelGustDot
+   end if
+   if (allocated(SrcUniformFieldTypeData%AngleH)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleH)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleH)
+      if (.not. allocated(DstUniformFieldTypeData%AngleH)) then
+         allocate(DstUniformFieldTypeData%AngleH(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleH.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%AngleH = SrcUniformFieldTypeData%AngleH
+   end if
+   if (allocated(SrcUniformFieldTypeData%AngleHDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleHDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleHDot)
+      if (.not. allocated(DstUniformFieldTypeData%AngleHDot)) then
+         allocate(DstUniformFieldTypeData%AngleHDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleHDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%AngleHDot = SrcUniformFieldTypeData%AngleHDot
+   end if
+   if (allocated(SrcUniformFieldTypeData%AngleV)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleV)
+      if (.not. allocated(DstUniformFieldTypeData%AngleV)) then
+         allocate(DstUniformFieldTypeData%AngleV(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleV.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%AngleV = SrcUniformFieldTypeData%AngleV
+   end if
+   if (allocated(SrcUniformFieldTypeData%AngleVDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleVDot)
+      if (.not. allocated(DstUniformFieldTypeData%AngleVDot)) then
+         allocate(DstUniformFieldTypeData%AngleVDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleVDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%AngleVDot = SrcUniformFieldTypeData%AngleVDot
+   end if
+   if (allocated(SrcUniformFieldTypeData%ShrH)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrH)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrH)
+      if (.not. allocated(DstUniformFieldTypeData%ShrH)) then
+         allocate(DstUniformFieldTypeData%ShrH(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrH.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%ShrH = SrcUniformFieldTypeData%ShrH
+   end if
+   if (allocated(SrcUniformFieldTypeData%ShrHDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrHDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrHDot)
+      if (.not. allocated(DstUniformFieldTypeData%ShrHDot)) then
+         allocate(DstUniformFieldTypeData%ShrHDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrHDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%ShrHDot = SrcUniformFieldTypeData%ShrHDot
+   end if
+   if (allocated(SrcUniformFieldTypeData%ShrV)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrV)
+      if (.not. allocated(DstUniformFieldTypeData%ShrV)) then
+         allocate(DstUniformFieldTypeData%ShrV(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrV.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%ShrV = SrcUniformFieldTypeData%ShrV
+   end if
+   if (allocated(SrcUniformFieldTypeData%ShrVDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrVDot)
+      if (.not. allocated(DstUniformFieldTypeData%ShrVDot)) then
+         allocate(DstUniformFieldTypeData%ShrVDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrVDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%ShrVDot = SrcUniformFieldTypeData%ShrVDot
+   end if
+   if (allocated(SrcUniformFieldTypeData%LinShrV)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%LinShrV)
+      if (.not. allocated(DstUniformFieldTypeData%LinShrV)) then
+         allocate(DstUniformFieldTypeData%LinShrV(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%LinShrV.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%LinShrV = SrcUniformFieldTypeData%LinShrV
+   end if
+   if (allocated(SrcUniformFieldTypeData%LinShrVDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%LinShrVDot)
+      if (.not. allocated(DstUniformFieldTypeData%LinShrVDot)) then
+         allocate(DstUniformFieldTypeData%LinShrVDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%LinShrVDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%LinShrVDot = SrcUniformFieldTypeData%LinShrVDot
+   end if
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyUniformFieldType( UniformFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(UniformFieldType), INTENT(INOUT) :: UniformFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyUniformFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-IF (ALLOCATED(UniformFieldTypeData%Time)) THEN
-  DEALLOCATE(UniformFieldTypeData%Time)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelH)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelH)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelHDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelHDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelV)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelV)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelVDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelVDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelGust)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelGust)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelGustDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelGustDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%AngleH)) THEN
-  DEALLOCATE(UniformFieldTypeData%AngleH)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%AngleHDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%AngleHDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%AngleV)) THEN
-  DEALLOCATE(UniformFieldTypeData%AngleV)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%AngleVDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%AngleVDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%ShrH)) THEN
-  DEALLOCATE(UniformFieldTypeData%ShrH)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%ShrHDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%ShrHDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%ShrV)) THEN
-  DEALLOCATE(UniformFieldTypeData%ShrV)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%ShrVDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%ShrVDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%LinShrV)) THEN
-  DEALLOCATE(UniformFieldTypeData%LinShrV)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%LinShrVDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%LinShrVDot)
-ENDIF
- END SUBROUTINE IfW_FlowField_DestroyUniformFieldType
-
- SUBROUTINE IfW_FlowField_PackUniformFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(UniformFieldType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_PackUniformFieldType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! RefHeight
-      Re_BufSz   = Re_BufSz   + 1  ! RefLength
-      Int_BufSz  = Int_BufSz  + 1  ! DataSize
-  Int_BufSz   = Int_BufSz   + 1     ! Time allocated yes/no
-  IF ( ALLOCATED(InData%Time) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! Time upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Time)  ! Time
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! VelH allocated yes/no
-  IF ( ALLOCATED(InData%VelH) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! VelH upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%VelH)  ! VelH
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! VelHDot allocated yes/no
-  IF ( ALLOCATED(InData%VelHDot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! VelHDot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%VelHDot)  ! VelHDot
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! VelV allocated yes/no
-  IF ( ALLOCATED(InData%VelV) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! VelV upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%VelV)  ! VelV
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! VelVDot allocated yes/no
-  IF ( ALLOCATED(InData%VelVDot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! VelVDot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%VelVDot)  ! VelVDot
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! VelGust allocated yes/no
-  IF ( ALLOCATED(InData%VelGust) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! VelGust upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%VelGust)  ! VelGust
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! VelGustDot allocated yes/no
-  IF ( ALLOCATED(InData%VelGustDot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! VelGustDot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%VelGustDot)  ! VelGustDot
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! AngleH allocated yes/no
-  IF ( ALLOCATED(InData%AngleH) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! AngleH upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%AngleH)  ! AngleH
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! AngleHDot allocated yes/no
-  IF ( ALLOCATED(InData%AngleHDot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! AngleHDot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%AngleHDot)  ! AngleHDot
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! AngleV allocated yes/no
-  IF ( ALLOCATED(InData%AngleV) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! AngleV upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%AngleV)  ! AngleV
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! AngleVDot allocated yes/no
-  IF ( ALLOCATED(InData%AngleVDot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! AngleVDot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%AngleVDot)  ! AngleVDot
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! ShrH allocated yes/no
-  IF ( ALLOCATED(InData%ShrH) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! ShrH upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ShrH)  ! ShrH
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! ShrHDot allocated yes/no
-  IF ( ALLOCATED(InData%ShrHDot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! ShrHDot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ShrHDot)  ! ShrHDot
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! ShrV allocated yes/no
-  IF ( ALLOCATED(InData%ShrV) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! ShrV upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ShrV)  ! ShrV
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! ShrVDot allocated yes/no
-  IF ( ALLOCATED(InData%ShrVDot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! ShrVDot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ShrVDot)  ! ShrVDot
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! LinShrV allocated yes/no
-  IF ( ALLOCATED(InData%LinShrV) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! LinShrV upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%LinShrV)  ! LinShrV
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! LinShrVDot allocated yes/no
-  IF ( ALLOCATED(InData%LinShrVDot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! LinShrVDot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%LinShrVDot)  ! LinShrVDot
-  END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%RefHeight
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RefLength
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%DataSize
-    Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%Time) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Time,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Time,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%Time,1), UBOUND(InData%Time,1)
-        ReKiBuf(Re_Xferred) = InData%Time(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%VelH) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelH,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelH,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%VelH,1), UBOUND(InData%VelH,1)
-        ReKiBuf(Re_Xferred) = InData%VelH(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%VelHDot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelHDot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelHDot,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%VelHDot,1), UBOUND(InData%VelHDot,1)
-        ReKiBuf(Re_Xferred) = InData%VelHDot(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%VelV) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelV,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelV,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%VelV,1), UBOUND(InData%VelV,1)
-        ReKiBuf(Re_Xferred) = InData%VelV(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%VelVDot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelVDot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelVDot,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%VelVDot,1), UBOUND(InData%VelVDot,1)
-        ReKiBuf(Re_Xferred) = InData%VelVDot(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%VelGust) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelGust,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelGust,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%VelGust,1), UBOUND(InData%VelGust,1)
-        ReKiBuf(Re_Xferred) = InData%VelGust(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%VelGustDot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelGustDot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelGustDot,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%VelGustDot,1), UBOUND(InData%VelGustDot,1)
-        ReKiBuf(Re_Xferred) = InData%VelGustDot(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%AngleH) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngleH,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngleH,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%AngleH,1), UBOUND(InData%AngleH,1)
-        ReKiBuf(Re_Xferred) = InData%AngleH(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%AngleHDot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngleHDot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngleHDot,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%AngleHDot,1), UBOUND(InData%AngleHDot,1)
-        ReKiBuf(Re_Xferred) = InData%AngleHDot(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%AngleV) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngleV,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngleV,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%AngleV,1), UBOUND(InData%AngleV,1)
-        ReKiBuf(Re_Xferred) = InData%AngleV(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%AngleVDot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngleVDot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngleVDot,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%AngleVDot,1), UBOUND(InData%AngleVDot,1)
-        ReKiBuf(Re_Xferred) = InData%AngleVDot(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%ShrH) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ShrH,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ShrH,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%ShrH,1), UBOUND(InData%ShrH,1)
-        ReKiBuf(Re_Xferred) = InData%ShrH(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%ShrHDot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ShrHDot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ShrHDot,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%ShrHDot,1), UBOUND(InData%ShrHDot,1)
-        ReKiBuf(Re_Xferred) = InData%ShrHDot(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%ShrV) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ShrV,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ShrV,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%ShrV,1), UBOUND(InData%ShrV,1)
-        ReKiBuf(Re_Xferred) = InData%ShrV(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%ShrVDot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ShrVDot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ShrVDot,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%ShrVDot,1), UBOUND(InData%ShrVDot,1)
-        ReKiBuf(Re_Xferred) = InData%ShrVDot(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%LinShrV) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LinShrV,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LinShrV,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%LinShrV,1), UBOUND(InData%LinShrV,1)
-        ReKiBuf(Re_Xferred) = InData%LinShrV(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%LinShrVDot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LinShrVDot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LinShrVDot,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%LinShrVDot,1), UBOUND(InData%LinShrVDot,1)
-        ReKiBuf(Re_Xferred) = InData%LinShrVDot(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE IfW_FlowField_PackUniformFieldType
-
- SUBROUTINE IfW_FlowField_UnPackUniformFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(UniformFieldType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_UnPackUniformFieldType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%RefHeight = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RefLength = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%DataSize = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Time not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Time)) DEALLOCATE(OutData%Time)
-    ALLOCATE(OutData%Time(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Time.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%Time,1), UBOUND(OutData%Time,1)
-        OutData%Time(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelH not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%VelH)) DEALLOCATE(OutData%VelH)
-    ALLOCATE(OutData%VelH(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelH.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%VelH,1), UBOUND(OutData%VelH,1)
-        OutData%VelH(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelHDot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%VelHDot)) DEALLOCATE(OutData%VelHDot)
-    ALLOCATE(OutData%VelHDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelHDot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%VelHDot,1), UBOUND(OutData%VelHDot,1)
-        OutData%VelHDot(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelV not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%VelV)) DEALLOCATE(OutData%VelV)
-    ALLOCATE(OutData%VelV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelV.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%VelV,1), UBOUND(OutData%VelV,1)
-        OutData%VelV(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelVDot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%VelVDot)) DEALLOCATE(OutData%VelVDot)
-    ALLOCATE(OutData%VelVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelVDot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%VelVDot,1), UBOUND(OutData%VelVDot,1)
-        OutData%VelVDot(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelGust not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%VelGust)) DEALLOCATE(OutData%VelGust)
-    ALLOCATE(OutData%VelGust(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelGust.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%VelGust,1), UBOUND(OutData%VelGust,1)
-        OutData%VelGust(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelGustDot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%VelGustDot)) DEALLOCATE(OutData%VelGustDot)
-    ALLOCATE(OutData%VelGustDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelGustDot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%VelGustDot,1), UBOUND(OutData%VelGustDot,1)
-        OutData%VelGustDot(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngleH not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%AngleH)) DEALLOCATE(OutData%AngleH)
-    ALLOCATE(OutData%AngleH(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AngleH.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%AngleH,1), UBOUND(OutData%AngleH,1)
-        OutData%AngleH(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngleHDot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%AngleHDot)) DEALLOCATE(OutData%AngleHDot)
-    ALLOCATE(OutData%AngleHDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AngleHDot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%AngleHDot,1), UBOUND(OutData%AngleHDot,1)
-        OutData%AngleHDot(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngleV not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%AngleV)) DEALLOCATE(OutData%AngleV)
-    ALLOCATE(OutData%AngleV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AngleV.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%AngleV,1), UBOUND(OutData%AngleV,1)
-        OutData%AngleV(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngleVDot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%AngleVDot)) DEALLOCATE(OutData%AngleVDot)
-    ALLOCATE(OutData%AngleVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AngleVDot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%AngleVDot,1), UBOUND(OutData%AngleVDot,1)
-        OutData%AngleVDot(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ShrH not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ShrH)) DEALLOCATE(OutData%ShrH)
-    ALLOCATE(OutData%ShrH(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ShrH.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%ShrH,1), UBOUND(OutData%ShrH,1)
-        OutData%ShrH(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ShrHDot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ShrHDot)) DEALLOCATE(OutData%ShrHDot)
-    ALLOCATE(OutData%ShrHDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ShrHDot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%ShrHDot,1), UBOUND(OutData%ShrHDot,1)
-        OutData%ShrHDot(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ShrV not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ShrV)) DEALLOCATE(OutData%ShrV)
-    ALLOCATE(OutData%ShrV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ShrV.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%ShrV,1), UBOUND(OutData%ShrV,1)
-        OutData%ShrV(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ShrVDot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ShrVDot)) DEALLOCATE(OutData%ShrVDot)
-    ALLOCATE(OutData%ShrVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ShrVDot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%ShrVDot,1), UBOUND(OutData%ShrVDot,1)
-        OutData%ShrVDot(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinShrV not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%LinShrV)) DEALLOCATE(OutData%LinShrV)
-    ALLOCATE(OutData%LinShrV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinShrV.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%LinShrV,1), UBOUND(OutData%LinShrV,1)
-        OutData%LinShrV(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinShrVDot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%LinShrVDot)) DEALLOCATE(OutData%LinShrVDot)
-    ALLOCATE(OutData%LinShrVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinShrVDot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%LinShrVDot,1), UBOUND(OutData%LinShrVDot,1)
-        OutData%LinShrVDot(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE IfW_FlowField_UnPackUniformFieldType
-
- SUBROUTINE IfW_FlowField_CopyUniformField_Interp( SrcUniformField_InterpData, DstUniformField_InterpData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(UniformField_Interp), INTENT(IN) :: SrcUniformField_InterpData
-   TYPE(UniformField_Interp), INTENT(INOUT) :: DstUniformField_InterpData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyUniformField_Interp'
-! 
+subroutine IfW_FlowField_DestroyUniformFieldType(UniformFieldTypeData, ErrStat, ErrMsg)
+   type(UniformFieldType), intent(inout) :: UniformFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyUniformFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUniformField_InterpData%VelH = SrcUniformField_InterpData%VelH
-    DstUniformField_InterpData%VelHDot = SrcUniformField_InterpData%VelHDot
-    DstUniformField_InterpData%VelV = SrcUniformField_InterpData%VelV
-    DstUniformField_InterpData%VelVDot = SrcUniformField_InterpData%VelVDot
-    DstUniformField_InterpData%VelGust = SrcUniformField_InterpData%VelGust
-    DstUniformField_InterpData%VelGustDot = SrcUniformField_InterpData%VelGustDot
-    DstUniformField_InterpData%AngleH = SrcUniformField_InterpData%AngleH
-    DstUniformField_InterpData%AngleHDot = SrcUniformField_InterpData%AngleHDot
-    DstUniformField_InterpData%AngleV = SrcUniformField_InterpData%AngleV
-    DstUniformField_InterpData%AngleVDot = SrcUniformField_InterpData%AngleVDot
-    DstUniformField_InterpData%ShrH = SrcUniformField_InterpData%ShrH
-    DstUniformField_InterpData%ShrHDot = SrcUniformField_InterpData%ShrHDot
-    DstUniformField_InterpData%ShrV = SrcUniformField_InterpData%ShrV
-    DstUniformField_InterpData%ShrVDot = SrcUniformField_InterpData%ShrVDot
-    DstUniformField_InterpData%LinShrV = SrcUniformField_InterpData%LinShrV
-    DstUniformField_InterpData%LinShrVDot = SrcUniformField_InterpData%LinShrVDot
-    DstUniformField_InterpData%CosAngleH = SrcUniformField_InterpData%CosAngleH
-    DstUniformField_InterpData%SinAngleH = SrcUniformField_InterpData%SinAngleH
-    DstUniformField_InterpData%CosAngleV = SrcUniformField_InterpData%CosAngleV
-    DstUniformField_InterpData%SinAngleV = SrcUniformField_InterpData%SinAngleV
- END SUBROUTINE IfW_FlowField_CopyUniformField_Interp
+   ErrMsg  = ''
+   if (allocated(UniformFieldTypeData%Time)) then
+      deallocate(UniformFieldTypeData%Time)
+   end if
+   if (allocated(UniformFieldTypeData%VelH)) then
+      deallocate(UniformFieldTypeData%VelH)
+   end if
+   if (allocated(UniformFieldTypeData%VelHDot)) then
+      deallocate(UniformFieldTypeData%VelHDot)
+   end if
+   if (allocated(UniformFieldTypeData%VelV)) then
+      deallocate(UniformFieldTypeData%VelV)
+   end if
+   if (allocated(UniformFieldTypeData%VelVDot)) then
+      deallocate(UniformFieldTypeData%VelVDot)
+   end if
+   if (allocated(UniformFieldTypeData%VelGust)) then
+      deallocate(UniformFieldTypeData%VelGust)
+   end if
+   if (allocated(UniformFieldTypeData%VelGustDot)) then
+      deallocate(UniformFieldTypeData%VelGustDot)
+   end if
+   if (allocated(UniformFieldTypeData%AngleH)) then
+      deallocate(UniformFieldTypeData%AngleH)
+   end if
+   if (allocated(UniformFieldTypeData%AngleHDot)) then
+      deallocate(UniformFieldTypeData%AngleHDot)
+   end if
+   if (allocated(UniformFieldTypeData%AngleV)) then
+      deallocate(UniformFieldTypeData%AngleV)
+   end if
+   if (allocated(UniformFieldTypeData%AngleVDot)) then
+      deallocate(UniformFieldTypeData%AngleVDot)
+   end if
+   if (allocated(UniformFieldTypeData%ShrH)) then
+      deallocate(UniformFieldTypeData%ShrH)
+   end if
+   if (allocated(UniformFieldTypeData%ShrHDot)) then
+      deallocate(UniformFieldTypeData%ShrHDot)
+   end if
+   if (allocated(UniformFieldTypeData%ShrV)) then
+      deallocate(UniformFieldTypeData%ShrV)
+   end if
+   if (allocated(UniformFieldTypeData%ShrVDot)) then
+      deallocate(UniformFieldTypeData%ShrVDot)
+   end if
+   if (allocated(UniformFieldTypeData%LinShrV)) then
+      deallocate(UniformFieldTypeData%LinShrV)
+   end if
+   if (allocated(UniformFieldTypeData%LinShrVDot)) then
+      deallocate(UniformFieldTypeData%LinShrVDot)
+   end if
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyUniformField_Interp( UniformField_InterpData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(UniformField_Interp), INTENT(INOUT) :: UniformField_InterpData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyUniformField_Interp'
+subroutine IfW_FlowField_PackUniformFieldType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(UniformFieldType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'IfW_FlowField_PackUniformFieldType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%RefHeight)
+   call RegPack(RF, InData%RefLength)
+   call RegPack(RF, InData%DataSize)
+   call RegPackAlloc(RF, InData%Time)
+   call RegPackAlloc(RF, InData%VelH)
+   call RegPackAlloc(RF, InData%VelHDot)
+   call RegPackAlloc(RF, InData%VelV)
+   call RegPackAlloc(RF, InData%VelVDot)
+   call RegPackAlloc(RF, InData%VelGust)
+   call RegPackAlloc(RF, InData%VelGustDot)
+   call RegPackAlloc(RF, InData%AngleH)
+   call RegPackAlloc(RF, InData%AngleHDot)
+   call RegPackAlloc(RF, InData%AngleV)
+   call RegPackAlloc(RF, InData%AngleVDot)
+   call RegPackAlloc(RF, InData%ShrH)
+   call RegPackAlloc(RF, InData%ShrHDot)
+   call RegPackAlloc(RF, InData%ShrV)
+   call RegPackAlloc(RF, InData%ShrVDot)
+   call RegPackAlloc(RF, InData%LinShrV)
+   call RegPackAlloc(RF, InData%LinShrVDot)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  ErrStat = ErrID_None
-  ErrMsg  = ""
+subroutine IfW_FlowField_UnPackUniformFieldType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(UniformFieldType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackUniformFieldType'
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%RefHeight); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefLength); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DataSize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Time); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VelH); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VelHDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VelV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VelVDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VelGust); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VelGustDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AngleH); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AngleHDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AngleV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AngleVDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ShrH); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ShrHDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ShrV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ShrVDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LinShrV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%LinShrVDot); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
- END SUBROUTINE IfW_FlowField_DestroyUniformField_Interp
-
- SUBROUTINE IfW_FlowField_PackUniformField_Interp( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(UniformField_Interp),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_PackUniformField_Interp'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! VelH
-      Re_BufSz   = Re_BufSz   + 1  ! VelHDot
-      Re_BufSz   = Re_BufSz   + 1  ! VelV
-      Re_BufSz   = Re_BufSz   + 1  ! VelVDot
-      Re_BufSz   = Re_BufSz   + 1  ! VelGust
-      Re_BufSz   = Re_BufSz   + 1  ! VelGustDot
-      Re_BufSz   = Re_BufSz   + 1  ! AngleH
-      Re_BufSz   = Re_BufSz   + 1  ! AngleHDot
-      Re_BufSz   = Re_BufSz   + 1  ! AngleV
-      Re_BufSz   = Re_BufSz   + 1  ! AngleVDot
-      Re_BufSz   = Re_BufSz   + 1  ! ShrH
-      Re_BufSz   = Re_BufSz   + 1  ! ShrHDot
-      Re_BufSz   = Re_BufSz   + 1  ! ShrV
-      Re_BufSz   = Re_BufSz   + 1  ! ShrVDot
-      Re_BufSz   = Re_BufSz   + 1  ! LinShrV
-      Re_BufSz   = Re_BufSz   + 1  ! LinShrVDot
-      Re_BufSz   = Re_BufSz   + 1  ! CosAngleH
-      Re_BufSz   = Re_BufSz   + 1  ! SinAngleH
-      Re_BufSz   = Re_BufSz   + 1  ! CosAngleV
-      Re_BufSz   = Re_BufSz   + 1  ! SinAngleV
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%VelH
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%VelHDot
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%VelV
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%VelVDot
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%VelGust
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%VelGustDot
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%AngleH
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%AngleHDot
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%AngleV
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%AngleVDot
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%ShrH
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%ShrHDot
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%ShrV
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%ShrVDot
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%LinShrV
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%LinShrVDot
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%CosAngleH
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%SinAngleH
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%CosAngleV
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%SinAngleV
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE IfW_FlowField_PackUniformField_Interp
-
- SUBROUTINE IfW_FlowField_UnPackUniformField_Interp( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(UniformField_Interp), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_UnPackUniformField_Interp'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%VelH = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VelHDot = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VelV = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VelVDot = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VelGust = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VelGustDot = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%AngleH = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%AngleHDot = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%AngleV = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%AngleVDot = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%ShrH = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%ShrHDot = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%ShrV = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%ShrVDot = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%LinShrV = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%LinShrVDot = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%CosAngleH = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%SinAngleH = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%CosAngleV = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%SinAngleV = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE IfW_FlowField_UnPackUniformField_Interp
-
- SUBROUTINE IfW_FlowField_CopyGrid3DFieldType( SrcGrid3DFieldTypeData, DstGrid3DFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Grid3DFieldType), INTENT(IN) :: SrcGrid3DFieldTypeData
-   TYPE(Grid3DFieldType), INTENT(INOUT) :: DstGrid3DFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyGrid3DFieldType'
-! 
+subroutine IfW_FlowField_CopyUniformField_Interp(SrcUniformField_InterpData, DstUniformField_InterpData, CtrlCode, ErrStat, ErrMsg)
+   type(UniformField_Interp), intent(in) :: SrcUniformField_InterpData
+   type(UniformField_Interp), intent(inout) :: DstUniformField_InterpData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyUniformField_Interp'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstGrid3DFieldTypeData%WindFileFormat = SrcGrid3DFieldTypeData%WindFileFormat
-    DstGrid3DFieldTypeData%WindProfileType = SrcGrid3DFieldTypeData%WindProfileType
-    DstGrid3DFieldTypeData%Periodic = SrcGrid3DFieldTypeData%Periodic
-    DstGrid3DFieldTypeData%InterpTower = SrcGrid3DFieldTypeData%InterpTower
-    DstGrid3DFieldTypeData%AddMeanAfterInterp = SrcGrid3DFieldTypeData%AddMeanAfterInterp
-    DstGrid3DFieldTypeData%RefHeight = SrcGrid3DFieldTypeData%RefHeight
-    DstGrid3DFieldTypeData%RefLength = SrcGrid3DFieldTypeData%RefLength
-IF (ALLOCATED(SrcGrid3DFieldTypeData%Vel)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%Vel,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%Vel,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%Vel,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%Vel,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%Vel,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%Vel,3)
-  i4_l = LBOUND(SrcGrid3DFieldTypeData%Vel,4)
-  i4_u = UBOUND(SrcGrid3DFieldTypeData%Vel,4)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%Vel)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%Vel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%Vel.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%Vel = SrcGrid3DFieldTypeData%Vel
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%Acc)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%Acc,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%Acc,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%Acc,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%Acc,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%Acc,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%Acc,3)
-  i4_l = LBOUND(SrcGrid3DFieldTypeData%Acc,4)
-  i4_u = UBOUND(SrcGrid3DFieldTypeData%Acc,4)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%Acc)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%Acc(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%Acc.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%Acc = SrcGrid3DFieldTypeData%Acc
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%VelTower)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%VelTower,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%VelTower,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%VelTower,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%VelTower,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%VelTower,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%VelTower,3)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%VelTower)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%VelTower(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%VelTower.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%VelTower = SrcGrid3DFieldTypeData%VelTower
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%AccTower)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%AccTower,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%AccTower,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%AccTower,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%AccTower,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%AccTower,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%AccTower,3)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%AccTower)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%AccTower(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%AccTower.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%AccTower = SrcGrid3DFieldTypeData%AccTower
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%VelAvg)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%VelAvg,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%VelAvg,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%VelAvg,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%VelAvg,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%VelAvg,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%VelAvg,3)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%VelAvg)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%VelAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%VelAvg.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%VelAvg = SrcGrid3DFieldTypeData%VelAvg
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%AccAvg)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%AccAvg,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%AccAvg,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%AccAvg,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%AccAvg,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%AccAvg,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%AccAvg,3)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%AccAvg)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%AccAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%AccAvg.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%AccAvg = SrcGrid3DFieldTypeData%AccAvg
-ENDIF
-    DstGrid3DFieldTypeData%DTime = SrcGrid3DFieldTypeData%DTime
-    DstGrid3DFieldTypeData%Rate = SrcGrid3DFieldTypeData%Rate
-    DstGrid3DFieldTypeData%YHWid = SrcGrid3DFieldTypeData%YHWid
-    DstGrid3DFieldTypeData%ZHWid = SrcGrid3DFieldTypeData%ZHWid
-    DstGrid3DFieldTypeData%GridBase = SrcGrid3DFieldTypeData%GridBase
-    DstGrid3DFieldTypeData%InitXPosition = SrcGrid3DFieldTypeData%InitXPosition
-    DstGrid3DFieldTypeData%InvDY = SrcGrid3DFieldTypeData%InvDY
-    DstGrid3DFieldTypeData%InvDZ = SrcGrid3DFieldTypeData%InvDZ
-    DstGrid3DFieldTypeData%MeanWS = SrcGrid3DFieldTypeData%MeanWS
-    DstGrid3DFieldTypeData%InvMWS = SrcGrid3DFieldTypeData%InvMWS
-    DstGrid3DFieldTypeData%TotalTime = SrcGrid3DFieldTypeData%TotalTime
-    DstGrid3DFieldTypeData%NComp = SrcGrid3DFieldTypeData%NComp
-    DstGrid3DFieldTypeData%NYGrids = SrcGrid3DFieldTypeData%NYGrids
-    DstGrid3DFieldTypeData%NZGrids = SrcGrid3DFieldTypeData%NZGrids
-    DstGrid3DFieldTypeData%NTGrids = SrcGrid3DFieldTypeData%NTGrids
-    DstGrid3DFieldTypeData%NSteps = SrcGrid3DFieldTypeData%NSteps
-    DstGrid3DFieldTypeData%PLExp = SrcGrid3DFieldTypeData%PLExp
-    DstGrid3DFieldTypeData%Z0 = SrcGrid3DFieldTypeData%Z0
-    DstGrid3DFieldTypeData%VLinShr = SrcGrid3DFieldTypeData%VLinShr
-    DstGrid3DFieldTypeData%HLinShr = SrcGrid3DFieldTypeData%HLinShr
-    DstGrid3DFieldTypeData%BoxExceedAllowF = SrcGrid3DFieldTypeData%BoxExceedAllowF
-    DstGrid3DFieldTypeData%BoxExceedAllowIdx = SrcGrid3DFieldTypeData%BoxExceedAllowIdx
-    DstGrid3DFieldTypeData%BoxExceedWarned = SrcGrid3DFieldTypeData%BoxExceedWarned
- END SUBROUTINE IfW_FlowField_CopyGrid3DFieldType
+   ErrMsg  = ''
+   DstUniformField_InterpData%VelH = SrcUniformField_InterpData%VelH
+   DstUniformField_InterpData%VelHDot = SrcUniformField_InterpData%VelHDot
+   DstUniformField_InterpData%VelV = SrcUniformField_InterpData%VelV
+   DstUniformField_InterpData%VelVDot = SrcUniformField_InterpData%VelVDot
+   DstUniformField_InterpData%VelGust = SrcUniformField_InterpData%VelGust
+   DstUniformField_InterpData%VelGustDot = SrcUniformField_InterpData%VelGustDot
+   DstUniformField_InterpData%AngleH = SrcUniformField_InterpData%AngleH
+   DstUniformField_InterpData%AngleHDot = SrcUniformField_InterpData%AngleHDot
+   DstUniformField_InterpData%AngleV = SrcUniformField_InterpData%AngleV
+   DstUniformField_InterpData%AngleVDot = SrcUniformField_InterpData%AngleVDot
+   DstUniformField_InterpData%ShrH = SrcUniformField_InterpData%ShrH
+   DstUniformField_InterpData%ShrHDot = SrcUniformField_InterpData%ShrHDot
+   DstUniformField_InterpData%ShrV = SrcUniformField_InterpData%ShrV
+   DstUniformField_InterpData%ShrVDot = SrcUniformField_InterpData%ShrVDot
+   DstUniformField_InterpData%LinShrV = SrcUniformField_InterpData%LinShrV
+   DstUniformField_InterpData%LinShrVDot = SrcUniformField_InterpData%LinShrVDot
+   DstUniformField_InterpData%CosAngleH = SrcUniformField_InterpData%CosAngleH
+   DstUniformField_InterpData%SinAngleH = SrcUniformField_InterpData%SinAngleH
+   DstUniformField_InterpData%CosAngleV = SrcUniformField_InterpData%CosAngleV
+   DstUniformField_InterpData%SinAngleV = SrcUniformField_InterpData%SinAngleV
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyGrid3DFieldType( Grid3DFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(Grid3DFieldType), INTENT(INOUT) :: Grid3DFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyGrid3DFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-IF (ALLOCATED(Grid3DFieldTypeData%Vel)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%Vel)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%Acc)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%Acc)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%VelTower)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%VelTower)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%AccTower)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%AccTower)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%VelAvg)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%VelAvg)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%AccAvg)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%AccAvg)
-ENDIF
- END SUBROUTINE IfW_FlowField_DestroyGrid3DFieldType
-
- SUBROUTINE IfW_FlowField_PackGrid3DFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Grid3DFieldType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_PackGrid3DFieldType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! WindFileFormat
-      Int_BufSz  = Int_BufSz  + 1  ! WindProfileType
-      Int_BufSz  = Int_BufSz  + 1  ! Periodic
-      Int_BufSz  = Int_BufSz  + 1  ! InterpTower
-      Int_BufSz  = Int_BufSz  + 1  ! AddMeanAfterInterp
-      Re_BufSz   = Re_BufSz   + 1  ! RefHeight
-      Re_BufSz   = Re_BufSz   + 1  ! RefLength
-  Int_BufSz   = Int_BufSz   + 1     ! Vel allocated yes/no
-  IF ( ALLOCATED(InData%Vel) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*4  ! Vel upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vel)  ! Vel
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Acc allocated yes/no
-  IF ( ALLOCATED(InData%Acc) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*4  ! Acc upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Acc)  ! Acc
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! VelTower allocated yes/no
-  IF ( ALLOCATED(InData%VelTower) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! VelTower upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%VelTower)  ! VelTower
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! AccTower allocated yes/no
-  IF ( ALLOCATED(InData%AccTower) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! AccTower upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%AccTower)  ! AccTower
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! VelAvg allocated yes/no
-  IF ( ALLOCATED(InData%VelAvg) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! VelAvg upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%VelAvg)  ! VelAvg
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! AccAvg allocated yes/no
-  IF ( ALLOCATED(InData%AccAvg) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! AccAvg upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%AccAvg)  ! AccAvg
-  END IF
-      Re_BufSz   = Re_BufSz   + 1  ! DTime
-      Re_BufSz   = Re_BufSz   + 1  ! Rate
-      Re_BufSz   = Re_BufSz   + 1  ! YHWid
-      Re_BufSz   = Re_BufSz   + 1  ! ZHWid
-      Re_BufSz   = Re_BufSz   + 1  ! GridBase
-      Re_BufSz   = Re_BufSz   + 1  ! InitXPosition
-      Re_BufSz   = Re_BufSz   + 1  ! InvDY
-      Re_BufSz   = Re_BufSz   + 1  ! InvDZ
-      Re_BufSz   = Re_BufSz   + 1  ! MeanWS
-      Re_BufSz   = Re_BufSz   + 1  ! InvMWS
-      Re_BufSz   = Re_BufSz   + 1  ! TotalTime
-      Int_BufSz  = Int_BufSz  + 1  ! NComp
-      Int_BufSz  = Int_BufSz  + 1  ! NYGrids
-      Int_BufSz  = Int_BufSz  + 1  ! NZGrids
-      Int_BufSz  = Int_BufSz  + 1  ! NTGrids
-      Int_BufSz  = Int_BufSz  + 1  ! NSteps
-      Re_BufSz   = Re_BufSz   + 1  ! PLExp
-      Re_BufSz   = Re_BufSz   + 1  ! Z0
-      Re_BufSz   = Re_BufSz   + 1  ! VLinShr
-      Re_BufSz   = Re_BufSz   + 1  ! HLinShr
-      Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowF
-      Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowIdx
-      Int_BufSz  = Int_BufSz  + 1  ! BoxExceedWarned
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    IntKiBuf(Int_Xferred) = InData%WindFileFormat
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%WindProfileType
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%Periodic, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%InterpTower, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%AddMeanAfterInterp, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RefHeight
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RefLength
-    Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%Vel) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,3)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,4)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,4)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i4 = LBOUND(InData%Vel,4), UBOUND(InData%Vel,4)
-        DO i3 = LBOUND(InData%Vel,3), UBOUND(InData%Vel,3)
-          DO i2 = LBOUND(InData%Vel,2), UBOUND(InData%Vel,2)
-            DO i1 = LBOUND(InData%Vel,1), UBOUND(InData%Vel,1)
-              ReKiBuf(Re_Xferred) = InData%Vel(i1,i2,i3,i4)
-              Re_Xferred = Re_Xferred + 1
-            END DO
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%Acc) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Acc,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Acc,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Acc,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Acc,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Acc,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Acc,3)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Acc,4)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Acc,4)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i4 = LBOUND(InData%Acc,4), UBOUND(InData%Acc,4)
-        DO i3 = LBOUND(InData%Acc,3), UBOUND(InData%Acc,3)
-          DO i2 = LBOUND(InData%Acc,2), UBOUND(InData%Acc,2)
-            DO i1 = LBOUND(InData%Acc,1), UBOUND(InData%Acc,1)
-              ReKiBuf(Re_Xferred) = InData%Acc(i1,i2,i3,i4)
-              Re_Xferred = Re_Xferred + 1
-            END DO
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%VelTower) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelTower,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelTower,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelTower,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelTower,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelTower,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelTower,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%VelTower,3), UBOUND(InData%VelTower,3)
-        DO i2 = LBOUND(InData%VelTower,2), UBOUND(InData%VelTower,2)
-          DO i1 = LBOUND(InData%VelTower,1), UBOUND(InData%VelTower,1)
-            ReKiBuf(Re_Xferred) = InData%VelTower(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%AccTower) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccTower,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccTower,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccTower,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccTower,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccTower,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccTower,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%AccTower,3), UBOUND(InData%AccTower,3)
-        DO i2 = LBOUND(InData%AccTower,2), UBOUND(InData%AccTower,2)
-          DO i1 = LBOUND(InData%AccTower,1), UBOUND(InData%AccTower,1)
-            ReKiBuf(Re_Xferred) = InData%AccTower(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%VelAvg) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelAvg,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelAvg,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelAvg,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelAvg,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelAvg,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelAvg,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%VelAvg,3), UBOUND(InData%VelAvg,3)
-        DO i2 = LBOUND(InData%VelAvg,2), UBOUND(InData%VelAvg,2)
-          DO i1 = LBOUND(InData%VelAvg,1), UBOUND(InData%VelAvg,1)
-            ReKiBuf(Re_Xferred) = InData%VelAvg(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%AccAvg) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccAvg,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccAvg,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccAvg,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccAvg,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccAvg,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccAvg,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%AccAvg,3), UBOUND(InData%AccAvg,3)
-        DO i2 = LBOUND(InData%AccAvg,2), UBOUND(InData%AccAvg,2)
-          DO i1 = LBOUND(InData%AccAvg,1), UBOUND(InData%AccAvg,1)
-            ReKiBuf(Re_Xferred) = InData%AccAvg(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-    ReKiBuf(Re_Xferred) = InData%DTime
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Rate
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%YHWid
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%ZHWid
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%GridBase
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%InitXPosition
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%InvDY
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%InvDZ
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%MeanWS
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%InvMWS
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TotalTime
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NComp
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NYGrids
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NZGrids
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NTGrids
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NSteps
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%PLExp
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Z0
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%VLinShr
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HLinShr
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%BoxExceedAllowF, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%BoxExceedAllowIdx
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%BoxExceedWarned, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE IfW_FlowField_PackGrid3DFieldType
-
- SUBROUTINE IfW_FlowField_UnPackGrid3DFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Grid3DFieldType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_UnPackGrid3DFieldType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%WindFileFormat = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%WindProfileType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%Periodic = TRANSFER(IntKiBuf(Int_Xferred), OutData%Periodic)
-    Int_Xferred = Int_Xferred + 1
-    OutData%InterpTower = TRANSFER(IntKiBuf(Int_Xferred), OutData%InterpTower)
-    Int_Xferred = Int_Xferred + 1
-    OutData%AddMeanAfterInterp = TRANSFER(IntKiBuf(Int_Xferred), OutData%AddMeanAfterInterp)
-    Int_Xferred = Int_Xferred + 1
-    OutData%RefHeight = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RefLength = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vel not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i4_l = IntKiBuf( Int_Xferred    )
-    i4_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vel)) DEALLOCATE(OutData%Vel)
-    ALLOCATE(OutData%Vel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vel.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i4 = LBOUND(OutData%Vel,4), UBOUND(OutData%Vel,4)
-        DO i3 = LBOUND(OutData%Vel,3), UBOUND(OutData%Vel,3)
-          DO i2 = LBOUND(OutData%Vel,2), UBOUND(OutData%Vel,2)
-            DO i1 = LBOUND(OutData%Vel,1), UBOUND(OutData%Vel,1)
-              OutData%Vel(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
-              Re_Xferred = Re_Xferred + 1
-            END DO
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Acc not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i4_l = IntKiBuf( Int_Xferred    )
-    i4_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Acc)) DEALLOCATE(OutData%Acc)
-    ALLOCATE(OutData%Acc(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Acc.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i4 = LBOUND(OutData%Acc,4), UBOUND(OutData%Acc,4)
-        DO i3 = LBOUND(OutData%Acc,3), UBOUND(OutData%Acc,3)
-          DO i2 = LBOUND(OutData%Acc,2), UBOUND(OutData%Acc,2)
-            DO i1 = LBOUND(OutData%Acc,1), UBOUND(OutData%Acc,1)
-              OutData%Acc(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
-              Re_Xferred = Re_Xferred + 1
-            END DO
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelTower not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%VelTower)) DEALLOCATE(OutData%VelTower)
-    ALLOCATE(OutData%VelTower(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelTower.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%VelTower,3), UBOUND(OutData%VelTower,3)
-        DO i2 = LBOUND(OutData%VelTower,2), UBOUND(OutData%VelTower,2)
-          DO i1 = LBOUND(OutData%VelTower,1), UBOUND(OutData%VelTower,1)
-            OutData%VelTower(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AccTower not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%AccTower)) DEALLOCATE(OutData%AccTower)
-    ALLOCATE(OutData%AccTower(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AccTower.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%AccTower,3), UBOUND(OutData%AccTower,3)
-        DO i2 = LBOUND(OutData%AccTower,2), UBOUND(OutData%AccTower,2)
-          DO i1 = LBOUND(OutData%AccTower,1), UBOUND(OutData%AccTower,1)
-            OutData%AccTower(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelAvg not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%VelAvg)) DEALLOCATE(OutData%VelAvg)
-    ALLOCATE(OutData%VelAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelAvg.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%VelAvg,3), UBOUND(OutData%VelAvg,3)
-        DO i2 = LBOUND(OutData%VelAvg,2), UBOUND(OutData%VelAvg,2)
-          DO i1 = LBOUND(OutData%VelAvg,1), UBOUND(OutData%VelAvg,1)
-            OutData%VelAvg(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AccAvg not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%AccAvg)) DEALLOCATE(OutData%AccAvg)
-    ALLOCATE(OutData%AccAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AccAvg.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%AccAvg,3), UBOUND(OutData%AccAvg,3)
-        DO i2 = LBOUND(OutData%AccAvg,2), UBOUND(OutData%AccAvg,2)
-          DO i1 = LBOUND(OutData%AccAvg,1), UBOUND(OutData%AccAvg,1)
-            OutData%AccAvg(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-    OutData%DTime = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%Rate = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%YHWid = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%ZHWid = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%GridBase = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%InitXPosition = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%InvDY = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%InvDZ = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%MeanWS = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%InvMWS = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TotalTime = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NComp = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%NYGrids = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%NZGrids = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%NTGrids = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%NSteps = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%PLExp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%Z0 = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VLinShr = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HLinShr = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%BoxExceedAllowF = TRANSFER(IntKiBuf(Int_Xferred), OutData%BoxExceedAllowF)
-    Int_Xferred = Int_Xferred + 1
-    OutData%BoxExceedAllowIdx = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%BoxExceedWarned = TRANSFER(IntKiBuf(Int_Xferred), OutData%BoxExceedWarned)
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE IfW_FlowField_UnPackGrid3DFieldType
-
- SUBROUTINE IfW_FlowField_CopyGrid4DFieldType( SrcGrid4DFieldTypeData, DstGrid4DFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Grid4DFieldType), INTENT(IN) :: SrcGrid4DFieldTypeData
-   TYPE(Grid4DFieldType), INTENT(INOUT) :: DstGrid4DFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyGrid4DFieldType'
-! 
+subroutine IfW_FlowField_DestroyUniformField_Interp(UniformField_InterpData, ErrStat, ErrMsg)
+   type(UniformField_Interp), intent(inout) :: UniformField_InterpData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyUniformField_Interp'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstGrid4DFieldTypeData%n = SrcGrid4DFieldTypeData%n
-    DstGrid4DFieldTypeData%delta = SrcGrid4DFieldTypeData%delta
-    DstGrid4DFieldTypeData%pZero = SrcGrid4DFieldTypeData%pZero
-IF (ALLOCATED(SrcGrid4DFieldTypeData%Vel)) THEN
-  i1_l = LBOUND(SrcGrid4DFieldTypeData%Vel,1)
-  i1_u = UBOUND(SrcGrid4DFieldTypeData%Vel,1)
-  i2_l = LBOUND(SrcGrid4DFieldTypeData%Vel,2)
-  i2_u = UBOUND(SrcGrid4DFieldTypeData%Vel,2)
-  i3_l = LBOUND(SrcGrid4DFieldTypeData%Vel,3)
-  i3_u = UBOUND(SrcGrid4DFieldTypeData%Vel,3)
-  i4_l = LBOUND(SrcGrid4DFieldTypeData%Vel,4)
-  i4_u = UBOUND(SrcGrid4DFieldTypeData%Vel,4)
-  i5_l = LBOUND(SrcGrid4DFieldTypeData%Vel,5)
-  i5_u = UBOUND(SrcGrid4DFieldTypeData%Vel,5)
-  IF (.NOT. ALLOCATED(DstGrid4DFieldTypeData%Vel)) THEN 
-    ALLOCATE(DstGrid4DFieldTypeData%Vel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid4DFieldTypeData%Vel.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid4DFieldTypeData%Vel = SrcGrid4DFieldTypeData%Vel
-ENDIF
-    DstGrid4DFieldTypeData%TimeStart = SrcGrid4DFieldTypeData%TimeStart
-    DstGrid4DFieldTypeData%RefHeight = SrcGrid4DFieldTypeData%RefHeight
- END SUBROUTINE IfW_FlowField_CopyGrid4DFieldType
+   ErrMsg  = ''
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyGrid4DFieldType( Grid4DFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(Grid4DFieldType), INTENT(INOUT) :: Grid4DFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyGrid4DFieldType'
+subroutine IfW_FlowField_PackUniformField_Interp(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(UniformField_Interp), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'IfW_FlowField_PackUniformField_Interp'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%VelH)
+   call RegPack(RF, InData%VelHDot)
+   call RegPack(RF, InData%VelV)
+   call RegPack(RF, InData%VelVDot)
+   call RegPack(RF, InData%VelGust)
+   call RegPack(RF, InData%VelGustDot)
+   call RegPack(RF, InData%AngleH)
+   call RegPack(RF, InData%AngleHDot)
+   call RegPack(RF, InData%AngleV)
+   call RegPack(RF, InData%AngleVDot)
+   call RegPack(RF, InData%ShrH)
+   call RegPack(RF, InData%ShrHDot)
+   call RegPack(RF, InData%ShrV)
+   call RegPack(RF, InData%ShrVDot)
+   call RegPack(RF, InData%LinShrV)
+   call RegPack(RF, InData%LinShrVDot)
+   call RegPack(RF, InData%CosAngleH)
+   call RegPack(RF, InData%SinAngleH)
+   call RegPack(RF, InData%CosAngleV)
+   call RegPack(RF, InData%SinAngleV)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  ErrStat = ErrID_None
-  ErrMsg  = ""
+subroutine IfW_FlowField_UnPackUniformField_Interp(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(UniformField_Interp), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackUniformField_Interp'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%VelH); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VelHDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VelV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VelVDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VelGust); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VelGustDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AngleH); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AngleHDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AngleV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AngleVDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ShrH); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ShrHDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ShrV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ShrVDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LinShrV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LinShrVDot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CosAngleH); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SinAngleH); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CosAngleV); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%SinAngleV); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-IF (ALLOCATED(Grid4DFieldTypeData%Vel)) THEN
-  DEALLOCATE(Grid4DFieldTypeData%Vel)
-ENDIF
- END SUBROUTINE IfW_FlowField_DestroyGrid4DFieldType
-
- SUBROUTINE IfW_FlowField_PackGrid4DFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Grid4DFieldType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_PackGrid4DFieldType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + SIZE(InData%n)  ! n
-      Db_BufSz   = Db_BufSz   + SIZE(InData%delta)  ! delta
-      Re_BufSz   = Re_BufSz   + SIZE(InData%pZero)  ! pZero
-  Int_BufSz   = Int_BufSz   + 1     ! Vel allocated yes/no
-  IF ( ALLOCATED(InData%Vel) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*5  ! Vel upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vel)  ! Vel
-  END IF
-      Db_BufSz   = Db_BufSz   + 1  ! TimeStart
-      Re_BufSz   = Re_BufSz   + 1  ! RefHeight
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO i1 = LBOUND(InData%n,1), UBOUND(InData%n,1)
-      IntKiBuf(Int_Xferred) = InData%n(i1)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%delta,1), UBOUND(InData%delta,1)
-      DbKiBuf(Db_Xferred) = InData%delta(i1)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%pZero,1), UBOUND(InData%pZero,1)
-      ReKiBuf(Re_Xferred) = InData%pZero(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-  IF ( .NOT. ALLOCATED(InData%Vel) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,3)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,4)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,4)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,5)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,5)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i5 = LBOUND(InData%Vel,5), UBOUND(InData%Vel,5)
-        DO i4 = LBOUND(InData%Vel,4), UBOUND(InData%Vel,4)
-          DO i3 = LBOUND(InData%Vel,3), UBOUND(InData%Vel,3)
-            DO i2 = LBOUND(InData%Vel,2), UBOUND(InData%Vel,2)
-              DO i1 = LBOUND(InData%Vel,1), UBOUND(InData%Vel,1)
-                ReKiBuf(Re_Xferred) = InData%Vel(i1,i2,i3,i4,i5)
-                Re_Xferred = Re_Xferred + 1
-              END DO
-            END DO
-          END DO
-        END DO
-      END DO
-  END IF
-    DbKiBuf(Db_Xferred) = InData%TimeStart
-    Db_Xferred = Db_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RefHeight
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE IfW_FlowField_PackGrid4DFieldType
-
- SUBROUTINE IfW_FlowField_UnPackGrid4DFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Grid4DFieldType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_UnPackGrid4DFieldType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    i1_l = LBOUND(OutData%n,1)
-    i1_u = UBOUND(OutData%n,1)
-    DO i1 = LBOUND(OutData%n,1), UBOUND(OutData%n,1)
-      OutData%n(i1) = IntKiBuf(Int_Xferred)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%delta,1)
-    i1_u = UBOUND(OutData%delta,1)
-    DO i1 = LBOUND(OutData%delta,1), UBOUND(OutData%delta,1)
-      OutData%delta(i1) = DbKiBuf(Db_Xferred)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%pZero,1)
-    i1_u = UBOUND(OutData%pZero,1)
-    DO i1 = LBOUND(OutData%pZero,1), UBOUND(OutData%pZero,1)
-      OutData%pZero(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vel not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i4_l = IntKiBuf( Int_Xferred    )
-    i4_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i5_l = IntKiBuf( Int_Xferred    )
-    i5_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vel)) DEALLOCATE(OutData%Vel)
-    ALLOCATE(OutData%Vel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vel.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i5 = LBOUND(OutData%Vel,5), UBOUND(OutData%Vel,5)
-        DO i4 = LBOUND(OutData%Vel,4), UBOUND(OutData%Vel,4)
-          DO i3 = LBOUND(OutData%Vel,3), UBOUND(OutData%Vel,3)
-            DO i2 = LBOUND(OutData%Vel,2), UBOUND(OutData%Vel,2)
-              DO i1 = LBOUND(OutData%Vel,1), UBOUND(OutData%Vel,1)
-                OutData%Vel(i1,i2,i3,i4,i5) = REAL(ReKiBuf(Re_Xferred), SiKi)
-                Re_Xferred = Re_Xferred + 1
-              END DO
-            END DO
-          END DO
-        END DO
-      END DO
-  END IF
-    OutData%TimeStart = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
-    OutData%RefHeight = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE IfW_FlowField_UnPackGrid4DFieldType
-
- SUBROUTINE IfW_FlowField_CopyPointsFieldType( SrcPointsFieldTypeData, DstPointsFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(PointsFieldType), INTENT(IN) :: SrcPointsFieldTypeData
-   TYPE(PointsFieldType), INTENT(INOUT) :: DstPointsFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyPointsFieldType'
-! 
+subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Grid3DFieldType), intent(in) :: SrcGrid3DFieldTypeData
+   type(Grid3DFieldType), intent(inout) :: DstGrid3DFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(4), UB(4)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyGrid3DFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcPointsFieldTypeData%Vel)) THEN
-  i1_l = LBOUND(SrcPointsFieldTypeData%Vel,1)
-  i1_u = UBOUND(SrcPointsFieldTypeData%Vel,1)
-  i2_l = LBOUND(SrcPointsFieldTypeData%Vel,2)
-  i2_u = UBOUND(SrcPointsFieldTypeData%Vel,2)
-  IF (.NOT. ALLOCATED(DstPointsFieldTypeData%Vel)) THEN 
-    ALLOCATE(DstPointsFieldTypeData%Vel(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstPointsFieldTypeData%Vel.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstPointsFieldTypeData%Vel = SrcPointsFieldTypeData%Vel
-ENDIF
- END SUBROUTINE IfW_FlowField_CopyPointsFieldType
+   ErrMsg  = ''
+   DstGrid3DFieldTypeData%WindFileFormat = SrcGrid3DFieldTypeData%WindFileFormat
+   DstGrid3DFieldTypeData%WindProfileType = SrcGrid3DFieldTypeData%WindProfileType
+   DstGrid3DFieldTypeData%Periodic = SrcGrid3DFieldTypeData%Periodic
+   DstGrid3DFieldTypeData%InterpTower = SrcGrid3DFieldTypeData%InterpTower
+   DstGrid3DFieldTypeData%AddMeanAfterInterp = SrcGrid3DFieldTypeData%AddMeanAfterInterp
+   DstGrid3DFieldTypeData%RefHeight = SrcGrid3DFieldTypeData%RefHeight
+   DstGrid3DFieldTypeData%RefLength = SrcGrid3DFieldTypeData%RefLength
+   if (allocated(SrcGrid3DFieldTypeData%Vel)) then
+      LB(1:4) = lbound(SrcGrid3DFieldTypeData%Vel)
+      UB(1:4) = ubound(SrcGrid3DFieldTypeData%Vel)
+      if (.not. allocated(DstGrid3DFieldTypeData%Vel)) then
+         allocate(DstGrid3DFieldTypeData%Vel(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%Vel.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%Vel = SrcGrid3DFieldTypeData%Vel
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%Acc)) then
+      LB(1:4) = lbound(SrcGrid3DFieldTypeData%Acc)
+      UB(1:4) = ubound(SrcGrid3DFieldTypeData%Acc)
+      if (.not. allocated(DstGrid3DFieldTypeData%Acc)) then
+         allocate(DstGrid3DFieldTypeData%Acc(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%Acc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%Acc = SrcGrid3DFieldTypeData%Acc
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%VelTower)) then
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelTower)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%VelTower)
+      if (.not. allocated(DstGrid3DFieldTypeData%VelTower)) then
+         allocate(DstGrid3DFieldTypeData%VelTower(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%VelTower.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%VelTower = SrcGrid3DFieldTypeData%VelTower
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%AccTower)) then
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccTower)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%AccTower)
+      if (.not. allocated(DstGrid3DFieldTypeData%AccTower)) then
+         allocate(DstGrid3DFieldTypeData%AccTower(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%AccTower.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%AccTower = SrcGrid3DFieldTypeData%AccTower
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%VelAvg)) then
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelAvg)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%VelAvg)
+      if (.not. allocated(DstGrid3DFieldTypeData%VelAvg)) then
+         allocate(DstGrid3DFieldTypeData%VelAvg(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%VelAvg.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%VelAvg = SrcGrid3DFieldTypeData%VelAvg
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%AccAvg)) then
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccAvg)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%AccAvg)
+      if (.not. allocated(DstGrid3DFieldTypeData%AccAvg)) then
+         allocate(DstGrid3DFieldTypeData%AccAvg(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%AccAvg.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%AccAvg = SrcGrid3DFieldTypeData%AccAvg
+   end if
+   DstGrid3DFieldTypeData%DTime = SrcGrid3DFieldTypeData%DTime
+   DstGrid3DFieldTypeData%Rate = SrcGrid3DFieldTypeData%Rate
+   DstGrid3DFieldTypeData%YHWid = SrcGrid3DFieldTypeData%YHWid
+   DstGrid3DFieldTypeData%ZHWid = SrcGrid3DFieldTypeData%ZHWid
+   DstGrid3DFieldTypeData%GridBase = SrcGrid3DFieldTypeData%GridBase
+   DstGrid3DFieldTypeData%InitXPosition = SrcGrid3DFieldTypeData%InitXPosition
+   DstGrid3DFieldTypeData%InvDY = SrcGrid3DFieldTypeData%InvDY
+   DstGrid3DFieldTypeData%InvDZ = SrcGrid3DFieldTypeData%InvDZ
+   DstGrid3DFieldTypeData%MeanWS = SrcGrid3DFieldTypeData%MeanWS
+   DstGrid3DFieldTypeData%InvMWS = SrcGrid3DFieldTypeData%InvMWS
+   DstGrid3DFieldTypeData%TotalTime = SrcGrid3DFieldTypeData%TotalTime
+   DstGrid3DFieldTypeData%NComp = SrcGrid3DFieldTypeData%NComp
+   DstGrid3DFieldTypeData%NYGrids = SrcGrid3DFieldTypeData%NYGrids
+   DstGrid3DFieldTypeData%NZGrids = SrcGrid3DFieldTypeData%NZGrids
+   DstGrid3DFieldTypeData%NTGrids = SrcGrid3DFieldTypeData%NTGrids
+   DstGrid3DFieldTypeData%NSteps = SrcGrid3DFieldTypeData%NSteps
+   DstGrid3DFieldTypeData%PLExp = SrcGrid3DFieldTypeData%PLExp
+   DstGrid3DFieldTypeData%Z0 = SrcGrid3DFieldTypeData%Z0
+   DstGrid3DFieldTypeData%VLinShr = SrcGrid3DFieldTypeData%VLinShr
+   DstGrid3DFieldTypeData%HLinShr = SrcGrid3DFieldTypeData%HLinShr
+   DstGrid3DFieldTypeData%BoxExceedAllow = SrcGrid3DFieldTypeData%BoxExceedAllow
+   DstGrid3DFieldTypeData%BoxExceedAllowDrv = SrcGrid3DFieldTypeData%BoxExceedAllowDrv
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyPointsFieldType( PointsFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(PointsFieldType), INTENT(INOUT) :: PointsFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyPointsFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-IF (ALLOCATED(PointsFieldTypeData%Vel)) THEN
-  DEALLOCATE(PointsFieldTypeData%Vel)
-ENDIF
- END SUBROUTINE IfW_FlowField_DestroyPointsFieldType
-
- SUBROUTINE IfW_FlowField_PackPointsFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(PointsFieldType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_PackPointsFieldType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! Vel allocated yes/no
-  IF ( ALLOCATED(InData%Vel) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! Vel upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vel)  ! Vel
-  END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-  IF ( .NOT. ALLOCATED(InData%Vel) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%Vel,2), UBOUND(InData%Vel,2)
-        DO i1 = LBOUND(InData%Vel,1), UBOUND(InData%Vel,1)
-          ReKiBuf(Re_Xferred) = InData%Vel(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
- END SUBROUTINE IfW_FlowField_PackPointsFieldType
-
- SUBROUTINE IfW_FlowField_UnPackPointsFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(PointsFieldType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_UnPackPointsFieldType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vel not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vel)) DEALLOCATE(OutData%Vel)
-    ALLOCATE(OutData%Vel(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vel.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%Vel,2), UBOUND(OutData%Vel,2)
-        DO i1 = LBOUND(OutData%Vel,1), UBOUND(OutData%Vel,1)
-          OutData%Vel(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
- END SUBROUTINE IfW_FlowField_UnPackPointsFieldType
-
- SUBROUTINE IfW_FlowField_CopyUserFieldType( SrcUserFieldTypeData, DstUserFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(UserFieldType), INTENT(IN) :: SrcUserFieldTypeData
-   TYPE(UserFieldType), INTENT(INOUT) :: DstUserFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyUserFieldType'
-! 
+subroutine IfW_FlowField_DestroyGrid3DFieldType(Grid3DFieldTypeData, ErrStat, ErrMsg)
+   type(Grid3DFieldType), intent(inout) :: Grid3DFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyGrid3DFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUserFieldTypeData%RefHeight = SrcUserFieldTypeData%RefHeight
- END SUBROUTINE IfW_FlowField_CopyUserFieldType
+   ErrMsg  = ''
+   if (allocated(Grid3DFieldTypeData%Vel)) then
+      deallocate(Grid3DFieldTypeData%Vel)
+   end if
+   if (allocated(Grid3DFieldTypeData%Acc)) then
+      deallocate(Grid3DFieldTypeData%Acc)
+   end if
+   if (allocated(Grid3DFieldTypeData%VelTower)) then
+      deallocate(Grid3DFieldTypeData%VelTower)
+   end if
+   if (allocated(Grid3DFieldTypeData%AccTower)) then
+      deallocate(Grid3DFieldTypeData%AccTower)
+   end if
+   if (allocated(Grid3DFieldTypeData%VelAvg)) then
+      deallocate(Grid3DFieldTypeData%VelAvg)
+   end if
+   if (allocated(Grid3DFieldTypeData%AccAvg)) then
+      deallocate(Grid3DFieldTypeData%AccAvg)
+   end if
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyUserFieldType( UserFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(UserFieldType), INTENT(INOUT) :: UserFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyUserFieldType'
+subroutine IfW_FlowField_PackGrid3DFieldType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Grid3DFieldType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'IfW_FlowField_PackGrid3DFieldType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%WindFileFormat)
+   call RegPack(RF, InData%WindProfileType)
+   call RegPack(RF, InData%Periodic)
+   call RegPack(RF, InData%InterpTower)
+   call RegPack(RF, InData%AddMeanAfterInterp)
+   call RegPack(RF, InData%RefHeight)
+   call RegPack(RF, InData%RefLength)
+   call RegPackAlloc(RF, InData%Vel)
+   call RegPackAlloc(RF, InData%Acc)
+   call RegPackAlloc(RF, InData%VelTower)
+   call RegPackAlloc(RF, InData%AccTower)
+   call RegPackAlloc(RF, InData%VelAvg)
+   call RegPackAlloc(RF, InData%AccAvg)
+   call RegPack(RF, InData%DTime)
+   call RegPack(RF, InData%Rate)
+   call RegPack(RF, InData%YHWid)
+   call RegPack(RF, InData%ZHWid)
+   call RegPack(RF, InData%GridBase)
+   call RegPack(RF, InData%InitXPosition)
+   call RegPack(RF, InData%InvDY)
+   call RegPack(RF, InData%InvDZ)
+   call RegPack(RF, InData%MeanWS)
+   call RegPack(RF, InData%InvMWS)
+   call RegPack(RF, InData%TotalTime)
+   call RegPack(RF, InData%NComp)
+   call RegPack(RF, InData%NYGrids)
+   call RegPack(RF, InData%NZGrids)
+   call RegPack(RF, InData%NTGrids)
+   call RegPack(RF, InData%NSteps)
+   call RegPack(RF, InData%PLExp)
+   call RegPack(RF, InData%Z0)
+   call RegPack(RF, InData%VLinShr)
+   call RegPack(RF, InData%HLinShr)
+   call RegPack(RF, InData%BoxExceedAllow)
+   call RegPack(RF, InData%BoxExceedAllowDrv)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  ErrStat = ErrID_None
-  ErrMsg  = ""
+subroutine IfW_FlowField_UnPackGrid3DFieldType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Grid3DFieldType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackGrid3DFieldType'
+   integer(B4Ki)   :: LB(4), UB(4)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%WindFileFormat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WindProfileType); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Periodic); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%InterpTower); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AddMeanAfterInterp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefHeight); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefLength); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Vel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Acc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VelTower); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AccTower); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%VelAvg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AccAvg); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Rate); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%YHWid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%ZHWid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GridBase); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%InitXPosition); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%InvDY); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%InvDZ); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MeanWS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%InvMWS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TotalTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NComp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NYGrids); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NZGrids); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NTGrids); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NSteps); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PLExp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Z0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VLinShr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%HLinShr); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BoxExceedAllow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BoxExceedAllowDrv); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
- END SUBROUTINE IfW_FlowField_DestroyUserFieldType
-
- SUBROUTINE IfW_FlowField_PackUserFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(UserFieldType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_PackUserFieldType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! RefHeight
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%RefHeight
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE IfW_FlowField_PackUserFieldType
-
- SUBROUTINE IfW_FlowField_UnPackUserFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(UserFieldType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_UnPackUserFieldType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%RefHeight = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE IfW_FlowField_UnPackUserFieldType
-
- SUBROUTINE IfW_FlowField_CopyFlowFieldType( SrcFlowFieldTypeData, DstFlowFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(FlowFieldType), INTENT(IN) :: SrcFlowFieldTypeData
-   TYPE(FlowFieldType), INTENT(INOUT) :: DstFlowFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyFlowFieldType'
-! 
+subroutine IfW_FlowField_CopyGrid4DFieldType(SrcGrid4DFieldTypeData, DstGrid4DFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Grid4DFieldType), intent(in) :: SrcGrid4DFieldTypeData
+   type(Grid4DFieldType), intent(inout) :: DstGrid4DFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(5), UB(5)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyGrid4DFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstFlowFieldTypeData%FieldType = SrcFlowFieldTypeData%FieldType
-    DstFlowFieldTypeData%RefPosition = SrcFlowFieldTypeData%RefPosition
-    DstFlowFieldTypeData%PropagationDir = SrcFlowFieldTypeData%PropagationDir
-    DstFlowFieldTypeData%VFlowAngle = SrcFlowFieldTypeData%VFlowAngle
-    DstFlowFieldTypeData%VelInterpCubic = SrcFlowFieldTypeData%VelInterpCubic
-    DstFlowFieldTypeData%RotateWindBox = SrcFlowFieldTypeData%RotateWindBox
-    DstFlowFieldTypeData%AccFieldValid = SrcFlowFieldTypeData%AccFieldValid
-    DstFlowFieldTypeData%RotToWind = SrcFlowFieldTypeData%RotToWind
-    DstFlowFieldTypeData%RotFromWind = SrcFlowFieldTypeData%RotFromWind
-      CALL IfW_FlowField_Copyuniformfieldtype( SrcFlowFieldTypeData%Uniform, DstFlowFieldTypeData%Uniform, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL IfW_FlowField_Copygrid3dfieldtype( SrcFlowFieldTypeData%Grid3D, DstFlowFieldTypeData%Grid3D, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL IfW_FlowField_Copygrid4dfieldtype( SrcFlowFieldTypeData%Grid4D, DstFlowFieldTypeData%Grid4D, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL IfW_FlowField_Copypointsfieldtype( SrcFlowFieldTypeData%Points, DstFlowFieldTypeData%Points, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL IfW_FlowField_Copyuserfieldtype( SrcFlowFieldTypeData%User, DstFlowFieldTypeData%User, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE IfW_FlowField_CopyFlowFieldType
+   ErrMsg  = ''
+   DstGrid4DFieldTypeData%n = SrcGrid4DFieldTypeData%n
+   DstGrid4DFieldTypeData%delta = SrcGrid4DFieldTypeData%delta
+   DstGrid4DFieldTypeData%pZero = SrcGrid4DFieldTypeData%pZero
+   DstGrid4DFieldTypeData%Vel => SrcGrid4DFieldTypeData%Vel
+   DstGrid4DFieldTypeData%TimeStart = SrcGrid4DFieldTypeData%TimeStart
+   DstGrid4DFieldTypeData%RefHeight = SrcGrid4DFieldTypeData%RefHeight
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyFlowFieldType( FlowFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(FlowFieldType), INTENT(INOUT) :: FlowFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyFlowFieldType'
+subroutine IfW_FlowField_DestroyGrid4DFieldType(Grid4DFieldTypeData, ErrStat, ErrMsg)
+   type(Grid4DFieldType), intent(inout) :: Grid4DFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyGrid4DFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   nullify(Grid4DFieldTypeData%Vel)
+end subroutine
 
-  ErrStat = ErrID_None
-  ErrMsg  = ""
+subroutine IfW_FlowField_PackGrid4DFieldType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Grid4DFieldType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'IfW_FlowField_PackGrid4DFieldType'
+   logical         :: PtrInIndex
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%n)
+   call RegPack(RF, InData%delta)
+   call RegPack(RF, InData%pZero)
+   call RegPackPtr(RF, InData%Vel)
+   call RegPack(RF, InData%TimeStart)
+   call RegPack(RF, InData%RefHeight)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL IfW_FlowField_Destroyuniformfieldtype( FlowFieldTypeData%Uniform, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_Destroygrid3dfieldtype( FlowFieldTypeData%Grid3D, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_Destroygrid4dfieldtype( FlowFieldTypeData%Grid4D, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_Destroypointsfieldtype( FlowFieldTypeData%Points, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_Destroyuserfieldtype( FlowFieldTypeData%User, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE IfW_FlowField_DestroyFlowFieldType
+subroutine IfW_FlowField_UnPackGrid4DFieldType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Grid4DFieldType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackGrid4DFieldType'
+   integer(B4Ki)   :: LB(5), UB(5)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   integer(B8Ki)   :: PtrIdx
+   type(c_ptr)     :: Ptr
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%delta); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%pZero); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackPtr(RF, OutData%Vel, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TimeStart); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefHeight); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
- SUBROUTINE IfW_FlowField_PackFlowFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(FlowFieldType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_PackFlowFieldType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+subroutine IfW_FlowField_CopyPointsFieldType(SrcPointsFieldTypeData, DstPointsFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(PointsFieldType), intent(in) :: SrcPointsFieldTypeData
+   type(PointsFieldType), intent(inout) :: DstPointsFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyPointsFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcPointsFieldTypeData%Vel)) then
+      LB(1:2) = lbound(SrcPointsFieldTypeData%Vel)
+      UB(1:2) = ubound(SrcPointsFieldTypeData%Vel)
+      if (.not. allocated(DstPointsFieldTypeData%Vel)) then
+         allocate(DstPointsFieldTypeData%Vel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstPointsFieldTypeData%Vel.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstPointsFieldTypeData%Vel = SrcPointsFieldTypeData%Vel
+   end if
+end subroutine
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! FieldType
-      Re_BufSz   = Re_BufSz   + SIZE(InData%RefPosition)  ! RefPosition
-      Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
-      Re_BufSz   = Re_BufSz   + 1  ! VFlowAngle
-      Int_BufSz  = Int_BufSz  + 1  ! VelInterpCubic
-      Int_BufSz  = Int_BufSz  + 1  ! RotateWindBox
-      Int_BufSz  = Int_BufSz  + 1  ! AccFieldValid
-      Re_BufSz   = Re_BufSz   + SIZE(InData%RotToWind)  ! RotToWind
-      Re_BufSz   = Re_BufSz   + SIZE(InData%RotFromWind)  ! RotFromWind
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! Uniform: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packuniformfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Uniform, ErrStat2, ErrMsg2, .TRUE. ) ! Uniform 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine IfW_FlowField_DestroyPointsFieldType(PointsFieldTypeData, ErrStat, ErrMsg)
+   type(PointsFieldType), intent(inout) :: PointsFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyPointsFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(PointsFieldTypeData%Vel)) then
+      deallocate(PointsFieldTypeData%Vel)
+   end if
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Uniform
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Uniform
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Uniform
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-      Int_BufSz   = Int_BufSz + 3  ! Grid3D: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packgrid3dfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid3D, ErrStat2, ErrMsg2, .TRUE. ) ! Grid3D 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine IfW_FlowField_PackPointsFieldType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(PointsFieldType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'IfW_FlowField_PackPointsFieldType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%Vel)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Grid3D
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Grid3D
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Grid3D
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-      Int_BufSz   = Int_BufSz + 3  ! Grid4D: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packgrid4dfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid4D, ErrStat2, ErrMsg2, .TRUE. ) ! Grid4D 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine IfW_FlowField_UnPackPointsFieldType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(PointsFieldType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackPointsFieldType'
+   integer(B4Ki)   :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%Vel); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Grid4D
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Grid4D
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Grid4D
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-      Int_BufSz   = Int_BufSz + 3  ! Points: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packpointsfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Points, ErrStat2, ErrMsg2, .TRUE. ) ! Points 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine IfW_FlowField_CopyUserFieldType(SrcUserFieldTypeData, DstUserFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(UserFieldType), intent(in) :: SrcUserFieldTypeData
+   type(UserFieldType), intent(inout) :: DstUserFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyUserFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstUserFieldTypeData%RefHeight = SrcUserFieldTypeData%RefHeight
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Points
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Points
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Points
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-      Int_BufSz   = Int_BufSz + 3  ! User: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packuserfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%User, ErrStat2, ErrMsg2, .TRUE. ) ! User 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine IfW_FlowField_DestroyUserFieldType(UserFieldTypeData, ErrStat, ErrMsg)
+   type(UserFieldType), intent(inout) :: UserFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyUserFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! User
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! User
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! User
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine IfW_FlowField_PackUserFieldType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(UserFieldType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'IfW_FlowField_PackUserFieldType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%RefHeight)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
+subroutine IfW_FlowField_UnPackUserFieldType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(UserFieldType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackUserFieldType'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%RefHeight); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-    IntKiBuf(Int_Xferred) = InData%FieldType
-    Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%RefPosition,1), UBOUND(InData%RefPosition,1)
-      ReKiBuf(Re_Xferred) = InData%RefPosition(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    ReKiBuf(Re_Xferred) = InData%PropagationDir
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%VFlowAngle
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%VelInterpCubic, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%RotateWindBox, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%AccFieldValid, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    DO i2 = LBOUND(InData%RotToWind,2), UBOUND(InData%RotToWind,2)
-      DO i1 = LBOUND(InData%RotToWind,1), UBOUND(InData%RotToWind,1)
-        ReKiBuf(Re_Xferred) = InData%RotToWind(i1,i2)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-    END DO
-    DO i2 = LBOUND(InData%RotFromWind,2), UBOUND(InData%RotFromWind,2)
-      DO i1 = LBOUND(InData%RotFromWind,1), UBOUND(InData%RotFromWind,1)
-        ReKiBuf(Re_Xferred) = InData%RotFromWind(i1,i2)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-    END DO
-      CALL IfW_FlowField_Packuniformfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Uniform, ErrStat2, ErrMsg2, OnlySize ) ! Uniform 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine IfW_FlowField_CopyFlowFieldType(SrcFlowFieldTypeData, DstFlowFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(FlowFieldType), intent(in) :: SrcFlowFieldTypeData
+   type(FlowFieldType), intent(inout) :: DstFlowFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyFlowFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstFlowFieldTypeData%FieldType = SrcFlowFieldTypeData%FieldType
+   DstFlowFieldTypeData%RefPosition = SrcFlowFieldTypeData%RefPosition
+   DstFlowFieldTypeData%PropagationDir = SrcFlowFieldTypeData%PropagationDir
+   DstFlowFieldTypeData%VFlowAngle = SrcFlowFieldTypeData%VFlowAngle
+   DstFlowFieldTypeData%VelInterpCubic = SrcFlowFieldTypeData%VelInterpCubic
+   DstFlowFieldTypeData%RotateWindBox = SrcFlowFieldTypeData%RotateWindBox
+   DstFlowFieldTypeData%AccFieldValid = SrcFlowFieldTypeData%AccFieldValid
+   DstFlowFieldTypeData%RotToWind = SrcFlowFieldTypeData%RotToWind
+   DstFlowFieldTypeData%RotFromWind = SrcFlowFieldTypeData%RotFromWind
+   call IfW_FlowField_CopyUniformFieldType(SrcFlowFieldTypeData%Uniform, DstFlowFieldTypeData%Uniform, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IfW_FlowField_CopyGrid3DFieldType(SrcFlowFieldTypeData%Grid3D, DstFlowFieldTypeData%Grid3D, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IfW_FlowField_CopyGrid4DFieldType(SrcFlowFieldTypeData%Grid4D, DstFlowFieldTypeData%Grid4D, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IfW_FlowField_CopyPointsFieldType(SrcFlowFieldTypeData%Points, DstFlowFieldTypeData%Points, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IfW_FlowField_CopyUserFieldType(SrcFlowFieldTypeData%User, DstFlowFieldTypeData%User, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      CALL IfW_FlowField_Packgrid3dfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid3D, ErrStat2, ErrMsg2, OnlySize ) ! Grid3D 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine IfW_FlowField_DestroyFlowFieldType(FlowFieldTypeData, ErrStat, ErrMsg)
+   type(FlowFieldType), intent(inout) :: FlowFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyFlowFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call IfW_FlowField_DestroyUniformFieldType(FlowFieldTypeData%Uniform, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IfW_FlowField_DestroyGrid3DFieldType(FlowFieldTypeData%Grid3D, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IfW_FlowField_DestroyGrid4DFieldType(FlowFieldTypeData%Grid4D, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IfW_FlowField_DestroyPointsFieldType(FlowFieldTypeData%Points, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IfW_FlowField_DestroyUserFieldType(FlowFieldTypeData%User, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      CALL IfW_FlowField_Packgrid4dfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid4D, ErrStat2, ErrMsg2, OnlySize ) ! Grid4D 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine IfW_FlowField_PackFlowFieldType(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(FlowFieldType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'IfW_FlowField_PackFlowFieldType'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%FieldType)
+   call RegPack(RF, InData%RefPosition)
+   call RegPack(RF, InData%PropagationDir)
+   call RegPack(RF, InData%VFlowAngle)
+   call RegPack(RF, InData%VelInterpCubic)
+   call RegPack(RF, InData%RotateWindBox)
+   call RegPack(RF, InData%AccFieldValid)
+   call RegPack(RF, InData%RotToWind)
+   call RegPack(RF, InData%RotFromWind)
+   call IfW_FlowField_PackUniformFieldType(RF, InData%Uniform) 
+   call IfW_FlowField_PackGrid3DFieldType(RF, InData%Grid3D) 
+   call IfW_FlowField_PackGrid4DFieldType(RF, InData%Grid4D) 
+   call IfW_FlowField_PackPointsFieldType(RF, InData%Points) 
+   call IfW_FlowField_PackUserFieldType(RF, InData%User) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      CALL IfW_FlowField_Packpointsfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Points, ErrStat2, ErrMsg2, OnlySize ) ! Points 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      CALL IfW_FlowField_Packuserfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%User, ErrStat2, ErrMsg2, OnlySize ) ! User 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
- END SUBROUTINE IfW_FlowField_PackFlowFieldType
-
- SUBROUTINE IfW_FlowField_UnPackFlowFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(FlowFieldType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_UnPackFlowFieldType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%FieldType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%RefPosition,1)
-    i1_u = UBOUND(OutData%RefPosition,1)
-    DO i1 = LBOUND(OutData%RefPosition,1), UBOUND(OutData%RefPosition,1)
-      OutData%RefPosition(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%PropagationDir = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VFlowAngle = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VelInterpCubic = TRANSFER(IntKiBuf(Int_Xferred), OutData%VelInterpCubic)
-    Int_Xferred = Int_Xferred + 1
-    OutData%RotateWindBox = TRANSFER(IntKiBuf(Int_Xferred), OutData%RotateWindBox)
-    Int_Xferred = Int_Xferred + 1
-    OutData%AccFieldValid = TRANSFER(IntKiBuf(Int_Xferred), OutData%AccFieldValid)
-    Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%RotToWind,1)
-    i1_u = UBOUND(OutData%RotToWind,1)
-    i2_l = LBOUND(OutData%RotToWind,2)
-    i2_u = UBOUND(OutData%RotToWind,2)
-    DO i2 = LBOUND(OutData%RotToWind,2), UBOUND(OutData%RotToWind,2)
-      DO i1 = LBOUND(OutData%RotToWind,1), UBOUND(OutData%RotToWind,1)
-        OutData%RotToWind(i1,i2) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-    END DO
-    i1_l = LBOUND(OutData%RotFromWind,1)
-    i1_u = UBOUND(OutData%RotFromWind,1)
-    i2_l = LBOUND(OutData%RotFromWind,2)
-    i2_u = UBOUND(OutData%RotFromWind,2)
-    DO i2 = LBOUND(OutData%RotFromWind,2), UBOUND(OutData%RotFromWind,2)
-      DO i1 = LBOUND(OutData%RotFromWind,1), UBOUND(OutData%RotFromWind,1)
-        OutData%RotFromWind(i1,i2) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-    END DO
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL IfW_FlowField_Unpackuniformfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%Uniform, ErrStat2, ErrMsg2 ) ! Uniform 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL IfW_FlowField_Unpackgrid3dfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%Grid3D, ErrStat2, ErrMsg2 ) ! Grid3D 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL IfW_FlowField_Unpackgrid4dfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%Grid4D, ErrStat2, ErrMsg2 ) ! Grid4D 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL IfW_FlowField_Unpackpointsfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%Points, ErrStat2, ErrMsg2 ) ! Points 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL IfW_FlowField_Unpackuserfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%User, ErrStat2, ErrMsg2 ) ! User 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE IfW_FlowField_UnPackFlowFieldType
-
+subroutine IfW_FlowField_UnPackFlowFieldType(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(FlowFieldType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackFlowFieldType'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%FieldType); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RefPosition); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PropagationDir); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VFlowAngle); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VelInterpCubic); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotateWindBox); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%AccFieldValid); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotToWind); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RotFromWind); if (RegCheckErr(RF, RoutineName)) return
+   call IfW_FlowField_UnpackUniformFieldType(RF, OutData%Uniform) ! Uniform 
+   call IfW_FlowField_UnpackGrid3DFieldType(RF, OutData%Grid3D) ! Grid3D 
+   call IfW_FlowField_UnpackGrid4DFieldType(RF, OutData%Grid4D) ! Grid4D 
+   call IfW_FlowField_UnpackPointsFieldType(RF, OutData%Points) ! Points 
+   call IfW_FlowField_UnpackUserFieldType(RF, OutData%User) ! User 
+end subroutine
 END MODULE IfW_FlowField_Types
 !ENDOFREGISTRYGENERATEDFILE

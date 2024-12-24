@@ -34,6 +34,7 @@ typedef   ^         InitInputType ReKi            HubPos    {3}    - - "Initial 
 typedef   ^         InitInputType R8Ki            HubRot    {3}{3} - - "Initial Hub direction cosine matrix"
 typedef   ^         InitInputType Logical         Linearize - .FALSE. - "Flag that tells this module if the glue code wants to linearize." -
 typedef   ^         InitInputType Logical         DynamicSolve - .TRUE. - "Use dynamic solve option.  Set to False for static solving (handled by glue code or driver code)." -
+typedef   ^         InitInputType LOGICAL         CompAeroMaps -   .FALSE. - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
 
 
 # Define outputs that the initialization routine may need here:
@@ -41,8 +42,6 @@ typedef   ^         InitInputType Logical         DynamicSolve - .TRUE. - "Use d
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputHdr {:}  -   -   "Names of the output-to-file channels"   -
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   -   "Units of the output-to-file channels"   -
 typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
-typedef   ^        InitOutputType R8Ki                kp_coordinate  {:}{:} - -   "Key point coordinates array"            -
-typedef   ^        InitOutputType IntKi               kp_total        -   -   -   "Total number of key points" -
 typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
 #typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_z   {:}  -   -   "Names of the constraint states used in linearization" -
 typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -
@@ -250,6 +249,7 @@ typedef   ^        ParameterType    Integer     Jac_ny                  -       
 typedef   ^        ParameterType    Integer     Jac_nx                  -            - - "half the number of continuous states in jacobian matrix" -
 typedef   ^        ParameterType    logical     RotStates               -            - - "Orient states in rotating frame during linearization? (flag)" -
 typedef   ^        ParameterType    Logical     RelStates               -            - - "Define states relative to root motion during linearization? (flag)" -
+typedef   ^        ParameterType    LOGICAL     CompAeroMaps            -   .FALSE.    - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
 
 
 # ..... Inputs
@@ -286,14 +286,14 @@ typedef   ^        EqMotionQP      ^           aaa        :::    - - "Translatio
 #This may not be needed at all. Would be useful only if we decide to use something other than the quadrature points for the output mesh.  In that case, don't put it in m%qp%q
 #typedef   ^        EqMotionQP      ^           q          :::    - - "Displacement and rotation for all quadrature points -- Calculated from x%q after solve. size 6 x p%nqp x p%elem_total" -
 
-typedef   ^        EqMotionQP      ^           RR0        ::::   - - "Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$" -
-typedef   ^        EqMotionQP      ^           kappa      :::    - - "Curvature vector \f$ \underline{k} \f$ at current QP (note this is not \kappa, but a term in \kappa)" -
-typedef   ^        EqMotionQP      ^           E1         :::    - - "\vec{e_1} = x_0^\prime + u^\prime (3) at current QP" -
+typedef   ^        EqMotionQP      ^           RR0        ::::   - - "Rotation tensor at current QP \\f$ \\left(\\underline{\\underline{R}}\\underline{\\underline{R}}_0\\right) \\f$" -
+typedef   ^        EqMotionQP      ^           kappa      :::    - - "Curvature vector \\f$ \\underline{k} \\f$ at current QP (note this is not \\kappa, but a term in \\kappa)" -
+typedef   ^        EqMotionQP      ^           E1         :::    - - "\\vec{e_1} = x_0^\\prime + u^\\prime (3) at current QP" -
 typedef   ^        EqMotionQP      ^           Stif       ::::   - - "C/S stiffness matrix resolved in inertial frame at current QP. 6x6" -
 
 typedef   ^        EqMotionQP      ^           Fb         :::    - - "Gyroscopic forces at current QP. 6" -
-typedef   ^        EqMotionQP      ^           Fc         :::    - - "Elastic force \f$ \underline{F}^c \f$ at current QP. 6" -
-typedef   ^        EqMotionQP      ^           Fd         :::    - - "Elastic force \f$ \underline{F}^d \f$ at current QP. 6" -
+typedef   ^        EqMotionQP      ^           Fc         :::    - - "Elastic force \\f$ \\underline{F}^c \\f$ at current QP. 6" -
+typedef   ^        EqMotionQP      ^           Fd         :::    - - "Elastic force \\f$ \\underline{F}^d \\f$ at current QP. 6" -
 typedef   ^        EqMotionQP      ^           Fg         :::    - - "Gravity forces at current QP. 6" -
 typedef   ^        EqMotionQP      ^           Fi         :::    - - "Inertial forces at current QP. 6" -
 typedef   ^        EqMotionQP      ^           Ftemp      :::    - - "Sum of some of the forces at current QP. 6" -
@@ -308,9 +308,9 @@ typedef   ^        EqMotionQP      ^           Ki         ::::   - - "Stiffness 
 typedef   ^        EqMotionQP      ^           Mi         ::::   - - "Mass matrix for inertial force. 6x6" -
 
 # Elastic force terms
-typedef   ^        EqMotionQP      ^           Oe         ::::   - - "\f$ \underline{\underline{\mathcal{O}}} \f$ from equation (19) of NREL CP-2C00-60759. 6x6" -
-typedef   ^        EqMotionQP      ^           Pe         ::::   - - "\f$ \underline{\underline{\mathcal{P}}} \f$ from equation (20) of NREL CP-2C00-60759. 6x6" -
-typedef   ^        EqMotionQP      ^           Qe         ::::   - - "\f$ \underline{\underline{\mathcal{Q}}} \f$ from equation (21) of NREL CP-2C00-60759. 6x6" -
+typedef   ^        EqMotionQP      ^           Oe         ::::   - - "\\f$ \\underline{\\underline{\\mathcal{O}}} \\f$ from equation (19) of NREL CP-2C00-60759. 6x6" -
+typedef   ^        EqMotionQP      ^           Pe         ::::   - - "\\f$ \\underline{\\underline{\\mathcal{P}}} \\f$ from equation (20) of NREL CP-2C00-60759. 6x6" -
+typedef   ^        EqMotionQP      ^           Qe         ::::   - - "\\f$ \\underline{\\underline{\\mathcal{Q}}} \\f$ from equation (21) of NREL CP-2C00-60759. 6x6" -
 
 # Disspipative terms
 typedef   ^        EqMotionQP      ^           Gd         :::: - - "Dissipative term for gyroscopic term. 6x6" -

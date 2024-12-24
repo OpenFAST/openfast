@@ -60,6 +60,7 @@ LIB_SOURCES =         \
 	$(SYS_FILE).f90    \
 	NWTC_IO.f90        \
 	NWTC_Num.f90       \
+	NWTC_Str.f90       \
 	ModMesh.f90        \
 	NWTC_Aero.f90      \
 	NWTC_Library.f90

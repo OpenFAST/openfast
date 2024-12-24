@@ -21,10 +21,9 @@
  ****************************************************************/
 
 
-#include "map.h"
-#include "maperror.h"
-#include "MAP_Types.h"
 #include "mapapi.h"
+#include "map.h"
+#include "MAP_Types.h"
 #include "lineroutines.h"
 #include "freedata.h"
 #include "mapinit.h"
@@ -32,6 +31,7 @@
 #include "numeric.h"
 #include "jacobian.h"
 #include "residual.h"
+#include <string.h>
 
 
 MAP_EXTERNCALL void map_initialize_msqs_base(MAP_InputType_t* u_type,
@@ -1161,6 +1161,12 @@ MAP_EXTERNCALL void map_set_gravity(MAP_ParameterType_t* p_type, const double gr
 {
   p_type->g = gravity;
 };
+
+MAP_EXTERNCALL void map_set_input_text(MAP_InitInputType_t* init_type, const char* input_txt_line)
+{
+  MAP_STRNCPY(init_type->library_input_str, input_txt_line, 254);
+  init_type->library_input_str[254] = '\0';
+}
 
 
 MAP_EXTERNCALL void map_add_cable_library_input_text(MAP_InitInputType_t* init_type)

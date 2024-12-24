@@ -60,10 +60,13 @@ CONTAINS
       CHARACTER(*),      INTENT(INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
       INTEGER(4)                          :: J             ! Generic index
-      INTEGER(4)                          :: K             ! Generic index
-      INTEGER(IntKi)                      :: N
+!      INTEGER(4)                          :: K             ! Generic index
+!      INTEGER(IntKi)                      :: N
 
-      REAL(DbKi)                          :: Mtemp(6,6)   
+      REAL(DbKi)                          :: Mtemp(6,6) = 0.0_DbKi  ! temporary mass matrix
+      
+      ErrStat = ErrID_None
+      ErrMsg = ""
 
       ! set initial velocity to zero
       Body%v6 = 0.0_DbKi
@@ -152,12 +155,25 @@ CONTAINS
       INTEGER(IntKi)                        :: l               ! index of segments or nodes along line
       REAL(DbKi)                            :: dummyStates(12) ! dummy vector to mimic states when initializing a rigidly attached rod
    
-   
-      ! assign initial body kinematics to state vector
-      states(7:12) = Body%r6
-      states(1:6 ) = Body%v6
-      
+      IF (wordy > 0) print *, "initializing Body ", Body%idNum
 
+      ! the r6 and v6 vectors should have already been set
+      ! r and rd of ends have already been set by setup function or by parent object   <<<<< right? <<<<<
+
+
+      if (Body%typeNum == 0) then               ! free body type
+      
+         ! assign initial body kinematics to state vector
+         states(1:6 ) = Body%v6 ! zero velocities for initialization (set to 0 in Body_Setup)
+         states(7:12) = Body%r6
+      
+      else if (Body%typeNum ==2 ) then           ! pinned rod type (coupled or attached to something previously via setPinKin)
+      
+         states(1:3)   = Body%v6(4:6) ! zero velocities for initialization (set to 0 in Body_Setup)
+         states(4:6)   = Body%r6(4:6) ! body orentations
+         
+      end if
+      
       ! set positions of any dependent points and rods now (before they are initialized)
       CALL Body_SetDependentKin(Body, 0.0_DbKi, m)
             
@@ -200,41 +216,39 @@ CONTAINS
 
    ! set kinematics for Bodies if they are coupled (or ground)
    !--------------------------------------------------------------
-   SUBROUTINE Body_SetKinematics(Body, r_in, v_in, a_in, t, m)
+   SUBROUTINE Body_SetKinematics(Body, r6_in, v6_in, a6_in, t, m)
 
       Type(MD_Body),         INTENT(INOUT)  :: Body       ! the Body object
-      Real(DbKi),            INTENT(IN   )  :: r_in(6)   ! 6-DOF position
-      Real(DbKi),            INTENT(IN   )  :: v_in(6)   ! 6-DOF velocity
-      Real(DbKi),             INTENT(IN   ) :: a_in(6)       ! 6-DOF acceleration (only used for coupled rods)
+      Real(DbKi),            INTENT(IN   )  :: r6_in(6)   ! 6-DOF position
+      Real(DbKi),            INTENT(IN   )  :: v6_in(6)   ! 6-DOF velocity
+      Real(DbKi),             INTENT(IN   ) :: a6_in(6)       ! 6-DOF acceleration 
       Real(DbKi),            INTENT(IN   )  :: t         ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Points)
 
 
-      INTEGER(IntKi)                   :: l
+!      INTEGER(IntKi)                   :: l
 
       ! store current time
       Body%time = t
 
-   !   if (abs(Body%typeNum) == 2) then ! body coupled in 6 DOF, or ground
-         Body%r6 = r_in
-         Body%v6 = v_in
-         Body%a6 = a_in
+      if (Body%typeNum == 2) then ! body pinned to coupling point
+      
+         ! set Body translational kinematics based on BCs (linear model for now) 
+         Body%r6(1:3) = r6_in(1:3)
+         Body%v6(1:3) = v6_in(1:3)
+         Body%a6(1:3) = a6_in(1:3)
+
+         ! Body rotations are left alone and will be handled, along with passing kinematics to dependent objects, by separate call to setState
+
+      else ! body rigidly coupled to coupling point
+         Body%r6 = r6_in
+         Body%v6 = v6_in
+         Body%a6 = a6_in
                   
          ! since this body has no states and all DOFs have been set, pass its kinematics to dependent attachments
          CALL Body_SetDependentKin(Body, t, m)
-      
-   !   else if (abs(Body%typeNum) == 1) then ! body pinned at reference point
-   !   
-   !      ! set Body *end A only* kinematics based on BCs (linear model for now) 
-   !      Body%r6(1:3) = r_in(1:3)
-   !      Body%v6(1:3) = v_in(1:3)
-   !      
-   !      ! Body is pinned so only ref point posiiton is specified, rotations are left alone and will be 
-   !      ! handled, along with passing kinematics to attached objects, by separate call to setState
-   !   
-   !   else
-   !      print *, "Error: Body_SetKinematics called for a free Body."  ! <<<
-   !   end if
+
+      end if
 
    END SUBROUTINE Body_SetKinematics
    !--------------------------------------------------------------
@@ -248,20 +262,32 @@ CONTAINS
       Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
 
-      INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
-      INTEGER(IntKi)                        :: J              ! index
+!      INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
+!      INTEGER(IntKi)                        :: J              ! index
    
       ! store current time
       Body%time = t
       
+      if (Body%typeNum == 0) then ! free Body type
       
-      
-      Body%r6 = X(7:12)   ! get positions      
-      Body%v6 = X(1:6)    ! get velocities
-      
+         Body%r6 = X(7:12)   ! get positions      
+         Body%v6 = X(1:6)    ! get velocities
 
-      ! set positions of any dependent points and rods
-      CALL Body_SetDependentKin(Body, t, m)
+         ! set positions of any dependent points and rods
+         CALL Body_SetDependentKin(Body, t, m) 
+
+      else if (Body%typeNum == 2) then
+
+         Body%r6(4:6) = X(4:6) ! get positions
+         Body%v6(4:6) = X(1:3) ! get velocities
+
+
+         ! set positions of any dependent points and rods
+         CALL Body_SetDependentKin(Body, t, m) 
+
+      else 
+         Call WrScr("Error: Body::setState called for a non-free Body type in MoorDyn")   ! <<<
+      end if
       
    END SUBROUTINE Body_SetState
    !--------------------------------------------------------------
@@ -333,6 +359,8 @@ CONTAINS
       
       INTEGER(IntKi)                        :: J                ! index
       
+      Real(DbKi)                            :: Fnet     (6)     ! net force and moment about reference point
+
       Real(DbKi)                            :: acc(6)           ! 6DOF acceleration vector
       
       Real(DbKi)                            :: y_temp (6)       ! temporary vector for LU decomposition
@@ -346,20 +374,40 @@ CONTAINS
 
       CALL Body_DoRHS(Body, m, p)
 
-      ! solve for accelerations in [M]{a}={f} using LU decomposition
-      CALL LUsolve(6, Body%M, LU_temp, Body%F6net, y_temp, acc)
+      IF (Body%typeNum == 0) THEN ! Free body
 
-      ! fill in state derivatives
-      Xd(7:12) = Body%v6       ! dxdt = V   (velocities)
-      Xd(1:6)  = acc           ! dVdt = a   (accelerations) 
+         ! solve for accelerations in [M]{a}={f} using LU decomposition
+         CALL LUsolve(6, Body%M, LU_temp, Body%F6net, y_temp, acc)
 
-      ! store accelerations in case they're useful as output
-      Body%a6 = acc
+         ! fill in state derivatives
+         Xd(7:12) = Body%v6       ! dxdt = V   (velocities)
+         Xd(1:6)  = acc           ! dVdt = a   (accelerations) 
+
+         ! store accelerations in case they're useful as output
+         Body%a6 = acc
+
+      ELSE ! Pinned Body, 3 states (rotational only)
+
+         ! Account for moment response due to inertial coupling
+         Fnet = Body%F6net
+         Fnet(4:6) = Fnet(4:6) - MATMUL(Body%M(4:6,1:3), Body%a6(1:3))  
+
+         ! solve for accelerations in [M]{a}={f} using LU decomposition
+         CALL LUsolve(3, Body%M(4:6,4:6), LU_temp(4:6,4:6), Fnet(4:6), y_temp(4:6), acc(4:6))
+
+         ! fill in state derivatives
+         Xd(4:6) = Body%v6(4:6)       ! dxdt = V   (velocities)
+         Xd(1:3)  = acc(4:6)           ! dVdt = a   (accelerations) 
+
+         ! store accelerations in case they're useful as output
+         Body%a6(4:6) = acc(4:6)
+
+      ENDIF
    
       ! check for NaNs (should check all state derivatives, not just first 6)
       DO J = 1, 6
          IF (Is_NaN(Xd(J))) THEN
-            CALL WrScr("NaN detected at time "//trim(Num2LStr(Body%time))//" in Body "//trim(Int2LStr(Body%IdNum))//"in MoorDyn,")
+            CALL WrScr("NaN detected at time "//trim(Num2LStr(Body%time))//" in Body "//trim(Int2LStr(Body%IdNum))//" in MoorDyn,")
             IF (wordy > 0) print *, "state derivatives:"
             IF (wordy > 0) print *, Xd
             EXIT
@@ -380,17 +428,21 @@ CONTAINS
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
 
       INTEGER(IntKi)             :: l         ! index of attached lines
-      INTEGER(IntKi)             :: I         ! index
-      INTEGER(IntKi)             :: J         ! index
-      INTEGER(IntKi)             :: K         ! index
 
       Real(DbKi)                 :: Fgrav(3)           ! body weight force
       Real(DbKi)                 :: body_rCGrotated(3) ! instantaneous vector from body ref point to CG
       Real(DbKi)                 :: U(3)               ! water velocity - zero for now
-      Real(DbKi)                 :: Ud(3)              ! water acceleration- zero for now
+!      Real(DbKi)                 :: Ud(3)              ! water acceleration- zero for now
       Real(DbKi)                 :: vi(6)              ! relative water velocity (last 3 terms are rotatonal and will be set to zero
       Real(DbKi)                 :: F6_i(6)            ! net force and moments from an attached object
       Real(DbKi)                 :: M6_i(6,6)          ! mass and inertia from an attached object
+      Real(DbKi)                 :: cda(6)             ! body drag coefficients
+      Real(DbKi)                 :: cda_t(3,3) = 0.0         ! matrix with translational drag coefficients as diagonals
+      Real(DbKi)                 :: cda_r(3,3) = 0.0         ! matrix with rotational drag coefficients as diagonals
+      Real(DbKi)                 :: w(3)                     ! body angular velocity vector
+      Real(DbKi)                 :: Fcentripetal(3)        ! centripetal force
+      Real(DbKi)                 :: Mcentripetal(3)        ! centripetal moment     
+
 
       ! Initialize variables
       U = 0.0_DbKi      ! Set to zero for now
@@ -408,6 +460,13 @@ CONTAINS
       body_rCGrotated = MATMUL(Body%OrMat, Body%rCG) ! rotateVector3(body_rCG, OrMat, body_rCGrotated); ! relative vector to body CG in inertial orientation
       CALL translateForce3to6DOF(body_rCGrotated, Fgrav, Body%F6net)  ! gravity forces and moments about body ref point given CG location
 
+      ! Centripetal force and moment due to COM not being at body origin plus gyroscopic moment
+      w = Body%v6(4:6)
+      Fcentripetal = - MATMUL(Body%M(1:3,1:3), CROSS_PRODUCT(w, CROSS_PRODUCT(w, body_rCGrotated)))
+      Mcentripetal = - CROSS_PRODUCT(w, MATMUL(Body%M(4:6,4:6), w)) 
+
+      Body%F6net(1:3) = Body%F6net(1:3) + Fcentripetal
+      Body%F6net(4:6) = Body%F6net(4:6) + Mcentripetal
 
       ! --------------------------------- apply wave kinematics ------------------------------------
       !env->waves->getU(r6, t, U); ! call generic function to get water velocities <<<<<<<<< all needs updating
@@ -420,8 +479,18 @@ CONTAINS
       vi(1:3) = U - Body%v6(1:3)  ! relative flow velocity over body ref point
       vi(4:6) =   - Body%v6(4:6)  ! for rotation, this is just the negative of the body's rotation for now (not allowing flow rotation)
 
-      Body%F6net = Body%F6net + 0.5*p%rhoW * vi * abs(vi) * Body%bodyCdA
-      ! <<< NOTE, for body this should be fixed to account for orientation!! <<< what about drag in rotational DOFs??? <<<<<<<<<<<<<<
+      cda_t(1,1) = Body%bodyCdA(1)
+      cda_t(2,2) = Body%bodyCdA(2)
+      cda_t(3,3) = Body%bodyCdA(3)
+      cda_r(1,1) = Body%bodyCdA(4)
+      cda_r(2,2) = Body%bodyCdA(5)
+      cda_r(3,3) = Body%bodyCdA(6)
+
+      cda(1:3) = MATMUL( MATMUL( MATMUL(Body%OrMat,cda_t) , transpose(Body%OrMat) ) , vi(1:3) * norm2(vi(1:3)) );
+      cda(4:6) = MATMUL( MATMUL( MATMUL(Body%OrMat,cda_r) , transpose(Body%OrMat) ) , vi(4:6) * norm2(vi(4:6)) );
+      Body%F6net = Body%F6net + 0.5*p%rhoW*cda
+
+      
 
    
    
@@ -429,10 +498,10 @@ CONTAINS
       do l = 1,Body%nAttachedC
       
          ! get net force and mass from Point on body ref point (global orientation)
-         CALL Point_GetNetForceAndMass( m%PointList(Body%attachedC(l)), Body%r6(1:3), F6_i, M6_i, m, p)
+         CALL Point_GetNetForceAndMass( m%PointList(Body%attachedC(l)), Body%r6(1:3), Body%v6(4:6), F6_i, M6_i, m, p)
          
          if (ABS(F6_i(5)) > 1.0E12) then
-            print *, "Warning: extreme pitch moment from body-attached Point ", l
+            Call WrScr( "Warning: extreme pitch moment from body-attached Point "//trim(num2lstr(l)))
          end if
          
          ! sum quantitites
@@ -444,10 +513,10 @@ CONTAINS
       do l=1,Body%nAttachedR
       
          ! get net force and mass from Rod on body ref point (global orientation)
-         CALL Rod_GetNetForceAndMass(m%RodList(Body%attachedR(l)), Body%r6(1:3), F6_i, M6_i, m, p)
+         CALL Rod_GetNetForceAndMass(m%RodList(Body%attachedR(l)), Body%r6(1:3), Body%v6(4:6), F6_i, M6_i, m, p)
          
          if (ABS(F6_i(5)) > 1.0E12) then
-            print *, "Warning: extreme pitch moment from body-attached Rod ", l
+            Call WrScr("Warning: extreme pitch moment from body-attached Rod "//trim(num2lstr(l)))
          end if
          
          ! sum quantitites
@@ -462,8 +531,8 @@ CONTAINS
 
       ! calculate the aggregate 3/6DOF rigid-body loads of a coupled rod including inertial loads
    !--------------------------------------------------------------
-   SUBROUTINE Body_GetCoupledForce(Body, Fnet_out, m, p)
-
+   SUBROUTINE Body_GetCoupledForce(t, Body, Fnet_out, m, p)
+      real(R8Ki),            intent(in   )  :: t           ! time - for ramping inertial loading
       Type(MD_Body),         INTENT(INOUT)  :: Body        ! the Body object
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
@@ -477,11 +546,37 @@ CONTAINS
       ! add inertial loads as appropriate 
       if (Body%typeNum == -1) then                          
       
-         F6_iner = 0.0_DbKi !-MATMUL(Body%M, Body%a6)     <<<<<<<< why does including F6_iner cause instability???
-         Fnet_out = Body%F6net + F6_iner        ! add inertial loads
+         if (p%inertialF == 1) then      ! include inertial components 
+            F6_iner = -MATMUL(Body%M, Body%a6)     ! unstable in OpenFAST v4 and below becasue of loose coupling with ED and SD. Transients in acceleration can cause issues
+         elseif (p%inertialF == 2) then  ! include inertial components, but ramp up load
+            F6_iner = -MATMUL(Body%M, Body%a6)
+            if (t < p%inertialF_rampT) F6_iner = F6_iner * t / p%inertialF_rampT
+         else
+            ! When OpenFAST v5 is released w/ tight coupling, remove this hack and just use the inertial term above 
+            F6_iner = 0.0
+         endif
+
+         Body%F6net = Body%F6net + F6_iner        ! add inertial loads
+         Fnet_out = Body%F6net
+                 
+      else if (Body%typeNum == 2) then  ! pinned coupled body  
+
+         if (p%inertialF == 1) then      ! include inertial components  
+            ! inertial loads ... from input translational ... and solved rotational ... acceleration
+            F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
+         elseif (p%inertialF == 2) then
+            F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
+            if (t < p%inertialF_rampT) F6_iner = F6_iner * t / p%inertialF_rampT
+         else 
+            F6_iner(1:3) = 0.0
+         endif
          
+         Body%F6net(1:3) = Body%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
+         Body%F6net(4:6) = 0.0_DbKi
+         Fnet_out = Body%F6net
+
       else
-         print *, "ERROR, Body_GetCoupledForce called for wrong (non-coupled) body type in MoorDyn!"
+         Call WrScr( "ERROR, Body_GetCoupledForce called for wrong (non-coupled) body type in MoorDyn!")
       end if
    
    END SUBROUTINE Body_GetCoupledForce
@@ -505,7 +600,7 @@ CONTAINS
          Body%AttachedC(Body%nAttachedC) = pointID
          Body%rPointRel(:,Body%nAttachedC) = coords  ! store relative position of point on body
       ELSE
-         Print*, "too many Points attached to Body ", Body%IdNum, " in MoorDyn!"
+         call WrScr("too many Points attached to Body "//trim(num2lstr(Body%IdNum))//" in MoorDyn!")
       END IF
 
    END SUBROUTINE Body_AddPoint
@@ -536,7 +631,7 @@ CONTAINS
          Body%r6RodRel(4:6, Body%nAttachedR) = tempUnitVec
          
       ELSE
-         Print*, "too many rods attached to Body ", Body%IdNum, " in MoorDyn"
+         call WrScr("too many rods attached to Body "//trim(num2lstr(Body%IdNum))//" in MoorDyn")
       END IF
 
    END SUBROUTINE Body_AddRod

@@ -209,6 +209,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" -
 # Outputs
 typedef     ^                   ^               GridOutType                      GridOutputs   {:}  - -    "Number of VTK grid to output" -
+typedef     ^                   ^               Logical                          InfoReeval     - .true. - "Give info about Reevaluation: gets set to false after first info statement" -
 
 # ........ Input ............
 # Rotors
@@ -263,11 +264,8 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            MHK           -  - -   "MHK flag"   -
 typedef     ^                   ^               ReKi                             WtrDpth       -  - -   "Water depth"   m
 # TODO UA - Should be part of AeroDyn
-typedef     ^                   ^              IntKi                             UAMod             - - -   "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef     ^                   ^              LOGICAL                           UA_Flag           - - -   "logical flag indicating whether to use UnsteadyAero"        -
-typedef     ^                   ^              LOGICAL                           Flookup           - - -   "Use table lookup for f' and f'' "    -
-typedef     ^                   ^              ReKi                              a_s               - - -   "speed of sound"        m/s
-typedef     ^                   ^              LOGICAL                           SumPrint          - - -   "Whether to print summary file (primarially in in UA)"    -
+typedef     ^                   ^              UA_InitInputType                  UA_Init           - - -   "InitInput data for UA model"
 
 #.......... InputFileType ......
 # FVW_InputFile

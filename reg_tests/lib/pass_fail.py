@@ -43,8 +43,13 @@ def passing_channels(test, baseline, RTOL_MAGNITUDE, ATOL_MAGNITUDE) -> np.ndarr
     NUMEPS = 1e-12
     ATOL_MIN = 1e-6
 
-    n_channels = np.shape(test)[0]
     where_close = np.zeros_like(test, dtype=bool)
+
+    if test.size != baseline.size:
+        passing_channels = np.all(where_close, axis=1) # all false
+        return passing_channels
+
+    n_channels = np.shape(test)[0]
 
     rtol = 10**(-1 * RTOL_MAGNITUDE)
     for i in range(n_channels):

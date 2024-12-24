@@ -138,6 +138,10 @@ documentation for details on the input file at the farm level.
 **DT_Mooring** (sec) sets the timestep for the shared mooring connections with
 MoorDyn. 
 
+**WrMooringVis** [swithch]   Write shared mooring line visualization, at
+the global FAST.Farm time step
+
+
 .. _FF:Input:VTK:
 
 Ambient Wind: Precursor in Visualization Toolkit Format
@@ -245,7 +249,7 @@ choose to use a time step that is an integer multiple smaller than or
 equal to **DT_Low**.
 When **Wake_Mod=2,3**, the stability of the algorithm will depend on the choice 
 of **dr** and **DT_Low**.
-(typically  :math:`\textbf{DT_Low}  \lessapprox \textbf{dr}/(2V_\text{Hub})`, 
+(typically  :math:`DT_Low<dr/(2V_\text{Hub})`, 
 see :numref:`FF:ModGuidance`)
 
 
@@ -408,6 +412,7 @@ The wake will adopt a "curled" shape in skewed inflow.
 When Wake_Mod=2,3, the stability of the algorithm will depend on the choice of **dr** and **DT_Low** (see the guidelines (see the guidelines given in :numref:`FF:ModGuidance`).
 
 
+**RotorDiamRef** [float, in m]: Reference turbine rotor diameter for wake calculations. 
 
 
 The wake planes are defined by the following parameters:
@@ -491,67 +496,65 @@ for the near-wake correction and must be greater than one. If the
 DEFAULT keyword is specified in place of a numerical value,
 **C_NearWake** is set to :math:`1.8`.
 
-**k_vAmb** [-] (:math:`k_{\nu Amb}`) is the calibrated parameter for the
-ambient turbulence influence in the eddy viscosity and must be greater
-than zero. If the DEFAULT keyword is specified in place of a numerical
-value, **k_vAmb** is set to :math:`0.05`.
 
-**k_vShr** [-] (:math:`k_{\nu Shr}`) is the calibrated parameter for the
-wake shear layer influence in the eddy viscosity and must be greater
-than zero. If the DEFAULT keyword is specified in place of a numerical
-value, **k_vShr** is set to :math:`0.016`.
+**k_vAmb** [five floats, comma separated] :math:`[k_{\nu Amb}, C_{\nu Amb}^{FMin}, C_{\nu Amb}^{DMin}, C_{\nu Amb}^{DMax}, C_{\nu Amb}^{Exp}]`
+Tuning parameters for the ambient turbulence influence in the eddy viscosity. If
+the DEFAULT keyword is specified, all five parameters will be set to the default
+values specified below. The five parameters in order are:
 
-**C_vAmb_DMin** [-] (:math:`C_{\nu Amb}^{DMin}`) is a calibrated
-parameter in the eddy viscosity filter function for ambient turbulence.
-It defines the transitional diameter fraction between the minimum and
-exponential regions and must be greater than or equal to zero. If the
-DEFAULT keyword is specified in place of a numerical value,
-**C_vAmb_DMin** is set to :math:`0.0`.
+   -  :math:`k_{\nu Amb}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`k_{\nu Amb} = 0.05`
+         | Calibrated coefficient for the maximum value of **k_vAmb**.
 
-**C_vAmb_DMax** [-] (:math:`C_{\nu Amb}^{DMax}`) is a calibrated
-parameter in the eddy viscosity filter function for ambient turbulence.
-It defines the transitional diameter fraction between the exponential
-and maximum regions and must be greater than **C_vAmb_DMin**. If the
-DEFAULT keyword is specified in place of a numerical value,
-**C_vAmb_DMax** is set to :math:`1.0`.
+   -  :math:`C_{\nu Amb}^{FMin}` [-]  (:math:`\ge 0`, :math:`\le 1`)
+         | DEFAULT value: :math:`C_{\nu Amb}^{FMin} = 1.0`.
+         | Calibrated parameter defining defines the value at the minimum region.
 
-**C_vAmb_FMin** [-] (:math:`C_{\nu Amb}^{FMin}`) is a calibrated
-parameter in the eddy viscosity filter function for ambient turbulence.
-It defines the value in the minimum region and must be between zero and
-one (inclusive). If the DEFAULT keyword is specified in place of a
-numerical value, **C_vAmb_FMin** is set to :math:`1.0`.
+   -  :math:`C_{\nu Amb}^{DMin}` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`C_{\nu Amb}^{DMin} = 0.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the minimum and exponential regions.
 
-**C_vAmb_Exp** [-] (:math:`C_{\nu Amb}^{Exp}`) is a calibrated parameter
-in the eddy viscosity filter function for ambient turbulence. It defines
-the exponent in the exponential region and must be greater than zero. If
-the DEFAULT keyword is specified in place of a numerical value,
-**C_vAmb_Exp** is set to :math:`0.01`.
+   -  :math:`C_{\nu Amb}^{DMax}` [-] (:math:`\ge k_\text{DMin}`)
+         | DEFAULT value: :math:`C_{\nu Amb}^{DMax} = 1.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the exponential and maximum regions. 
 
-**C_vShr_DMin** [-] (:math:`C_{\nu Shr}^{DMin}`) is a calibrated
-parameter in the eddy viscosity filter function for the wake shear
-layer. It defines the transitional diameter fraction between the minimum
-and exponential regions and must be greater than or equal to zero. If
-the DEFAULT keyword is specified in place of a numerical value,
-**C_vShr_DMin** is set to :math:`3.0`.
+   -  :math:`C_{\nu Amb}^{Exp}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`C_{\nu Amb}^{Exp} = 0.01`.
+         | Calibrated parameter defining the exponent in the exponential region.
 
-**C_vShr_DMax** [-] (:math:`C_{\nu Shr}^{DMax}`) is a calibrated
-parameter in the eddy viscosity filter function for the wake shear
-layer. It defines the transitional diameter fraction between the
-exponential and maximum regions and must be greater than
-**C_vShr_DMin**. If the DEFAULT keyword is specified in place of a
-numerical value, **C_vShr_DMax** is set to :math:`25.0`.
 
-**C_vShr_FMin** [-] (:math:`C_{\nu Shr}^{FMin}`) is a calibrated
-parameter in the eddy viscosity filter function for the wake shear
-layer. It defines the value in the minimum region and must be between
-zero and one (inclusive). If the DEFAULT keyword is specified in place
-of a numerical value, **C_vShr_FMin** is set to :math:`0.2`.
+**k_vShr** [five floats, comma separated] :math:`[k_{\nu Shr}, C_{\nu Shr}^{FMin}, C_{\nu Shr}^{DMin}, C_{\nu Shr}^{DMax}, C_{\nu Shr}^{Exp}]`
+Tuning parameters for the wake shear layer influence in the eddy viscosity. If
+the DEFAULT keyword is specified, all five parameters will be set to the default
+values specified below. The five parameters in order are:
 
-**C_vShr_Exp** [-] (:math:`C_{\nu Shr}^{Exp}`) is a calibrated parameter
-in the eddy viscosity filter function for the wake shear layer. It
-defines the exponent in the exponential region and must be greater than
-zero. If the DEFAULT keyword is specified in place of a numerical value,
-**C_vShr_Exp** is set to :math:`0.1`.
+   -  :math:`k_{\nu Shr}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`k_{\nu Shr} = 0.016`
+         | Calibrated coefficient for the maximum value of **k_vShr**.
+
+   -  :math:`C_{\nu Shr}^{FMin}` [-]  (:math:`\ge 0`, :math:`\le 1`)
+         | DEFAULT value: :math:`C_{\nu Shr}^{FMin} = 0.2`.
+         | Calibrated parameter defining defines the value at the minimum region.
+
+   -  :math:`C_{\nu Shr}^{DMin}` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`C_{\nu Shr}^{DMin} = 3.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the minimum and exponential regions.
+
+   -  :math:`C_{\nu Shr}^{DMax}` [-] (:math:`\ge k_\text{DMin}`)
+         | DEFAULT value: :math:`C_{\nu Shr}^{DMax} = 25.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the exponential and maximum regions. 
+
+   -  :math:`C_{\nu Shr}^{Exp}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`C_{\nu Shr}^{Exp} = 0.1`.
+         | Calibrated parameter defining the exponent in the exponential region.
+
+
+
+
 
 **Mod_WakeDiam** [switch] specifies the wake diameter calculation model
 (method). There are four options: 1) use the rotor diameter
@@ -589,7 +592,7 @@ or [**Mod_Wake=3**].
 
 **k_VortexDecay** [-] This constant specifies the decay rate of the 
 spanwise velocity components from the curled wake model. 
-DEFAULT is 0.01.
+DEFAULT is 0.0001.
 
 **NumVortices** [-] The number of vortices in the curled wake model. 
 DEFAULT is 100.
@@ -624,10 +627,105 @@ If DEFAULT is used, then **Mod_Projection=2** when **Mod_Wake=2**,
 and **Mod_Projection=1** otherwise.
 
 
+Wake-Added Turbulence (WAT)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
-Note: this option requires intensive writing to disk and will drastically slow down the simulation.
+The wake-added turbulence model is described in :numref:`FF:WAT`.
+
+**WAT** [switch] Select whether the wake-added turbulence is included.
+There are three options:
+0) no wake-added turbulence,
+1) use predefined turbulence box for the background turbulence,
+2) use a user defined turbulence box.
+When **WAT=1**, the number of points of the box are inferred from the filename, 
+and the dimensions in each directions are taken as :math:`dx=dy=dz=0.03*\text{RotorDiamRef}`.
+
+**WAT_BoxFile**: [quoted string]
+Filepath to the file containing the u-component of the turbulence box 
+(either predefined or user-defined). This turbulence box is expected to be 
+in the Mann box format. 
+The filename should be of the form "Label_1024x32x16.u" where the extension ".u" 
+is required. FAST.Farm will assume that files with extensions ".v" and ".w" are present,
+and these files will also be read. 
+When **WAT=1**, the three digits separated by "x" in the filename are assumed to be 
+the number of points in the x y and z dimension of the box.
+
+**WAT_NxNyNz**: [three integers, comma separated] 
+Number of points in the x, y, and z directions of the WAT_BoxFile.
+These are used only if WAT=2. 
+
+**WAT_DxDyDz**: [three floats, comma separated] 
+Distances (in meters) between points in the x, y, and z directions of the WAT_BoxFile 
+These are used only if WAT=2.
+When **WAT=1** the dimensions in each directions are taken as :math:`dx=dy=dz=0.03*\text{RotorDiamRef}`.
+
+**WAT_ScaleBox**: [flag]  
+When set to True, the input turbulence box is scaled so that it has zero mean and unit standard deviation at every node.
 DEFAULT is False.
+
+**WAT_k_Def** [five floats, comma separated] :math:`[k_\text{def}, k_\text{FMin}, k_\text{DMin}, k_\text{DMax}, e]`
+Tuning parameters for quasi-steady wake deficit effect in the wake-added
+turbulence scaling factor.  This tuning paramater is a function of the
+downstream position from the rotor using a set of five parameters.  See equation
+:eq:`eq:kDefGradDefaults` in section :numref:`FF:WAT` (FAST.Farm theory) for
+details on the function used for **WAT_k_Def**. If the DEFAULT keyword is
+specified, all five parameters will be set to the default values specified
+below. The five parameters in order are:
+
+   -  :math:`k_\text{def}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`k_\text{def} = 0.6`.
+         | Calibrated coefficient for the maximum value of **WAT_k_Def**.
+
+   -  :math:`k_\text{FMin}` [-]  (:math:`\ge 0`, :math:`\le 1`)
+         | DEFAULT value: :math:`k_\text{FMin} = 0.0`.
+         | Calibrated parameter defining defines the value at the minimum region.
+
+   -  :math:`k_\text{DMin}` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`k_\text{DMin} = 0.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the minimum and exponential regions.
+
+   -  :math:`k_\text{DMax}` [-] (:math:`\ge k_\text{DMin}`)
+         | DEFAULT value: :math:`k_\text{DMax} = 2.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the exponential and maximum regions. 
+
+   -  :math:`e` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`e = 1.0`.
+         | Calibrated parameter defining the exponent in the exponential region.
+
+**WAT_k_Grad** [five floats, comma separated] :math:`[k_\text{Grad}, k_\text{FMin}, k_\text{DMin}, k_\text{DMax}, e]`
+Tuning parameters for gradient of the wake deficit in the wake-added turbulence
+scaling factor.  This tuning paramater is a function of the downstream position
+from the rotor using a set of five parameters.  See equation
+:eq:`eq:kDefGradDefaults` in section :numref:`FF:WAT` (FAST.Farm theory) for
+details on the function used for **WAT_k_Grad**. If the DEFAULT keyword is
+specified, all five parameters will be set to the default values specified
+below. The five parameters in order are:
+
+   -  :math:`k_\text{grad}` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`k_\text{grad} = 3.0`.
+         | Calibrated coefficient for the maximum value of **WAT_k_Grad**.
+
+   -  :math:`k_\text{FMin}` [-]  (:math:`\ge 0`, :math:`\le 1`)
+         | DEFAULT value: :math:`k_\text{FMin} = 0.0`.
+         | Calibrated parameter defining defines the value at the minimum region.
+
+   -  :math:`k_\text{DMin}` [-] (:math:`\ge 0`)
+         | DEFAULT value: :math:`k_\text{DMin} = 0.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the minimum and exponential regions.
+
+   -  :math:`k_\text{DMax}` [-] (:math:`\ge k_\text{DMin}`)
+         | DEFAULT value: :math:`k_\text{DMax} = 12.0`.
+         | Calibrated parameter defining the transitional diameter fraction
+            between the exponential and maximum regions. 
+
+   -  :math:`e` [-] (:math:`\gt 0`)
+         | DEFAULT value: :math:`e = 0.65`.
+         | Calibrated parameter defining the exponent in the exponential region.
+
+
 
 Visualize
 ~~~~~~~~~
@@ -749,6 +847,12 @@ results output file should result in a field that is 10 characters long;
 printed using the “F10.4” format. **OutFmt** is not used when
 **OutFileFmt** = 2. See :numref:`FF:Output:Time` for
 details on time-series results files.
+
+
+**OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
+Note: this option requires intensive writing to disk and will drastically slow down the simulation.
+DEFAULT is False.
+
 
 FAST.Farm can output wake-related quantities for up to 9 individual
 turbines, not considering the effects of wake merging, at up to 20

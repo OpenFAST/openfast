@@ -22,7 +22,6 @@ module AeroDyn_Driver_Subs
    use AeroDyn_Inflow_Types
    use AeroDyn_Inflow, only: ADI_Init, ADI_ReInit, ADI_End, ADI_CalcOutput, ADI_UpdateStates 
    use AeroDyn_Inflow, only: concatOutputHeaders
-   use AeroDyn_Inflow, only: ADI_ADIW_Solve ! TODO remove me
    use AeroDyn_Inflow, only: Init_MeshMap_For_ADI, Set_Inputs_For_ADI
    use AeroDyn_IO,     only: AD_WrVTK_Surfaces, AD_WrVTK_LinesPoints
    
@@ -238,7 +237,6 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    DO j = 1-numInp, 0
       call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
       call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-      call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState(1)%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
    END DO              
    ! --- AeroDyn + Inflow at T=0
    call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
@@ -291,8 +289,7 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
    ! u(1) is at nt, u(2) is at nt-1.  Set inputs for nt timestep
    call Shift_ADI_Inputs(nt,dvr, ADI, errStat2, errMsg2); if(Failed()) return
    call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState(1)%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
-
+   
    time = ADI%inputTimes(2)
 
    ! Calculate outputs at nt - 1 (current time)
@@ -361,7 +358,7 @@ subroutine Dvr_EndCase(dvr, ADI, initialized, errStat, errMsg)
             else
                sWT = ''
             endif
-            call WrBinFAST(trim(dvr%out%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, (/0.0_DbKi, dvr%dt/), dvr%out%storage(:,:,iWT), errStat2, errMsg2)
+            call WrBinFAST(trim(dvr%out%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, GetVersion(version), dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, (/0.0_DbKi, dvr%dt/), dvr%out%storage(:,:,iWT), errStat2, errMsg2)
             call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          enddo
       endif
@@ -448,7 +445,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          !call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          needInit=.true.
       endif
-      if (ADI%p%AD%WakeMod == WakeMod_FVW) then
+      if (ADI%p%AD%Wake_Mod == WakeMod_FVW) then
          call WrScr('[INFO] OLAF is used, AeroDyn will be re-initialized')
          needInit=.true.
       endif
@@ -468,11 +465,11 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       InitInp%IW_InitInp%HWindSpeed = dvr%IW_InitInp%HWindSpeed
       InitInp%IW_InitInp%RefHt      = dvr%IW_InitInp%RefHt
       InitInp%IW_InitInp%PLExp      = dvr%IW_InitInp%PLExp
-      InitInp%IW_InitInp%UseInputFile = .true.     ! read input file instead of passed file data
       InitInp%IW_InitInp%MHK        = dvr%MHK
+      InitInp%IW_InitInp%FilePassingMethod = 0_IntKi ! read input file instead of passed file data
       ! AeroDyn
       InitInp%AD%Gravity   = 9.80665_ReKi
-      InitInp%AD%RootName  = dvr%out%Root ! 'C:/Work/XFlow/'
+      InitInp%AD%RootName  = dvr%out%Root
       InitInp%AD%InputFile = dvr%AD_InputFile
       InitInp%AD%MHK         = dvr%MHK
       InitInp%AD%defFldDens  = dvr%FldDens
@@ -499,15 +496,15 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          if (wt%projMod==-1)then
             !call WrScr('>>> Using HAWTprojection to determine projMod')
             if (wt%HAWTprojection) then
-               InitInp%AD%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
+               !InitInp%AD%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
+               InitInp%AD%rotors(iWT)%AeroProjMod = -1 ! We let the code decide based on BEM_Mod
             else
                InitInp%AD%rotors(iWT)%AeroProjMod = APM_LiftingLine
             endif
          else
             InitInp%AD%rotors(iWT)%AeroProjMod = wt%projMod
          endif
-         InitInp%AD%rotors(iWT)%AeroBEM_Mod = wt%BEM_Mod
-         !call WrScr('   Driver:  projMod: '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroBEM_Mod)))
+         call WrScr('   Driver:  projMod: '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod)))
          InitInp%AD%rotors(iWT)%HubPosition    = y_ED%HubPtMotion%Position(:,1)
          InitInp%AD%rotors(iWT)%HubOrientation = y_ED%HubPtMotion%RefOrientation(:,:,1)
          InitInp%AD%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
@@ -519,7 +516,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       enddo
 
       call ADI_Init(InitInp, ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, dt, InitOut, errStat, errMsg)
-
+      dvr%out%AD_ver = InitOut%Ver
+      
       ! Set output headers
       if (iCase==1) then
          call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
@@ -551,7 +549,7 @@ contains
       if (errStat /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitCase')
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver')
       endif
       Failed0 = errStat >= AbortErrLev
       if(Failed0) call cleanUp()
@@ -593,26 +591,26 @@ subroutine Init_Meshes(dvr, FED, errStat, errMsg)
       orientation = R_gl2wt
       
       !bjj: Inspector consistently gives "Invalid Memory Access" errors here on the allocation of wt%ptMesh%RotationVel in MeshCreate. I haven't yet figured out why.
-      call CreatePointMesh(y_ED%PlatformPtMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
+      call CreateInputPointMesh(y_ED%PlatformPtMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
 
       ! Tower
       if (wt%hasTower) then
          pos         = y_ED%PlatformPtMesh%Position(:,1) + matmul(transpose(R_gl2wt),  wt%twr%origin_t)
          orientation = R_gl2wt
-         call CreatePointMesh(y_ED%TwrPtMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
+         call CreateInputPointMesh(y_ED%TwrPtMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
       endif
 
       ! Nacelle
       pos           = y_ED%PlatformPtMesh%Position(:,1) +  matmul(transpose(R_gl2wt),  wt%nac%origin_t)
       orientation   = R_gl2wt ! Yaw?
-      call CreatePointMesh(y_ED%NacelleMotion, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
+      call CreateInputPointMesh(y_ED%NacelleMotion, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
 
       ! Hub
       R_nac2gl  = transpose(y_ED%NacelleMotion%RefOrientation(:,:,1))
       R_nac2hub = EulerConstruct( wt%hub%orientation_n ) ! nacelle 2 hub (constant)
       pos         = y_ED%NacelleMotion%Position(:,1) + matmul(R_nac2gl,wt%hub%origin_n)
       orientation = matmul(R_nac2hub, y_ED%NacelleMotion%RefOrientation(:,:,1))   ! Global 2 hub at t=0
-      call CreatePointMesh(y_ED%HubPtMotion, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
+      call CreateInputPointMesh(y_ED%HubPtMotion, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
 
       ! Blades
 !       wt%Rg2b0 = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
@@ -626,7 +624,7 @@ subroutine Init_Meshes(dvr, FED, errStat, errMsg)
          R_hub2bl = EulerConstruct( wt%bld(iB)%orientation_h ) ! Rotation matrix hub 2 blade (constant)
          orientation = matmul(R_hub2bl,  y_ED%HubPtMotion%RefOrientation(:,:,1) ) ! Global 2 blade =    hub2blade   x global2hub
          pos         = y_ED%HubPtMotion%Position(:,1) + matmul(R_hub2gl, wt%bld(iB)%origin_h) +  wt%bld(iB)%hubRad_bl*orientation(3,:) 
-         call CreatePointMesh(y_ED%BladeRootMotion(iB), pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
+         call CreateInputPointMesh(y_ED%BladeRootMotion(iB), pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
       end do
 
       ! --- Mapping
@@ -704,9 +702,12 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
       ! Getting current time values by interpolation
       ! timestate = HWindSpeed, PLExp, RotSpeed, Pitch, yaw
       call interpTimeValue(dvr%timeSeries, time, dvr%iTimeSeries, timeState)
-      ! Set wind at this time
+      ! Set wind at this time 
       ADI%m%IW%HWindSpeed = timeState(1)
       ADI%m%IW%PLexp      = timeState(2)
+      ! Set values in flow field (not recommended)
+      ADI%m%IW%p%FlowField%Uniform%VelH = timeState(1)
+      ADI%m%IW%p%FlowField%Uniform%ShrV = timeState(2)
       !! Set motion at this time
       dvr%WT(1)%hub%rotSpeed = timeState(3)     ! rad/s
       do j=1,size(dvr%WT(1)%bld)
@@ -1009,9 +1010,6 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc);
       if (errStat2==ErrID_Fatal) then
          wt%projMod = -1
-         wt%BEM_Mod = -1
-      else
-         call ParseVar(FileInfo_In, CurLine, 'BEM_Mod'//sWT    , wt%BEM_Mod     , errStat2, errMsg2, unEc); if(Failed()) return
       endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
 
@@ -1023,7 +1021,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       if (wt%BasicHAWTFormat) then
          ! --- Basic Geometry
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT , wt%originInit , 3 , errStat2, errMsg2 , unEc); if(Failed()) return
-         if ( dvr%MHK == 1 ) then
+         if ( dvr%MHK == MHK_FixedBottom ) then
             wt%originInit(3) = wt%originInit(3) - dvr%WtrDpth
          end if
          call ParseVar(FileInfo_In, CurLine, 'numBlades'//sWT      , wt%numBlades      , errStat2, errMsg2 , unEc); if(Failed()) return
@@ -1061,7 +1059,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          ! --- Advanced geometry
          ! Rotor origin and orientation
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT     , wt%originInit, 3         , errStat2, errMsg2, unEc); if(Failed()) return
-         if ( dvr%MHK == 1 ) then
+         if ( dvr%MHK == MHK_FixedBottom ) then
             wt%originInit(3) = wt%originInit(3) - dvr%WtrDpth
          end if
          call ParseAry(FileInfo_In, CurLine, 'baseOrientationInit'//sWT, wt%orientationInit, 3    , errStat2, errMsg2, unEc); if(Failed()) return
@@ -1107,7 +1105,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       call ParseVar(FileInfo_In, CurLine, 'amplitude'//sWT         , wt%amplitude,       errStat2, errMsg2, unEc); if(Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'frequency'//sWT         , wt%frequency,       errStat2, errMsg2, unEc); if(Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'baseMotionFilename'//sWT, wt%motionFileName,  errStat2, errMsg2, unEc); if(Failed()) return
-      wt%frequency = wt%frequency * 2 *pi ! Hz to rad/s
+      wt%frequency = wt%frequency * 2 * pi ! Hz to rad/s
       if (dvr%analysisType==idAnalysisRegular) then
          if (wt%motionType==idBaseMotionGeneral) then
             call ReadDelimFile(wt%motionFileName, 19, wt%motion, errStat2, errMsg2, priPath=priPath); if(Failed()) return
@@ -1315,7 +1313,7 @@ subroutine setSimpleMotion(wt, rotSpeed, bldPitch, nacYaw, DOF, amplitude, frequ
    integer                       :: i
    wt%degreeofFreedom   = DOF
    wt%amplitude         = amplitude
-   wt%frequency         = frequency * 2 *pi ! Hz to rad/s
+   wt%frequency         = frequency
    wt%nac%motionType    = idNacMotionConstant
    wt%nac%yaw           = nacYaw* PI /180._ReKi ! deg 2 rad
    wt%hub%motionType    = idHubMotionConstant
@@ -1347,7 +1345,7 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", errStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
-   if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
+   if (dvr%MHK /= MHK_None .and. dvr%MHK /= MHK_FixedBottom .and. dvr%MHK /= MHK_Floating) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
    
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',errStat, errMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%IW_InitInp%compInflow) ), 'CompInflow needs to be 0 or 1')) return
@@ -1454,7 +1452,7 @@ subroutine Dvr_InitializeOutputs(nWT, out, numSteps, errStat, errMsg)
             end if
             call OpenFOutFile ( out%unOutFile(iWT), trim(out%Root)//trim(sWT)//'.out', errStat, errMsg )
             if ( errStat >= AbortErrLev ) return
-            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( version%Name )
+            write (out%unOutFile(iWT),'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim( TRIM(GetVersion(version)) )
             write (out%unOutFile(iWT),'(1X,A)') trim(GetNVD(out%AD_ver))
             write (out%unOutFile(iWT),'()' )    !print a blank line
             write (out%unOutFile(iWT),'()' )    !print a blank line
@@ -1670,8 +1668,8 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, errStat, errMsg)
          out%outLine(1:nDV)         = dvr%wt(iWT)%WriteOutput(1:nDV)  ! Driver Write Outputs
          ! out%outLine(11)            = dvr%WT(iWT)%hub%azimuth       ! azimuth already stored a nt-1
 
-         out%outLine(nDV+1:nDV+nAD) = yADI%AD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
-         out%outLine(nDV+nAD+1:)    = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
+         out%outLine(nDV+1:nDV+nIW) = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
+         out%outLine(nDV+nIW+1:)    = yADI%AD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
 
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
             ! ASCII
@@ -1684,133 +1682,19 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, errStat, errMsg)
          endif
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
             ! Store for binary
-            out%storage(1:nDV+nAD+nIW, nt, iWT) = out%outLine(1:nDV+nAD+nIW)
+            out%storage(1:nDV+nIW+nAD, nt, iWT) = out%outLine(1:nDV+nIW+nAD)
          endif
       endif
    enddo
 end subroutine Dvr_WriteOutputs
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Read a delimited file with one line of header
-subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, priPath)
-   character(len=*),                        intent(in)  :: Filename
-   integer,                                 intent(in)  :: nCol
-   real(ReKi), dimension(:,:), allocatable, intent(out) :: Array
-   integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
-   character(*)           ,                 intent(out) :: errMsg  ! Error message if errStat /= ErrID_None
-   integer(IntKi), optional,                intent(in ) :: nHeaderLines
-   character(*)  , optional,                intent(in ) :: priPath  ! Primary path, to use if filename is not absolute
-   integer              :: UnIn, i, j, nLine, nHead
-   character(len= 2048) :: line
-   integer(IntKi)       :: errStat2      ! local status of error message
-   character(ErrMsgLen) :: errMsg2       ! temporary Error message
-   character(len=2048) :: Filename_Loc   ! filename local to this function
-   errStat = ErrID_None
-   errMsg  = ""
-
-   Filename_Loc = Filename
-   if (present(priPath)) then
-      if (PathIsRelative(Filename_Loc)) Filename_Loc = trim(PriPath)//trim(Filename)
-   endif
-
-   ! Open file
-   call GetNewUnit(UnIn) 
-   call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); if(Failed()) return 
-   ! Count number of lines
-   nLine = line_count(UnIn)
-   allocate(Array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; if(Failed())return
-   ! Read header
-   nHead=1
-   if (present(nHeaderLines)) nHead = nHeaderLines
-   do i=1,nHead
-      read(UnIn, *, IOSTAT=errStat2) line
-      errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename_Loc)
-      if(Failed()) return
-   enddo
-   ! Read data
-   do I = 1,nLine-1
-      read (UnIn,*,IOSTAT=errStat2) (Array(I,J), J=1,nCol)
-      errMsg2 = ' Error reading line '//trim(Num2LStr(I+1))//' of file: '//trim(Filename_Loc)
-      if(Failed()) return
-   end do  
-   close(UnIn) 
-contains
-   logical function Failed()
-      CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile' )
-      Failed = errStat >= AbortErrLev
-      if (Failed) then
-         if ((UnIn)>0) close(UnIn)
-      endif
-   end function Failed
-end subroutine ReadDelimFile
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Counts number of lines in a file
-integer function line_count(iunit)
-   integer, intent(in) :: iunit
-   character(len=2048) :: line
-   ! safety for infinite loop..
-   integer :: i
-   integer, parameter :: nline_max=100000000 ! 100 M
-   line_count=0
-   do i=1,nline_max 
-      line=''
-      read(iunit,'(A)',END=100)line
-      line_count=line_count+1
-   enddo
-   if (line_count==nline_max) then
-      print*,'Error: maximum number of line exceeded for line_count'
-      STOP
-   endif
-100 if(len(trim(line))>0) then
-      line_count=line_count+1
-   endif
-   rewind(iunit)
-   return
-end function
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Perform linear interpolation of an array, where first column is assumed to be ascending time values
-!! First value is used for times before, and last value is used for time beyond
-subroutine interpTimeValue(array, time, iLast, values)
-   real(ReKi), dimension(:,:), intent(in)    :: array !< vector of time steps
-   real(DbKi),                 intent(in)    :: time  !< time
-   integer,                    intent(inout) :: iLast
-   real(ReKi), dimension(:),   intent(out)   :: values !< vector of values at given time
-   integer :: i
-   real(ReKi) :: alpha
-   if (array(iLast,1)> time) then 
-      values = array(iLast,2:)
-   elseif (iLast == size(array,1)) then 
-      values = array(iLast,2:)
-   else
-      ! Look for index
-      do i=iLast,size(array,1)
-         if (array(i,1)<=time) then
-            iLast=i
-         else
-            exit
-         endif
-      enddo
-      if (iLast==size(array,1)) then
-         values = array(iLast,2:)
-      else
-         ! Linear interpolation
-         alpha = (array(iLast+1,1)-time)/(array(iLast+1,1)-array(iLast,1))
-         values = array(iLast,2:)*alpha + array(iLast+1,2:)*(1-alpha)
-         !print*,'time', array(iLast,1), '<=', time,'<',  array(iLast+1,1), 'fact', alpha
-      endif
-   endif
-end subroutine interpTimeValue
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed for plotting VTK surfaces.
-subroutine setVTKParameters(p_FAST, dvr, ADI, errStat, errMsg, dirname)
-   type(Dvr_Outputs),     intent(inout) :: p_FAST           !< The parameters of the glue code
-   type(Dvr_SimData), target,    intent(inout) :: dvr           ! intent(out) only so that we can save FmtWidth in dvr%out%ActualChanLen
-   type(ADI_Data),     target,   intent(in   ) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
-   integer(IntKi),               intent(  out) :: errStat          !< Error status of the operation
-   character(*),                 intent(  out) :: errMsg           !< Error message if errStat /= ErrID_None
+subroutine setVTKParameters(DVR_Outs, dvr, ADI, errStat, errMsg, dirname)
+   type(Dvr_Outputs),            intent(inout) :: DVR_Outs        !< The parameters of the glue code
+   type(Dvr_SimData), target,    intent(inout) :: dvr             ! intent(out) only so that we can save FmtWidth in dvr%out%ActualChanLen
+   type(ADI_Data),     target,   intent(in   ) :: ADI             ! Input data for initialization (intent out for getting AD WriteOutput names/units)
+   integer(IntKi),               intent(  out) :: errStat         !< Error status of the operation
+   character(*),                 intent(  out) :: errMsg          !< Error message if errStat /= ErrID_None
    character(*),        optional,intent(in   ) :: dirname
    real(SiKi)                              :: RefPoint(3), RefLengths(2)               
    real(SiKi)                              :: x, y                
@@ -1842,19 +1726,23 @@ subroutine setVTKParameters(p_FAST, dvr, ADI, errStat, errMsg, dirname)
 
    ! get the name of the output directory for vtk files (in a subdirectory called "vtk" of the output directory), and
    ! create the VTK directory if it does not exist
-   call GetPath ( p_FAST%root, p_FAST%VTK_OutFileRoot, vtkroot ) ! the returned p_FAST%VTK_OutFileRoot includes a file separator character at the end
-   p_FAST%VTK_OutFileRoot = trim(p_FAST%VTK_OutFileRoot) // trim(dir)
-   call MKDIR( trim(p_FAST%VTK_OutFileRoot) )
-   p_FAST%VTK_OutFileRoot = trim( p_FAST%VTK_OutFileRoot ) // PathSep // trim(vtkroot)
+   call GetPath ( DVR_Outs%root, DVR_Outs%VTK_OutFileRoot, vtkroot ) ! the returned DVR_Outs%VTK_OutFileRoot includes a file separator character at the end
+   if (PathIsRelative(trim(dir))) then
+      DVR_Outs%VTK_OutFileRoot = trim(DVR_Outs%VTK_OutFileRoot) // trim(dir)
+   else
+      DVR_Outs%VTK_OutFileRoot = trim(dir)
+   endif
+   call MKDIR( trim(DVR_Outs%VTK_OutFileRoot) )
+   DVR_Outs%VTK_OutFileRoot = trim( DVR_Outs%VTK_OutFileRoot ) // PathSep // trim(vtkroot)
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
-   p_FAST%VTK_tWidth = max(9, CEILING( log10( real(dvr%numSteps+1, ReKi) / p_FAST%n_VTKTime ) ) + 1) ! NOTE: at least 9, if user changes dt/and tmax 
+   DVR_Outs%VTK_tWidth = max(9, CEILING( log10( real(dvr%numSteps+1, ReKi) / DVR_Outs%n_VTKTime ) ) + 1) ! NOTE: at least 9, if user changes dt/and tmax 
 
-   if (allocated(p_FAST%VTK_Surface)) then
+   if (allocated(DVR_Outs%VTK_Surface)) then
       return ! The surfaces were already computed (for combined cases)
    endif
 
-   allocate(p_FAST%VTK_Surface(dvr%numTurbines))
+   allocate(DVR_Outs%VTK_Surface(dvr%numTurbines))
    ! --- Find dimensions for all objects to determine "Ground" and typical dimensions
    MaxBladeLength = 0
    MaxTwrLength   = 0
@@ -1895,7 +1783,7 @@ subroutine setVTKParameters(p_FAST, dvr, ADI, errStat, errMsg, dirname)
    enddo ! Loop on turbine 
 
    ! Get radius for ground (blade length + hub radius):
-   GroundRad = MaxBladeLength + MaxTwrLength+ p_FAST%VTKHubRad
+   GroundRad = MaxBladeLength + MaxTwrLength+ DVR_Outs%VTKHubRad
    ! write the ground or seabed reference polygon:
    RefPoint(1:2) = dvr%WT(1)%originInit(1:2)
    do iWT=2,dvr%numTurbines
@@ -1905,37 +1793,37 @@ subroutine setVTKParameters(p_FAST, dvr, ADI, errStat, errMsg, dirname)
    
    RefPoint(3) = 0.0_ReKi
    RefLengths  = GroundRad  + sqrt((WorldBoxMax(1)-WorldBoxMin(1))**2 + (WorldBoxMax(2)-WorldBoxMin(2))**2)
-   call WrVTK_Ground (RefPoint, RefLengths, trim(p_FAST%VTK_OutFileRoot) // '.GroundSurface', errStat2, errMsg2 )         
+   call WrVTK_Ground (RefPoint, RefLengths, trim(DVR_Outs%VTK_OutFileRoot) // '.GroundSurface', errStat2, errMsg2 )         
 
 
    ! --- Create surfaces for Nacelle, Base, Tower, Blades
    do iWT=1,dvr%numTurbines
       wt => dvr%wt(iWT)
-      p_FAST%VTK_Surface(iWT)%NumSectors = 25   
+      DVR_Outs%VTK_Surface(iWT)%NumSectors = 25   
 
       ! Create nacelle box
-      p_FAST%VTK_Surface(iWT)%NacelleBox(:,1) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3) /)
-      p_FAST%VTK_Surface(iWT)%NacelleBox(:,2) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3) /) 
-      p_FAST%VTK_Surface(iWT)%NacelleBox(:,3) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)                    , p_FAST%VTKNacDim(3) /)
-      p_FAST%VTK_Surface(iWT)%NacelleBox(:,4) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)                    , p_FAST%VTKNacDim(3) /) 
-      p_FAST%VTK_Surface(iWT)%NacelleBox(:,5) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)                    , p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /)
-      p_FAST%VTK_Surface(iWT)%NacelleBox(:,6) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)                    , p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /) 
-      p_FAST%VTK_Surface(iWT)%NacelleBox(:,7) = (/ p_FAST%VTKNacDim(1)+p_FAST%VTKNacDim(4), p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /)
-      p_FAST%VTK_Surface(iWT)%NacelleBox(:,8) = (/ p_FAST%VTKNacDim(1)                    , p_FAST%VTKNacDim(2)+p_FAST%VTKNacDim(5), p_FAST%VTKNacDim(3)+p_FAST%VTKNacDim(6) /) 
+      DVR_Outs%VTK_Surface(iWT)%NacelleBox(:,1) = (/ DVR_Outs%VTKNacDim(1)                    , DVR_Outs%VTKNacDim(2)+DVR_Outs%VTKNacDim(5), DVR_Outs%VTKNacDim(3) /)
+      DVR_Outs%VTK_Surface(iWT)%NacelleBox(:,2) = (/ DVR_Outs%VTKNacDim(1)+DVR_Outs%VTKNacDim(4), DVR_Outs%VTKNacDim(2)+DVR_Outs%VTKNacDim(5), DVR_Outs%VTKNacDim(3) /) 
+      DVR_Outs%VTK_Surface(iWT)%NacelleBox(:,3) = (/ DVR_Outs%VTKNacDim(1)+DVR_Outs%VTKNacDim(4), DVR_Outs%VTKNacDim(2)                    , DVR_Outs%VTKNacDim(3) /)
+      DVR_Outs%VTK_Surface(iWT)%NacelleBox(:,4) = (/ DVR_Outs%VTKNacDim(1)                    , DVR_Outs%VTKNacDim(2)                    , DVR_Outs%VTKNacDim(3) /) 
+      DVR_Outs%VTK_Surface(iWT)%NacelleBox(:,5) = (/ DVR_Outs%VTKNacDim(1)                    , DVR_Outs%VTKNacDim(2)                    , DVR_Outs%VTKNacDim(3)+DVR_Outs%VTKNacDim(6) /)
+      DVR_Outs%VTK_Surface(iWT)%NacelleBox(:,6) = (/ DVR_Outs%VTKNacDim(1)+DVR_Outs%VTKNacDim(4), DVR_Outs%VTKNacDim(2)                    , DVR_Outs%VTKNacDim(3)+DVR_Outs%VTKNacDim(6) /) 
+      DVR_Outs%VTK_Surface(iWT)%NacelleBox(:,7) = (/ DVR_Outs%VTKNacDim(1)+DVR_Outs%VTKNacDim(4), DVR_Outs%VTKNacDim(2)+DVR_Outs%VTKNacDim(5), DVR_Outs%VTKNacDim(3)+DVR_Outs%VTKNacDim(6) /)
+      DVR_Outs%VTK_Surface(iWT)%NacelleBox(:,8) = (/ DVR_Outs%VTKNacDim(1)                    , DVR_Outs%VTKNacDim(2)+DVR_Outs%VTKNacDim(5), DVR_Outs%VTKNacDim(3)+DVR_Outs%VTKNacDim(6) /) 
 
       ! Create base box (using towerbase or nacelle dime)
-      BaseBoxDim = minval(p_FAST%VTKNacDim(4:6))/2
+      BaseBoxDim = minval(DVR_Outs%VTKNacDim(4:6))/2
       if (size(ADI%m%VTK_Surfaces(iWT)%TowerRad)>0) then
          BaseBoxDim = ADI%m%VTK_Surfaces(iWT)%TowerRad(1)
       endif
-      p_FAST%VTK_Surface(iWT)%BaseBox(:,1) = (/ -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim /)
-      p_FAST%VTK_Surface(iWT)%BaseBox(:,2) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim /) 
-      p_FAST%VTK_Surface(iWT)%BaseBox(:,3) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim             , -BaseBoxDim /)
-      p_FAST%VTK_Surface(iWT)%BaseBox(:,4) = (/ -BaseBoxDim             , -BaseBoxDim             , -BaseBoxDim /) 
-      p_FAST%VTK_Surface(iWT)%BaseBox(:,5) = (/ -BaseBoxDim             , -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim /)
-      p_FAST%VTK_Surface(iWT)%BaseBox(:,6) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim /) 
-      p_FAST%VTK_Surface(iWT)%BaseBox(:,7) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim /)
-      p_FAST%VTK_Surface(iWT)%BaseBox(:,8) = (/ -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim /) 
+      DVR_Outs%VTK_Surface(iWT)%BaseBox(:,1) = (/ -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim /)
+      DVR_Outs%VTK_Surface(iWT)%BaseBox(:,2) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim /) 
+      DVR_Outs%VTK_Surface(iWT)%BaseBox(:,3) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim             , -BaseBoxDim /)
+      DVR_Outs%VTK_Surface(iWT)%BaseBox(:,4) = (/ -BaseBoxDim             , -BaseBoxDim             , -BaseBoxDim /) 
+      DVR_Outs%VTK_Surface(iWT)%BaseBox(:,5) = (/ -BaseBoxDim             , -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim /)
+      DVR_Outs%VTK_Surface(iWT)%BaseBox(:,6) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim /) 
+      DVR_Outs%VTK_Surface(iWT)%BaseBox(:,7) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim /)
+      DVR_Outs%VTK_Surface(iWT)%BaseBox(:,8) = (/ -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim /) 
 
    enddo ! iWT, turbines
 
@@ -1943,12 +1831,12 @@ end subroutine SetVTKParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes a minimal subset of meshes with surfaces to VTK-formatted files. It doesn't bother with 
 !! returning an error code.
-subroutine WrVTK_Surfaces(t_global, ADI, FED, p_FAST, VTK_count)
+subroutine WrVTK_Surfaces(t_global, ADI, FED, DVR_Outs, VTK_count)
    use FVW_IO, only: WrVTK_FVW
    real(DbKi),               intent(in   ) :: t_global  !< Current global time
    type(FED_Data), target,   intent(in   ) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
    type(ADI_Data),           intent(in   ) :: ADI       !< Input data for initialization (intent out for getting AD WriteOutput names/units)
-   type(Dvr_Outputs),        intent(in   ) :: p_FAST    !< Parameters for the glue code
+   type(Dvr_Outputs),        intent(in   ) :: DVR_Outs  !< Parameters for the glue code
    integer(IntKi)         ,  intent(in   ) :: VTK_count
    logical, parameter    :: OutputFields = .FALSE. ! due to confusion about what fields mean on a surface, we are going to just output the basic meshes if people ask for fields
    integer(IntKi)        :: errStat2
@@ -1959,7 +1847,7 @@ subroutine WrVTK_Surfaces(t_global, ADI, FED, p_FAST, VTK_count)
    type(RotFED), pointer :: y_ED ! Alias to shorten notation
 
    ! AeroDyn surfaces (Blades, Hub, Tower)
-   call AD_WrVTK_Surfaces(ADI%u(2)%AD, ADI%y%AD, p_FAST%VTKRefPoint, ADI%m%VTK_Surfaces, VTK_count, p_FAST%VTK_OutFileRoot, p_FAST%VTK_tWidth, 25, p_FAST%VTKHubRad)
+   call AD_WrVTK_Surfaces(ADI%u(2)%AD, ADI%y%AD, DVR_Outs%VTKRefPoint, ADI%m%VTK_Surfaces, VTK_count, DVR_Outs%VTK_OutFileRoot, DVR_Outs%VTK_tWidth, 25, DVR_Outs%VTKHubRad)
 
    ! Elastic info
    nWT = size(FED%WT)
@@ -1972,25 +1860,25 @@ subroutine WrVTK_Surfaces(t_global, ADI, FED, p_FAST, VTK_count)
       y_ED => FED%WT(iWT)
 
       ! Base 
-      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, y_ED%PlatformPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
-                                   VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
+      call MeshWrVTK_PointSurface (DVR_Outs%VTKRefPoint, y_ED%PlatformPtMesh, trim(DVR_Outs%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
+                                   VTK_count, OutputFields, errStat2, errMsg2, DVR_Outs%VTK_tWidth , verts = DVR_Outs%VTK_Surface(iWT)%BaseBox)
       if (y_ED%numBlades>0) then
          ! Nacelle 
-         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, y_ED%NacelleMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', &
-                                      VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%NacelleBox)
+         call MeshWrVTK_PointSurface (DVR_Outs%VTKRefPoint, y_ED%NacelleMotion, trim(DVR_Outs%VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', &
+                                      VTK_count, OutputFields, errStat2, errMsg2, DVR_Outs%VTK_tWidth , verts = DVR_Outs%VTK_Surface(iWT)%NacelleBox)
       endif
       
-      if (p_FAST%WrVTK>1) then
+      if (DVR_Outs%WrVTK>1) then
          ! --- animations
          ! Tower base
-         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, y_ED%TwrPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurface', &
-                                      VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , &
-                                      NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
+         call MeshWrVTK_PointSurface (DVR_Outs%VTKRefPoint, y_ED%TwrPtMesh, trim(DVR_Outs%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurface', &
+                                      VTK_count, OutputFields, errStat2, errMsg2, DVR_Outs%VTK_tWidth , &
+                                      NumSegments=DVR_Outs%VTK_Surface(iWT)%NumSectors, radius=DVR_Outs%VTKHubRad)
 
          if (ADI%u(2)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
-            call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, y_ED%TwrPtMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
-                                         VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , &
-                                         NumSegments=p_FAST%VTK_Surface(iWT)%NumSectors, radius=p_FAST%VTKHubRad)
+            call MeshWrVTK_PointSurface (DVR_Outs%VTKRefPoint, y_ED%TwrPtMeshAD, trim(DVR_Outs%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurfaceAD', &
+                                         VTK_count, OutputFields, errStat2, errMsg2, DVR_Outs%VTK_tWidth , &
+                                         NumSegments=DVR_Outs%VTK_Surface(iWT)%NumSectors, radius=DVR_Outs%VTKHubRad)
         endif
      endif
    enddo
@@ -1998,18 +1886,18 @@ subroutine WrVTK_Surfaces(t_global, ADI, FED, p_FAST, VTK_count)
    ! Free wake
    if (allocated(ADI%m%AD%FVW_u)) then
       if (allocated(ADI%m%AD%FVW_u(1)%WingsMesh)) then
-         call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(1)%AD%FVW, ADI%z(1)%AD%FVW, ADI%m%AD%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+         call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(1)%AD%FVW, ADI%z(1)%AD%FVW, ADI%m%AD%FVW, trim(DVR_Outs%VTK_OutFileRoot)//'.FVW', VTK_count, DVR_Outs%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
       end if   
    end if   
 end subroutine WrVTK_Surfaces
 !> This routine writes a minimal subset of meshes with surfaces to VTK-formatted files. It doesn't bother with 
 !! returning an error code.
-subroutine WrVTK_Lines(t_global, ADI, FED, p_FAST, VTK_count)
+subroutine WrVTK_Lines(t_global, ADI, FED, DVR_Outs, VTK_count)
    use FVW_IO, only: WrVTK_FVW
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
    type(ADI_Data),           intent(in   ) :: ADI                 !< Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(FED_Data), target,   intent(in   ) :: FED                 !< Elastic wind turbine data (Fake ElastoDyn)
-   TYPE(Dvr_Outputs),        INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
+   TYPE(Dvr_Outputs),        INTENT(IN   ) :: DVR_Outs            !< Parameters for the glue code
    INTEGER(IntKi)          , INTENT(IN   ) :: VTK_count
    logical, parameter    :: OutputFields = .TRUE.
    INTEGER(IntKi)        :: k
@@ -2021,7 +1909,7 @@ subroutine WrVTK_Lines(t_global, ADI, FED, p_FAST, VTK_count)
    type(RotFED), pointer :: y_ED ! Alias to shorten notation
 
    ! AeroDyn surfaces (Blades, Tower)
-   call AD_WrVTK_LinesPoints(ADI%u(2)%AD, ADI%y%AD, p_FAST%VTKRefPoint, VTK_count, p_FAST%VTK_OutFileRoot, p_FAST%VTK_tWidth)
+   call AD_WrVTK_LinesPoints(ADI%u(2)%AD, ADI%y%AD, DVR_Outs%VTKRefPoint, VTK_count, DVR_Outs%VTK_OutFileRoot, DVR_Outs%VTK_tWidth)
 
    ! Elastic info
    nWT = size(FED%WT)
@@ -2033,34 +1921,34 @@ subroutine WrVTK_Lines(t_global, ADI, FED, p_FAST, VTK_count)
       endif
       y_ED => FED%WT(iWT)
 
-      if (p_FAST%WrVTK_Type==2) then   ! only if not doing surfaces
+      if (DVR_Outs%WrVTK_Type==2) then   ! only if not doing surfaces
          ! Base
-         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, y_ED%PlatformPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
-                                      VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
+         call MeshWrVTK_PointSurface (DVR_Outs%VTKRefPoint, y_ED%PlatformPtMesh, trim(DVR_Outs%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
+                                      VTK_count, OutputFields, errStat2, errMsg2, DVR_Outs%VTK_tWidth , verts = DVR_Outs%VTK_Surface(iWT)%BaseBox)
       endif
       if (y_ED%numBlades>0) then
          ! Nacelle 
-         call MeshWrVTK( p_FAST%VTKRefPoint, y_ED%NacelleMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Nacelle', &
-                         VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth )
+         call MeshWrVTK( DVR_Outs%VTKRefPoint, y_ED%NacelleMotion, trim(DVR_Outs%VTK_OutFileRoot)//trim(sWT)//'.Nacelle', &
+                         VTK_count, OutputFields, errStat2, errMsg2, DVR_Outs%VTK_tWidth )
       endif
 
-      if (p_FAST%WrVTK>1) then
+      if (DVR_Outs%WrVTK>1) then
          ! --- animations  
          ! Tower base
-         call MeshWrVTK(p_FAST%VTKRefPoint, y_ED%TwrPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBase', &
-                        VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth )
+         call MeshWrVTK(DVR_Outs%VTKRefPoint, y_ED%TwrPtMesh, trim(DVR_Outs%VTK_OutFileRoot)//trim(sWT)//'.TwrBase', &
+                        VTK_count, OutputFields, errStat2, errMsg2, DVR_Outs%VTK_tWidth )
 
          if (ADI%u(2)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
-            call MeshWrVTK(p_FAST%VTKRefPoint, y_ED%TwrPtMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseAD', &
-                           VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth )
+            call MeshWrVTK(DVR_Outs%VTKRefPoint, y_ED%TwrPtMeshAD, trim(DVR_Outs%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseAD', &
+                           VTK_count, OutputFields, errStat2, errMsg2, DVR_Outs%VTK_tWidth )
          endif
       endif
    enddo
 
    ! Free wake (only write this here if doing line meshes only -- FVW is written with surface outputs)
-   if (allocated(ADI%m%AD%FVW_u) .and. p_FAST%WrVTK_Type==2) then
+   if (allocated(ADI%m%AD%FVW_u) .and. DVR_Outs%WrVTK_Type==2) then
       if (allocated(ADI%m%AD%FVW_u(1)%WingsMesh)) then
-         call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(1)%AD%FVW, ADI%z(1)%AD%FVW, ADI%m%AD%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+         call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(1)%AD%FVW, ADI%z(1)%AD%FVW, ADI%m%AD%FVW, trim(DVR_Outs%VTK_OutFileRoot)//'.FVW', VTK_count, DVR_Outs%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
       end if   
    end if
 end subroutine WrVTK_Lines
@@ -2227,6 +2115,7 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc,
    alphaTq = min(max(alphaTq, 0._ReKi), 1.0_ReKi) ! Bounding value
 
    ! --- Rotor torque
+   !bjj: note: WriteOutput isn't always computed when AD_CalcOutput is called (though it appears to be okay in AeroDyn_Inflow.f90); be careful that AllOuts( RtAeroMxh ) is up to date.
    rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtAeroMxh )
    ! Optional filtering of input torque
    rotTorque_filt = ( 1.0 - alphaTq )*rotTorque + alphaTq*rotTorque_filt_prev

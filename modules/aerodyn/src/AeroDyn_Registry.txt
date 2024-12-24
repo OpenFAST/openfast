@@ -16,15 +16,13 @@ usefrom	BEMT_Registry.txt
 usefrom  FVW_Registry.txt
 usefrom	UnsteadyAero_Registry.txt
 usefrom AeroAcoustics_Registry.txt
+usefrom InflowWind.txt
 
 param    AeroDyn/AD     -  IntKi    ModelUnknown            - -1  -  "" -
 param    ^              -  IntKi    WakeMod_none            -  0  -  "Wake model - none"                                      -
 param    ^              -  IntKi    WakeMod_BEMT            -  1  -  "Wake model - BEMT (blade elememnt momentum theory)"     -
-param    ^              -  IntKi    WakeMod_DBEMT           -  2  -  "Wake model - DBEMT (dynamic elememnt momentum theory)"  -
+#param    ^              -  IntKi    WakeMod_TODO           -  2  -  "Wake model - TBD"  -
 param    ^              -  IntKi    WakeMod_FVW             -  3  -  "Wake model - FVW (free vortex wake, OLAF)"              -
-
-param    ^              -  IntKi    AFAeroMod_steady        -  1  -  "steady model"                               -
-param    ^              -  IntKi    AFAeroMod_BL_unsteady   -  2  -  "Beddoes-Leishman unsteady model"            -
 
 param    ^              -  IntKi    TwrPotent_none          -  0  -  "no tower potential flow"                    -
 param    ^              -  IntKi    TwrPotent_baseline      -  1  -  "baseline tower potential flow"              -
@@ -33,6 +31,13 @@ param    ^              -  IntKi    TwrPotent_Bak           -  2  -  "tower pote
 param    ^              -  IntKi    TwrShadow_none          -  0  -  "no tower shadow"                            -
 param    ^              -  IntKi    TwrShadow_Powles        -  1  -  "Powles tower shadow model"                  -
 param    ^              -  IntKi    TwrShadow_Eames         -  2  -  "Eames tower shadow model"                   -
+
+param    ^              -  IntKi    TwrAero_none            -  0  -  "no tower aero"                            -
+param    ^              -  IntKi    TwrAero_noVIV           -  1  -  "Tower aero model without VIV"                  -
+param    ^              -  IntKi    TwrAero_VIV             -  2  -  "Tower aero model with VIV"                   -
+
+param    ^              -  IntKi    SA_Wgt_Uniform          -  1  -  "Sector average weighting - Uniform"                            -
+#param    ^              -  IntKi    SA_Wgt_Impulse          -  1  -  "Sector average weighting - Impulse"                            -
 
 param    ^              -  IntKi    TFinAero_none           -  0  -  "no tail fin aero"                                   -
 param    ^              -  IntKi    TFinAero_polar          -  1  -  "polar-based tail fin aerodynamics"                  -
@@ -50,19 +55,29 @@ param    ^              -  IntKi    AD_MaxBl_Out            -  3  -  "Maximum nu
 
 # Tail Fin parameters 
 typedef  ^  TFinParameterType   IntKi   TFinMod    -    -   0 "Tail fin aerodynamics model {0=none, 1=polar-based, 2=USB-based}" (switch)
-typedef  ^  TFinParameterType   ReKi    TFinChord  -    -   - "Tail fin chord [used only when TFinMod=1]" m
-typedef  ^  TFinParameterType   ReKi    TFinArea   -    -   - "Tail fin planform area [used only when TFinMod=1]" m^2
+typedef  ^  TFinParameterType   ReKi    TFinArea   -    -   - "Tail fin planform area" m^2
 typedef  ^  TFinParameterType   IntKi   TFinIndMod -    -   - "Model for induced velocity calculation {0=none, 1=rotor-average}" (switch)
 typedef  ^  TFinParameterType   IntKi   TFinAFID   -    -   - "Index of Tail fin airfoil number [1 to NumAFfiles]" -
+typedef  ^  TFinParameterType   ReKi    TFinChord  -    -   - "Tail fin chord" m
+typedef  ^  TFinParameterType   ReKi   TFinKp   -    -   - "Tail fin potential flow coefficient for unsteady aerodynamics" -
+typedef  ^  TFinParameterType   ReKi   TFinSigma   3    -   - "Tail fin empirical constants characterizing the decay of separation functions" 1/deg
+typedef  ^  TFinParameterType   ReKi   TFinAStar   3    -   - "Tail fin characteristics angles for separation functions" deg
+typedef  ^  TFinParameterType   ReKi   TFinKv   -    -   - "Tail fin vortex lift coefficient for unsteady aerodynamics" -
+typedef  ^  TFinParameterType   ReKi   TFinCDc   -    -   - "Tail fin drag coefficient for unsteady aerodynamics" -
 
 # Tail Fin input file 
 typedef  ^  TFinInputFileType   IntKi   TFinMod    -    -   0 "Tail fin aerodynamics model {0=none, 1=polar-based, 2=USB-based}" (switch)
-typedef  ^  TFinInputFileType   ReKi    TFinChord  -    -   - "Tail fin chord [used only when TFinMod=1]" m
-typedef  ^  TFinInputFileType   ReKi    TFinArea   -    -   - "Tail fin planform area [used only when TFinMod=1]" m^2
+typedef  ^  TFinInputFileType   ReKi    TFinArea   -    -   - "Tail fin planform area" m^2
 typedef  ^  TFinInputFileType   ReKi    TFinRefP_n 3    -   - "Undeflected position of the tail fin reference point wrt the tower top" m 
 typedef  ^  TFinInputFileType   ReKi    TFinAngles 3    -   - "Tail fin chordline skew, tilt, and bank angles about the reference point" (deg)
 typedef  ^  TFinInputFileType   IntKi   TFinIndMod -    -   - "Model for induced velocity calculation {0=none, 1=rotor-average}" (switch)
 typedef  ^  TFinInputFileType   IntKi   TFinAFID   -    -   - "Index of Tail fin airfoil number [1 to NumAFfiles]" -
+typedef  ^  TFinInputFileType   ReKi    TFinChord  -    -   - "Tail fin chord" m
+typedef  ^  TFinInputFileType   ReKi    TFinKp   -    -   - "Tail fin potential flow coefficient for unsteady aerodynamics" -
+typedef  ^  TFinInputFileType   ReKi    TFinSigma   3    -   - "Tail fin empirical constants characterizing the decay of separation functions" 1/deg
+typedef  ^  TFinInputFileType   ReKi    TFinAStar 3    -   - "Tail fin characteristics angles for separation functions" deg
+typedef  ^  TFinInputFileType   ReKi   TFinKv   -    -   - "Tail fin vortex lift coefficient for unsteady aerodynamics" -
+typedef  ^  TFinInputFileType   ReKi   TFinCDc   -    -   - "Tail fin drag coefficient for unsteady aerodynamics" -
 
 
 
@@ -76,6 +91,7 @@ typedef    ^          ^                  SiKi                    TowerRad       
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef	AeroDyn/AD	RotInitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine" -
+typedef	^	RotInitInputType	ReKi	originInit	{3}	-	0	"X-Y-Z reference position for the turbine"	m
 typedef	^	RotInitInputType	ReKi	HubPosition	{3}	-	-	"X-Y-Z reference position of hub"	m
 typedef	^	RotInitInputType	R8Ki	HubOrientation	{3}{3}	-	-	"DCM reference orientation of hub"	-
 typedef	^	RotInitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
@@ -83,7 +99,7 @@ typedef	^	RotInitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM referenc
 typedef	^	RotInitInputType	R8Ki	NacellePosition	{3}	-	-	"X-Y-Z reference position of nacelle"	m
 typedef	^	RotInitInputType	R8Ki	NacelleOrientation	{3}{3}	-	-	"DCM reference orientation of nacelle"	-
 typedef	^	RotInitInputType	IntKi	AeroProjMod   	-	1	-	"Flag to switch between different projection models"	-
-typedef	^	RotInitInputType	IntKi	AeroBEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
+typedef	^	RotInitInputType	ReKi	RotSpeed	-	-	0	"Rotor speed used when AeroDyn is computing aero maps"	"rad/s"
 
 typedef	^	InitInputType	RotInitInputType rotors	{:}	-	-	"Init Input Types for rotors"	-
 typedef	^	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
@@ -91,6 +107,7 @@ typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef	^	InitInputType	LOGICAL	UsePrimaryInputFile	-	.TRUE.	-	"Read input file instead of passed data"	-
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
 typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
+typedef	^	InitInputType	LOGICAL	CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravity force" Nm/s^2
 typedef ^   InitInputType   IntKi   MHK     -   -   -   "MHK turbine type switch"   -
 typedef ^   InitInputType   ReKi    defFldDens  -   -   -   "Default fluid density from the driver; may be overwritten" kg/m^3
@@ -100,6 +117,7 @@ typedef ^   InitInputType   ReKi    defPatm     -   -   -   "Default atmospheric
 typedef ^   InitInputType   ReKi    defPvap     -   -   -   "Default vapor pressure from the driver; may be overwritten" Pa
 typedef ^   InitInputType   ReKi    WtrDpth -  -   -    "Water depth" m
 typedef ^   InitInputType   ReKi    MSL2SWL -  -   -    "Offset between still-water level and mean sea level" m
+typedef ^   InitInputType   FlowFieldType *FlowField -  -   -    "Pointer of InflowWinds flow field data type" - 
 
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Blade Input file data .....................................................................................................
@@ -137,6 +155,7 @@ typedef	^	RotInitOutputType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 
 typedef	^	InitOutputType	RotInitOutputType	 rotors	{:}	-	-	"Rotor init output type"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+typedef	^	InitOutputType	IntKi	nNodesVel	-	-	-	"number of nodes velocity values are needed at (for ExtLoads coupling)"	-
 # ..... Input file data ...........................................................................................................
 
 # ..... Primary Input file data ...................................................................................................
@@ -154,21 +173,24 @@ typedef	^	RotInputFile	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x directio
 # Nacelle
 typedef	^	RotInputFile	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotInputFile	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
+typedef	^	RotInputFile	ReKi	NacArea     3	-	-	"Projected area of the nacelle in X, Y, Z in the nacelle coordinate system" m^2
+typedef	^	RotInputFile	ReKi	NacCd       3	-	-	"Drag cefficient for the nacelle areas defied above" -
+typedef	^	RotInputFile	ReKi	NacDragAC   3	-	-	"Position of aerodynamic center of nacelle drag in nacelle coordinates" m
 # TailFin
 typedef  ^  RotInputFile   LOGICAL          TFinAero  - .FALSE. -   "Calculate tail fin aerodynamics model (flag)" flag
 typedef  ^  RotInputFile   CHARACTER(1024)  TFinFile  -    -    -   "Input file for tail fin aerodynamics [used only when TFinAero=True]" -
 typedef  ^  RotInputFile   TFinInputFileType TFin     -    -    -   "Input file data for tail fin" -
 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
-typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
-typedef	^	AD_InputFile	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
-typedef	^	AD_InputFile	IntKi	AFAeroMod	-	-	-	"Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
+typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or \"default\"}"	s
+typedef	^	AD_InputFile	IntKi	Wake_Mod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
+typedef	^	AD_InputFile	IntKi	BEM_Mod	-	-	-	"Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid}"	-
 typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
 typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
-typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
-typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
+typedef	^	AD_InputFile	IntKi	TwrAero	-	-	-	"Calculate tower aerodynamic loads? {0=none, 1=aero without VIV, 2=aero with VIV}"	-
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
 typedef ^   AD_InputFile    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
+typedef ^   AD_InputFile    Logical NacelleDrag    -   -   -   "Include NacelleDrag effects?" flag
 typedef	^	AD_InputFile	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	AD_InputFile	CHARACTER(1024)	AA_InputFile	-	-	-	"AeroAcoustics input file name"	"quoted strings"
 typedef	^	AD_InputFile	CHARACTER(1024)	ADBlFile {:}	-	-	"AD blade file (NumBl filenames)"	"quoted strings"
@@ -177,37 +199,44 @@ typedef	^	AD_InputFile	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	AD_InputFile	ReKi	Patm 	-	-	-	"Atmospheric pressure" Pa
 typedef	^	AD_InputFile	ReKi	Pvap 	-	-	-	"Vapour pressure" Pa
 typedef	^	AD_InputFile	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
-typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0]"	-
+typedef	^	AD_InputFile	IntKi	Skew_Mod -	-	-	"Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model}"	-
+typedef	^	AD_InputFile	Logical SkewMomCorr	-	-	-	"Turn the skew momentum correction on or off [used only when SkewMod=1]" - 
+typedef	^	AD_InputFile	IntKi   SkewRedistr_Mod	-	-	-	"Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef	^	AD_InputFile	ReKi	SkewModFactor	-	-	-	"Constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
-typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [unused when WakeMod=0]"	flag
-typedef	^	AD_InputFile	LOGICAL	HubLoss	-	-	-	"Use the Prandtl hub-loss model? [unused when WakeMod=0]"	flag
-typedef	^	AD_InputFile	LOGICAL	TanInd	-	-	-	"Include tangential induction in BEMT calculations? [unused when WakeMod=0]"	flag
-typedef	^	AD_InputFile	LOGICAL	AIDrag	-	-	-	"Include the drag term in the axial-induction calculation? [unused when WakeMod=0]"	flag
-typedef	^	AD_InputFile	LOGICAL	TIDrag	-	-	-	"Include the drag term in the tangential-induction calculation? [unused when WakeMod=0 or TanInd=FALSE]"	flag
-typedef	^	AD_InputFile	ReKi	IndToler	-	-	-	"Convergence tolerance for BEM induction factors [unused when WakeMod=0]"	-
-typedef	^	AD_InputFile	ReKi	MaxIter	-	-	-	"Maximum number of iteration steps [unused when WakeMod=0]"	-
-typedef	^	AD_InputFile	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]"	-
-typedef	^	AD_InputFile	LOGICAL	FLookup	-	-	-	"Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2]"	flag
+typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [unused when Wake_Mod=0]"	flag
+typedef	^	AD_InputFile	LOGICAL	HubLoss	-	-	-	"Use the Prandtl hub-loss model? [unused when Wake_Mod=0]"	flag
+typedef	^	AD_InputFile	LOGICAL	TanInd	-	-	-	"Include tangential induction in BEMT calculations? [unused when Wake_Mod=0]"	flag
+typedef	^	AD_InputFile	LOGICAL	AIDrag	-	-	-	"Include the drag term in the axial-induction calculation? [unused when Wake_Mod=0]"	flag
+typedef	^	AD_InputFile	LOGICAL	TIDrag	-	-	-	"Include the drag term in the tangential-induction calculation? [unused when Wake_Mod=0 or TanInd=FALSE]"	flag
+typedef	^	AD_InputFile	ReKi	IndToler	-	-	-	"Convergence tolerance for BEM induction factors [unused when Wake_Mod=0]"	-
+typedef	^	AD_InputFile	ReKi	MaxIter	-	-	-	"Maximum number of iteration steps [unused when Wake_Mod=0]"	-
+typedef	^	AD_InputFile	Logical	SectAvg	-	.False. - 	"Use Sector average for BEM inflow velocity calculation (flag)"	-
+typedef	^	     ^      	IntKi  	SA_Weighting	-	1	-	    "Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True]" -
+typedef	^	     ^      	ReKi   	SA_PsiBwd	-	-60	-	"Sector Average - Backard Azimuth (<0)"	deg
+typedef	^	     ^      	ReKi   	SA_PsiFwd	-	 60	-	"Sector Average - Forward Azimuth (>0)"	deg
+typedef	^	     ^      	IntKi  	SA_nPerSec	-	  5	-	"Sector average - Number of points per sectors (-) [used only when SectAvg=True]" -
+typedef	^	     ^      	LOGICAL	AoA34	-	-	-	"Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]"	-
+typedef	^	AD_InputFile	UA_InitInputType	UA_Init	-	-	-	"InitInput data for UA model"	-
 typedef	^	AD_InputFile	ReKi	InCol_Alfa	-	-	-	"The column in the airfoil tables that contains the angle of attack"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cl	-	-	-	"The column in the airfoil tables that contains the lift coefficient"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cd	-	-	-	"The column in the airfoil tables that contains the drag coefficient"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cm	-	-	-	"The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cpmin	-	-	-	"The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column"	-
-typedef	^	AD_InputFile	INTEGER	AFTabMod	-	-	-	"Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp}" -
+typedef	^	AD_InputFile	IntKi AFTabMod	-	-	-	"Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp}" -
 typedef	^	AD_InputFile	IntKi	NumAFfiles	-	-	-	"Number of airfoil files used"	-
 typedef	^	AD_InputFile	CHARACTER(1024)	FVWFileName	-	-	-	"FVW input filename"	"quoted string"
 typedef	^	AD_InputFile	CHARACTER(1024)	AFNames	{:}	-	-	"Airfoil file names (NumAF lines)"	"quoted strings"
 typedef	^	AD_InputFile	LOGICAL	UseBlCm	-	-	-	"Include aerodynamic pitching moment in calculations?"	flag
 #typedef	^	AD_InputFile	IntKi	NumBlNds	-	-	-	"Number of blade nodes used in the analysis"	-
-typedef	^	AD_InputFile	LOGICAL	SumPrint	-	-	-	"Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?"	flag
+typedef	^	AD_InputFile	LOGICAL	SumPrint	-	-	-	"Generate a summary file listing input options and interpolated properties to \"<rootname>.AD.sum\"?"	flag
 typedef	^	AD_InputFile	IntKi	NBlOuts	-	-	-	"Number of blade node outputs [0 - 9]"	-
 typedef	^	AD_InputFile	IntKi	BlOutNd	{9}	-	-	"Blade nodes whose values will be output"	-
 typedef	^	AD_InputFile	IntKi	NTwOuts	-	-	-	"Number of tower node outputs [0 - 9]"	-
 typedef	^	AD_InputFile	IntKi	TwOutNd	{9}	-	-	"Tower nodes whose values will be output"	-
 typedef	^	AD_InputFile	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	AD_InputFile	CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
-typedef	^	AD_InputFile	ReKi	tau1_const	-	-	-	"time constant for DBEMT [used only when WakeMod=2 and DBEMT_Mod/=2]"	s
-typedef	^	AD_InputFile	IntKi	DBEMT_Mod	-	-	-	"Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1}"	-
+typedef	^	AD_InputFile	ReKi	tau1_const	-	-	-	"time constant for DBEMT"	s
+typedef	^	AD_InputFile	IntKi	DBEMT_Mod	-	-	-	"Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1=constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-) [used only when WakeMod=1]" -
 typedef	^	AD_InputFile	IntKi	BldNd_NumOuts	-	-	-	"Number of requested output channels per blade node (AD_AllBldNdOuts)"	-
 typedef	^	AD_InputFile	CHARACTER(ChanLen)	BldNd_OutList	{:}	-	-	"List of user-requested output channels (AD_AllBldNdOuts)"	-
 #typedef  ^  AD_InputFile   IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (AD_AllBldNdOuts)" -
@@ -262,13 +291,15 @@ typedef	^	RotMiscVarType	AA_OutputType	AA_y	-	-	-	"Outputs from the AA module"	-
 typedef	^	RotMiscVarType	AA_InputType	AA_u	-	-	-	"Inputs to the AA module"	-
 
 typedef	^	RotMiscVarType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
+typedef	^	RotMiscVarType	ReKi	SectAvgInflow  	{:}{:}{:}	-	-	"Sector averaged - disturbed inflow to improve BEM shear calculations"	m/s
 typedef	^	RotMiscVarType	R8Ki	orientationAnnulus	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
 typedef	^	RotMiscVarType	R8Ki	R_li              	{:}{:}{:}{:}	-	-	"Transformation matrix from inertial system to the staggered polar coordinate system of a given section"	-
 typedef	^	RotMiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-
 typedef	^	RotMiscVarType	ReKi	W_Twr	{:}	-	-	"relative wind speed normal to the tower at node j"	m/s
 typedef	^	RotMiscVarType	ReKi	X_Twr	{:}	-	-	"local x-component of force per unit length of the jth node in the tower"	m/s
 typedef	^	RotMiscVarType	ReKi	Y_Twr	{:}	-	-	"local y-component of force per unit length of the jth node in the tower"	m/s
-typedef	^	RotMiscVarType	ReKi	Curve	{:}{:}	-	-	"curvature angle, saved for possible output to file"	rad
+typedef	^	RotMiscVarType	ReKi	Cant	{:}{:}	-	-	"curvature angle, saved for possible output to file"	rad
+typedef	^	RotMiscVarType	ReKi	Toe 	{:}{:}	-	-	"Toe angle, saved for possible output to file"	rad
 typedef	^	RotMiscVarType	ReKi	TwrClrnc	{:}{:}	-	-	"Distance between tower (including tower radius) and blade node (not including blade width), saved for possible output to file"	m
 typedef	^	RotMiscVarType	ReKi	X	{:}{:}	-	-	"normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade"	N/m
 typedef	^	RotMiscVarType	ReKi	Y	{:}{:}	-	-	"tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade"	N/m
@@ -294,6 +325,10 @@ typedef	^	RotMiscVarType	ReKi	HubFB	{:}	        -	-	  "buoyant force at hub node
 typedef	^	RotMiscVarType	ReKi	HubMB	{:}  	    -	-	  "buoyant moment at hub node"   Nm
 typedef	^	RotMiscVarType	ReKi	NacFB	{:}	        -	-	  "buoyant force at nacelle (tower top) node"   N
 typedef	^	RotMiscVarType	ReKi	NacMB	{:}  	    -	-	  "buoyant moment at nacelle (tower top) node"   Nm
+typedef	^	RotMiscVarType	ReKi	NacDragF	{:}	        -	-	  "drag force at nacelle (tower top) node"   N
+typedef	^	RotMiscVarType	ReKi	NacDragM	{:}  	    -	-	  "drag moment at nacelle (tower top) node"   Nm
+typedef	^	RotMiscVarType	ReKi	NacFi	{:}	        -	-	  "Total force at nacelle (tower top) node"   N
+typedef	^	RotMiscVarType	ReKi	NacMi	{:}  	    -	-	  "Total moment at nacelle (tower top) node"   Nm
 typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
 typedef	^	RotMiscVarType	MeshType	BladeBuoyLoadPoint	{:}	-	-	"point mesh for lumped buoyant blade loads"	-
@@ -316,16 +351,47 @@ typedef	^	RotMiscVarType	ReKi	TFinSTV_i 	3	-	-	"Structural velocity at the refer
 typedef	^	RotMiscVarType	ReKi	TFinF_i 	3	-	-	"Forces at the reference point of the fin in the inertial system"
 typedef	^	RotMiscVarType	ReKi	TFinM_i 	3	-	-	"Moments at the reference point of the fin in the inertial system"
 
-typedef	^	MiscVarType	RotMiscVarType	rotors	{:}-	-	-	"MiscVars for each rotor"	-
+# Inflow data storage
+typedef	^	ElemInflowType	ReKi	InflowVel	{:}{:}	-	-	"U,V,W at nodes on element (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	ElemInflowType	ReKi	InflowAcc	{:}{:}	-	-	"Wind acceleration at nodes on element (blade or tower) (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	RotInflowType	ElemInflowType    Blade		{:}	-	-	"Blade wind inputs"	-
+typedef	^	RotInflowType	ElemInflowType    Tower		-	-	-	"Blade wind inputs"	-
+typedef	^	RotInflowType	ReKi	InflowOnHub 	{3}{1}	-	-	"U,V,W at hub"	m/s
+typedef	^	RotInflowType	ReKi	InflowOnNacelle	{3}{1}	-	-	"U,V,W at nacelle"	m/s
+typedef	^	RotInflowType	ReKi	InflowOnTailFin	{3}{1}	-	-	"U,V,W at tailfin"	m/s
+typedef	^	RotInflowType	ReKi	AvgDiskVel	{3}	-	0.0	"disk-averaged U,V,W"	m/s
+
+typedef	^	AD_InflowType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
+typedef	^	AD_InflowType	RotInflowType	RotInflow	{:}	-	-	"Inflow on rotor"	-
+
+typedef	^	MiscVarType	RotMiscVarType	rotors	{:} -	-	"MiscVars for each rotor"	-
 typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
 typedef	^	MiscVarType	FVW_OutputType	FVW_y	-	-	-	"Outputs from the FVW module"	-
 typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
+typedef	^	MiscVarType	ReKi            WindPos	{:}{:} - -	"XYZ coordinates to query for wind velocity/acceleration"	-
+typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind velocity"	-
+typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
+typedef	^	MiscVarType	AD_InflowType	Inflow	{:}	-	-	"Inflow storage (size of u for history of inputs)"	-
+
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 
 
 # Parameters for each rotor
+typedef	^	Jac_u_idxStarts	IntKi	Nacelle	-	1	-	"Index to first point in u jacobian for Nacelle" -
+typedef	^	Jac_u_idxStarts	IntKi	Hub	-	1	-	"Index to first point in u jacobian for Hub" -
+typedef	^	Jac_u_idxStarts	IntKi	TFin	-	1	-	"Index to first point in u jacobian for TFin" -
+typedef	^	Jac_u_idxStarts	IntKi	Tower	-	1	-	"Index to first point in u jacobian for Tower" -
+typedef	^	Jac_u_idxStarts	IntKi	BladeRoot	-	1	-	"Index to first point in u jacobian for BladeRoot" -
+typedef	^	Jac_u_idxStarts	IntKi	Blade	-	1	-	"Index to first point in u jacobian for Blade" -
+typedef	^	Jac_u_idxStarts	IntKi	UserProp	-	1	-	"Index to first point in u jacobian for UserProp" -
+typedef	^	Jac_u_idxStarts	IntKi	Extended	-	1	-	"Index to first point in u jacobian for Extended" -
+typedef	^	Jac_y_idxStarts	IntKi	NacelleLoad	-	1	-	"Index to first point in y jacobian for NacelleLoad" -
+typedef	^	Jac_y_idxStarts	IntKi	HubLoad	-	1	-	"Index to first point in y jacobian for HubLoad" -
+typedef	^	Jac_y_idxStarts	IntKi	TFinLoad	-	1	-	"Index to first point in y jacobian for TFinLoad" -
+typedef	^	Jac_y_idxStarts	IntKi	TowerLoad	-	1	-	"Index to first point in y jacobian for TowerLoad" -
+typedef	^	Jac_y_idxStarts	IntKi	BladeLoad	-	1	-	"Index to first point in y jacobian for BladeLoad" -
 typedef	^	RotParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	RotParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
 typedef	^	RotParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	-
@@ -340,6 +406,9 @@ typedef	^	RotParameterType	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotParameterType	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotParameterType	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
+typedef	^	RotParameterType	ReKi	NacArea     3	-	-	"Projected area of the nacelle in X, Y, Z in the nacelle coordinate system" m^2
+typedef	^	RotParameterType	ReKi	NacCd       3	-	-	"Drag cefficient for the nacelle areas defied above" -
+typedef	^	RotParameterType	ReKi	NacDragAC   3	-	-	"Position of aerodynamic center of nacelle drag in nacelle coordinates" m
 typedef	^	RotParameterType	ReKi	VolBl       -	-	-	"Buoyancy volume of all blades" m^3
 typedef	^	RotParameterType	ReKi	VolTwr       -	-	-	"Buoyancy volume of the tower" m^3
 typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m
@@ -352,18 +421,22 @@ typedef ^   RotParameterType	ReKi	TwrTaper  {:}   	-	-	"Array of tower element t
 typedef ^   RotParameterType	ReKi	TwrAxCent {:}	    -	-	"Array of tower element axial centroid, used in buoyancy calculation" -
 typedef	^	RotParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	RotParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
-typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
+typedef	^	RotParameterType	IntKi	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
+typedef	^	RotParameterType	Jac_u_idxStarts Jac_u_idxStartList	-	-	-	"Starting indices for all Jac_u components" -
+typedef	^	RotParameterType	Jac_y_idxStarts Jac_y_idxStartList	-	-	-	"Starting indices for all Jac_y components" -
+typedef	^	RotParameterType	IntKi	NumExtendedInputs	-	-	-	"number of extended inputs" -
 typedef	^	RotParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	RotParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
-typedef	^	RotParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
-typedef   ^     RotParameterType Integer         NumBl_Lin      -    -     -   "number of blades in the jacobian"	-
+typedef	^	RotParameterType	IntKi	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
+typedef   ^     RotParameterType IntKi NumBl_Lin      -    -     -   "number of blades in the jacobian"	-
 
 typedef	^	RotParameterType	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
 typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
-typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
-typedef	^	RotParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
+typedef	^	RotParameterType	IntKi	TwrAero	-	-	-	"Calculate tower aerodynamic loads? {0=none, 1=aero without VIV, 2=aero with VIV}"	switch
+typedef	^	RotParameterType	Integer	DBEMT_Mod	-	-	-	"DBEMT_Mod"	-
 typedef	^	RotParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
 typedef ^   RotParameterType    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
+typedef ^   RotParameterType    Logical NacelleDrag    -   -   -   "Include NacelleDrag effects?" flag
 typedef ^   RotParameterType    IntKi   MHK         -   -   -   "MHK" flag
 typedef	^	RotParameterType	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	RotParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
@@ -375,7 +448,7 @@ typedef ^   RotParameterType    ReKi    Pvap      -   -   -  "Vapour pressure" P
 typedef ^   RotParameterType    ReKi    WtrDpth -  -   -     "Water depth" m
 typedef ^   RotParameterType    ReKi    MSL2SWL -  -   -     "Offset between still-water level and mean sea level" m
 typedef	^	RotParameterType	IntKi	AeroProjMod   	-	1	-	"Flag to switch between different projection models"	-
-typedef	^	RotParameterType	IntKi	AeroBEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
+typedef	^	RotParameterType	IntKi	BEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
 # parameters for output
 typedef	^	RotParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	RotParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
@@ -390,21 +463,28 @@ typedef	^	RotParameterType	IntKi	BldNd_TotNumOuts	-	-	-	"Total number of request
 typedef	^	RotParameterType	OutParmType	BldNd_OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
 typedef  ^  RotParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (AD_AllBldNdOuts)" -
 typedef  ^  RotParameterType  IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
+typedef  ^  RotParameterType  IntKi BldNd_NumNodesOut - - - "The blades to output (AD_AllBldNdOuts)" -
 # Tail fin parameters (per rotor)
 typedef  ^  RotParameterType  LOGICAL           TFinAero  - .FALSE. -   "Calculate tail fin aerodynamics model (flag)" flag
 typedef  ^  RotParameterType  TFinParameterType TFin    -       -   -   "Parameters for tail fin of current rotor" -
 
-# parameters for all rotors:
+# Parameters for all rotors:
 typedef  ^  ParameterType  RotParameterType rotors {:} - - "Parameter types for each rotor" -
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
-typedef	^	ParameterType	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0]"	-
-typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
+typedef	^	ParameterType	IntKi	Skew_Mod	-	-	-	"Type of skewed-wake correction model {-1=orthogonal, 0=None, 1=Glauert} [unused when Wake_Mod=0]"	-
+typedef	^	ParameterType	IntKi	Wake_Mod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
 typedef   ^     ParameterType LOGICAL         CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 
+typedef ^   ParameterType   FlowFieldType *FlowField -  -   -    "Pointer of InflowWinds flow field data type" - 
+typedef ^      ^            Logical        SectAvg   -  -   -    "Use Sector average for BEM inflow velocity calculation"	-
+typedef ^      ^            IntKi          SA_Weighting - - 1    "Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse}  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True]" -
+typedef ^      ^            ReKi           SA_PsiBwd -  -   -    "Sector Average - Backard Azimuth (<0)"	deg
+typedef ^      ^            ReKi           SA_PsiFwd -  -   -    "Sector Average - Forward Azimuth (>0)"	deg
+typedef ^      ^            IntKi          SA_nPerSec -  -   -    "Sector Average - Number of points per sector (>1)"	-
 
 
 # ..... Inputs ....................................................................................................................
@@ -416,16 +496,10 @@ typedef	^	RotInputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade ro
 typedef	^	RotInputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 typedef	^	RotInputType	MeshType	TFinMotion	- 	-	-	"motion of tail fin (at tail fin ref point)"	-
 # Define inputs that are not on a mesh here:
-typedef	^	RotInputType	ReKi	InflowOnBlade	{:}{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
-typedef	^	RotInputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
-typedef	^	RotInputType	ReKi	InflowOnHub 	{3}	-	-	"U,V,W at hub"	m/s
-typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}	-	-	"U,V,W at nacelle"	m/s
-typedef	^	RotInputType	ReKi	InflowOnTailFin	{3}	-	-	"U,V,W at tailfin"	m/s
 typedef	^	RotInputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 
 
 typedef	^	InputType	RotInputType	rotors	{:}	-	-	"Inputs for each rotor"	-
-typedef	^	InputType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
 
 
 # ..... Outputs ...................................................................................................................

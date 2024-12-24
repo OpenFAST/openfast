@@ -40,7 +40,6 @@ typedef  ^              ^                     ReKi                    RefHt     
 typedef  ^              ^                     ReKi                    RefLength               -     -     -     "Reference length for linear horizontal and vertical sheer"     -
 typedef  ^              ^                     ReKi                    PropagationDir          -     -     -     "Direction of wind propagation"                                 radians
 typedef  ^              ^                     logical                 UseInputFile            -   .true.  -     "Flag for toggling file based IO in wind type 2."               -
-typedef  ^              ^                     FileInfoType            PassedFileData          -     -     -     "Optional slot for wind type 2 data if file IO is not used."    -
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              Grid3D_InitInputType  IntKi                   ScaleMethod             -     0     -     "Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation]"  -
@@ -87,6 +86,7 @@ typedef  ^              User_InitInputType    SiKi                    Dummy     
 typedef  ^              Grid4D_InitInputType  IntKi                   n                       4     -     -     "number of grid points in the x, y, z, and t directions"                     -
 typedef  ^              ^                     ReKi                    delta                   4     -     -     "size between 2 consecutive grid points in each grid direction"               "m,m,m,s"
 typedef  ^              ^                     ReKi                    pZero                   3     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))"    "m"
+typedef  ^              ^                     SiKi                   *Vel                   :::::   -     -     "pointer to 4D grid velocity data"      "m/s"
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              Points_InitInputType  IntKi                   NumWindPoints           -     -     -     "Number of points where wind components will be provided"                     -

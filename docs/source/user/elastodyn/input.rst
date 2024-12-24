@@ -199,7 +199,11 @@ Mass and Inertia
 
 **PtfmYIner**   - Platform inertia for yaw rotation about the platform CM (kg m^2)
 
+**PtfmXYIner**  - Platform roll-pitch moment of inertia (*Ixy=-∫xydm*) about the platform CM (kg m^2)
 
+**PtfmYZIner**  - Platform pitch-yaw moment of inertia (*Iyz=-∫yzdm*) about the platform CM (kg m^2)
+
+**PtfmXZIner**  - Platform roll-yaw moment of inertia (*Ixz=-∫xzdm*) about the platform CM (kg m^2)
 
 Blade
 ~~~~~
@@ -230,6 +234,29 @@ Rotor-Teeter
 
 **TeetHSSp**    - Rotor-teeter hard-stop linear-spring constant (N-m/rad) [used only for 2 blades and when TeetMod=1]
 
+
+Yaw-Friction
+~~~~~~~~~~~~
+
+**YawFrctMod**  - Yaw-friction model {0: none, 1: friction independent of yaw-bearing force and bending moment, 2: friction with Coulomb terms depending on yaw-bearing force and bending moment, 3: user defined model} 
+
+**M_CSmax**     - Maximum static Coulomb friction torque (N-m) [M_CSmax when YawFrctMod=1; -min(0,Fz)*M_CSmax when YawFrctMod=2]
+
+**M_FCSmax**    - Maximum static Coulomb friction torque proportional to yaw bearing shear force (N-m) [sqrt(Fx^2+Fy^2)*M_FCSmax; only used when YawFrctMod=2]
+
+**M_MCSmax**    - Maximum static Coulomb friction torque proportional to yaw bearing bending moment (N-m) [sqrt(Mx^2+My^2)*M_MCSmax; only used when YawFrctMod=2]
+
+**M_CD**        - Dynamic Coulomb friction moment (N-m) [M_CD when YawFrctMod=1; -min(0,Fz)*M_CD when YawFrctMod=2]
+
+**M_FCD**       - Dynamic Coulomb friction moment proportional to yaw bearing shear force (N-m) [sqrt(Fx^2+Fy^2)*M_FCD; only used when YawFrctMod=2]
+
+**M_MCD**       - Dynamic Coulomb friction moment proportional to yaw bearing bending moment (N-m) [sqrt(Mx^2+My^2)*M_MCD; only used when YawFrctMod=2]
+
+**sig_v**       - Linear viscous friction coefficient (N-m/(rad/s))
+
+**sig_v2**      - Quadratic viscous friction coefficient (N-m/(rad/s)^2)
+
+**OmgCut**      - Yaw angular velocity cutoff below which viscous friction is linearized (rad/s)
 
 
 Drivetrain

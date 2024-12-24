@@ -151,8 +151,10 @@ CONTAINS
       vecLen   = SQRT(Dot_Product(vec,vec))
       vecLen2D = SQRT(vec(1)**2+vec(2)**2)
       if ( vecLen < 0.000001 ) then
-         print *, "ERROR in GetOrientationAngles in MoorDyn. Supplied vector is near zero" 
-         print *, vec
+         if (wordy > 0) then
+            print *, "ERROR in GetOrientationAngles in MoorDyn. Supplied vector is near zero" 
+            print *, vec
+         endif
          k_hat = NaN ! 1.0/0.0
       else
          k_hat = vec / vecLen 
@@ -236,10 +238,10 @@ CONTAINS
       REAL(DbKi),       INTENT(  OUT)  :: a_out(3)     ! acceleration of point
 
       REAL(DbKi)                       :: rRel(3)
-      REAL(DbKi)                       :: rRel2(3)
+!      REAL(DbKi)                       :: rRel2(3)
 
-      REAL(DbKi)                       :: r_out2(3)
-      REAL(DbKi)                       :: rd_out2(3)
+!      REAL(DbKi)                       :: r_out2(3)
+!      REAL(DbKi)                       :: rd_out2(3)
       REAL(DbKi)                       :: H(3,3)
 
       ! rd_in should be in global orientation frame
@@ -322,10 +324,10 @@ CONTAINS
       REAL(DbKi),       INTENT(  OUT)  :: Mout(6,6)   ! resultant mass and inertia matrix about ref point
   
       REAL(DbKi)                       :: H(     3,3) ! "anti-symmetric tensor components" from Sadeghi and Incecik
-      REAL(DbKi)                       :: tempM( 3,3)
-      REAL(DbKi)                       :: tempM2(3,3)
-      REAL(DbKi)                       :: Htrans(3,3)
-      Integer(IntKi)                   :: I,J
+!      REAL(DbKi)                       :: tempM( 3,3)
+!      REAL(DbKi)                       :: tempM2(3,3)
+!      REAL(DbKi)                       :: Htrans(3,3)
+!      Integer(IntKi)                   :: I
    
       ! sub-matrix definitions are accordint to  | m    J |
       !                                          | J^T  I |
@@ -444,8 +446,8 @@ CONTAINS
       REAL(DbKi),      INTENT ( IN    )  :: gamma   ! member twist angle
       REAL(DbKi)                         :: R(3,3)  ! rotation matrix 
      
-      INTEGER(IntKi)                     :: errStat  
-      CHARACTER(100)                     :: errMsg   
+!      INTEGER(IntKi)                     :: errStat  
+!      CHARACTER(100)                     :: errMsg   
 
       REAL(DbKi)                         :: s1, c1, s2, c2, s3, c3
 
@@ -920,7 +922,7 @@ CONTAINS
 
       INTEGER(IntKi)             :: ix, iy, iz, it        ! indices for interpolation      
       INTEGER(IntKi)             :: iz0, iz1              ! special indices for currrent interpolation  
-      INTEGER(IntKi)             :: N                     ! number of rod elements for convenience
+!      INTEGER(IntKi)             :: N                     ! number of rod elements for convenience
       Real(SiKi)                 :: fx, fy, fz, ft        ! interpolation fractions
       Real(DbKi)                 :: zp                    ! zprime coordinate used for Wheeler stretching
    
@@ -980,114 +982,114 @@ CONTAINS
    END SUBROUTINE getWaterKin
 
 
-   ! unused routine with old code for taking wave kinematic grid inputs from HydroDyn
-   SUBROUTINE CopyWaterKinFromHydroDyn(p, InitInp)
-
-      TYPE(MD_InitInputType),       INTENT(IN   )  :: InitInp     ! INTENT(INOUT) : Input data for initialization routine
-      TYPE(MD_ParameterType),       INTENT(  OUT)  :: p           ! INTENT( OUT) : Parameters
-      
-      INTEGER(IntKi)                               :: I, J, K, Itemp
-
-
-      ! ----------------------------- Arrays for wave kinematics -----------------------------
-      
-      
-  !   :::::::::::::: BELOW WILL BE USED EVENTUALLY WHEN WAVE INFO IS AN INPUT ::::::::::::::::::
-  !   ! The rAll array contains all nodes or reference points in the system 
-  !   ! (x,y,z global coordinates for each) in the order of bodies, rods, points, internal line nodes.      
-  !   
-  !   ! count the number of nodes to use for passing wave kinematics
-  !   J=0 
-  !   ! Body reference point coordinates
-  !   J = J + p%nBodies
-  !   ! Rod node coordinates (including ends)
-  !   DO l = 1, p%nRods
-  !      J = J + (m%RodList(l)%N + 1)
-  !   END DO
-  !   ! Point reference point coordinates
-  !   J = J + p%nPoints
-  !   ! Line internal node coordinates
-  !   DO l = 1, p%nLines
-  !      J = J + (m%LineList(l)%N - 1)
-  !   END DO
-  !
-  !   ! allocate all relevant arrays
-  !   ! allocate state vector and temporary state vectors based on size just calculated
-  !   ALLOCATE ( y%rAll(3,J), u%U(3,J), u%Ud(3,J), u%zeta(J), u%PDyn(J), STAT = ErrStat )
-  !   IF ( ErrStat /= ErrID_None ) THEN
-  !     ErrMsg  = ' Error allocating wave kinematics vectors.'
-  !     RETURN
-  !   END IF
-  !
-  !
-  !   ! go through the nodes and fill in the data (this should maybe be turned into a global function)
-  !   J=0 
-  !   ! Body reference point coordinates
-  !   DO I = 1, p%nBodies
-  !      J = J + 1                     
-  !      y%rAll(:,J) = m%BodyList(I)%r6(1:3)         
-  !   END DO
-  !   ! Rod node coordinates
-  !   DO I = 1, p%nRods
-  !      DO K = 0,m%RodList(I)%N  
-  !         J = J + 1             
-  !         y%rAll(:,J) = m%RodList(I)%r(:,K)
-  !      END DO
-  !   END DO
-  !   ! Point reference point coordinates
-  !   DO I = 1, p%nPoints
-  !      J = J + 1
-  !      y%rAll(:,J) = m%PointList(I)%r
-  !   END DO      
-  !   ! Line internal node coordinates
-  !   DO I = 1, p%nLines
-  !      DO K = 1,m%LineList(I)%N-1
-  !         J = J + 1               
-  !         y%rAll(:,J) = m%LineList(I)%r(:,K)
-  !      END DO
-  !   END DO        
-     ! :::::::::::::::: the above might be used eventually. For now, let's store wave info grids within this module :::::::::::::::::
-     
-     
-     ! ----- copy wave grid data over from HydroDyn (as was done in USFLOWT branch) -----
-     
-     ! get grid and time info (currently this is hard-coded to match what's in HydroDyn_Input
-     ! DO I=1,p%nzWave
-     !    p%pz(I) =  1.0 - 2.0**(p%nzWave-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
-     ! END DO
-     ! DO J = 1,p%nyWave
-     !    p%py(J) = WaveGrid_y0 + WaveGrid_dy*(J-1)
-     ! END DO
-     ! DO K = 1,p%nxWave
-     !    p%px(K) = WaveGrid_x0 + WaveGrid_dx*(K-1)
-     ! END DO
-     ! 
-     ! p%tWave = InitInp%WaveTime
-     
-     DO I=1,p%nzWave
-        DO J = 1,p%nyWave
-           DO K = 1,p%nxWave 
-              Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node on 3D grid
-              
-              p%uxWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,1)  ! note: indices are t, z, y, x
-              p%uyWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,2)
-              p%uzWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,3)
-              p%axWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,1)
-              p%ayWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,2)
-              p%azWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,3)
-              p%PDyn(   :,I,J,K) = InitInp%WavePDyn(:,Itemp)
-           END DO
-        END DO
-     END DO
-        
-     DO J = 1,p%nyWave
-        DO K = 1,p%nxWave
-           Itemp = (J-1)*p%nxWave + K    ! index of actual node on surface 2D grid   
-           p%zeta(:,J,K) = InitInp%WaveElev(:,Itemp)
-        END DO
-     END DO
-     
-   END SUBROUTINE CopyWaterKinFromHydroDyn
+  !! ! unused routine with old code for taking wave kinematic grid inputs from HydroDyn
+  !! SUBROUTINE CopyWaterKinFromHydroDyn(p, InitInp)
+  !!
+  !!    TYPE(MD_InitInputType),       INTENT(IN   )  :: InitInp     ! INTENT(INOUT) : Input data for initialization routine
+  !!    TYPE(MD_ParameterType),       INTENT(  OUT)  :: p           ! INTENT( OUT) : Parameters
+  !!    
+  !!    INTEGER(IntKi)                               :: I, J, K, Itemp
+  !!
+  !!
+  !!    ! ----------------------------- Arrays for wave kinematics -----------------------------
+  !!    
+  !!    
+  !!!   :::::::::::::: BELOW WILL BE USED EVENTUALLY WHEN WAVE INFO IS AN INPUT ::::::::::::::::::
+  !!!   ! The rAll array contains all nodes or reference points in the system 
+  !!!   ! (x,y,z global coordinates for each) in the order of bodies, rods, points, internal line nodes.      
+  !!!   
+  !!!   ! count the number of nodes to use for passing wave kinematics
+  !!!   J=0 
+  !!!   ! Body reference point coordinates
+  !!!   J = J + p%nBodies
+  !!!   ! Rod node coordinates (including ends)
+  !!!   DO l = 1, p%nRods
+  !!!      J = J + (m%RodList(l)%N + 1)
+  !!!   END DO
+  !!!   ! Point reference point coordinates
+  !!!   J = J + p%nConnects
+  !!!   ! Line internal node coordinates
+  !!!   DO l = 1, p%nLines
+  !!!      J = J + (m%LineList(l)%N - 1)
+  !!!   END DO
+  !!!
+  !!!   ! allocate all relevant arrays
+  !!!   ! allocate state vector and temporary state vectors based on size just calculated
+  !!!   ALLOCATE ( y%rAll(3,J), u%U(3,J), u%Ud(3,J), u%zeta(J), u%PDyn(J), STAT = ErrStat )
+  !!!   IF ( ErrStat /= ErrID_None ) THEN
+  !!!     ErrMsg  = ' Error allocating wave kinematics vectors.'
+  !!!     RETURN
+  !!!   END IF
+  !!!
+  !!!
+  !!!   ! go through the nodes and fill in the data (this should maybe be turned into a global function)
+  !!!   J=0 
+  !!!   ! Body reference point coordinates
+  !!!   DO I = 1, p%nBodies
+  !!!      J = J + 1                     
+  !!!      y%rAll(:,J) = m%BodyList(I)%r6(1:3)         
+  !!!   END DO
+  !!!   ! Rod node coordinates
+  !!!   DO I = 1, p%nRods
+  !!!      DO K = 0,m%RodList(I)%N  
+  !!!         J = J + 1             
+  !!!         y%rAll(:,J) = m%RodList(I)%r(:,K)
+  !!!      END DO
+  !!!   END DO
+  !!!   ! Point reference point coordinates
+  !!!   DO I = 1, p%nConnects
+  !!!      J = J + 1
+  !!!      y%rAll(:,J) = m%ConnectList(I)%r
+  !!!   END DO      
+  !!!   ! Line internal node coordinates
+  !!!   DO I = 1, p%nLines
+  !!!      DO K = 1,m%LineList(I)%N-1
+  !!!         J = J + 1               
+  !!!         y%rAll(:,J) = m%LineList(I)%r(:,K)
+  !!!      END DO
+  !!!   END DO        
+  !!   ! :::::::::::::::: the above might be used eventually. For now, let's store wave info grids within this module :::::::::::::::::
+  !!   
+  !!   
+  !!   ! ----- copy wave grid data over from HydroDyn (as was done in USFLOWT branch) -----
+  !!   
+  !!   ! get grid and time info (currently this is hard-coded to match what's in HydroDyn_Input
+  !!   ! DO I=1,p%nzWave
+  !!   !    p%pz(I) =  1.0 - 2.0**(p%nzWave-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
+  !!   ! END DO
+  !!   ! DO J = 1,p%nyWave
+  !!   !    p%py(J) = WaveGrid_y0 + WaveGrid_dy*(J-1)
+  !!   ! END DO
+  !!   ! DO K = 1,p%nxWave
+  !!   !    p%px(K) = WaveGrid_x0 + WaveGrid_dx*(K-1)
+  !!   ! END DO
+  !!   ! 
+  !!   ! p%tWave = InitInp%WaveTime
+  !!   
+  !!   DO I=1,p%nzWave
+  !!      DO J = 1,p%nyWave
+  !!         DO K = 1,p%nxWave 
+  !!            Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node on 3D grid
+  !!            
+  !!            p%uxWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,1)  ! note: indices are t, z, y, x
+  !!            p%uyWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,2)
+  !!            p%uzWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,3)
+  !!            p%axWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,1)
+  !!            p%ayWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,2)
+  !!            p%azWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,3)
+  !!            p%PDyn(   :,I,J,K) = InitInp%WavePDyn(:,Itemp)
+  !!         END DO
+  !!      END DO
+  !!   END DO
+  !!      
+  !!   DO J = 1,p%nyWave
+  !!      DO K = 1,p%nxWave
+  !!         Itemp = (J-1)*p%nxWave + K    ! index of actual node on surface 2D grid   
+  !!         p%zeta(:,J,K) = InitInp%WaveElev(:,Itemp)
+  !!      END DO
+  !!   END DO
+  !!   
+  !! END SUBROUTINE CopyWaterKinFromHydroDyn
    
      
    ! ----- write wave grid spacing to output file -----
@@ -1099,7 +1101,7 @@ CONTAINS
     CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
 
     INTEGER(IntKi)                   :: ErrStat2
-    CHARACTER(120)                   :: ErrMsg2   
+!    CHARACTER(120)                   :: ErrMsg2   
  
     CHARACTER(120)                   :: Frmt       
     INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
@@ -1131,8 +1133,9 @@ CONTAINS
      Frmt = '('//TRIM(Int2LStr(8))//'(A1,e10.4))'      
      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pzWave(I))), I=1,p%nzWave )
      
-     CLOSE(UnOut, IOSTAT = ErrStat )
-     IF ( ErrStat /= 0 ) THEN
+     CLOSE(UnOut, IOSTAT = ErrStat2 )
+     IF ( ErrStat2 /= 0 ) THEN
+        ErrStat = ErrID_Severe
         ErrMsg = 'Error closing wave grid file'
      END IF
      
@@ -1148,7 +1151,7 @@ CONTAINS
     CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
 
     INTEGER(IntKi)                   :: ErrStat2
-    CHARACTER(120)                   :: ErrMsg2   
+!    CHARACTER(120)                   :: ErrMsg2   
     
     INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
     INTEGER(IntKi)   :: I,J,K, l, Itemp
@@ -1280,7 +1283,7 @@ CONTAINS
       INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat             ! Error status of the operation
       CHARACTER(*),            INTENT(  OUT)  :: ErrMsg              ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(IntKi)                   :: I, iIn, ix, iy, iz
+      INTEGER(IntKi)                   :: I, iIn, ix, iy, iz, numHdrLn
       INTEGER(IntKi)                   :: ntIn   ! number of time series inputs from file      
       INTEGER(IntKi)                   :: UnIn   ! unit number for coefficient input file
       INTEGER(IntKi)                   :: UnEcho       
@@ -1299,6 +1302,7 @@ CONTAINS
       CHARACTER(120)                   :: Line
       CHARACTER(4096)                  :: entries2  
       INTEGER(IntKi)                   :: coordtype
+      LOGICAL                          :: dataBegin
    
       INTEGER(IntKi)                   :: NStepWave    ! 
       INTEGER(IntKi)                   :: NStepWave2   ! 
@@ -1310,7 +1314,7 @@ CONTAINS
       REAL(SiKi),  ALLOCATABLE         :: TmpFFTWaveElev(:)     ! Data for the FFT calculation
       TYPE(FFT_DataType)               :: FFT_Data              ! the instance of the FFT module we're using
       
-      
+      REAL(SiKi)                       :: tmpReal            ! A temporary real number
       COMPLEX(SiKi),ALLOCATABLE        :: tmpComplex(:)      ! A temporary array (0:NStepWave2-1) for FFT use. 
    
       REAL(SiKi)                       :: Omega                 ! Wave frequency (rad/s)
@@ -1326,7 +1330,7 @@ CONTAINS
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHx(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHy(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity in x-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCV( :)        ! Discrete Fourier transform of the instantaneous vertical   velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
-      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
+!      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
 
       INTEGER(IntKi)                   :: ErrStatTmp
       INTEGER(IntKi)                   :: ErrStat2
@@ -1346,7 +1350,7 @@ CONTAINS
          
       ELSE IF (SCAN(WaterKinString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
          ! If the input has no letters, let's assume it's a number         
-         print *, "ERROR WaveKin option does not currently support numeric entries. It must be a filename."
+         call WrScr( "ERROR WaveKin option does not currently support numeric entries. It must be a filename." )
          p%WaveKin = 0
          p%Current = 0
          return
@@ -1354,7 +1358,7 @@ CONTAINS
 
 
       ! otherwise interpret the input as a file name to load the bathymetry lookup data from
-      print *, "   The waterKin input contains letters so will load a water kinematics input file"
+      call WrScr( "   The waterKin input contains letters so will load a water kinematics input file" )
       
       
       ! -------- load water kinematics input file -------------
@@ -1385,14 +1389,17 @@ CONTAINS
       READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
+      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
       ! Y grid points
       READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
+      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
       ! Z grid points
       READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
       READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
       CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
+      Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
       ! ----- current -----
       CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
       CALL ReadVar( UnIn, FileName, p%Current,   'CurrentMod', 'CurrentMod', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
@@ -1406,7 +1413,7 @@ CONTAINS
             EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
          end if
          if (i == 100) then
-            print*,"WARNING: MD can handle a maximum of 100 current profile points"
+            call WrScr("WARNING: MD can handle a maximum of 100 current profile points")
             exit
          end if
       END DO
@@ -1442,7 +1449,7 @@ CONTAINS
       ! --------------------- set from inputted wave elevation time series, grid approach -------------------
       if (p%WaveKin == 3) then
 
-         print *, 'Setting up WaveKin 3 option: read wave elevation time series from file'
+         call WrScr( 'Setting up WaveKin 3 option: read wave elevation time series from file' )
 
          IF ( LEN_TRIM( WaveKinFile ) == 0 )  THEN
             CALL SetErrStat( ErrID_Fatal,'WaveKinFile must not be an empty string.',ErrStat, ErrMsg, RoutineName); return
@@ -1460,20 +1467,31 @@ CONTAINS
       
          CALL OpenFInpFile ( UnElev, WaveKinFile, ErrStat2, ErrMsg2 ); if(Failed()) return
         
-         print *, 'Reading wave elevation data from ', trim(WaveKinFile)
+         call WrScr( 'Reading wave elevation data from '//trim(WaveKinFile) )
          
          ! Read through length of file to find its length
-         i = 1  ! start counter
+         i         = 0 ! start line counter
+         numHdrLn  = 0 ! start header-line counter
+         dataBegin = .FALSE. ! started reading the data section
          DO
             READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     !read into a line
             IF (ErrStat2 /= 0) EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
             i = i+1
+            READ(Line,*,IOSTAT=ErrStatTmp) tmpReal
+            IF (ErrStatTmp/=0) THEN  ! Not a number
+               IF (dataBegin) THEN
+                  CALL SetErrStat( ErrID_Fatal,' Non-data line detected in WaveKinFile past the header lines.',ErrStat, ErrMsg, RoutineName); return
+               END IF
+               numHdrLn = numHdrLn + 1
+            ELSE
+               dataBegin = .TRUE.
+            END IF
          END DO
 
          ! rewind to start of input file to re-read things now that we know how long it is
          REWIND(UnElev)      
 
-         ntIn = i-3     ! save number of lines of file
+         ntIn = i-numHdrLn     ! save number of lines of file
          
 
          ! allocate space for input wave elevation array (including time column)
@@ -1481,8 +1499,9 @@ CONTAINS
          CALL AllocAry(WaveElevIn,  ntIn, 'WaveElevIn', ErrStat2, ErrMsg2 ); if(Failed()) return
 
          ! read the data in from the file
-         READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     ! skip the first two lines as headers
-         READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     !
+         DO i = 1, numHdrLn
+            READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     ! skip header lines
+         END DO
          
          DO i = 1, ntIn
             READ (UnElev, *, IOSTAT=ErrStat2) WaveTimeIn(i), WaveElevIn(i)
@@ -1494,8 +1513,12 @@ CONTAINS
 
          ! Close the inputs file 
          CLOSE ( UnElev ) 
+
+         IF (WaveTimeIn(1) .NE. 0.0) THEN
+            CALL SetErrStat( ErrID_Fatal, ' MoorDyn WaveElev time series should start at t = 0 seconds.',ErrStat, ErrMsg, RoutineName); return
+         ENDIF
          
-         print *, "Read ", ntIn, " time steps from input file."
+         call WrScr( "Read "//trim(num2lstr(ntIn))//" time steps from input file." )
 
          ! if (WaveTimeIn(ntIn) < TMax) then <<<< need to handle if time series is too short?
            
@@ -1705,49 +1728,58 @@ CONTAINS
          REAL(ReKi) :: tempArray (100)
          REAL(ReKi) :: dx
          INTEGER(IntKi)                   :: nEntries, I
-         
-         ! get array of coordinate entries 
-         CALL stringToArray(entries, nEntries, tempArray)
-         
-         ! set number of coordinates
-         if (     coordtype==0) then   ! 0: not used - make one grid point at zero
-            n = 1;
-         else if (coordtype==1) then   ! 1: list values in ascending order
-            n = nEntries
-         else if (coordtype==2) then   ! 2: uniform specified by -xlim, xlim, num
-            n = int(tempArray(3))
-         else
-            print *, "Error: invalid coordinate type specified to gridAxisCoords"
-         end if
-         
-         ! allocate coordinate array
-         CALL AllocAry(coordarray, n, 'x,y, or z grid points' , ErrStat, ErrMsg)
-         !ALLOCATE ( coordarray(n), STAT=ErrStat) 
-         
-         ! fill in coordinates
-         if (     coordtype==0) then
-            coordarray(1) = 0.0_ReKi
-         
-         else if (coordtype==1) then
-            coordarray(1:n) = tempArray(1:n)
-         
-         else if (coordtype==2) then  
-            coordarray(1) = tempArray(1)
-            coordarray(n) = tempArray(2)
-            dx = (coordarray(n)-coordarray(0))/REAL(n-1)
-            do i=2,n-1
-               coordarray(i) = coordarray(1) + REAL(i)*dx
-            end do
-         
-         else
-            print *, "Error: invalid coordinate type specified to gridAxisCoords" 
-         end if
-         
-         print *, "Set water grid coordinates to :"
-         DO i=1,n
-            print *, " ", coordarray(i)
-         end do
-         
+
+         IF (len(trim(entries)) == len(entries)) THEN
+            call WrScr("Warning: Only 120 characters read from wave grid coordinates")
+         END IF
+
+         IF (entries(len(entries):len(entries)) == ',') THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg = 'Last character of wave grid coordinate list cannot be comma'
+         ELSE
+            ! get array of coordinate entries 
+            CALL stringToArray(entries, nEntries, tempArray)
+            
+            ! set number of coordinates
+            if (     coordtype==0) then   ! 0: not used - make one grid point at zero
+               n = 1;
+            else if (coordtype==1) then   ! 1: list values in ascending order
+               n = nEntries
+            else if (coordtype==2) then   ! 2: uniform specified by -xlim, xlim, num
+               n = int(tempArray(3))
+            else
+               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
+            end if
+            
+            ! allocate coordinate array
+            CALL AllocAry(coordarray, n, 'x,y, or z grid points' , ErrStat, ErrMsg)
+            !ALLOCATE ( coordarray(n), STAT=ErrStat) 
+            
+            ! fill in coordinates
+            if (     coordtype==0) then
+               coordarray(1) = 0.0_ReKi
+            
+            else if (coordtype==1) then
+               coordarray(1:n) = tempArray(1:n)
+            
+            else if (coordtype==2) then  
+               coordarray(1) = tempArray(1)
+               coordarray(n) = tempArray(2)
+               dx = (coordarray(n)-coordarray(1))/REAL(n-1)
+               do i=2,n
+                  coordarray(i) = coordarray(i-1) + dx
+               end do
+            
+            else
+               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
+            end if
+            
+            ! print *, "Set water grid coordinates to :"
+            ! DO i=1,n
+            !    print *, " ", coordarray(i)
+            ! end do
+         END IF
+
       END SUBROUTINE gridAxisCoords
    
    
@@ -1775,7 +1807,7 @@ CONTAINS
             END IF
             n = n + 1
             if (n > 100) then
-               print *, "ERROR - stringToArray cannot do more than 100 entries"
+               call WrScr( "ERROR - stringToArray cannot do more than 100 entries")
             end if            
             READ(instring(pos1:pos1+pos2-2), *) outarray(n)
 

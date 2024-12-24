@@ -20,12 +20,14 @@ param	ElastoDyn/ED	-	IntKi	ED_NMX	-	4	-	"Used in updating predictor-corrector va
 # Define inputs that the initialization routine may need here:
 typedef	ElastoDyn/ED	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
 typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
-typedef	^	InitInputType	CHARACTER(1024)	ADInputFile	-	-	-	"Name of the AeroDyn input file (in this verison, that is where we'll get the blade mesh info"	-
 typedef	^	InitInputType	LOGICAL	CompElast	-	-	-	"flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false)"	-
+typedef	^	InitInputType	LOGICAL	RigidAero	-	-	-	"flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"
 typedef ^   InitInputType   ReKi Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef ^   InitInputType   IntKi MHK     -   -   -   "MHK turbine type switch"   -
 typedef ^   InitInputType   ReKi WtrDpth -  -   -    "Water depth" m
+typedef	^	InitInputType	LOGICAL	CompAeroMaps	-	.FALSE.	-	"flag to determine if ElastoDyn is computing aero maps (true) or running a normal simulation (false)"	-
+typedef	^	InitInputType	ReKi	RotSpeed	-	-	-	"Rotor speed used when ElastoDyn is computing aero maps"	"rad/s"
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -34,7 +36,7 @@ typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and da
 typedef	^	InitOutputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 typedef	^	InitOutputType	ReKi	BlPitch	{:}	-	-	"Initial blade pitch angles"	radians
 typedef	^	InitOutputType	ReKi	BladeLength	-	-	-	"Blade length (for AeroDyn)"	meters
-typedef	^	InitOutputType	ReKi	TowerHeight	-	-	-	"Tower Height"	meters
+typedef	^	InitOutputType	ReKi	TowerFlexL	-	-	-	"Tower Flexible Length"	meters
 typedef	^	InitOutputType	ReKi	TowerBaseHeight	-	-	-	"Tower Base Height"	meters
 typedef	^	InitOutputType	ReKi	HubHt	-	-	-	"Height of the hub"	meters
 typedef	^	InitOutputType	ReKi	BldRNodes	{:}	-	-	"Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL )"
@@ -55,6 +57,7 @@ typedef	^	InitOutputType	LOGICAL	RotFrame_x	{:}	-	-	"Flag that tells FAST/MBC3 i
 typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef	^	InitOutputType	IntKi	GearBox_index	-	-	-	"Index to gearbox rotation in state array (for steady-state calculations)"   -
 
 # ..... Blade Input file data ...........................................................................................................
 typedef	ElastoDyn/ED	BladeInputData	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
@@ -150,6 +153,9 @@ typedef	^	ED_InputFile	ReKi	PtfmMass	-	-	-	"Platform mass"	kg
 typedef	^	ED_InputFile	ReKi	PtfmRIner	-	-	-	"Platform inertia for roll tilt rotation about the platform CM"	"kg m^2"
 typedef	^	ED_InputFile	ReKi	PtfmPIner	-	-	-	"Platform inertia for pitch tilt rotation about the platform CM"	"kg m^2"
 typedef	^	ED_InputFile	ReKi	PtfmYIner	-	-	-	"Platform inertia for yaw rotation about the platform CM"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	PtfmXYIner	-	-	-	"Platform xy inertia about the platform CM"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	PtfmYZIner	-	-	-	"Platform yz inertia about the platform CM"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	PtfmXZIner	-	-	-	"Platform xz inertia about the platform CM"	"kg m^2"
 typedef	^	ED_InputFile	ReKi	BldNodes	-	-	-	"Number of blade nodes (per blade) used for analysis"	-
 typedef	^	ED_InputFile	ED_BladeMeshInputData	InpBlMesh	{:}	-	-	"Input data for blade discretizations (could be on each blade)"	"see BladeMeshInputData"
 typedef	^	ED_InputFile	BladeInputData	InpBl	{:}	-	-	"Input data for individual blades"	"see BladeInputData type"
@@ -161,6 +167,16 @@ typedef	^	ED_InputFile	ReKi	TeetSStP	-	-	-	"Rotor-teeter soft-stop position"	rad
 typedef	^	ED_InputFile	ReKi	TeetHStP	-	-	-	"Rotor-teeter hard-stop position"	radians
 typedef	^	ED_InputFile	ReKi	TeetSSSp	-	-	-	"Rotor-teeter soft-stop linear-spring constant"	N-m/rad
 typedef	^	ED_InputFile	ReKi	TeetHSSp	-	-	-	"Rotor-teeter hard-stop linear-spring constant"	N-m/rad
+typedef ^       ED_InputFile    IntKi   YawFrctMod      -       -       -       "Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], 2 [does use Fz at bearing], or 3 [user defined model]"     -
+typedef ^       ED_InputFile    R8Ki    M_CD    -       -       -       "Dynamic friction moment at null yaw rate"      N-m
+typedef ^       ED_InputFile    R8Ki    M_FCD   -       -       -       "Dynamic friction moment at null yaw rate proportional to yaw bearing shear force"      N-m
+typedef ^       ED_InputFile    R8Ki    M_MCD   -       -       -       "Dynamic friction moment at null yaw rate proportional to yaw bearing bending moment"   N-m
+typedef ^       ED_InputFile    R8Ki    M_CSMAX -       -       -       "Maximum Coulomb friction torque" N-m
+typedef ^       ED_InputFile    R8Ki    M_FCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing shear force"    N-m
+typedef ^       ED_InputFile    R8Ki    M_MCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing bending moment" N-m
+typedef ^       ED_InputFile    R8Ki    sig_v   -       -       -       "Linear viscous friction coefficient"     N-m/(rad/s)
+typedef ^       ED_InputFile    R8Ki    sig_v2  -       -       -       "Quadratic viscous friction coefficient"  N-m/(rad/s)^2
+typedef ^       ED_InputFile    R8Ki    OmgCut  -       -       -       "Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized"  rad/s
 typedef	^	ED_InputFile	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"	%
 typedef	^	ED_InputFile	ReKi	GBRatio	-	-	-	"Gearbox ratio"	-
 typedef	^	ED_InputFile	ReKi	DTTorSpr	-	-	-	"Drivetrain torsional spring"	N-m/rad
@@ -252,6 +268,12 @@ typedef  ^  ED_InputFile   IntKi BldNd_BladesOut - - - "The blades to output (ED
 # ..... Internal data types: Coordinate Systems ...................................................................................
 #  This type defines coordinate sytems used internally by FAST.  The 3 components of each vector correspond to the z1, z2, and z3 components of the individual vectors.
 #  NOTE: the orientations of most of these coordinate systems will change every time step.
+typedef ^       ED_CoordSys     R8Ki    alpha1  3       -       -       "Vector / direction alpha1 after ptfm yaw rotation"	-
+typedef ^       ED_CoordSys     R8Ki    alpha2  3       -       -       "Vector / direction alpha2 after ptfm yaw rotation"	-
+typedef ^       ED_CoordSys     R8Ki    alpha3  3       -       -       "Vector / direction alpha3 after ptfm yaw rotation"	-
+typedef ^       ED_CoordSys     R8Ki    beta1   3       -       -       "Vector / direction beta1 after ptfm yaw and pitch rotation"	-
+typedef ^       ED_CoordSys     R8Ki    beta2   3       -       -       "Vector / direction beta2 after ptfm yaw and pitch rotation"	-
+typedef ^       ED_CoordSys     R8Ki    beta3   3       -       -       "Vector / direction beta3 after ptfm yaw and pitch rotation"	-
 typedef	^	ED_CoordSys	R8Ki	a1	3	-	-	"Vector / direction a1 (=  xt from the IEC coord. system)"	-
 typedef	^	ED_CoordSys	R8Ki	a2	3	-	-	"Vector / direction a2 (=  zt from the IEC coord. system)"	-
 typedef	^	ED_CoordSys	R8Ki	a3	3	-	-	"Vector / direction a3 (= -yt from the IEC coord. system)"	-
@@ -489,6 +511,7 @@ typedef	^	ED_RtHndSide	ReKi	TFrlMom	-	-	-	"The total tail-furl spring and damper
 typedef	^	ED_RtHndSide	ReKi	RFrlMom	-	-	-	"The total rotor-furl spring and damper moment"
 typedef	^	ED_RtHndSide	ReKi	GBoxEffFac	-	-	-	"The factor used to apply the gearbox efficiency effects to the equation associated with the generator DOF"
 typedef	^	ED_RtHndSide	ReKi	rSAerCen	{:}{:}{:}	-	-	"aerodynamic pitching moment arm (i.e., the position vector from point S on the blade to the aerodynamic center of the element)"
+typedef ^       ED_RtHndSide    ReKi    YawFriMom       -       -       -       "Yaw Friction Moment"   kN-m
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -509,6 +532,10 @@ typedef	^	OtherStateType	ReKi	HSSBrTrq	-	-	-	"HSSBrTrq from update states; a hac
 typedef	^	OtherStateType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque (adjusted for sign)"	N-m
 typedef	^	OtherStateType	IntKi	SgnPrvLSTQ	-	-	-	"The sign of the low-speed shaft torque from the previous call to RtHS().  This is calculated at the end of RtHS().  NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run!"	-
 typedef	^	OtherStateType	IntKi	SgnLSTQ	{ED_NMX}	-	-	"history of sign of LSTQ"
+typedef ^       OtherStateType  ReKi    Mfhat   -       -       -       "Final Yaw Friction Torque"     N-m
+typedef ^       OtherStateType  ReKi    YawFriMfp     -       -       -       "Yaw Friction Torque to bring yaw system to a stop at current time step"        N-m
+typedef ^       OtherStateType  R8Ki    OmegaTn -       -       -       "Yaw rate at t_n used to calculate friction torque and yaw rate at t_n+1"       rad/s
+typedef ^       OtherStateType  R8Ki    OmegaDotTn      -       -       -       "Yaw acceleration at t_n used to calculate friction torque and yaw rate at t_n+1"       rad/s^2
 
 # ..... Misc Vars ................................................................................................................
 typedef	^	MiscVarType	ED_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
@@ -521,10 +548,29 @@ typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAP
 typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
 typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
 typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
+typedef ^       MiscVarType     ReKi    OgnlYawRow      {:}     -       -       "Original DOF_Yaw row in AugMat"        -
+typedef ^       MiscVarType     ReKi    FrcONcRt        3       -       -       "Force acting on yaw bearing including inertial contributions"     N
+typedef ^       MiscVarType     ReKi    MomONcRt        3       -       -       "Moment acting on yaw bearing including inertial contributions"    N-m
+typedef ^       MiscVarType     ReKi    YawFriMz      -       -       -       "External loading on yaw bearing not including inertial contributions"  N-m
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef	^	Jac_u_idxStarts	IntKi	BladeLoad	-	1	-	"Index to first point in y jacobian for BladeLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	PlatformLoad	-	1	-	"Index to first point in y jacobian for PlatformLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	TowerLoad	-	1	-	"Index to first point in y jacobian for TowerLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	HubLoad	-	1	-	"Index to first point in y jacobian for HubLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	NacelleLoad	-	1	-	"Index to first point in y jacobian for NacelleLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	TFinLoad	-	1	-	"Index to first point in y jacobian for TFinLoad" -
+typedef	^	Jac_u_idxStarts	IntKi	BlPitchCom	-	1	-	"Index to first point in y jacobian for BlPitchCom" -
+typedef	^	Jac_y_idxStarts	IntKi	Blade	-	1	-	"Index to first point in u jacobian for Blade" -
+typedef	^	Jac_y_idxStarts	IntKi	Platform	-	1	-	"Index to first point in u jacobian for Platform" -
+typedef	^	Jac_y_idxStarts	IntKi	Tower	-	1	-	"Index to first point in u jacobian for Tower" -
+typedef	^	Jac_y_idxStarts	IntKi	Hub	-	1	-	"Index to first point in u jacobian for Hub" -
+typedef	^	Jac_y_idxStarts	IntKi	BladeRoot	-	1	-	"Index to first point in u jacobian for BladeRoot" -
+typedef	^	Jac_y_idxStarts	IntKi	Nacelle	-	1	-	"Index to first point in u jacobian for Nacelle" -
+typedef	^	Jac_y_idxStarts	IntKi	TFin	-	1	-	"Index to first point in u jacobian for TFin" -
+
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	DbKi	DT24	-	-	-	"=DT/24 (used in loose coupling)"	seconds
 typedef	^	ParameterType	IntKi	BldNodes	-	-	-	"Number of blade nodes used in the analysis"	-
@@ -642,6 +688,9 @@ typedef	^	ParameterType	ReKi	PtfmMass	-	-	-	"Platform mass"
 typedef	^	ParameterType	ReKi	PtfmPIner	-	-	-	"Platform inertia for pitch tilt rotation about the platform CM."
 typedef	^	ParameterType	ReKi	PtfmRIner	-	-	-	"Platform inertia for roll tilt rotation about the platform CM."
 typedef	^	ParameterType	ReKi	PtfmYIner	-	-	-	"Platform inertia for yaw rotation about the platform CM."
+typedef	^	ParameterType	ReKi	PtfmXYIner	-	-	-	"Platform xy inertia about the platform CM"	"kg m^2"
+typedef	^	ParameterType	ReKi	PtfmYZIner	-	-	-	"Platform yz inertia about the platform CM"	"kg m^2"
+typedef	^	ParameterType	ReKi	PtfmXZIner	-	-	-	"Platform xz inertia about the platform CM"	"kg m^2"
 typedef	^	ParameterType	ReKi	RFrlMass	-	-	-	"Rotor-furl mass"
 typedef	^	ParameterType	ReKi	RotIner	-	-	-	"Inertia of rotor about its centerline"
 typedef	^	ParameterType	ReKi	RotMass	-	-	-	"Rotor mass (blades, tips, and hub)"
@@ -736,7 +785,20 @@ typedef	^	ParameterType	IntKi	method	-	-	-	"Identifier for integration method (1
 typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
-typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
+typedef	^	ParameterType	LOGICAL	RigidAero	-	-	-	"flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used"	-
+typedef ^       ParameterType   IntKi   YawFrctMod      -       -       -       "Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], or 2 [does use Fz at bearing]"     -
+typedef ^       ParameterType   R8Ki    M_CD    -       -       -       "Dynamic friction moment at null yaw rate"      N-m
+typedef ^       ParameterType   R8Ki    M_FCD   -       -       -       "Dynamic friction moment at null yaw rate proportional to yaw bearing shear force"      N-m
+typedef ^       ParameterType   R8Ki    M_MCD   -       -       -       "Dynamic friction moment at null yaw rate proportional to yaw bearing bending moment"   N-m
+typedef ^       ParameterType   R8Ki    M_CSMAX -       -       -       "Maximum Coulomb friction torque"       N-m
+typedef ^       ParameterType   R8Ki    M_FCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing shear force"       N-m
+typedef ^       ParameterType   R8Ki    M_MCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing bending moment"    N-m
+typedef ^       ParameterType   R8Ki    sig_v   -       -       -       "Linear viscous friction coefficient"     N-m/(rad/s)
+typedef ^       ParameterType   R8Ki    sig_v2  -       -       -       "Quadratic viscous friction coefficient"  N-m/(rad/s)^2
+typedef ^       ParameterType   R8Ki    OmgCut  -       -       -       "Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized"  rad/s
+#typedef        ^       ParameterType   R8Ki    thr_omg -       -       -       "Yaw rate stiction threshold"   rad/s
+#typedef        ^       ParameterType   R8Ki    thr_omgdot      -       -       -       "Yaw acceleration stiction threshold"   rad/s^2
+
 # .... ED_AllBlNds option ........................................................................................................
 typedef  ^  ParameterType  IntKi   BldNd_NumOuts        -  -  -  "Number of requested output channels per blade node (ED_AllBldNdOuts)"  -
 typedef  ^  ParameterType  IntKi   BldNd_TotNumOuts     -  -  -  "Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts)" -
@@ -744,10 +806,18 @@ typedef  ^  ParameterType  OutParmType BldNd_OutParam  {:} -  -  "Names and unit
 #typedef  ^  ParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
 typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
 
+typedef	^	ParameterType	Jac_u_idxStarts Jac_u_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
+typedef	^	ParameterType	Jac_y_idxStarts Jac_y_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
 typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
 typedef	^	ParameterType	R8Ki	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	ParameterType	R8Ki	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
 typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
+typedef	^	ParameterType	Logical	CompAeroMaps	-	-	-	"number of outputs in jacobian matrix"	-
+typedef	^	ParameterType	Integer	NumExtendedInputs	-	-	-	"number of extended inputs for linearization"	-
+typedef	^	ParameterType	Integer	NumBl_Lin	-	-	-	"number of blades in the jacobian"	-
+typedef	^	ParameterType	Integer	NActvVelDOF_Lin	-	-	-	"number of velocity states in the jacobian"	-
+typedef	^	ParameterType	Integer	NActvDOF_Lin	-	-	-	"number of active DOFs to use in the jacobian"	-
+typedef	^	ParameterType	Integer	NActvDOF_Stride	-	-	-	"stride for active DOFs to use in the jacobian"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
@@ -770,13 +840,9 @@ typedef	^	InputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m
 typedef	^	OutputType	MeshType	BladeLn2Mesh	{:}	-	-	"A mesh on each blade, containing positions and orientations of the blade elements"
 typedef	^	OutputType	MeshType	PlatformPtMesh	-	-	-	"Platform reference point positions/orientations/velocities/accelerations"	-
 typedef	^	OutputType	MeshType	TowerLn2Mesh	-	-	-	"Tower line2 mesh with positions/orientations/velocities/accelerations"	-
-typedef	^	OutputType	MeshType	HubPtMotion14	-	-	-	"For AeroDyn v14: motions of the hub"
 typedef	^	OutputType	MeshType	HubPtMotion	-	-	-	"For AeroDyn and Lidar(InflowWind): motions of the hub"
-typedef	^	OutputType	MeshType	BladeRootMotion14	-	-	-	"For AeroDyn v14: motions of the blade roots"
 typedef	^	OutputType	MeshType	BladeRootMotion	{:}	-	-	"For AeroDyn/BeamDyn: motions at the blade roots"
-typedef	^	OutputType	MeshType	RotorFurlMotion14	-	-	-	"For AeroDyn14: motions of the rotor furl point."
-typedef	^	OutputType	MeshType	NacelleMotion	-	-	-	"For AeroDyn14 & ServoDyn/TMD: motions of the nacelle."
-typedef	^	OutputType	MeshType	TowerBaseMotion14	-	-	-	"For AeroDyn 14: motions of the tower base"
+typedef	^	OutputType	MeshType	NacelleMotion	-	-	-	"For AeroDyn & ServoDyn/TMD: motions of the nacelle."
 typedef	^	OutputType	MeshType	TFinCMMotion    	-	-	-	"For AeroDyn: motions of the tail find CM point (point J)"
 
 # Define outputs that are not on this mesh here:

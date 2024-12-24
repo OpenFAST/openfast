@@ -53,7 +53,7 @@ typedef     ^                   InitOutputType       ReKi                AirDens
 #
 
 # ..... Primary Input file data ...................................................................................................
-typedef     ^                   AA_InputFile         DbKi                DT_AA            -     -     -     "Time interval for aerodynamic calculations {or "default"}"     s
+typedef     ^                   AA_InputFile         DbKi                DT_AA            -     -     -     "Time interval for aerodynamic calculations {or \"default\"}"     s
 typedef     ^                   AA_InputFile         IntKi               IBLUNT           -     -     -     "FLAG TO COMPUTE BLUNTNESS NOISE"     -
 typedef     ^                   AA_InputFile         IntKi               ILAM             -     -     -     "FLAG TO COMPUTE LBL NOISE {1=steady model, 2=Beddoes-Leishman unsteady model}"     -
 typedef     ^                   AA_InputFile         IntKi               ITIP             -     -     -     "FLAG TO COMPUTE TIP NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -
@@ -74,11 +74,11 @@ typedef     ^                   AA_InputFile         ReKi                ObsZ   
 typedef     ^                   AA_InputFile         AA_BladePropsType   BladeProps      {:}    -     -     "blade property information from blade input files"     -
 typedef     ^                   AA_InputFile         IntKi               NrOutFile        -     -     -     "Nr of output files"     -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfile       {:}    -     -     "AAoutfile for writing output files"     -
-typedef     ^                   AA_InputFile         CHARACTER(1024)     TICalcTabFile    -     -     -     "Name of the file containing the table for incident turbulence intensity" -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     FTitle           -     -     -     "File Title: the 2nd line of the input file, which contains a description of its contents" -
 typedef     ^                   AA_InputFile         DBKi                AAStart         -     -     -     "Time after which to calculate AA"     s
+typedef     ^                   AA_InputFile         ReKi                TI              -     -     -     "Average rotor incident turbulence intensity" -
+typedef     ^                   AA_InputFile         ReKi                avgV            -     -     -     "Average wind speed" -
 typedef     ^                   AA_InputFile         ReKi                Lturb           -     -     -      "Turbulent lengthscale in Amiet model"     -
-typedef     ^                   AA_InputFile         ReKi                AvgV            -     -      -     "Average wind speed to compute incident turbulence intensity"  m    
 typedef     ^                   AA_InputFile         ReKi                ReListBL            {:}    -     -     ""          
 typedef     ^                   AA_InputFile         ReKi                AoAListBL           {:}    -     -     ""         deg
 typedef     ^                   AA_InputFile         ReKi                Pres_DispThick         {:}{:}{:}    -     -     ""         
@@ -89,9 +89,6 @@ typedef     ^                   AA_InputFile         ReKi                Pres_Cf
 typedef     ^                   AA_InputFile         ReKi                Suct_Cf         {:}{:}{:}    -     -     ""         
 typedef     ^                   AA_InputFile         ReKi                Pres_EdgeVelRat         {:}{:}{:}    -     -     ""         
 typedef     ^                   AA_InputFile         ReKi                Suct_EdgeVelRat         {:}{:}{:}    -     -     ""         
-typedef     ^                   AA_InputFile         ReKi                TI_Grid_In          {:}{:}    -     -     ""    
-typedef     ^                   AA_InputFile         ReKi                dz_turb_in                  -     -      -     ""  m    
-typedef     ^                   AA_InputFile         ReKi                dy_turb_in                  -     -      -     ""  m    
      
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -184,10 +181,8 @@ typedef     ^                   ParameterType        IntKi               total_s
 typedef     ^                   ParameterType        IntKi               AA_Bl_Prcntge           -      -     -     "The Percentage of the Blade which the noise is calculated"     %
 typedef     ^                   ParameterType        IntKi               startnode               -      -     -     "Corersponding node to the noise calculation percentage of the blade"     -
 typedef     ^                   ParameterType        ReKi                Lturb                   -     -      -     "Turbulent lengthscale in Amiet model"  m    
-typedef     ^                   ParameterType        ReKi                AvgV                   -     -      -     "Average wind speed to compute incident turbulence intensity"  m    
-typedef     ^                   ParameterType        ReKi                dz_turb_in                  -     -      -     ""  m    
-typedef     ^                   ParameterType        ReKi                dy_turb_in                  -     -      -     ""  m    
-typedef     ^                   ParameterType        ReKi                TI_Grid_In          {:}{:}    -     -     ""         
+typedef     ^                   ParameterType        ReKi                avgV                   -     -      -     "Average wind speed to compute incident turbulence intensity"  m    
+typedef     ^                   ParameterType        ReKi                TI                     -     -     -     "Rotor incident turbulent intensity"         
 typedef     ^                   ParameterType        CHARACTER(1024)     FTitle                 -     -     -     "File Title: the 2nd line of the input file, which contains a description of its contents" -
 
 # parameters for output

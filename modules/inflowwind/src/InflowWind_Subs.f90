@@ -490,22 +490,18 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
   
       ! LIDAR Sensor Type
    CALL ParseVar( InFileInfo, CurLine, "SensorType", InputFileData%SensorType, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
 
      ! Number of Range Gates
    CALL ParseVar( InFileInfo, CurLine, "NumPulseGate", InputFileData%NumPulseGate, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
      
      ! Pulse Gate Spacing
    CALL ParseVar( InFileInfo, CurLine, "PulseSpacing", InputFileData%PulseSpacing, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
 
      ! NumBeam: Number of points to output the lidar measured wind velocity (1 to 5)
    CALL ParseVar( InFileInfo, CurLine, "NumBeam", InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
 
      ! Before proceeding, make sure that NumBeam makes sense
@@ -515,53 +511,42 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
       RETURN   
    ELSE   
             ! Allocate space for the output location arrays:
-      CALL AllocAry( InputFileData%FocalDistanceX, InputFileData%NumBeam, 'NumBeam', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry( InputFileData%FocalDistanceY, InputFileData%NumBeam, 'NumBeam', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry( InputFileData%FocalDistanceZ, InputFileData%NumBeam, 'NumBeam', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry( InputFileData%FocalDistanceX, InputFileData%NumBeam, 'FocalDistanceX', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry( InputFileData%FocalDistanceY, InputFileData%NumBeam, 'FocalDistanceY', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry( InputFileData%FocalDistanceZ, InputFileData%NumBeam, 'FocalDistanceZ', TmpErrStat, TmpErrMsg ); CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
       if (Failed()) return
    ENDIF
     
     ! Focal Distance X
    CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceX', InputFileData%FocalDistanceX, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
  
     ! Focal Distance Y
    CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceY', InputFileData%FocalDistanceY, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
 
     ! Focal Distance Z
    CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceZ', InputFileData%FocalDistanceZ, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    if (Failed()) return
 
     ! Rotor Apex Offset Position
-   CALL ParseAry( InFileInfo, CurLine, "RotorApexOffsetPos", InputFileData%RotorApexOffsetPos, 1, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   CALL ParseAry( InFileInfo, CurLine, "RotorApexOffsetPos", InputFileData%RotorApexOffsetPos, size(InputFileData%RotorApexOffsetPos), TmpErrStat, TmpErrMsg, UnEc )
    IF (Failed()) RETURN
    
     ! URefIni
    CALL ParseVar( InFileInfo, CurLine, "URefLid", InputFileData%URefLid, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN 
  
     ! Measurement Interval
    CALL ParseVar( InFileInfo, CurLine, "MeasurementInterval", InputFileData%MeasurementInterval, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
    
     ! Lidar Radial Vel
-   CALL ParseLoVar( InFileInfo, CurLine, "LidRadialVel", InputFileData%LidRadialVel, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   CALL ParseVar( InFileInfo, CurLine, "LidRadialVel", InputFileData%LidRadialVel, TmpErrStat, TmpErrMsg, UnEc )
    IF (Failed()) RETURN
      
     ! Consider Hub Motion
    CALL ParseVar( InFileInfo, CurLine, "ConsiderHubMotion", InputFileData%ConsiderHubMotion, TmpErrStat, TmpErrMsg, UnEc )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (Failed()) RETURN
    
 
@@ -679,7 +664,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ! make sure that all values for WindVzi are above ground.  Set to 0 otherwise.
 
-   IF ( InitInp%MHK == 1 .or. InitInp%MHK == 2 ) THEN
+   IF ( InitInp%MHK /= MHK_None ) THEN
       DO I = 1, InputFileData%NWindVel
          IF ( InputFileData%WindVziList(I) >= InitInp%WtrDpth + InitInp%MSL2SWL ) THEN
             CALL SetErrStat( ErrID_Warn, ' Requested wind velocity at point ( '//   &
@@ -714,7 +699,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
          CALL Steady_ValidateInput()
 
       CASE ( Uniform_WindNumber )
-         IF ( InitInp%WindType2UseInputFile ) CALL Uniform_ValidateInput()
+         CALL Uniform_ValidateInput()
 
       CASE ( TSFF_WindNumber )
          CALL TSFF_ValidateInput()
@@ -984,9 +969,6 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    !-----------------------------------------------------------------
    ! Copy over the general information that applies to everything
    !-----------------------------------------------------------------
-   
-      ! Copy the WindType over.
-   p%WindType   =  InputFileData%WindType
 
       ! Convert the PropagationDir to radians and store this.  For simplicity, we will shift it to be between -pi and pi
    p%FlowField%PropagationDir = D2R * InputFileData%PropagationDir
@@ -1306,15 +1288,17 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput(WindAccZ) = .TRUE.
    end if
 
-   IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
-      DO I=p%lidar%NumBeam+1,5
-         InvalidOutput( WindMeas(I) ) = .TRUE.
-      END DO
-   ELSE
-      DO I=p%lidar%NumPulseGate+1,5
-         InvalidOutput( WindMeas(I) ) = .TRUE.
-      END DO
-   END IF
+   if (p%lidar%SensorType /= SensorType_None) then
+      IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
+         DO I=p%lidar%NumBeam+1,5
+            InvalidOutput( WindMeas(I) ) = .TRUE.
+         END DO
+      ELSE
+         DO I=p%lidar%NumPulseGate+1,5
+            InvalidOutput( WindMeas(I) ) = .TRUE.
+         END DO
+      END IF
+   endif
 
 !   ................. End of validity checking .................
 
@@ -1537,16 +1521,17 @@ SUBROUTINE SetAllOuts( p, y, m, ErrStat, ErrMsg )
    
    
       !FIXME:  Add in Wind1Dir etc.  -- although those can be derived outside of FAST.
-
-IF ( p%lidar%SensorType == SensorType_SinglePoint) THEN
-     DO I = 1,MIN(5, p%lidar%NumBeam )
-         m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
-      END DO 
-   ELSE 
-      DO I = 1,MIN(5, p%lidar%NumPulseGate )
-        m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
-     END DO  
-   END IF  
+   if (p%lidar%SensorType /= SensorType_None) then
+      IF ( p%lidar%SensorType == SensorType_SinglePoint) THEN
+         DO I = 1,MIN(5, p%lidar%NumBeam )
+            m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
+         END DO
+      ELSE
+         DO I = 1,MIN(5, p%lidar%NumPulseGate )
+           m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
+        END DO
+      END IF
+   endif
 
 END SUBROUTINE SetAllOuts
 
@@ -1647,12 +1632,9 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
    CHARACTER(*),              PARAMETER                     :: RoutineName="CalculateOutput"
-
-   ! Temporary variables for error handling
    INTEGER(IntKi)                                           :: TmpErrStat
    CHARACTER(ErrMsgLen)                                     :: TmpErrMsg            ! temporary error message
 
-   ! Initialize ErrStat
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
@@ -1660,7 +1642,6 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
    CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, InputData%PositionXYZ, &
                                  y%VelocityUVW, y%AccelUVW, TmpErrStat, TmpErrMsg)
    CALL SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF ( ErrStat >= AbortErrLev) RETURN
 
    ! Get velocities and accelerations for OutList variables, no error check
    IF ( p%NWindVel >= 1_IntKi .AND. FillWrOut ) THEN
@@ -1671,16 +1652,9 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
 END SUBROUTINE CalculateOutput
                       
 !====================================================================================================
+!FIXME: is this routine necessary anymore?
 !> this routine calculates a rotor-averaged mean velocity, DiskVel 
-SUBROUTINE InflowWind_GetSpatialAverage( Time, InputData, p, x, xd, z, OtherStates, m, MeanVelocity, ErrStat, ErrMsg )
-
-
-   IMPLICIT                                                    NONE
-
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_GetSpatialAverage"
-
-
-      ! Inputs / Outputs
+SUBROUTINE InflowWind_GetRotorSpatialAverage( Time, InputData, p, x, xd, z, OtherStates, m, MeanVelocity, ErrStat, ErrMsg )
 
    REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
    TYPE(InflowWind_InputType),               INTENT(IN   )  :: InputData         !< Inputs at Time
@@ -1690,63 +1664,50 @@ SUBROUTINE InflowWind_GetSpatialAverage( Time, InputData, p, x, xd, z, OtherStat
    TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z                 !< Constraint states at Time
    TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherStates       !< Other states at Time
    TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< misc/optimization variables
-   REAL(ReKi),                               INTENT(  OUT)  :: MeanVelocity(3)   !< at InputPosition
-      
+   REAL(ReKi),                               INTENT(  OUT)  :: MeanVelocity(3)   !< at InputPosition      
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   
+   CHARACTER(*),PARAMETER     :: RoutineName = "InflowWind_GetRotorSpatialAverage"
+   INTEGER(IntKi)             :: ErrStat2
+   CHARACTER(ErrMsgLen)       :: ErrMsg2   
+   INTEGER(IntKi)             :: I
+   REAL(ReKi), ALLOCATABLE    :: acc(:,:)  ! acceleration, unallocated so it won't be calculated
 
-
-      ! Local variables
-   INTEGER(IntKi)                                           :: I                   !< Generic counters
-
-
-      ! Temporary variables for error handling
-   INTEGER(IntKi)                                           :: ErrStat2
-   CHARACTER(ErrMsgLen)                                     :: ErrMsg2            ! temporary error message
-   LOGICAL,                PARAMETER                        :: FillWrOut = .false.
-
-
-
-      ! Initialize ErrStat
    ErrStat  = ErrID_None
    ErrMsg   = ""
    MeanVelocity = 0.0_ReKi
    
-   !-----------------------------------------------------------------------
-   !  Points coordinate transforms from to global to aligned with hub orientation
-   !-----------------------------------------------------------------------
+   !----------------------------------------------------------------------------
+   ! Points coordinate transforms from to global to aligned with hub orientation
+   !----------------------------------------------------------------------------
+
    m%u_Avg%HubPosition    = InputData%HubPosition
    m%u_Avg%HubOrientation = InputData%HubOrientation
    
    do i=1,size(m%u_Avg%PositionXYZ,DIM=2)
-      m%u_Avg%PositionXYZ(:,i) = matmul(InputData%HubOrientation,p%PositionAvg(:,i)) + InputData%HubPosition
+      m%u_Avg%PositionXYZ(:,i) = InputData%HubPosition + &
+                                 matmul(InputData%HubOrientation,p%PositionAvg(:,i))
    end do
 
-   CALL CalculateOutput( Time, m%u_Avg, p, x, xd, z, OtherStates, m%y_Avg, m, FillWrOut, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !----------------------------------------------------------------------------
+   ! Calculate wind velocities at average positions
+   !----------------------------------------------------------------------------
 
-   do i=1,size(m%u_Avg%PositionXYZ,DIM=2)
-      MeanVelocity = MeanVelocity + m%y_Avg%VelocityUVW(:,i)
-   end do
-   MeanVelocity = MeanVelocity / REAL(size(m%u_Avg%PositionXYZ,DIM=2),ReKi)
-        
-   
-   RETURN
+   CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, m%u_Avg%PositionXYZ, &
+                                m%y_Avg%VelocityUVW, acc, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-!............................
-END SUBROUTINE InflowWind_GetSpatialAverage
+   !----------------------------------------------------------------------------
+   ! Calculate average velocity over all positions
+   !----------------------------------------------------------------------------
+
+   MeanVelocity = sum(m%y_Avg%VelocityUVW, dim=2) / REAL(IfW_NumPtsAvg,ReKi)
+
+END SUBROUTINE InflowWind_GetRotorSpatialAverage
 !====================================================================================================
 !> this routine calculates a rotor-averaged mean velocity, DiskVel 
 SUBROUTINE InflowWind_GetHubValues( Time, InputData, p, x, xd, z, OtherStates, m, Velocity, ErrStat, ErrMsg )
-
-
-   IMPLICIT                                                    NONE
-
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_GetHubValues"
-
-
-      ! Inputs / Outputs
-
    REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
    TYPE(InflowWind_InputType),               INTENT(IN   )  :: InputData         !< Inputs at Time
    TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
@@ -1756,42 +1717,27 @@ SUBROUTINE InflowWind_GetHubValues( Time, InputData, p, x, xd, z, OtherStates, m
    TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherStates       !< Other states at Time
    TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< misc/optimization variables
    REAL(ReKi),                               INTENT(  OUT)  :: Velocity(3)       !< at InputPosition
-      
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   
+   CHARACTER(*),PARAMETER     :: RoutineName="InflowWind_GetHubValues"
+   INTEGER(IntKi)             :: ErrStat2
+   CHARACTER(ErrMsgLen)       :: ErrMsg2            ! temporary error message
+   REAL(ReKi), ALLOCATABLE    :: acc(:,:)  ! acceleration, unallocated so it won't be calculated
 
-
-      ! Local variables
-   INTEGER(IntKi)                                           :: I                   !< Generic counters
-
-
-      ! Temporary variables for error handling
-   INTEGER(IntKi)                                           :: ErrStat2
-   CHARACTER(ErrMsgLen)                                     :: ErrMsg2            ! temporary error message
-   LOGICAL,                PARAMETER                        :: FillWrOut = .false.
-
-
-
-      ! Initialize ErrStat
    ErrStat  = ErrID_None
    ErrMsg   = ""
    
-   !-----------------------------------------------------------------------
-   !  Calculate values at the hub:
-   !-----------------------------------------------------------------------
    m%u_Hub%HubPosition      = InputData%HubPosition
    m%u_Hub%HubOrientation   = InputData%HubOrientation
-   
    m%u_Hub%PositionXYZ(:,1) = InputData%HubPosition
-      
-   CALL CalculateOutput( Time, m%u_Hub, p, x, xd, z, OtherStates, m%y_Hub, m, FillWrOut, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   Velocity = m%y_Hub%VelocityUVW(:,1)
-      
-   RETURN
 
-!............................
+   CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, m%u_Hub%PositionXYZ, &
+                                m%y_Hub%VelocityUVW, acc, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+     
+   Velocity = m%y_Hub%VelocityUVW(:,1)
+
 END SUBROUTINE InflowWind_GetHubValues
 !====================================================================================================
 !> this routine calculates the mean wind speed 

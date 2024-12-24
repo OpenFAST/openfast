@@ -26,7 +26,7 @@ implicit none
 
 public IfW_FlowField_GetVelAcc
 public IfW_UniformField_CalcAccel, IfW_Grid3DField_CalcAccel
-public IfW_UniformWind_GetOP
+public IfW_UniformWind_GetOP, IfW_UniformWind_Perturb       ! for linearization
 public Grid3D_to_Uniform, Uniform_to_Grid3D
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
@@ -40,7 +40,7 @@ contains
 
 !> IfW_FlowField_GetVelAcc gets the velocities (and accelerations) at the given point positions.
 !! Accelerations are only calculated if the AccelUVW array is allocated.
-subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, AccelUVW, ErrStat, ErrMsg)
+subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, AccelUVW, ErrStat, ErrMsg, BoxExceedAllow, PosOffset)
 
    type(FlowFieldType), intent(in)           :: FF                !< FlowField data structure
    integer(IntKi), intent(in)                :: IStart            !< Start index for returning velocities for external field
@@ -50,22 +50,25 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
    real(ReKi), allocatable, intent(inout)    :: AccelUVW(:, :)    !< Array of acceleration outputs
    integer(IntKi), intent(out)               :: ErrStat           !< Error status
    character(*), intent(out)                 :: ErrMsg            !< Error message
+   logical, optional, intent(in)             :: BoxExceedAllow    !< Flag to allow wind box to be exceeded (Lidar & OLAF)
+   real(ReKi), optional, intent(in)          :: PosOffset(3)      !< XYZ offset to position array
 
    character(*), parameter                   :: RoutineName = "IfW_FlowField_GetVelAcc"
-   integer(IntKi)                            :: i
-   integer(IntKi)                            :: NumPoints
-   logical                                   :: OutputAccel, AddMeanAfterInterp
-   real(ReKi), allocatable                   :: Position(:, :)
-   integer(IntKi)                            :: Grid3D_AccelInterp
    integer(IntKi)                            :: TmpErrStat
    character(ErrMsgLen)                      :: TmpErrMsg
 
+   ! All Wind Types
+   real(ReKi), allocatable                   :: Position(:, :)
+   real(ReKi)                                :: PosOffset_Local(3)
+   logical                                   :: OutputAccel, AddMeanAfterInterp
+   integer(IntKi)                            :: i, NumPoints, IEnd
+   
    ! Uniform Field
    type(UniformField_Interp)                 :: UFopVel, UFopAcc
-
+   
    ! Grid3D Field
-   real(ReKi)                                :: Xi(3)
-   real(ReKi)                                :: VelCell(8, 3), AccCell(8, 3)
+   real(ReKi)                                :: Xi(3), VelCell(8, 3), AccCell(8, 3)
+   integer(IntKi)                            :: Grid3D_AccelInterp
    logical                                   :: Is3D
    logical                                   :: GridExceedAllow   ! is this point allowed to exceed bounds of wind grid
 
@@ -107,10 +110,18 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
 
    ! Copy positions or transform based on wind box rotation
    if (FF%RotateWindBox) then
-      do i = 1, NumPoints
-         Position(:, i) = GetPrimePosition(PositionXYZ(:, i))
-      end do
-   else
+      if (present(PosOffset)) then
+         do i = 1, NumPoints
+            Position(:, i) = GetPrimePosition(PositionXYZ(:, i) + PosOffset)
+         end do
+      else
+         do i = 1, NumPoints
+            Position(:, i) = GetPrimePosition(PositionXYZ(:, i))
+         end do
+      end if
+   else if (present(PosOffset)) then
+      Position = PositionXYZ + spread(PosOffset, 2, NumPoints)
+   else 
       Position = PositionXYZ
    end if
 
@@ -166,6 +177,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
                VelocityUVW(:, i) = 0.0_ReKi
             end if
          end do
+
       end if
 
    case (Grid3D_FieldType)
@@ -193,6 +205,15 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       ! Store flag value since it doesn't change during loop
       AddMeanAfterInterp = FF%Grid3D%AddMeanAfterInterp
 
+      ! Points can exceed grid limits
+      if (present(BoxExceedAllow)) then
+         GridExceedAllow = FF%Grid3D%BoxExceedAllow .and. BoxExceedAllow
+      else if (FF%Grid3D%BoxExceedAllowDrv) then
+         GridExceedAllow = .true.
+      else
+         GridExceedAllow = .false.
+      end if
+
       ! Loop through points
       do i = 1, NumPoints
 
@@ -202,9 +223,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
             if (OutputAccel) AccelUVW(:, i) = 0.0_ReKi
             cycle
          end if
-
-         ! Is this point allowed beyond the bounds of the wind box?
-         GridExceedAllow = FF%Grid3D%BoxExceedAllowF .and. (i >= FF%Grid3D%BoxExceedAllowIdx)
 
          ! Calculate grid cells for interpolation, returns velocity and acceleration
          ! components at corners of grid cell containing time and position. Also
@@ -247,7 +265,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       !-------------------------------------------------------------------------
 
       ! If field is not allocated, return error
-      if (.not. allocated(FF%Grid4D%Vel)) then
+      if (.not. associated(FF%Grid4D%Vel)) then
          call SetErrStat(ErrID_Fatal, "Grid4D Field not allocated", ErrStat, ErrMsg, RoutineName)
          return
       end if
@@ -255,17 +273,16 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       ! Loop through points
       do i = 1, NumPoints
 
-         ! If height less than or equal to zero, set velocity to zero
-         if (Position(3, i) <= 0.0_ReKi) then
-            VelocityUVW(:, i) = 0.0_ReKi
-            cycle
-         end if
-
+         ! If height greater than zero, calculate velocity, otherwise zero
+         if (Position(3, i) > 0.0_ReKi) then
             call Grid4DField_GetVel(FF%Grid4D, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
             if (TmpErrStat >= AbortErrLev) then
                call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
                return
             end if
+         else
+            VelocityUVW(:, i) = 0.0_ReKi
+         end if
       end do
 
    case (Point_FieldType)
@@ -280,8 +297,15 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
          return
       end if
 
-      ! Set velocities directly from velocity array
-      VelocityUVW = FF%Points%Vel(:, IStart:IStart + NumPoints - 1)
+      ! Calculate end index
+      IEnd = IStart + NumPoints - 1
+
+      ! If start and end indices are valid, copy velocities, otherwise zero
+      if (IStart >= 1 .and. IEnd < size(FF%Points%Vel)) then
+         VelocityUVW = FF%Points%Vel(:, IStart:IEnd)
+      else
+         VelocityUVW = 0.0_ReKi
+      end if
 
    case (User_FieldType)
 
@@ -289,7 +313,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       ! User Flow Field
       !-------------------------------------------------------------------------
 
-      call SetErrStat(ErrID_Fatal, "User Field not to be implemented", ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "User Field not implemented", ErrStat, ErrMsg, RoutineName)
       return
 
    case default
@@ -692,7 +716,7 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
    type(UniformFieldType), intent(IN)  :: UF             !< Parameters
    real(DbKi), intent(IN)              :: t              !< Current simulation time in seconds
    logical, intent(in)                 :: InterpCubic    !< flag for using cubic interpolation
-   real(ReKi), intent(OUT)             :: OP_out(2)      !< operating point (HWindSpeed and PLexp
+   real(ReKi), intent(OUT)             :: OP_out(3)      !< operating point (HWindSpeed, PLexp, and AngleH)
 
    type(UniformField_Interp)           :: op         ! interpolated values of InterpParams
 
@@ -705,8 +729,21 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
 
    OP_out(1) = op%VelH
    OP_out(2) = op%ShrV
-
+   OP_out(3) = op%AngleH
 end subroutine
+
+
+!> Routine to perturb the wind extended outputs (needed by AeroDyn)
+!! NOTE: we are not passing the pointer here, but doing pass by reference to the FlowField since
+!!    this can only be used with linearization, and linearization requires using Uniform winds.
+subroutine IfW_UniformWind_Perturb(FF_perturb, du)
+   type(FlowFieldType),    intent(INOUT)  :: FF_perturb     !< Parameters to be modified
+   real(R8Ki),             intent(IN   )  :: du(3)          !< perturbations to apply
+   FF_perturb%Uniform%VelH(:) = FF_perturb%Uniform%VelH(:) + du(1)
+   FF_perturb%Uniform%ShrV(:) = FF_perturb%Uniform%ShrV(:) + du(2)
+   FF_perturb%PropagationDir  = FF_perturb%PropagationDir  + du(3)
+end subroutine
+
 
 subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
                                VelCell, AccCell, Xi, Is3D, ErrStat, ErrMsg)
@@ -1638,6 +1675,8 @@ subroutine Grid4DField_GetVel(G4D, Time, Position, Velocity, ErrStat, ErrMsg)
       end if
       Indx_Hi(i) = min(Indx_Lo(i) + 1, G4D%n(i))     ! make sure it's a valid index
    end do
+   Indx_Lo = Indx_Lo-1
+   Indx_Hi = Indx_Hi-1
 
    !----------------------------------------------------------------------------
    ! Clamp isopc to [-1, 1] so we don't extrapolate (effectively nearest neighbor)

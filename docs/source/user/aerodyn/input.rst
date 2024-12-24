@@ -3,6 +3,19 @@
 Input Files
 ===========
 
+Important changes introduced in v4.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some important changes have been introduced starting from version 4.0.
+Please refer to :ref:`api_change_ad4x` to understand the link between the old and new inputs.
+
+The documentation below has been updated to incorporate these changes.
+
+
+
+Introduction
+~~~~~~~~~~~~
+
 The user configures the aerodynamic model parameters via a primary
 AeroDyn input file, as well as separate input files for airfoil and
 blade data. When used in standalone mode, an additional driver input
@@ -32,7 +45,7 @@ AeroDyn Primary Input File
  
 The primary AeroDyn input file defines modeling options, environmental
 conditions (except freestream flow), airfoils, tower nodal
-discretization and properties, tower, hub, and nacelle buoyancy properties,
+discretization and properties, tower, hub, and nacelle properties,
 as well as output file specifications.
 
 The file is organized into several functional sections. Each section
@@ -42,6 +55,10 @@ primary input file is given in
 
 The input file begins with two lines of header information which is for
 your use, but is not used by the software.
+
+
+
+
 
 General Options
 ~~~~~~~~~~~~~~~
@@ -65,17 +82,23 @@ for ``DTAero`` may be used to indicate that AeroDyn should employ the
 time step prescribed by the driver code (OpenFAST or the standalone driver
 program).
 
-Set ``WakeMod`` to 0 if you want to disable rotor wake/induction effects or 1 to
-include these effects using the (quasi-steady) BEM theory model. When
-``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used (also
-referred to as dynamic inflow or dynamic wake model, see :numref:`AD_DBEMT`).  When ``WakeMod`` is set
-to 3, the free vortex wake model is used, also referred to as OLAF (see
-:numref:`OLAF`). ``WakeMod`` cannot be set to 2 or 3 during linearization
-analyses.
 
-Set ``AFAeroMod`` to 1 to include steady blade airfoil aerodynamics or 2
-to enable UA; ``AFAeroMod`` must be 1 during linearization analyses
-with AeroDyn coupled to OpenFAST. 
+**Wake_Mod** 
+Set ``Wake_Mod`` to 0 if you want to have zero induced velocities.
+Set it to 1 to include these effects using the BEM theory model. 
+When ``Wake_Mod`` is set to 3, the free vortex wake model is used, also referred to as OLAF (see
+:numref:`OLAF`). ``Wake_Mod`` cannot be set to 3 during linearization analyses.
+
+.. note::
+    Link to old inputs: The previous input `WakeMod` is removed, `WakeMod=2` used to mean DBEMT, but this now controlled using `DBEMT_Mod`. 
+    `Wake_Mod=2` is a placeholder for future induction calculation method. 
+
+
+**~~AFAeroMod~~**
+This input has been removed. See ``UA_Mod`` below.
+
+**~~FrozenWake~~**
+This input has been removed. See ``DBEMT_Mod`` below.
 
 Set ``TwrPotent`` to 0 to disable the
 potential-flow influence of the tower on the fluid flow local to the
@@ -93,15 +116,15 @@ Set the ``TwrAero`` flag to TRUE to calculate fluid drag loads on the
 tower or FALSE to disable these effects. 
 
 During linearization analyses
-with AeroDyn coupled OpenFAST and BEM enabled (``WakeMod = 1``), set the
-``FrozenWake`` flag to TRUE to employ frozen-wake assumptions during
-linearization (i.e. to fix the axial and tangential induces velocities,
-and, at their operating-point values during linearization) or FALSE to
-recalculate the induction during linearization using BEM theory. 
+with AeroDyn coupled OpenFAST and BEM enabled (``Wake_Mod = 1``), set the
+``DBEMT_Mod=-1`` to employ frozen-wake assumptions 
+(i.e. to fix the axial and tangential induces velocities, and, at their operating-point values during linearization)
+or 
+``DBEMT_Mod=3`` to use the continuous dynamic wake model.
 
 Set the ``CavitCheck`` flag to TRUE to perform a cavitation check for MHK
 turbines or FALSE to disable this calculation. If ``CavitCheck`` is
-TRUE, ``AFAeroMod`` must be set to 1 because the cavitation check does
+TRUE, ``UA_Mod`` must be set to 0 because the cavitation check does
 not function with unsteady airfoil aerodynamics. If ``CavitCheck`` is
 TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver input file must be set
 to 1 or 2 to indicate an MHK turbine is being modeled.
@@ -111,14 +134,18 @@ tower, nacelle, and hub of an MHK turbine or FALSE to disable this calculation.
 If ``Buoyancy`` is TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver 
 input file must be set to 1 or 2 to indicate an MHK turbine is being modeled.
 
+Set the ``NacelleDrag`` flag to TRUE to calculate the drag loads on the nacelle
+or FALSE to disable this calculation. 
+
 Set the ``CompAA`` flag to TRUE to run aero-acoustic calculations.  This
-option is only available for ``WakeMod = 1`` or ``2`` and is not available for
+option is only available for ``Wake_Mod = 1`` and is not available for
 an MHK turbine.  See section :numref:`AeroAcoustics` for information on how to 
 use this feature.
 
 The ``AA_InputFile`` is used to specify the input file for the aeroacoustics
 sub-module. See :numref:`AeroAcoustics` for information on how to use this
 feature.
+
 
 
 Environmental Conditions
@@ -147,17 +174,58 @@ around 2,000 Pa.
 Blade-Element/Momentum Theory Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are not used when ``WakeMod = 0``.
+**BEM_Mod** 
+Determines the kind of BEM algorithm to use.
 
-``SkewMod`` determines the skewed-wake correction model. Set
-``SkewMod`` to 1 to use the uncoupled BEM solution technique without
-an additional skewed-wake correction. Set ``SkewMod`` to 2 to include
-the Pitt/Peters correction model. **The coupled model ``SkewMod=
-3`` is not available in this version of AeroDyn.**
+- ``BEM_Mod=2`` (recommended) uses the new AeroDyn BEM implementation using the local staggered polar grid coordinate system, which is more suitable for large coning. It also includes an optional momentum correction that is important for large skew (see ``SkewMomCorr``). The feature will be documented at a later time.
+- ``BEM_Mod=1`` (for backward compatibility) uses the old AeroDyn BEM implementation using the NoSweepPitchTwist coordinate system.
 
-``SkewModFactor`` is used only when  ``SkewMod = 2``. Enter a scaling factor to use
-in the Pitt/Peters correction model, or enter ``"default"`` to use the default 
-value of :math:`\frac{15 \pi}{32}`.
+
+.. note::
+    Link to old inputs: previous implementation would have ``BEM_Mod=1`` implied.
+
+
+.. warning::
+
+    ``BEM_Mod`` currently governs the coordinate system used for "ill-defined" outputs (outputs that don't have a specified coordinate system) such as the ones that ends with "x" and "y". Other ill-defined outputs are the typical BEM quantities such as "AxInd", "TnInd", "Phi", etc. These are defined in a different coordinate system depending on `BEM_Mod`. For consistency accross differents `Wake_Mod` (even when `Wake_Mod/=1`), we use `BEM_Mod` to determine the coordinate system of the ill-defined outputs. 
+
+The following inputs in this section are only used when ``Wake_Mod = 1``.
+
+
+
+**Skew_Mod**
+``Skew_Mod`` determines the skew correction model (for yaw and tilt):
+
+- ``Skew_Mod=1``: activates Glauert's skew model (recommended).  This model has two components: a momentum correction (``SkewMomCorr` `), and a velocity redistribution model (``SkewRedistr_Mod``). 
+- ``Skew_Mod=0`` means no skew model at all (not recommended) 
+- ``Skew_Mod=-1`` throws away non-normal component (for linearization). This setting makes sure the wind speed is always normal to the rotor to limit periodic variation of the wind speed if the rotor is not perpendicular to the wind (e.g. tower top tilting or tilt). This is mostly needed for linearization. 
+
+Currently (``Skew_Mod=0``) or (``Skew_Mod=1`` and ``SkewModCorr=False`` and ``SkewRedistr_Mod = 0``)  are the same, both set of inputs turn off the skew correction entirely.
+
+.. note::
+    Link to old inputs: Previous implementations always had the skew model on. `Skew_Mod=-1` replaces the old `SkewMod=0` (an option that few users were using). 
+
+
+**SkewMomCorr**
+Turns the skew momentum correction on or off [used only when ``Skew_Mod=1``]
+The feature will be documented at a later time.
+
+.. note::
+    Link to old inputs: the previous behavior would be `SkewMomCorr=False`
+
+**SkewRedistr_Mod**
+``SkewRedistr_Mod`` allows to turn on and off the induced velocity redistribution model, and give room for other models to be selected/implemented. Default=1.
+
+ - 0: no redistribution
+ - 1: Glauert (Pitt-Peters) redistribution model
+
+**SkewRedistrFactor** 
+Defines the constant used in the Glauert redistribution model (``SkewRedistr_Mod=1``). 
+Use ``"default"`` to use the default value of :math:`\frac{15 \pi}{32}`.
+
+
+BEM Algorithm options
+~~~~~~~~~~~~~~~~~~~~~
 
 Set ``TipLoss`` to TRUE to include the Prandtl tip-loss model or FALSE
 to disable it. Likewise, set ``HubLoss`` to TRUE to include the
@@ -185,29 +253,63 @@ the BEM solve is not less than or equal to ``IndToler`` in
 ``MaxIter``, AeroDyn will exit the BEM solver and return an error
 message.
 
-Dynamic Blade-Element/Momentum Theory Options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are used only when ``WakeMod = 2``.
+Shear corrections
+~~~~~~~~~~~~~~~~~
+
+The BEM algorithm may need to be corrected to account for shear.
+Currently, a sector average correction is implemented, as a beta feature, to limit fluctuations associated with variations of wind speed as the blade rotates.
+
+The feature will be documented at a later time and is still at an experimental stage.
+
+**SectAvg**  Use Sector Averaging (flag).
+The method uses sectors expanding forward and backward relative to the current azimuth of the blade (see ``SectAvgPsiBwd`` and ``SectAvgPsiFwd``). 
+The velocity is averaged within this sector by attributing different weighting at different points in the sector (see ``SectAvgWeighting``).
+
+**SectAvgWeighting** Weighting function for sector average. 
+1=Uniform  (switch) [used only when ``SectAvg=True``]. Default is 1.
+
+**SectAvgNPoints** Number of points per sectors (-) [used only when ``SectAvg=True``]. Default is 5.
+
+**SectAvgPsiBwd** Backward azimuth (in degrees) relative to the blade azimuth where the sector starts. Must be negative. [used only when SectAvg=True]. Default is -60 deg.
+
+**SectAvgPsiFwd** Forward azimuth (in degrees) relative to the blade azimuth where the sector ends. Must be positive. [used only when SectAvg=True]. Default is 60 deg.
+
+
+
+
+
+Dynamic Wake / Dynamic inflow model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The input parameters in this section are used only when ``Wake_Mod = 1``.
 The theory is described in :numref:`AD_DBEMT`.
 
-There are three options available for ``DBEMT_Mod``:
+The dynamic wake (also called dynamic inflow) model is governed by the input ``DBEMT_Mod``:
 
+- ``0``: no dynamic wake, also called quasi-steady wake model (not recommended).
+- ``-1``: frozen wake, the induced velocities at a given operating point will remain constant (useful for simplified linearization only). 
 - ``1``: discrete-time Oye's model, with constant :math:`\tau_1`
 - ``2``: discrete-time Oye's model, with varying :math:`\tau_1`, automatically adjusted based on inflow. (recommended for time-domain simulations)
 - ``3``: continuous-time Oye's model, with constant :math:`\tau_1` (recommended for linearization)
 
 For ``DBEMT_Mod=1`` or ``DBEMT_Mod=3`` it is the user responsability to set the value of :math:`\tau_1` (i.e. ``tau1_const``) according to the expression given in :numref:`AD_DBEMT`, using an estimate of what the mean axial induction (:math:`\overline{a}`) and the mean relative wind velocity across the rotor (:math:`\overline{U_0}`) are for a given simulation. 
 
-The option ``DBEMT_Mod=3`` is the only one that can be used for linearization.
+Only the options ``DBEMT_Mod={-1,3}`` can be used for linearization.
 
+
+.. note::
+    Link to old inputs: 
+    The option `DBEMT_Mod=-1` has the same behavior as the old `FrozenWake=True`.
+    `DBEMT_Mod=0` has the same behavior as the previous `WakeMod=1` option.
+    `DBEMT_Mod=J` (`J` in `1,2,3`)  , has the same behavior as the previous `WakeMod=2` & `DBEMT_Mod=J` 
 
 
 
 OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are used only when ``WakeMod = 3``.
+The input parameters in this section are used only when ``Wake_Mod = 3``.
 
 The settings for the free vortex wake model are set in the OLAF input file
 described in :numref:`OLAF-Input-Files`.  ``OLAFInputFileName`` is the filename
@@ -219,11 +321,23 @@ for this input file.
 Unsteady Airfoil Aerodynamics Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are used only when ``AFAeroMod
-= 2``.
 
-``UAMod`` determines the UA model. It has the following options:
 
+**AoA34** 
+Determine whether the baseline angle of attack is sampled at the 3/4 chord or at the aerodynamic center point. 
+Most ``UA_Mod`` will require `AoA34` to be set to true. But when using quasi-steady aerodynamics, the user may want to set it to true or false. 
+
+.. warning::
+    This feature is currently not implemented due to a lag between the `dev` and `dev-unstable`  branch.
+
+.. note::
+    Link to previous inputs: `AFAeroMod=1` implies `AoA34=False`. But to have a fair comparison between steady and unsteady aerodynamics model, it would be best to set `AoA34=True` when doing quasi-steady aero.
+
+
+
+``UA_Mod`` determines the UA model. It has the following options:
+
+- ``0``: no unsteady arifoil aerodynamics,
 - ``1``: the discrete-time model of Beddoes-Leishman (B-L) (**not currently functional**), 
 - ``2``: the extensions to B-L developed by González  (changes in Cn, Cc, Cm)
 - ``3``: the extensions to B-L developed by Minnema/Pierce (changes in Cc and Cm)
@@ -232,8 +346,10 @@ The input parameters in this section are used only when ``AFAeroMod
 - ``6``: 1-state continuous-time developed by Oye
 - ``7``: discrete-time Boeing-Vertol (BV) model
 
-Linearization is supported with ``UAMod=4,5,6`` (which use continuous-time states) but not with the other models. The different models are described in :numref:`AD_UA`.
+Linearization is supported with ``UA_Mod=4,5,6`` (which use continuous-time states) but not with the other models. The different models are described in :numref:`AD_UA`.
 
+.. note::
+    Link to old inputs: If `UA_Mod>0`, then this is equivalent to the old `AFAeroMod=2`. 
 
 **While all of the UA models are documented in this
 manual, the original B-L model is not yet functional. Testing has shown
@@ -256,7 +372,7 @@ is determined via a lookup into the static lift-force coefficient and
 drag-force coefficient data. **Using best-fit exponential equations
 (``FLookup = FALSE``) is not yet available, so ``FLookup`` must be
 ``TRUE`` in this version of AeroDyn.** Note, ``FLookup`` is not used 
-when ``UAMod=4`` or ``UAMod=5``.
+when ``UA_Mod=4`` or ``UA_Mod=5``.
 
 ``UAStartRad`` is the starting rotor radius where dynamic stall
 will be turned on. Enter a number between 0 and 1, representing a fraction of rotor radius,
@@ -338,13 +454,18 @@ Since the hub and blades are joined elements, hub buoyancy should be turned on i
 
 Nacelle Properties
 ~~~~~~~~~~~~~~~~~~
-The input parameters in this section pertain to the calculation of buoyant loads
-on the nacelle and are only used when ``Buoyancy = TRUE``.
+The input parameters in this section pertain to the calculation of buoyant and drag loads
+on the nacelle and are only used when ``Buoyancy = TRUE`` or ``NacelleDrag = TRUE``.
 
 ``VolNac`` is the volume of the nacelle and ``NacCenB``` is the 
 position (x,y,z vector) of the nacelle center of buoyancy from
 the yaw bearing in local nacelle coordinates. To neglect buoyant 
-loads on the nacelle, set ``VolNac`` to 0.
+loads on the nacelle, set ``VolNac`` to 0. Only used when ``Buoyancy = TRUE``.
+
+``NacArea`` are the projected areas (Ax,Ay,Az vector) of the nacelle in the nacelle coordinate system, 
+``NacCd`` are the drag coefficients (Cdx, Cdy, Cdz vector) for the three nacelle areas defined by ``NacArea``and ``NacDragAC`` is the 
+position (x,y,z vector) of the nacelle aerodynamic center from
+the yaw bearing in local nacelle coordinates.  Only used when ``NacelleDrag = TRUE``.
 
 Tail fin AeroDynamics
 ~~~~~~~~~~~~~~~~~~~~~
@@ -410,7 +531,7 @@ file with name ``<OutFileRoot>.AD.sum``. ``<OutFileRoot>`` is either
 specified in the I/O SETTINGS section of the driver input file when
 running AeroDyn standalone, or by the OpenFAST program when running a
 coupled simulation. See :numref:`sec:ad_SumFile` for summary file details.
-If ``AFAeroMod=2``, the unsteady aero module will also generate a file
+If ``UAMod>0``, the unsteady aero module will also generate a file
 called ``<OutFileRoot>.UA.sum`` that will list all of the UA parameters
 used in the airfoil tables. This allows the user to check what values
 are being used in case the code has computed the parameters
@@ -528,7 +649,7 @@ if the keyword ``DEFAULT`` is entered in place of a numerical value,
 ``RelThickness`` is the non-dimensional thickness of the airfoil 
 (thickness over chord ratio), expressed as a fraction (not a percentage), 
 typically between 0.1 and 1. 
-The parameter is currently used when ``UAMod=7``, but might be used more in the future.
+The parameter is currently used when ``UA_Mod=7``, but might be used more in the future.
 The default value of 0.2 if provided for convenience.
 
 ``NonDimArea`` is the nondimensional airfoil area (normalized by the
@@ -583,24 +704,24 @@ or calculating it based on the polar coefficient data in the airfoil table:
 
 -  ``alphaUpper`` specifies the AoA (in degrees) of the upper boundary of 
    fully-attached region of the cn or cl curve. It is used to 
-   compute the separation function when ``UAMod=5``.
+   compute the separation function when ``UA_Mod=5``.
 
 -  ``alphaLower`` specifies the AoA (in degrees) of the lower boundary of 
    fully-attached region of the cn or cl curve. It is used to 
-   compute the separation function when ``UAMod=5``. (The separation function
+   compute the separation function when ``UA_Mod=5``. (The separation function
    will have a value of 1 between ``alphaUpper`` and ``alphaLower``.)   
 
 -  ``eta_e`` is the recovery factor and typically has a value in the
-   range [0.85 to 0.95] for ``UAMod = 1``; if the keyword ``DEFAULT`` is
+   range [0.85 to 0.95] for ``UA_Mod = 1``; if the keyword ``DEFAULT`` is
    entered in place of a numerical value, ``eta_e`` is set to 0.9 for
-   ``UAMod = 1``, but ``eta_e`` is set to 1.0 for other ``UAMod``
+   ``UA_Mod = 1``, but ``eta_e`` is set to 1.0 for other ``UA_Mod``
    values and whenever ``FLookup = TRUE``;
 
 -  ``C_nalpha`` is the slope of the 2D normal force coefficient curve
    in the linear region;
 
 -  ``C_lalpha`` is the slope of the 2D normal lift coefficient curve
-   in the linear region; Used for ``UAMod=4,6``.
+   in the linear region; Used for ``UA_Mod=4,6``.
 
 -  ``T_f0`` is the initial value of the time constant associated with
    *Df* in the expressions of *Df* and *f’*; if the keyword ``DEFAULT`` is
@@ -661,19 +782,19 @@ or calculating it based on the polar coefficient data in the airfoil table:
    to 1, based on experimental results;
 
 -  ``S1`` is the constant in the best fit curve of *f* for
-   ``alpha0`` :math:`\le` AoA :math:`\le` ``alpha1`` for ``UAMod = 1`` (and is unused
+   ``alpha0`` :math:`\le` AoA :math:`\le` ``alpha1`` for ``UA_Mod = 1`` (and is unused
    otherwise); by definition, it depends on the airfoil;
 
 -  ``S2`` is the constant in the best fit curve of *f* for AoA >
-   ``alpha1`` for ``UAMod = 1`` (and is unused otherwise); by
+   ``alpha1`` for ``UA_Mod = 1`` (and is unused otherwise); by
    definition, it depends on the airfoil;
 
 -  ``S3`` is the constant in the best fit curve of *f* for
-   ``alpha2`` :math:`\le` AoA :math:`\le` ``alpha0`` for ``UAMod = 1`` (and is unused
+   ``alpha2`` :math:`\le` AoA :math:`\le` ``alpha0`` for ``UA_Mod = 1`` (and is unused
    otherwise); by definition, it depends on the airfoil;
 
 -  ``S4`` is the constant in the best fit curve of *f* for AoA <
-   ``alpha2`` for ``UAMod = 1`` (and is unused otherwise); by
+   ``alpha2`` for ``UA_Mod = 1`` (and is unused otherwise); by
    definition, it depends on the airfoil;
 
 -  ``Cn1`` is the critical value of :math:`C^{\prime}_n` at leading-edge separation for
@@ -700,22 +821,22 @@ or calculating it based on the polar coefficient data in the airfoil table:
    location at zero-lift AoA, positive for nose up;
 
 -  ``k0`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` and equals for :math:`\hat{x}_{AC}-0.25`
-   ``UAMod = 1`` (and is unused otherwise);
+   ``UA_Mod = 1`` (and is unused otherwise);
 
--  ``k1`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UAMod = 1``
+-  ``k1`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UA_Mod = 1``
    (and is unused otherwise);
 
--  ``k2`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UAMod = 1``
+-  ``k2`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UA_Mod = 1``
    (and is unused otherwise);
 
--  ``k3`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UAMod = 1``
+-  ``k3`` is a constant in the best fit curve of :math:`\hat{x}_{cp}` for ``UA_Mod = 1``
    (and is unused otherwise);
 
 -  ``k1_hat`` is a constant in the expression of *Cc* due to
-   leading-edge vortex effects for ``UAMod = 1`` (and is unused
+   leading-edge vortex effects for ``UA_Mod = 1`` (and is unused
    otherwise);
 
--  ``x_cp_bar`` is a constant in the expression of :math:`\hat{x}_{cp}^{\nu}` for ``UAMod =
+-  ``x_cp_bar`` is a constant in the expression of :math:`\hat{x}_{cp}^{\nu}` for ``UA_Mod =
    1`` (and is unused otherwise); if the keyword ``DEFAULT`` is entered in
    place of a numerical value, ``x_cp_bar`` is set to 0.2; and
 
@@ -876,29 +997,33 @@ An example of tail fin input file is given below:
     Comment
     ======  General inputs =============================================================
     1         TFinMod     - Tail fin aerodynamics model {0: none, 1: polar-based, 2: USB-based} (switch)
-    0.5       TFinChord   - Tail fin chord (m) [used only when TFinMod=1]
-    0.3       TFinArea    - Tail fin planform area (m^2) [used only when TFinMod=1]
+    0.3       TFinArea    - Tail fin planform area (m^2)
     10.,0.,0. TFinRefP_n  - Undeflected position of the tail fin reference point wrt the tower top (m)
     0.,0.,0.  TFinAngles  - Tail fin chordline skew, tilt, and bank angles about the reference point (degrees)
     0         TFinIndMod  - Model for induced velocity calculation {0: none, 1:rotor-average} (switch)
     ====== Polar-based model ================================ [used only when TFinMod=1] 
-    1        TFinAFID - Index of Tail fin airfoil number [1 to NumAFfiles]
-    ====== Unsteady slender body model  ===================== [used only when TFinMod=2] 
-    [TODO inputs for model 2]
+    1         TFinAFID - Index of Tail fin airfoil number [1 to NumAFfiles]
+    0.5       TFinChord   - Tail fin chord (m)
+    ====== Unsteady slender body model  ===================== [used only when TFinMod=2]
+    0.9           TFinKp        - Tail fin potential flow coefficient (-)
+    0.3,0.1,0.1   TFinSigma     - Tail fin empirical constant for vortex separation functions (1/deg)
+    40,60,60      TFinAStar     - Tail fin initial angles for vortex separation functions (deg)
+    3.1416        TFinKv        - Tail fin vortex lift coefficient (-)
+    1.3           TFinCDc       - Tail fin drag coefficient (-)
 
 General inputs
 ~~~~~~~~~~~~~~
 
-**TFinMod** Switch to select a model for the tail fin aerodynamics:
+``TFinMod`` is a switch to select a model for the tail fin aerodynamics:
 0) none (the aerodynamic forces are zero), 1) polar-based, 2) USB-based (see :numref:`TF-aerotheory`).
 (switch)
 
-**TFinArea** Area of the tail fin. (m^2)
+``TFinArea`` is the area of the tail fin. (m^2)
 This is the plan form area of the tail fin plate used to relate the local dynamic pressure and airfoil
 coefficients to aerodynamic loads. This value must not be negative and is only used when
 TFinMod is set to 1. (m^2)
 
-**TFinRefP_n** Undeflected position (:math:`x_{\text{ref},x_n},x_{\text{ref},y_n}, x_{\text{ref},z_n}`) of the tail fin from the tower top in nacelle coordinates.
+``TFinRefP_n`` is the undeflected position (:math:`x_{\text{ref},x_n},x_{\text{ref},y_n}, x_{\text{ref},z_n}`) of the tail fin from the tower top in nacelle coordinates.
 (formerly defined using ``TFinCPxn``,  ``TFinCPyn``, ``TFinCPzn``). 
 The distances defines the configuration for a furl angle of zero.
 For a typical upwind wind turbine, 
@@ -908,7 +1033,7 @@ For a typical upwind wind turbine,
 See :numref:`figTFGeom` and :numref:`figTFcoord1`.
 (m)
 
-**TFinAngles** Angles (:math:`\theta_\text{skew},\theta_\text{tilt}, \theta_\text{bank}`) of the tail fin 
+``TFinAngles`` are the angles (:math:`\theta_\text{skew},\theta_\text{tilt}, \theta_\text{bank}`) of the tail fin 
 (formerly defined as ``TFinSkew``, ``TFinTilt``, ``TFinBank``).
 See :numref:`figTFGeom` and :numref:`figTFcoord1`. 
 These angles define the chordline at a furl angle of zero, where the chordline is assumed to be passing through the reference point.
@@ -925,7 +1050,7 @@ This value must be greater than -180 and less than or equal to 180 degrees.
 
 
 
-**TFinIndMod**
+``TFinIndMod``
 Switch to select a model for the calculation of the velocity induced by the rotor and its wake on the tailfin (not the induced velocity from the tailfin wing).
 The options available are: 
 0) none (the induced velocity is zero)
@@ -936,7 +1061,7 @@ The options available are:
 Polar-based model inputs
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**TFinAFID**
+``TFinAFID``
 This integer tells AeroDyn which of the input airfoil files (``AFNames``) is assigned to the tail fin. For
 instance, a value of 2 means that the tail fin will use ``AFNames(2)`` for the local tail fin airfoil. 
 This value must be
@@ -945,7 +1070,21 @@ between 1 and ``NumAFfiles`` and is only used when TFinMod is set to 1. (-)
 
 Unsteady slender body (USB) model inputs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Refer to :numref:`TF-aerotheory` and :cite:`ad-hammam_NREL:2023` for guidance on how to select parameters for the unsteady slender body theory based model.
 
-This option is currently not available and will be documented in a future release.
+``TFinKp``
+Potential lift coefficient for unsteady aerodynamics. ``TFinKp`` is used to calculate the potential flow contribution to the unsteady aerodynamic force on the tail fin.
+
+``TFinSigma``
+Tail fin empirical constants characterizing the decay of separation functions used in the unsteady aerodynamic model. The separation functions and their dependence on ``TFinSigma`` are described in :numref:`TF-aerotheory`.
 
 
+``TFinAStar``
+Tail fin characteristics angles for separation functions used in the unsteady aerodynamic model. The separation functions and their dependence on ``TFinAStar`` are described in :numref:`TF-aerotheory`.
+
+
+``TFinKv``
+Vortex lift coefficient for unsteady aerodynamics. ``TFinKv`` is used to calculate the vortex flow contribution to the unsteady aerodynamic force on the tail fin.
+
+``TFinCDc``
+Tail fin drag coefficient used for unsteady aerodynamic model. The drag on the tail fin significantly contributes to the normal force at high yaw angles.

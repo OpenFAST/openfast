@@ -58,7 +58,7 @@ MODULE NWTC_IO
 
    LOGICAL                       :: Beep     = .TRUE.                            !< Flag that specifies whether or not to beep for error messages and program terminations.
 
-   CHARACTER(20)                 :: ProgName = ' '                               !< The name of the calling program. DO NOT USE THIS IN NEW PROGRAMS (Modules)
+   CHARACTER(25)                 :: ProgName = ' '                               !< The name of the calling program. DO NOT USE THIS IN NEW PROGRAMS (Modules)
    CHARACTER(99)                 :: ProgVer  = ' '                               !< The version (including date) of the calling program. DO NOT USE THIS IN NEW PROGRAMS
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         !< The tab character.
    CHARACTER(*), PARAMETER       :: CommChars = '!#%'                            !< Comment characters that mark the end of useful input
@@ -120,6 +120,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE AllIPAry1
       MODULE PROCEDURE AllIPAry2
       MODULE PROCEDURE AllFPAry1
+      MODULE PROCEDURE AllDPAry1  
       MODULE PROCEDURE AllRPAry2
       MODULE PROCEDURE AllR4PAry3
       MODULE PROCEDURE AllR8PAry3
@@ -189,6 +190,14 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadR4AryFromStr
       MODULE PROCEDURE ReadR8Ary  ! read array of 8-byte reals
       MODULE PROCEDURE ReadR8AryFromStr
+   END INTERFACE
+
+      !> \copydoc nwtc_io::readr4arywdefault
+   INTERFACE ReadAryWDefault
+      MODULE PROCEDURE ReadR4AryWDefault
+      MODULE PROCEDURE ReadR8AryWDefault
+!      MODULE PROCEDURE ReadR4AryWDefaultFromStr    ! Not coded yet
+!      MODULE PROCEDURE ReadR8AryWDefaultFromStr    ! Not coded yet
    END INTERFACE
 
       !> \copydoc nwtc_io::readcarylines   
@@ -621,6 +630,37 @@ CONTAINS
    END SUBROUTINE AllFPAry1
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
+   SUBROUTINE AllDPAry1 (  Ary, AryDim1, Descr, ErrStat, ErrMsg )
+   ! This routine allocates a 1-D REAL array.
+
+   ! Argument declarations.
+   REAL(C_DOUBLE), POINTER           :: Ary    (:)                                 !  Array to be allocated
+   INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    !< Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
+   CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllRPAry2: Ary already allocated."
+   END IF
+
+   ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+      Ary = 0
+   END IF
+   
+   RETURN
+   END SUBROUTINE AllDPAry1
+!=======================================================================
+!> \copydoc nwtc_io::allipary1
    SUBROUTINE AllRPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
    ! This routine allocates a 2-D REAL array.
 
@@ -674,7 +714,7 @@ CONTAINS
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
    ELSE
       ErrStat = ErrID_None
@@ -707,7 +747,7 @@ CONTAINS
    ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
    ELSE
       ErrStat = ErrID_None
@@ -827,7 +867,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*BYTES_IN_SiKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*BYTES_IN_R4Ki))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
       ErrStat = ErrID_None
@@ -886,7 +926,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_SiKi))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -949,7 +989,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -981,7 +1021,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1014,7 +1054,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1047,7 +1087,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1081,7 +1121,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_R4Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1115,7 +1155,7 @@ CONTAINS
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
          ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1599,105 +1639,65 @@ END SUBROUTINE CheckR8Var
 !=======================================================================
 !> This routine packs the DLL_Type (nwtc_base::dll_type) data into an integer buffer.
 !! It is required for the FAST Registry. It is the inverse of DLLTypeUnPack (nwtc_io::dlltypeunpack).
-   SUBROUTINE DLLTypePack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
-   
-   
-      TYPE(DLL_Type),                INTENT(IN   ) :: InData             !< DLL data to pack (store in arrays of type ReKi, DbKi, and/or IntKi)
-      REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)         !< buffer with real (ReKi) data from InData structure
-      REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)         !< buffer with double (DbKi) data from InData structure
-      INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)        !< buffer with integer (IntKi) data from InData structure
-      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat            !< error status
-      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg             !< error message
-      LOGICAL,          OPTIONAL,    INTENT(IN   ) :: SizeOnly           !< flag to determine if we're just looking for the size of the buffers instead of the packed data
+   SUBROUTINE DLLTypePack(RF, InData)
+      type(RegFile), intent(inout)  :: RF
+      TYPE(DLL_Type), intent(in)       :: InData  !< DLL data to pack
       
-         ! Local variable
-      INTEGER(IntKi)                               :: Int_BufSz
-      INTEGER(IntKi)                               :: i,buf_start
-      
-      ErrStat = ErrID_None
-      ErrMsg  = ""
+      INTEGER(IntKi)                   :: i
 
-         ! get size of buffer:
-      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName(1))*NWTC_MAX_DLL_PROC + 1
+      ! If buffer error, return
+      if (RF%ErrStat /= ErrID_None) return
       
-      ALLOCATE( IntKiBuf(Int_BufSz), STAT=ErrStat )
-      IF (ErrStat /= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' DLLTypePack: Error allocating IntKiBuf.'
-         RETURN
-      END IF
-            
-      IF ( PRESENT(SizeOnly) ) THEN
-         IF ( SizeOnly ) RETURN
-      ENDIF      
+      ! has the DLL procedure been loaded?
+      call RegPack(RF, c_associated(InData%ProcAddr(1)))
       
-      !..............
-      ! Fill buffer
-      !..............
-      
-         ! has the DLL procedure been loaded?
-      IF ( C_ASSOCIATED(InData%ProcAddr(1))) THEN
-         IntKiBuf(1) = 1
-      ELSE
-         IntKiBuf(1) = 0         
-      END IF
-      
-         ! Put an ascii representation of the strings in the integer array
-      CALL Str2IntAry( InData%FileName, IntKiBuf(2:), ErrStat, ErrMsg )
-      buf_start=LEN(InData%FileName)+2
-      DO i=1,NWTC_MAX_DLL_PROC
-         CALL Str2IntAry( InData%ProcName(i), IntKiBuf(buf_start:), ErrStat, ErrMsg )
-         buf_start = buf_start + LEN(InData%ProcName(i))
-      END DO
-      
+      ! Pack strings
+      call RegPack(RF, InData%FileName)
+      do i = 1, NWTC_MAX_DLL_PROC
+         call RegPack(RF, InData%ProcName(i))
+      end do
+
+      ! If buffer error, return
+      if (RegCheckErr(RF, 'DLLTypeUnPack')) return
       
    END SUBROUTINE DLLTypePack
 !=======================================================================
 !> This routine unpacks the DLL_Type data from an integer buffer.
 !! It is required for the FAST Registry. It is the inverse of DLLTypePack (nwtc_io::dlltypepack).
-   SUBROUTINE DLLTypeUnPack( OutData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
-   
-   
-      REAL(ReKi),       ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)        !< buffer with real (ReKi) data to place in the OutData structure
-      REAL(DbKi),       ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)        !< buffer with real (DbKi) data to place in the OutData structure
-      INTEGER(IntKi),   ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)       !< buffer with integer (IntKi) data to place in the OutData structure
-      TYPE(DLL_Type),                INTENT(  OUT) :: OutData           !< the reconstituted OutData structure, created from 3 buffers
-      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat           !< error status/level
-      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg            !< message corresponding to ErrStat
-      
-         ! Local variable
-      INTEGER(IntKi)                               :: Int_BufSz
-      INTEGER(IntKi)                               :: i, Int_BufEnd
-      
-      ErrStat = ErrID_None
-      ErrMsg  = ""
+   subroutine DLLTypeUnPack(RF, OutData)
+      type(RegFile), intent(inout)  :: RF
+      type(DLL_Type), intent(out)   :: OutData !< Reconstituted OutData structure
+         
+      logical        :: WasAssociated
+      integer(IntKi) :: i
 
-      IF (.NOT. ALLOCATED(IntKiBuf) ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' DLLTypeUnPack: invalid buffer.'
-      END IF
-                     
-         ! Get an ascii representation of the strings from the integer array                           
-      Int_BufSz = LEN(OutData%FileName) + 1
-      CALL IntAry2Str( IntKiBuf(2:(Int_BufSz)), OutData%FileName, ErrStat, ErrMsg )
-      IF (ErrStat >= AbortErrLev) RETURN
-      Int_BufSz = Int_BufSz + 1
-      do i=1,NWTC_MAX_DLL_PROC
-         Int_BufEnd=Int_BufSz+LEN(OutData%ProcName(i))-1
-         CALL IntAry2Str( IntKiBuf(Int_BufSz:Int_BufEnd), OutData%ProcName(i), ErrStat, ErrMsg )
-         IF (ErrStat >= AbortErrLev) RETURN
-         Int_BufSz = Int_BufSz+LEN(OutData%ProcName(i))
+      ! If buffer error, return
+      if (RF%ErrStat /= ErrID_None) return
+      
+      ! Get flag indicating if dll was associated
+      call RegUnpack(RF, WasAssociated)
+
+      ! Unpack strings
+      call RegUnpack(RF, OutData%FileName)
+      do i = 1, NWTC_MAX_DLL_PROC
+         call RegUnpack(RF, OutData%ProcName(i))
       end do
+
+      ! If buffer error, return
+      if (RegCheckErr(RF, 'DLLTypeUnPack')) return
       
-      
-      IF ( IntKiBuf(1) == 1 .AND. LEN_TRIM(OutData%FileName) > 0 .AND. LEN_TRIM(OutData%ProcName(1)) > 0 ) THEN
-         CALL LoadDynamicLib( OutData, ErrStat, ErrMsg )
+      ! If dll was loaded, and data in filename and procname, load dll
+      IF (WasAssociated .AND. LEN_TRIM(OutData%FileName) > 0 .AND. LEN_TRIM(OutData%ProcName(1)) > 0) THEN
+         CALL LoadDynamicLib(OutData, RF%ErrStat, RF%ErrMsg)
       else
          ! Nullifying
          OutData%FileAddr  = INT(0,C_INTPTR_T)
          OutData%FileAddrX = C_NULL_PTR
          OutData%ProcAddr  = C_NULL_FUNPTR
       END IF
+
+      ! If buffer error, return
+      if (RegCheckErr(RF, 'DLLTypeUnPack')) return
       
    END SUBROUTINE DLLTypeUnPack   
 !=======================================================================
@@ -1730,7 +1730,7 @@ END SUBROUTINE CheckR8Var
          END IF
       END IF
       
-      CALL WrScr ( 'Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
+      CALL WrScr ( ' Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
 
    RETURN
    END SUBROUTINE DispNVD1
@@ -1873,7 +1873,7 @@ END SUBROUTINE CheckR8Var
    INTEGER(IntKi), INTENT(IN) :: ErrID          !< error status/level
 
       ! Function delcaration
-   CHARACTER(13)              :: GetErrStr      !< description of the ErrID level
+   CHARACTER(25)              :: GetErrStr      !< description of the ErrID level
 
       SELECT CASE ( ErrID )
          CASE ( ErrID_None )
@@ -1887,12 +1887,11 @@ END SUBROUTINE CheckR8Var
          CASE ( ErrID_Fatal )
             GetErrStr = 'FATAL ERROR'
          CASE DEFAULT
-            GetErrStr = 'Unknown ErrID'
+            GetErrStr = 'Unknown ErrID '//TRIM(Num2LStr(ErrID))
       END SELECT
 
 
    END FUNCTION GetErrStr
-   
 !=======================================================================
 !> This function extracts the Name field from the ProgDesc data type
 !  and return it.
@@ -2160,6 +2159,65 @@ END SUBROUTINE CheckR8Var
    if (present(NumFound)) NumFound = iWord
 
    END SUBROUTINE GetWords
+!=======================================================================
+!> This subroutine is used to compare a header line (`HeaderLine`) with a list of column names.
+!! It searches for each possible column name (AvailableChanName) and returns an index array indicating which
+!! order the columns are listed in the file (this allows columns to be entered in different orders or for 
+!! some columns to be missing. It returns an error if any of the required channels are missing.
+   SUBROUTINE GetInputColumnIndex(MaxCols, AvailableChanNames, RequiredChanNames, HeaderLine, Indx, ErrStat, ErrMsg)
+   
+      INTEGER(IntKi), INTENT(IN   )    :: MaxCols                             !< maximum number of columns that should be in the input file
+      CHARACTER(*),   INTENT(IN   )    :: AvailableChanNames(MaxCols)         !< list of column headers, THESE SHOULD BE IN UPPER CASE
+      LOGICAL,        INTENT(IN   )    :: RequiredChanNames( MaxCols)         !< T/F corresponding to channel names to determine if these channels should be required
+      CHARACTER(*),   INTENT(IN   )    :: HeaderLine                          !< line of text to be read
+      INTEGER(IntKi), INTENT(INOUT)    :: Indx(MaxCols)                       !< index relating upper-case column names found in header line with AvailableChanNames
+      INTEGER(IntKi), INTENT(  OUT)    :: ErrStat                             !< returns a fatal error if a required channel name isn't found in HeaderLine
+      CHARACTER(*),   INTENT(  OUT)    :: ErrMsg                              !< returns message about which column is missing
+   
+      CHARACTER(ChanLen)               :: Words(MaxCols)
+      INTEGER(IntKi)                   :: i                    ! loop counter
+      INTEGER(IntKi)                   :: j                    ! loop counter
+      INTEGER(IntKi)                   :: FirstCheck
+      INTEGER(IntKi)                   :: NumFound
+            
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      
+      CALL GetWords ( HeaderLine, Words, MaxCols, NumFound )
+      
+      DO j = 1,NumFound
+         CALL Conv2UC ( Words(j) )
+      
+         ! stop reading any more headers if this word starts with a comment character (indicating that the columns aren't in the table)
+         IF ( INDEX( CommChars, Words(j)(1:1) ) > 0 ) THEN
+            NumFound = j - 1
+            EXIT
+         END IF
+      END DO
+      
+      Indx = -1 ! initialize all values to be "not found"
+      
+      FirstCheck = 1
+      DO i = 1,SIZE(Indx)
+         DO j = FirstCheck,NumFound
+            IF ( TRIM(AvailableChanNames(i)) == TRIM(Words(j)) ) THEN
+               Indx(I) = j
+               IF (j == FirstCheck + 1) FirstCheck = FirstCheck + 1 ! attempt to make this loop a little faster without assuming anything about the order of the words found
+               CYCLE
+            END IF
+         END DO
+      END DO
+      
+      ! check that the required columns are in the file:
+      DO i = 1,SIZE(Indx)
+         IF (Indx(i) < 1 .and. RequiredChanNames(i)) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg = TRIM(AvailableChanNames(i))//" , a required input, was not found in the line."
+            RETURN
+         END IF
+      END DO
+      
+   END SUBROUTINE GetInputColumnIndex
 !=======================================================================
 !> This routine converts an ASCII array of integers into an equivalent string
 !! (character array). This routine is the inverse of the Str2IntAry() (nwtc_io::str2intary) routine.
@@ -2868,7 +2926,7 @@ END SUBROUTINE CheckR8Var
    END SUBROUTINE ParseChAry
 !=======================================================================
 !> This subroutine parses a comment line
-   SUBROUTINE ParseCom ( FileInfo, LineNum, Var, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ParseCom ( FileInfo, LineNum, Var, ErrStat, ErrMsg, UnEc, IsLegalComment )
 
          ! Arguments declarations.
       INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       !< The error status.
@@ -2877,6 +2935,7 @@ END SUBROUTINE CheckR8Var
       CHARACTER(*),   INTENT(OUT)            :: Var                           !< The variable to receive the comment
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
       TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      !< The derived type for holding the file information.
+      LOGICAL, OPTIONAL,   INTENT(INOUT)     :: IsLegalComment                !< True if the comment is a "legal" comment line starting with '---' or '==='. NOTE: We have too many options, we need to be more strict!!!!
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseCom'
       
       ErrStat=ErrID_None
@@ -2903,6 +2962,21 @@ END SUBROUTINE CheckR8Var
          IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  trim(Var)
       END IF
       LineNum = LineNum + 1
+
+      IF (PRESENT(IsLegalComment) ) then
+         if (len(Var)<=3) then
+            IsLegalComment=.False.
+         else
+            ! Here, we are talking about comments in the input file that are "expected to be there"
+            IsLegalComment =  (Var(1:3)=='---') .or.  (Var(1:3)=='===')
+         endif
+         if (.not.IsLegalComment) then
+            call SetErrStat(ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The comment line did not start with `---` or `===`. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
+                   , ErrStat, ErrMsg, RoutineName )
+         endif
+      END IF
 
    END SUBROUTINE ParseCom
 
@@ -3872,7 +3946,7 @@ END SUBROUTINE CheckR8Var
       CALL Conv2UC( defaultStr )
       IF ( INDEX(defaultStr, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable
          LineNum = LineNum - 1  ! back up a line
-         CALL ParseVar ( FileInfo, LineNum, ExpVarName, Var, ErrStatLcl, ErrMsg2, UnEc )
+         CALL ParseVar ( FileInfo, LineNum, ExpVarName, Var, ErrStatLcl, ErrMsg2 )
             CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       ELSE
          Var = VarDefault  ! "DEFAULT" value
@@ -4010,7 +4084,9 @@ END SUBROUTINE CheckR8Var
          NullLoc = index(FileString(idx:len(FileString)),C_NULL_CHAR)
          ! started indexing at idx, so add that back in for location in FileString
          NullLoc = NullLoc + idx - 1
-         if (NullLoc > idx) then
+         if (NullLoc == idx) then   ! blank line
+            FileStringArray(Line) = ''
+         elseif (NullLoc > idx) then
             FileStringArray(Line) = trim(FileString(idx:NullLoc-1))
          else
             ! If not NULL terminated
@@ -4584,20 +4660,26 @@ END SUBROUTINE CheckR8Var
       ! Local declarations:
 
    INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+   CHARACTER(ErrMsgLen)         :: CommentInt                                      ! internal comment, if not returned from this subroutine
 
 
-
-
-   READ (UnIn,'(A)',IOSTAT=IOS)  Comment
+   IF (PRESENT(Comment)) THEN
+      READ (UnIn,'(A)',IOSTAT=IOS)  Comment
+   ELSE
+      READ (UnIn,'(A)',IOSTAT=IOS)  CommentInt
+   END IF
 
    CALL CheckIOS ( IOS, Fil, ComName, StrType, ErrStat, ErrMsg )
-
-
    IF (ErrStat >= AbortErrLev) RETURN
 
    IF ( PRESENT(UnEc) )  THEN
-      IF ( UnEc > 0 ) &
-         WRITE (UnEc,'(A)')  TRIM(Comment)
+      IF ( UnEc > 0 ) THEN
+         IF (PRESENT(Comment)) THEN
+            WRITE (UnEc,'(A)')  TRIM(Comment)
+         ELSE
+            WRITE (UnEc,'(A)')  TRIM(CommentInt)
+         END IF
+      END IF
    END IF
 
 
@@ -5723,15 +5805,17 @@ END SUBROUTINE CheckR8Var
 
       IF ( AryLenRead > MaxAryLen )  THEN
 
-         ErrStat = ErrID_Fatal
+         ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
-         RETURN
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
+!         RETURN ! finish reading the file instead of returning first
 
       ELSE
 
          CALL GetWords ( OutLine, CharAry((AryLenRead - NumWords + 1):AryLenRead), NumWords )
 
       END IF
+
 
    END DO
 
@@ -5761,10 +5845,11 @@ END SUBROUTINE CheckR8Var
 
    INTEGER                          :: MaxAryLen                                   ! Maximum length of the array being read
    INTEGER                          :: NumWords                                    ! Number of words contained on a line
+   INTEGER                          :: ErrStat2
 
-   INTEGER                          :: QuoteCh                                     ! Character position.
+!   INTEGER                          :: QuoteCh                                     ! Character position.
 
-   CHARACTER(1000)                  :: OutLine                                     ! Character string read from file, containing output list
+   CHARACTER(MaxFileInfoLineLen)    :: OutLine                                     ! Character string read from file, containing output list
    CHARACTER(3)                     :: EndOfFile
 
 
@@ -5786,21 +5871,27 @@ END SUBROUTINE CheckR8Var
       IF ( PRESENT(UnEc) )  THEN
          if (UnEc > 0) WRITE(UnEc, '(A)')  trim(FileInfo%Lines(LineNum))
       ENDIF
-      OutLine = adjustl(trim(FileInfo%Lines(LineNum)))   ! remove leading whitespace
+      
+!      OutLine = adjustl(trim(FileInfo%Lines(LineNum)))   ! remove leading whitespace
+      READ (FileInfo%Lines(LineNum),*,IOSTAT=ErrStat2)  OutLine ! read first output channel name, or remove quotes on list of outputs so that this behaves like ReadOutputList
+      IF (ErrStat2 /= 0) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error reading from OutList. Line # '//trim(num2lstr(LineNum))//': "'//trim(FileInfo%Lines(LineNum))//'".'
+         RETURN
+      END IF
+
+      !IF ( PRESENT(UnEc) )  THEN
+      !   IF ( UnEc > 0 ) WRITE (UnEc,Ec_StrFrmt)  OutLine, "List of user-requested output channels", '"OutList"'
+      !END IF      
+      
+      LineNum = LineNum + 1
+      
 
       EndOfFile = OutLine(1:3)            ! EndOfFile is the 1st 3 characters of OutLine
       CALL Conv2UC( EndOfFile )           ! Convert EndOfFile to upper case
       IF ( EndOfFile == 'END' ) THEN
-         LineNum = LineNum + 1
          EXIT     ! End of OutList has been reached; therefore, exit this DO
       ENDIF
-
-      ! Check if we have a quoted string at the begining.  Ignore anything outside the quotes if so (this is the ReadVar behaviour for quoted strings).
-      if (SCAN(OutLine(1:1), '''"' ) == 1_IntKi ) then
-         QuoteCh = SCAN( OutLine(2:), '''"' )            ! last quote
-         if (QuoteCh < 1)  QuoteCh = LEN_TRIM(OutLine)   ! in case no end quote
-         OutLine(QuoteCh+2:) = ' '    ! blank out everything after last quote
-      endif
 
       NumWords = CountWords( OutLine )    ! The number of words in OutLine.
 
@@ -5810,9 +5901,10 @@ END SUBROUTINE CheckR8Var
 
       IF ( AryLenRead > MaxAryLen )  THEN
 
-         ErrStat = ErrID_Fatal
+         ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
-         RETURN
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
+!        RETURN ! finish processing the OutList variable before returning
 
       ELSE
 
@@ -5820,7 +5912,6 @@ END SUBROUTINE CheckR8Var
 
       END IF
 
-      LineNum = LineNum+1
 
       if (LineNum > FileInfo%NumLines) exit  ! Don't overrun end of file in case no END found
 
@@ -6018,6 +6109,138 @@ END SUBROUTINE CheckR8Var
    END IF
    RETURN
    END SUBROUTINE ReadR8AryFromStr
+
+!=======================================================================
+!> This routine reads a AryLen values separated by whitespace (or other Fortran record delimiters such as commas) 
+!!  into an array (either on same line or multiple lines), or sets default values.
+!! Use ReadAryWDefault (nwtc_io::readarywdefault) instead of directly calling a specific routine in the generic interface.   
+subroutine ReadR4AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDefault, ErrStat, ErrMsg, UnEc )
+   ! This routine reads a AryLen values into a 4-byte real array separated by white space, or sets to default
+   integer,       intent(in   )           :: UnIn                 ! I/O unit for input file.
+   character(*),  intent(in   )           :: Fil                  ! Name of the input file.
+   integer,       intent(in   )           :: AryLen               ! Length of the array.
+   real(R4Ki),    intent(inout)           :: Ary(AryLen)          ! Real array being read.
+   character(*),  intent(in   )           :: AryName              ! Text string containing the variable name.
+   character(*),  intent(in   )           :: AryDescr             ! Text string describing the variable.
+   real(R4Ki),    intent(in   )           :: AryDefault(AryLen)   ! Default value for variable being read
+   integer,       intent(  out)           :: ErrStat              ! Error status
+   character(*),  intent(  out)           :: ErrMsg               ! Error message
+   integer,       intent(in   ), optional :: UnEc                 ! I/O unit for echo file. If present and > 0, write to UnEc
+
+   integer                                :: Ind                  ! Index into the string array.  Assumed to be one digit.
+   integer                                :: IOS                  ! I/O status returned from the read statement.
+   character(30)                          :: Word(AryLen)         ! String to hold the words on the line.
+   character(2048)                        :: Line                 ! The contents of a line returned from ReadLine() with comment removed.
+   integer                                :: LineLen              ! Length of line read in
+
+   call ReadLine( UnIn, CommChars, Line, LineLen, IOS )           ! Reads a line.  Returns what is before the first comment character.
+   call CheckIOS( IOS, Fil, trim(AryName), StrType, ErrStat, ErrMsg )   ! Assume `default` is most likely
+      if (ErrStat >= AbortErrLev) return
+
+   ! check for default
+   call GetWords(Line, Word(1), 1)
+   call Conv2UC( Word(1) )
+
+   if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
+
+      ! Values exist, so reread line into AryLen of words
+      call GetWords( Line, Word(AryLen), AryLen)
+
+      ! read the first AryLen numbers from the line
+      read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+      ! Check if there was an error
+      call CheckIOS ( IOS, Fil, trim( AryName ), NumType, ErrStat, ErrMsg )
+      if (ErrStat >= AbortErrLev) return
+      
+      do Ind=1,AryLen
+         call CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+            if (ErrStat >= AbortErrLev) return
+      end do
+
+      if ( present(UnEc) )  then
+         if ( UnEc > 0 ) then
+            write(UnEc, Ec_ReAryFrmt)  trim(AryName), AryDescr, Ary(1:min(AryLen,NWTC_MaxAryLen))
+         end if
+      end if
+
+   else
+      ! Set default
+      Ary = AryDefault
+      if ( present(UnEc) )  then
+         if ( UnEc > 0 ) then
+            write(UnEc, Ec_ReAryFrmt)  trim(AryName), trim(AryDescr)//' (set to default)', Ary(1:min(AryLen,NWTC_MaxAryLen))
+         endif
+      endif
+   endif
+
+   return
+end subroutine ReadR4AryWDefault
+!=======================================================================
+!> \copydoc nwtc_io::readr4arywdefault   
+subroutine ReadR8AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDefault, ErrStat, ErrMsg, UnEc )
+   ! This routine reads a AryLen values into a 8-byte real array separated by white space, or sets to default
+   integer,       intent(in   )           :: UnIn                 ! I/O unit for input file.
+   character(*),  intent(in   )           :: Fil                  ! Name of the input file.
+   integer,       intent(in   )           :: AryLen               ! Length of the array.
+   real(R8Ki),    intent(inout)           :: Ary(AryLen)          ! Real array being read.
+   character(*),  intent(in   )           :: AryDescr             ! Text string describing the variable.
+   character(*),  intent(in   )           :: AryName              ! Text string containing the variable name.
+   real(R8Ki),    intent(in   )           :: AryDefault(AryLen)   ! Default value for variable being read
+   integer,       intent(  out)           :: ErrStat              ! Error status
+   character(*),  intent(  out)           :: ErrMsg               ! Error message
+   integer,       intent(in   ), optional :: UnEc                 ! I/O unit for echo file. If present and > 0, write to UnEc
+
+   integer                                :: Ind                  ! Index into the string array.  Assumed to be one digit.
+   integer                                :: IOS                  ! I/O status returned from the read statement.
+   character(30)                          :: Word(AryLen)         ! String to hold the words on the line.
+   character(2048)                        :: Line                 ! The contents of a line returned from ReadLine() with comment removed.
+   integer                                :: LineLen              ! Length of line read in
+
+   call ReadLine( UnIn, CommChars, Line, LineLen, IOS )           ! Reads a line.  Returns what is before the first comment character.
+   call CheckIOS( IOS, Fil, trim(AryName), StrType, ErrStat, ErrMsg )   ! Assume `default` is most likely
+      if (ErrStat >= AbortErrLev) return
+
+   ! check for default
+   call GetWords(Line, Word(1), 1)
+   call Conv2UC( Word(1) )
+
+   if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
+
+      ! Values exist, so reread line into AryLen of words
+      call GetWords( Line, Word(AryLen), AryLen)
+
+      ! read the first AryLen numbers from the line
+      read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+      ! Check if there was an error
+      call CheckIOS ( IOS, Fil, trim( AryName ), NumType, ErrStat, ErrMsg )
+      if (ErrStat >= AbortErrLev) return
+      
+      do Ind=1,AryLen
+         call CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+            if (ErrStat >= AbortErrLev) return
+      end do
+
+      if ( present(UnEc) )  then
+         if ( UnEc > 0 ) then
+            write(UnEc, Ec_ReAryFrmt)  trim(AryName), AryDescr, Ary(1:min(AryLen,NWTC_MaxAryLen))
+         end if
+      end if
+
+   else
+      ! Set default
+      Ary = AryDefault
+      if ( present(UnEc) )  then
+         if ( UnEc > 0 ) then
+            write(UnEc, Ec_ReAryFrmt)  trim(AryName), trim(AryDescr)//' (set to default)', Ary(1:min(AryLen,NWTC_MaxAryLen))
+         endif
+      endif
+   endif
+
+   return
+end subroutine ReadR8AryWDefault
+
 !=======================================================================
 !> \copydoc nwtc_io::readcarylines   
    SUBROUTINE ReadR4AryLines ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
@@ -6145,7 +6368,6 @@ END SUBROUTINE CheckR8Var
 
    CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
-
 
    READ (Word,*,IOSTAT=IOS)  Var
 
@@ -6321,7 +6543,6 @@ END SUBROUTINE CheckR8Var
    CHARACTER( *), INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
    CHARACTER( *), INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
       ! Local declarations:
-   INTEGER                            :: IOS                                             ! I/O status returned from the read statement.
    CHARACTER(1024)                    :: sVar                                            ! String to hold the value of the variable
    ! Read full content of variable as one string, should it be "default", or an array
    CALL ReadVar (UnIn, Fil, sVar, VarName, VarDescr, ErrStat, ErrMsg, UnEc)
@@ -7703,5 +7924,91 @@ END SUBROUTINE CheckR8Var
    RETURN
    END SUBROUTINE WrScr1
 
+   !----------------------------------------------------------------------------------------------------------------------------------
+   !> Read a delimited file of float with one or multiple lines of header
+   !! TODO: put me in a CSV.f90 file of the NWTC library
+   !! TODO: automatic detection of number of columns for instance using ReadCAryFromStr
+   !!       See also the quick and dirty check introduced to read blade files that don't have Buoyancy columns
+   subroutine ReadDelimFile(Filename, nCol, array, errStat, errMsg, nHeaderLines, priPath)
+      character(len=*),                        intent(in)  :: Filename
+      integer(IntKi),                          intent(in)  :: nCol
+      real(ReKi), dimension(:,:), allocatable, intent(out) :: array
+      integer(IntKi)         ,                 intent(out) :: errStat ! Status of error message
+      character(*)           ,                 intent(out) :: errMsg  ! Error message if errStat /= ErrID_None
+      integer(IntKi), optional,                intent(in ) :: nHeaderLines
+      character(*)  , optional,                intent(in ) :: priPath  ! Primary path, to use if filename is not absolute
+      integer(IntKi)       :: UnIn, i, j, nLine, nHead
+      character(len= 2048) :: line
+      integer(IntKi)       :: errStat2      ! local status of error message
+      character(ErrMsgLen) :: errMsg2       ! temporary Error message
+      character(len=2048) :: Filename_Loc   ! filename local to this function
+      errStat = ErrID_None
+      errMsg  = ""
+
+      Filename_Loc = Filename
+      if (present(priPath)) then
+         if (PathIsRelative(Filename_Loc)) Filename_Loc = trim(PriPath)//trim(Filename)
+      endif
+
+      ! Open file
+      call GetNewUnit(UnIn) 
+      call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); if(Failed()) return 
+      ! Count number of lines
+      nLine = line_count(UnIn, errStat2, errMsg2); if(Failed()) return
+      if (allocated(array)) deallocate(array)
+      allocate(array(nLine-1, nCol), stat=errStat2); errMsg2='allocation failed'; if(Failed())return
+      ! Read header
+      nHead=1
+      if (present(nHeaderLines)) nHead = nHeaderLines
+      do i=1,nHead
+         read(UnIn, *, IOSTAT=errStat2) line
+         errMsg2 = ' Error reading line '//trim(Num2LStr(1))//' of file: '//trim(Filename_Loc)
+         if(Failed()) return
+      enddo
+      ! Read data
+      do i = 1,nLine-1
+         read (UnIn,*,IOSTAT=errStat2) (array(i,j), j=1,nCol)
+         errMsg2 = ' Error reading line '//trim(Num2LStr(i+1))//' of file: '//trim(Filename_Loc)
+         if(Failed()) return
+      end do  
+      close(UnIn) 
+   contains
+      logical function Failed()
+         CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ReadDelimFile' )
+         Failed = errStat >= AbortErrLev
+         if (Failed) then
+            if ((UnIn)>0) close(UnIn)
+         endif
+      end function Failed
+   end subroutine ReadDelimFile
+
+   !----------------------------------------------------------------------------------------------------------------------------------
+   !> Counts number of lines in a file, do not count last line if empty
+   integer function line_count(iUnit, errStat, errMsg)
+      integer(IntKi), intent(in) :: iUnit
+      integer(IntKi), intent(out) :: errStat ! Error status
+      character(*),   intent(out) :: errMsg  ! Error message associated with ErrStat
+      character(len=2048) :: line
+      integer, parameter :: nline_max=100000000 ! 100 M safety for infinite loop..
+      integer :: i
+      errStat = ErrID_None
+      errMsg  = ''
+      line_count=0
+      do i=1,nline_max 
+         line=''
+         read(iUnit,'(A)',END=100)line
+         line_count=line_count+1
+      enddo
+      if (line_count==nline_max) then
+         errStat = ErrID_Fatal
+         errMsg = 'Error: maximum number of line exceeded for line_count'
+         return
+      endif
+   100 if(len(trim(line))>0) then
+         line_count=line_count+1
+      endif
+      rewind(iUnit)
+      return
+   end function line_count
       
 END MODULE NWTC_IO

@@ -54,8 +54,6 @@ CONTAINS
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.   
 SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    TYPE(FWrap_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(FWrap_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
    TYPE(FWrap_ParameterType),       INTENT(  OUT)  :: p           !< Parameters
@@ -76,7 +74,6 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-      ! local variables
    TYPE(FAST_ExternInitType)                       :: ExternInitData 
    INTEGER(IntKi)                                  :: j,k,nb      
    
@@ -86,137 +83,109 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
    
       ! Initialize variables
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
-      ! Initialize the NWTC Subroutine Library
-
-   !call NWTC_Init( )
    
       ! Display the module information
-
    if (InitInp%TurbNum == 1) call DispNVD( FWrap_Ver )
    InitOut%Ver = FWrap_Ver
 
-
       ! Define initial system states here:
-
    x%Dummy          = 0.0_ReKi
    xd%Dummy         = 0.0_ReKi
    z%Dummy          = 0.0_ReKi
    OtherState%Dummy = 0.0_ReKi
 
 
-      ! Define initial guess for the system inputs here:
+   !.................
+   ! Initialize an instance of FAST
+   !................
+   
+      !.... Lidar data (unused) ....
+   ExternInitData%Tmax = InitInp%TMax
 
    
-      !.................
-      ! Initialize an instance of FAST
-      !................
+      !.... supercontroller ....
+   if ( InitInp%UseSC ) then
+      ExternInitData%NumSC2Ctrl     = InitInp%NumSC2Ctrl     ! "number of controller inputs [from supercontroller]"
+      ExternInitData%NumCtrl2SC     = InitInp%NumCtrl2SC     ! "number of controller outputs [to supercontroller]"
+      ExternInitData%NumSC2CtrlGlob = InitInp%NumSC2CtrlGlob ! "number of global controller inputs [from supercontroller]"
+      call AllocAry(ExternInitData%fromSCGlob, InitInp%NumSC2CtrlGlob, 'ExternInitData%InitScOutputsGlob (global inputs to turbine controller from supercontroller)',       ErrStat2, ErrMsg2);   if (Failed()) return;
+      call AllocAry(ExternInitData%fromSC, InitInp%NumSC2Ctrl, ' ExternInitData%InitScOutputsTurbine (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2);   if (Failed()) return;
+      ExternInitData%fromSCGlob = InitInp%fromSCGlob
+      ExternInitData%fromSC =  InitInp%fromSC
+      call AllocAry(u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2);   if (Failed()) return;
+      call AllocAry(u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC (turbine-related inputs for turbine controller from supercontroller)',   ErrStat2, ErrMsg2);   if (Failed()) return;
+   else
+      
+      ExternInitData%NumSC2Ctrl     = 0 ! "number of controller inputs [from supercontroller]"
+      ExternInitData%NumCtrl2SC     = 0 ! "number of controller outputs [to supercontroller]"
+      ExternInitData%NumSC2CtrlGlob = 0 ! "number of global controller inputs [from supercontroller]"
    
-         !.... Lidar data (unused) ....
-      ExternInitData%Tmax = InitInp%TMax
+   end if
+      !.... multi-turbine options ....
+   ExternInitData%TurbIDforName = InitInp%TurbNum
+   ExternInitData%TurbinePos = InitInp%p_ref_Turbine
+   ExternInitData%WaveFieldMod = InitInp%WaveFieldMod
+   
+   ExternInitData%FarmIntegration = .true.
+   ExternInitData%RootName = InitInp%RootName
+         
+      !.... 4D-wind data ....
+   ExternInitData%windGrid_n(1) = InitInp%nX_high
+   ExternInitData%windGrid_n(2) = InitInp%nY_high
+   ExternInitData%windGrid_n(3) = InitInp%nZ_high
+   ExternInitData%windGrid_n(4) = InitInp%n_high_low
+   
+   ExternInitData%windGrid_delta(1) = InitInp%dX_high
+   ExternInitData%windGrid_delta(2) = InitInp%dY_high
+   ExternInitData%windGrid_delta(3) = InitInp%dZ_high
+   ExternInitData%windGrid_delta(4) = InitInp%dt_high
+   
+   ExternInitData%windGrid_pZero = InitInp%p_ref_high - InitInp%p_ref_Turbine
+   ExternInitData%windGrid_data => InitInp%Vdist_High
 
-      
-         !.... supercontroller ....
-      if ( InitInp%UseSC ) then
-         ExternInitData%NumSC2Ctrl     = InitInp%NumSC2Ctrl     ! "number of controller inputs [from supercontroller]"
-         ExternInitData%NumCtrl2SC     = InitInp%NumCtrl2SC     ! "number of controller outputs [to supercontroller]"
-         ExternInitData%NumSC2CtrlGlob = InitInp%NumSC2CtrlGlob ! "number of global controller inputs [from supercontroller]"
-         call AllocAry(ExternInitData%fromSCGlob, InitInp%NumSC2CtrlGlob, 'ExternInitData%InitScOutputsGlob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call AllocAry(ExternInitData%fromSC, InitInp%NumSC2Ctrl, ' ExternInitData%InitScOutputsTurbine (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ExternInitData%fromSCGlob = InitInp%fromSCGlob
-         ExternInitData%fromSC =  InitInp%fromSC
-         call AllocAry(u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call AllocAry(u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      else
-         
-         ExternInitData%NumSC2Ctrl     = 0 ! "number of controller inputs [from supercontroller]"
-         ExternInitData%NumCtrl2SC     = 0 ! "number of controller outputs [to supercontroller]"
-         ExternInitData%NumSC2CtrlGlob = 0 ! "number of global controller inputs [from supercontroller]"
-      
-      end if
-         !.... multi-turbine options ....
-      ExternInitData%TurbIDforName = InitInp%TurbNum
-      ExternInitData%TurbinePos = InitInp%p_ref_Turbine
-      ExternInitData%WaveFieldMod = InitInp%WaveFieldMod
-      
-      ExternInitData%FarmIntegration = .true.
-      ExternInitData%RootName = InitInp%RootName
-            
-         !.... 4D-wind data ....
-      ExternInitData%windGrid_n(1) = InitInp%nX_high
-      ExternInitData%windGrid_n(2) = InitInp%nY_high
-      ExternInitData%windGrid_n(3) = InitInp%nZ_high
-      ExternInitData%windGrid_n(4) = InitInp%n_high_low
-      
-      ExternInitData%windGrid_delta(1) = InitInp%dX_high
-      ExternInitData%windGrid_delta(2) = InitInp%dY_high
-      ExternInitData%windGrid_delta(3) = InitInp%dZ_high
-      ExternInitData%windGrid_delta(4) = InitInp%dt_high
-      
-      ExternInitData%windGrid_pZero = InitInp%p_ref_high - InitInp%p_ref_Turbine
-            
-      
-      CALL FAST_InitializeAll_T( t_initial, InitInp%TurbNum, m%Turbine, ErrStat2, ErrMsg2, InitInp%FASTInFile, ExternInitData ) 
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if (ErrStat >= AbortErrLev) then
-            call cleanup()
-            return
-         end if
-         
-      
-      !.................
-      ! Check that we've set up FAST properly:
-      !.................
-      if (m%Turbine%p_FAST%CompAero /= MODULE_AD) then
-         call SetErrStat(ErrID_Fatal,"AeroDyn (v15) must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
-         call cleanup()
-         return
-      end if
-      
-         ! move the misc var to the input variable...
-      if (m%Turbine%p_FAST%CompInflow /= MODULE_IfW) then
-         call SetErrStat(ErrID_Fatal,"InflowWind must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
-         call cleanup()
-         return
-      end if
-      
-      call move_alloc(m%Turbine%IfW%p%FlowField%Grid4D%Vel, u%Vdist_High)
-         
-      
-      !.................
-      ! Define parameters here:
-      !.................
 
-      call FWrap_SetParameters(InitInp, p, m%Turbine%p_FAST%dt, Interval, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if (ErrStat >= AbortErrLev) then
-            call cleanup()
-            return
-         end if
-         
-      !.................
-      ! Set outputs (allocate arrays and set miscVar meshes for computing other outputs):
-      !.................
-         
-      call AllocAry(y%AzimAvg_Ct, p%nr, 'y%AzimAvg_Ct (azimuth-averaged ct)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call AllocAry(y%AzimAvg_Cq, p%nr, 'y%AzimAvg_Cq (azimuth-averaged cq)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL FAST_InitializeAll_T( t_initial, InitInp%TurbNum, m%Turbine, ErrStat2, ErrMsg2, InitInp%FASTInFile, ExternInitData ) ;   if (Failed()) return;
+
+   !.................
+   ! Check that we've set up FAST properly:
+   !.................
+   if (m%Turbine%p_FAST%CompAero /= MODULE_AD .and. m%Turbine%p_FAST%CompAero /= MODULE_ADsk) then
+      call SetErrStat(ErrID_Fatal,"AeroDyn or AeroDisk must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
+      call cleanup()
+      return
+   end if
+   
+      ! move the misc var to the input variable...
+   if (m%Turbine%p_FAST%CompInflow /= MODULE_IfW) then
+      call SetErrStat(ErrID_Fatal,"InflowWind must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
+      call cleanup()
+      return
+   end if
+   
+   !.................
+   ! Define parameters here:
+   !.................
+
+   call FWrap_SetParameters(InitInp, p, m%Turbine%p_FAST%dt, Interval, ErrStat2, ErrMsg2);   if (Failed()) return;
       
-      if ( InitInp%UseSC ) then
-         call AllocAry(y%toSC, InitInp%NumCtrl2SC, 'y%toSC (turbine controller outputs to Super Controller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      end if
+   !.................
+   ! Set outputs (allocate arrays and set miscVar meshes for computing other outputs):
+   !.................
       
+   call AllocAry(y%AzimAvg_Ct, p%nr, 'y%AzimAvg_Ct (azimuth-averaged ct)', ErrStat2, ErrMsg2);   if (Failed()) return;
+   call AllocAry(y%AzimAvg_Cq, p%nr, 'y%AzimAvg_Cq (azimuth-averaged cq)', ErrStat2, ErrMsg2);   if (Failed()) return;
+   
+   if ( InitInp%UseSC ) then
+      call AllocAry(y%toSC, InitInp%NumCtrl2SC, 'y%toSC (turbine controller outputs to Super Controller)', ErrStat2, ErrMsg2);   if (Failed()) return;
+   end if
+   
+   if (m%Turbine%p_FAST%CompAero == MODULE_AD) then
       nb = size(m%Turbine%AD%y%rotors(1)%BladeLoad)
-      Allocate( m%ADRotorDisk(nb), m%TempDisp(nb), m%TempLoads(nb), m%AD_L2L(nb), STAT=ErrStat2 )
-      if (ErrStat2 /= 0) then
-         call SetErrStat(ErrID_Fatal,"Error allocating space for ADRotorDisk meshes.",ErrStat,ErrMsg,RoutineName)
-         call cleanup()
-         return
-      end if
-      
+      allocate( m%ADRotorDisk(nb), m%TempDisp(nb), m%TempLoads(nb), m%AD_L2L(nb), STAT=ErrStat2 ); if (Failed0("ADRotorDisk meshes.")) return;
+   
       do k=1,nb
          
          call meshCopy(  SrcMesh         = m%Turbine%AD%y%rotors(1)%BladeLoad(k) &
@@ -226,7 +195,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                        , TranslationDisp = .TRUE.                &  ! set automatically to 0
                        , ErrStat         = ErrStat2              &
                        , ErrMess         = ErrMsg2               )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (Failed()) return;
        
          call meshCopy(  SrcMesh         = m%TempDisp(k)         &
                        , DestMesh        = m%TempLoads(k)        & 
@@ -235,7 +204,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                        , Moment          = .true.                &
                        , ErrStat         = ErrStat2              &
                        , ErrMess         = ErrMsg2               )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (Failed()) return;
                         
             
          call MeshCreate ( BlankMesh         = m%ADRotorDisk(k) &
@@ -248,9 +217,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                           ,TranslationDisp   = .true.           & ! only for loads transfer
                           ,Orientation       = .true.           & ! only for loads transfer
                          )
-               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-            if (errStat >= AbortErrLev) exit
+            if (Failed()) return;
             
             ! set node initial position/orientation
          ! shortcut for 
@@ -260,32 +227,39 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          
             ! create line2 elements
          do j=1,p%nr-1
-            call MeshConstructElement( m%ADRotorDisk(k), ELEMENT_LINE2, errStat2, errMsg2, p1=j, p2=j+1 )
-               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            call MeshConstructElement( m%ADRotorDisk(k), ELEMENT_LINE2, errStat2, errMsg2, p1=j, p2=j+1 );   if (Failed()) return;
          end do !j
             
-         call MeshCommit(m%ADRotorDisk(k), errStat2, errMsg2 )
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            if (errStat >= AbortErrLev) exit
+         call MeshCommit(m%ADRotorDisk(k), errStat2, errMsg2 );   if (Failed()) return;
             
-         call MeshMapCreate(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2) ! this is going to transfer the motions as well as the loads, which is overkill
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         call MeshMapCreate(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2);   if (Failed()) return; ! this is going to transfer the motions as well as the loads, which is overkill
       end do
-      
-      !................
-      ! also need to set the WrOutput channels...
-      !................
-      
-      
-      call cleanup()
+   endif
+   
+   
+   call cleanup()
       
 contains
    subroutine cleanup()
-   
       call FAST_DestroyExternInitType(ExternInitData,ErrStat2,ErrMsg2) ! this doesn't actually do anything unless we add allocatable data later
-      
    end subroutine cleanup
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      Failed = errStat >= AbortErrLev
+      if (Failed) call cleanup()
+   end function Failed
 
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate memory for "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
 END SUBROUTINE FWrap_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 ! this routine sets the parameters for the FAST Wrapper module. It does not set p%n_FAST_low because we need to initialize FAST first.
@@ -347,8 +321,6 @@ end subroutine FWrap_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE FWrap_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    TYPE(FWrap_InputType),           INTENT(INOUT)  :: u           !< System inputs
    TYPE(FWrap_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
    TYPE(FWrap_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
@@ -360,60 +332,40 @@ SUBROUTINE FWrap_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-      ! local variables
    INTEGER(IntKi)                                  :: ErrStat2    ! local error status
    CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! local error message
    CHARACTER(*), PARAMETER                         :: RoutineName = 'FWrap_End'
 
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-
       !! Place any last minute operations or calculations here:
-
    CALL ExitThisProgram_T( m%Turbine, ErrID_None, .false. )   
 
-      !! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
-
-
       !! Destroy the input data:
-
-   call FWrap_DestroyInput( u, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+   call FWrap_DestroyInput( u, ErrStat2, ErrMsg2 );              call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       !! Destroy the parameter data:
-
-   call FWrap_DestroyParam( p, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call FWrap_DestroyParam( p, ErrStat2, ErrMsg2 );              call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       !! Destroy the state data:
-
    call FWrap_DestroyContState(   x,          ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call FWrap_DestroyDiscState(   xd,         ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call FWrap_DestroyConstrState( z,          ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call FWrap_DestroyOtherState(  OtherState, ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-
       !! Destroy the output data:
-
-   call FWrap_DestroyOutput( y, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+   call FWrap_DestroyOutput( y, ErrStat2, ErrMsg2 );             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
       !! Destroy the misc data:
-
-   call FWrap_DestroyMisc( m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+   call FWrap_DestroyMisc( m, ErrStat2, ErrMsg2 );               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 END SUBROUTINE FWrap_End
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine updates states and outputs to n+1 based on inputs and states at n (this has an inherent time-step delay on outputs).
 !! The routine uses subcycles because FAST typically has a smaller time step than FAST.Farm.
 SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    REAL(DbKi),                       INTENT(IN   ) :: t               !< Current simulation time in seconds (no longer used, since inputs are set elsewhere)
    INTEGER(IntKi),                   INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
    TYPE(FWrap_InputType),            INTENT(INOUT) :: u               !< Inputs at t (not changed, but possibly copied)
@@ -471,13 +423,10 @@ SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       
    !END IF
 
-
 END SUBROUTINE FWrap_Increment
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates outputs at n=0 based on inputs at n=0.
 SUBROUTINE FWrap_t0( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    TYPE(FWrap_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
    TYPE(FWrap_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(FWrap_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
@@ -495,22 +444,21 @@ SUBROUTINE FWrap_t0( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER                         :: RoutineName = 'FWrap_t0'
 
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
-
 
       ! set the inputs needed for FAST:
    call FWrap_SetInputs(u, m, 0.0_DbKi)
       
       ! compute the FAST t0 solution:
-   call FAST_Solution0_T(m%Turbine, ErrStat2, ErrMsg2 ) 
+   call FAST_Solution0_T(m%Turbine, ErrStat2, ErrMsg2 )
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return;
       
       ! set the outputs for FAST.Farm:
    call FWrap_CalcOutput(p, u, y, m, ErrStat2, ErrMsg2)
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+      if (ErrStat >= AbortErrLev) return;
    
 END SUBROUTINE FWrap_t0
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -551,157 +499,208 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    integer, parameter                              :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    
       ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-      ! put this back!
-   call move_alloc(m%Turbine%IfW%p%FlowField%Grid4D%Vel, u%Vdist_High)
-   
-   
    ! Turbine-dependent commands to the super controller:
    if (m%Turbine%p_FAST%UseSC) then
       y%toSC = m%Turbine%SC_DX%u%toSC
    end if
    
    
-   ! ....... outputs from AeroDyn v15 ............
-   
-   ! note that anything that uses m%Turbine%AD%Input(1) assumes we have not updated these inputs after calling AD_CalcOutput in FAST.
-   
-   ! Orientation of rotor centerline, normal to disk:
-   y%xHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(1,:,1) !actually also x_hat_disk and x_hat_hub
-   
-   
-   ! Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind 
-   ! velocity (ambients + deficits + motion), both projected onto the horizontal plane, rad
-   
-      ! if the orientation of the rotor centerline or rotor-disk-averaged relative wind speed is directed vertically upward or downward (+/-Z^)
-      ! the nacelle-yaw error is undefined
-   if ( EqualRealNos(m%Turbine%AD%m%rotors(1)%V_DiskAvg(1), 0.0_ReKi) .and. EqualRealNos(m%Turbine%AD%m%rotors(1)%V_DiskAvg(2), 0.0_ReKi) ) then
-      call SetErrStat(ErrID_Fatal,"Nacelle-yaw error is undefined because the rotor-disk-averaged relative wind speed "// &
-                        "is directed vertically", ErrStat,ErrMsg,RoutineName) 
-   elseif ( EqualRealNos(y%xHat_Disk(1), 0.0_ReKi) .and. EqualRealNos(y%xHat_Disk(2), 0.0_ReKi) ) then
-      call SetErrStat(ErrID_Fatal,"Nacelle-yaw error is undefined because the rotor centerline "// &
-                        "is directed vertically", ErrStat,ErrMsg,RoutineName) 
-   else
-      vy = m%Turbine%AD%m%rotors(1)%V_DiskAvg(2) * y%xHat_Disk(1) - m%Turbine%AD%m%rotors(1)%V_DiskAvg(1) * y%xHat_Disk(2) 
-      vx = m%Turbine%AD%m%rotors(1)%V_DiskAvg(1) * y%xHat_Disk(1) + m%Turbine%AD%m%rotors(1)%V_DiskAvg(2) * y%xHat_Disk(2) 
+   if (m%Turbine%p_FAST%CompAero == MODULE_AD) then
+      ! ....... outputs from AeroDyn v15 ............
       
-      y%YawErr = atan2(vy, vx)
-   end if
-   
+      ! note that anything that uses m%Turbine%AD%Input(1) assumes we have not updated these inputs after calling AD_CalcOutput in FAST.
       
-   ! Center position of hub, m
-   p0 = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Position(:,1) + m%Turbine%AD%Input(1)%rotors(1)%HubMotion%TranslationDisp(:,1) 
-   y%p_hub = p%p_ref_Turbine + p0     
-   
-   ! Rotor diameter, m
-   y%D_rotor = 2.0_ReKi * maxval(m%Turbine%AD%m%rotors(1)%BEMT_u(indx)%rLocal) ! BEMT_u(indx) is calculated on inputs that were passed INTO AD_CalcOutput; Input(1) is calculated from values passed out of ED_CalcOutput AFTER AD_CalcOutput
-
-   if ( y%D_rotor > p%r(p%nr) ) then
-      call SetErrStat(ErrID_Fatal,"The radius of the wake planes is not large relative to the rotor diameter.", ErrStat,ErrMsg,RoutineName) 
-   end if
-   
-   ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
-   y%DiskAvg_Vx_Rel = m%Turbine%AD%m%rotors(1)%V_dot_x
-
-   ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially      
-   theta = 0.0_ReKi
-   do k=1,size(m%ADRotorDisk) ! loop on blades
+      ! Orientation of rotor centerline, normal to disk:
+      y%xHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(1,:,1) !actually also x_hat_disk and x_hat_hub
+      
+      
+      ! Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind 
+      ! velocity (ambients + deficits + motion), both projected onto the horizontal plane, rad
+      
+         ! if the orientation of the rotor centerline or rotor-disk-averaged relative wind speed is directed vertically upward or downward (+/-Z^)
+         ! the nacelle-yaw error is undefined
+      if ( EqualRealNos(m%Turbine%AD%m%rotors(1)%V_DiskAvg(1), 0.0_ReKi) .and. EqualRealNos(m%Turbine%AD%m%rotors(1)%V_DiskAvg(2), 0.0_ReKi) ) then
+         call SetErrStat(ErrID_Fatal,"Nacelle-yaw error is undefined because the rotor-disk-averaged relative wind speed "// &
+                           "is directed vertically", ErrStat,ErrMsg,RoutineName) 
+      elseif ( EqualRealNos(y%xHat_Disk(1), 0.0_ReKi) .and. EqualRealNos(y%xHat_Disk(2), 0.0_ReKi) ) then
+         call SetErrStat(ErrID_Fatal,"Nacelle-yaw error is undefined because the rotor centerline "// &
+                           "is directed vertically", ErrStat,ErrMsg,RoutineName) 
+      else
+         vy = m%Turbine%AD%m%rotors(1)%V_DiskAvg(2) * y%xHat_Disk(1) - m%Turbine%AD%m%rotors(1)%V_DiskAvg(1) * y%xHat_Disk(2) 
+         vx = m%Turbine%AD%m%rotors(1)%V_DiskAvg(1) * y%xHat_Disk(1) + m%Turbine%AD%m%rotors(1)%V_DiskAvg(2) * y%xHat_Disk(2) 
+         
+         y%YawErr = atan2(vy, vx)
+      end if
+      
+      
+      ! Center position of hub, m
+      p0 = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Position(:,1) + m%Turbine%AD%Input(1)%rotors(1)%HubMotion%TranslationDisp(:,1) 
+      y%p_hub = p%p_ref_Turbine + p0     
+      
+      ! Rotor diameter, m
+      y%D_rotor = 2.0_ReKi * maxval(m%Turbine%AD%m%rotors(1)%BEMT_u(indx)%rLocal) ! BEMT_u(indx) is calculated on inputs that were passed INTO AD_CalcOutput; Input(1) is calculated from values passed out of ED_CalcOutput AFTER AD_CalcOutput
+ 
+      if ( y%D_rotor > p%r(p%nr) ) then
+         call SetErrStat(ErrID_Fatal,"The radius of the wake planes is not large relative to the rotor diameter.", ErrStat,ErrMsg,RoutineName) 
+      end if
+      
+      ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
+      y%DiskAvg_Vx_Rel = m%Turbine%AD%m%rotors(1)%V_dot_x
+ 
+      ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially      
+      theta = 0.0_ReKi
+      do k=1,size(m%ADRotorDisk) ! loop on blades
+               
+         m%TempDisp(k)%RefOrientation = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Orientation      
+         m%TempDisp(k)%Position       = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Position + m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationDisp     
+        !m%TempDisp(k)%TranslationDisp = 0.0_R8Ki
+         m%TempLoads(k)%Force         = m%Turbine%AD%y%rotors(1)%BladeLoad(k)%Force
+         m%TempLoads(k)%Moment        = m%Turbine%AD%y%rotors(1)%BladeLoad(k)%Moment
+         
+         theta(1) = m%Turbine%AD%m%rotors(1)%hub_theta_x_root(k)
+         orientation = EulerConstruct( theta )
+         m%ADRotorDisk(k)%RefOrientation(:,:,1) = matmul(orientation, m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(:,:,1) )
+         do j=1,p%nr
+            m%ADRotorDisk(k)%RefOrientation(:,:,j) = m%ADRotorDisk(k)%RefOrientation(:,:,1)
+            m%ADRotorDisk(k)%Position(:,j) = p0 + p%r(j)*m%ADRotorDisk(k)%RefOrientation(3,:,1)
+         end do
+        !m%ADRotorDisk(k)%TranslationDisp = 0.0_ReKi
+         m%ADRotorDisk(k)%RemapFlag = .true.
+      
+         call transfer_line2_to_line2(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2, m%TempDisp(k), m%ADRotorDisk(k))
+            call setErrStat(ErrStat2,ErrMsg2,ErrStat2,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end do
+         
+      ! --- Ct and Cq on polar grid (goes beyond rotor radius)
+      if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
+         y%AzimAvg_Ct = 0.0_ReKi
+         y%AzimAvg_Cq = 0.0_ReKi
+      else
+         y%AzimAvg_Ct(1) = 0.0_ReKi
+         y%AzimAvg_Cq(1) = 0.0_ReKi
+      
+         do j=2,p%nr
             
-      m%TempDisp(k)%RefOrientation = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Orientation      
-      m%TempDisp(k)%Position       = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Position + m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationDisp     
-     !m%TempDisp(k)%TranslationDisp = 0.0_R8Ki
-      m%TempLoads(k)%Force         = m%Turbine%AD%y%rotors(1)%BladeLoad(k)%Force
-      m%TempLoads(k)%Moment        = m%Turbine%AD%y%rotors(1)%BladeLoad(k)%Moment
-      
-      theta(1) = m%Turbine%AD%m%rotors(1)%hub_theta_x_root(k)
-      orientation = EulerConstruct( theta )
-      m%ADRotorDisk(k)%RefOrientation(:,:,1) = matmul(orientation, m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(:,:,1) )
-      do j=1,p%nr
-         m%ADRotorDisk(k)%RefOrientation(:,:,j) = m%ADRotorDisk(k)%RefOrientation(:,:,1)
-         m%ADRotorDisk(k)%Position(:,j) = p0 + p%r(j)*m%ADRotorDisk(k)%RefOrientation(3,:,1)
-      end do
-     !m%ADRotorDisk(k)%TranslationDisp = 0.0_ReKi
-      m%ADRotorDisk(k)%RemapFlag = .true.
-   
-      call transfer_line2_to_line2(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2, m%TempDisp(k), m%ADRotorDisk(k))
-         call setErrStat(ErrStat2,ErrMsg2,ErrStat2,ErrMsg,RoutineName)
-         if (ErrStat >= AbortErrLev) return
-   end do
-         
-   ! --- Ct and Cq on polar grid (goes beyond rotor radius)
-   if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
-      y%AzimAvg_Ct = 0.0_ReKi
-      y%AzimAvg_Cq = 0.0_ReKi
-   else
-      y%AzimAvg_Ct(1) = 0.0_ReKi
-      y%AzimAvg_Cq(1) = 0.0_ReKi
-      
-      do j=2,p%nr
-         
-         denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
-
-         ! Thrust coefficient
-         ! Ct(r)  = dT/dr / (1/2 rho pi r U_rel^2 ), with dT/dr = sum_iB dFn/dr
-         num = 0.0_ReKi
-         do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
-            num   =  num + dot_product( y%xHat_Disk, m%ADRotorDisk(k)%Force(:,j) )
+            denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
+       
+            ! Thrust coefficient
+            ! Ct(r)  = dT/dr / (1/2 rho pi r U_rel^2 ), with dT/dr = sum_iB dFn/dr
+            num = 0.0_ReKi
+            do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
+               num   =  num + dot_product( y%xHat_Disk, m%ADRotorDisk(k)%Force(:,j) )
+            end do
+            y%AzimAvg_Ct(j) = num / denom
+       
+            ! Torque coefficient 
+            ! Cq = dQ/dr / (1/2 rho pi r^2 U_rel^2)    dQ/dr =  sum_iB r dFt/dr
+            num = 0.0_ReKi
+            do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
+               num = num - p%r(j)*dot_product(m%ADRotorDisk(k)%RefOrientation(2,:,1), m%ADRotorDisk(k)%Force(:,j) ) + dot_product(y%xHat_Disk, m%ADRotorDisk(k)%Moment(:,j) )
+            end do
+            y%AzimAvg_Cq(j) = num / (denom * p%r(j) )
          end do
-         y%AzimAvg_Ct(j) = num / denom
-
-         ! Torque coefficient 
-         ! Cq = dQ/dr / (1/2 rho pi r^2 U_rel^2)    dQ/dr =  sum_iB r dFt/dr
-         num = 0.0_ReKi
-         do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
-            num = num - p%r(j)*dot_product(m%ADRotorDisk(k)%RefOrientation(2,:,1), m%ADRotorDisk(k)%Force(:,j) ) + dot_product(y%xHat_Disk, m%ADRotorDisk(k)%Moment(:,j) )
-         end do
-         y%AzimAvg_Cq(j) = num / (denom * p%r(j) )
-      end do
          
-   end if  
-      
-   ! --- Variables needed to orient wake planes in "skew" coordinate system
-   ! chi_skew and psi_skew
-   y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) ! AeroDyn_IO
+     end if
+            
+      ! --- Variables needed to orient wake planes in "skew" coordinate system
+      ! chi_skew and psi_skew
+      y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) ! AeroDyn_IO
 
-   ! TODO place me in an AeroDyn Function like Calc_Chi0
-   ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
-   yHat_plane(1:3) = (/ -y%xHat_Disk(2), y%xHat_Disk(1), 0.0_ReKi  /)
-   yHat_plane(1:3) = yHat_plane/TwoNorm(yHat_plane)
-   ! Construct z_hat
-   zHat_plane(1)   = -y%xHat_Disk(1)*y%xHat_Disk(3)
-   zHat_plane(2)   = -y%xHat_Disk(2)*y%xHat_Disk(3)
-   zHat_plane(3)   =  y%xHat_Disk(1)*y%xHat_Disk(1) + y%xHat_Disk(2)*y%xHat_Disk(2) 
-   zHat_plane(1:3) =  zHat_plane/TwoNorm(zHat_plane)
+      ! TODO place me in an AeroDyn Function like Calc_Chi0
+      ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
+      yHat_plane(1:3) = (/ -y%xHat_Disk(2), y%xHat_Disk(1), 0.0_ReKi  /)
+      yHat_plane(1:3) = yHat_plane/TwoNorm(yHat_plane)
+      ! Construct z_hat
+      zHat_plane(1)   = -y%xHat_Disk(1)*y%xHat_Disk(3)
+      zHat_plane(2)   = -y%xHat_Disk(2)*y%xHat_Disk(3)
+      zHat_plane(3)   =  y%xHat_Disk(1)*y%xHat_Disk(1) + y%xHat_Disk(2)*y%xHat_Disk(2)
+      zHat_plane(1:3) =  zHat_plane/TwoNorm(zHat_plane)
 
 !~    zHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(3,:,1) ! TODO TODO, shoudn't rotate
 
-   ! Skew system (y and z are in disk plane, x is normal to disk, y is in the cross-flow direction formed by the diskavg velocity)
-   xSkew = y%xHat_Disk 
-   ySkew = y%xHat_Disk - m%Turbine%AD%m%rotors(1)%V_diskAvg 
-   denom = TwoNorm(ySkew)
-   if (EqualRealNos(denom, 0.0_ReKi)) then
-      ! There is no skew
-      ySkew = yHat_plane
-      zSkew = zHat_plane
-   else
-      ySkew = ySkew / denom
-      zSkew(1) = xSkew(2) * ySkew(3) - xSkew(3) * ySkew(2)
-      zSkew(2) = xSkew(3) * ySkew(1) - xSkew(1) * ySkew(3)
-      zSkew(3) = xSkew(1) * ySkew(2) - xSkew(2) * ySkew(1)
-   endif
-   zHat_Disk = zSkew
+      ! Skew system (y and z are in disk plane, x is normal to disk, y is in the cross-flow direction formed by the diskavg velocity)
+      xSkew = y%xHat_Disk
+      ySkew = y%xHat_Disk - m%Turbine%AD%m%rotors(1)%V_diskAvg
+      denom = TwoNorm(ySkew)
+      if (EqualRealNos(denom, 0.0_ReKi)) then
+         ! There is no skew
+         ySkew = yHat_plane
+         zSkew = zHat_plane
+      else
+         ySkew = ySkew / denom
+         zSkew(1) = xSkew(2) * ySkew(3) - xSkew(3) * ySkew(2)
+         zSkew(2) = xSkew(3) * ySkew(1) - xSkew(1) * ySkew(3)
+         zSkew(3) = xSkew(1) * ySkew(2) - xSkew(2) * ySkew(1)
+      endif
+      zHat_Disk = zSkew
 
-   tmp_sz_y = -1.0_ReKi * dot_product(zHat_Disk,yHat_plane)
-   tmp_sz_z =             dot_product(zHat_Disk,zHat_plane)
-   if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
-      y%psi_skew = 0.0_ReKi
-   else
-      y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
-   end if
-  
+      tmp_sz_y = -1.0_ReKi * dot_product(zHat_Disk,yHat_plane)
+      tmp_sz_z =             dot_product(zHat_Disk,zHat_plane)
+      if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
+         y%psi_skew = 0.0_ReKi
+      else
+         y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
+      end if
+
+   elseif (m%Turbine%p_FAST%CompAero == MODULE_ADsk) then
+      ! ....... outputs from AeroDisk ...............
+      ! Orientation of rotor centerline, normal to disk:
+      y%xHat_Disk = m%Turbine%ADsk%Input(1)%HubMotion%Orientation(1,:,1) !actually also x_hat_disk and x_hat_hub
+
+      ! Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind
+      ! velocity (ambients + deficits + motion), both projected onto the horizontal plane, rad
+      ! if the orientation of the rotor centerline or rotor-disk-averaged relative wind speed is directed vertically upward or downward (+/-Z^)
+      ! the nacelle-yaw error is undefined (this is handled inside of AeroDisk)
+      y%YawErr = m%Turbine%ADsk%y%YawErr
+
+      ! Center position of hub, m
+      p0 = m%Turbine%ADsk%Input(1)%HubMotion%Position(:,1) + m%Turbine%ADsk%Input(1)%HubMotion%TranslationDisp(:,1)
+      y%p_hub = p%p_ref_Turbine + p0
+
+      ! Rotor diameter, m
+      y%D_rotor = 2.0_ReKi * m%Turbine%ADsk%p%RotorRad
+
+      if ( y%D_rotor > p%r(p%nr) ) then
+         call SetErrStat(ErrID_Fatal,"The radius of the wake planes is not large relative to the rotor diameter.", ErrStat,ErrMsg,RoutineName)
+      end if
+
+      ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
+      y%DiskAvg_Vx_Rel = m%Turbine%ADsk%y%VRel
+
+      ! Thrust coefficients
+      if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
+         y%AzimAvg_Ct = 0.0_ReKi
+      else
+         y%AzimAvg_Ct = 0.0_ReKi
+         do j=1,p%nr
+            if (p%r(j) <= m%Turbine%ADsk%p%RotorRad) then
+               y%AzimAvg_Ct(1:j) = m%Turbine%ADsk%y%Ct
+            endif
+         enddo
+      endif
+
+      ! Torque coefficients
+      if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
+         y%AzimAvg_Cq = 0.0_ReKi
+      else
+         y%AzimAvg_Cq(1) = 0.0_ReKi
+         do j=2,p%nr
+            if (p%r(j) <= m%Turbine%ADsk%p%RotorRad) then
+               y%AzimAvg_Cq(j) = m%Turbine%ADsk%y%Cq * m%Turbine%ADsk%p%RotorRad / p%r(j)  ! \f$ C_q(r) = C_Q \frac{R}{r} \f$
+            endif
+         enddo
+      endif
+
+      ! Skew angles
+      y%psi_skew = m%Turbine%ADsk%y%PsiSkew
+      y%chi_skew = m%Turbine%ADsk%y%ChiSkew
+
+   endif
+      
 END SUBROUTINE FWrap_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the inputs needed before calling an instance of FAST
@@ -712,7 +711,6 @@ SUBROUTINE FWrap_SetInputs(u, m, t)
    REAL(DbKi),                      INTENT(IN   )  :: t           !< current simulation time
 
    ! set the 4d-wind-inflow input array (a bit of a hack [simplification] so that we don't have large amounts of data copied in multiple data structures):
-      call move_alloc(u%Vdist_High, m%Turbine%IfW%p%FlowField%Grid4D%Vel)
       m%Turbine%IfW%p%FlowField%Grid4D%TimeStart = t
       
       ! do something with the inputs from the super-controller:

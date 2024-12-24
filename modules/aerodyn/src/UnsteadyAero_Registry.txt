@@ -16,14 +16,12 @@ include   Registry_NWTC_Library.txt
 usefrom   AirfoilInfo_Registry.txt
 #
 #
-
-param     UnsteadyAero/UA       -                INTEGER           UA_Baseline      -        1   -   "UAMod = 1 [Baseline model (Original)]" -
-param     UnsteadyAero/UA       -                INTEGER           UA_Gonzalez      -        2   -   "UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]" -
-param     UnsteadyAero/UA       -                INTEGER           UA_MinnemaPierce -        3   -   "[Minnema/Pierce variant (changes in Cc and Cm)]" -
-param     UnsteadyAero/UA       -                INTEGER           UA_HGM           -        4   -   "[continuous variant of HGM (Hansen) model]" -
-param     UnsteadyAero/UA       -                INTEGER           UA_HGMV          -        5   -   "[continuous variant of HGM (Hansen) model with vortex modifications]" -
-param     UnsteadyAero/UA       -                INTEGER           UA_Oye           -        6   -   "Stieg Oye dynamic stall model" -
-param     UnsteadyAero/UA       -                INTEGER           UA_BV            -        7   -   "Boeing-Vertol dynamic stall model (e.g. used in CACTUS)" -
+# NOTE: UA model parameters are defined in AirfoilInfo_Registry.txt
+#
+param     UnsteadyAero/UA       -                INTEGER           UA_Method_RK4      -        1   -   "RK4 integration method" -
+param     UnsteadyAero/UA       -                INTEGER           UA_Method_AB4      -        2   -   "AB4 integration method" -
+param     UnsteadyAero/UA       -                INTEGER           UA_Method_ABM4     -        3   -   "ABM4 integration method" -
+param     UnsteadyAero/UA       -                INTEGER           UA_Method_BDF2     -        4   -   "BDF2 integration method" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -32,6 +30,7 @@ param     UnsteadyAero/UA       -                INTEGER           UA_BV        
 typedef   UnsteadyAero/UA              InitInputType                 DbKi                     dt                              -             -         -        "time step" s
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -             -         -        "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
 typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             ReKi                     d_34_to_ac                      -            0.5        -        "Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension)"       - 
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
 typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
 typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
@@ -41,13 +40,15 @@ typedef   ^                            ^                             Logical    
 typedef   ^                            ^                             LOGICAL                  WrSum                           -             .false.   -        "Write UA AFI parameters to summary file?"    -
 typedef   ^                            ^                             INTEGER                  UAOff_innerNode                 {:}           -         -        "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
 typedef   ^                            ^                             INTEGER                  UAOff_outerNode                 {:}           -         -        "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
+typedef   ^                            ^                             IntKi                    UA_OUTS                         -             0         -        "Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile"    -
+typedef   ^                            ^                             INTEGER                  integrationMethod               -             3         -        "method to integrate states (default is 3=UA_Method_ABM4)"    -
 
 #
 # Define outputs from the initialization routine here:                                                                                    
 #                                                                                                                                         
 typedef   ^                            InitOutputType                ProgDesc                 Version                         -             -         -        "Version structure" -
-typedef   ^                            InitOutputType                CHARACTER(19)            WriteOutputHdr                  {:}           -         -        "The is the list of all UA-related output channel header strings (includes all sub-module channels)"    -
-typedef   ^                            ^                             CHARACTER(19)            WriteOutputUnt                  {:}           -         -        "The is the list of all UA-related output channel unit strings (includes all sub-module channels)"    -
+typedef   ^                            InitOutputType                CHARACTER(ChanLen)       WriteOutputHdr                  {:}           -         -        "The is the list of all UA-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}           -         -        "The is the list of all UA-related output channel unit strings (includes all sub-module channels)"    -
 
 
 # Variables local to the Kelvin Chain:                                                                                                                                                                                                                            
@@ -107,7 +108,7 @@ typedef   ^                            UA_KelvinChainType            ReKi       
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef   ^                            UA_ElementContinuousStateType R8Ki                     x                                5            -         -        "continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function)"        "{rad, rad, - -}"
+typedef   ^                            UA_ElementContinuousStateType R8Ki                     x                                7            -         -        "continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function)"        "{rad, rad, - -}"
 typedef   ^                            ContinuousStateType           UA_ElementContinuousStateType  element                   {:}{:}        -         -        "continuous states when UA_Mod=4 for each blade/node"        "-"
 
 # Define discrete (non-differentiable) states here:
@@ -115,7 +116,7 @@ typedef   ^                            ContinuousStateType           UA_ElementC
 typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        "angle of attack, previous time step"      rad
 typedef   ^                            DiscreteStateType             ReKi                     alpha_filt_minus1               {:}{:}        -         -        "filtered angle of attack, previous time step"      rad
 typedef   ^                            DiscreteStateType             ReKi                     alpha_dot                       {:}{:}        -         -        "Rate of change of angle of attack (filtered); BV model"       rad/s
-typedef   ^                            DiscreteStateType             ReKi                     alpha_dot_minus1                {:}{:}        -         -        "Rate of change of angle of attack (filtered); BV modeldata"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     alpha_dot_minus1                {:}{:}        -         -        "Rate of change of angle of attack (filtered); BV model"       rad/s
 typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        "non-dimensional pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kalpha_f_minus1                 {:}{:}        -         -        "filtered pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kq_f_minus1                     {:}{:}        -         -        "filtered pitching acceleration, previous time step"        -
@@ -161,6 +162,7 @@ typedef   ^                            OtherStateType                ReKi       
 typedef   ^                            OtherStateType                ReKi                     sigma3                          {:}{:}        -         -        "multiplier for T_V"   -
 typedef   ^                            OtherStateType                IntKi                    n                               {:}{:}        -         -        "counter for continuous state integration"   -
 typedef   ^                            OtherStateType                UA_ContinuousStateType   xdot                            4             -         -        "history states for continuous state integration"   -
+typedef   ^                            OtherStateType                UA_ContinuousStateType   xHistory                        4             -         -        "history states for continuous state integration"   -
 typedef   ^                            OtherStateType                ReKi                     t_vortexBegin                   {:}{:}        -         -        "HGMV model: simulation time when vortex lift term became active"   s
 typedef   ^                            OtherStateType                ReKi                     SignOfOmega                     {:}{:}        -         -        "HGMV model: sign of omega when vortex lift term became active "   s
 typedef   ^                            OtherStateType                LOGICAL                  PositivePressure                {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift became active because of positive pressure (or negative)"   -
@@ -180,7 +182,7 @@ typedef   ^                            MiscVarType                   LOGICAL    
 typedef   ^                            MiscVarType                   LOGICAL                  LESF                            {:}{:}        -         -        "logical flag indicating if leading edge separation is possible"   -
 typedef   ^                            MiscVarType                   LOGICAL                  VRTX                            {:}{:}        -         -        "logical flag indicating if a vortex is being processed"   -
 typedef   ^                            MiscVarType                   ReKi                     T_Sh                            {:}{:}        -         -        "shedding frequency"   -
-typedef   ^                            MiscVarType                   LOGICAL                  BEDSEP                          {:}{:}        -         -        "logical flag indicating if this is undergoing separated flow (for compison with AD14)"   -
+typedef   ^                            MiscVarType                   LOGICAL                  BEDSEP                          {:}{:}        -         -        "logical flag indicating if this is undergoing separated flow"   -
 typedef   ^                            MiscVarType                   ReKi                     weight                          {:}{:}        -         -        "value between 0 and 1 indicating if UA is on (1) or off (0) or somewhere in between"   -
 
 
@@ -188,6 +190,7 @@ typedef   ^                            MiscVarType                   ReKi       
 # Define parameters here:
 typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
 typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             ReKi                     d_34_to_ac                      -            0.5        -        "Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension)"       - 
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
 typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
 typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
@@ -202,6 +205,10 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Logical                  ShedEffect                      -             -         -        "Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods)"        -
 typedef   ^                            ParameterType                 IntKi                    lin_nx                          -             0         -        "Number of continuous states for linearization"            -
 typedef   ^                            ^                             LOGICAL                  UA_off_forGood                  {:}{:}        -         -        "logical flag indicating if UA is off for good"   -
+typedef   ^                            ^                             INTEGER                  lin_xIndx                       {:}{:}        -         -        "array to indicate which state to perturb for UA"   -
+typedef   ^                            ^                             R8Ki                     dx                              {7}           -         -        "array to indicate size of state perturbations (x array)"   -
+typedef   ^                            ^                             IntKi                    UA_OUTS                         -             0         -        "Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile"    -
+typedef   ^                            ^                             INTEGER                  integrationMethod               -             3         -        "method to integrate states"    -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

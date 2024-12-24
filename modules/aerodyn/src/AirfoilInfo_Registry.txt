@@ -20,6 +20,18 @@ param     AirfoilInfo/AFI       -                INTEGER           AFITable_1   
 param     AirfoilInfo/AFI       -                INTEGER           AFITable_2Re   -        2   -   "2D interpolation on AoA and Re" -
 param     AirfoilInfo/AFI       -                INTEGER           AFITable_2User -        3   -   "2D interpolation on AoA and UserProp" -
 
+# These are UA models; defined here so that we can appropriately compute the separation function and attached flow values for the airfoil table.
+# This is not an ideal place for the parameters, but AFI needs this information at initialization.
+param     AirfoilInfo/AFI       -                INTEGER           UA_None          -        0   -   "Steady aerodynamics, using the same angle of attack convention as UA" -
+param     AirfoilInfo/AFI       -                INTEGER           UA_Baseline      -        1   -   "UAMod = 1 [Baseline model (Original)]" -
+param     AirfoilInfo/AFI       -                INTEGER           UA_Gonzalez      -        2   -   "UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]" -
+param     AirfoilInfo/AFI       -                INTEGER           UA_MinnemaPierce -        3   -   "Minnema/Pierce variant (changes in Cc and Cm)" -
+param     AirfoilInfo/AFI       -                INTEGER           UA_HGM           -        4   -   "continuous variant of HGM (Hansen) model" -
+param     AirfoilInfo/AFI       -                INTEGER           UA_HGMV          -        5   -   "continuous variant of HGM (Hansen) model with vortex modifications" -
+param     AirfoilInfo/AFI       -                INTEGER           UA_Oye           -        6   -   "Stieg Oye dynamic stall model" -
+param     AirfoilInfo/AFI       -                INTEGER           UA_BV            -        7   -   "Boeing-Vertol dynamic stall model (e.g. used in CACTUS)" -
+param     AirfoilInfo/AFI       -                INTEGER           UA_HGMV360       -        8   -   "continuous variant of HGM (Hansen) model with vortex modifications modified for 360-deg" -
+
 
 # ..... Airfoil data ...............................................................................................................
 # The following derived type stores Beddoes-Leishman unsteady-aero data for an airfoil at a single combination of Re and control setting. The data can be computed internally of not read from the input file.
@@ -53,7 +65,7 @@ typedef   ^                     ^                ReKi                k1         
 typedef   ^                     ^                ReKi                k2           -        -   -   "airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1]" -
 typedef   ^                     ^                ReKi                k3           -        -   -   "airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1]" -
 typedef   ^                     ^                ReKi                k1_hat       -        -   -   "Constant in the expression of Cc due to leading edge vortex effects.  [ignored if UAMod<>1]" -
-typedef   ^                     ^                ReKi                x_cp_bar     -        -   -   "Constant in the expression of \hat(x)_cp^v [ignored if UAMod<>1, default = 0.2]" -
+typedef   ^                     ^                ReKi                x_cp_bar     -        -   -   "Constant in the expression of \\hat(x)_cp^v [ignored if UAMod<>1, default = 0.2]" -
 typedef   ^                     ^                ReKi                UACutout     -        -   -   "Angle of attack above which unsteady aerodynamics are disabled" "input in degrees; stored as radians"
 typedef   ^                     ^                ReKi                UACutout_delta -      -   -   "Number of angles-of-attack below UACutout where unsteady aerodynamics begin to be disabled" "input in degrees; stored as radians"
 typedef   ^                     ^                ReKi                UACutout_blend -      -   -   "Angle of attack above which unsteady aerodynamics begins to be disabled" "stored as radians"
@@ -61,17 +73,14 @@ typedef   ^                     ^                ReKi                filtCutOff 
 
 typedef   ^                     ^                ReKi                alphaUpper   -        -  2pi  "(input) upper angle of attack defining fully attached region" "input in degrees; stored as radians"
 typedef   ^                     ^                ReKi                alphaLower   -        -  2pi  "(input) lower angle of attack defining fully attached region" "input in degrees; stored as radians"
-typedef   ^                     ^                ReKi                c_Rate       -        -  -    "(calculated) linear slope in the fully attached region of cn or cl" "1/rad"
-typedef   ^                     ^                ReKi                c_RateUpper  -        -  -    "(calculated) linear slope in the upper fully attached region of cn or cl" "1/rad"
-typedef   ^                     ^                ReKi                c_RateLower  -        -  -    "(calculated) linear slope in the lower fully attached region of cn or cl" "1/rad"
 typedef   ^                     ^                ReKi                c_alphaLower -        -  -    "(calculated) value of cn or cl at alphaLower" "-"
 typedef   ^                     ^                ReKi                c_alphaUpper -        -  -    "(calculated) value of cn or cl at alphaUpper" "-"
-typedef   ^                     ^                ReKi                alphaUpperWrap -      -  2pi  "(calculated) upper angle of attack defining fully attached wrap-around region" "stored as radians"
-typedef   ^                     ^                ReKi                alphaLowerWrap -      -  2pi  "(calculated) lower angle of attack defining fully attached wrap-around region" "stored as radians"
-typedef   ^                     ^                ReKi                c_RateWrap     -      -  -    "(calculated) linear slope in the fully attached wrap-around region of cn or cl (will be negative)" "1/rad"
-typedef   ^                     ^                ReKi                c_alphaLowerWrap -    -  -    "(calculated) value of cn or cl at alphaLowerWrap" "-"
-typedef   ^                     ^                ReKi                c_alphaUpperWrap -    -  -    "(calculated) value of cn or cl at alphaUpperWrap" "-"
 
+typedef   ^                     ^                ReKi                alpha0ReverseFlow  -  -  2pi  "(calculated) Angle of attack for Cn=0 for reverse flow" "rad"
+typedef   ^                     ^                ReKi                alphaBreakUpper    -  -  2pi  "(calculated) Angle of attack where normal and reverse flow CnAttached intersect; between 0 and +pi; will be near +pi/2 deg in most cases" "rad"
+typedef   ^                     ^                ReKi                CnBreakUpper       -  -  -    "(calculated) CnAttached value at alphaBreakUpper where normal and reverse flow CnAttached intersect; will be positive" "-"
+typedef   ^                     ^                ReKi                alphaBreakLower    -  -  2pi  "(calculated) Angle of attack where normal and reverse flow CnAttached intersect; between -pi and 0; will be near -pi/2 deg in most cases" "rad"
+typedef   ^                     ^                ReKi                CnBreakLower       -  -  -    "(calculated) CnAttached value at alphaBreakLower where normal and reverse flow CnAttached intersect; will be negative" "-"
 
 typedef   AirfoilInfo/AFI AFI_UA_BL_Default_Type LOGICAL             alpha0       -        .true.   -   "Calculate value for this input?" -
 typedef   ^                     ^                LOGICAL             alpha1       -        .true.   -   "Calculate value for this input?" -
@@ -132,7 +141,7 @@ typedef   ^                     ^                INTEGER             InCol_Cl   
 typedef   ^                     ^                INTEGER             InCol_Cd     -        -   -   "The column of the coefficient tables that holds the minimum pressure coefficient"  -
 typedef   ^                     ^                INTEGER             InCol_Cm     -        -   -   "The column of the coefficient tables that holds the pitching-moment coefficient"   -
 typedef   ^                     ^                INTEGER             InCol_Cpmin  -        -   -   "The column of the coefficient tables that holds the minimum pressure coefficient"  -
-typedef   ^                     ^                LOGICAL             UA_f_cn      -        -   -   "Whether any UA separation functions should be calculated on cn (true) or cl (false)"  -
+typedef   ^                     ^                INTEGER             UAMod        -        -   -   "UA model: used to determine how UA separation functions should be calculated"  -
 
 # Define outputs from the initialization routine here:
 typedef   ^                     InitOutputType   ProgDesc            Ver          -        -   -   "This module's name, version, and date" -

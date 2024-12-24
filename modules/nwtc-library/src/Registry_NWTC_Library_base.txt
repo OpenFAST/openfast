@@ -1,0 +1,124 @@
+# This file defines types that may be  used from the NWTC_Library
+# include this into a component registry file if you wish to use these types
+# the "usefrom" keyword defines the types for the registry without generating
+# a NWTC_Library_Types.f90 file
+#
+#.............................................................
+
+
+typedef   NWTC_Library  ProgDesc            CHARACTER(99)            Name - - - "Name of the program or module"
+typedef     ^             ^                 CHARACTER(99)            Ver  - - - "Version number of the program or module"
+typedef     ^             ^                 CHARACTER(24)            Date - - - "String containing date module was last updated"
+
+typedef   NWTC_Library  FASTdataType        CHARACTER(1024)          File     - - - "Name of the FAST-style binary file"
+typedef     ^             ^                 CHARACTER(1024)          Descr    - - - "String describing file"
+typedef     ^             ^                 IntKi                    NumChans - - - "Number of output channels in this binary file (not including the time channel)"
+typedef     ^             ^                 IntKi                    NumRecs  - - - "Number of records (rows) of data in the file"
+typedef     ^             ^                 DbKi                     TimeStep - - - "Time step for evenly-spaced data in the output file (when NumRecs is not allo"
+typedef     ^             ^                 CHARACTER(ChanLen)       ChanNames {:} - - "Strings describing the names of the channels from the binary file (including the time channel)"
+typedef     ^             ^                 CHARACTER(ChanLen)       ChanUnits {:} - - "Strings describing the units of the channels from the binary file (including the time channel)"
+typedef     ^             ^                 ReKi                     Data      {:}{:} - - "numeric data (rows and columns) from the binary file, including the time channel"
+
+typedef   NWTC_Library  OutParmType         IntKi                    Indx   - - - "An index into AllOuts array where this channel is computed/stored"
+typedef     ^             ^                 CHARACTER(ChanLen)       Name   - - - "Name of the output channel"
+typedef     ^             ^                 CHARACTER(ChanLen)       Units  - - - "Units this channel is specified in"
+typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
+
+typedef   NWTC_Library  FileInfoType        IntKi                    NumLines
+typedef     ^             ^                 IntKi                    NumFiles
+typedef     ^             ^                 IntKi                    FileLine  {:}
+typedef     ^             ^                 IntKi                    FileIndx  {:}
+typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  FileList  {:}
+typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  Lines     {:}
+
+typedef   NWTC_Library  Quaternion          ReKi                     q0
+typedef     ^             ^                 ReKi                     v  {3}
+
+typedef   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi      pRNG
+typedef     ^             ^                     IntKi                RandSeed          {3}
+typedef     ^             ^                     IntKi                RandSeedAry       {:}
+typedef     ^             ^              CHARACTER(6)                RNG_type
+
+#-------------------------------------------------------------------------------
+# Module Variables
+#-------------------------------------------------------------------------------
+
+param       ^       -           IntKi           VarNameLen          -   64  -   ""  -
+
+param       ^       -           IntKi           VF_Force            -   1   -   ""  -
+param       ^       -           IntKi           VF_Moment           -   2   -   ""  -
+param       ^       -           IntKi           VF_Orientation      -   3   -   ""  -
+param       ^       -           IntKi           VF_TransDisp        -   4   -   ""  -
+param       ^       -           IntKi           VF_AngularDisp      -   5   -   ""  -
+param       ^       -           IntKi           VF_TransVel         -   6   -   ""  -
+param       ^       -           IntKi           VF_AngularVel       -   7   -   ""  -
+param       ^       -           IntKi           VF_TransAcc         -   8   -   ""  -
+param       ^       -           IntKi           VF_AngularAcc       -   9   -   ""  -
+param       ^       -           IntKi           VF_Scalar           -  10   -   ""  -
+
+param       ^       -           IntKi           VF_None             -   0   -   "Variable with no flags"  -
+param       ^       -           IntKi           VF_Mesh             -   1   -   "Variable contained in mesh"  -
+param       ^       -           IntKi           VF_Line             -   2   -   "Variable is for a line mesh"  -
+param       ^       -           IntKi           VF_RotFrame         -   4   -   "Variable in rotating frame"  -
+param       ^       -           IntKi           VF_Ext              -   8   -   "Variable for extended linearization"  -
+param       ^       -           IntKi           VF_Any              - 4095  -   "Enable all flags (used for filtering)"  -
+
+param       ^       -           IntKi           VC_None             -   0   -   ""  -
+param       ^       -           IntKi           VC_Tight            -   1   -   ""  -
+param       ^       -           IntKi           VC_Option1          -   2   -   ""  -
+param       ^       -           IntKi           VC_Option2          -   3   -   ""  -
+
+typedef     ^       ModVarType  character(VarNameLen)   Name        -   -   -   ""  -
+typedef     ^       ^           IntKi           Field               -   0   -   ""  -
+typedef     ^       ^           IntKi           Nodes               -   1   -   ""  -
+typedef     ^       ^           IntKi           Num                 -   1   -   ""  -
+typedef     ^       ^           IntKi           Flags               -   0   -   ""  -
+typedef     ^       ^           IntKi           DerivOrder          -   0   -   ""  -
+typedef     ^       ^           IntKi           iLoc                :   -   -   "indices in local arrays"  -
+typedef     ^       ^           IntKi           iSol                :   -   -   "indices in solver arrays"  -
+typedef     ^       ^           IntKi           iLin                :   -   -   "indices in linearization arrays"  -
+typedef     ^       ^           IntKi           iq                  :   -   -   "row index in solver q matrix"  -
+typedef     ^       ^           IntKi           iUsr                2   -   -   "first user defined index for variable, can be used a lower/upper bounds"  -
+typedef     ^       ^           IntKi           jUsr                -   0   -   "second user defined index for variable"  -
+typedef     ^       ^           IntKi           MeshID              -   0   -   "Mesh identification number"  -
+typedef     ^       ^           logical         Solve               -   F   -   "flag indicating that variable is used by solver"  -
+typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
+typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
+
+typedef     ^       ModVarsType IntKi           ModNum              -   0   -   ""  -
+typedef     ^       ^           character(6)    ModAbbr             -   -   -   ""  -
+typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"  -
+typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"  -
+typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"  -
+typedef     ^       ^           IntKi           Nx                  -   -   -   ""  -
+typedef     ^       ^           IntKi           Nu                  -   -   -   ""  -
+typedef     ^       ^           IntKi           Ny                  -   -   -   ""  -
+
+typedef     ^       ModValsType R8Ki            x                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            dxdt                :   -   -   ""  -
+typedef     ^       ^           R8Ki            u                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            y                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            u_perturb           :   -   -   "input perturbation array"  -
+typedef     ^       ^           R8Ki            x_perturb           :   -   -   ""  -
+typedef     ^       ^           R8Ki            xp                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            xn                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            yp                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            yn                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            dYdx                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dXdx                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dYdu                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dXdu                ::  -   -   ""  -
+
+typedef     ^       ModDataType IntKi           Idx                 -   0   -   "Module index in array of modules"  -
+typedef     ^       ^           IntKi           ID                  -   0   -   "Module identification number"  -
+typedef     ^       ^           character(ChanLen) Abbr             -   -   -   "Module name abbreviation"  -
+typedef     ^       ^           IntKi           Ins                 -   0   -   "Module instance number"  -
+typedef     ^       ^           logical         IsTC                -   F   -   "Flag indicating module is part of tight coupling" -
+typedef     ^       ^           R8Ki            DT                  -   0   -   "Module time step"  -
+typedef     ^       ^           IntKi           SubSteps            -   0   -   "Module number of substeps per solver time step"  -
+typedef     ^       ^           IntKi           ixs                 ::  -   -   "index array mapping local x vector to global x vector" -
+typedef     ^       ^           IntKi           ius                 ::  -   -   "index array mapping local u vector to global u vector" -
+typedef     ^       ^           IntKi           iys                 ::  -   -   "index array mapping local y vector to global y vector" -
+typedef     ^       ^           ModVarsType    *Vars                -   -   -   "Pointer to module variables type"  -
+typedef     ^       ^           IntKi           SrcMaps             :   -   -   "Indices of mappings where module is the source"
+typedef     ^       ^           IntKi           DstMaps             :   -   -   "Indices of mappings where module is the destination"

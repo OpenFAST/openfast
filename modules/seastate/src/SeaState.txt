@@ -1,0 +1,183 @@
+###################################################################################################################################
+###################################################################################################################################
+# Registry for SeaState in the FAST Modularization Framework
+# This Registry file is used to create MODULE SeaState  which contains all of the user-defined types needed in SeaState.
+# It also contains copy, destroy, pack,  and unpack routines associated with each defined data types.
+# See NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>  <ModuleName/ModName>      <TypeName>                   <FieldType>              <FieldName>                 <Dims>       <IO>       <DNAME>     <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+#
+# ...... Include files (definitions from NWTC Library) ............................................................................
+# make sure that the file name does not have any trailing white spaces!
+include   Registry_NWTC_Library.txt
+usefrom   Current.txt
+usefrom   Waves.txt
+usefrom   Waves2.txt
+usefrom   SeaSt_WaveField.txt
+#
+#
+typedef   SeaState/SeaSt     SeaSt_InputFile    LOGICAL                  EchoFlag          -        -        -  "Echo the input file"   
+typedef     ^                 ^                 ReKi                     MSL2SWL           -        -        -  "Mean Sea Level to Still Water Level offset"    m
+typedef     ^                 ^                 ReKi                     X_HalfWidth       -        -        -  "Half-width of the domain in the X direction" m
+typedef     ^                 ^                 ReKi                     Y_HalfWidth       -        -        -  "Half-width of the domain in the Y direction" m
+typedef     ^                 ^                 ReKi                     Z_Depth           -        -        -  "Depth of the domain the Z direction" m
+typedef     ^                 ^                 INTEGER                  NX                -        -        -  "Number of nodes in half of the X-direction domain"
+typedef     ^                 ^                 INTEGER                  NY                -        -        -  "Number of nodes in half of the Y-direction domain"
+typedef     ^                 ^                 INTEGER                  NZ                -        -        -  "Number of nodes in half of the Z-direction domain"
+typedef     ^                 ^                 Waves_InitInputType      Waves             -        -        -  "Initialization data for Waves module"    -
+typedef     ^                 ^                 Waves2_InitInputType     Waves2            -        -        -  "Initialization data for Waves2 module"    -
+typedef     ^                 ^                 Current_InitInputType    Current           -        -        -  "Initialization data for Current module"    -
+typedef     ^                 ^                 LOGICAL                  Echo              -        -        -  "Echo the input files to a file with the same name as the input but with a .echo extension [T/F]"    -
+typedef     ^                 ^                 INTEGER                  NWaveElev         -        -        -  "Number of user-requested points where the incident wave elevations can be output"  -
+typedef     ^                 ^                 SiKi                     WaveElevxi        {:}      -        -  "xi-coordinates for points where the incident wave elevations can be output"  (meters)
+typedef     ^                 ^                 SiKi                     WaveElevyi        {:}      -        -  "yi-coordinates for points where the incident wave elevations can be output"  (meters)
+typedef     ^                 ^                 INTEGER                  NWaveKin          -        -        -  "Number of points where the incident wave kinematics will be computed"  -
+typedef     ^                 ^                 SiKi                     WaveKinxi         {:}      -        -  "xi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean sea level"  (meters)
+typedef     ^                 ^                 SiKi                     WaveKinyi         {:}      -        -  "yi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean sea level"  (meters)
+typedef     ^                 ^                 SiKi                     WaveKinzi         {:}      -        -  "zi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean sea level"  (meters)
+typedef     ^                 ^                 INTEGER                  OutSwtch          -        -        -  "Output requested channels to: [1=SeaState.out 2=GlueCode.out  3=both files]"    -
+typedef     ^                 ^                 LOGICAL                  OutAll            -        -        -  "Output all user-specified member and joint loads (only at each member end, not interior locations) [T/F]"    -
+typedef     ^                 ^                 INTEGER                  NumOuts           -        -        -  "The number of outputs for this module as requested in the input file"    -
+typedef     ^                 ^                 CHARACTER(ChanLen)       OutList           {:}      -        -  "The user-requested output channel labels for this modules. This should really be dimensioned with MaxOutPts"    -
+typedef     ^                 ^                 LOGICAL                  SeaStSum          -        -        -  "Generate a SeaState summary file [T/F]"    -
+typedef     ^                 ^                 CHARACTER(20)            OutFmt            -        -        -  "Output format for numerical results"    -
+typedef     ^                 ^                 CHARACTER(20)            OutSFmt           -        -        -  "Output format for header strings"    -
+typedef     ^                 ^                 INTEGER                  WaveStMod         -        -        -  "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
+typedef     ^                 ^                 ReKi                     WtrDpth           -        -        -  "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
+typedef     ^                 ^                 ReKi                     WtrDens           -        -        -  "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
+typedef     ^                 ^                 INTEGER                  WaveDirMod        -        -        -  "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
+typedef     ^                 ^                 SiKi                     WaveDir           -        -        -  "Incident wave propagation heading direction" (degrees)
+typedef     ^                 ^                 LOGICAL                  WaveMultiDir      -        -        -  "Indicates the waves are multidirectional"  -
+typedef     ^                 ^                 SiKi                     MCFD              -        -        -  "Diameter of members that will use the MacCamy-Fuchs diffraction model"
+typedef     ^                 ^                 SiKi                     WvLowCOff         -        -        -  "Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
+typedef     ^                 ^                 SiKi                     WvHiCOff          -        -        -  "High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
+typedef     ^                 ^                 SiKi                     WvLowCOffD        -        -        -  "Minimum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
+typedef     ^                 ^                 SiKi                     WvHiCOffD         -        -        -  "Maximum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
+typedef     ^                 ^                 SiKi                     WvLowCOffS        -        -        -  "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
+typedef     ^                 ^                 SiKi                     WvHiCOffS         -        -        -  "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
+typedef     ^                 ^                 SiKi                     WaveDOmega        -        -        -  "Frequency step for incident wave calculations" (rad/s)
+typedef     ^                 ^                 INTEGER                  WaveMod           -        -        -  "Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters." -
+
+
+typedef   SeaState/SeaSt     InitInputType          CHARACTER(1024)          InputFile                       -          -          -         "Supplied by Driver:  full path and filename for the SeaState module"    -
+typedef   ^                  ^                      LOGICAL                  UseInputFile                    -       .TRUE.        -         "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
+typedef   ^                  ^                      FileInfoType             PassedFileData                  -          -          -         "If we don't use the input file, pass everything through this"   -
+typedef   ^                  ^                      CHARACTER(1024)          OutRootName                     -          -          -         "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
+typedef   ^                  ^                      ReKi                     Gravity                         -          -          -         "Supplied by Driver:  Gravitational acceleration"  "(m/s^2)"
+typedef   ^                  ^                      ReKi                     defWtrDens                      -          -          -         "Default water density from the driver; may be overwritten                      "  "(kg/m^3)"
+typedef   ^                  ^                      ReKi                     defWtrDpth                      -          -          -         "Default water depth from the driver; may be overwritten                        "  "m"
+typedef   ^                  ^                      ReKi                     defMSL2SWL                      -          -          -         "Default mean sea level to still water level from the driver; may be overwritten"  "m"
+typedef   ^                  ^                      DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
+typedef   ^                  ^                      INTEGER                  WaveFieldMod                    -          -          -         "Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
+typedef   ^                  ^                      ReKi                     PtfmLocationX                   -          -          -         "Supplied by Driver:  X coordinate of platform location in the wave field"    "m"
+typedef   ^                  ^                      ReKi                     PtfmLocationY                   -          -          -         "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"
+typedef   ^                  ^                      IntKi                    WrWvKinMod                      -          0          -         "0,1, or 2 indicating whether we are going to write out kinematics files.  [ignored if WaveMod = 6, if 1 or 2 then files are written using the outrootname]" -
+typedef   ^                  ^                      LOGICAL                  HasIce                          -          -          -         "Supplied by Driver:  Whether this simulation has ice loading (flag)"    -
+typedef   ^                  ^                      Logical                  Linearize                       -     .FALSE.         -         "Flag that tells this module if the glue code wants to linearize."	-
+typedef   ^                  ^                      Logical                  SurfaceVis                      -     .FALSE.         -         "Turn on grid surface visualization outputs" -
+typedef   ^                  ^                      IntKi                    SurfaceVisNx                    -          0          -         "Number of points in X direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution." -
+typedef   ^                  ^                      IntKi                    SurfaceVisNy                    -          0          -         "Number of points in Y direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution." -
+
+#
+#
+# Define outputs from the initialization routine here:
+#                            
+typedef   ^                  InitOutputType         CHARACTER(ChanLen)       WriteOutputHdr    {:}     -      -  "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                  ^                      CHARACTER(ChanLen)       WriteOutputUnt    {:}     -      -  "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
+typedef   ^                  ^                      ProgDesc                 Ver                -      -      -  "Version of SeaState"
+typedef   ^                  ^                      LOGICAL                  InvalidWithSSExctn -      -      -  "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
+typedef   ^                  ^                      SiKi                     WaveElevVisX       {:}     -      -  "X locations of grid output"    "m,-"
+typedef   ^                  ^                      SiKi                     WaveElevVisY       {:}     -      -  "Y locations of grid output"    "m,-"
+typedef   ^                  ^                      SiKi                     WaveElevVisGrid    {:}{:}{:}  -   -  "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second/third dimensions are the grid of points." (m)
+typedef   ^                  ^                      SeaSt_WaveFieldType     *WaveField          -      -      -  "Pointer to wave field"
+typedef   ^                  ^                      CHARACTER(LinChanLen)    LinNames_y         {:}    -      -  "Names of the outputs used in linearization" -
+typedef   ^                  ^                      CHARACTER(LinChanLen)    LinNames_u         {:}    -      -  "Names of the inputs used in linearization" -
+typedef   ^                  ^                      LOGICAL                  RotFrame_u         {:}    -      -  "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+typedef   ^                  ^                      LOGICAL                  RotFrame_y         {:}    -      -  "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+typedef   ^                  ^                      LOGICAL                  IsLoad_u           {:}    -      -  "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+
+
+
+#                            
+#                            
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef   ^                  ContinuousStateType           R8Ki           UnusedStates              -          -          -         "placeholder for states"        -
+#   
+#
+# Define discrete (nondifferentiable) states here:                                  
+typedef   ^                            DiscreteStateType             R8Ki             UnusedStates              -          -          -         "placeholder for states"        -
+#  
+#
+# Define constraint states here:                                                    
+typedef   ^                            ConstraintStateType           R8Ki          UnusedStates -          -          -                      "placeholder for states"        -
+# 
+#
+# Define any other states, including integer or logical states here:                
+typedef   ^                            OtherStateType                R8Ki    UnusedStates                          -          -          -         "placeholder for states"   -
+#
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                  MiscVarType            INTEGER                        Decimate           -       -      -  "The output decimation counter" -
+typedef   ^                  ^                      DbKi                           LastOutTime        -       -      -  "Last time step which was written to the output file (sec)"    -
+typedef   ^                  ^                      INTEGER                        LastIndWave        -       -      -  "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
+typedef   ^                  ^                      SeaSt_WaveField_MiscVarType    WaveField_m        -       -      -  "misc var information from the SeaState Interpolation module"   -
+
+# .... Linearization params .......................................................................................................
+# NOTE:  This is overkill given how limited linearization is. For completeness and similarity to other modules, keeping all this here.  Also note some
+#        values are set here, but will be overwritten in the code.
+typedef  ^                 Jac_u_idxStarts      IntKi                   Extended             -     1  -  "Index to first point in u jacobian for Extended" -
+typedef  ^                 Jac_y_idxStarts      IntKi                   Extended             -     1  -  "Index to first point in y jacobian for Extended" -
+typedef  ^                 Jac_y_idxStarts      IntKi                   WrOuts               -     2  -  "Index to first point in y jacobian for WrOuts" -
+typedef  ^                 SeaSt_LinParams      IntKi                   NumExtendedInputs    -     1  -  "number of extended inputs" -
+typedef  ^                 ^                    IntKi                   NumExtendedOutputs   -     1  -  "number of extended outputs" -
+typedef  ^                 ^                    Jac_u_idxStarts         Jac_u_idxStartList   -     -  -  "Starting indices for all Jac_u components" -
+typedef  ^                 ^                    Jac_y_idxStarts         Jac_y_idxStartList   -     -  -  "Starting indices for all Jac_y components" -
+typedef  ^                 ^                    ReKi                    du                   {:}   -  -  "vector that determines size of perturbation for u (inputs)"
+typedef  ^                 ^                    IntKi                   Jac_nu               -     -  -  "number of inputs  in jacobian matrix"   -
+typedef  ^                 ^                    IntKi                   Jac_ny               -     -  -  "number of outputs in jacobian matrix"   -
+
+
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+#
+typedef   ^                  ParameterType          DbKi                     WaveDT            -       -      -  "Wave DT" sec
+typedef   ^                  ^                      INTEGER                  NGridPts          -       -      -  "Number of data points in the wave kinematics grid"        -
+typedef   ^                  ^                      INTEGER                  NGrid             3       -      -  "Number of grid entries in x, y, and z"
+typedef   ^                  ^                      ReKi                     deltaGrid         3       -      -  "delta between grid points in x, y, and theta (for z)" m,m,rad
+typedef   ^                  ^                      INTEGER                  NWaveElev         -       -      -  "Number of wave elevation outputs"        -
+typedef   ^                  ^                      SiKi                     WaveElevxi        {:}     -      -  "xi-coordinates for points where the incident wave elevations can be output"  (meters)
+typedef   ^                  ^                      SiKi                     WaveElevyi        {:}     -      -  "yi-coordinates for points where the incident wave elevations can be output"  (meters)
+typedef   ^                  ^                      INTEGER                  NWaveKin          -       -      -  "Number of points where the incident wave kinematics can be output"  -
+typedef   ^                  ^                      SiKi                     WaveKinxi         {:}     -      -  "xi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level"  (meters)
+typedef   ^                  ^                      SiKi                     WaveKinyi         {:}     -      -  "yi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level"  (meters)
+typedef   ^                  ^                      SiKi                     WaveKinzi         {:}     -      -  "zi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level"  (meters)
+typedef   ^                  ^                      OutParmType              OutParam          {:}     -      -  ""        -
+typedef   ^                  ^                      INTEGER                  NumOuts           -       -      -  "Number of SeaState module-level outputs (not the total number including sub-modules"        -
+typedef   ^                  ^                      INTEGER                  OutSwtch          -       -      -  "Output requested channels to: [1=SeaState.out 2=GlueCode.out  3=both files]"    -
+typedef   ^                  ^                      CHARACTER(20)            OutFmt            -       -      -  "Output format for numerical results"    -
+typedef   ^                  ^                      CHARACTER(20)            OutSFmt           -       -      -  "Output format for header strings"    -
+typedef   ^                  ^                      CHARACTER(1)             Delim             -       -      -  "Delimiter string for outputs, defaults to space"        -
+typedef   ^                  ^                      INTEGER                  UnOutFile         -       -      -  "File unit for the SeaState outputs"        -
+typedef   ^                  ^                      INTEGER                  OutDec            -       -      -  "Write every OutDec time steps"  -
+typedef   ^                  ^                      SeaSt_WaveFieldType     &WaveField         -       -      -  "Wave field" -
+typedef   ^                  ^                      SeaSt_LinParams          LinParams         -       -      -  "Linearization parameters" -
+
+#
+#
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+#
+typedef   ^                  InputType              SiKi                     DummyInput        -       -      -  "Remove this variable if you have inputs" -
+#
+#
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+typedef   ^                  OutputType             ReKi                     WriteOutput       {:}     -      -  "Outputs to be written to the output file(s)"  -

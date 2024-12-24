@@ -28,7 +28,7 @@ PROGRAM MoorDyn_Driver
    IMPLICIT NONE 
 
    TYPE MD_Drvr_InitInput
-      LOGICAL                 :: Echo
+      ! LOGICAL                 :: Echo
       REAL(DbKi)              :: Gravity
       REAL(DbKi)              :: rhoW
       REAL(DbKi)              :: WtrDepth
@@ -57,7 +57,6 @@ PROGRAM MoorDyn_Driver
    TYPE(MD_Drvr_InitInput)               :: drvrInitInp      ! Initialization data for the driver program
    INTEGER                               :: UnIn             ! Unit number for the input file
    INTEGER                               :: UnEcho           ! The local unit number for this module's echo file
-  
 
    TYPE (MD_InitInputType)               :: MD_InitInp    
    TYPE (MD_ParameterType)               :: MD_p
@@ -91,7 +90,7 @@ PROGRAM MoorDyn_Driver
    INTEGER(IntKi)                        :: nt               ! number of coupling time steps to use in simulation
 
    REAL(DbKi)                            :: t                ! current time (s)
-   REAL(DbKi)                            :: tMax             ! sim end time (s)
+   REAL(DbKi)                            :: TMax             ! sim end time (s)
    REAL(DbKi)                            :: dtC              ! fixed/constant global time step
    REAL(DbKi)                            :: frac             ! fraction used in interpolation
          
@@ -102,7 +101,7 @@ PROGRAM MoorDyn_Driver
    Integer(IntKi)                        :: iTurb
    Integer(IntKi)                        :: nTurbines
    Integer(IntKi)                        :: iIn
-   integer(intKi)                        :: Un
+   !integer(intKi)                        :: Un
   
    ! data for SimStatus/RunTimes:
    REAL(DbKi)                            :: PrevSimTime        !< Previous time message was written to screen (s > 0)
@@ -115,13 +114,13 @@ PROGRAM MoorDyn_Driver
   
    CHARACTER(20)                         :: FlagArg              ! flag argument from command line
    CHARACTER(200)                        :: git_commit    ! String containing the current git commit hash
-   TYPE(ProgDesc), PARAMETER             :: version = ProgDesc( 'MoorDyn Driver', '', '' )
+   TYPE(ProgDesc), PARAMETER             :: version = ProgDesc( 'MoorDyn Driver', '', '2024-01-18' )
 
   
   
    ErrMsg  = ""
    ErrStat = ErrID_None
-   UnEcho=-1
+   UnEcho=-1 ! set to -1 as echo is no longer used by MD
    UnIn  =-1
   
    ! TODO: Sort out error handling (two sets of flags currently used)
@@ -132,8 +131,8 @@ PROGRAM MoorDyn_Driver
    CALL CheckArgs( MD_InitInp%FileName, Arg2=drvrInitInp%InputsFile, Flag=FlagArg )
    IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
 
-      ! Display the copyright notice
-   CALL DispCopyrightLicense( version%Name, 'Copyright (C) 2021 NREL, 2019 Matt Hall' )
+   !    ! Display the copyright notice
+   ! CALL DispCopyrightLicense( version%Name, ' Copyright (C) 2019 Matt Hall' )
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
@@ -145,7 +144,7 @@ PROGRAM MoorDyn_Driver
    CALL CPU_TIME ( ProgStrtCPU )                                    ! Initial time (this zeros the start time when used as a MATLAB function)
    
 
-   CALL WrScr( ' MD Driver updated 2022-01-12')
+   CALL WrScr('MD Driver last updated '//TRIM( version%Date ))
 
    ! Parse the driver input file and run the simulation based on that file
    CALL get_command_argument(1, drvrFilename)
@@ -163,7 +162,7 @@ PROGRAM MoorDyn_Driver
    MD_InitInp%RootName                = drvrInitInp%OutRootName
    MD_InitInp%UsePrimaryInputFile     = .TRUE.
    !MD_InitInp%PassedPrimaryInputData  = 
-   MD_InitInp%Echo                    = drvrInitInp%Echo
+   ! MD_InitInp%Echo                    = drvrInitInp%Echo
    !MD_InitInp%OutList                 = <<<< never used?
    MD_InitInp%Linearize               = .FALSE.
    
@@ -176,7 +175,7 @@ PROGRAM MoorDyn_Driver
    
    if (drvrInitInp%FarmSize > 0) then   ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
       nTurbines = drvrInitInp%FarmSize
-   else    ! FarmSize==0 indicates normal, FAST module mode
+   else ! FarmSize==0 indicates normal, FAST module mode
       nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
    end if
    
@@ -214,29 +213,29 @@ PROGRAM MoorDyn_Driver
    ! -------------------------------- -----------------------------------
    
    ! fill in the hydrodynamics data
-   ALLOCATE( MD_InitInp%WaveVel (2,200,3))
-   ALLOCATE( MD_InitInp%WaveAcc (2,200,3))
-   ALLOCATE( MD_InitInp%WavePDyn(2,200)  )
-   ALLOCATE( MD_InitInp%WaveElev(2,200)  )
-   ALLOCATE( MD_InitInp%WaveTime(2)      )
-   MD_InitInp%WaveVel  = 0.0_ReKi
-   MD_InitInp%WaveAcc  = 0.0_ReKi
-   MD_InitInp%WavePDyn = 0.0_ReKi
-   MD_InitInp%WaveElev = 0.0_ReKi
-   MD_InitInp%WaveTime = 0.0_ReKi
-   DO I = 1,SIZE(MD_InitInp%WaveTime)
-      MD_InitInp%WaveTime(I) = 600.0*I
-   END DO
+   !ALLOCATE( MD_InitInp%WaveVel (2,200,3))
+   !ALLOCATE( MD_InitInp%WaveAcc (2,200,3))
+   !ALLOCATE( MD_InitInp%WavePDyn(2,200)  )
+   !ALLOCATE( MD_InitInp%WaveElev(2,200)  )
+   !ALLOCATE( MD_InitInp%WaveTime(2)      )
+   !MD_InitInp%WaveVel  = 0.0_ReKi
+   !MD_InitInp%WaveAcc  = 0.0_ReKi
+   !MD_InitInp%WavePDyn = 0.0_ReKi
+   !MD_InitInp%WaveElev = 0.0_ReKi
+   !MD_InitInp%WaveTime = 0.0_ReKi
+   !DO I = 1,SIZE(MD_InitInp%WaveTime)
+   !   MD_InitInp%WaveTime(I) = 600.0*I
+   !END DO
    
    ! open driver output file >>> not yet used <<<
    !CALL GetNewUnit( Un )
    !OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
   
    ! call the initialization routine
-   CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat, ErrMsg2 ); call AbortIfFailed()
+   CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat2, ErrMsg2 ); call AbortIfFailed()
    
-   CALL MD_DestroyInitInput  ( MD_InitInp , ErrStat, ErrMsg ); call AbortIfFailed()
-   CALL MD_DestroyInitOutput ( MD_InitOut , ErrStat, ErrMsg ); call AbortIfFailed()
+   CALL MD_DestroyInitInput  ( MD_InitInp , ErrStat2, ErrMsg2 ); call AbortIfFailed()
+   CALL MD_DestroyInitOutput ( MD_InitOut , ErrStat2, ErrMsg2 ); call AbortIfFailed()
       
    CALL DispNVD( MD_InitOut%Ver ) 
    
@@ -259,8 +258,8 @@ PROGRAM MoorDyn_Driver
    if (drvrInitInp%InputsMod == 1 ) then
 
       if ( LEN( TRIM(drvrInitInp%InputsFile) ) < 1 ) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' ERROR: MoorDyn Driver InputFile cannot be empty if InputsMode is 1.'
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = ' ERROR: MoorDyn Driver InputFile cannot be empty if InputsMode is 1.'
          CALL AbortIfFailed()
       end if
    
@@ -301,14 +300,14 @@ PROGRAM MoorDyn_Driver
 
   
       ! specify stepping details 
-      nt = tMax/dtC - 1            ! number of coupling time steps
+      nt = TMax/dtC - 1            ! number of coupling time steps
 
       
       ! allocate space for processed motion array
       ALLOCATE ( r_in(nt, ncIn), r_in2(nt, ncIn), rd_in(nt, ncIn), rd_in2(nt, ncIn), rdd_in(nt, ncIn), rdd_in2(nt, ncIn), STAT=ErrStat2)
       IF ( ErrStat2 /= ErrID_None ) THEN
          ErrStat2 = ErrID_Fatal
-         ErrMsg  = '  Error allocating space for r_in or rd_in array.'
+         ErrMsg2  = '  Error allocating space for r_in or rd_in array.'
          call AbortIfFailed()
       END IF 
 
@@ -448,11 +447,11 @@ PROGRAM MoorDyn_Driver
       
       
    else   
-      nt = tMax/dtC - 1            ! number of coupling time steps
+      nt = TMax/dtC - 1            ! number of coupling time steps
    end if   
    
    CALL WrScr(" ")
-   call WrScr("Tmax - "//trim(Num2LStr(tMax))//" and nt="//trim(Num2LStr(nt)))
+   call WrScr("Tmax - "//trim(Num2LStr(TMax))//" and nt="//trim(Num2LStr(nt)))
    CALL WrScr(" ")
    
    
@@ -491,9 +490,10 @@ PROGRAM MoorDyn_Driver
          i = 1  ! read first timestep data 
          K = 1  ! the index of the coupling points in the input mesh CoupledKinematics
          J = 1  ! the starting index of the relevant DOFs in the input array
+
          ! any coupled bodies (type -1)
          DO l = 1,MD_p%nCpldBodies(iTurb)
-            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
             MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) ) ! full Euler angle approach
             MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
             MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
@@ -506,8 +506,7 @@ PROGRAM MoorDyn_Driver
          
          ! any coupled rods (type -1 or -2)    >>> need to make rotations ignored if it's a pinned rod <<<
          DO l = 1,MD_p%nCpldRods(iTurb)
-         
-            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
             MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) )
             MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
             MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
@@ -520,8 +519,7 @@ PROGRAM MoorDyn_Driver
          
          ! any coupled points (type -1)
          DO l = 1, MD_p%nCpldPoints(iTurb)
-            
-            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
             MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
             MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = 0.0_DbKi !rdd_in(i, J:J+2)
             
@@ -554,7 +552,7 @@ PROGRAM MoorDyn_Driver
   
    call WrScr("Doing time marching now...")
    
-   CALL SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, SimStrtCPU, t, tMax )
+   CALL SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, SimStrtCPU, t, TMax )
 
    DO i = 1,nt
 
@@ -564,7 +562,7 @@ PROGRAM MoorDyn_Driver
 
 
       if ( MOD( i, 20 ) == 0 ) THEN         
-         CALL SimStatus( PrevSimTime, PrevClockTime, t, tMax )
+         CALL SimStatus( PrevSimTime, PrevClockTime, t, TMax )
       end if
       
       ! shift older inputs back in the buffer
@@ -573,16 +571,17 @@ PROGRAM MoorDyn_Driver
       MD_uTimes(2) = MD_uTimes(1) - dtC 
       !MD_uTimes(3) = MD_uTimes(2) - dtC
 
-      ! update coupled object kinematics iff we're reading input time series
+      ! update coupled object kinematics if we're reading input time series
       if (drvrInitInp%InputsMod == 1 ) then
          
          DO iTurb = 1, MD_p%nTurbines
             
             K = 1  ! the index of the coupling points in the input mesh CoupledKinematics
             J = 1  ! the starting index of the relevant DOFs in the input array
+
             ! any coupled bodies (type -1)
             DO l = 1,MD_p%nCpldBodies(iTurb)
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
                MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) ) ! full Euler angle approach
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
                MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
@@ -595,8 +594,7 @@ PROGRAM MoorDyn_Driver
             
             ! any coupled rods (type -1 or -2)    >>> need to make rotations ignored if it's a pinned rod <<<
             DO l = 1,MD_p%nCpldRods(iTurb)
-            
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
                MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) )
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
                MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
@@ -609,8 +607,7 @@ PROGRAM MoorDyn_Driver
             
             ! any coupled points (type -1)
             DO l = 1, MD_p%nCpldPoints(iTurb)
-               
-               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+               MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)   
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
                MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = 0.0_DbKi !rdd_in(i, J:J+2)
                
@@ -635,7 +632,19 @@ PROGRAM MoorDyn_Driver
       end if   ! InputsMod == 1 
       
       ! >>> otherwise, mesh kinematics should all still be zero ... maybe worth checking <<<
-      
+
+      ! ! set free body state for kinematics debugging
+      ! if (i==1) then
+      !    DO l = 1,MD_p%nFreeBodies
+      !       IF (l==1) THEN 
+      !          MD_x%states(MD_m%BodyStateIs1(l):MD_m%BodyStateIsN(l)) = [0.0, 0.0, 0.0, 0.2, 0.0, 0.0,  0.0, 0.0, -2.0, 0.0, 0.0, 0.0]
+      !          print*, "vel set for body1"
+      !       ELSEIF (l==2) THEN
+      !          MD_x%states(MD_m%BodyStateIs1(l):MD_m%BodyStateIsN(l)) = [0.0, 0.0, 10.0*0.2, 0.2, 0.0, 0.0,  0.0, 10.0, -2.0, 0.0, 0.0, 0.0]
+      !          print*, "vel set for body2"
+      !       ENDIF
+      !    ENDDO
+      ! endif
       
       ! --------------------------------- update states ---------------------------------
       CALL MD_UpdateStates( t, nt, MD_u, MD_uTimes, MD_p, MD_x, MD_xd, MD_xc, MD_xo, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
@@ -667,43 +676,46 @@ PROGRAM MoorDyn_Driver
    CALL MD_End( MD_u(1), MD_p, MD_x, MD_xd, MD_xc , MD_xo, MD_y, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
    
    do j = 2,MD_interp_order+1
-      call MD_DestroyInput( MD_u(j), ErrStat, ErrMsg)
+      call MD_DestroyInput( MD_u(j), ErrStat2, ErrMsg2)
    end do  
-   
-   DEALLOCATE(MD_u)
-   DEALLOCATE(MD_uTimes)
-   
-   IF (ALLOCATED(r_in)  ) DEALLOCATE(r_in  )
-   IF (ALLOCATED(PtfmMotIn)) DEALLOCATE(PtfmMotIn)
-   
-   CALL WrScr( "Program has ended" )
-   close (un) 
+
+   if ( ErrStat /= ErrID_None ) THEN ! Display all errors
+      CALL WrScr1( "Errors: " )
+      CALL WrScr( trim(GetErrStr(ErrStat))//': '//trim(ErrMsg) )
+   endif
+
+   !close (un)    
+   call CleanUp()
+   CALL NormStop()
   
 
 CONTAINS
 
    SUBROUTINE AbortIfFailed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver') 
-        IF ( ErrStat /= ErrID_None ) THEN
-           CALL WrScr( "Local error: "//ErrMsg2 )
-           CALL WrScr( "Full error messages: "//ErrMsg )
-        END IF
+   
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver')
+        
         if (ErrStat >= AbortErrLev) then
            call CleanUp()
-           STOP
-        endif
+           Call ProgAbort(trim(ErrMsg))
+        elseif ( ErrStat2 /= ErrID_None ) THEN
+           CALL WrScr1( trim(GetErrStr(ErrStat2))//': '//trim(ErrMsg2)//NewLine)
+        end if
    END SUBROUTINE AbortIfFailed
 
-   LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'OutSummary') 
-        Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp()
-   END FUNCTION Failed
-
    SUBROUTINE CleanUp()
-      if(UnEcho>0) CLOSE(UnEcho)
-      if(UnEcho>0) CLOSE( UnIn)
-      if(allocated(MD_u)) deallocate(MD_u)
+      if(UnEcho     >0) CLOSE( UnEcho )
+      if(UnIn       >0) CLOSE( UnIn )
+
+      IF (ALLOCATED(MD_u     )) DEALLOCATE(MD_u     )
+      IF (ALLOCATED(MD_uTimes)) DEALLOCATE(MD_uTimes)
+      IF (ALLOCATED(PtfmMotIn)) DEALLOCATE(PtfmMotIn)
+      IF (ALLOCATED(r_in     )) DEALLOCATE(r_in     )
+      IF (ALLOCATED(r_in2    )) DEALLOCATE(r_in2    )
+      IF (ALLOCATED(rd_in    )) DEALLOCATE(rd_in    )
+      IF (ALLOCATED(rd_in2   )) DEALLOCATE(rd_in2   )
+      IF (ALLOCATED(rdd_in   )) DEALLOCATE(rdd_in   )
+      IF (ALLOCATED(rdd_in2  )) DEALLOCATE(rdd_in2  )
    END SUBROUTINE CleanUp
 
    !-------------------------------------------------------------------------------------------------------------------------------
@@ -711,16 +723,11 @@ CONTAINS
       CHARACTER(*),                  INTENT( IN    )   :: inputFile
       TYPE(MD_Drvr_InitInput),       INTENT(   OUT )   :: InitInp
       ! Local variables  
-      INTEGER                                          :: I                    ! generic integer for counting
       INTEGER                                          :: J                    ! generic integer for counting
-      CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
 
-      CHARACTER(1024)                                  :: EchoFile             ! Name of MoorDyn echo file  
-      CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line   
-      CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
-      CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
+      ! CHARACTER(1024)                                  :: EchoFile             ! Name of MoorDyn echo file  
       CHARACTER(1024)                                  :: FileName             ! Name of MoorDyn input file  
-      CHARACTER(1024)                                  :: FilePath             ! Path Name of MoorDyn input file  
+      CHARACTER(1024)                                  :: FilePath             ! Name of path to MoorDyn input file
    
       UnEcho=-1
       UnIn  =-1
@@ -736,17 +743,17 @@ CONTAINS
       ! Read until "echo"
       CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2); call AbortIfFailed()
       CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 2', ErrStat2, ErrMsg2); call AbortIfFailed()
-      CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2); call AbortIfFailed()
-      ! If we echo, we rewind
-      IF ( InitInp%Echo ) THEN
-         EchoFile = TRIM(FileName)//'.echo'
-         CALL GetNewUnit( UnEcho )   
-         CALL OpenEcho ( UnEcho, EchoFile, ErrStat, ErrMsg ); call AbortIfFailed()
-         REWIND(UnIn)
-         CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-         CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 2', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-         CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      END IF
+      ! CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2); call AbortIfFailed()
+      ! ! If we echo, we rewind
+      ! IF ( InitInp%Echo ) THEN
+      !    EchoFile = TRIM(FileName)//'.echo'
+      !    CALL GetNewUnit( UnEcho )   
+      !    CALL OpenEcho ( UnEcho, EchoFile, ErrStat2, ErrMsg2 ); call AbortIfFailed()
+      !    REWIND(UnIn)
+      !    CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      !    CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 2', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      !    CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      ! END IF
       !---------------------- ENVIRONMENTAL CONDITIONS -------------------------------------------------
       CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
@@ -772,17 +779,23 @@ CONTAINS
       if(UnEcho>0) CLOSE( UnEcho )
       if(UnIn>0)   CLOSE( UnIn   )
    
+      UnEcho = -1
+      UnIn = -1
+      
       ! Perform input checks and triggers
-      !CALL GetPath( FileName, FilePath )
-      !IF ( PathIsRelative( InitInp%MDInputFile ) ) then
-      !   InitInp%MDInputFile = TRIM(FilePath)//TRIM(InitInp%MDInputFile)
-      !END IF
-      !IF ( PathIsRelative( InitInp%OutRootName ) ) then
-      !   InitInp%OutRootName = TRIM(FilePath)//TRIM(InitInp%OutRootName)
-      !endif
-      !IF ( PathIsRelative( InitInp%InputsFile ) ) then
-      !   InitInp%InputsFile = TRIM(FilePath)//TRIM(InitInp%InputsFile)
-      !endif
+      CALL GetPath( FileName, FilePath )
+      
+      IF ( PathIsRelative( InitInp%MDInputFile ) ) then
+         InitInp%MDInputFile = TRIM(FilePath)//TRIM(InitInp%MDInputFile)
+      END IF
+      
+      IF ( PathIsRelative( InitInp%OutRootName ) ) then
+         InitInp%OutRootName = TRIM(FilePath)//TRIM(InitInp%OutRootName)
+      endif
+      
+      IF ( PathIsRelative( InitInp%InputsFile ) ) then
+         InitInp%InputsFile = TRIM(FilePath)//TRIM(InitInp%InputsFile)
+      endif
 
    END SUBROUTINE ReadDriverInputFile
 

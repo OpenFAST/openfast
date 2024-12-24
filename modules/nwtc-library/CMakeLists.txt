@@ -14,6 +14,18 @@
 # limitations under the License.
 #
 
+if (GENERATE_TYPES)
+  generate_f90_types(src/Registry_NWTC_Library_base.txt ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_Types.f90 -noextrap)
+  generate_f90_types(src/Registry_NWTC_Library_mesh.txt ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_IncSubs.f90 -incsubs -noextrap)
+  # Generate Registry_NWTC_Library.txt by concatenating _base.txt and _mesh.txt
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS 
+    src/Registry_NWTC_Library_mesh.txt 
+    src/Registry_NWTC_Library_base.txt) # if these files change, rerun configure
+  file(READ src/Registry_NWTC_Library_base.txt BASE_CONTENTS)
+  file(READ src/Registry_NWTC_Library_mesh.txt MESH_CONTENTS)
+  file(WRITE src/Registry_NWTC_Library.txt "${BASE_CONTENTS}\n${MESH_CONTENTS}")
+endif()
+
 #-------------------------------------------------------------------------------
 # NWTC System File
 #-------------------------------------------------------------------------------
@@ -55,6 +67,7 @@ set(NWTCLIBS_SOURCES
 
   src/NWTC_Base.f90
   src/SingPrec.f90
+  src/ModReg.f90
 
   src/ModMesh.f90
   src/ModMesh_Mapping.f90
@@ -63,6 +76,7 @@ set(NWTCLIBS_SOURCES
   src/NWTC_IO.f90
   src/NWTC_Library.f90
   src/NWTC_Num.f90
+  src/NWTC_Str.f90
   src/NWTC_RandomNumber.f90
   
   src/NWTC_Library_Types.f90
@@ -135,8 +149,14 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
    endif()
 endif()
 
+add_custom_target(nwtc_library_inc_subs DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/NWTC_Library_IncSubs.f90)
+
 # Create NWTC Library
-add_library(nwtclibs ${NWTC_SYS_FILE} ${NWTCLIBS_SOURCES})
+add_library(nwtclibs STATIC
+  ${NWTC_SYS_FILE} 
+  ${NWTCLIBS_SOURCES}
+)
+add_dependencies(nwtclibs nwtc_library_inc_subs)
 target_link_libraries(nwtclibs PUBLIC
   ${LAPACK_LIBRARIES} 
   ${CMAKE_DL_LIBS} 

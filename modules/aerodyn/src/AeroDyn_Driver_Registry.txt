@@ -15,7 +15,7 @@ usefrom    AeroDyn_Registry.txt
 usefrom    AeroDyn_Inflow_Registry.txt
 #
 # ..... Table of combined cases to run .......................................................................................................
-typedef   AeroDyn_Driver/AD_Dvr Dvr_Case   ReKi                   HWindSpeed       -      -     -   "Hub wind speed" "m/s"
+typedef   AeroDyn_Driver/AD_Dvr Dvr_Case          ReKi                   HWindSpeed       -      -     -   "Hub wind speed" "m/s"
 typedef   ^                         ^             ReKi                   PLExp            -      -     -   "Power law wind-shear exponent" "-"
 typedef   ^                         ^             ReKi                   rotSpeed         -      -     -   "Rotor speed" "rad/s"
 typedef   ^                         ^             ReKi                   bldPitch         -      -     -   "Pitch angle" "rad"
@@ -36,7 +36,7 @@ typedef    ^    DvrVTK_SurfaceType    SiKi    BaseBox       {3}{8}    -    -    
 # typedef    ^    DvrVTK_SurfaceType    DvrVTK_BLSurfaceType    BladeShape    {:}    -    -    "AirfoilCoords for each blade"    m
 
 # ..... Data for driver output file .......................................................................................................
-typedef   AeroDyn_Driver/AD_Dvr  Dvr_Outputs ProgDesc          AD_ver           -      -     -   "AeroDyn version information" -
+typedef   AeroDyn_Driver/AD_Dvr  Dvr_Outputs      ProgDesc               AD_ver           -      -     -   "AeroDyn version information" -
 typedef   ^                         ^             IntKi                  unOutFile        :      -     -   "unit number for writing output file for each rotor" "-"
 typedef   ^                         ^             IntKi                  ActualChanLen    -      -     -   "Actual length of channels written to text file (less than or equal to ChanLen)" "-"
 typedef   ^                         ^             IntKi                  nDvrOutputs      -      -     -   "Number of outputs for the driver (without AD and IW)" "-"
@@ -45,17 +45,18 @@ typedef   ^                         ^             character(25)          Fmt_a  
 typedef   ^                         ^             character(1)           delim            -      -     -   "column delimiter" "-"
 typedef   ^                         ^             character(20)          outFmt           -      -     -   "Format specifier" "-"
 typedef   ^                         ^             IntKi                  fileFmt          -      -     -   "Output format 1=Text, 2=Binary, 3=Both" "-"
-typedef   ^                         ^             IntKi                  wrVTK            -      -     -   "0= no vtk, 1=init only, 2=animation" "-"
+typedef   ^                         ^             IntKi                  WrVTK            -      -     -   "0= no vtk, 1=init only, 2=animation" "-"
 typedef   ^                         ^             IntKi                  WrVTK_Type       -      -     -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
 typedef   ^                         ^             character(1024)        Root             -      -     -   "Output file rootname" "-"
-typedef   ^                         ^             character(1024)        VTK_OutFileRoot  -      -     -   "Output file rootname for vtk" "-"
+typedef   ^                         ^             character(1024)        VTK_OutFileRoot  -      -     -   "Output file rootname for vtk (includes directory)" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputHdr  {:}     -     -   "Channel headers" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputUnt  {:}     -     -   "Channel units" "-"
 typedef   ^                         ^             ReKi                   storage         :::     -     -   "nTurbines x nChannel x nTime"
 typedef   ^                         ^             ReKi                   outLine          :      -     -   "Output line to be written to disk"
 typedef   ^                         ^             DvrVTK_SurfaceType     VTK_surface      :      -     -   "Data for VTK surface visualization"
-typedef   ^                         ^             INTEGER                VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"    -
-typedef   ^                         ^             INTEGER                n_VTKTime        -      -     -   "Number of time steps between writing VTK files"    -
+typedef   ^                         ^             IntKi                  VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"    -
+typedef   ^                         ^             IntKi                  n_VTKTime        -      -     -   "Number of time steps between writing VTK files" -
+typedef   ^                         ^             DbKi                   VTK_DT           -      -     -   "Write VTK time step" -
 typedef   ^                         ^             SiKi                   VTKHubRad        -      -     -   "Hub radius for visualization"    m
 typedef   ^                         ^             ReKi                   VTKNacDim        6      -     -   "Nacelle dimensions for visualization"    m
 typedef   ^                         ^             SiKi                   VTKRefPoint      3      -     -   "RefPoint for VTK outputs"
@@ -138,7 +139,7 @@ typedef   ^                         ^            ReKi                    Patm   
 typedef   ^                         ^            ReKi                    Pvap             -      -     -   "Vapour pressure of working fluid" "Pa"
 typedef   ^                         ^            ReKi                    WtrDpth          -      -     -   "Water depth" "m"
 typedef   ^                         ^            ReKi                    MSL2SWL          -      -     -   "Offset between still-water level and mean sea level" "m"
-typedef   ^                         ^            IntKi                   numTurbines      -      -     -   "number of blades on turbine" "-"
+typedef   ^                         ^            IntKi                   numTurbines      -   -9999    -   "number of turbine rotors" "-"
 typedef   ^                         ^            WTData                  WT               :      -     -   "Wind turbine data for driver" "-"
 typedef   ^                         ^            DbKi                    dT               -      -     -   "time increment" "s"
 typedef   ^                         ^            DbKi                    tMax             -      -     -   "time increment" "s"
@@ -149,7 +150,7 @@ typedef   ^                         ^            IntKi                   iCase  
 typedef   ^                         ^            ReKi                    timeSeries       ::     -     -   "Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw" "-"
 typedef   ^                         ^            IntKi                   iTimeSeries      -      -     -   "Stored index to optimize time interpolation" -
 typedef   ^                         ^            character(1024)         root             -      -     -   "Output file rootname" "-"
-typedef   ^                         ^            Dvr_Outputs            out              -      -     -   "data for driver output file" "-"
+typedef   ^                         ^            Dvr_Outputs             out              -      -     -   "data for driver output file" "-"
 typedef   ^                         ^            ADI_IW_InputData        IW_InitInp       -      -     -   "" -
 
 # ..... Data to wrap the driver ..........................................................................................................

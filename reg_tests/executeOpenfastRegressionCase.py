@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import numpy as np
 import shutil
+import glob
 import subprocess
 import rtestlib as rtl
 import openfastDrivers
@@ -54,6 +55,7 @@ parser.add_argument("atol", metavar="Absolute-Tolerance", type=float, nargs=1, h
 parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
+parser.add_argument("-steadystate", dest="steadyState", action='store_true', help="perform steadystate/aeromap analysis"  )
 
 args = parser.parse_args()
 
@@ -66,12 +68,13 @@ atol = args.atol[0]
 plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
+steadyState = args.steadyState
 
 # validate inputs
 rtl.validateExeOrExit(executable)
 rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.makedirs(buildDirectory)
+    os.makedirs(buildDirectory, exist_ok=True)
 
 
 ### Build the filesystem navigation variables for running openfast on the test case
@@ -121,11 +124,24 @@ if not os.path.isdir(testBuildDirectory):
 
 ### Run openfast on the test case
 if not noExec:
-    caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
-    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
+    if steadyState:
+        caseInputFile = os.path.join(testBuildDirectory, caseName + ".drv")
+        returnCode = openfastDrivers.runAeromapCase(caseInputFile, executable)
+    else:
+        caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
+        returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
     if returnCode != 0:
         sys.exit(returnCode*10)
-    
+
+### If this is a restart test case
+if caseName.endswith('_Restart'):
+    for caseInputFile in reversed(glob.glob(os.path.join(testBuildDirectory, '*chkp'))):
+        if not caseInputFile.endswith('dll.chkp'): 
+            break
+    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable, restart=True)
+    if returnCode != 0:
+        sys.exit(returnCode*10)
+
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")

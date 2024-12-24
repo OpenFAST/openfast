@@ -352,7 +352,6 @@ subroutine FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    integer(IntKi),             intent(  out) :: ErrStat       !< Error status of the operation
    character(*),               intent(  out) :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   character(1024)         :: rootDir, baseName  ! Simulation root dir and basename
    integer(IntKi)          :: iW, nBldMax
    integer(IntKi), allocatable :: nBldPerRot(:)
    integer(IntKi)          :: ErrStat2
@@ -481,7 +480,7 @@ subroutine FVW_FinalWrite(u, p, x, z, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
    if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP) then
-      print*,'>>> FINAL WRITE'
+      call WrScr('OLAF: writting final VTK outputs')
       t=-1.0_ReKi
       if (p%WrVTK==1) then
          if (m%VTKstep<m%iStep+1) then
@@ -584,7 +583,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       m%ComputeWakeInduced = .FALSE.
    endif
    if (bReevaluation) then
-      call WrScr('[INFO] FVW: Update States: reevaluation at the same starting time')
+      if (m%InfoReEval) then
+         call WrScr('[INFO] FVW: Update States: reevaluation at the same starting time.  This will not print on subsequent occurences.')
+         m%InfoReEval = .false.
+      endif
       call RollBackPreviousTimeStep() ! Cancel wake emission done in previous call
       m%ComputeWakeInduced = .TRUE.
    endif
@@ -756,8 +758,9 @@ contains
    end subroutine RollBackPreviousTimeStep
 
    subroutine CleanUp()
-      call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2); if(Failed()) return
-      call FVW_DestroyInput(uInterp, ErrStat2, ErrMsg2); if(Failed()) return
+      ! note: errors not trapped here as leads to recursive use of Failed()
+      call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2)  !; if(Failed()) return
+      call FVW_DestroyInput(uInterp, ErrStat2, ErrMsg2)        !; if(Failed()) return
    end subroutine
 
    logical function Failed()
@@ -1569,8 +1572,9 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Initial misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   
+   integer(IntKi), parameter :: NumBladesPerWing = 1 ! UA is called separately for each wing (i.e., blade). In BEMT, UA is called for all blades on a single rotor.
    !
-   type(UA_InitInputType) :: Init_UA_Data
    type(UA_InitOutputType):: InitOutData_UA
    integer                :: i,iW
    integer(intKi)         :: ErrStat2
@@ -1585,32 +1589,28 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
       ! We store these per wings (they each contains element info for (nNodes x 1)
       allocate(x%UA(p%nWings), xd%UA(p%nWings), OtherState%UA(p%nWings))
 
+      allocate(InitInp%UA_Init%c(InitInp%numBladeNodes,NumBladesPerWing), STAT = errStat2)
+      allocate(InitInp%UA_Init%UAOff_innerNode(NumBladesPerWing), stat=errStat2)
+      allocate(InitInp%UA_Init%UAOff_outerNode(NumBladesPerWing), stat=errStat2)
+      InitInp%UA_Init%dt              = interval
+      InitInp%UA_Init%numBlades       = NumBladesPerWing
+      InitInp%UA_Init%nNodesPerBlade  = InitInp%numBladeNodes ! At AeroDyn ndoes, not CP
       do iW=1,p%nWings
+         
          ! ---Condensed version of "BEMT_Set_UA_InitData"
-         allocate(Init_UA_Data%c(InitInp%numBladeNodes,1), STAT = errStat2)
          do i = 1,InitInp%numBladeNodes
-            Init_UA_Data%c(i,1)      = p%W(iW)%chord_LL(i) ! NOTE: InitInp chord move-allocd to p
+            InitInp%UA_Init%c(i,1)      = p%W(iW)%chord_LL(i) ! NOTE: InitInp chord move-allocd to p
          end do
-         Init_UA_Data%dt              = interval          
-         Init_UA_Data%OutRootName     = trim(InitInp%RootName)//'W'//num2lstr(iW)
-         Init_UA_Data%numBlades       = 1
-         Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes ! At AeroDyn ndoes, not CP
+         InitInp%UA_Init%OutRootName     = trim(InitInp%RootName)//'W'//num2lstr(iW)//'.UA'
 
-         Init_UA_Data%UAMod           = InitInp%UAMod  
-         Init_UA_Data%Flookup         = InitInp%Flookup
-         Init_UA_Data%a_s             = InitInp%a_s ! Speed of sound, m/s  
-         Init_UA_Data%ShedEffect      = .False. ! Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
-         Init_UA_Data%WrSum           = InitInp%SumPrint
-         allocate(Init_UA_Data%UAOff_innerNode(1), stat=errStat2)
-         allocate(Init_UA_Data%UAOff_outerNode(1), stat=errStat2)
-         Init_UA_Data%UAOff_innerNode(1) = InitInp%W(iW)%UAOff_innerNode
-         Init_UA_Data%UAOff_outerNode(1) = InitInp%W(iW)%UAOff_outerNode
+         InitInp%UA_Init%ShedEffect      = .False. ! Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
+         InitInp%UA_Init%UAOff_innerNode(1) = InitInp%W(iW)%UAOff_innerNode
+         InitInp%UA_Init%UAOff_outerNode(1) = InitInp%W(iW)%UAOff_outerNode
 
          ! --- UA init
          allocate(m%W(iW)%u_UA(InitInp%numBladeNodes, 2), stat=errStat2) 
-         call UA_Init( Init_UA_Data, m%W(iW)%u_UA(1,1), m%W(iW)%p_UA, x%UA(iW), xd%UA(iW), OtherState%UA(iW), m%W(iW)%y_UA, m%W(iW)%m_UA, interval, AFInfo, p%W(iW)%AFIndx, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
+         call UA_Init( InitInp%UA_Init, m%W(iW)%u_UA(1,1), m%W(iW)%p_UA, x%UA(iW), xd%UA(iW), OtherState%UA(iW), m%W(iW)%y_UA, m%W(iW)%m_UA, interval, AFInfo, p%W(iW)%AFIndx, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
 
-         call UA_DestroyInitInput( Init_UA_Data, ErrStat2, ErrMsg2 ); if(Failed())return
          call UA_DestroyInitOutput( InitOutData_UA, ErrStat2, ErrMsg2 ); if(Failed())return
 
       enddo

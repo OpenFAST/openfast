@@ -97,24 +97,18 @@ CONTAINS
       Point%time = t
 
       
-    !  if (Point%typeNum==0) THEN ! anchor ( <<< to be changed/expanded) ... in MoorDyn F also used for coupled points
-                        
-         ! set position and velocity
-         Point%r  = r_in
-         Point%rd = rd_in
-         Point%a = a_in
-                 
-         ! pass latest kinematics to any attached lines
-         DO l=1,Point%nAttached
-            CALL Line_SetEndKinematics(m%LineList(Point%attached(l)), Point%r, Point%rd, t, Point%Top(l))
-         END DO
-      
-     ! else
-     !    
-     !    PRINT*,"Error: setKinematics called for wrong Point type. Point ", Point%IdNum, " type ", Point%typeNum
-         
-   !  END IF
-      
+                     
+      ! set position and velocity
+      Point%r  = r_in
+      Point%rd = rd_in
+      Point%a = a_in
+               
+      ! pass latest kinematics to any attached lines
+      DO l=1,Point%nAttached
+         CALL Line_SetEndKinematics(m%LineList(Point%attached(l)), Point%r, Point%rd, t, Point%Top(l))
+      END DO
+   
+   
          
    END SUBROUTINE Point_SetKinematics
    !--------------------------------------------------------------
@@ -161,8 +155,8 @@ CONTAINS
 
       !INTEGER(IntKi)             :: l         ! index of attached lines
       INTEGER(IntKi)                        :: J                ! index
-      INTEGER(IntKi)                        :: K                ! index      
-      Real(DbKi)                            :: Sum1             ! for adding things
+!      INTEGER(IntKi)                        :: K                ! index      
+!      Real(DbKi)                            :: Sum1             ! for adding things
       
       Real(DbKi)                            :: S(3,3)           ! inverse mass matrix
 
@@ -215,9 +209,9 @@ CONTAINS
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
 
       INTEGER(IntKi)             :: l         ! index of attached lines
-      INTEGER(IntKi)             :: I         ! index
+!      INTEGER(IntKi)             :: I         ! index
       INTEGER(IntKi)             :: J         ! index
-      INTEGER(IntKi)             :: K         ! index
+!      INTEGER(IntKi)             :: K         ! index
 
       Real(DbKi)                 :: Fnet_i(3) ! force from an attached line
       Real(DbKi)                 :: Moment_dummy(3) ! dummy vector to hold unused line end moments
@@ -320,16 +314,19 @@ CONTAINS
 
    ! calculate the force and mass contributions of the point on the parent body (only for type 3 points?)
    !--------------------------------------------------------------
-   SUBROUTINE Point_GetNetForceAndMass(Point, rRef, Fnet_out, M_out, m, p)
+   SUBROUTINE Point_GetNetForceAndMass(Point, rRef, wRef, Fnet_out, M_out, m, p)
    
       Type(MD_Point),      INTENT(INOUT)  :: Point     ! the Point object
       Real(DbKi),            INTENT(IN   )  :: rRef(3)     ! global coordinates of reference point (i.e. the parent body)
+      Real(DbKi),            INTENT(IN   )  :: wRef(3)     ! global angular velocities of reference point (i.e. the parent body)
       Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector about rRef
       Real(DbKi),            INTENT(  OUT)  :: M_out(6,6)  ! mass and inertia matrix about rRef
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
       TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
 
       Real(DbKi)                            :: rRel(  3)   ! position of point relative to the body reference point (global orientation frame)
+      Real(DbKi)                            :: Fcentripetal(3)        ! centripetal force
+      Real(DbKi)                            :: Mcentripetal(3)        ! centripetal moment     
 
 
       CALL Point_DoRHS(Point, m, p)
@@ -338,9 +335,16 @@ CONTAINS
 
       ! convert net force into 6dof force about body ref point
       CALL translateForce3to6DOF(rRel, Point%Fnet, Fnet_out)
-      
+
       ! convert mass matrix to 6by6 mass matrix about body ref point
       CALL translateMass3to6DOF(rRel, Point%M, M_out)
+
+      ! add in the centripetal force and moment on the body. If rRel is zero there will be no translational centripetal component
+      Fcentripetal = - MATMUL(M_out(1:3,1:3), CROSS_PRODUCT(wRef, CROSS_PRODUCT(wRef,rRel)))
+      Mcentripetal = - CROSS_PRODUCT(wRef, MATMUL(M_out(4:6,4:6), wRef))
+
+      Fnet_out(1:3) = Fnet_out(1:3) + Fcentripetal
+      Fnet_out(4:6) = Fnet_out(4:6) + Mcentripetal
 
    END SUBROUTINE Point_GetNetForceAndMass
    
@@ -362,7 +366,7 @@ CONTAINS
          Point%Attached(Point%nAttached) = lineID
          Point%Top(Point%nAttached) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
       ELSE
-         Print*, "Too many lines connected to Point ", Point%IdNum, " in MoorDyn!"
+         call WrScr("Too many lines connected to Point "//trim(num2lstr(Point%IdNum))//" in MoorDyn!")
       END IF
 
    END SUBROUTINE Point_AddLine
@@ -379,6 +383,9 @@ CONTAINS
       REAL(DbKi),       INTENT(INOUT)    :: rdEnd(3)
       
       Integer(IntKi)    :: l,m,J
+      logical           :: found
+
+      found = .false.
       
       DO l = 1,Point%nAttached    ! look through attached lines
       
@@ -386,7 +393,7 @@ CONTAINS
          
             TopOfLine = Point%Top(l);                ! record which end of the line was attached
             
-            DO m = l,Point%nAttached-1 
+            DO m = l,Point%nAttached 
             
                Point%Attached(m) = Point%Attached(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
                Point%Top(     m) =      Point%Top(m+1) 
@@ -399,18 +406,20 @@ CONTAINS
                   rdEnd(J) = Point%rd(J)
                END DO
                
-               print*, "Detached line ", lineID, " from Point ", Point%IdNum
+               call WrScr( "Detached line "//trim(num2lstr(lineID))//" from Point "//trim(num2lstr(Point%IdNum)))
                
                EXIT
             END DO
             
-            IF (l == Point%nAttached) THEN   ! detect if line not found
-               print *, "Error: failed to find line to remove during removeLineFromPoint call to point ", Point%IdNum, ". Line ", lineID
-            END IF
+            found = .true.
          
          END IF
          
       END DO
+
+      IF (.not. found) THEN   ! detect if line not found TODO: fix this, its wrong. If pointNnattached is oprginally 2, then it will be 1 after one run of the loop and l will also be 1
+         CALL WrScr("Error: failed to find line to remove during RemoveLine call to Point "//trim(num2lstr(Point%IdNum))//". Line "//trim(num2lstr(lineID)))
+      END IF
       
    END SUBROUTINE Point_RemoveLine
 

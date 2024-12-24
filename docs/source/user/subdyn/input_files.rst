@@ -179,11 +179,10 @@ properties, the material properties are not allowed to change within a
 single member.
 
 Future releases will allow for members of different cross-sections,
-i.e., noncircular members. For this reason, the input file has
-(currently unused) sections dedicated to the identification of direction
-cosines that in the future will allow the module to identify the correct
-orientation of noncircular members. The current release only accepts
-tubular (circular) members.
+i.e., noncircular members. For this reason, the input file has sections 
+dedicated to the identification of direction cosines that in the future 
+will allow the module to identify the correct orientation of noncircular 
+members. The current release only accepts tubular (circular) members.
 
 The file is organized into several functional sections. Each section
 corresponds to an aspect of the SubDyn model and substructure.
@@ -230,13 +229,6 @@ static gravity and buoyancy loads, and high-frequency loads transferred
 from the turbine. Recommended to set to True.
 
 
-**GuyanLoadCorrection** is a flag to specify whether the extra moment due to 
-the lever arm from the Guyan deflection of the structure is to be added to the loads
-passed to SubDyn, and, whether the FEM representation should be expressed in the rotating 
-frame in the floating case (the rotation is induced by the rigid body Guyan modes).
-See section :numref:`SD_Loads` for details. Recommended to set to True.
-
-
 FEA and Craig-Bampton Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -254,16 +246,11 @@ Increasing the number of elements per member may increase accuracy, with
 the trade-off of increased memory usage and computation time. We
 recommend using **NDiv** > 1 when modeling tapered members.
 
-**CBMod** is a flag that specifies whether or not the C-B reduction
-should be carried out by the module. If FALSE, then the full
-finite-element model is retained and **Nmodes** is ignored.
-
-**Nmodes** sets the number of internal C-B modal DOFs to retain in the
+**Nmodes** sets the number of internal C-B modal DOF to retain in the
 C-B reduction. **Nmodes** = 0 corresponds to a Guyan (static)
-reduction. **Nmodes** is ignored if **CBMod** is set to FALSE,
-meaning the full finite-element model is retained by keeping all modes
-(i.e. a modal analysis is still done, and all the modes are used as DOFs)  .
-
+reduction. With **Nmodes** < 0 (equivalent to **CBMod** set to FALSE 
+in previous versions), SubDyn will retain all C-B modes, leading to the 
+same number of DOF as the full finite-element model.
 
 **JDampings** specifies value(s) of damping coefficients as a
 percentage of critical damping for the retained C-B modes. Distinct
@@ -419,7 +406,7 @@ MEMBER X-SECTION PROPERTY table (discussed next) for starting
 cross-section properties and **MPropSetID2** specifies the identifier
 for ending cross-section properties, allowing for tapered members.
 The sixth column specify the member type  **MType**.
-A member is one of the three following types (see :numref:`SD_FEM`):
+A member is one of the four following types (see :numref:`SD_FEM`):
 
 - Beams (*MType=1*), Euler-Bernoulli (*FEMMod=1*) or Timoshenko (*FEMMod=3*)
 
@@ -427,9 +414,12 @@ A member is one of the three following types (see :numref:`SD_FEM`):
 
 - Rigid link (*MType=3*)
 
+- Spring element (*MType=5*)
+
 **COSMID** refers to the IDs of the members' cosine matrices for noncircular
-members; the current release uses SubDyn's default direction cosine convention
-if it's not present or when COSMID values are -1.
+members and spring elements; the current release uses SubDyn's default direction cosine convention
+if it's not present or when COSMID values are -1. Spring elements are defined between joints that 
+are coincident in the space and the direction cosine must be provided.
 
 
 An example of member table is given below
@@ -525,22 +515,27 @@ An example of rigid link properties table is given below
      (-)       (kg/m)    
       12       7850.0
        3       7000.0
-       
 
+Spring Properties
+~~~~~~~~~~~~~~~~~
+Members that are specified as spring elements (**MType=5**), 
+have their properties defined in the spring element properties table. 
+The table lists for each spring property: the property ID (**PropSetID**) and the 
+stiffness coefficients (**K11**, **K12**, **K13**, **K14**, **K15**, **K16**, **K22**,
+**K23**, **K24**, **K25**, **K26**,  **K33**, **K34**, **K35**, **K36**, **K44**, **K45**,
+**K46**, **K55**, **K56**, **K66**). The stiffness matrix is considered symmetric and 
+includes diagonal (kii) and cross-coupling (kij) coefficients. 
+The FEM representation of the spring element is given in :numref:`SD_SpringElement`.
 
+An example of spring properties table is given below:
 
+.. code::
 
-
-
-
-
-
-
-
-
-
-
-
+    -------------------------- SPRING ELEMENT PROPERTIES  ----------------------------
+             1   NSpringPropSets - Number of spring properties
+    PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66    
+      (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)
+       2        2E7      0      0        0      0       0       1E12     0        0     0        0       1E12   0       0        0       1E12     0     0         1E8      0        1E12
 
 Member Cosine Matrices COSM (i,j)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -548,9 +543,12 @@ Member Cosine Matrices COSM (i,j)
 to be provided. Each row of the table will list the nine entries of the
 direction cosine matrices (COSM11, COSM12,…COSM33) for matrix elements.
 Each row is a vector in the global coordinate system for principal axes 
-in the x, y and z directions respectively. These vectors need to be 
-specified with an extremely high level of precision for results to be
-equivalent to an internal calculation.
+in the x (COSM11, COSM12, COSM13), y (COSM21, COSM22, COSM23) and 
+z (COSM31, COSM32, COSM33) directions respectively. Internally, SubDyn 
+transposes this provided matrix to make it consistent with the definition 
+of direction cosine matrix :math:`[ \mathbf{D_c} ]` used in SubDyn (Eq. :eq:`Dc`). 
+The vectors provided need to be specified with an extremely high level of 
+precision for results to be equivalent to an internal calculation.
 
 Joint Additional Concentrated Masses
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

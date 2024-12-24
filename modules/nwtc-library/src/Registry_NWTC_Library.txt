@@ -6,66 +6,160 @@
 #.............................................................
 
 
-usefrom   NWTC_Library  ProgDesc            CHARACTER(99)            Name
-usefrom     ^             ^                 CHARACTER(99)            Ver
-usefrom     ^             ^                 CHARACTER(24)            Date
+typedef   NWTC_Library  ProgDesc            CHARACTER(99)            Name - - - "Name of the program or module"
+typedef     ^             ^                 CHARACTER(99)            Ver  - - - "Version number of the program or module"
+typedef     ^             ^                 CHARACTER(24)            Date - - - "String containing date module was last updated"
 
-usefrom     ^           FASTdataType        CHARACTER(1024)          File
-usefrom     ^             ^                 CHARACTER(1024)          Descr
-usefrom     ^             ^                 IntKi                    NumChans
-usefrom     ^             ^                 IntKi                    NumRecs
-usefrom     ^             ^                 DbKi                     TimeStep
-usefrom     ^             ^                 CHARACTER(ChanLen)       ChanNames {:}
-usefrom     ^             ^                 CHARACTER(ChanLen)       ChanUnits {:}
-usefrom     ^             ^                 ReKi                     Data      {:}{:}
+typedef   NWTC_Library  FASTdataType        CHARACTER(1024)          File     - - - "Name of the FAST-style binary file"
+typedef     ^             ^                 CHARACTER(1024)          Descr    - - - "String describing file"
+typedef     ^             ^                 IntKi                    NumChans - - - "Number of output channels in this binary file (not including the time channel)"
+typedef     ^             ^                 IntKi                    NumRecs  - - - "Number of records (rows) of data in the file"
+typedef     ^             ^                 DbKi                     TimeStep - - - "Time step for evenly-spaced data in the output file (when NumRecs is not allo"
+typedef     ^             ^                 CHARACTER(ChanLen)       ChanNames {:} - - "Strings describing the names of the channels from the binary file (including the time channel)"
+typedef     ^             ^                 CHARACTER(ChanLen)       ChanUnits {:} - - "Strings describing the units of the channels from the binary file (including the time channel)"
+typedef     ^             ^                 ReKi                     Data      {:}{:} - - "numeric data (rows and columns) from the binary file, including the time channel"
 
-usefrom   NWTC_Library  OutParmType         IntKi                    Indx
-usefrom     ^             ^                 CHARACTER(ChanLen)       Name
-usefrom     ^             ^                 CHARACTER(ChanLen)       Units
-usefrom     ^             ^                 IntKi                    SignM
+typedef   NWTC_Library  OutParmType         IntKi                    Indx   - - - "An index into AllOuts array where this channel is computed/stored"
+typedef     ^             ^                 CHARACTER(ChanLen)       Name   - - - "Name of the output channel"
+typedef     ^             ^                 CHARACTER(ChanLen)       Units  - - - "Units this channel is specified in"
+typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
 
-usefrom   NWTC_Library  FileInfoType        IntKi                    NumLines
-usefrom     ^             ^                 IntKi                    NumFiles
-usefrom     ^             ^                 IntKi                    FileLine  {:}
-usefrom     ^             ^                 IntKi                    FileIndx  {:}
-usefrom     ^             ^                 CHARACTER(MaxFileInfoLineLen)  FileList  {:}
-usefrom     ^             ^                 CHARACTER(MaxFileInfoLineLen)  Lines     {:}
+typedef   NWTC_Library  FileInfoType        IntKi                    NumLines
+typedef     ^             ^                 IntKi                    NumFiles
+typedef     ^             ^                 IntKi                    FileLine  {:}
+typedef     ^             ^                 IntKi                    FileIndx  {:}
+typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  FileList  {:}
+typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  Lines     {:}
 
-usefrom   NWTC_Library  Quaternion          ReKi                     q0
-usefrom     ^             ^                 ReKi                     v  {3}
+typedef   NWTC_Library  Quaternion          ReKi                     q0
+typedef     ^             ^                 ReKi                     v  {3}
 
-usefrom   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
-usefrom     ^             ^                     IntKi                RandSeed          {3}
-usefrom     ^             ^                     IntKi                RandSeedAry       {:}
-usefrom     ^             ^              CHARACTER(6)                RNG_type
+typedef   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi      pRNG
+typedef     ^             ^                     IntKi                RandSeed          {3}
+typedef     ^             ^                     IntKi                RandSeedAry       {:}
+typedef     ^             ^              CHARACTER(6)                RNG_type
+
+#-------------------------------------------------------------------------------
+# Module Variables
+#-------------------------------------------------------------------------------
+
+param       ^       -           IntKi           VarNameLen          -   64  -   ""  -
+
+param       ^       -           IntKi           VF_Force            -   1   -   ""  -
+param       ^       -           IntKi           VF_Moment           -   2   -   ""  -
+param       ^       -           IntKi           VF_Orientation      -   3   -   ""  -
+param       ^       -           IntKi           VF_TransDisp        -   4   -   ""  -
+param       ^       -           IntKi           VF_AngularDisp      -   5   -   ""  -
+param       ^       -           IntKi           VF_TransVel         -   6   -   ""  -
+param       ^       -           IntKi           VF_AngularVel       -   7   -   ""  -
+param       ^       -           IntKi           VF_TransAcc         -   8   -   ""  -
+param       ^       -           IntKi           VF_AngularAcc       -   9   -   ""  -
+param       ^       -           IntKi           VF_Scalar           -  10   -   ""  -
+
+param       ^       -           IntKi           VF_None             -   0   -   "Variable with no flags"  -
+param       ^       -           IntKi           VF_Mesh             -   1   -   "Variable contained in mesh"  -
+param       ^       -           IntKi           VF_Line             -   2   -   "Variable is for a line mesh"  -
+param       ^       -           IntKi           VF_RotFrame         -   4   -   "Variable in rotating frame"  -
+param       ^       -           IntKi           VF_Ext              -   8   -   "Variable for extended linearization"  -
+param       ^       -           IntKi           VF_Any              - 4095  -   "Enable all flags (used for filtering)"  -
+
+param       ^       -           IntKi           VC_None             -   0   -   ""  -
+param       ^       -           IntKi           VC_Tight            -   1   -   ""  -
+param       ^       -           IntKi           VC_Option1          -   2   -   ""  -
+param       ^       -           IntKi           VC_Option2          -   3   -   ""  -
+
+typedef     ^       ModVarType  character(VarNameLen)   Name        -   -   -   ""  -
+typedef     ^       ^           IntKi           Field               -   0   -   ""  -
+typedef     ^       ^           IntKi           Nodes               -   1   -   ""  -
+typedef     ^       ^           IntKi           Num                 -   1   -   ""  -
+typedef     ^       ^           IntKi           Flags               -   0   -   ""  -
+typedef     ^       ^           IntKi           DerivOrder          -   0   -   ""  -
+typedef     ^       ^           IntKi           iLoc                :   -   -   "indices in local arrays"  -
+typedef     ^       ^           IntKi           iSol                :   -   -   "indices in solver arrays"  -
+typedef     ^       ^           IntKi           iLin                :   -   -   "indices in linearization arrays"  -
+typedef     ^       ^           IntKi           iq                  :   -   -   "row index in solver q matrix"  -
+typedef     ^       ^           IntKi           iUsr                2   -   -   "first user defined index for variable, can be used a lower/upper bounds"  -
+typedef     ^       ^           IntKi           jUsr                -   0   -   "second user defined index for variable"  -
+typedef     ^       ^           IntKi           MeshID              -   0   -   "Mesh identification number"  -
+typedef     ^       ^           logical         Solve               -   F   -   "flag indicating that variable is used by solver"  -
+typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
+typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
+
+typedef     ^       ModVarsType IntKi           ModNum              -   0   -   ""  -
+typedef     ^       ^           character(6)    ModAbbr             -   -   -   ""  -
+typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"  -
+typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"  -
+typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"  -
+typedef     ^       ^           IntKi           Nx                  -   -   -   ""  -
+typedef     ^       ^           IntKi           Nu                  -   -   -   ""  -
+typedef     ^       ^           IntKi           Ny                  -   -   -   ""  -
+
+typedef     ^       ModValsType R8Ki            x                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            dxdt                :   -   -   ""  -
+typedef     ^       ^           R8Ki            u                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            y                   :   -   -   ""  -
+typedef     ^       ^           R8Ki            u_perturb           :   -   -   "input perturbation array"  -
+typedef     ^       ^           R8Ki            x_perturb           :   -   -   ""  -
+typedef     ^       ^           R8Ki            xp                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            xn                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            yp                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            yn                  :   -   -   ""  -
+typedef     ^       ^           R8Ki            dYdx                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dXdx                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dYdu                ::  -   -   ""  -
+typedef     ^       ^           R8Ki            dXdu                ::  -   -   ""  -
+
+typedef     ^       ModDataType IntKi           Idx                 -   0   -   "Module index in array of modules"  -
+typedef     ^       ^           IntKi           ID                  -   0   -   "Module identification number"  -
+typedef     ^       ^           character(ChanLen) Abbr             -   -   -   "Module name abbreviation"  -
+typedef     ^       ^           IntKi           Ins                 -   0   -   "Module instance number"  -
+typedef     ^       ^           logical         IsTC                -   F   -   "Flag indicating module is part of tight coupling" -
+typedef     ^       ^           R8Ki            DT                  -   0   -   "Module time step"  -
+typedef     ^       ^           IntKi           SubSteps            -   0   -   "Module number of substeps per solver time step"  -
+typedef     ^       ^           IntKi           ixs                 ::  -   -   "index array mapping local x vector to global x vector" -
+typedef     ^       ^           IntKi           ius                 ::  -   -   "index array mapping local u vector to global u vector" -
+typedef     ^       ^           IntKi           iys                 ::  -   -   "index array mapping local y vector to global y vector" -
+typedef     ^       ^           ModVarsType    *Vars                -   -   -   "Pointer to module variables type"  -
+typedef     ^       ^           IntKi           SrcMaps             :   -   -   "Indices of mappings where module is the source"
+typedef     ^       ^           IntKi           DstMaps             :   -   -   "Indices of mappings where module is the destination"
+
+# This file defines types that may be  used from the NWTC_Library
+# include this into a component registry file if you wish to use these types
+# the "usefrom" keyword defines the types for the registry without generating
+# a NWTC_Library_Types.f90 file
+#
+#.............................................................
+
+
 
 #BJJ: the following three types will actually be placed in the ModMesh_Mapping.f90 file instead of NWTC_Library_Types.f90
-usefrom   NWTC_Library  MapType             IntKi                    OtherMesh_Element
-usefrom     ^             ^                 R8Ki                     distance           -
-usefrom     ^             ^                 R8Ki                     couple_arm        {3}
-usefrom     ^             ^                 R8Ki                     shape_fn          {2}
+typedef   NWTC_Library  MapType             IntKi                    OtherMesh_Element  -        - - "Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src" -
+typedef     ^             ^                 R8Ki                     distance           -        - - "Magnitude of couple_arm" m
+typedef     ^             ^                 R8Ki                     couple_arm        {3}       - - "Vector between a point and node 1 of an element (p_ODR - p_OSR)" m
+typedef     ^             ^                 R8Ki                     shape_fn          {2}       - - "shape functions: 1-D element-level location [0,1] based on closest-line projection of point" -
 
-usefrom   NWTC_Library  MeshMapLinearizationType R8Ki                mi        {:}{:}
-usefrom     ^             ^                 R8Ki                     fx_p      {:}{:}
-usefrom     ^             ^                 R8Ki                     tv_uD     {:}{:}
-usefrom     ^             ^                 R8Ki                     tv_uS     {:}{:}
-usefrom     ^             ^                 R8Ki                     ta_uD     {:}{:}
-usefrom     ^             ^                 R8Ki                     ta_uS     {:}{:}
-usefrom     ^             ^                 R8Ki                     ta_rv     {:}{:}
-usefrom     ^             ^                 R8Ki                     li        {:}{:}
-usefrom     ^             ^                 R8Ki                     M_u       {:}{:}
-usefrom     ^             ^                 R8Ki                     M_t       {:}{:}
-usefrom     ^             ^                 R8Ki                     M_f       {:}{:}
+typedef   NWTC_Library  MeshMapLinearizationType R8Ki                mi        {:}{:}  - -  "block matrix of motions that reflects identity (i.e., solely the mapping of one quantity to itself on another mesh)"
+typedef     ^             ^                 R8Ki                     fx_p      {:}{:}  - -  "block matrix of motions that reflects skew-symmetric (cross-product) matrix"
+typedef     ^             ^                 R8Ki                     tv_uD     {:}{:}  - -  "block matrix of translational velocity that is multiplied by destination translational displacement"
+typedef     ^             ^                 R8Ki                     tv_uS     {:}{:}  - -  "block matrix of translational velocity that is multiplied by source translational displacement"
+typedef     ^             ^                 R8Ki                     ta_uD     {:}{:}  - -  "block matrix of translational acceleration that is multiplied by destination translational displacement"
+typedef     ^             ^                 R8Ki                     ta_uS     {:}{:}  - -  "block matrix of translational acceleration that is multiplied by source translational displacement"
+typedef     ^             ^                 R8Ki                     ta_rv     {:}{:}  - -  "block matrix of translational acceleration that is multiplied by omega (RotationVel)"
+typedef     ^             ^                 R8Ki                     li        {:}{:}  - -  "block matrix of loads that reflects identity (i.e., solely the mapping on one quantity to itself on another mesh)"
+typedef     ^             ^                 R8Ki                     M_uS      {:}{:}  - -  "block matrix of moment that is multiplied by Source u (translationDisp)"
+typedef     ^             ^                 R8Ki                     M_uD      {:}{:}  - -  "block matrix of moment that is multiplied by Destination u (translationDisp)"
+typedef     ^             ^                 R8Ki                     M_f       {:}{:}  - -  "block matrix of moment that is multiplied by force"
 
-usefrom   NWTC_Library  MeshMapType         MapType                  MapLoads          {:}
-usefrom     ^             ^                 MapType                  MapMotions        {:}
-usefrom     ^             ^                 MapType                  MapSrcToAugmt     {:}
-usefrom     ^             ^                 MeshType                 Augmented_Ln2_Src  -
-usefrom     ^             ^                 MeshType                 Lumped_Points_Src  -
-usefrom     ^             ^                 INTEGER                  LoadLn2_A_Mat_Piv {:}
-usefrom     ^             ^                 R8Ki                     DisplacedPosition {:}{:}{:}
-usefrom     ^             ^                 R8Ki                     LoadLn2_A_Mat     {:}{:}
-usefrom     ^             ^                 R8Ki                     LoadLn2_F         {:}{:}
-usefrom     ^             ^                 R8Ki                     LoadLn2_M         {:}{:}
-usefrom     ^             ^                 MeshMapLinearizationType dM
+typedef   NWTC_Library  MeshMapType         MapType                  MapLoads          {:}       - - "mapping data structure for load fields on the mesh"
+typedef     ^               ^               MapType                  MapMotions        {:}       - - "mapping data structure for motion and/or scalar fields on the mesh"
+typedef     ^               ^               MapType                  MapSrcToAugmt     {:}       - - "for source line2 loads, we map between source and an augmented source mesh, then between augmented source and destination"
+typedef     ^               ^               MeshType                 Augmented_Ln2_Src  -        - - "temporary mesh for storing augmented line2 source values"
+typedef     ^               ^               MeshType                 Lumped_Points_Src  -        - - "temporary mesh for lumping lines to points, stored here for efficiency"
+typedef     ^               ^               INTEGER                  LoadLn2_A_Mat_Piv {:}       - - "The pivot values for the factorization of LoadLn2_A_Mat"
+typedef     ^               ^               R8Ki                     DisplacedPosition {:}{:}{:} - - "couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency)" m
+typedef     ^               ^               R8Ki                     LoadLn2_A_Mat     {:}{:}    - - "The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)"
+typedef     ^               ^               R8Ki                     LoadLn2_F         {:}{:}    - - "The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping"
+typedef     ^               ^               R8Ki                     LoadLn2_M         {:}{:}    - - "The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)"
+typedef     ^             ^                 MeshMapLinearizationType dM
+#typedef     ^               ^               MeshType                 Lumped_Points_Dest -        - - "temporary mesh for debugging the lumped values in the line2-to-line2"
 

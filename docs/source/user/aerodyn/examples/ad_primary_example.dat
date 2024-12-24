@@ -1,17 +1,16 @@
-------- AERODYN v15 for OpenFAST INPUT FILE -----------------------------------------------
+------- AERODYN for OpenFAST INPUT FILE -------------------------------------------------------------
 Description line that will be printed in the output file and written to the screen.
 ======  General Options  ============================================================================
-True          Echo               - Echo the input to "<rootname>.AD.ech"?  (flag)
+False         Echo               - Echo the input to "<rootname>.AD.ech"?  (flag)
 "default"     DTAero             - Time interval for aerodynamic calculations {or "default"} (s)
-          1   WakeMod            - Type of wake/induction model (switch) {0=none, 1=BEMT, 2=DBEMT, 3=OLAF}  [WakeMod cannot be 2 or 3 when linearizing]
-          1   AFAeroMod          - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
-          0   TwrPotent          - Type of tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+          1   Wake_Mod           - Wake/induction model (switch) {0=none, 1=BEMT, 3=OLAF} [Wake_Mod cannot be 2 or 3 when linearizing]
+          1   TwrPotent          - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
           0   TwrShadow          - Calculate tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
 False         TwrAero            - Calculate tower aerodynamic loads? (flag)
-False         FrozenWake         - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
-False         CavitCheck         - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
+False         CavitCheck         - Perform cavitation check? (flag) [UA_Mod must be 0 when CavitCheck=true]
 False         Buoyancy           - Include buoyancy effects? (flag)
-False         CompAA             - Flag to compute AeroAcoustics calculation [used only when WakeMod = 1 or 2]
+False         NacelleDrag        - Include Nacelle Drag effects? (flag)
+False         CompAA             - Flag to compute AeroAcoustics calculation [used only when Wake_Mod = 1 or 2]
 "unused"      AA_InputFile       - AeroAcoustics input file [used only when CompAA=true]
 ======  Environmental Conditions  ===================================================================
 "default"     AirDens            - Air density (kg/m^3)
@@ -19,24 +18,39 @@ False         CompAA             - Flag to compute AeroAcoustics calculation [us
 "default"     SpdSound           - Speed of sound in working fluid (m/s)
 "default"     Patm               - Atmospheric pressure (Pa) [used only when CavitCheck=True]
 "default"     Pvap               - Vapour pressure of working fluid (Pa) [used only when CavitCheck=True]
-======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3]
-          1   SkewMod            - Type of skewed-wake correction model (switch) {1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0 or 3]
-"default"     SkewModFactor      - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when SkewMod=2; unused when WakeMod=0 or 3]
-f             TipLoss            - Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0 or 3]
-f             HubLoss            - Use the Prandtl hub-loss model? (flag) [unused when WakeMod=0 or 3]
-True          TanInd             - Include tangential induction in BEMT calculations? (flag) [unused when WakeMod=0 or 3]
-True          AIDrag             - Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod=0 or 3]
-True          TIDrag             - Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod=0,3 or TanInd=FALSE]
-      1E-05   IndToler           - Convergence tolerance for BEMT nonlinear solve residual equation {or "default"} (-) [unused when WakeMod=0 or 3]
-        100   MaxIter            - Maximum number of iteration steps (-) [unused when WakeMod=0]
-======  Dynamic Blade-Element/Momentum Theory Options  ============================================== [used only when WakeMod=2]
-          2   DBEMT_Mod          - Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-) [used only when WakeMod=2]
-          4   tau1_const         - Time constant for DBEMT (s) [used only when WakeMod=2 and DBEMT_Mod=1 or 3]
-======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when WakeMod=3]
-"unused"      OLAFInputFileName - Input file for OLAF [used only when WakeMod=3]
-======  Beddoes-Leishman Unsteady Airfoil Aerodynamics Options  ===================================== [used only when AFAeroMod=2]
-          1   UAMod              - Unsteady Aero Model Switch (switch) {2=B-L Gonzalez, 3=B-L Minnema/Pierce, 4=B-L HGM 4-states, 5=B-L 5 states, 6=Oye, 7=Boeing-Vertol} [used only when AFAeroMod=2]
-FALSE         FLookup            - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
+======  Blade-Element/Momentum Theory Options  ====================================================== [unused when Wake_Mod=0 or 3, except for BEM_Mod]
+          2   BEM_Mod            - BEM model {1=legacy NoSweepPitchTwist, 2=polar} (switch) [used for all Wake_Mod to determine output coordinate system]
+--- Skew correction
+          1   Skew_Mod           - Skew model {0=No skew model, -1=Remove non-normal component for linearization, 1=skew model active}
+True          SkewMomCorr        - Turn the skew momentum correction on or off [used only when Skew_Mod=1]
+          1   SkewRedistr_Mod    - Type of skewed-wake correction model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, default=1} [used only when Skew_Mod=1]
+"default"     SkewRedistrFactor  - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when Skew_Mod=1 and SkewRedistr_Mod=1]
+--- BEM algorithm 
+True          TipLoss            - Use the Prandtl tip-loss model? (flag) [unused when Wake_Mod=0 or 3]
+True          HubLoss            - Use the Prandtl hub-loss model? (flag) [unused when Wake_Mod=0 or 3]
+True          TanInd             - Include tangential induction in BEMT calculations? (flag) [unused when Wake_Mod=0 or 3]
+True          AIDrag             - Include the drag term in the axial-induction calculation? (flag) [unused when Wake_Mod=0 or 3]
+True          TIDrag             - Include the drag term in the tangential-induction calculation? (flag) [unused when Wake_Mod=0,3 or TanInd=FALSE]
+"Default"     IndToler           - Convergence tolerance for BEMT nonlinear solve residual equation {or "default"} (-) [unused when Wake_Mod=0 or 3]
+        100   MaxIter            - Maximum number of iteration steps (-) [unused when Wake_Mod=0]
+--- Shear correction 
+False         SectAvg           - Use sector averaging (flag)
+1             SectAvgWeighting  - Weighting function for sector average  {1=Uniform, default=1}  within a sector centered on the blade (switch) [used only when SectAvg=True] 
+5             SectAvgNPoints    - Number of points per sectors (-) {default=5} [used only when SectAvg=True]
+-60           SectAvgPsiBwd     - Backward azimuth relative to blade where the sector starts (<=0) {default=-60} (deg) [used only when SectAvg=True]
+ 60           SectAvgPsiFwd     - Forward azimuth relative to blade where the sector ends (>=0) {default=60} (deg) [used only when SectAvg=True]
+--- Dynamic wake/inflow
+          2   DBEMT_Mod          - Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1:constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-)
+         20   tau1_const         - Time constant for DBEMT (s) [used only when DBEMT_Mod=1 or 3]
+======  OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options  ================== [used only when Wake_Mod=3]
+"unused"      OLAFInputFileName  - Input file for OLAF [used only when Wake_Mod=3]
+======  Unsteady Airfoil Aerodynamics Options  ====================================================
+True          AoA34              - Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]
+          3   UA_Mod             - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA), 2=B-L Gonzalez, 3=B-L Minnema/Pierce, 4=B-L HGM 4-states, 5=B-L HGM+vortex 5 states, 6=Oye, 7=Boeing-Vertol}
+True          FLookup            - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when UA_Mod=2 or UA_Mod=3]
+          3   IntegrationMethod  - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2)
+          0   UAStartRad         - Starting radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when UA_Mod>0; if line is missing UAStartRad=0]
+          1   UAEndRad           - Ending radius for dynamic stall (fraction of rotor radius [0.0,1.0]) [used only when UA_Mod>0; if line is missing UAEndRad=1]
 ======  Airfoil Information =========================================================================
           1   AFTabMod           - Interpolation method for multiple airfoil tables {1=1D interpolation on AoA (first table only); 2=2D interpolation on AoA and Re; 3=2D interpolation on AoA and UserProp} (-)
           1   InCol_Alfa         - The column in the airfoil tables that contains the angle of attack (-)
@@ -61,27 +75,33 @@ True          UseBlCm            - Include aerodynamic pitching moment in calcul
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(2)        - Name of file containing distributed aerodynamic properties for Blade #2 (-) [unused if NumBl < 2]
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(3)        - Name of file containing distributed aerodynamic properties for Blade #3 (-) [unused if NumBl < 3]
 ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
-        0.0   VolHub             - Hub volume (m^3)
-        0.0   HubCenBx           - Hub center of buoyancy x direction offset (m)
-======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
-        0.0   VolNac             - Nacelle volume (m^3)
-0.0, 0.0, 0.0 NacCenB            - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+          0   VolHub             - Hub volume (m^3)
+          0   HubCenBx           - Hub center of buoyancy x direction offset (m)
+======  Nacelle Properties ========================================================================== [used only when Buoyancy=True or NacelleDrag=True]
+          0   VolNac             - Nacelle volume (m^3)
+    0, 0, 0   NacCenB            - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+    0, 0, 0   NacArea            - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
+    0, 0, 0   NacCd              - Drag coefficient for the nacelle areas defined above (-)
+    0, 0, 0   NacDragAC          - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
+======  Tail Fin Aerodynamics =======================================================================
+False         TFinAero           - Calculate tail fin aerodynamics model (flag)
+"unused"      TFinFile           - Input file for tail fin aerodynamics [used only when TFinAero=True]
 ======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
           5   NumTwrNds         - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
-TwrElev        TwrDiam        TwrCd          TwrTI (used only with TwrShadow=2)  TwrCb (used only with Buoyancy=True)
-(m)            (m)            (-)            (-)                                 (-)
-0.0000000E+00  6.0000000E+00  0.0000000E+00  1.0000000E-01                       0.0
-2.0000000E+01  5.5000000E+00  0.0000000E+00  1.0000000E-01                       0.0
-4.0000000E+01  5.0000000E+00  0.0000000E+00  1.0000000E-01                       0.0
-6.0000000E+01  4.5000000E+00  0.0000000E+00  1.0000000E-01                       0.0
-8.0000000E+01  4.0000000E+00  0.0000000E+00  1.0000000E-01                       0.0
+TwrElev        TwrDiam        TwrCd          TwrTI           TwrCb  ! TwrTI used only when TwrShadow=2; TwrCb used only when Buoyancy=True
+(m)              (m)           (-)            (-)            (-)
+0.0000000E+00  6.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
+2.0000000E+01  5.5000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
+4.0000000E+01  5.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
+6.0000000E+01  4.5000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
+8.0000000E+01  4.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
 ======  Outputs  ====================================================================================
-True          SumPrint            - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?  (flag)
+True          SumPrint            - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"? (flag)
           4   NBlOuts             - Number of blade node outputs [0 - 9] (-)
           1,          3,          4,          6    BlOutNd             - Blade nodes whose values will be output  (-)
           0   NTwOuts             - Number of tower node outputs [0 - 9]  (-)
           1   TwOutNd             - Tower nodes whose values will be output  (-)
-                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+              OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
 "B1N1VDisx, B1N1VDisy, B1N1VDisz" ! disturbed wind velocity at Blade 1, Node 1
 "B1N2VDisx, B1N2VDisy, B1N2VDisz" ! disturbed wind velocity at Blade 1, Node 2
 "B1N3VDisx, B1N3VDisy, B1N3VDisz" ! disturbed wind velocity at Blade 1, Node 3
@@ -93,18 +113,19 @@ True          SumPrint            - Generate a summary file listing input option
 "B1N1Alpha, B1N2Alpha, B1N3Alpha"  
 "B1N1Theta, B1N2Theta, B1N3Theta"  
 END of OutList section (the word "END" must appear in the first 3 columns of the last OutList line)
-====== Outputs for all blade stations (same ending as above for B1N1.... ============================ [optional section]
-   1              BldNd_BladesOut     - Number of blades to output all node information at.  Up to number of blades on turbine. (-)
-   "All"          BldNd_BlOutNd       - Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)
-                  OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
-"Fx, Fy"
-"Vx, Vy"
-Vrel
-TnInd
-AxInd
-Theta
-Phi
-Vindx
-Vindy
-Alpha
+====== Outputs for all blade stations (same ending as above for B1N1.... =========================== [optional section]
+          1   BldNd_BladesOut     - Number of blades to output all node information at.  Up to number of blades on turbine. (-)
+"All"         BldNd_BlOutNd       - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
+              OutList_Nodal       - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+"Fx, Fy"                   
+"Vx, Vy"                   
+"Vrel"                     
+"TnInd"                    
+"AxInd"                    
+"Theta"                    
+"Phi"                      
+"Vindx"                    
+"Vindy"                    
+"Alpha"                    
 END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)
+====================================================================================================
