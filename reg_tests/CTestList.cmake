@@ -293,6 +293,19 @@ endfunction(sed_regression)
 #   add_test(${TESTNAME} ${Python_EXECUTABLE} ${test_module} ${input_file} )
 # endfunction(py_openfast_library_regression)
 
+# Python-based OpenFAST IO Library tests
+function(py_openfast_io_library_pytest TESTNAME LABEL)
+  set(module "-m")
+  set(pytest "pytest")
+  set(pytestVerbose "--verbose")
+  set(py_test_file "${CMAKE_CURRENT_LIST_DIR}/../openfast_io/openfast_io/tests/test_of_io_pytest.py")
+  set(executable "--executable=${CTEST_OPENFAST_EXECUTABLE}")
+  set(source_dir "--source_dir=${CMAKE_CURRENT_LIST_DIR}/..")
+  set(build_dir "--build_dir=${CTEST_BINARY_DIR}")
+  add_test(${TESTNAME} ${Python_EXECUTABLE} ${module} ${pytest} ${pytestVerbose} ${py_test_file} ${executable} ${source_dir} ${build_dir})
+  set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")
+endfunction(py_openfast_io_library_pytest)
+
 
 #===============================================================================
 # Regression tests
@@ -510,6 +523,9 @@ md_regression("md_vertical"                                   "moordyn")
 py_md_regression("py_md_5MW_OC4Semi"                          "moordyn;python")
 # the following tests are excessively slow in double precision, so skip these in normal testing
 #md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")
+
+#  OpenFAST IO Library regression tests
+py_openfast_io_library_pytest("openfast_io_library" "openfast_io;python")
 
 # AeroDisk regression tests
 adsk_regression("adsk_timeseries_shutdown"                    "aerodisk")

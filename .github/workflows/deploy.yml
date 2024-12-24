@@ -6,38 +6,75 @@ name: deploy
 
 on:
   workflow_dispatch:
-
+  
   release:
     types:
       - released
 
+
 jobs:
+  publish-to-pypi-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' 
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Hatch
+        uses: pypa/hatch@install
+
+      - name: Install dependencies
+        run: pip install keyring[file]
+
+      - name: Build package
+        run: hatch build
+        working-directory: openfast_io
+
+      - name: Publish to PyPI test
+        env:
+          HATCH_INDEX_USER: __token__
+          HATCH_INDEX_AUTH: ${{ secrets.PYPI_TEST_TOKEN }}
+        run: hatch publish -r test
+        working-directory: openfast_io
+
   publish-to-pypi:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
+    if: github.event_name == 'release' 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1.3.4
-
-      - name: Build a binary wheel and a source tarball
-        run: poetry build
-        working-directory: openfast_python
-
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.14
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          packages-dir: openfast_python/dist
+          python-version: '3.12'
+          cache: 'pip'
 
+      - name: Install Hatch
+        uses: pypa/hatch@install
+
+      - name: Install dependencies
+        run: pip install keyring[file]
+
+      - name: Build package
+        run: hatch build
+        working-directory: openfast_io
+
+      - name: Publish to PyPI
+        env:
+          HATCH_INDEX_USER: __token__
+          HATCH_INDEX_AUTH: ${{ secrets.PYPI_TOKEN }}
+        run: hatch publish 
+        working-directory: openfast_io
 
   docker-build-and-push:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    if: github.event_name == 'release'
+    timeout-minutes: 500
     env:
       DOCKERFILE_PATH: share/docker/Dockerfile
       DOCKERHUB_REPOSITORY: nrel/openfast

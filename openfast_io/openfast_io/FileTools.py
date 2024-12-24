@@ -4,6 +4,7 @@ import operator
 import numpy as np
 import yaml
 from functools import reduce
+from deepdiff import DeepDiff
 try:
     import ruamel_yaml as ry
 except Exception:
@@ -36,7 +37,7 @@ def remove_numpy(fst_vt):
 
                 if data_type in [np.int_, np.intc, np.intp, np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
                     get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = int(get_dict(fst_vt, branch_i[:-1])[branch_i[-1]])
-                elif data_type in [np.single, np.double, np.longdouble, np.csingle, np.cdouble, np.float_, np.float16, np.float32, np.float64, np.complex64, np.complex128]:
+                elif data_type in [np.single, np.double, np.longdouble, np.csingle, np.cdouble, np.float16, np.float32, np.float64, np.complex64, np.complex128]:
                     get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = float(get_dict(fst_vt, branch_i[:-1])[branch_i[-1]])
                 elif data_type in [np.bool_]:
                     get_dict(fst_vt, branch_i[:-1])[branch_i[-1]] = bool(get_dict(fst_vt, branch_i[:-1])[branch_i[-1]])
@@ -269,3 +270,93 @@ def get_dlc_label(cases, include_seed=True):
 def load_file_list(fname_flist):
     # load list of filenames from file
     return np.genfromtxt(fname_flist, dtype='str')
+
+def check_rtest_cloned(rtest_dir):
+    # check if the rtest directory is cloned
+    if not os.path.isdir(rtest_dir):
+        raise FileNotFoundError(f"The directory {rtest_dir} does not exist. Please clone the r-test submodule. Try running `git submodule update --init --recursive`")
+
+    return True
+
+
+def remove_nested_keys(dictionary, keys_to_remove):
+    for key in keys_to_remove:
+        if key in dictionary:
+            del dictionary[key]
+
+    for value in dictionary.values():
+        if isinstance(value, dict):
+            remove_nested_keys(value, keys_to_remove)
+
+    return dictionary
+
+def cleanup_fstvt(fst_vt, ignoreVars=None, removeFileRef=False, removeArrayProps=False):
+    # sanitize the dictionaries from numpy data types
+    fst_vt = remove_numpy(fst_vt)
+
+    if removeFileRef: # not fair to compare file paths
+        fileVars = ['af_coord', 'Filename_Uni', 'FileName_BTS', 'FileName_u', 'FileName_v', 'FileName_w', # TODO: orgainze these logically
+                    'AFNames', 'ADBlFile1', 'ADBlFile2', 'ADBlFile3', 'NumCoords',
+                    'DLL_FileName','DLL_InFile','af_data',
+                    'PerfFileName',
+                    'InflowFile',
+                    'AeroFile',
+                    'BldFile1', 'BldFile2', 'BldFile3', 
+                    'TwrFile',
+                    'EDFile',
+                    'ServoFile',
+                    'BldFile',
+                    'SeaStFile',
+                    'HydroFile',
+                    'SubFile',
+                    'MooringFile',
+                    'Red_FileName',
+                    'PrescribedForcesFile',
+                    'actuatorDiskFile',
+                    'BDBldFile(1)', 'BDBldFile(2)', 'BDBldFile(3)',
+                    'OLAFInputFileName',
+                    'EDFile_path',      
+                    'BDBldFile(1_path)',
+                    'BDBldFile(2_path)',
+                    'BDBldFile(3_path)',
+                    'InflowFile_path',  
+                    'AeroFile_path',    
+                    'ServoFile_path',   
+                    'HydroFile_path',   
+                    'SubFile_path',     
+                    'MooringFile_path', 
+                    'IceFile_path',     
+                    'description',
+                    ]
+        fst_vt = remove_nested_keys(fst_vt, fileVars)
+
+    if removeArrayProps: # we can have different array properties, if run through different tools
+        arrayVars = ['BlSpn', 'BlCrvAC','BlSwpAC','BlCrvAng','BlTwist','BlChord','BlAFID',
+                    'ac','PC_GS_KP','PC_GS_KI','WE_FOPoles','beam_stiff','attr','units']
+
+        fst_vt = remove_nested_keys(fst_vt, arrayVars)
+
+    if ignoreVars is not None:
+        fst_vt = remove_nested_keys(fst_vt, ignoreVars)
+
+    return fst_vt
+
+def compare_fst_vt(fst_vt1, fst_vt2, ignoreVars = None, removeFileRef=False, removeArrayProps=False, print_diff=False):
+    # Compare two FAST variable trees
+
+    # sanitize the dictionaries from numpy data types
+    fst_vt1 = cleanup_fstvt(fst_vt1, ignoreVars, removeFileRef, removeArrayProps)
+    fst_vt2 = cleanup_fstvt(fst_vt2, ignoreVars, removeFileRef, removeArrayProps)
+
+    diff = DeepDiff(fst_vt1, fst_vt2, ignore_numeric_type_changes=True,
+                    # ignore_string_case=True,
+                    # verbose_level = 2
+                    )
+
+    if diff == {}:
+        print('No differences found between the two fst_vt.')
+
+    if print_diff:
+        print(diff.pretty())
+
+    return diff

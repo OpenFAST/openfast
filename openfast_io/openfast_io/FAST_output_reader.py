@@ -103,15 +103,15 @@ class FASTOutputFile():
         return df
 
 
-def load_ascii_output(filename):
+def load_ascii_output(filename, headerLines = 8, descriptionLine = 4, attributeLine = 6, unitLine = 7, delimiter = None):
     with open(filename) as f:
         info = {}
         info['name'] = os.path.splitext(os.path.basename(filename))[0]
-        header = [f.readline() for _ in range(8)]
-        info['description'] = header[4].strip()
-        info['attribute_names'] = header[6].split()
-        info['attribute_units'] = [unit[1:-1] for unit in header[7].split()]  #removing "()"
-        data = np.array([line.split() for line in f.readlines()], dtype=float)
+        header = [f.readline() for _ in range(headerLines)]
+        info['description'] = header[descriptionLine].strip()
+        info['attribute_names'] = header[attributeLine].strip().split(delimiter)
+        info['attribute_units'] = [unit[1:-1] for unit in header[unitLine].strip().split(delimiter)]  #removing "()"
+        data = np.array([line.split(delimiter) for line in f.readlines()], dtype=float)
         return data, info
 
 def load_binary_output(filename):
@@ -211,16 +211,20 @@ def load_binary_output(filename):
 
 
 if __name__=="__main__":
-    d,i = load_binary_output('Test18.T1.outb')
-    types = []
-    for j in range(39):
-        types.append('f8')
-    print(type(i['attribute_names']))
 
-    print(np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) }))
+    from openfast_io.FileTools import check_rtest_cloned
+
+    parent_dir = os.path.dirname( os.path.dirname( os.path.dirname( os.path.realpath(__file__) ) ) ) + os.sep
+
+    of_outputfile = os.path.join(parent_dir, 'reg_tests', 'r-test', 'glue-codes', 
+                                 'openfast', '5MW_Land_BD_DLL_WTurb', '5MW_Land_BD_DLL_WTurb.outb')
+
+    check_rtest_cloned(of_outputfile)
+
+    d,i,p = load_binary_output(of_outputfile)
+
+    print(tuple(i['attribute_names']))
     print(type(d))
-    print(np.array(d,dtype=np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) })))
-
     print(i)
     print(len(i['attribute_names']))
     print(np.shape(d))

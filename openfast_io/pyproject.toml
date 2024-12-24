@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "openfast_io"
+# dynamic = ["version"]
+version = "4.0.0"
+description = "Readers and writers for OpenFAST files."
+license = {file = "../LICENSE"}
+authors = [
+    {name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"      },
+    {name = "Andy Platt", email = "andy.platt@nrel.gov"            },
+    {name = "Derek Slaughter", email = "derek.slaughter@nrel.gov"  },
+    { name = "NREL WISDEM Team", email = "systems.engineering@nrel.gov"    },
+]
+maintainers = [
+    {name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"      },
+    {name = "Andy Platt", email = "andy.platt@nrel.gov"            },
+    {name = "Derek Slaughter", email = "derek.slaughter@nrel.gov"  },
+]  
+readme = "README.md"
+requires-python = ">3.10"
+
+classifiers = [  # Optional
+  # How mature is this project? Common values are
+  #   3 - Alpha
+  #   4 - Beta
+  #   5 - Production/Stable
+  "Development Status :: 4 - Beta",
+
+  # Indicate who your project is intended for
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+
+  # Specify the Python versions you support here. In particular, ensure
+  # that you indicate you support Python 3. These classifiers are *not*
+  # checked by "pip install". See instead "python_requires" below.
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+dependencies = [
+    "numpy>1.0",
+    "pandas>2.0",
+    "ruamel_yaml>0.18",
+    "deepdiff>8.0",
+    ]
+    
+[project.urls]
+homepage = "https://github.com/OpenFAST/openfast"
+documentation = "https://openfast.readthedocs.io/en/main/"
+repository = "https://github.com/OpenFAST/openfast"
+Issues = "https://github.com/OpenFAST/openfast/issues"
+
+
+
+[project.optional-dependencies]
+
+rosco = ["rosco>2.9.2"]
+xlrd = ["xlrd>2"]
+all = ["rosco>2.9.2", "xlrd>2"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "openfast_io/_version.py"
