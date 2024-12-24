@@ -18,45 +18,63 @@ The HydroDyn module was split into HydroDyn and SeaState.  This results in a
 completely new input file for SeaState, and complete revision of the HydroDyn
 input file.  See examples in the regression tests for the new formats.
 
-New modules AeroDisk (see :numref:`ADsk`) and Simplified-ElastoDyn (see :numref:`SED`)
-were added.  See documentation on those modules for exmple input files.
+New modules AeroDisk (see :numref:`ADsk`), Simplified-ElastoDyn (see
+:numref:`SED`), and SeaState (see :numref:`SeaSt`) were added.  See
+documentation on those modules for exmple input files.
 
-============================================= ======= ==================== ========================================================================================================================================================================================================
-Modified in OpenFAST `dev`
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Module                                        Line    Flag Name            Example Value
-============================================= ======= ==================== ========================================================================================================================================================================================================
-OpenFAST                                      15      CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
-OpenFAST                                      13      CompElast            3   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades; 3=Simplified ElastoDyn}
-AeroDyn                                       40      IntegrationMethod    3   IntegrationMethod  - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2)
-AeroDyn                                       80\*     NacArea             0, 0, 0            NacArea            - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
-AeroDyn                                       81\*     NacCd               0, 0, 0            NacCd              - Drag coefficient for the nacelle areas defined above (-)
-AeroDyn                                       82\*     NacDragAC           0, 0, 0            NacDragAC          - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
-AeroDyn                                       140\*   BldNd_BlOutNd        "All"  BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
-AeroDyn Aeroacoustics                         11\*    TI                   0.1 TI   - Rotor-incident wind turbulence intensity (-) [Only used if TiCalcMeth == 1]
-AeroDyn Aeroacoustics                         12\*    avgV                 8 avgV   - Average wind speed used to compute the section-incident turbulence intensity (m/s) [Only used if TiCalcMeth == 1]
-ElastoDyn blade file                          15                           Removal of the `PitchAxis` input column
-HydroDyn                                       all                         Complete restructuring of input file
-SeaState                                       all                         New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
-Subdyn                                        11       --removed--
-SubDyn                                        56\*                                             ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------
-SubDyn                                        57\*    NSpringPropSets  0                         - Number of spring properties
-SubDyn                                        58\*                                             PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66
-SubDyn                                        59\*                                             (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)  
-FAST.Farm                                     16      WrMooringVis         true          WrMooringVis       - Write shared mooring visualization, at DT_Mooring timestep (-) [only used for Mod_SharedMooring=3]
-FAST.Farm                                     48      RotorDiamRef         125           RotorDiamRef       - Reference turbine rotor diameter for wake calculations (m) [>0.0]
-FAST.Farm                                     58      k_vAmb               DEFAULT       k_vAmb        - Calibrated parameters for the influence of the ambient turbulence in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.05, 1.0, 0.0, 1.0, 0.01]
-FAST.Farm                                     59      kvShr                DEFAULT       k_vShr        - Calibrated parameters for the influence of the shear layer in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.016, 0.2, 3.0, 25.0, 0.1]
-FAST.Farm                                     60-66   --removed--
-FAST.Farm                                     72                           --- WAKE-ADDED TURBULENCE ---
-FAST.Farm                                     73       WAT                 2                  WAT                - Switch between wake-added turbulence box options {0: no wake added turbulence, 1: predefined turbulence box, 2: user defined turbulence box} (switch)
-FAST.Farm                                     74       WAT_BoxFile         "../WAT_MannBoxDB/FFDB_D100_512x512x64.u" WAT_BoxFile  - Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined) (quoted string)
-FAST.Farm                                     75       WAT_NxNyNz          512, 512, 64       WAT_NxNyNz         - Number of points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2, derived value if WAT=1] (-)
-FAST.Farm                                     76       WAT_DxDyDz          5.0, 5.0, 5.0      WAT_DxDyDz         - Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2, derived value if WAT=1] (m)
-FAST.Farm                                     77       WAT_ScaleBox        default            WAT_ScaleBox       - Flag to scale the input turbulence box to zero mean and unit standard deviation at every node [DEFAULT=False] (flag)
-FAST.Farm                                     78       WAT_k_Def           default            WAT_k_Def          - Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]
-FAST.Farm                                     79       WAT_k_Grad          default            WAT_k_Grad         - Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]                   
-============================================= ======= ==================== ========================================================================================================================================================================================================
+============================================= ======== ==================== ========================================================================================================================================================================================================
+Modified in OpenFAST `dev`                             
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ========================================================================================================================================================================================================
+OpenFAST                                      15       CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
+OpenFAST                                      13       CompElast            3   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades; 3=Simplified ElastoDyn}
+AeroDyn                                        all                          Complete restructuring of input file (see notes below)
+AeroDyn Aeroacoustics                         11\*     TI                   0.1 TI   - Rotor-incident wind turbulence intensity (-) [Only used if TiCalcMeth == 1]
+AeroDyn Aeroacoustics                         12\*     avgV                 8 avgV   - Average wind speed used to compute the section-incident turbulence intensity (m/s) [Only used if TiCalcMeth == 1]
+HydroDyn                                       all                          Complete restructuring of input file
+SeaState                                       all                          New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
+AeroDisk                                       all                          New module
+Simplified-ElastoDyn                           all                          New module
+ElastoDyn                                     84       PtfmXYIner           0   PtfmXYIner  - Platform xy moment of inertia about the platform CM (=-int(xydm)) (kg m^2)
+ElastoDyn                                     84       PtfmYZIner           0   PtfmYZIner  - Platform yz moment of inertia about the platform CM (=-int(yzdm)) (kg m^2)
+ElastoDyn                                     84       PtfmXZIner           0   PtfmXZIner  - Platform xz moment of inertia about the platform CM (=-int(xzdm)) (kg m^2)
+ElastoDyn                                     101                           ---------------------- YAW-FRICTION --------------------------------------------
+ElastoDyn                                     102      YawFrctMod             0   YawFrctMod  - Yaw-friction model {0: none, 1: friction independent of yaw-bearing force and bending moment, 2: friction with Coulomb terms depending on yaw-bearing force and bending moment...
+ElastoDyn                                     103      M_CSmax              300   M_CSmax     - Maximum static Coulomb friction torque (N-m) [M_CSmax when YawFrctMod=1; abs(Fz)*M_CSmax when YawFrctMod=2 and Fz<0]
+ElastoDyn                                     104      M_FCSmax               0   M_FCSmax    - Maximum static Coulomb friction torque proportional to yaw bearing shear force (N-m) [sqrt(Fx^2+Fy^2)*M_FCSmax; only used when YawFrctMod=2]
+ElastoDyn                                     105      M_MCSmax               0   M_MCSmax    - Maximum static Coulomb friction torque proportional to yaw bearing bending moment (N-m) [sqrt(Mx^2+My^2)*M_MCSmax; only used when YawFrctMod=2]
+ElastoDyn                                     106      M_CD                  40   M_CD        - Dynamic Coulomb friction moment (N-m) [M_CD when YawFrctMod=1; abs(Fz)*M_CD when YawFrctMod=2 and Fz<0]
+ElastoDyn                                     107      M_FCD                  0   M_FCD       - Dynamic Coulomb friction moment proportional to yaw bearing shear force (N-m) [sqrt(Fx^2+Fy^2)*M_FCD; only used when YawFrctMod=2]
+ElastoDyn                                     108      M_MCD                  0   M_MCD       - Dynamic Coulomb friction moment proportional to yaw bearing bending moment (N-m) [sqrt(Mx^2+My^2)*M_MCD; only used when YawFrctMod=2]
+ElastoDyn                                     109      sig_v                  0   sig_v       - Linear viscous friction coefficient (N-m/(rad/s))
+ElastoDyn                                     110      sig_v2                 0   sig_v2      - Quadratic viscous friction coefficient (N-m/(rad/s)^2)
+ElastoDyn                                     111      OmgCut                 0   OmgCut      - Yaw angular velocity cutoff below which viscous friction is linearized (rad/s)
+ElastoDyn blade file                          15                            Removal of the `PitchAxis` input column
+InflowWind driver                             27                            ----  Output VTK slices  ------------------------------------------------------
+InflowWind driver                             28       NOutWindXY           0            NOutWindXY    -- Number of XY planes for output <RootName>.XY<loc>.t<n>.vtk (-) [0 to 9]
+InflowWind driver                             29       OutWindZ             90           OutWindZ      -- Z coordinates of XY planes for output (m) [1 to NOutWindXY] [unused for NOutWindXY=0]
+MoorDyn                                       --                            New optional sections (freeform file).  See MoorDyn documentation for details
+SubDyn                                        8         --removed--         removed: GuyanLoadCorrection
+SubDyn                                        12        --removed--         removed: CBMod
+SubDyn                                        56\*                                              ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------
+SubDyn                                        57\*     NSpringPropSets  0                         - Number of spring properties
+SubDyn                                        58\*                                              PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66
+SubDyn                                        59\*                                              (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)  
+FAST.Farm                                     16       WrMooringVis         true          WrMooringVis       - Write shared mooring visualization, at DT_Mooring timestep (-) [only used for Mod_SharedMooring=3]
+FAST.Farm                                     48\*     RotorDiamRef         125           RotorDiamRef       - Reference turbine rotor diameter for wake calculations (m) [>0.0]
+FAST.Farm                                     53\*     k_vAmb               DEFAULT       k_vAmb        - Calibrated parameters for the influence of the ambient turbulence in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.05, 1.0, 0.0, 1.0, 0.01]
+FAST.Farm                                     54\*     kvShr                DEFAULT       k_vShr        - Calibrated parameters for the influence of the shear layer in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.016, 0.2, 3.0, 25.0, 0.1]
+FAST.Farm                                     55-62\*  --removed--
+FAST.Farm                                     69\*                          --- WAKE-ADDED TURBULENCE ---
+FAST.Farm                                     70\*      WAT                 2                  WAT                - Switch between wake-added turbulence box options {0: no wake added turbulence, 1: predefined turbulence box, 2: user defined turbulence box} (switch)
+FAST.Farm                                     71\*      WAT_BoxFile         "../WAT_MannBoxDB/FFDB_D100_512x512x64.u" WAT_BoxFile  - Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined) (quoted string)
+FAST.Farm                                     72\*      WAT_NxNyNz          512, 512, 64       WAT_NxNyNz         - Number of points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2, derived value if WAT=1] (-)
+FAST.Farm                                     73\*      WAT_DxDyDz          5.0, 5.0, 5.0      WAT_DxDyDz         - Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2, derived value if WAT=1] (m)
+FAST.Farm                                     74\*      WAT_ScaleBox        default            WAT_ScaleBox       - Flag to scale the input turbulence box to zero mean and unit standard deviation at every node [DEFAULT=False] (flag)
+FAST.Farm                                     75\*      WAT_k_Def           default            WAT_k_Def          - Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]
+FAST.Farm                                     76\*      WAT_k_Grad          default            WAT_k_Grad         - Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]                   
+============================================= ======== ==================== ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
 
