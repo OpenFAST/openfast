@@ -1,6 +1,8 @@
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 # Data structures for representing wave fields.
 #
+usefrom IfW_FlowField.txt
+
 param     SeaSt_WaveField      -                INTEGER             WaveDirMod_None          -        0   -   "WaveDirMod = 0 [Directional spreading function is NONE]" -
 param     SeaSt_WaveField      -                INTEGER             WaveDirMod_COS2S         -        1   -   "WaveDirMod = 1 [Directional spreading function is COS2S]" -
 
@@ -52,6 +54,8 @@ typedef     ^                 ^                 ReKi                 MSL2SWL    
 typedef     ^                 ^                 SiKi                 WaveElevC       {:}{:}{:}        -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part" (m)
 typedef     ^                 ^                 SiKi                 WaveElevC0      {:}{:}           -        -        "Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part" (m)
 typedef     ^                 ^                 SiKi                 WaveDirArr      {:}              -        -        "Wave direction array. Each frequency has a unique direction of WaveNDir > 1" (degrees)
+typedef     ^                 ^                 LOGICAL              hasCurrField    -                -        -        "True if CurrField is populated for MHK simulations"	(-)
+typedef     ^                 ^                 FlowFieldType        *CurrField      -                -        -        "Pointer to FlowField type from InflowWind containing the dynamic current information" (-)
 
 typedef     ^                 ^                 ReKi                 WtrDpth          -               -        -        "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
 typedef     ^                 ^                 ReKi                 WtrDens          -               -        -        "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
