@@ -276,11 +276,11 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\seastate\src\SeaSt_WaveField.txt">
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\seastate\SeaSt_WaveField_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\seastate\src\SeaSt_WaveField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\seastate\SeaSt_WaveField_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\seastate\src\SeaSt_WaveField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\seastate\SeaSt_WaveField_Types.f90"/></FileConfiguration></File>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry SeaSt_WaveField" Description="Running Registry for SeaSt_WaveField" Outputs="..\..\modules\seastate\src\SeaSt_WaveField_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\seastate\src\SeaSt_WaveField_Types.f90"/>
 		<File RelativePath="..\..\modules\seastate\src\SeaState.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
