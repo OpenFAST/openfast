@@ -217,17 +217,29 @@ You can also build your own custom images using our `Dockerfile` or base your im
 Install the ``openfast_io`` python wrapper
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The ``openfast_io`` python package is a wrapper comprising readers and writers for converting OpenFAST files to/from
-python objects. You can install it with:
+python objects.
 
-.. code-block::
+To use `openfast_io` as a library for incorporation into other scripts or tools, it is available via (assuming that you have already setup your python environment):
+
+.. code-block:: bash
 
     pip install openfast_io
 
-or
+These instructions are for interaction directly with the `openfast_io` source code.
 
-.. code-block::
+1. Follow this step only if you have not cloned the OpenFAST repo:
 
-    poetry add openfast_io
+.. code-block:: bash
+
+    git clone https://github.com/OpenFAST/OpenFAST.git
+    cd OpenFAST
+
+2. Assuming you are within the OpenFAST directory:
+
+.. code-block:: bash
+
+    cd openfast_io
+    pip install -e .
 
 For more information and installation options, see the `OpenFAST Python readme <https://github.com/OpenFAST/openfast/blob/main/openfast_python/README.md>`_.
 

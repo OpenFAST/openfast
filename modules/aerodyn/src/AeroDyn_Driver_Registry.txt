@@ -46,17 +46,18 @@ typedef   ^                         ^             character(25)          Fmt_a  
 typedef   ^                         ^             character(1)           delim            -      -     -   "column delimiter" "-"
 typedef   ^                         ^             character(20)          outFmt           -      -     -   "Format specifier" "-"
 typedef   ^                         ^             IntKi                  fileFmt          -      -     -   "Output format 1=Text, 2=Binary, 3=Both" "-"
-typedef   ^                         ^             IntKi                  wrVTK            -      -     -   "0= no vtk, 1=init only, 2=animation" "-"
+typedef   ^                         ^             IntKi                  WrVTK            -      -     -   "0= no vtk, 1=init only, 2=animation" "-"
 typedef   ^                         ^             IntKi                  WrVTK_Type       -      -     -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
 typedef   ^                         ^             character(1024)        Root             -      -     -   "Output file rootname" "-"
-typedef   ^                         ^             character(1024)        VTK_OutFileRoot  -      -     -   "Output file rootname for vtk" "-"
+typedef   ^                         ^             character(1024)        VTK_OutFileRoot  -      -     -   "Output file rootname for vtk (includes directory)" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputHdr  {:}     -     -   "Channel headers" "-"
 typedef   ^                         ^             character(ChanLen)     WriteOutputUnt  {:}     -     -   "Channel units" "-"
 typedef   ^                         ^             ReKi                   storage         :::     -     -   "nTurbines x nChannel x nTime"
 typedef   ^                         ^             ReKi                   outLine          :      -     -   "Output line to be written to disk"
 typedef   ^                         ^             DvrVTK_SurfaceType     VTK_surface      :      -     -   "Data for VTK surface visualization"
-typedef   ^                         ^             INTEGER                VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"    -
-typedef   ^                         ^             INTEGER                n_VTKTime        -      -     -   "Number of time steps between writing VTK files"    -
+typedef   ^                         ^             IntKi                  VTK_tWidth       -      -     -   "Width of number of files for leading zeros in file name format"    -
+typedef   ^                         ^             IntKi                  n_VTKTime        -      -     -   "Number of time steps between writing VTK files" -
+typedef   ^                         ^             DbKi                   VTK_DT           -      -     -   "Write VTK time step" -
 typedef   ^                         ^             SiKi                   VTKHubRad        -      -     -   "Hub radius for visualization"    m
 typedef   ^                         ^             ReKi                   VTKNacDim        6      -     -   "Nacelle dimensions for visualization"    m
 typedef   ^                         ^             SiKi                   VTKRefPoint      3      -     -   "RefPoint for VTK outputs"
@@ -150,7 +151,7 @@ typedef   ^                         ^            IntKi                   iCase  
 typedef   ^                         ^            ReKi                    timeSeries       ::     -     -   "Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw" "-"
 typedef   ^                         ^            IntKi                   iTimeSeries      -      -     -   "Stored index to optimize time interpolation" -
 typedef   ^                         ^            character(1024)         root             -      -     -   "Output file rootname" "-"
-typedef   ^                         ^            Dvr_Outputs            out              -      -     -   "data for driver output file" "-"
+typedef   ^                         ^            Dvr_Outputs             out              -      -     -   "data for driver output file" "-"
 typedef   ^                         ^            ADI_IW_InputData        IW_InitInp       -      -     -   "" -
 typedef   ^                         ^            SeaSt_InitInputType     SS_InitInp       -      -     -   "" -
 

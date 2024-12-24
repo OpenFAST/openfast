@@ -238,13 +238,25 @@ Rotor-Teeter
 Yaw-Friction
 ~~~~~~~~~~~~
 
-**YawFrctMod**  - Yaw-friction model {0: none, 1: friction without Fz term at the yaw bearing, 2: friction includes Fz term at yaw bearing, 3: user defined model} 
+**YawFrctMod**  - Yaw-friction model {0: none, 1: friction independent of yaw-bearing force and bending moment, 2: friction with Coulomb terms depending on yaw-bearing force and bending moment, 3: user defined model} 
 
-**M_CSmax**     - Maximum Coulomb friction torque (N-m)[mu_s*D_eff when YawFrctMod=1 and Fz*mu_s*D_eff when YawFrctMod=2]
+**M_CSmax**     - Maximum static Coulomb friction torque (N-m) [M_CSmax when YawFrctMod=1; -min(0,Fz)*M_CSmax when YawFrctMod=2]
 
-**M_CD**        - Dynamic friction moment at null yaw rate (N-m) [mu_d*D_eff when YawFrctMod=1 and Fz*mu_d*D_eff when YawFrctMod=2]
+**M_FCSmax**    - Maximum static Coulomb friction torque proportional to yaw bearing shear force (N-m) [sqrt(Fx^2+Fy^2)*M_FCSmax; only used when YawFrctMod=2]
 
-**sig_v**       - Viscous friction coefficient (N-m/(rad/s))
+**M_MCSmax**    - Maximum static Coulomb friction torque proportional to yaw bearing bending moment (N-m) [sqrt(Mx^2+My^2)*M_MCSmax; only used when YawFrctMod=2]
+
+**M_CD**        - Dynamic Coulomb friction moment (N-m) [M_CD when YawFrctMod=1; -min(0,Fz)*M_CD when YawFrctMod=2]
+
+**M_FCD**       - Dynamic Coulomb friction moment proportional to yaw bearing shear force (N-m) [sqrt(Fx^2+Fy^2)*M_FCD; only used when YawFrctMod=2]
+
+**M_MCD**       - Dynamic Coulomb friction moment proportional to yaw bearing bending moment (N-m) [sqrt(Mx^2+My^2)*M_MCD; only used when YawFrctMod=2]
+
+**sig_v**       - Linear viscous friction coefficient (N-m/(rad/s))
+
+**sig_v2**      - Quadratic viscous friction coefficient (N-m/(rad/s)^2)
+
+**OmgCut**      - Yaw angular velocity cutoff below which viscous friction is linearized (rad/s)
 
 
 Drivetrain

@@ -10,7 +10,7 @@ module FAST_Farm_IO
    TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', '', '' ) !< module date/version information 
 
    integer, parameter :: maxOutputPoints = 9
-   integer, parameter :: maxOutputPlanes = 99      ! Allow up to 99 outpt planes
+   integer, parameter :: maxOutputPlanes = 999     ! Allow up to 99 outpt planes
 
 
       contains
@@ -643,6 +643,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadVar( UnIn, InputFile, p%MD_FileName, "MD_FileName", "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    IF ( PathIsRelative( p%MD_FileName ) ) p%MD_FileName = TRIM(PriPath)//TRIM(p%MD_FileName)
    CALL ReadVar( UnIn, InputFile, p%DT_mooring, "DT_Mooring", "Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, p%WrMooringVis, "MooringVis","Write shared mooring visualization, at DT_Mooring timestep (-) [only used for Mod_SharedMooring=3]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
    !---------------------- AMBIENT WIND: PRECURSOR IN VTK FORMAT ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: Precursor in VTK Format', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
@@ -871,17 +872,17 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisWind, "WrDisWind", "Write disturbed wind data to <OutFileRoot>.Low.Dis.t<n/n_low-out>.vtk etc.? (flag)", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
    ! XY planes
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 99]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 999]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    call allocAry( AWAE_InitInp%OutDisWindZ, AWAE_InitInp%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 ); if (Failed()) return
    CALL ReadAry( UnIn, InputFile, AWAE_InitInp%OutDisWindZ, AWAE_InitInp%NOutDisWindXY, "OutDisWindZ", "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXY] [unused for NOutDisWindXY=0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
    ! YZ planes
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindYZ, "NOutDisWindYZ", "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisYZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindYZ, "NOutDisWindYZ", "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisYZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 999]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    call allocAry( AWAE_InitInp%OutDisWindX, AWAE_InitInp%NOutDisWindYZ, "OutDisWindX", ErrStat2, ErrMsg2 ); if (Failed()) return
    CALL ReadAry( UnIn, InputFile, AWAE_InitInp%OutDisWindX, AWAE_InitInp%NOutDisWindYZ, "OutDisWindX", "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindYZ] [unused for NOutDisWindYZ=0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
    ! XZ planes
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXZ, "NOutDisWindXZ", "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low/DisXZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXZ, "NOutDisWindXZ", "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low/DisXZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 999]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
    call allocAry( AWAE_InitInp%OutDisWindY, AWAE_InitInp%NOutDisWindXZ, "OutDisWindY", ErrStat2, ErrMsg2 ); if (Failed()) return
    CALL ReadAry( UnIn, InputFile, AWAE_InitInp%OutDisWindY, AWAE_InitInp%NOutDisWindXZ, "OutDisWindY", "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXZ] [unused for NOutDisWindXZ=0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
 
@@ -1117,9 +1118,9 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    AWAE_InitInp%WrDisDT =  p%DT_low * n_disDT_dt
 
 
-   if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
-   if (AWAE_InitInp%NOutDisWindYZ < 0 .or. AWAE_InitInp%NOutDisWindYZ > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
-   if (AWAE_InitInp%NOutDisWindXZ < 0 .or. AWAE_InitInp%NOutDisWindXZ > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
+   if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 999].', ErrStat, ErrMsg, RoutineName )
+   if (AWAE_InitInp%NOutDisWindYZ < 0 .or. AWAE_InitInp%NOutDisWindYZ > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 999].', ErrStat, ErrMsg, RoutineName )
+   if (AWAE_InitInp%NOutDisWindXZ < 0 .or. AWAE_InitInp%NOutDisWindXZ > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 999].', ErrStat, ErrMsg, RoutineName )
    if (p%NOutDist < 0 .or. p%NOutDist > maxOutputPoints ) then
       CALL SetErrStat( ErrID_Fatal, 'NOutDist must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    else

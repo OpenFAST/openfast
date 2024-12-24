@@ -505,8 +505,10 @@ SUBROUTINE AWAE_PrintSum(  p, u, y, ErrStat, ErrMsg )
 
    ! Open the summary file and give it a heading.
       
+   !$OMP critical(fileopen)
    CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
    CALL OpenFOutFile ( UnSu, TRIM( p%OutFileRoot )//'.sum', ErrStat, ErrMsg )
+   !$OMP end critical(fileopen)
    IF ( ErrStat >= AbortErrLev ) RETURN
 
  

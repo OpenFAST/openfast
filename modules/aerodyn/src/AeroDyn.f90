@@ -1856,8 +1856,10 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
 
    else  ! Call the FVW sub module
          ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
-      call SetInputsForFVW(p, u, m, errStat2, errMsg2)
-      if (Failed()) return
+      do i=1,size(u)
+         call SetInputsForFVW(p, u(i), i, m, errStat2, errMsg2)
+         if (Failed()) return
+      enddo
          ! Note: the setup is handled above in the SetInputs routine
       call FVW_UpdateStates( t, n, m%FVW_u, utimes, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, p%AFI, m%FVW, ErrStat2, ErrMsg2 )
       if (Failed()) return
@@ -2078,7 +2080,7 @@ subroutine AD_CalcWind_Rotor(t, u, FlowField, p, p_AD, m, RotInflow, StartNode, 
 
 contains
    logical function Failed()
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'AD_CalcWind')
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'AD_CalcWindRotor')
       Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine
@@ -2138,7 +2140,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
    if (p%Wake_Mod == WakeMod_FVW) then
          ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
-      call SetInputsForFVW(p, (/u/), m, errStat2, errMsg2)
+      call SetInputsForFVW(p, u, 1, m, errStat2, errMsg2)
       if(Failed()) return
          ! Calculate Outputs at time t
       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
@@ -3427,7 +3429,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, RotInflow, m, indx, errStat, errMsg)
    !..........................
    ! Set main geometry parameters (orientatioAnnulus, Twist, Toe, Cant, rLocal)
    !..........................
-   ! TODO (EB): For harmonization between BEM and OLAF we should always compute R_li, r_Local, Twist, Toe, Cant
+   ! TODO (EB): For harmonization between BEM and OLAF we should always compute R_li, r_Local, Twist, Toe, Cant, drdz
    !            BEM would then switch below between an "orientationMomentum", either Annulus (R_li) or NoPitchSweepPitch (R_wi)
    if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
 
@@ -3847,10 +3849,11 @@ subroutine Calculate_MeshOrientation_LiftingLine(p, u, m, twist, toe, cant, ErrS
 end subroutine Calculate_MeshOrientation_LiftingLine
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%FVW_u(indx).
-subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
+subroutine SetInputsForFVW(p, u, tIndx, m, errStat, errMsg)
 
    type(AD_ParameterType),  intent(in   )  :: p                               !< AD parameters
-   type(AD_InputType),      intent(in   )  :: u(:)                            !< AD Inputs at Time
+   type(AD_InputType),      intent(in   )  :: u                               !< AD Inputs at Time
+   integer(intKi),          intent(in   )  :: tIndx                           !< index of m%FVW_u() array
    type(AD_MiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
    integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
@@ -3858,7 +3861,6 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    real(R8Ki)                              :: x_hat_disk(3)
    real(R8Ki), allocatable                 :: thetaBladeNds(:,:)
    
-   integer(intKi)                          :: tIndx
    integer(intKi)                          :: iR ! Loop on rotors
    integer(intKi)                          :: j, k  ! loop counter for blades
    integer(intKi)                          :: ErrStat2
@@ -3869,82 +3871,80 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   do tIndx=1,size(u)
-      do iR =1, size(p%rotors)
-         allocate(thetaBladeNds(p%rotors(iR)%NumBlNds, p%rotors(iR)%NumBlades))
-         ! Get disk average values and orientations
-         ! NOTE: needed because it sets m%V_diskAvg and m%V_dot_x, needed by CalcOutput..
-         call DiskAvgValues(p%rotors(iR), u(tIndx)%rotors(iR), m%Inflow(tIndx)%RotInflow(iR), m%rotors(iR), x_hat_disk) ! also sets m%V_diskAvg and m%V_dot_x
+   do iR =1, size(p%rotors)
+      allocate(thetaBladeNds(p%rotors(iR)%NumBlNds, p%rotors(iR)%NumBlades))
+      ! Get disk average values and orientations
+      ! NOTE: needed because it sets m%V_diskAvg and m%V_dot_x, needed by CalcOutput..
+      call DiskAvgValues(p%rotors(iR), u%rotors(iR), m%Inflow(tIndx)%RotInflow(iR), m%rotors(iR), x_hat_disk) ! also sets m%V_diskAvg and m%V_dot_x
 
-         ! Compute Orientation similar to BEM, only to have consistent outputs...
-         ! TODO TODO TODO All this below is mostly a calcOutput thing, we should move it somewhere else!
-         !                orientation annulus is only used for Outputs with OLAF, same for pitch and azimuth
-         if (p%rotors(iR)%AeroProjMod==APM_BEM_NoSweepPitchTwist) then
-            call Calculate_MeshOrientation_NoSweepPitchTwist(p%rotors(iR), u(tIndx)%rotors(iR),  m%rotors(iR), thetaBladeNds, m%rotors(iR)%Toe, m%rotors(iR)%Cant, ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
+      ! Compute Orientation similar to BEM, only to have consistent outputs...
+      ! TODO TODO TODO All this below is mostly a calcOutput thing, we should move it somewhere else!
+      !                orientation annulus is only used for Outputs with OLAF, same for pitch and azimuth
+      if (p%rotors(iR)%AeroProjMod==APM_BEM_NoSweepPitchTwist) then
+         call Calculate_MeshOrientation_NoSweepPitchTwist(p%rotors(iR), u%rotors(iR),  m%rotors(iR), thetaBladeNds, m%rotors(iR)%Toe, m%rotors(iR)%Cant, ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
 
-         elseif (p%rotors(iR)%AeroProjMod==APM_BEM_Polar) then
-            do k=1,p%rotors(iR)%numBlades
-               call Calculate_MeshOrientation_Rel2Hub(u(tIndx)%rotors(iR)%BladeMotion(k), u(tIndx)%rotors(iR)%HubMotion, x_hat_disk, m%rotors(iR)%orientationAnnulus(:,:,:,k))
-               call TwistToeCant_FromLocalPolar(u(tIndx)%rotors(iR)%BladeMotion(k), m%rotors(iR)%orientationAnnulus(:,:,:,k), thetaBladeNds(:,k), m%rotors(iR)%Toe(:,k), m%rotors(iR)%Cant(:,k))
-            enddo
-
-         else if (p%rotors(iR)%AeroProjMod==APM_LiftingLine) then
-            call Calculate_MeshOrientation_LiftingLine      (p%rotors(iR),u(tIndx)%rotors(iR), m%rotors(iR), thetaBladeNds, m%rotors(iR)%Toe, m%rotors(iR)%Cant, ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
-         else
-            call SetErrStat(ErrID_Fatal, 'Aero Projection Method not implemented' ,ErrStat, ErrMsg, RoutineName)
-         endif
-         call StorePitchAndAzimuth(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat >= AbortErrLev) return
-
-            ! Rather than use a meshcopy, we will just copy what we need to the WingsMesh
-            ! NOTE:  MeshCopy requires the source mesh to be INOUT intent
-            ! NOTE2: If we change the WingsMesh to not be identical to the BladeMotion mesh, add the mapping stuff here.
-         do k=1,p%rotors(iR)%NumBlades
-            iW=p%FVW%Bld2Wings(iR,k)
-
-            if ( u(tIndx)%rotors(iR)%BladeMotion(k)%nNodes /= m%FVW_u(tIndx)%WingsMesh(iW)%nNodes ) then
-               call SetErrStat(ErrID_Fatal,"WingsMesh contains different number of nodes than the BladeMotion mesh",ErrStat,ErrMsg,RoutineName)
-               return
-            endif
-            m%FVW%W(iW)%PitchAndTwist(:) = thetaBladeNds(:,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
-            m%FVW_u(tIndx)%WingsMesh(iW)%TranslationDisp   = u(tIndx)%rotors(iR)%BladeMotion(k)%TranslationDisp
-            m%FVW_u(tIndx)%WingsMesh(iW)%Orientation       = u(tIndx)%rotors(iR)%BladeMotion(k)%Orientation
-            m%FVW_u(tIndx)%WingsMesh(iW)%TranslationVel    = u(tIndx)%rotors(iR)%BladeMotion(k)%TranslationVel
-            m%FVW_u(tIndx)%rotors(iR)%HubPosition    = u(tIndx)%rotors(iR)%HubMotion%Position(:,1) + u(tIndx)%rotors(iR)%HubMotion%TranslationDisp(:,1)
-            m%FVW_u(tIndx)%rotors(iR)%HubOrientation = u(tIndx)%rotors(iR)%HubMotion%Orientation(:,:,1)
-
-            ! Inputs for dynamic stall (see SetInputsForBEMT)
-            do j=1,p%rotors(iR)%NumBlNds         
-               ! inputs for CUA, section pitch/torsion rate
-               m%FVW_u(tIndx)%W(iW)%omega_z(j) = dot_product( u(tIndx)%rotors(iR)%BladeMotion(k)%RotationVel(   :,j), m%rotors(iR)%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
-            end do !j=nodes
-         enddo ! k blades
-         if (allocated(thetaBladeNds)) deallocate(thetaBladeNds)
-      enddo ! iR, rotors
-
-      if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
-         m%FVW_u(tIndx)%V_wind   = m%Inflow(tIndx)%InflowWakeVel
-         ! Applying tower shadow to V_wind based on r_wind positions
-         ! NOTE: m%DisturbedInflow also contains tower shadow and we need it for CalcOutput
-         if (p%FVW%TwrShadowOnWake) then
-            do iR =1, size(p%rotors)
-               if (p%rotors(iR)%TwrPotent /= TwrPotent_none .or. p%rotors(iR)%TwrShadow /= TwrShadow_none) then
-                  call TwrInflArray( p%rotors(iR), u(tIndx)%rotors(iR), m%Inflow(tIndx)%RotInflow(iR), m%rotors(iR), m%FVW%r_wind, m%FVW_u(tIndx)%V_wind, ErrStat2, ErrMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                  if (ErrStat >= AbortErrLev) return
-               endif
-            enddo
-         end if
-      endif
-      do iR =1, size(p%rotors)
-         ! Disturbed inflow for UA on Lifting line Mesh Points
-         call SetDisturbedInflow(p%rotors(iR), p, u(tIndx)%rotors(iR), m%Inflow(tIndx)%RotInflow(iR), m%rotors(iR), errStat2, errMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         do k=1,p%rotors(iR)%NumBlades
-            iW=p%FVW%Bld2Wings(iR,k)
-            m%FVW_u(tIndx)%W(iW)%Vwnd_LL(1:3,:) = m%rotors(iR)%DisturbedInflow(1:3,:,k)
+      elseif (p%rotors(iR)%AeroProjMod==APM_BEM_Polar) then
+         do k=1,p%rotors(iR)%numBlades
+            call Calculate_MeshOrientation_Rel2Hub(u%rotors(iR)%BladeMotion(k), u%rotors(iR)%HubMotion, x_hat_disk, m%rotors(iR)%orientationAnnulus(:,:,:,k))
+            call TwistToeCant_FromLocalPolar(u%rotors(iR)%BladeMotion(k), m%rotors(iR)%orientationAnnulus(:,:,:,k), thetaBladeNds(:,k), m%rotors(iR)%Toe(:,k), m%rotors(iR)%Cant(:,k))
          enddo
+
+      else if (p%rotors(iR)%AeroProjMod==APM_LiftingLine) then
+         call Calculate_MeshOrientation_LiftingLine      (p%rotors(iR),u%rotors(iR), m%rotors(iR), thetaBladeNds, m%rotors(iR)%Toe, m%rotors(iR)%Cant, ErrStat=ErrStat2,ErrMsg=ErrMsg2) ! sets m%orientationAnnulus, m%Curve
+      else
+         call SetErrStat(ErrID_Fatal, 'Aero Projection Method not implemented' ,ErrStat, ErrMsg, RoutineName)
+      endif
+      call StorePitchAndAzimuth(p%rotors(iR), u%rotors(iR), m%rotors(iR), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
+ 
+         ! Rather than use a meshcopy, we will just copy what we need to the WingsMesh
+         ! NOTE:  MeshCopy requires the source mesh to be INOUT intent
+         ! NOTE2: If we change the WingsMesh to not be identical to the BladeMotion mesh, add the mapping stuff here.
+      do k=1,p%rotors(iR)%NumBlades
+         iW=p%FVW%Bld2Wings(iR,k)
+ 
+         if ( u%rotors(iR)%BladeMotion(k)%nNodes /= m%FVW_u(tIndx)%WingsMesh(iW)%nNodes ) then
+            call SetErrStat(ErrID_Fatal,"WingsMesh contains different number of nodes than the BladeMotion mesh",ErrStat,ErrMsg,RoutineName)
+            return
+         endif
+         m%FVW%W(iW)%PitchAndTwist(:) = thetaBladeNds(:,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
+         m%FVW_u(tIndx)%WingsMesh(iW)%TranslationDisp   = u%rotors(iR)%BladeMotion(k)%TranslationDisp
+         m%FVW_u(tIndx)%WingsMesh(iW)%Orientation       = u%rotors(iR)%BladeMotion(k)%Orientation
+         m%FVW_u(tIndx)%WingsMesh(iW)%TranslationVel    = u%rotors(iR)%BladeMotion(k)%TranslationVel
+         m%FVW_u(tIndx)%rotors(iR)%HubPosition    = u%rotors(iR)%HubMotion%Position(:,1) + u%rotors(iR)%HubMotion%TranslationDisp(:,1)
+         m%FVW_u(tIndx)%rotors(iR)%HubOrientation = u%rotors(iR)%HubMotion%Orientation(:,:,1)
+ 
+         ! Inputs for dynamic stall (see SetInputsForBEMT)
+         do j=1,p%rotors(iR)%NumBlNds         
+            ! inputs for CUA, section pitch/torsion rate
+            m%FVW_u(tIndx)%W(iW)%omega_z(j) = dot_product( u%rotors(iR)%BladeMotion(k)%RotationVel(   :,j), m%rotors(iR)%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+         end do !j=nodes
+      enddo ! k blades
+      if (allocated(thetaBladeNds)) deallocate(thetaBladeNds)
+   enddo ! iR, rotors
+ 
+   if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
+      m%FVW_u(tIndx)%V_wind   = m%Inflow(tIndx)%InflowWakeVel
+      ! Applying tower shadow to V_wind based on r_wind positions
+      ! NOTE: m%DisturbedInflow also contains tower shadow and we need it for CalcOutput
+      if (p%FVW%TwrShadowOnWake) then
+         do iR =1, size(p%rotors)
+            if (p%rotors(iR)%TwrPotent /= TwrPotent_none .or. p%rotors(iR)%TwrShadow /= TwrShadow_none) then
+               call TwrInflArray( p%rotors(iR), u%rotors(iR), m%Inflow(tIndx)%RotInflow(iR), m%rotors(iR), m%FVW%r_wind, m%FVW_u(tIndx)%V_wind, ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               if (ErrStat >= AbortErrLev) return
+            endif
+         enddo
+      end if
+   endif
+   do iR =1, size(p%rotors)
+      ! Disturbed inflow for UA on Lifting line Mesh Points
+      call SetDisturbedInflow(p%rotors(iR), p, u%rotors(iR), m%Inflow(tIndx)%RotInflow(iR), m%rotors(iR), errStat2, errMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      do k=1,p%rotors(iR)%NumBlades
+         iW=p%FVW%Bld2Wings(iR,k)
+         m%FVW_u(tIndx)%W(iW)%Vwnd_LL(1:3,:) = m%rotors(iR)%DisturbedInflow(1:3,:,k)
       enddo
    enddo
 

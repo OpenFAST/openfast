@@ -68,10 +68,10 @@ IMPLICIT NONE
     character(1)  :: delim      !< column delimiter [-]
     character(20)  :: outFmt      !< Format specifier [-]
     INTEGER(IntKi)  :: fileFmt = 0_IntKi      !< Output format 1=Text, 2=Binary, 3=Both [-]
-    INTEGER(IntKi)  :: wrVTK = 0_IntKi      !< 0= no vtk, 1=init only, 2=animation [-]
+    INTEGER(IntKi)  :: WrVTK = 0_IntKi      !< 0= no vtk, 1=init only, 2=animation [-]
     INTEGER(IntKi)  :: WrVTK_Type = 0_IntKi      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
     character(1024)  :: Root      !< Output file rootname [-]
-    character(1024)  :: VTK_OutFileRoot      !< Output file rootname for vtk [-]
+    character(1024)  :: VTK_OutFileRoot      !< Output file rootname for vtk (includes directory) [-]
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Channel headers [-]
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Channel units [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: storage      !< nTurbines x nChannel x nTime [-]
@@ -79,6 +79,7 @@ IMPLICIT NONE
     TYPE(DvrVTK_SurfaceType) , DIMENSION(:), ALLOCATABLE  :: VTK_surface      !< Data for VTK surface visualization [-]
     INTEGER(IntKi)  :: VTK_tWidth = 0_IntKi      !< Width of number of files for leading zeros in file name format [-]
     INTEGER(IntKi)  :: n_VTKTime = 0_IntKi      !< Number of time steps between writing VTK files [-]
+    REAL(DbKi)  :: VTK_DT = 0.0_R8Ki      !< Write VTK time step [-]
     REAL(SiKi)  :: VTKHubRad = 0.0_R4Ki      !< Hub radius for visualization [m]
     REAL(ReKi) , DIMENSION(1:6)  :: VTKNacDim = 0.0_ReKi      !< Nacelle dimensions for visualization [m]
     REAL(SiKi) , DIMENSION(1:3)  :: VTKRefPoint = 0.0_R4Ki      !< RefPoint for VTK outputs [-]
@@ -348,7 +349,7 @@ subroutine AD_Dvr_CopyDvr_Outputs(SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCo
    DstDvr_OutputsData%delim = SrcDvr_OutputsData%delim
    DstDvr_OutputsData%outFmt = SrcDvr_OutputsData%outFmt
    DstDvr_OutputsData%fileFmt = SrcDvr_OutputsData%fileFmt
-   DstDvr_OutputsData%wrVTK = SrcDvr_OutputsData%wrVTK
+   DstDvr_OutputsData%WrVTK = SrcDvr_OutputsData%WrVTK
    DstDvr_OutputsData%WrVTK_Type = SrcDvr_OutputsData%WrVTK_Type
    DstDvr_OutputsData%Root = SrcDvr_OutputsData%Root
    DstDvr_OutputsData%VTK_OutFileRoot = SrcDvr_OutputsData%VTK_OutFileRoot
@@ -418,6 +419,7 @@ subroutine AD_Dvr_CopyDvr_Outputs(SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCo
    end if
    DstDvr_OutputsData%VTK_tWidth = SrcDvr_OutputsData%VTK_tWidth
    DstDvr_OutputsData%n_VTKTime = SrcDvr_OutputsData%n_VTKTime
+   DstDvr_OutputsData%VTK_DT = SrcDvr_OutputsData%VTK_DT
    DstDvr_OutputsData%VTKHubRad = SrcDvr_OutputsData%VTKHubRad
    DstDvr_OutputsData%VTKNacDim = SrcDvr_OutputsData%VTKNacDim
    DstDvr_OutputsData%VTKRefPoint = SrcDvr_OutputsData%VTKRefPoint
@@ -480,7 +482,7 @@ subroutine AD_Dvr_PackDvr_Outputs(RF, Indata)
    call RegPack(RF, InData%delim)
    call RegPack(RF, InData%outFmt)
    call RegPack(RF, InData%fileFmt)
-   call RegPack(RF, InData%wrVTK)
+   call RegPack(RF, InData%WrVTK)
    call RegPack(RF, InData%WrVTK_Type)
    call RegPack(RF, InData%Root)
    call RegPack(RF, InData%VTK_OutFileRoot)
@@ -499,6 +501,7 @@ subroutine AD_Dvr_PackDvr_Outputs(RF, Indata)
    end if
    call RegPack(RF, InData%VTK_tWidth)
    call RegPack(RF, InData%n_VTKTime)
+   call RegPack(RF, InData%VTK_DT)
    call RegPack(RF, InData%VTKHubRad)
    call RegPack(RF, InData%VTKNacDim)
    call RegPack(RF, InData%VTKRefPoint)
@@ -525,7 +528,7 @@ subroutine AD_Dvr_UnPackDvr_Outputs(RF, OutData)
    call RegUnpack(RF, OutData%delim); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%outFmt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%fileFmt); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%wrVTK); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WrVTK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WrVTK_Type); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Root); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTK_OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
@@ -548,6 +551,7 @@ subroutine AD_Dvr_UnPackDvr_Outputs(RF, OutData)
    end if
    call RegUnpack(RF, OutData%VTK_tWidth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_VTKTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VTK_DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTKHubRad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTKNacDim); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTKRefPoint); if (RegCheckErr(RF, RoutineName)) return

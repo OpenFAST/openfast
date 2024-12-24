@@ -132,17 +132,17 @@
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Inflow_Registry.txt">
 			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\AeroDyn_Inflow_Types.f90"/></FileConfiguration></File>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
@@ -1000,13 +1000,13 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library.txt"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library_typedef_nomesh.txt">
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\NWTC_Library_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\NWTC_Library_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\NWTC_Library_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\NWTC_Library_Types.f90"/></FileConfiguration></File></Filter>
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
