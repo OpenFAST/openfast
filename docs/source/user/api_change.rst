@@ -11,14 +11,15 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 
 
 
-OpenFAST v3.5.5 to OpenFAST dev
-----------------------------------
+OpenFAST v3.5.5 to OpenFAST 4.0.0
+---------------------------------
 
 The HydroDyn module was split into HydroDyn and SeaState.  This results in a
 completely new input file for SeaState, and complete revision of the HydroDyn
 input file.  See examples in the regression tests for the new formats.
 
-New modules AeroDisk (see :numref:`ADsk`) and Simplified-ElastoDyn (see :numref:`SED`).
+New modules AeroDisk (see :numref:`ADsk`) and Simplified-ElastoDyn (see :numref:`SED`)
+were added.  See documentation on those modules for exmple input files.
 
 ============================================= ======= ==================== ========================================================================================================================================================================================================
 Modified in OpenFAST `dev`
@@ -28,17 +29,21 @@ Module                                        Line    Flag Name            Examp
 OpenFAST                                      15      CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
 OpenFAST                                      13      CompElast            3   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades; 3=Simplified ElastoDyn}
 AeroDyn                                       40      IntegrationMethod    3   IntegrationMethod  - Switch to indicate which integration method UA uses (1=RK4, 2=AB4, 3=ABM4, 4=BDF2)
+AeroDyn                                       80\*     NacArea             0, 0, 0            NacArea            - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
+AeroDyn                                       81\*     NacCd               0, 0, 0            NacCd              - Drag coefficient for the nacelle areas defined above (-)
+AeroDyn                                       82\*     NacDragAC           0, 0, 0            NacDragAC          - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
 AeroDyn                                       140\*   BldNd_BlOutNd        "All"  BldNd_BlOutNd   - Specify a portion of the nodes to output. {"ALL", "Tip", "Root", or a list of node numbers} (-)
 AeroDyn Aeroacoustics                         11\*    TI                   0.1 TI   - Rotor-incident wind turbulence intensity (-) [Only used if TiCalcMeth == 1]
 AeroDyn Aeroacoustics                         12\*    avgV                 8 avgV   - Average wind speed used to compute the section-incident turbulence intensity (m/s) [Only used if TiCalcMeth == 1]
 ElastoDyn blade file                          15                           Removal of the `PitchAxis` input column
 HydroDyn                                       all                         Complete restructuring of input file
 SeaState                                       all                         New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
+Subdyn                                        11       --removed--
 SubDyn                                        56\*                                             ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------
 SubDyn                                        57\*    NSpringPropSets  0                         - Number of spring properties
 SubDyn                                        58\*                                             PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66
 SubDyn                                        59\*                                             (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)  
-FAST.Farm                                     16      WrMooringVis         true              WrMooringVis       - Write shared mooring visualization, at DT_Mooring timestep (-) [only used for Mod_SharedMooring=3]
+FAST.Farm                                     16      WrMooringVis         true          WrMooringVis       - Write shared mooring visualization, at DT_Mooring timestep (-) [only used for Mod_SharedMooring=3]
 FAST.Farm                                     48      RotorDiamRef         125           RotorDiamRef       - Reference turbine rotor diameter for wake calculations (m) [>0.0]
 FAST.Farm                                     58      k_vAmb               DEFAULT       k_vAmb        - Calibrated parameters for the influence of the ambient turbulence in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.05, 1.0, 0.0, 1.0, 0.01]
 FAST.Farm                                     59      kvShr                DEFAULT       k_vShr        - Calibrated parameters for the influence of the shear layer in the eddy viscosity (set of 5 parameters: k, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=0.016, 0.2, 3.0, 25.0, 0.1]
@@ -51,10 +56,6 @@ FAST.Farm                                     76       WAT_DxDyDz          5.0, 
 FAST.Farm                                     77       WAT_ScaleBox        default            WAT_ScaleBox       - Flag to scale the input turbulence box to zero mean and unit standard deviation at every node [DEFAULT=False] (flag)
 FAST.Farm                                     78       WAT_k_Def           default            WAT_k_Def          - Calibrated parameters for the influence of the maximum wake deficit on wake-added turbulence (set of 5 parameters: k_Def, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[0.6, 0.0, 0.0, 2.0, 1.0 ]]
 FAST.Farm                                     79       WAT_k_Grad          default            WAT_k_Grad         - Calibrated parameters for the influence of the radial velocity gradient of the wake deficit on wake-added turbulence (set of 5 parameters: k_Grad, FMin, DMin, DMax, Exp) (-) [>=0.0, >=0.0 and <=1.0, >=0.0, >DMin, >0.0] or DEFAULT [DEFAULT=[3.0, 0.0, 0.0, 12.0, 0.65]                   
-AeroDyn                                       80\*     NacArea             0, 0, 0            NacArea            - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
-AeroDyn                                       81\*     NacCd               0, 0, 0            NacCd              - Drag coefficient for the nacelle areas defined above (-)
-AeroDyn                                       82\*     NacDragAC           0, 0, 0            NacDragAC          - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
-Subdyn                                        11       --removed--
 ============================================= ======= ==================== ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
