@@ -27,8 +27,10 @@ Modified in OpenFAST `dev`
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line     Flag Name            Example Value
 ============================================= ======== ==================== ========================================================================================================================================================================================================
-OpenFAST                                      15       CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
 OpenFAST                                      13       CompElast            3   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades; 3=Simplified ElastoDyn}
+OpenFAST                                      15       CompAero\**          2   CompAero        - Compute aerodynamic loads (switch) {0=None; 1=AeroDisk; 2=AeroDyn; 3=ExtLoads}
+OpenFAST                                      17       CompSeaSt            0   CompSeaSt       - Compute sea state information (switch) {0=None; 1=SeaState}
+OpenFAST                                      41       SeaStFile            "unused"      SeaStFile       - Name of file containing sea state input parameters (quoted string)
 AeroDyn                                        all                          Complete restructuring of input file (see notes below)
 AeroDyn Aeroacoustics                         11\*     TI                   0.1 TI   - Rotor-incident wind turbulence intensity (-) [Only used if TiCalcMeth == 1]
 AeroDyn Aeroacoustics                         12\*     avgV                 8 avgV   - Average wind speed used to compute the section-incident turbulence intensity (m/s) [Only used if TiCalcMeth == 1]
