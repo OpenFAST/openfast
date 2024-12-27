@@ -1251,9 +1251,15 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDynBlade']['BlTwist']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
         self.fst_vt['AeroDynBlade']['BlChord']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
         self.fst_vt['AeroDynBlade']['BlAFID']         = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
+        self.fst_vt['AeroDynBlade']['t_c']            = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
         self.fst_vt['AeroDynBlade']['BlCb']           = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
         self.fst_vt['AeroDynBlade']['BlCenBn']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
         self.fst_vt['AeroDynBlade']['BlCenBt']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
+        self.fst_vt['AeroDynBlade']['BlCpn']          = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
+        self.fst_vt['AeroDynBlade']['BlCpt']          = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
+        self.fst_vt['AeroDynBlade']['BlCan']          = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
+        self.fst_vt['AeroDynBlade']['BlCat']          = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
+        self.fst_vt['AeroDynBlade']['BlCam']          = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
         for i in range(self.fst_vt['AeroDynBlade']['NumBlNds']):
             data = [float(val) for val in f.readline().split()]
             self.fst_vt['AeroDynBlade']['BlSpn'][i]   = data[0] 
@@ -1263,14 +1269,26 @@ class InputReader_OpenFAST(object):
             self.fst_vt['AeroDynBlade']['BlTwist'][i] = data[4]
             self.fst_vt['AeroDynBlade']['BlChord'][i] = data[5]
             self.fst_vt['AeroDynBlade']['BlAFID'][i]  = data[6]
-            if len(data) == 9:
-                self.fst_vt['AeroDynBlade']['BlCb'][i]    = data[7]
-                self.fst_vt['AeroDynBlade']['BlCenBn'][i] = data[8]
-                self.fst_vt['AeroDynBlade']['BlCenBt'][i] = data[9]
+            if len(data) == 16:
+                self.fst_vt['AeroDynBlade']['t_c'][i]     = data[7]
+                self.fst_vt['AeroDynBlade']['BlCb'][i]    = data[8]
+                self.fst_vt['AeroDynBlade']['BlCenBn'][i] = data[9]
+                self.fst_vt['AeroDynBlade']['BlCenBt'][i] = data[10]
+                self.fst_vt['AeroDynBlade']['BlCpn'][i]   = data[11]
+                self.fst_vt['AeroDynBlade']['BlCpt'][i]   = data[12]
+                self.fst_vt['AeroDynBlade']['BlCan'][i]   = data[13]
+                self.fst_vt['AeroDynBlade']['BlCat'][i]   = data[14]
+                self.fst_vt['AeroDynBlade']['BlCam'][i]   = data[15]
             else:
+                self.fst_vt['AeroDynBlade']['t_c'][i]     = 0.0
                 self.fst_vt['AeroDynBlade']['BlCb'][i]    = 0.0
                 self.fst_vt['AeroDynBlade']['BlCenBn'][i] = 0.0
                 self.fst_vt['AeroDynBlade']['BlCenBt'][i] = 0.0
+                self.fst_vt['AeroDynBlade']['BlCpn'][i]   = 0.0
+                self.fst_vt['AeroDynBlade']['BlCpt'][i]   = 0.0
+                self.fst_vt['AeroDynBlade']['BlCan'][i]   = 0.0
+                self.fst_vt['AeroDynBlade']['BlCat'][i]   = 0.0
+                self.fst_vt['AeroDynBlade']['BlCam'][i]   = 0.0
 
         
         f.close()

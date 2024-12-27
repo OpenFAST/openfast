@@ -1019,8 +1019,8 @@ class InputWriter_OpenFAST(object):
         f.write('Generated with OpenFAST_IO\n')
         f.write('======  Blade Properties =================================================================\n')
         f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['AeroDynBlade']['NumBlNds'], 'NumBlNds', '- Number of blade nodes used in the analysis (-)\n'))
-        f.write('    BlSpn        BlCrvAC        BlSwpAC        BlCrvAng       BlTwist        BlChord          BlAFID       BlCb        BlCenBn      BlCenBt\n')
-        f.write('     (m)           (m)            (m)            (deg)         (deg)           (m)              (-)        (-)         (m)             (m)\n')
+        f.write('     BlSpn     BlCrvAC     BlSwpAC     BlCrvAng     BlTwist     BlChord     BlAFID     t_c      BlCb     BlCenBn     BlCenBt    BlCpn    BlCpt    BlCan    BlCat    BlCam\n')
+        f.write('     (m)       (m)         (m)         (deg)        (deg)       (m)         (-)        (-)      (-)      (m)         (m)        (-)      (-)      (-)      (-)      (-)\n')
         BlSpn    = self.fst_vt['AeroDynBlade']['BlSpn']
         BlCrvAC  = self.fst_vt['AeroDynBlade']['BlCrvAC']
         BlSwpAC  = self.fst_vt['AeroDynBlade']['BlSwpAC']
@@ -1028,11 +1028,17 @@ class InputWriter_OpenFAST(object):
         BlTwist  = self.fst_vt['AeroDynBlade']['BlTwist']
         BlChord  = self.fst_vt['AeroDynBlade']['BlChord']
         BlAFID   = self.fst_vt['AeroDynBlade']['BlAFID']
+        t_c      = self.fst_vt['AeroDynBlade']['t_c']
         BlCb     = self.fst_vt['AeroDynBlade']['BlCb']
         BlCenBn  = self.fst_vt['AeroDynBlade']['BlCenBn']
         BlCenBt  = self.fst_vt['AeroDynBlade']['BlCenBt']
-        for Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, AFID, BlCb, BlCenBn, BlCenBt in zip(BlSpn, BlCrvAC, BlSwpAC, BlCrvAng, BlTwist, BlChord, BlAFID, BlCb, BlCenBn, BlCenBt):
-            f.write('{: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 8d} {: 2.15e} {: 2.15e} {: 2.15e}\n'.format(Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, int(AFID), BlCb, BlCenBn, BlCenBt))
+        BlCpn    = self.fst_vt['AeroDynBlade']['BlCpn']
+        BlCpt    = self.fst_vt['AeroDynBlade']['BlCpt']
+        BlCan    = self.fst_vt['AeroDynBlade']['BlCan']
+        BlCat    = self.fst_vt['AeroDynBlade']['BlCat']
+        BlCam    = self.fst_vt['AeroDynBlade']['BlCam']
+        for Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, AFID, t_c, BlCb, BlCenBn, BlCenBt, BlCpn, BlCpt, BlCan, BlCat, BlCam in zip(BlSpn, BlCrvAC, BlSwpAC, BlCrvAng, BlTwist, BlChord, BlAFID, t_c, BlCb, BlCenBn, BlCenBt, BlCpn, BlCpt, BlCan, BlCat, BlCam):
+            f.write('{: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 8d} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e}\n'.format(Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, int(AFID), t_c, BlCb, BlCenBn, BlCenBt, BlCpn, BlCpt, BlCan, BlCat, BlCam))
         
         f.flush()
         os.fsync(f)
