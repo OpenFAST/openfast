@@ -1039,7 +1039,6 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['TwrShadow']     = int(f.readline().split()[0])
         self.fst_vt['AeroDyn']['TwrAero']       = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['CavitCheck']    = bool_read(f.readline().split()[0])
-        self.fst_vt['AeroDyn']['Buoyancy']      = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['NacelleDrag']      = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['CompAA']        = bool_read(f.readline().split()[0])
         self.fst_vt['AeroDyn']['AA_InputFile']  = f.readline().split()[0]
@@ -1157,6 +1156,8 @@ class InputReader_OpenFAST(object):
         self.fst_vt['AeroDyn']['TwrCd'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
         self.fst_vt['AeroDyn']['TwrTI'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
         self.fst_vt['AeroDyn']['TwrCb'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
+        self.fst_vt['AeroDyn']['TwrCp'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
+        self.fst_vt['AeroDyn']['TwrCa'] = [None]*self.fst_vt['AeroDyn']['NumTwrNds']
         for i in range(self.fst_vt['AeroDyn']['NumTwrNds']):
             data = [float(val) for val in f.readline().split()]
             self.fst_vt['AeroDyn']['TwrElev'][i] = data[0] 
@@ -1164,6 +1165,8 @@ class InputReader_OpenFAST(object):
             self.fst_vt['AeroDyn']['TwrCd'][i]   = data[2]
             self.fst_vt['AeroDyn']['TwrTI'][i]   = data[3]
             self.fst_vt['AeroDyn']['TwrCb'][i]   = data[4]
+            self.fst_vt['AeroDyn']['TwrCp'][i]   = data[5]
+            self.fst_vt['AeroDyn']['TwrCa'][i]   = data[6]
 
         # Outputs
         f.readline()
