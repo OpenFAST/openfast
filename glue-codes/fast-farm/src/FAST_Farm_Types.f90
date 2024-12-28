@@ -60,6 +60,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WT_Position      !< X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number [meters]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) {0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin} [-]
     INTEGER(IntKi)  :: MooringMod = 0_IntKi      !< Mod_SharedMooring is a flag for array-level mooring. (switch) {0: none, 3: yes/MoorDyn} [-]
+    LOGICAL  :: WrMooringVis = .false.      !< Write shared mooring visualization (-) [only used for Mod_SharedMooring=3] [-]
     CHARACTER(1024)  :: MD_FileName      !< Name/location of the farm-level MoorDyn input file [-]
     REAL(DbKi)  :: DT_mooring = 0.0_R8Ki      !< Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0] [seconds]
     INTEGER(IntKi)  :: n_mooring = 0_IntKi      !< Number of FAST and MoorDyn time steps per FAST.Farm timestep when mooring > 0 [-]
@@ -185,6 +186,9 @@ IMPLICIT NONE
     TYPE(MD_OutputType)  :: y      !< System outputs [-]
     TYPE(MD_MiscVarType)  :: m      !< Misc/optimization variables [-]
     LOGICAL  :: IsInitialized = .FALSE.      !< Has MD_Init been called [-]
+    INTEGER(IntKi)  :: VTK_count = 0      !< Counter for VTK output of shared moorings [-]
+    INTEGER(IntKi)  :: VTK_TWidth = 0_IntKi      !< width for VTK_count field in output name [-]
+    character(1024)  :: VTK_OutFileRoot      !< Rootfilename for VTK output [-]
   END TYPE MD_Data
 ! =======================
 ! =========  WAT_IfW_data  =======
@@ -220,8 +224,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Farm_CopyParam'
@@ -236,8 +240,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%SC_FileName = SrcParamData%SC_FileName
    DstParamData%UseSC = SrcParamData%UseSC
    if (allocated(SrcParamData%WT_Position)) then
-      LB(1:2) = lbound(SrcParamData%WT_Position, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%WT_Position, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%WT_Position)
+      UB(1:2) = ubound(SrcParamData%WT_Position)
       if (.not. allocated(DstParamData%WT_Position)) then
          allocate(DstParamData%WT_Position(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -249,12 +253,13 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%WaveFieldMod = SrcParamData%WaveFieldMod
    DstParamData%MooringMod = SrcParamData%MooringMod
+   DstParamData%WrMooringVis = SrcParamData%WrMooringVis
    DstParamData%MD_FileName = SrcParamData%MD_FileName
    DstParamData%DT_mooring = SrcParamData%DT_mooring
    DstParamData%n_mooring = SrcParamData%n_mooring
    if (allocated(SrcParamData%WT_FASTInFile)) then
-      LB(1:1) = lbound(SrcParamData%WT_FASTInFile, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%WT_FASTInFile, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%WT_FASTInFile)
+      UB(1:1) = ubound(SrcParamData%WT_FASTInFile)
       if (.not. allocated(DstParamData%WT_FASTInFile)) then
          allocate(DstParamData%WT_FASTInFile(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -281,8 +286,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NOutTurb = SrcParamData%NOutTurb
    DstParamData%NOutRadii = SrcParamData%NOutRadii
    if (allocated(SrcParamData%OutRadii)) then
-      LB(1:1) = lbound(SrcParamData%OutRadii, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutRadii, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutRadii)
+      UB(1:1) = ubound(SrcParamData%OutRadii)
       if (.not. allocated(DstParamData%OutRadii)) then
          allocate(DstParamData%OutRadii(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -294,8 +299,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%NOutDist = SrcParamData%NOutDist
    if (allocated(SrcParamData%OutDist)) then
-      LB(1:1) = lbound(SrcParamData%OutDist, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutDist, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutDist)
+      UB(1:1) = ubound(SrcParamData%OutDist)
       if (.not. allocated(DstParamData%OutDist)) then
          allocate(DstParamData%OutDist(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -307,8 +312,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%NWindVel = SrcParamData%NWindVel
    if (allocated(SrcParamData%WindVelX)) then
-      LB(1:1) = lbound(SrcParamData%WindVelX, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%WindVelX, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%WindVelX)
+      UB(1:1) = ubound(SrcParamData%WindVelX)
       if (.not. allocated(DstParamData%WindVelX)) then
          allocate(DstParamData%WindVelX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -319,8 +324,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%WindVelX = SrcParamData%WindVelX
    end if
    if (allocated(SrcParamData%WindVelY)) then
-      LB(1:1) = lbound(SrcParamData%WindVelY, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%WindVelY, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%WindVelY)
+      UB(1:1) = ubound(SrcParamData%WindVelY)
       if (.not. allocated(DstParamData%WindVelY)) then
          allocate(DstParamData%WindVelY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -331,8 +336,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%WindVelY = SrcParamData%WindVelY
    end if
    if (allocated(SrcParamData%WindVelZ)) then
-      LB(1:1) = lbound(SrcParamData%WindVelZ, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%WindVelZ, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%WindVelZ)
+      UB(1:1) = ubound(SrcParamData%WindVelZ)
       if (.not. allocated(DstParamData%WindVelZ)) then
          allocate(DstParamData%WindVelZ(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -343,8 +348,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%WindVelZ = SrcParamData%WindVelZ
    end if
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -361,8 +366,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%NOutSteps = SrcParamData%NOutSteps
    DstParamData%FileDescLines = SrcParamData%FileDescLines
-   LB(1:1) = lbound(SrcParamData%Module_Ver, kind=B8Ki)
-   UB(1:1) = ubound(SrcParamData%Module_Ver, kind=B8Ki)
+   LB(1:1) = lbound(SrcParamData%Module_Ver)
+   UB(1:1) = ubound(SrcParamData%Module_Ver)
    do i1 = LB(1), UB(1)
       call NWTC_Library_CopyProgDesc(SrcParamData%Module_Ver(i1), DstParamData%Module_Ver(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -389,8 +394,8 @@ subroutine Farm_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(Farm_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Farm_DestroyParam'
@@ -418,16 +423,16 @@ subroutine Farm_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%WindVelZ)
    end if
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
       deallocate(ParamData%OutParam)
    end if
-   LB(1:1) = lbound(ParamData%Module_Ver, kind=B8Ki)
-   UB(1:1) = ubound(ParamData%Module_Ver, kind=B8Ki)
+   LB(1:1) = lbound(ParamData%Module_Ver)
+   UB(1:1) = ubound(ParamData%Module_Ver)
    do i1 = LB(1), UB(1)
       call NWTC_Library_DestroyProgDesc(ParamData%Module_Ver(i1), ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -438,8 +443,8 @@ subroutine Farm_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(Farm_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT_low)
    call RegPack(RF, InData%DT_high)
@@ -452,6 +457,7 @@ subroutine Farm_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%WT_Position)
    call RegPack(RF, InData%WaveFieldMod)
    call RegPack(RF, InData%MooringMod)
+   call RegPack(RF, InData%WrMooringVis)
    call RegPack(RF, InData%MD_FileName)
    call RegPack(RF, InData%DT_mooring)
    call RegPack(RF, InData%n_mooring)
@@ -481,9 +487,9 @@ subroutine Farm_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%WindVelZ)
    call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(RF, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
-      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
+      LB(1:1) = lbound(InData%OutParam)
+      UB(1:1) = ubound(InData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(RF, InData%OutParam(i1)) 
       end do
@@ -491,8 +497,8 @@ subroutine Farm_PackParam(RF, Indata)
    call RegPack(RF, InData%NumOuts)
    call RegPack(RF, InData%NOutSteps)
    call RegPack(RF, InData%FileDescLines)
-   LB(1:1) = lbound(InData%Module_Ver, kind=B8Ki)
-   UB(1:1) = ubound(InData%Module_Ver, kind=B8Ki)
+   LB(1:1) = lbound(InData%Module_Ver)
+   UB(1:1) = ubound(InData%Module_Ver)
    do i1 = LB(1), UB(1)
       call NWTC_Library_PackProgDesc(RF, InData%Module_Ver(i1)) 
    end do
@@ -518,8 +524,8 @@ subroutine Farm_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Farm_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -534,6 +540,7 @@ subroutine Farm_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WT_Position); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MooringMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WrMooringVis); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MD_FileName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT_mooring); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_mooring); if (RegCheckErr(RF, RoutineName)) return
@@ -577,8 +584,8 @@ subroutine Farm_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumOuts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NOutSteps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FileDescLines); if (RegCheckErr(RF, RoutineName)) return
-   LB(1:1) = lbound(OutData%Module_Ver, kind=B8Ki)
-   UB(1:1) = ubound(OutData%Module_Ver, kind=B8Ki)
+   LB(1:1) = lbound(OutData%Module_Ver)
+   UB(1:1) = ubound(OutData%Module_Ver)
    do i1 = LB(1), UB(1)
       call NWTC_Library_UnpackProgDesc(RF, OutData%Module_Ver(i1)) ! Module_Ver 
    end do
@@ -605,16 +612,16 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Farm_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%AllOuts, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%AllOuts)
+      UB(1:1) = ubound(SrcMiscData%AllOuts)
       if (.not. allocated(DstMiscData%AllOuts)) then
          allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -625,8 +632,8 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%AllOuts = SrcMiscData%AllOuts
    end if
    if (allocated(SrcMiscData%TimeData)) then
-      LB(1:1) = lbound(SrcMiscData%TimeData, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%TimeData, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%TimeData)
+      UB(1:1) = ubound(SrcMiscData%TimeData)
       if (.not. allocated(DstMiscData%TimeData)) then
          allocate(DstMiscData%TimeData(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -637,8 +644,8 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%TimeData = SrcMiscData%TimeData
    end if
    if (allocated(SrcMiscData%AllOutData)) then
-      LB(1:2) = lbound(SrcMiscData%AllOutData, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%AllOutData, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%AllOutData)
+      UB(1:2) = ubound(SrcMiscData%AllOutData)
       if (.not. allocated(DstMiscData%AllOutData)) then
          allocate(DstMiscData%AllOutData(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -650,8 +657,8 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstMiscData%n_Out = SrcMiscData%n_Out
    if (allocated(SrcMiscData%FWrap_2_MD)) then
-      LB(1:1) = lbound(SrcMiscData%FWrap_2_MD, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%FWrap_2_MD, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%FWrap_2_MD)
+      UB(1:1) = ubound(SrcMiscData%FWrap_2_MD)
       if (.not. allocated(DstMiscData%FWrap_2_MD)) then
          allocate(DstMiscData%FWrap_2_MD(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -666,8 +673,8 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    if (allocated(SrcMiscData%MD_2_FWrap)) then
-      LB(1:1) = lbound(SrcMiscData%MD_2_FWrap, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%MD_2_FWrap, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%MD_2_FWrap)
+      UB(1:1) = ubound(SrcMiscData%MD_2_FWrap)
       if (.not. allocated(DstMiscData%MD_2_FWrap)) then
          allocate(DstMiscData%MD_2_FWrap(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -687,8 +694,8 @@ subroutine Farm_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(Farm_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Farm_DestroyMisc'
@@ -704,8 +711,8 @@ subroutine Farm_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%AllOutData)
    end if
    if (allocated(MiscData%FWrap_2_MD)) then
-      LB(1:1) = lbound(MiscData%FWrap_2_MD, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%FWrap_2_MD, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%FWrap_2_MD)
+      UB(1:1) = ubound(MiscData%FWrap_2_MD)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyMeshMapType(MiscData%FWrap_2_MD(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -713,8 +720,8 @@ subroutine Farm_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%FWrap_2_MD)
    end if
    if (allocated(MiscData%MD_2_FWrap)) then
-      LB(1:1) = lbound(MiscData%MD_2_FWrap, kind=B8Ki)
-      UB(1:1) = ubound(MiscData%MD_2_FWrap, kind=B8Ki)
+      LB(1:1) = lbound(MiscData%MD_2_FWrap)
+      UB(1:1) = ubound(MiscData%MD_2_FWrap)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyMeshMapType(MiscData%MD_2_FWrap(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -727,8 +734,8 @@ subroutine Farm_PackMisc(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(Farm_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackMisc'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%AllOuts)
    call RegPackAlloc(RF, InData%TimeData)
@@ -736,18 +743,18 @@ subroutine Farm_PackMisc(RF, Indata)
    call RegPack(RF, InData%n_Out)
    call RegPack(RF, allocated(InData%FWrap_2_MD))
    if (allocated(InData%FWrap_2_MD)) then
-      call RegPackBounds(RF, 1, lbound(InData%FWrap_2_MD, kind=B8Ki), ubound(InData%FWrap_2_MD, kind=B8Ki))
-      LB(1:1) = lbound(InData%FWrap_2_MD, kind=B8Ki)
-      UB(1:1) = ubound(InData%FWrap_2_MD, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%FWrap_2_MD), ubound(InData%FWrap_2_MD))
+      LB(1:1) = lbound(InData%FWrap_2_MD)
+      UB(1:1) = ubound(InData%FWrap_2_MD)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackMeshMapType(RF, InData%FWrap_2_MD(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%MD_2_FWrap))
    if (allocated(InData%MD_2_FWrap)) then
-      call RegPackBounds(RF, 1, lbound(InData%MD_2_FWrap, kind=B8Ki), ubound(InData%MD_2_FWrap, kind=B8Ki))
-      LB(1:1) = lbound(InData%MD_2_FWrap, kind=B8Ki)
-      UB(1:1) = ubound(InData%MD_2_FWrap, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%MD_2_FWrap), ubound(InData%MD_2_FWrap))
+      LB(1:1) = lbound(InData%MD_2_FWrap)
+      UB(1:1) = ubound(InData%MD_2_FWrap)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackMeshMapType(RF, InData%MD_2_FWrap(i1)) 
       end do
@@ -759,8 +766,8 @@ subroutine Farm_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(Farm_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackMisc'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1197,8 +1204,8 @@ subroutine Farm_CopyMD_Data(SrcMD_DataData, DstMD_DataData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Farm_CopyMD_Data'
@@ -1223,8 +1230,8 @@ subroutine Farm_CopyMD_Data(SrcMD_DataData, DstMD_DataData, CtrlCode, ErrStat, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMD_DataData%Input)) then
-      LB(1:1) = lbound(SrcMD_DataData%Input, kind=B8Ki)
-      UB(1:1) = ubound(SrcMD_DataData%Input, kind=B8Ki)
+      LB(1:1) = lbound(SrcMD_DataData%Input)
+      UB(1:1) = ubound(SrcMD_DataData%Input)
       if (.not. allocated(DstMD_DataData%Input)) then
          allocate(DstMD_DataData%Input(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1239,8 +1246,8 @@ subroutine Farm_CopyMD_Data(SrcMD_DataData, DstMD_DataData, CtrlCode, ErrStat, E
       end do
    end if
    if (allocated(SrcMD_DataData%InputTimes)) then
-      LB(1:1) = lbound(SrcMD_DataData%InputTimes, kind=B8Ki)
-      UB(1:1) = ubound(SrcMD_DataData%InputTimes, kind=B8Ki)
+      LB(1:1) = lbound(SrcMD_DataData%InputTimes)
+      UB(1:1) = ubound(SrcMD_DataData%InputTimes)
       if (.not. allocated(DstMD_DataData%InputTimes)) then
          allocate(DstMD_DataData%InputTimes(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1257,14 +1264,17 @@ subroutine Farm_CopyMD_Data(SrcMD_DataData, DstMD_DataData, CtrlCode, ErrStat, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstMD_DataData%IsInitialized = SrcMD_DataData%IsInitialized
+   DstMD_DataData%VTK_count = SrcMD_DataData%VTK_count
+   DstMD_DataData%VTK_TWidth = SrcMD_DataData%VTK_TWidth
+   DstMD_DataData%VTK_OutFileRoot = SrcMD_DataData%VTK_OutFileRoot
 end subroutine
 
 subroutine Farm_DestroyMD_Data(MD_DataData, ErrStat, ErrMsg)
    type(MD_Data), intent(inout) :: MD_DataData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Farm_DestroyMD_Data'
@@ -1283,8 +1293,8 @@ subroutine Farm_DestroyMD_Data(MD_DataData, ErrStat, ErrMsg)
    call MD_DestroyInput(MD_DataData%u, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MD_DataData%Input)) then
-      LB(1:1) = lbound(MD_DataData%Input, kind=B8Ki)
-      UB(1:1) = ubound(MD_DataData%Input, kind=B8Ki)
+      LB(1:1) = lbound(MD_DataData%Input)
+      UB(1:1) = ubound(MD_DataData%Input)
       do i1 = LB(1), UB(1)
          call MD_DestroyInput(MD_DataData%Input(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1304,8 +1314,8 @@ subroutine Farm_PackMD_Data(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(MD_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackMD_Data'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call MD_PackContState(RF, InData%x) 
    call MD_PackDiscState(RF, InData%xd) 
@@ -1315,9 +1325,9 @@ subroutine Farm_PackMD_Data(RF, Indata)
    call MD_PackInput(RF, InData%u) 
    call RegPack(RF, allocated(InData%Input))
    if (allocated(InData%Input)) then
-      call RegPackBounds(RF, 1, lbound(InData%Input, kind=B8Ki), ubound(InData%Input, kind=B8Ki))
-      LB(1:1) = lbound(InData%Input, kind=B8Ki)
-      UB(1:1) = ubound(InData%Input, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%Input), ubound(InData%Input))
+      LB(1:1) = lbound(InData%Input)
+      UB(1:1) = ubound(InData%Input)
       do i1 = LB(1), UB(1)
          call MD_PackInput(RF, InData%Input(i1)) 
       end do
@@ -1326,6 +1336,9 @@ subroutine Farm_PackMD_Data(RF, Indata)
    call MD_PackOutput(RF, InData%y) 
    call MD_PackMisc(RF, InData%m) 
    call RegPack(RF, InData%IsInitialized)
+   call RegPack(RF, InData%VTK_count)
+   call RegPack(RF, InData%VTK_TWidth)
+   call RegPack(RF, InData%VTK_OutFileRoot)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1333,8 +1346,8 @@ subroutine Farm_UnPackMD_Data(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(MD_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackMD_Data'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1361,6 +1374,9 @@ subroutine Farm_UnPackMD_Data(RF, OutData)
    call MD_UnpackOutput(RF, OutData%y) ! y 
    call MD_UnpackMisc(RF, OutData%m) ! m 
    call RegUnpack(RF, OutData%IsInitialized); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VTK_count); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VTK_TWidth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VTK_OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Farm_CopyWAT_IfW_data(SrcWAT_IfW_dataData, DstWAT_IfW_dataData, CtrlCode, ErrStat, ErrMsg)
@@ -1467,8 +1483,8 @@ subroutine Farm_CopyAll_FastFarm_Data(SrcAll_FastFarm_DataData, DstAll_FastFarm_
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Farm_CopyAll_FastFarm_Data'
@@ -1481,8 +1497,8 @@ subroutine Farm_CopyAll_FastFarm_Data(SrcAll_FastFarm_DataData, DstAll_FastFarm_
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcAll_FastFarm_DataData%FWrap)) then
-      LB(1:1) = lbound(SrcAll_FastFarm_DataData%FWrap, kind=B8Ki)
-      UB(1:1) = ubound(SrcAll_FastFarm_DataData%FWrap, kind=B8Ki)
+      LB(1:1) = lbound(SrcAll_FastFarm_DataData%FWrap)
+      UB(1:1) = ubound(SrcAll_FastFarm_DataData%FWrap)
       if (.not. allocated(DstAll_FastFarm_DataData%FWrap)) then
          allocate(DstAll_FastFarm_DataData%FWrap(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1497,8 +1513,8 @@ subroutine Farm_CopyAll_FastFarm_Data(SrcAll_FastFarm_DataData, DstAll_FastFarm_
       end do
    end if
    if (allocated(SrcAll_FastFarm_DataData%WD)) then
-      LB(1:1) = lbound(SrcAll_FastFarm_DataData%WD, kind=B8Ki)
-      UB(1:1) = ubound(SrcAll_FastFarm_DataData%WD, kind=B8Ki)
+      LB(1:1) = lbound(SrcAll_FastFarm_DataData%WD)
+      UB(1:1) = ubound(SrcAll_FastFarm_DataData%WD)
       if (.not. allocated(DstAll_FastFarm_DataData%WD)) then
          allocate(DstAll_FastFarm_DataData%WD(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1530,8 +1546,8 @@ subroutine Farm_DestroyAll_FastFarm_Data(All_FastFarm_DataData, ErrStat, ErrMsg)
    type(All_FastFarm_Data), intent(inout) :: All_FastFarm_DataData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Farm_DestroyAll_FastFarm_Data'
@@ -1542,8 +1558,8 @@ subroutine Farm_DestroyAll_FastFarm_Data(All_FastFarm_DataData, ErrStat, ErrMsg)
    call Farm_DestroyMisc(All_FastFarm_DataData%m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(All_FastFarm_DataData%FWrap)) then
-      LB(1:1) = lbound(All_FastFarm_DataData%FWrap, kind=B8Ki)
-      UB(1:1) = ubound(All_FastFarm_DataData%FWrap, kind=B8Ki)
+      LB(1:1) = lbound(All_FastFarm_DataData%FWrap)
+      UB(1:1) = ubound(All_FastFarm_DataData%FWrap)
       do i1 = LB(1), UB(1)
          call Farm_DestroyFASTWrapper_Data(All_FastFarm_DataData%FWrap(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1551,8 +1567,8 @@ subroutine Farm_DestroyAll_FastFarm_Data(All_FastFarm_DataData, ErrStat, ErrMsg)
       deallocate(All_FastFarm_DataData%FWrap)
    end if
    if (allocated(All_FastFarm_DataData%WD)) then
-      LB(1:1) = lbound(All_FastFarm_DataData%WD, kind=B8Ki)
-      UB(1:1) = ubound(All_FastFarm_DataData%WD, kind=B8Ki)
+      LB(1:1) = lbound(All_FastFarm_DataData%WD)
+      UB(1:1) = ubound(All_FastFarm_DataData%WD)
       do i1 = LB(1), UB(1)
          call Farm_DestroyWakeDynamics_Data(All_FastFarm_DataData%WD(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1573,25 +1589,25 @@ subroutine Farm_PackAll_FastFarm_Data(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(All_FastFarm_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Farm_PackAll_FastFarm_Data'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call Farm_PackParam(RF, InData%p) 
    call Farm_PackMisc(RF, InData%m) 
    call RegPack(RF, allocated(InData%FWrap))
    if (allocated(InData%FWrap)) then
-      call RegPackBounds(RF, 1, lbound(InData%FWrap, kind=B8Ki), ubound(InData%FWrap, kind=B8Ki))
-      LB(1:1) = lbound(InData%FWrap, kind=B8Ki)
-      UB(1:1) = ubound(InData%FWrap, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%FWrap), ubound(InData%FWrap))
+      LB(1:1) = lbound(InData%FWrap)
+      UB(1:1) = ubound(InData%FWrap)
       do i1 = LB(1), UB(1)
          call Farm_PackFASTWrapper_Data(RF, InData%FWrap(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%WD))
    if (allocated(InData%WD)) then
-      call RegPackBounds(RF, 1, lbound(InData%WD, kind=B8Ki), ubound(InData%WD, kind=B8Ki))
-      LB(1:1) = lbound(InData%WD, kind=B8Ki)
-      UB(1:1) = ubound(InData%WD, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%WD), ubound(InData%WD))
+      LB(1:1) = lbound(InData%WD)
+      UB(1:1) = ubound(InData%WD)
       do i1 = LB(1), UB(1)
          call Farm_PackWakeDynamics_Data(RF, InData%WD(i1)) 
       end do
@@ -1607,8 +1623,8 @@ subroutine Farm_UnPackAll_FastFarm_Data(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(All_FastFarm_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Farm_UnPackAll_FastFarm_Data'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

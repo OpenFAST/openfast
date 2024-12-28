@@ -54,6 +54,7 @@ parser.add_argument("atol", metavar="Absolute-Tolerance", type=float, nargs=1, h
 parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
+parser.add_argument("-compFile", dest="compFile", metavar="comparison-file", type=str, nargs='?', const='arg_was_not_given', help="File to use for comparison (no extension)")
 
 args = parser.parse_args()
 
@@ -66,6 +67,13 @@ atol = args.atol[0]
 plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
+# file to use for comparison (ending not included)
+if args.compFile is None:
+    compFile = "FAST.Farm"
+elif args.compFile == 'arg_was_not_given':
+    compFile = "FAST.Farm"
+else:
+    compFile = args.compFile
 
 # validate inputs
 rtl.validateExeOrExit(executable)
@@ -129,8 +137,8 @@ if not noExec:
         sys.exit(returnCode*10)
     
 ### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, caseName + ".out")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".out")
+localOutFile = os.path.join(testBuildDirectory, compFile + ".out")
+baselineOutFile = os.path.join(targetOutputDirectory, compFile + ".out")
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 

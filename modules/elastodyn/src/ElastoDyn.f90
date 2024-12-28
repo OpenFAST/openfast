@@ -1247,11 +1247,12 @@ END IF
    m%AllOuts( YawBrMxp) =  DOT_PRODUCT( MomBNcRt, m%CoordSys%b1 )
    m%AllOuts( YawBrMyp) = -DOT_PRODUCT( MomBNcRt, m%CoordSys%b3 )
    m%AllOuts(YawFriMom) = OtherState%Mfhat*0.001_ReKi    !KBF add YawFricMom as an output based on HSSBrTq (kN-m)
-   m%AllOuts(YawFriMfp)      = OtherState%YawFriMfp*0.001_ReKi
-   m%AllOuts(YawFriMz) = m%YawFriMz*0.001_ReKi
-   m%FrcONcRt =  m%AllOuts( YawBrFzn)*1000_ReKi
-   m%AllOuts(OmegaYF) = OtherState%OmegaTn*R2D
-   m%AllOuts(dOmegaYF) = OtherState%OmegaDotTn*R2D
+   m%AllOuts(YawFriMfp) = OtherState%YawFriMfp*0.001_ReKi
+   m%AllOuts(YawFriMz)  = m%YawFriMz*0.001_ReKi
+   m%FrcONcRt           = (/m%AllOuts( YawBrFxn),m%AllOuts( YawBrFyn),m%AllOuts( YawBrFzn)/) * 1000_ReKi
+   m%MomONcRt           = (/m%AllOuts( YawBrMxn),m%AllOuts( YawBrMyn),m%AllOuts( YawBrMzn)/) * 1000_ReKi
+   m%AllOuts(OmegaYF)   = OtherState%OmegaTn*R2D
+   m%AllOuts(dOmegaYF)  = OtherState%OmegaDotTn*R2D
 
       ! Tower Base Loads:
 
@@ -1874,8 +1875,7 @@ SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    INTEGER(IntKi)                         :: ErrStat2          ! The error status code
    CHARACTER(ErrMsgLen)                   :: ErrMsg2           ! The error message, if an error occurred
    CHARACTER(*), PARAMETER                :: RoutineName = 'ED_CalcContStateDeriv'
-   Real(R8Ki)                             :: YawFriMz                 ! Loops through some or all of the DOFs.
-   Real(R8Ki)                             :: Fz                 ! Loops through some or all of the DOFs.
+   Real(R8Ki)                             :: YawFriMz          ! External loading on yaw bearing not including inertial contributions
 
    
       ! Initialize ErrStat
@@ -1917,11 +1917,10 @@ SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CALL RFurling( t, p, x%QT(DOF_RFrl),          x%QDT(DOF_RFrl),            m%RtHS%RFrlMom ) ! Compute moment from rotor-furl springs and dampers, RFrlMom
    CALL TFurling( t, p, x%QT(DOF_TFrl),          x%QDT(DOF_TFrl),            m%RtHS%TFrlMom ) ! Compute moment from tail-furl  springs and dampers, TFrlMom
    ! Compute the yaw friction torque
-   Fz= m%FrcONcRt !YawBrFzn force from CalcOutput
    YawFriMz=DOT_PRODUCT( m%RtHS%MomBNcRtt, m%CoordSys%d2 ) + u%YawMom
    m%YawFriMz = YawFriMz
    
-   CALL YawFriction( t, p, Fz, YawFriMz, OtherState%OmegaTn, OtherState%OmegaDotTn, m%RtHS%YawFriMom )  !Compute yaw Friction #RRD
+   CALL YawFriction( t, p, m%FrcONcRt, m%MomONcRt, YawFriMz, OtherState%OmegaTn, OtherState%OmegaDotTn, m%RtHS%YawFriMom )  !Compute yaw Friction #RRD
 
    
    !bjj: note m%RtHS%GBoxEffFac needed in OtherState only to fix HSSBrTrq (and used in FillAugMat)
@@ -3334,10 +3333,17 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
       p%TeetHSSp = 0.0
    END IF
 
+      ! Yaw friction model inputs
    p%YawFrctMod  = InputFileData%YawFrctMod
-   p%M_CD  = InputFileData%M_CD
-   p%M_CSmax  = InputFileData%M_CSmax
-   p%sig_v  = InputFileData%sig_v
+   p%M_CD        = InputFileData%M_CD
+   p%M_FCD       = InputFileData%M_FCD
+   p%M_MCD       = InputFileData%M_MCD
+   p%M_CSmax     = InputFileData%M_CSmax
+   p%M_FCSmax    = InputFileData%M_FCSmax
+   p%M_MCSmax    = InputFileData%M_MCSmax
+   p%sig_v       = InputFileData%sig_v
+   p%sig_v2      = InputFileData%sig_v2
+   p%OmgCut      = InputFileData%OmgCut
 
    
    CALL AllocAry( p%TipMass, p%NumBl, 'TipMass', ErrStat, ErrMsg )
@@ -6403,57 +6409,63 @@ SUBROUTINE Teeter( t, p, TeetDef, TeetRate, TeetMom )
 END SUBROUTINE Teeter
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine computes the Yaw Friction Torque due to yaw rate and acceleration.
-SUBROUTINE YawFriction( t, p, Fz, Mzz, Omg, OmgDot, YawFriMf )
+SUBROUTINE YawFriction( t, p, F, M, Mzz, Omg, OmgDot, YawFriMf )
 !..................................................................................................................................
 
       ! Passed Variables:
    REAL(DbKi), INTENT(IN)             :: t                                       !< simulation time
    TYPE(ED_ParameterType), INTENT(IN) :: p                                       !< parameters from the structural dynamics module
-   REAL(R8Ki), INTENT(IN )            :: Fz, Mzz                                 !< Effective yaw bearing force and external yaw bearing torque
-   REAL(R8Ki), INTENT(IN )            :: Omg                                !< The yaw rate (rotational speed), x%QDT(DOF_Yaw).
-   REAL(R8Ki), INTENT(IN )            :: OmgDot                             !< The yaw acceleration (derivative of rotational speed), x%QD2T(DOF_Yaw).
-   
-   REAL(ReKi), INTENT(OUT)            :: YawFriMf                                 !< The total friction torque (Coulomb + viscous).
+   REAL(ReKi), INTENT(IN )            :: F(3), M(3)                              !< Effective yaw bearing force and moment
+   REAL(R8Ki), INTENT(IN )            :: Mzz                                     !< External yaw bearing torque
+   REAL(R8Ki), INTENT(IN )            :: Omg                                     !< The yaw rate (rotational speed), x%QDT(DOF_Yaw).
+   REAL(R8Ki), INTENT(IN )            :: OmgDot                                  !< The yaw acceleration (derivative of rotational speed), x%QD2T(DOF_Yaw).
+   REAL(ReKi), INTENT(OUT)            :: YawFriMf                                !< The total friction torque (Coulomb + viscous).
 
       ! Local variables:
-   REAL(ReKi)                         :: temp                                   ! It takes teh value of Fz or -1.
+   REAL(ReKi)                         :: temp, Fs, Mb, Mf_vis                    ! temp takes the value of Fz or -1.
 
    
    SELECT CASE ( p%YawFrctMod  ) 
-   ! Yaw-friction model {0: none, 1: does not use Fz at yaw bearing, 2: does, 3: user defined model} (switch)
+   ! Yaw-friction model {0: none, 1: does not use F and M at yaw bearing, 2: does, 3: user defined model} (switch)
 
    CASE ( 0_IntKi )              ! None!
 
-
       YawFriMf = 0.0_ReKi
 
+   CASE ( 1_IntKi, 2_IntKi )              ! 1 = F and M not used. 2 = F and M used
 
-   CASE ( 1_IntKi, 2_IntKi )              ! 1= no Fz use. 2=Fz used
+      temp = -1.0_ReKi  ! In the case of YawFrctMod=1
+      Fs   =  0.0_ReKi
+      Mb   =  0.0_ReKi
 
-      temp = -1.0_ReKi  !In the case of YawFrctMod=1 
-      
       IF  (p%YawFrctMod .EQ. 2) THEN   
-        temp = MIN(0.0_R8Ki, Fz)  !In the case of YawFrctMod=2 
+        temp = MIN(0.0_ReKi, F(3))  ! In the case of YawFrctMod=2
+        Fs = SQRT(F(1)**2+F(2)**2)  ! Effective shear force on yaw bearing
+        Mb = SQRT(M(1)**2+M(2)**2)  ! Effective bending moment on yaw bearing
       ENDIF
       
-      IF  (EqualRealNos( Omg, 0.0_R8Ki ) )THEN
-           YawFriMf =  -MIN(real(p%M_CD,ReKi) * ABS(temp), ABS(real(Mzz,ReKi))) * SIGN(1.0_ReKi, real(Mzz,ReKi))
+      IF  (EqualRealNos( Omg, 0.0_R8Ki )) THEN
            IF (EqualRealNos( OmgDot, 0.0_R8Ki )) THEN
-                YawFriMf =  -MIN(real(p%M_CSmax,ReKi) * ABS(temp), ABS(real(Mzz,ReKi))) * SIGN(1.0_ReKi, real(Mzz,ReKi)) 
+                YawFriMf =  -MIN( real(p%M_CSmax,ReKi) * ABS(temp) + real(p%M_FCSmax,ReKi) * Fs + real(p%M_MCSmax,ReKi) * Mb, ABS(real(Mzz,ReKi)) ) * SIGN(1.0_ReKi, real(Mzz,ReKi))
+           ELSE
+                YawFriMf =  -MIN( real(p%M_CD,   ReKi) * ABS(temp) + real(p%M_FCD,   ReKi) * Fs + real(p%M_MCD,   ReKi) * Mb, ABS(real(Mzz,ReKi)) ) * SIGN(1.0_ReKi, real(Mzz,ReKi))
            ENDIF    
       ELSE
-            YawFriMf = real(p%M_CD,ReKi) * temp * sign(1.0_ReKi, real(Omg,ReKi)) - real(p%sig_v,ReKi) * real(Omg,ReKi)
+           ! Viscous friction
+           IF ( ABS(Omg) > p%OmgCut ) THEN ! Full quadratic viscous friction
+                Mf_vis = - real(p%sig_v,ReKi) * real(Omg,ReKi) - real(p%sig_v2,ReKi) * real(Omg,ReKi) * ABS(real(Omg,ReKi))
+           ELSE ! Linearized viscous friction
+                Mf_vis = - ( real(p%sig_v,ReKi) + real(p%sig_v2,ReKi) * real(p%OmgCut,ReKi) ) * real(Omg,ReKi)
+           ENDIF
+           YawFriMf = ( real(p%M_CD,ReKi) * temp - real(p%M_FCD,ReKi) * Fs - real(p%M_MCD,ReKi) * Mb ) * sign(1.0_ReKi, real(Omg,ReKi)) &  ! Coulomb friction
+                        + Mf_vis
       ENDIF
 
+   CASE ( 3_IntKi )              ! User-defined YawFriMf model. >>>> NOT IMPLEMENTED YET
 
-   CASE ( 3_IntKi )              ! User-defined YawFriMf  model. >>>> NOT IMPLEMENTED YET
-
-
-      CALL UserYawFrict ( t, Fz, Mzz, Omg, OmgDot, p%RootName, YawFriMf )
-
+      CALL UserYawFrict ( t, F, M, Mzz, Omg, OmgDot, p%RootName, YawFriMf )
 
    END SELECT
-
 
    RETURN
 END SUBROUTINE YawFriction
@@ -9747,10 +9759,12 @@ SUBROUTINE ED_PrintSum( p, OtherState, ErrStat, ErrMsg )
 
    ! Open the summary file and give it a heading.
    
+   !$OMP critical(filename)
    CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) RETURN
-
-   CALL OpenFOutFile ( UnSu, TRIM( p%RootName )//'.sum', ErrStat, ErrMsg )
+   if (ErrStat < AbortErrLev) then
+      CALL OpenFOutFile ( UnSu, TRIM( p%RootName )//'.sum', ErrStat, ErrMsg )
+   endif
+   !$OMP end critical(filename)
    IF ( ErrStat /= ErrID_None ) RETURN
 
    

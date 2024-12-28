@@ -110,8 +110,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: FilePassingMethod = 0      !< Method for file passing {0: None (read from file), 1: as FileInfoType to parse, 2: as InputFileType already parsed} [-]
     TYPE(FileInfoType)  :: PassedFileInfo      !< If we don't use the input file, pass everything through this [FilePassingMethod = 1] [-]
     TYPE(InflowWind_InputFile)  :: PassedFileData      !< If we don't use the input file, pass everything through this [FilePassingMethod = 2] [-]
-    LOGICAL  :: WindType2UseInputFile = .TRUE.      !< Flag for toggling file based IO in wind type 2. [-]
-    TYPE(FileInfoType)  :: WindType2Info      !< Optional slot for wind type 2 data if file IO is not used. [-]
     LOGICAL  :: OutputAccel = .FALSE.      !< Flag to output wind acceleration [-]
     TYPE(Lidar_InitInputType)  :: lidar      !< InitInput for lidar data [-]
     TYPE(Grid4D_InitInputType)  :: FDext      !< InitInput for 4D external wind data [-]
@@ -120,6 +118,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean sea level to still water level [m]
     LOGICAL  :: BoxExceedAllow = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
+    LOGICAL  :: LidarEnabled = .false.      !< Enable LiDAR for this instance of InflowWind? (FAST.Farm, ADI, and InflowWind driver/library are not compatible) [-]
   END TYPE InflowWind_InitInputType
 ! =======================
 ! =========  InflowWind_InitOutputType  =======
@@ -209,7 +208,7 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'InflowWind_CopyInputFile'
@@ -222,8 +221,8 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
    DstInputFileData%VelInterpCubic = SrcInputFileData%VelInterpCubic
    DstInputFileData%NWindVel = SrcInputFileData%NWindVel
    if (allocated(SrcInputFileData%WindVxiList)) then
-      LB(1:1) = lbound(SrcInputFileData%WindVxiList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%WindVxiList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%WindVxiList)
+      UB(1:1) = ubound(SrcInputFileData%WindVxiList)
       if (.not. allocated(DstInputFileData%WindVxiList)) then
          allocate(DstInputFileData%WindVxiList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -234,8 +233,8 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
       DstInputFileData%WindVxiList = SrcInputFileData%WindVxiList
    end if
    if (allocated(SrcInputFileData%WindVyiList)) then
-      LB(1:1) = lbound(SrcInputFileData%WindVyiList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%WindVyiList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%WindVyiList)
+      UB(1:1) = ubound(SrcInputFileData%WindVyiList)
       if (.not. allocated(DstInputFileData%WindVyiList)) then
          allocate(DstInputFileData%WindVyiList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -246,8 +245,8 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
       DstInputFileData%WindVyiList = SrcInputFileData%WindVyiList
    end if
    if (allocated(SrcInputFileData%WindVziList)) then
-      LB(1:1) = lbound(SrcInputFileData%WindVziList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%WindVziList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%WindVziList)
+      UB(1:1) = ubound(SrcInputFileData%WindVziList)
       if (.not. allocated(DstInputFileData%WindVziList)) then
          allocate(DstInputFileData%WindVziList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -281,8 +280,8 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
    DstInputFileData%SumPrint = SrcInputFileData%SumPrint
    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
    if (allocated(SrcInputFileData%OutList)) then
-      LB(1:1) = lbound(SrcInputFileData%OutList, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%OutList, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%OutList)
+      UB(1:1) = ubound(SrcInputFileData%OutList)
       if (.not. allocated(DstInputFileData%OutList)) then
          allocate(DstInputFileData%OutList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -297,8 +296,8 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
    DstInputFileData%NumPulseGate = SrcInputFileData%NumPulseGate
    DstInputFileData%RotorApexOffsetPos = SrcInputFileData%RotorApexOffsetPos
    if (allocated(SrcInputFileData%FocalDistanceX)) then
-      LB(1:1) = lbound(SrcInputFileData%FocalDistanceX, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%FocalDistanceX, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%FocalDistanceX)
+      UB(1:1) = ubound(SrcInputFileData%FocalDistanceX)
       if (.not. allocated(DstInputFileData%FocalDistanceX)) then
          allocate(DstInputFileData%FocalDistanceX(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -309,8 +308,8 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
       DstInputFileData%FocalDistanceX = SrcInputFileData%FocalDistanceX
    end if
    if (allocated(SrcInputFileData%FocalDistanceY)) then
-      LB(1:1) = lbound(SrcInputFileData%FocalDistanceY, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%FocalDistanceY, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%FocalDistanceY)
+      UB(1:1) = ubound(SrcInputFileData%FocalDistanceY)
       if (.not. allocated(DstInputFileData%FocalDistanceY)) then
          allocate(DstInputFileData%FocalDistanceY(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -321,8 +320,8 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
       DstInputFileData%FocalDistanceY = SrcInputFileData%FocalDistanceY
    end if
    if (allocated(SrcInputFileData%FocalDistanceZ)) then
-      LB(1:1) = lbound(SrcInputFileData%FocalDistanceZ, kind=B8Ki)
-      UB(1:1) = ubound(SrcInputFileData%FocalDistanceZ, kind=B8Ki)
+      LB(1:1) = lbound(SrcInputFileData%FocalDistanceZ)
+      UB(1:1) = ubound(SrcInputFileData%FocalDistanceZ)
       if (.not. allocated(DstInputFileData%FocalDistanceZ)) then
          allocate(DstInputFileData%FocalDistanceZ(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -434,7 +433,7 @@ subroutine InflowWind_UnPackInputFile(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(InflowWind_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_UnPackInputFile'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -511,10 +510,6 @@ subroutine InflowWind_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode
    call InflowWind_CopyInputFile(SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstInitInputData%WindType2UseInputFile = SrcInitInputData%WindType2UseInputFile
-   call NWTC_Library_CopyFileInfoType(SrcInitInputData%WindType2Info, DstInitInputData%WindType2Info, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    DstInitInputData%OutputAccel = SrcInitInputData%OutputAccel
    call Lidar_CopyInitInput(SrcInitInputData%lidar, DstInitInputData%lidar, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -527,6 +522,7 @@ subroutine InflowWind_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
    DstInitInputData%BoxExceedAllow = SrcInitInputData%BoxExceedAllow
+   DstInitInputData%LidarEnabled = SrcInitInputData%LidarEnabled
 end subroutine
 
 subroutine InflowWind_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -541,8 +537,6 @@ subroutine InflowWind_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileInfo, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call InflowWind_DestroyInputFile(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyFileInfoType(InitInputData%WindType2Info, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Lidar_DestroyInitInput(InitInputData%lidar, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -565,8 +559,6 @@ subroutine InflowWind_PackInitInput(RF, Indata)
    call RegPack(RF, InData%FilePassingMethod)
    call NWTC_Library_PackFileInfoType(RF, InData%PassedFileInfo) 
    call InflowWind_PackInputFile(RF, InData%PassedFileData) 
-   call RegPack(RF, InData%WindType2UseInputFile)
-   call NWTC_Library_PackFileInfoType(RF, InData%WindType2Info) 
    call RegPack(RF, InData%OutputAccel)
    call Lidar_PackInitInput(RF, InData%lidar) 
    call InflowWind_IO_PackGrid4D_InitInputType(RF, InData%FDext) 
@@ -575,6 +567,7 @@ subroutine InflowWind_PackInitInput(RF, Indata)
    call RegPack(RF, InData%WtrDpth)
    call RegPack(RF, InData%MSL2SWL)
    call RegPack(RF, InData%BoxExceedAllow)
+   call RegPack(RF, InData%LidarEnabled)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -593,8 +586,6 @@ subroutine InflowWind_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%FilePassingMethod); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileInfo) ! PassedFileInfo 
    call InflowWind_UnpackInputFile(RF, OutData%PassedFileData) ! PassedFileData 
-   call RegUnpack(RF, OutData%WindType2UseInputFile); if (RegCheckErr(RF, RoutineName)) return
-   call NWTC_Library_UnpackFileInfoType(RF, OutData%WindType2Info) ! WindType2Info 
    call RegUnpack(RF, OutData%OutputAccel); if (RegCheckErr(RF, RoutineName)) return
    call Lidar_UnpackInitInput(RF, OutData%lidar) ! lidar 
    call InflowWind_IO_UnpackGrid4D_InitInputType(RF, OutData%FDext) ! FDext 
@@ -603,6 +594,7 @@ subroutine InflowWind_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSL2SWL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BoxExceedAllow); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LidarEnabled); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -611,15 +603,15 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'InflowWind_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
       if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
          allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -630,8 +622,8 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
-      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
       if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
          allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -648,8 +640,8 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
       if (.not. allocated(DstInitOutputData%LinNames_y)) then
          allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -660,8 +652,8 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
       if (.not. allocated(DstInitOutputData%LinNames_u)) then
          allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -672,8 +664,8 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
    end if
    if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
       if (.not. allocated(DstInitOutputData%RotFrame_y)) then
          allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -684,8 +676,8 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
       DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
    end if
    if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
       if (.not. allocated(DstInitOutputData%RotFrame_u)) then
          allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -696,8 +688,8 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
       DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u, kind=B8Ki)
+      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
+      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
       if (.not. allocated(DstInitOutputData%IsLoad_u)) then
          allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -776,7 +768,7 @@ subroutine InflowWind_UnPackInitOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(InflowWind_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_UnPackInitOutput'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -817,8 +809,8 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'InflowWind_CopyParam'
@@ -827,8 +819,8 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
    DstParamData%RootFileName = SrcParamData%RootFileName
    DstParamData%DT = SrcParamData%DT
    if (allocated(SrcParamData%WindViXYZprime)) then
-      LB(1:2) = lbound(SrcParamData%WindViXYZprime, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%WindViXYZprime, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%WindViXYZprime)
+      UB(1:2) = ubound(SrcParamData%WindViXYZprime)
       if (.not. allocated(DstParamData%WindViXYZprime)) then
          allocate(DstParamData%WindViXYZprime(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -839,8 +831,8 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
       DstParamData%WindViXYZprime = SrcParamData%WindViXYZprime
    end if
    if (allocated(SrcParamData%WindViXYZ)) then
-      LB(1:2) = lbound(SrcParamData%WindViXYZ, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%WindViXYZ, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%WindViXYZ)
+      UB(1:2) = ubound(SrcParamData%WindViXYZ)
       if (.not. allocated(DstParamData%WindViXYZ)) then
          allocate(DstParamData%WindViXYZ(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -863,8 +855,8 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
       if (ErrStat >= AbortErrLev) return
    end if
    if (allocated(SrcParamData%PositionAvg)) then
-      LB(1:2) = lbound(SrcParamData%PositionAvg, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%PositionAvg, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%PositionAvg)
+      UB(1:2) = ubound(SrcParamData%PositionAvg)
       if (.not. allocated(DstParamData%PositionAvg)) then
          allocate(DstParamData%PositionAvg(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -877,8 +869,8 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
    DstParamData%NWindVel = SrcParamData%NWindVel
    DstParamData%NumOuts = SrcParamData%NumOuts
    if (allocated(SrcParamData%OutParam)) then
-      LB(1:1) = lbound(SrcParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(SrcParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
       if (.not. allocated(DstParamData%OutParam)) then
          allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -893,8 +885,8 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
       end do
    end if
    if (allocated(SrcParamData%OutParamLinIndx)) then
-      LB(1:2) = lbound(SrcParamData%OutParamLinIndx, kind=B8Ki)
-      UB(1:2) = ubound(SrcParamData%OutParamLinIndx, kind=B8Ki)
+      LB(1:2) = lbound(SrcParamData%OutParamLinIndx)
+      UB(1:2) = ubound(SrcParamData%OutParamLinIndx)
       if (.not. allocated(DstParamData%OutParamLinIndx)) then
          allocate(DstParamData%OutParamLinIndx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -914,8 +906,8 @@ subroutine InflowWind_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(InflowWind_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'InflowWind_DestroyParam'
@@ -937,8 +929,8 @@ subroutine InflowWind_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%PositionAvg)
    end if
    if (allocated(ParamData%OutParam)) then
-      LB(1:1) = lbound(ParamData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(ParamData%OutParam, kind=B8Ki)
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -956,8 +948,8 @@ subroutine InflowWind_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(InflowWind_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_PackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%RootFileName)
@@ -976,9 +968,9 @@ subroutine InflowWind_PackParam(RF, Indata)
    call RegPack(RF, InData%NumOuts)
    call RegPack(RF, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
-      call RegPackBounds(RF, 1, lbound(InData%OutParam, kind=B8Ki), ubound(InData%OutParam, kind=B8Ki))
-      LB(1:1) = lbound(InData%OutParam, kind=B8Ki)
-      UB(1:1) = ubound(InData%OutParam, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%OutParam), ubound(InData%OutParam))
+      LB(1:1) = lbound(InData%OutParam)
+      UB(1:1) = ubound(InData%OutParam)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackOutParmType(RF, InData%OutParam(i1)) 
       end do
@@ -993,8 +985,8 @@ subroutine InflowWind_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(InflowWind_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_UnPackParam'
-   integer(B8Ki)   :: i1, i2
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
@@ -1049,15 +1041,15 @@ subroutine InflowWind_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, E
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'InflowWind_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcInputData%PositionXYZ)) then
-      LB(1:2) = lbound(SrcInputData%PositionXYZ, kind=B8Ki)
-      UB(1:2) = ubound(SrcInputData%PositionXYZ, kind=B8Ki)
+      LB(1:2) = lbound(SrcInputData%PositionXYZ)
+      UB(1:2) = ubound(SrcInputData%PositionXYZ)
       if (.not. allocated(DstInputData%PositionXYZ)) then
          allocate(DstInputData%PositionXYZ(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1106,7 +1098,7 @@ subroutine InflowWind_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(InflowWind_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_UnPackInput'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1122,15 +1114,15 @@ subroutine InflowWind_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'InflowWind_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcOutputData%VelocityUVW)) then
-      LB(1:2) = lbound(SrcOutputData%VelocityUVW, kind=B8Ki)
-      UB(1:2) = ubound(SrcOutputData%VelocityUVW, kind=B8Ki)
+      LB(1:2) = lbound(SrcOutputData%VelocityUVW)
+      UB(1:2) = ubound(SrcOutputData%VelocityUVW)
       if (.not. allocated(DstOutputData%VelocityUVW)) then
          allocate(DstOutputData%VelocityUVW(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1141,8 +1133,8 @@ subroutine InflowWind_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat
       DstOutputData%VelocityUVW = SrcOutputData%VelocityUVW
    end if
    if (allocated(SrcOutputData%AccelUVW)) then
-      LB(1:2) = lbound(SrcOutputData%AccelUVW, kind=B8Ki)
-      UB(1:2) = ubound(SrcOutputData%AccelUVW, kind=B8Ki)
+      LB(1:2) = lbound(SrcOutputData%AccelUVW)
+      UB(1:2) = ubound(SrcOutputData%AccelUVW)
       if (.not. allocated(DstOutputData%AccelUVW)) then
          allocate(DstOutputData%AccelUVW(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1153,8 +1145,8 @@ subroutine InflowWind_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat
       DstOutputData%AccelUVW = SrcOutputData%AccelUVW
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
-      LB(1:1) = lbound(SrcOutputData%WriteOutput, kind=B8Ki)
-      UB(1:1) = ubound(SrcOutputData%WriteOutput, kind=B8Ki)
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
       if (.not. allocated(DstOutputData%WriteOutput)) then
          allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1211,7 +1203,7 @@ subroutine InflowWind_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(InflowWind_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_UnPackOutput'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1381,15 +1373,15 @@ subroutine InflowWind_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrM
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'InflowWind_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts, kind=B8Ki)
-      UB(1:1) = ubound(SrcMiscData%AllOuts, kind=B8Ki)
+      LB(1:1) = lbound(SrcMiscData%AllOuts)
+      UB(1:1) = ubound(SrcMiscData%AllOuts)
       if (.not. allocated(DstMiscData%AllOuts)) then
          allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1400,8 +1392,8 @@ subroutine InflowWind_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrM
       DstMiscData%AllOuts = SrcMiscData%AllOuts
    end if
    if (allocated(SrcMiscData%WindViUVW)) then
-      LB(1:2) = lbound(SrcMiscData%WindViUVW, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%WindViUVW, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%WindViUVW)
+      UB(1:2) = ubound(SrcMiscData%WindViUVW)
       if (.not. allocated(DstMiscData%WindViUVW)) then
          allocate(DstMiscData%WindViUVW(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1412,8 +1404,8 @@ subroutine InflowWind_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrM
       DstMiscData%WindViUVW = SrcMiscData%WindViUVW
    end if
    if (allocated(SrcMiscData%WindAiUVW)) then
-      LB(1:2) = lbound(SrcMiscData%WindAiUVW, kind=B8Ki)
-      UB(1:2) = ubound(SrcMiscData%WindAiUVW, kind=B8Ki)
+      LB(1:2) = lbound(SrcMiscData%WindAiUVW)
+      UB(1:2) = ubound(SrcMiscData%WindAiUVW)
       if (.not. allocated(DstMiscData%WindAiUVW)) then
          allocate(DstMiscData%WindAiUVW(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1484,7 +1476,7 @@ subroutine InflowWind_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(InflowWind_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_UnPackMisc'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return

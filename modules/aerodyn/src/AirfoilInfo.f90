@@ -483,7 +483,7 @@ CONTAINS
       ENDIF
       
       ! Reading Boundary layer file for aeroacoustics
-      CALL ParseVar ( FileInfo, CurLine, 'BL_file' , p%BL_file , ErrStat2, ErrMsg2, UnEc )
+      CALL ParseVar ( FileInfo, CurLine, 'BL_file' , p%BL_file , ErrStat2, ErrMsg2, UnEc, IsPath=.true. )
          IF (ErrStat2 >= AbortErrLev) p%BL_file = "NOT_SET_IN_AIRFOIL_FILE"
          !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( PathIsRelative( p%BL_file ) )  p%BL_file=trim(PriPath)//trim(p%BL_file)
@@ -1195,8 +1195,13 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
       A(:,1) = alpha
       A(:,2) = 1.0_ReKi
       
-      B(:,1) = Cn
-      B(:,2) = Cl
+      if (size(Cn) == 1) then
+         B(:,1) = Cn(1)
+         B(:,2) = Cl(1)
+      else
+         B(:,1) = Cn
+         B(:,2) = Cl
+      end if
       
       CALL LAPACK_gels('N', A, B, ErrStat, ErrMsg)
    
@@ -1927,13 +1932,12 @@ subroutine AFI_WrHeader(delim, FileName, unOutFile, ErrStat, ErrMsg)
    ChanName(i) = 'alphaBreakLower';   ChanUnit(i) = '(deg)';      i = i+1;
    ChanName(i) = 'CnBreakLower';      ChanUnit(i) = '(-)';        i = i+1;
 
+   !$OMP critical(filename)
    CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) RETURN
-
-   CALL OpenFOutFile ( unOutFile, trim(FileName), ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-      
+   if (ErrStat < AbortErrLev) then
+      CALL OpenFOutFile ( unOutFile, trim(FileName), ErrStat2, ErrMsg2 )
+   endif
+   !$OMP end critical(filename)
          
    ! Generate file outputs
 
@@ -2106,11 +2110,12 @@ subroutine AFI_WrTables(AFI_Params,UAMod,OutRootName)
 
       
       ! Write to file
-
+      !$OMP critical(filename)
       CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-
-      CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.Coefs.'//trim(num2lstr(iTab))//'.out', ErrStat, ErrMsg )
+      if (ErrStat < AbortErrLev) then
+         CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.Coefs.'//trim(num2lstr(iTab))//'.out', ErrStat, ErrMsg )
+      endif
+      !$OMP end critical(filename)
          if (ErrStat >= AbortErrLev) then
             call WrScr(Trim(ErrMsg))
             return

@@ -225,7 +225,7 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyFASTdataType'
    ErrStat = ErrID_None
@@ -236,8 +236,8 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
    DstFASTdataTypeData%NumRecs = SrcFASTdataTypeData%NumRecs
    DstFASTdataTypeData%TimeStep = SrcFASTdataTypeData%TimeStep
    if (allocated(SrcFASTdataTypeData%ChanNames)) then
-      LB(1:1) = lbound(SrcFASTdataTypeData%ChanNames, kind=B8Ki)
-      UB(1:1) = ubound(SrcFASTdataTypeData%ChanNames, kind=B8Ki)
+      LB(1:1) = lbound(SrcFASTdataTypeData%ChanNames)
+      UB(1:1) = ubound(SrcFASTdataTypeData%ChanNames)
       if (.not. allocated(DstFASTdataTypeData%ChanNames)) then
          allocate(DstFASTdataTypeData%ChanNames(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -248,8 +248,8 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
       DstFASTdataTypeData%ChanNames = SrcFASTdataTypeData%ChanNames
    end if
    if (allocated(SrcFASTdataTypeData%ChanUnits)) then
-      LB(1:1) = lbound(SrcFASTdataTypeData%ChanUnits, kind=B8Ki)
-      UB(1:1) = ubound(SrcFASTdataTypeData%ChanUnits, kind=B8Ki)
+      LB(1:1) = lbound(SrcFASTdataTypeData%ChanUnits)
+      UB(1:1) = ubound(SrcFASTdataTypeData%ChanUnits)
       if (.not. allocated(DstFASTdataTypeData%ChanUnits)) then
          allocate(DstFASTdataTypeData%ChanUnits(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -260,8 +260,8 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
       DstFASTdataTypeData%ChanUnits = SrcFASTdataTypeData%ChanUnits
    end if
    if (allocated(SrcFASTdataTypeData%Data)) then
-      LB(1:2) = lbound(SrcFASTdataTypeData%Data, kind=B8Ki)
-      UB(1:2) = ubound(SrcFASTdataTypeData%Data, kind=B8Ki)
+      LB(1:2) = lbound(SrcFASTdataTypeData%Data)
+      UB(1:2) = ubound(SrcFASTdataTypeData%Data)
       if (.not. allocated(DstFASTdataTypeData%Data)) then
          allocate(DstFASTdataTypeData%Data(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -311,7 +311,7 @@ subroutine NWTC_Library_UnPackFASTdataType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FASTdataType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackFASTdataType'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -378,7 +378,7 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyFileInfoType'
    ErrStat = ErrID_None
@@ -386,8 +386,8 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
    DstFileInfoTypeData%NumLines = SrcFileInfoTypeData%NumLines
    DstFileInfoTypeData%NumFiles = SrcFileInfoTypeData%NumFiles
    if (allocated(SrcFileInfoTypeData%FileLine)) then
-      LB(1:1) = lbound(SrcFileInfoTypeData%FileLine, kind=B8Ki)
-      UB(1:1) = ubound(SrcFileInfoTypeData%FileLine, kind=B8Ki)
+      LB(1:1) = lbound(SrcFileInfoTypeData%FileLine)
+      UB(1:1) = ubound(SrcFileInfoTypeData%FileLine)
       if (.not. allocated(DstFileInfoTypeData%FileLine)) then
          allocate(DstFileInfoTypeData%FileLine(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -398,8 +398,8 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
       DstFileInfoTypeData%FileLine = SrcFileInfoTypeData%FileLine
    end if
    if (allocated(SrcFileInfoTypeData%FileIndx)) then
-      LB(1:1) = lbound(SrcFileInfoTypeData%FileIndx, kind=B8Ki)
-      UB(1:1) = ubound(SrcFileInfoTypeData%FileIndx, kind=B8Ki)
+      LB(1:1) = lbound(SrcFileInfoTypeData%FileIndx)
+      UB(1:1) = ubound(SrcFileInfoTypeData%FileIndx)
       if (.not. allocated(DstFileInfoTypeData%FileIndx)) then
          allocate(DstFileInfoTypeData%FileIndx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -410,8 +410,8 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
       DstFileInfoTypeData%FileIndx = SrcFileInfoTypeData%FileIndx
    end if
    if (allocated(SrcFileInfoTypeData%FileList)) then
-      LB(1:1) = lbound(SrcFileInfoTypeData%FileList, kind=B8Ki)
-      UB(1:1) = ubound(SrcFileInfoTypeData%FileList, kind=B8Ki)
+      LB(1:1) = lbound(SrcFileInfoTypeData%FileList)
+      UB(1:1) = ubound(SrcFileInfoTypeData%FileList)
       if (.not. allocated(DstFileInfoTypeData%FileList)) then
          allocate(DstFileInfoTypeData%FileList(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -422,8 +422,8 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
       DstFileInfoTypeData%FileList = SrcFileInfoTypeData%FileList
    end if
    if (allocated(SrcFileInfoTypeData%Lines)) then
-      LB(1:1) = lbound(SrcFileInfoTypeData%Lines, kind=B8Ki)
-      UB(1:1) = ubound(SrcFileInfoTypeData%Lines, kind=B8Ki)
+      LB(1:1) = lbound(SrcFileInfoTypeData%Lines)
+      UB(1:1) = ubound(SrcFileInfoTypeData%Lines)
       if (.not. allocated(DstFileInfoTypeData%Lines)) then
          allocate(DstFileInfoTypeData%Lines(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -474,7 +474,7 @@ subroutine NWTC_Library_UnPackFileInfoType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FileInfoType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackFileInfoType'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -533,7 +533,7 @@ subroutine NWTC_Library_CopyNWTC_RandomNumber_ParameterType(SrcNWTC_RandomNumber
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyNWTC_RandomNumber_ParameterType'
    ErrStat = ErrID_None
@@ -541,8 +541,8 @@ subroutine NWTC_Library_CopyNWTC_RandomNumber_ParameterType(SrcNWTC_RandomNumber
    DstNWTC_RandomNumber_ParameterTypeData%pRNG = SrcNWTC_RandomNumber_ParameterTypeData%pRNG
    DstNWTC_RandomNumber_ParameterTypeData%RandSeed = SrcNWTC_RandomNumber_ParameterTypeData%RandSeed
    if (allocated(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) then
-      LB(1:1) = lbound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry, kind=B8Ki)
-      UB(1:1) = ubound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry, kind=B8Ki)
+      LB(1:1) = lbound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)
+      UB(1:1) = ubound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)
       if (.not. allocated(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) then
          allocate(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -583,7 +583,7 @@ subroutine NWTC_Library_UnPackNWTC_RandomNumber_ParameterType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(NWTC_RandomNumber_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackNWTC_RandomNumber_ParameterType'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -599,7 +599,7 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModVarType'
    ErrStat = ErrID_None
@@ -611,8 +611,8 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    DstModVarTypeData%Flags = SrcModVarTypeData%Flags
    DstModVarTypeData%DerivOrder = SrcModVarTypeData%DerivOrder
    if (allocated(SrcModVarTypeData%iLoc)) then
-      LB(1:1) = lbound(SrcModVarTypeData%iLoc, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarTypeData%iLoc, kind=B8Ki)
+      LB(1:1) = lbound(SrcModVarTypeData%iLoc)
+      UB(1:1) = ubound(SrcModVarTypeData%iLoc)
       if (.not. allocated(DstModVarTypeData%iLoc)) then
          allocate(DstModVarTypeData%iLoc(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -623,8 +623,8 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
       DstModVarTypeData%iLoc = SrcModVarTypeData%iLoc
    end if
    if (allocated(SrcModVarTypeData%iSol)) then
-      LB(1:1) = lbound(SrcModVarTypeData%iSol, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarTypeData%iSol, kind=B8Ki)
+      LB(1:1) = lbound(SrcModVarTypeData%iSol)
+      UB(1:1) = ubound(SrcModVarTypeData%iSol)
       if (.not. allocated(DstModVarTypeData%iSol)) then
          allocate(DstModVarTypeData%iSol(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -635,8 +635,8 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
       DstModVarTypeData%iSol = SrcModVarTypeData%iSol
    end if
    if (allocated(SrcModVarTypeData%iLin)) then
-      LB(1:1) = lbound(SrcModVarTypeData%iLin, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarTypeData%iLin, kind=B8Ki)
+      LB(1:1) = lbound(SrcModVarTypeData%iLin)
+      UB(1:1) = ubound(SrcModVarTypeData%iLin)
       if (.not. allocated(DstModVarTypeData%iLin)) then
          allocate(DstModVarTypeData%iLin(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -647,8 +647,8 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
       DstModVarTypeData%iLin = SrcModVarTypeData%iLin
    end if
    if (allocated(SrcModVarTypeData%iq)) then
-      LB(1:1) = lbound(SrcModVarTypeData%iq, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarTypeData%iq, kind=B8Ki)
+      LB(1:1) = lbound(SrcModVarTypeData%iq)
+      UB(1:1) = ubound(SrcModVarTypeData%iq)
       if (.not. allocated(DstModVarTypeData%iq)) then
          allocate(DstModVarTypeData%iq(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -664,8 +664,8 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    DstModVarTypeData%Solve = SrcModVarTypeData%Solve
    DstModVarTypeData%Perturb = SrcModVarTypeData%Perturb
    if (allocated(SrcModVarTypeData%LinNames)) then
-      LB(1:1) = lbound(SrcModVarTypeData%LinNames, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarTypeData%LinNames, kind=B8Ki)
+      LB(1:1) = lbound(SrcModVarTypeData%LinNames)
+      UB(1:1) = ubound(SrcModVarTypeData%LinNames)
       if (.not. allocated(DstModVarTypeData%LinNames)) then
          allocate(DstModVarTypeData%LinNames(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -729,7 +729,7 @@ subroutine NWTC_Library_UnPackModVarType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ModVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackModVarType'
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -757,8 +757,8 @@ subroutine NWTC_Library_CopyModVarsType(SrcModVarsTypeData, DstModVarsTypeData, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModVarsType'
@@ -767,8 +767,8 @@ subroutine NWTC_Library_CopyModVarsType(SrcModVarsTypeData, DstModVarsTypeData, 
    DstModVarsTypeData%ModNum = SrcModVarsTypeData%ModNum
    DstModVarsTypeData%ModAbbr = SrcModVarsTypeData%ModAbbr
    if (allocated(SrcModVarsTypeData%x)) then
-      LB(1:1) = lbound(SrcModVarsTypeData%x, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarsTypeData%x, kind=B8Ki)
+      LB(1:1) = lbound(SrcModVarsTypeData%x)
+      UB(1:1) = ubound(SrcModVarsTypeData%x)
       if (.not. allocated(DstModVarsTypeData%x)) then
          allocate(DstModVarsTypeData%x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -783,8 +783,8 @@ subroutine NWTC_Library_CopyModVarsType(SrcModVarsTypeData, DstModVarsTypeData, 
       end do
    end if
    if (allocated(SrcModVarsTypeData%u)) then
-      LB(1:1) = lbound(SrcModVarsTypeData%u, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarsTypeData%u, kind=B8Ki)
+      LB(1:1) = lbound(SrcModVarsTypeData%u)
+      UB(1:1) = ubound(SrcModVarsTypeData%u)
       if (.not. allocated(DstModVarsTypeData%u)) then
          allocate(DstModVarsTypeData%u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -799,8 +799,8 @@ subroutine NWTC_Library_CopyModVarsType(SrcModVarsTypeData, DstModVarsTypeData, 
       end do
    end if
    if (allocated(SrcModVarsTypeData%y)) then
-      LB(1:1) = lbound(SrcModVarsTypeData%y, kind=B8Ki)
-      UB(1:1) = ubound(SrcModVarsTypeData%y, kind=B8Ki)
+      LB(1:1) = lbound(SrcModVarsTypeData%y)
+      UB(1:1) = ubound(SrcModVarsTypeData%y)
       if (.not. allocated(DstModVarsTypeData%y)) then
          allocate(DstModVarsTypeData%y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -823,16 +823,16 @@ subroutine NWTC_Library_DestroyModVarsType(ModVarsTypeData, ErrStat, ErrMsg)
    type(ModVarsType), intent(inout) :: ModVarsTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyModVarsType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ModVarsTypeData%x)) then
-      LB(1:1) = lbound(ModVarsTypeData%x, kind=B8Ki)
-      UB(1:1) = ubound(ModVarsTypeData%x, kind=B8Ki)
+      LB(1:1) = lbound(ModVarsTypeData%x)
+      UB(1:1) = ubound(ModVarsTypeData%x)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyModVarType(ModVarsTypeData%x(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -840,8 +840,8 @@ subroutine NWTC_Library_DestroyModVarsType(ModVarsTypeData, ErrStat, ErrMsg)
       deallocate(ModVarsTypeData%x)
    end if
    if (allocated(ModVarsTypeData%u)) then
-      LB(1:1) = lbound(ModVarsTypeData%u, kind=B8Ki)
-      UB(1:1) = ubound(ModVarsTypeData%u, kind=B8Ki)
+      LB(1:1) = lbound(ModVarsTypeData%u)
+      UB(1:1) = ubound(ModVarsTypeData%u)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyModVarType(ModVarsTypeData%u(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -849,8 +849,8 @@ subroutine NWTC_Library_DestroyModVarsType(ModVarsTypeData, ErrStat, ErrMsg)
       deallocate(ModVarsTypeData%u)
    end if
    if (allocated(ModVarsTypeData%y)) then
-      LB(1:1) = lbound(ModVarsTypeData%y, kind=B8Ki)
-      UB(1:1) = ubound(ModVarsTypeData%y, kind=B8Ki)
+      LB(1:1) = lbound(ModVarsTypeData%y)
+      UB(1:1) = ubound(ModVarsTypeData%y)
       do i1 = LB(1), UB(1)
          call NWTC_Library_DestroyModVarType(ModVarsTypeData%y(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -863,34 +863,34 @@ subroutine NWTC_Library_PackModVarsType(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ModVarsType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackModVarsType'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%ModNum)
    call RegPack(RF, InData%ModAbbr)
    call RegPack(RF, allocated(InData%x))
    if (allocated(InData%x)) then
-      call RegPackBounds(RF, 1, lbound(InData%x, kind=B8Ki), ubound(InData%x, kind=B8Ki))
-      LB(1:1) = lbound(InData%x, kind=B8Ki)
-      UB(1:1) = ubound(InData%x, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%x), ubound(InData%x))
+      LB(1:1) = lbound(InData%x)
+      UB(1:1) = ubound(InData%x)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackModVarType(RF, InData%x(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%u))
    if (allocated(InData%u)) then
-      call RegPackBounds(RF, 1, lbound(InData%u, kind=B8Ki), ubound(InData%u, kind=B8Ki))
-      LB(1:1) = lbound(InData%u, kind=B8Ki)
-      UB(1:1) = ubound(InData%u, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%u), ubound(InData%u))
+      LB(1:1) = lbound(InData%u)
+      UB(1:1) = ubound(InData%u)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackModVarType(RF, InData%u(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%y))
    if (allocated(InData%y)) then
-      call RegPackBounds(RF, 1, lbound(InData%y, kind=B8Ki), ubound(InData%y, kind=B8Ki))
-      LB(1:1) = lbound(InData%y, kind=B8Ki)
-      UB(1:1) = ubound(InData%y, kind=B8Ki)
+      call RegPackBounds(RF, 1, lbound(InData%y), ubound(InData%y))
+      LB(1:1) = lbound(InData%y)
+      UB(1:1) = ubound(InData%y)
       do i1 = LB(1), UB(1)
          call NWTC_Library_PackModVarType(RF, InData%y(i1)) 
       end do
@@ -905,8 +905,8 @@ subroutine NWTC_Library_UnPackModVarsType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ModVarsType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackModVarsType'
-   integer(B8Ki)   :: i1
-   integer(B8Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -962,14 +962,14 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModValsType'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcModValsTypeData%x)) then
-      LB(1:1) = lbound(SrcModValsTypeData%x, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%x, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%x)
+      UB(1:1) = ubound(SrcModValsTypeData%x)
       if (.not. allocated(DstModValsTypeData%x)) then
          allocate(DstModValsTypeData%x(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -980,8 +980,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%x = SrcModValsTypeData%x
    end if
    if (allocated(SrcModValsTypeData%dxdt)) then
-      LB(1:1) = lbound(SrcModValsTypeData%dxdt, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%dxdt, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%dxdt)
+      UB(1:1) = ubound(SrcModValsTypeData%dxdt)
       if (.not. allocated(DstModValsTypeData%dxdt)) then
          allocate(DstModValsTypeData%dxdt(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -992,8 +992,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%dxdt = SrcModValsTypeData%dxdt
    end if
    if (allocated(SrcModValsTypeData%u)) then
-      LB(1:1) = lbound(SrcModValsTypeData%u, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%u, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%u)
+      UB(1:1) = ubound(SrcModValsTypeData%u)
       if (.not. allocated(DstModValsTypeData%u)) then
          allocate(DstModValsTypeData%u(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1004,8 +1004,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%u = SrcModValsTypeData%u
    end if
    if (allocated(SrcModValsTypeData%y)) then
-      LB(1:1) = lbound(SrcModValsTypeData%y, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%y, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%y)
+      UB(1:1) = ubound(SrcModValsTypeData%y)
       if (.not. allocated(DstModValsTypeData%y)) then
          allocate(DstModValsTypeData%y(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1016,8 +1016,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%y = SrcModValsTypeData%y
    end if
    if (allocated(SrcModValsTypeData%u_perturb)) then
-      LB(1:1) = lbound(SrcModValsTypeData%u_perturb, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%u_perturb, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%u_perturb)
+      UB(1:1) = ubound(SrcModValsTypeData%u_perturb)
       if (.not. allocated(DstModValsTypeData%u_perturb)) then
          allocate(DstModValsTypeData%u_perturb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1028,8 +1028,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%u_perturb = SrcModValsTypeData%u_perturb
    end if
    if (allocated(SrcModValsTypeData%x_perturb)) then
-      LB(1:1) = lbound(SrcModValsTypeData%x_perturb, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%x_perturb, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%x_perturb)
+      UB(1:1) = ubound(SrcModValsTypeData%x_perturb)
       if (.not. allocated(DstModValsTypeData%x_perturb)) then
          allocate(DstModValsTypeData%x_perturb(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1040,8 +1040,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%x_perturb = SrcModValsTypeData%x_perturb
    end if
    if (allocated(SrcModValsTypeData%xp)) then
-      LB(1:1) = lbound(SrcModValsTypeData%xp, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%xp, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%xp)
+      UB(1:1) = ubound(SrcModValsTypeData%xp)
       if (.not. allocated(DstModValsTypeData%xp)) then
          allocate(DstModValsTypeData%xp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1052,8 +1052,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%xp = SrcModValsTypeData%xp
    end if
    if (allocated(SrcModValsTypeData%xn)) then
-      LB(1:1) = lbound(SrcModValsTypeData%xn, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%xn, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%xn)
+      UB(1:1) = ubound(SrcModValsTypeData%xn)
       if (.not. allocated(DstModValsTypeData%xn)) then
          allocate(DstModValsTypeData%xn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1064,8 +1064,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%xn = SrcModValsTypeData%xn
    end if
    if (allocated(SrcModValsTypeData%yp)) then
-      LB(1:1) = lbound(SrcModValsTypeData%yp, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%yp, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%yp)
+      UB(1:1) = ubound(SrcModValsTypeData%yp)
       if (.not. allocated(DstModValsTypeData%yp)) then
          allocate(DstModValsTypeData%yp(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1076,8 +1076,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%yp = SrcModValsTypeData%yp
    end if
    if (allocated(SrcModValsTypeData%yn)) then
-      LB(1:1) = lbound(SrcModValsTypeData%yn, kind=B8Ki)
-      UB(1:1) = ubound(SrcModValsTypeData%yn, kind=B8Ki)
+      LB(1:1) = lbound(SrcModValsTypeData%yn)
+      UB(1:1) = ubound(SrcModValsTypeData%yn)
       if (.not. allocated(DstModValsTypeData%yn)) then
          allocate(DstModValsTypeData%yn(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1088,8 +1088,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%yn = SrcModValsTypeData%yn
    end if
    if (allocated(SrcModValsTypeData%dYdx)) then
-      LB(1:2) = lbound(SrcModValsTypeData%dYdx, kind=B8Ki)
-      UB(1:2) = ubound(SrcModValsTypeData%dYdx, kind=B8Ki)
+      LB(1:2) = lbound(SrcModValsTypeData%dYdx)
+      UB(1:2) = ubound(SrcModValsTypeData%dYdx)
       if (.not. allocated(DstModValsTypeData%dYdx)) then
          allocate(DstModValsTypeData%dYdx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1100,8 +1100,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%dYdx = SrcModValsTypeData%dYdx
    end if
    if (allocated(SrcModValsTypeData%dXdx)) then
-      LB(1:2) = lbound(SrcModValsTypeData%dXdx, kind=B8Ki)
-      UB(1:2) = ubound(SrcModValsTypeData%dXdx, kind=B8Ki)
+      LB(1:2) = lbound(SrcModValsTypeData%dXdx)
+      UB(1:2) = ubound(SrcModValsTypeData%dXdx)
       if (.not. allocated(DstModValsTypeData%dXdx)) then
          allocate(DstModValsTypeData%dXdx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1112,8 +1112,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%dXdx = SrcModValsTypeData%dXdx
    end if
    if (allocated(SrcModValsTypeData%dYdu)) then
-      LB(1:2) = lbound(SrcModValsTypeData%dYdu, kind=B8Ki)
-      UB(1:2) = ubound(SrcModValsTypeData%dYdu, kind=B8Ki)
+      LB(1:2) = lbound(SrcModValsTypeData%dYdu)
+      UB(1:2) = ubound(SrcModValsTypeData%dYdu)
       if (.not. allocated(DstModValsTypeData%dYdu)) then
          allocate(DstModValsTypeData%dYdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1124,8 +1124,8 @@ subroutine NWTC_Library_CopyModValsType(SrcModValsTypeData, DstModValsTypeData, 
       DstModValsTypeData%dYdu = SrcModValsTypeData%dYdu
    end if
    if (allocated(SrcModValsTypeData%dXdu)) then
-      LB(1:2) = lbound(SrcModValsTypeData%dXdu, kind=B8Ki)
-      UB(1:2) = ubound(SrcModValsTypeData%dXdu, kind=B8Ki)
+      LB(1:2) = lbound(SrcModValsTypeData%dXdu)
+      UB(1:2) = ubound(SrcModValsTypeData%dXdu)
       if (.not. allocated(DstModValsTypeData%dXdu)) then
          allocate(DstModValsTypeData%dXdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1214,7 +1214,7 @@ subroutine NWTC_Library_UnPackModValsType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ModValsType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackModValsType'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -1240,7 +1240,7 @@ subroutine NWTC_Library_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B8Ki)                  :: LB(2), UB(2)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'NWTC_Library_CopyModDataType'
@@ -1254,8 +1254,8 @@ subroutine NWTC_Library_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, 
    DstModDataTypeData%DT = SrcModDataTypeData%DT
    DstModDataTypeData%SubSteps = SrcModDataTypeData%SubSteps
    if (allocated(SrcModDataTypeData%ixs)) then
-      LB(1:2) = lbound(SrcModDataTypeData%ixs, kind=B8Ki)
-      UB(1:2) = ubound(SrcModDataTypeData%ixs, kind=B8Ki)
+      LB(1:2) = lbound(SrcModDataTypeData%ixs)
+      UB(1:2) = ubound(SrcModDataTypeData%ixs)
       if (.not. allocated(DstModDataTypeData%ixs)) then
          allocate(DstModDataTypeData%ixs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1266,8 +1266,8 @@ subroutine NWTC_Library_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, 
       DstModDataTypeData%ixs = SrcModDataTypeData%ixs
    end if
    if (allocated(SrcModDataTypeData%ius)) then
-      LB(1:2) = lbound(SrcModDataTypeData%ius, kind=B8Ki)
-      UB(1:2) = ubound(SrcModDataTypeData%ius, kind=B8Ki)
+      LB(1:2) = lbound(SrcModDataTypeData%ius)
+      UB(1:2) = ubound(SrcModDataTypeData%ius)
       if (.not. allocated(DstModDataTypeData%ius)) then
          allocate(DstModDataTypeData%ius(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1278,8 +1278,8 @@ subroutine NWTC_Library_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, 
       DstModDataTypeData%ius = SrcModDataTypeData%ius
    end if
    if (allocated(SrcModDataTypeData%iys)) then
-      LB(1:2) = lbound(SrcModDataTypeData%iys, kind=B8Ki)
-      UB(1:2) = ubound(SrcModDataTypeData%iys, kind=B8Ki)
+      LB(1:2) = lbound(SrcModDataTypeData%iys)
+      UB(1:2) = ubound(SrcModDataTypeData%iys)
       if (.not. allocated(DstModDataTypeData%iys)) then
          allocate(DstModDataTypeData%iys(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1291,8 +1291,8 @@ subroutine NWTC_Library_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, 
    end if
    DstModDataTypeData%Vars => SrcModDataTypeData%Vars
    if (allocated(SrcModDataTypeData%SrcMaps)) then
-      LB(1:1) = lbound(SrcModDataTypeData%SrcMaps, kind=B8Ki)
-      UB(1:1) = ubound(SrcModDataTypeData%SrcMaps, kind=B8Ki)
+      LB(1:1) = lbound(SrcModDataTypeData%SrcMaps)
+      UB(1:1) = ubound(SrcModDataTypeData%SrcMaps)
       if (.not. allocated(DstModDataTypeData%SrcMaps)) then
          allocate(DstModDataTypeData%SrcMaps(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1303,8 +1303,8 @@ subroutine NWTC_Library_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, 
       DstModDataTypeData%SrcMaps = SrcModDataTypeData%SrcMaps
    end if
    if (allocated(SrcModDataTypeData%DstMaps)) then
-      LB(1:1) = lbound(SrcModDataTypeData%DstMaps, kind=B8Ki)
-      UB(1:1) = ubound(SrcModDataTypeData%DstMaps, kind=B8Ki)
+      LB(1:1) = lbound(SrcModDataTypeData%DstMaps)
+      UB(1:1) = ubound(SrcModDataTypeData%DstMaps)
       if (.not. allocated(DstModDataTypeData%DstMaps)) then
          allocate(DstModDataTypeData%DstMaps(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
@@ -1375,7 +1375,7 @@ subroutine NWTC_Library_UnPackModDataType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ModDataType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackModDataType'
-   integer(B8Ki)   :: LB(2), UB(2)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(B8Ki)   :: PtrIdx
