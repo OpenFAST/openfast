@@ -39,6 +39,8 @@ MODULE FAST_Farm_Subs
 #endif
 
    IMPLICIT NONE
+
+   integer(IntKi), private, parameter  :: iED = 1
    
 CONTAINS
 
@@ -881,7 +883,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
          SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
       ELSE
-         SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
+         SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y(iED)%PlatformPtMesh
       END IF
    
       CALL MeshMapCreate( SubstructureMotion, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
@@ -965,7 +967,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
             SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
          ELSE
-            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
+            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y(iED)%PlatformPtMesh
          END IF
    
          CALL Transfer_Point_to_Point( SubstructureMotion, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
@@ -995,7 +997,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
             SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
          ELSE
-            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
+            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y(iED)%PlatformPtMesh
          END IF
       
          ! mapping; Note: SubstructureLoads_Tmp_Farm contains loads from the farm-level (at a previous step); gets integrated into individual turbines inside FWrap_Increment()

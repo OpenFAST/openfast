@@ -3139,7 +3139,6 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
                              ffd_t)
                      
          call Calc_Sd_Pd_Od_Qd_Gd_Xd_Yd(m%qp%E1(:,idx_qp,nelem), &
-                                        m%qp%vvv(:,idx_qp,nelem), &
                                         m%qp%vvp(:,idx_qp,nelem), &
                                         m%qp%betaC(:,:,idx_qp,nelem), &
                                         ffd_t, &
@@ -3154,8 +3153,8 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
    ENDIF
 
 CONTAINS
-   subroutine Calc_Sd_Pd_Od_Qd_Gd_Xd_Yd(E1, vvv, vvp, betaC, ffd, Sd, Od, Qd, Gd, Xd, Yd, Pd)
-      REAL(BDKi), intent(in)     :: E1(:), vvv(:), vvp(:), betaC(:,:), ffd(:)
+   subroutine Calc_Sd_Pd_Od_Qd_Gd_Xd_Yd(E1, vvp, betaC, ffd, Sd, Od, Qd, Gd, Xd, Yd, Pd)
+      REAL(BDKi), intent(in)     :: E1(:), vvp(:), betaC(:,:), ffd(:)
       REAL(BDKi), intent(out)    :: Sd(:,:), Od(:,:), Qd(:,:), Gd(:,:), Xd(:,:), Yd(:,:), Pd(:,:)
       REAL(BDKi)                 :: D11(3,3), D12(3,3), D21(3,3), D22(3,3)
       REAL(BDKi)                 :: b11(3,3), b12(3,3)
@@ -3170,7 +3169,7 @@ CONTAINS
       b11(1:3,1:3) = -MATMUL(SkewSymMat(E1),D11)
       b12(1:3,1:3) = -MATMUL(SkewSymMat(E1),D12)
       
-      SS_ome = SkewSymMat(vvv(4:6))
+      SS_ome = SkewSymMat( m%qp%vvv(4:6,idx_qp,nelem) )
 
       ! Compute stiffness matrix Sd
       Sd(1:3,1:3) = -MATMUL(D11,SS_ome)
@@ -3184,7 +3183,7 @@ CONTAINS
       Pd(4:6,4:6) = -MATMUL(b12,SS_ome)
 
       ! Compute stiffness matrix Od
-      alpha = SkewSymMat(vvv(1:3)) - MATMUL(SS_ome,SkewSymMat(E1))
+      alpha = SkewSymMat(vvp(1:3)) - MATMUL(SS_ome,SkewSymMat(E1))
       Od(:,1:3) = 0.0_BDKi
       Od(1:3,4:6) = MATMUL(D11,alpha) - SkewSymMat(ffd(1:3))
       Od(4:6,4:6) = MATMUL(D21,alpha) - SkewSymMat(ffd(4:6))
@@ -3214,8 +3213,8 @@ CONTAINS
       REAL(BDKi)                 :: eed(6)
 
       ! Compute strain rates
-      eed(1:3) = vvv(1:3) + cross_product(E1,vvv(4:6))
-      eed(4:6) = vvp(4:6)
+      eed      = vvp
+      eed(1:3) = eed(1:3) + cross_product(E1,vvv(4:6))
 
       ! Compute dissipative force
       ffd(1:6) = MATMUL(betaC(:,:),eed)
