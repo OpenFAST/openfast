@@ -344,7 +344,6 @@ IMPLICIT NONE
 ! =========  BeamDyn_Data  =======
   TYPE, PUBLIC :: BeamDyn_Data
     TYPE(BD_ContinuousStateType) , DIMENSION(:,:), ALLOCATABLE  :: x      !< Continuous states [-]
-    TYPE(BD_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: dxdt      !< Continuous state derivatives [-]
     TYPE(BD_DiscreteStateType) , DIMENSION(:,:), ALLOCATABLE  :: xd      !< Discrete states [-]
     TYPE(BD_ConstraintStateType) , DIMENSION(:,:), ALLOCATABLE  :: z      !< Constraint states [-]
     TYPE(BD_OtherStateType) , DIMENSION(:,:), ALLOCATABLE  :: OtherSt      !< Other states [-]
@@ -357,16 +356,15 @@ IMPLICIT NONE
 ! =======================
 ! =========  ElastoDyn_Data  =======
   TYPE, PUBLIC :: ElastoDyn_Data
-    TYPE(ED_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: x      !< Continuous states [-]
-    TYPE(ED_ContinuousStateType)  :: dxdt      !< Continuous state derivatives [-]
-    TYPE(ED_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: xd      !< Discrete states [-]
-    TYPE(ED_ConstraintStateType) , DIMENSION(:), ALLOCATABLE  :: z      !< Constraint states [-]
-    TYPE(ED_OtherStateType) , DIMENSION(:), ALLOCATABLE  :: OtherSt      !< Other states [-]
-    TYPE(ED_ParameterType)  :: p      !< Parameters [-]
-    TYPE(ED_OutputType)  :: y      !< System outputs [-]
-    TYPE(ED_MiscVarType)  :: m      !< Misc (optimization) variables not associated with time [-]
-    TYPE(ED_InputType) , DIMENSION(:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
-    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
+    TYPE(ED_ContinuousStateType) , DIMENSION(:,:), ALLOCATABLE  :: x      !< Continuous states [-]
+    TYPE(ED_DiscreteStateType) , DIMENSION(:,:), ALLOCATABLE  :: xd      !< Discrete states [-]
+    TYPE(ED_ConstraintStateType) , DIMENSION(:,:), ALLOCATABLE  :: z      !< Constraint states [-]
+    TYPE(ED_OtherStateType) , DIMENSION(:,:), ALLOCATABLE  :: OtherSt      !< Other states [-]
+    TYPE(ED_ParameterType) , DIMENSION(:), ALLOCATABLE  :: p      !< Parameters [-]
+    TYPE(ED_OutputType) , DIMENSION(:), ALLOCATABLE  :: y      !< System outputs [-]
+    TYPE(ED_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: m      !< Misc (optimization) variables not associated with time [-]
+    TYPE(ED_InputType) , DIMENSION(:,:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
   END TYPE ElastoDyn_Data
 ! =======================
 ! =========  SED_Data  =======
@@ -698,7 +696,7 @@ IMPLICIT NONE
 ! =========  FAST_InitData  =======
   TYPE, PUBLIC :: FAST_InitData
     TYPE(ED_InitInputType)  :: InData_ED      !< ED Initialization input data [-]
-    TYPE(ED_InitOutputType)  :: OutData_ED      !< ED Initialization output data [-]
+    TYPE(ED_InitOutputType) , DIMENSION(:), ALLOCATABLE  :: OutData_ED      !< ED Initialization output data [-]
     TYPE(SED_InitInputType)  :: InData_SED      !< SED Initialization input data [-]
     TYPE(SED_InitOutputType)  :: OutData_SED      !< SED Initialization output data [-]
     TYPE(BD_InitInputType)  :: InData_BD      !< BD Initialization input data [-]
@@ -3210,22 +3208,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
          end do
       end do
    end if
-   if (allocated(SrcBeamDyn_DataData%dxdt)) then
-      LB(1:1) = lbound(SrcBeamDyn_DataData%dxdt)
-      UB(1:1) = ubound(SrcBeamDyn_DataData%dxdt)
-      if (.not. allocated(DstBeamDyn_DataData%dxdt)) then
-         allocate(DstBeamDyn_DataData%dxdt(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstBeamDyn_DataData%dxdt.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call BD_CopyContState(SrcBeamDyn_DataData%dxdt(i1), DstBeamDyn_DataData%dxdt(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
    if (allocated(SrcBeamDyn_DataData%xd)) then
       LB(1:2) = lbound(SrcBeamDyn_DataData%xd)
       UB(1:2) = ubound(SrcBeamDyn_DataData%xd)
@@ -3382,15 +3364,6 @@ subroutine FAST_DestroyBeamDyn_Data(BeamDyn_DataData, ErrStat, ErrMsg)
       end do
       deallocate(BeamDyn_DataData%x)
    end if
-   if (allocated(BeamDyn_DataData%dxdt)) then
-      LB(1:1) = lbound(BeamDyn_DataData%dxdt)
-      UB(1:1) = ubound(BeamDyn_DataData%dxdt)
-      do i1 = LB(1), UB(1)
-         call BD_DestroyContState(BeamDyn_DataData%dxdt(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(BeamDyn_DataData%dxdt)
-   end if
    if (allocated(BeamDyn_DataData%xd)) then
       LB(1:2) = lbound(BeamDyn_DataData%xd)
       UB(1:2) = ubound(BeamDyn_DataData%xd)
@@ -3483,15 +3456,6 @@ subroutine FAST_PackBeamDyn_Data(RF, Indata)
          do i1 = LB(1), UB(1)
             call BD_PackContState(RF, InData%x(i1,i2)) 
          end do
-      end do
-   end if
-   call RegPack(RF, allocated(InData%dxdt))
-   if (allocated(InData%dxdt)) then
-      call RegPackBounds(RF, 1, lbound(InData%dxdt), ubound(InData%dxdt))
-      LB(1:1) = lbound(InData%dxdt)
-      UB(1:1) = ubound(InData%dxdt)
-      do i1 = LB(1), UB(1)
-         call BD_PackContState(RF, InData%dxdt(i1)) 
       end do
    end if
    call RegPack(RF, allocated(InData%xd))
@@ -3591,19 +3555,6 @@ subroutine FAST_UnPackBeamDyn_Data(RF, OutData)
          do i1 = LB(1), UB(1)
             call BD_UnpackContState(RF, OutData%x(i1,i2)) ! x 
          end do
-      end do
-   end if
-   if (allocated(OutData%dxdt)) deallocate(OutData%dxdt)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%dxdt(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%dxdt.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call BD_UnpackContState(RF, OutData%dxdt(i1)) ! dxdt 
       end do
    end if
    if (allocated(OutData%xd)) deallocate(OutData%xd)
@@ -3714,110 +3665,156 @@ subroutine FAST_CopyElastoDyn_Data(SrcElastoDyn_DataData, DstElastoDyn_DataData,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyElastoDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcElastoDyn_DataData%x)) then
-      LB(1:1) = lbound(SrcElastoDyn_DataData%x)
-      UB(1:1) = ubound(SrcElastoDyn_DataData%x)
+      LB(1:2) = lbound(SrcElastoDyn_DataData%x)
+      UB(1:2) = ubound(SrcElastoDyn_DataData%x)
       if (.not. allocated(DstElastoDyn_DataData%x)) then
-         allocate(DstElastoDyn_DataData%x(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstElastoDyn_DataData%x(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstElastoDyn_DataData%x.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      do i1 = LB(1), UB(1)
-         call ED_CopyContState(SrcElastoDyn_DataData%x(i1), DstElastoDyn_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_CopyContState(SrcElastoDyn_DataData%x(i1,i2), DstElastoDyn_DataData%x(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
       end do
    end if
-   call ED_CopyContState(SrcElastoDyn_DataData%dxdt, DstElastoDyn_DataData%dxdt, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcElastoDyn_DataData%xd)) then
-      LB(1:1) = lbound(SrcElastoDyn_DataData%xd)
-      UB(1:1) = ubound(SrcElastoDyn_DataData%xd)
+      LB(1:2) = lbound(SrcElastoDyn_DataData%xd)
+      UB(1:2) = ubound(SrcElastoDyn_DataData%xd)
       if (.not. allocated(DstElastoDyn_DataData%xd)) then
-         allocate(DstElastoDyn_DataData%xd(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstElastoDyn_DataData%xd(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstElastoDyn_DataData%xd.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      do i1 = LB(1), UB(1)
-         call ED_CopyDiscState(SrcElastoDyn_DataData%xd(i1), DstElastoDyn_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_CopyDiscState(SrcElastoDyn_DataData%xd(i1,i2), DstElastoDyn_DataData%xd(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
       end do
    end if
    if (allocated(SrcElastoDyn_DataData%z)) then
-      LB(1:1) = lbound(SrcElastoDyn_DataData%z)
-      UB(1:1) = ubound(SrcElastoDyn_DataData%z)
+      LB(1:2) = lbound(SrcElastoDyn_DataData%z)
+      UB(1:2) = ubound(SrcElastoDyn_DataData%z)
       if (.not. allocated(DstElastoDyn_DataData%z)) then
-         allocate(DstElastoDyn_DataData%z(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstElastoDyn_DataData%z(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstElastoDyn_DataData%z.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      do i1 = LB(1), UB(1)
-         call ED_CopyConstrState(SrcElastoDyn_DataData%z(i1), DstElastoDyn_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_CopyConstrState(SrcElastoDyn_DataData%z(i1,i2), DstElastoDyn_DataData%z(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
       end do
    end if
    if (allocated(SrcElastoDyn_DataData%OtherSt)) then
-      LB(1:1) = lbound(SrcElastoDyn_DataData%OtherSt)
-      UB(1:1) = ubound(SrcElastoDyn_DataData%OtherSt)
+      LB(1:2) = lbound(SrcElastoDyn_DataData%OtherSt)
+      UB(1:2) = ubound(SrcElastoDyn_DataData%OtherSt)
       if (.not. allocated(DstElastoDyn_DataData%OtherSt)) then
-         allocate(DstElastoDyn_DataData%OtherSt(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstElastoDyn_DataData%OtherSt(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstElastoDyn_DataData%OtherSt.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_CopyOtherState(SrcElastoDyn_DataData%OtherSt(i1,i2), DstElastoDyn_DataData%OtherSt(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
+      end do
+   end if
+   if (allocated(SrcElastoDyn_DataData%p)) then
+      LB(1:1) = lbound(SrcElastoDyn_DataData%p)
+      UB(1:1) = ubound(SrcElastoDyn_DataData%p)
+      if (.not. allocated(DstElastoDyn_DataData%p)) then
+         allocate(DstElastoDyn_DataData%p(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstElastoDyn_DataData%p.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
       do i1 = LB(1), UB(1)
-         call ED_CopyOtherState(SrcElastoDyn_DataData%OtherSt(i1), DstElastoDyn_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call ED_CopyParam(SrcElastoDyn_DataData%p(i1), DstElastoDyn_DataData%p(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   call ED_CopyParam(SrcElastoDyn_DataData%p, DstElastoDyn_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call ED_CopyOutput(SrcElastoDyn_DataData%y, DstElastoDyn_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call ED_CopyMisc(SrcElastoDyn_DataData%m, DstElastoDyn_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcElastoDyn_DataData%y)) then
+      LB(1:1) = lbound(SrcElastoDyn_DataData%y)
+      UB(1:1) = ubound(SrcElastoDyn_DataData%y)
+      if (.not. allocated(DstElastoDyn_DataData%y)) then
+         allocate(DstElastoDyn_DataData%y(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstElastoDyn_DataData%y.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call ED_CopyOutput(SrcElastoDyn_DataData%y(i1), DstElastoDyn_DataData%y(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcElastoDyn_DataData%m)) then
+      LB(1:1) = lbound(SrcElastoDyn_DataData%m)
+      UB(1:1) = ubound(SrcElastoDyn_DataData%m)
+      if (.not. allocated(DstElastoDyn_DataData%m)) then
+         allocate(DstElastoDyn_DataData%m(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstElastoDyn_DataData%m.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call ED_CopyMisc(SrcElastoDyn_DataData%m(i1), DstElastoDyn_DataData%m(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    if (allocated(SrcElastoDyn_DataData%Input)) then
-      LB(1:1) = lbound(SrcElastoDyn_DataData%Input)
-      UB(1:1) = ubound(SrcElastoDyn_DataData%Input)
+      LB(1:2) = lbound(SrcElastoDyn_DataData%Input)
+      UB(1:2) = ubound(SrcElastoDyn_DataData%Input)
       if (.not. allocated(DstElastoDyn_DataData%Input)) then
-         allocate(DstElastoDyn_DataData%Input(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstElastoDyn_DataData%Input(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstElastoDyn_DataData%Input.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      do i1 = LB(1), UB(1)
-         call ED_CopyInput(SrcElastoDyn_DataData%Input(i1), DstElastoDyn_DataData%Input(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_CopyInput(SrcElastoDyn_DataData%Input(i1,i2), DstElastoDyn_DataData%Input(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
       end do
    end if
    if (allocated(SrcElastoDyn_DataData%InputTimes)) then
-      LB(1:1) = lbound(SrcElastoDyn_DataData%InputTimes)
-      UB(1:1) = ubound(SrcElastoDyn_DataData%InputTimes)
+      LB(1:2) = lbound(SrcElastoDyn_DataData%InputTimes)
+      UB(1:2) = ubound(SrcElastoDyn_DataData%InputTimes)
       if (.not. allocated(DstElastoDyn_DataData%InputTimes)) then
-         allocate(DstElastoDyn_DataData%InputTimes(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstElastoDyn_DataData%InputTimes(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstElastoDyn_DataData%InputTimes.', ErrStat, ErrMsg, RoutineName)
             return
@@ -3831,63 +3828,92 @@ subroutine FAST_DestroyElastoDyn_Data(ElastoDyn_DataData, ErrStat, ErrMsg)
    type(ElastoDyn_Data), intent(inout) :: ElastoDyn_DataData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_DestroyElastoDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ElastoDyn_DataData%x)) then
-      LB(1:1) = lbound(ElastoDyn_DataData%x)
-      UB(1:1) = ubound(ElastoDyn_DataData%x)
-      do i1 = LB(1), UB(1)
-         call ED_DestroyContState(ElastoDyn_DataData%x(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      LB(1:2) = lbound(ElastoDyn_DataData%x)
+      UB(1:2) = ubound(ElastoDyn_DataData%x)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_DestroyContState(ElastoDyn_DataData%x(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ElastoDyn_DataData%x)
    end if
-   call ED_DestroyContState(ElastoDyn_DataData%dxdt, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ElastoDyn_DataData%xd)) then
-      LB(1:1) = lbound(ElastoDyn_DataData%xd)
-      UB(1:1) = ubound(ElastoDyn_DataData%xd)
-      do i1 = LB(1), UB(1)
-         call ED_DestroyDiscState(ElastoDyn_DataData%xd(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      LB(1:2) = lbound(ElastoDyn_DataData%xd)
+      UB(1:2) = ubound(ElastoDyn_DataData%xd)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_DestroyDiscState(ElastoDyn_DataData%xd(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ElastoDyn_DataData%xd)
    end if
    if (allocated(ElastoDyn_DataData%z)) then
-      LB(1:1) = lbound(ElastoDyn_DataData%z)
-      UB(1:1) = ubound(ElastoDyn_DataData%z)
-      do i1 = LB(1), UB(1)
-         call ED_DestroyConstrState(ElastoDyn_DataData%z(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      LB(1:2) = lbound(ElastoDyn_DataData%z)
+      UB(1:2) = ubound(ElastoDyn_DataData%z)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_DestroyConstrState(ElastoDyn_DataData%z(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ElastoDyn_DataData%z)
    end if
    if (allocated(ElastoDyn_DataData%OtherSt)) then
-      LB(1:1) = lbound(ElastoDyn_DataData%OtherSt)
-      UB(1:1) = ubound(ElastoDyn_DataData%OtherSt)
-      do i1 = LB(1), UB(1)
-         call ED_DestroyOtherState(ElastoDyn_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      LB(1:2) = lbound(ElastoDyn_DataData%OtherSt)
+      UB(1:2) = ubound(ElastoDyn_DataData%OtherSt)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_DestroyOtherState(ElastoDyn_DataData%OtherSt(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ElastoDyn_DataData%OtherSt)
    end if
-   call ED_DestroyParam(ElastoDyn_DataData%p, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call ED_DestroyOutput(ElastoDyn_DataData%y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call ED_DestroyMisc(ElastoDyn_DataData%m, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ElastoDyn_DataData%Input)) then
-      LB(1:1) = lbound(ElastoDyn_DataData%Input)
-      UB(1:1) = ubound(ElastoDyn_DataData%Input)
+   if (allocated(ElastoDyn_DataData%p)) then
+      LB(1:1) = lbound(ElastoDyn_DataData%p)
+      UB(1:1) = ubound(ElastoDyn_DataData%p)
       do i1 = LB(1), UB(1)
-         call ED_DestroyInput(ElastoDyn_DataData%Input(i1), ErrStat2, ErrMsg2)
+         call ED_DestroyParam(ElastoDyn_DataData%p(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ElastoDyn_DataData%p)
+   end if
+   if (allocated(ElastoDyn_DataData%y)) then
+      LB(1:1) = lbound(ElastoDyn_DataData%y)
+      UB(1:1) = ubound(ElastoDyn_DataData%y)
+      do i1 = LB(1), UB(1)
+         call ED_DestroyOutput(ElastoDyn_DataData%y(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ElastoDyn_DataData%y)
+   end if
+   if (allocated(ElastoDyn_DataData%m)) then
+      LB(1:1) = lbound(ElastoDyn_DataData%m)
+      UB(1:1) = ubound(ElastoDyn_DataData%m)
+      do i1 = LB(1), UB(1)
+         call ED_DestroyMisc(ElastoDyn_DataData%m(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ElastoDyn_DataData%m)
+   end if
+   if (allocated(ElastoDyn_DataData%Input)) then
+      LB(1:2) = lbound(ElastoDyn_DataData%Input)
+      UB(1:2) = ubound(ElastoDyn_DataData%Input)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_DestroyInput(ElastoDyn_DataData%Input(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ElastoDyn_DataData%Input)
    end if
@@ -3900,56 +3926,89 @@ subroutine FAST_PackElastoDyn_Data(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ElastoDyn_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FAST_PackElastoDyn_Data'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%x))
    if (allocated(InData%x)) then
-      call RegPackBounds(RF, 1, lbound(InData%x), ubound(InData%x))
-      LB(1:1) = lbound(InData%x)
-      UB(1:1) = ubound(InData%x)
-      do i1 = LB(1), UB(1)
-         call ED_PackContState(RF, InData%x(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%x), ubound(InData%x))
+      LB(1:2) = lbound(InData%x)
+      UB(1:2) = ubound(InData%x)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_PackContState(RF, InData%x(i1,i2)) 
+         end do
       end do
    end if
-   call ED_PackContState(RF, InData%dxdt) 
    call RegPack(RF, allocated(InData%xd))
    if (allocated(InData%xd)) then
-      call RegPackBounds(RF, 1, lbound(InData%xd), ubound(InData%xd))
-      LB(1:1) = lbound(InData%xd)
-      UB(1:1) = ubound(InData%xd)
-      do i1 = LB(1), UB(1)
-         call ED_PackDiscState(RF, InData%xd(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%xd), ubound(InData%xd))
+      LB(1:2) = lbound(InData%xd)
+      UB(1:2) = ubound(InData%xd)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_PackDiscState(RF, InData%xd(i1,i2)) 
+         end do
       end do
    end if
    call RegPack(RF, allocated(InData%z))
    if (allocated(InData%z)) then
-      call RegPackBounds(RF, 1, lbound(InData%z), ubound(InData%z))
-      LB(1:1) = lbound(InData%z)
-      UB(1:1) = ubound(InData%z)
-      do i1 = LB(1), UB(1)
-         call ED_PackConstrState(RF, InData%z(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%z), ubound(InData%z))
+      LB(1:2) = lbound(InData%z)
+      UB(1:2) = ubound(InData%z)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_PackConstrState(RF, InData%z(i1,i2)) 
+         end do
       end do
    end if
    call RegPack(RF, allocated(InData%OtherSt))
    if (allocated(InData%OtherSt)) then
-      call RegPackBounds(RF, 1, lbound(InData%OtherSt), ubound(InData%OtherSt))
-      LB(1:1) = lbound(InData%OtherSt)
-      UB(1:1) = ubound(InData%OtherSt)
-      do i1 = LB(1), UB(1)
-         call ED_PackOtherState(RF, InData%OtherSt(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%OtherSt), ubound(InData%OtherSt))
+      LB(1:2) = lbound(InData%OtherSt)
+      UB(1:2) = ubound(InData%OtherSt)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_PackOtherState(RF, InData%OtherSt(i1,i2)) 
+         end do
       end do
    end if
-   call ED_PackParam(RF, InData%p) 
-   call ED_PackOutput(RF, InData%y) 
-   call ED_PackMisc(RF, InData%m) 
+   call RegPack(RF, allocated(InData%p))
+   if (allocated(InData%p)) then
+      call RegPackBounds(RF, 1, lbound(InData%p), ubound(InData%p))
+      LB(1:1) = lbound(InData%p)
+      UB(1:1) = ubound(InData%p)
+      do i1 = LB(1), UB(1)
+         call ED_PackParam(RF, InData%p(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%y))
+   if (allocated(InData%y)) then
+      call RegPackBounds(RF, 1, lbound(InData%y), ubound(InData%y))
+      LB(1:1) = lbound(InData%y)
+      UB(1:1) = ubound(InData%y)
+      do i1 = LB(1), UB(1)
+         call ED_PackOutput(RF, InData%y(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%m))
+   if (allocated(InData%m)) then
+      call RegPackBounds(RF, 1, lbound(InData%m), ubound(InData%m))
+      LB(1:1) = lbound(InData%m)
+      UB(1:1) = ubound(InData%m)
+      do i1 = LB(1), UB(1)
+         call ED_PackMisc(RF, InData%m(i1)) 
+      end do
+   end if
    call RegPack(RF, allocated(InData%Input))
    if (allocated(InData%Input)) then
-      call RegPackBounds(RF, 1, lbound(InData%Input), ubound(InData%Input))
-      LB(1:1) = lbound(InData%Input)
-      UB(1:1) = ubound(InData%Input)
-      do i1 = LB(1), UB(1)
-         call ED_PackInput(RF, InData%Input(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%Input), ubound(InData%Input))
+      LB(1:2) = lbound(InData%Input)
+      UB(1:2) = ubound(InData%Input)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_PackInput(RF, InData%Input(i1,i2)) 
+         end do
       end do
    end if
    call RegPackAlloc(RF, InData%InputTimes)
@@ -3960,78 +4019,123 @@ subroutine FAST_UnPackElastoDyn_Data(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ElastoDyn_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FAST_UnPackElastoDyn_Data'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%x)) deallocate(OutData%x)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%x(LB(1):UB(1)),stat=stat)
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%x(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%x.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call ED_UnpackContState(RF, OutData%x(i1)) ! x 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_UnpackContState(RF, OutData%x(i1,i2)) ! x 
+         end do
       end do
    end if
-   call ED_UnpackContState(RF, OutData%dxdt) ! dxdt 
    if (allocated(OutData%xd)) deallocate(OutData%xd)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%xd(LB(1):UB(1)),stat=stat)
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%xd(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%xd.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call ED_UnpackDiscState(RF, OutData%xd(i1)) ! xd 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_UnpackDiscState(RF, OutData%xd(i1,i2)) ! xd 
+         end do
       end do
    end if
    if (allocated(OutData%z)) deallocate(OutData%z)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%z(LB(1):UB(1)),stat=stat)
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%z(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%z.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call ED_UnpackConstrState(RF, OutData%z(i1)) ! z 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_UnpackConstrState(RF, OutData%z(i1,i2)) ! z 
+         end do
       end do
    end if
    if (allocated(OutData%OtherSt)) deallocate(OutData%OtherSt)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%OtherSt(LB(1):UB(1)),stat=stat)
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%OtherSt(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OtherSt.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call ED_UnpackOtherState(RF, OutData%OtherSt(i1)) ! OtherSt 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_UnpackOtherState(RF, OutData%OtherSt(i1,i2)) ! OtherSt 
+         end do
       end do
    end if
-   call ED_UnpackParam(RF, OutData%p) ! p 
-   call ED_UnpackOutput(RF, OutData%y) ! y 
-   call ED_UnpackMisc(RF, OutData%m) ! m 
-   if (allocated(OutData%Input)) deallocate(OutData%Input)
+   if (allocated(OutData%p)) deallocate(OutData%p)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%Input(LB(1):UB(1)),stat=stat)
+      allocate(OutData%p(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%p.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call ED_UnpackParam(RF, OutData%p(i1)) ! p 
+      end do
+   end if
+   if (allocated(OutData%y)) deallocate(OutData%y)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%y(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call ED_UnpackOutput(RF, OutData%y(i1)) ! y 
+      end do
+   end if
+   if (allocated(OutData%m)) deallocate(OutData%m)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%m(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%m.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call ED_UnpackMisc(RF, OutData%m(i1)) ! m 
+      end do
+   end if
+   if (allocated(OutData%Input)) deallocate(OutData%Input)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Input(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call ED_UnpackInput(RF, OutData%Input(i1)) ! Input 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call ED_UnpackInput(RF, OutData%Input(i1,i2)) ! Input 
+         end do
       end do
    end if
    call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
@@ -10881,9 +10985,22 @@ subroutine FAST_CopyInitData(SrcInitDataData, DstInitDataData, CtrlCode, ErrStat
    call ED_CopyInitInput(SrcInitDataData%InData_ED, DstInitDataData%InData_ED, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call ED_CopyInitOutput(SrcInitDataData%OutData_ED, DstInitDataData%OutData_ED, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcInitDataData%OutData_ED)) then
+      LB(1:1) = lbound(SrcInitDataData%OutData_ED)
+      UB(1:1) = ubound(SrcInitDataData%OutData_ED)
+      if (.not. allocated(DstInitDataData%OutData_ED)) then
+         allocate(DstInitDataData%OutData_ED(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitDataData%OutData_ED.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call ED_CopyInitOutput(SrcInitDataData%OutData_ED(i1), DstInitDataData%OutData_ED(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    call SED_CopyInitInput(SrcInitDataData%InData_SED, DstInitDataData%InData_SED, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -11020,8 +11137,15 @@ subroutine FAST_DestroyInitData(InitDataData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call ED_DestroyInitInput(InitDataData%InData_ED, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call ED_DestroyInitOutput(InitDataData%OutData_ED, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(InitDataData%OutData_ED)) then
+      LB(1:1) = lbound(InitDataData%OutData_ED)
+      UB(1:1) = ubound(InitDataData%OutData_ED)
+      do i1 = LB(1), UB(1)
+         call ED_DestroyInitOutput(InitDataData%OutData_ED(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(InitDataData%OutData_ED)
+   end if
    call SED_DestroyInitInput(InitDataData%InData_SED, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call SED_DestroyInitOutput(InitDataData%OutData_SED, ErrStat2, ErrMsg2)
@@ -11111,7 +11235,15 @@ subroutine FAST_PackInitData(RF, Indata)
    integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call ED_PackInitInput(RF, InData%InData_ED) 
-   call ED_PackInitOutput(RF, InData%OutData_ED) 
+   call RegPack(RF, allocated(InData%OutData_ED))
+   if (allocated(InData%OutData_ED)) then
+      call RegPackBounds(RF, 1, lbound(InData%OutData_ED), ubound(InData%OutData_ED))
+      LB(1:1) = lbound(InData%OutData_ED)
+      UB(1:1) = ubound(InData%OutData_ED)
+      do i1 = LB(1), UB(1)
+         call ED_PackInitOutput(RF, InData%OutData_ED(i1)) 
+      end do
+   end if
    call SED_PackInitInput(RF, InData%InData_SED) 
    call SED_PackInitOutput(RF, InData%OutData_SED) 
    call BD_PackInitInput(RF, InData%InData_BD) 
@@ -11169,7 +11301,19 @@ subroutine FAST_UnPackInitData(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call ED_UnpackInitInput(RF, OutData%InData_ED) ! InData_ED 
-   call ED_UnpackInitOutput(RF, OutData%OutData_ED) ! OutData_ED 
+   if (allocated(OutData%OutData_ED)) deallocate(OutData%OutData_ED)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%OutData_ED(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutData_ED.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call ED_UnpackInitOutput(RF, OutData%OutData_ED(i1)) ! OutData_ED 
+      end do
+   end if
    call SED_UnpackInitInput(RF, OutData%InData_SED) ! InData_SED 
    call SED_UnpackInitOutput(RF, OutData%OutData_SED) ! OutData_SED 
    call BD_UnpackInitInput(RF, OutData%InData_BD) ! InData_BD 

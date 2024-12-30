@@ -1116,7 +1116,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
             case (Module_ED)
 
                ! Update the azimuth angle
-               call ED_UpdateAzimuth(Turbine%ED%p, Turbine%ED%x(STATE_PRED), ModData%DT)
+               call ED_UpdateAzimuth(Turbine%ED%p(ModData%Ins), Turbine%ED%x(ModData%Ins, STATE_PRED), ModData%DT)
 
             case (Module_BD)
 

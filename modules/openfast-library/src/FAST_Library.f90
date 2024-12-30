@@ -24,6 +24,7 @@ MODULE FAST_Data
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 4000        ! Maximum number of outputs
    INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 53       ! Maximum number of initialization values from Simulink
    INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 51
+   integer(IntKi), parameter, private    :: iED = 1
 
 
       ! Global (static) data:
@@ -358,16 +359,16 @@ subroutine FAST_HubPosition(iTurb_c, AbsPosition_c, RotationalVel_c, Orientation
       return
    end if
 
-   if (.NOT. Turbine(iTurb)%ED%y%HubPtMotion%Committed) then
+   if (.NOT. Turbine(iTurb)%ED%y(iED)%HubPtMotion%Committed) then
       ErrStat_c = ErrID_Fatal
       ErrMsg = "HubPtMotion mesh has not been committed."//C_NULL_CHAR
       ErrMsg_c = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       return
    end if
 
-   AbsPosition_c = REAL(Turbine(iTurb)%ED%y%HubPtMotion%Position(:,1), C_FLOAT) + REAL(Turbine(iTurb)%ED%y%HubPtMotion%TranslationDisp(:,1), C_FLOAT)
-   Orientation_c = reshape( Turbine(iTurb)%ED%y%HubPtMotion%Orientation(1:3,1:3,1), (/9/) )
-   RotationalVel_c = Turbine(iTurb)%ED%y%HubPtMotion%RotationVel(:,1)
+   AbsPosition_c = REAL(Turbine(iTurb)%ED%y(iED)%HubPtMotion%Position(:,1), C_FLOAT) + REAL(Turbine(iTurb)%ED%y(iED)%HubPtMotion%TranslationDisp(:,1), C_FLOAT)
+   Orientation_c = reshape( Turbine(iTurb)%ED%y(iED)%HubPtMotion%Orientation(1:3,1:3,1), (/9/) )
+   RotationalVel_c = Turbine(iTurb)%ED%y(iED)%HubPtMotion%RotationVel(:,1)
 
 end subroutine FAST_HubPosition
 !==================================================================================================================================
@@ -600,7 +601,7 @@ subroutine FAST_ExtLoads_Init(iTurb_c, TMax, InputFileName_c, TurbIDforName, Out
 
    dt_c = DBLE(Turbine(iTurb)%p_FAST%DT)
 
-   NumBl_c     = Turbine(iTurb)%ED%p%NumBl
+   NumBl_c     = Turbine(iTurb)%ED%p(iED)%NumBl
 
    CompLoadsType = Turbine(iTurb)%p_FAST%CompAero
 
@@ -998,7 +999,7 @@ subroutine FAST_ExtLoads_Restart(iTurb_c, CheckpointRootName_c, AbortErrLev_c, d
    n_t_global_c  = n_t_global
    AbortErrLev_c = AbortErrLev
    NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine(iTurb)%y_FAST%numOuts )) ! includes time
-   numblades_c = Turbine(iTurb)%ED%p%NumBl
+   numblades_c = Turbine(iTurb)%ED%p(iED)%NumBl
    dt_c          = Turbine(iTurb)%p_FAST%dt
 
 #ifdef CONSOLE_FILE

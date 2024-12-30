@@ -663,12 +663,13 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
    real(DbKi)              :: error
    logical                 :: ProcessAzimuth
    integer(IntKi)          :: i, j, iy
+   integer(IntKi), parameter  :: iED = 1
 
    ErrStat = ErrID_None
    ErrMsg = ""
 
    ! Get current azimuth angle from ElastoDyn output
-   psi = real(T%ED%y%LSSTipPxa, R8Ki)
+   psi = real(T%ED%y(iED)%LSSTipPxa, R8Ki)
    call Zero2TwoPi(psi)
 
    ! Cyclic shift psi buffer and set first index to new psi
@@ -714,7 +715,7 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
 
       ! Initialize psi buffer for interpolation based on time step and rotor speed
       do i = 1, size(m%CS%psi_buffer)
-         m%CS%psi_buffer(i) = psi - (i - 1)*p_FAST%DT*T%ED%y%LSS_Spd
+         m%CS%psi_buffer(i) = psi - (i - 1)*p_FAST%DT*T%ED%y(iED)%LSS_Spd
       end do
 
       ! Initialize output buffer by copying outputs from first buffer location
@@ -809,12 +810,12 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
          ! Forcing linearization if time is close to tmax (with sufficient margin)
 
          ! If rotor has nonzero speed
-         if (T%ED%p%RotSpeed > 0) then
+         if (T%ED%p(iED)%RotSpeed > 0) then
 
             ! If simulation is at least 10 revolutions, and error in rotor speed less than 0.1%
-            if ((p_FAST%TMax > 10*(TwoPi_D)/T%ED%p%RotSpeed) .and. &
-                (t_global >= p_FAST%TMax - 2._DbKi*(TwoPi_D)/T%ED%p%RotSpeed)) then
-               if (abs(T%ED%y%RotSpeed - T%ED%p%RotSpeed)/T%ED%p%RotSpeed < 0.001) then
+            if ((p_FAST%TMax > 10*(TwoPi_D)/T%ED%p(iED)%RotSpeed) .and. &
+                (t_global >= p_FAST%TMax - 2._DbKi*(TwoPi_D)/T%ED%p(iED)%RotSpeed)) then
+               if (abs(T%ED%y(iED)%RotSpeed - T%ED%p(iED)%RotSpeed)/T%ED%p(iED)%RotSpeed < 0.001) then
                   m%CS%ForceLin = .true.
                end if
             end if
@@ -895,6 +896,7 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
    integer(IntKi)                            :: ix, iz, iu, iy
    integer(IntKi)                            :: Un
    integer(IntKi)                            :: StateLinIndex, InputLinIndex
+   integer(IntKi), parameter                 :: iED = 1
    character(200)                            :: SimStr
    character(MaxWrScrLen)                    :: BlankLine
    character(1024)                           :: LinRootName
@@ -907,7 +909,7 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
    ! Write message to screen
    BlankLine = ""
    call WrOver(BlankLine)  ! BlankLine contains MaxWrScrLen spaces
-   SimStr = '(RotSpeed='//trim(Num2LStr(Turbine%ED%y%RotSpeed*RPS2RPM, Fmt))//' rpm, BldPitch1='//trim(Num2LStr(Turbine%ED%y%BlPitch(1)*R2D, Fmt))//' deg)'
+   SimStr = '(RotSpeed='//trim(Num2LStr(Turbine%ED%y(iED)%RotSpeed*RPS2RPM, Fmt))//' rpm, BldPitch1='//trim(Num2LStr(Turbine%ED%y(iED)%BlPitch(1)*R2D, Fmt))//' deg)'
    call WrOver(' Performing linearization '//trim(Num2LStr(m%Lin%TimeIndex))//' at simulation time '//TRIM(Num2LStr(t_global))//' s. '//trim(SimStr))
    call WrScr('')
 
@@ -926,8 +928,8 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
    !----------------------------------------------------------------------------
 
    ! Get parameters
-   y_FAST%Lin%RotSpeed = Turbine%ED%y%RotSpeed
-   y_FAST%Lin%Azimuth = Turbine%ED%y%LSSTipPxa
+   y_FAST%Lin%RotSpeed = Turbine%ED%y(iED)%RotSpeed
+   y_FAST%Lin%Azimuth = Turbine%ED%y(iED)%LSSTipPxa
 
    ! Assemble linearization root file name
    LinRootName = trim(p_FAST%OutFileRoot)//'.'//trim(Num2LStr(m%Lin%TimeIndex))

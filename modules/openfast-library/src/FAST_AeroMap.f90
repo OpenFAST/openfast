@@ -33,9 +33,10 @@ implicit none
 real(DbKi), parameter      :: SS_t_global = 0.0_DbKi
 real(DbKi), parameter      :: UJacSclFact_x = 1.0d3
 
-logical, parameter         :: output_debugging = .false.
-integer(IntKi), parameter  :: iModStruct = 1
-integer(IntKi), parameter  :: iModAero = 2
+logical, parameter                  :: output_debugging = .false.
+integer(IntKi), parameter           :: iModStruct = 1
+integer(IntKi), parameter           :: iModAero = 2
+integer(IntKi), private, parameter  :: iED = 1
 
 contains
 
@@ -305,7 +306,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
 
       n_global = real(n_case, DbKi) ! n_global is double-precision so that we can reuse existing code.
 
-      call WrOutputLine(n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, T%ED%y%WriteOutput, UnusedAry, &
+      call WrOutputLine(n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, T%ED%y, UnusedAry, &
                         T%AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
                         UnusedAry, UnusedAry, UnusedAry, UnusedAry, T%IceD%y, T%BD%y, ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -375,7 +376,7 @@ subroutine SS_Solve(AM, m, Mappings, caseData, p_FAST, y_FAST, m_FAST, T, ErrSta
    nx = AM%Mod%Vars%Nx
 
    ! Set the rotor speed in ElastoDyn
-   T%ED%x(STATE_CURR)%QDT(p_FAST%GearBox_Index) = caseData%RotSpeed
+   T%ED%x(iED,STATE_CURR)%QDT(p_FAST%GearBox_Index) = caseData%RotSpeed
 
    ! Set prescribed inputs from case data
    call SS_SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, T%ED, T%BD, T%AD)
@@ -642,17 +643,17 @@ subroutine SS_UpdateInputsStates(AM, delta, T, ErrStat, ErrMsg)
          case (Module_ED)
 
             ! Copy blade1 flap and edge states to other blades
-            do j = 2, T%ED%p%NumBl
-               T%ED%x(STATE_CURR)%QT(DOF_BF(j, 1)) = T%ED%x(STATE_CURR)%QT(DOF_BF(1, 1))
-               T%ED%x(STATE_CURR)%QT(DOF_BF(j, 2)) = T%ED%x(STATE_CURR)%QT(DOF_BF(1, 2))
-               T%ED%x(STATE_CURR)%QT(DOF_BE(j, 1)) = T%ED%x(STATE_CURR)%QT(DOF_BE(1, 1))
+            do j = 2, T%ED%p(iED)%NumBl
+               T%ED%x(iED,STATE_CURR)%QT(DOF_BF(j, 1)) = T%ED%x(iED,STATE_CURR)%QT(DOF_BF(1, 1))
+               T%ED%x(iED,STATE_CURR)%QT(DOF_BF(j, 2)) = T%ED%x(iED,STATE_CURR)%QT(DOF_BF(1, 2))
+               T%ED%x(iED,STATE_CURR)%QT(DOF_BE(j, 1)) = T%ED%x(iED,STATE_CURR)%QT(DOF_BE(1, 1))
             end do
 
             ! Set velocities to zero
-            do j = 1, T%ED%p%NumBl
-               T%ED%x(STATE_CURR)%QDT(DOF_BF(j, 1)) = 0.0_R8Ki
-               T%ED%x(STATE_CURR)%QDT(DOF_BF(j, 2)) = 0.0_R8Ki
-               T%ED%x(STATE_CURR)%QDT(DOF_BE(j, 1)) = 0.0_R8Ki
+            do j = 1, T%ED%p(iED)%NumBl
+               T%ED%x(iED,STATE_CURR)%QDT(DOF_BF(j, 1)) = 0.0_R8Ki
+               T%ED%x(iED,STATE_CURR)%QDT(DOF_BF(j, 2)) = 0.0_R8Ki
+               T%ED%x(iED,STATE_CURR)%QDT(DOF_BE(j, 1)) = 0.0_R8Ki
             end do
 
             ! Transfer loads from ED blade 1 to other blades
@@ -958,7 +959,7 @@ subroutine SS_ED_InputSolve_OtherBlades(AM, InputIndex, T)
    integer(IntKi), intent(in)                :: InputIndex  !< Input index to transfer
    type(FAST_TurbineType), intent(inout)     :: T           !< Turbine type
    integer(IntKi)                            :: j, k
-   associate (BladePtLoads => T%ED%Input(InputIndex)%BladePtLoads)
+   associate (BladePtLoads => T%ED%Input(InputIndex,iED)%BladePtLoads)
       do k = 2, size(BladePtLoads, 1)
          do j = 1, BladePtLoads(k)%NNodes
             BladePtLoads(k)%Force(:, j) = matmul(BladePtLoads(1)%Force(:, j), AM%HubOrientation(:, :, k))
@@ -1181,20 +1182,20 @@ subroutine SS_SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, ED, BD, AD)
 
    ! Set prescribed inputs for all of the modules in the steady-state solve
 
-   ED%Input(1)%TwrAddedMass = 0.0_ReKi
-   ED%Input(1)%PtfmAddedMass = 0.0_ReKi
+   ED%Input(1,iED)%TwrAddedMass = 0.0_ReKi
+   ED%Input(1,iED)%PtfmAddedMass = 0.0_ReKi
 
-   ED%Input(1)%TowerPtLoads%Force = 0.0
-   ED%Input(1)%TowerPtLoads%Moment = 0.0
-   ED%Input(1)%NacelleLoads%Force = 0.0
-   ED%Input(1)%NacelleLoads%Moment = 0.0
-   ED%Input(1)%HubPtLoad%Force = 0.0      ! these are from BD, but they don't affect the ED calculations for aeromaps, so set them to 0
-   ED%Input(1)%HubPtLoad%Moment = 0.0     ! these are from BD, but they don't affect the ED calculations for aeromaps, so set them to 0
+   ED%Input(1,iED)%TowerPtLoads%Force = 0.0
+   ED%Input(1,iED)%TowerPtLoads%Moment = 0.0
+   ED%Input(1,iED)%NacelleLoads%Force = 0.0
+   ED%Input(1,iED)%NacelleLoads%Moment = 0.0
+   ED%Input(1,iED)%HubPtLoad%Force = 0.0      ! these are from BD, but they don't affect the ED calculations for aeromaps, so set them to 0
+   ED%Input(1,iED)%HubPtLoad%Moment = 0.0     ! these are from BD, but they don't affect the ED calculations for aeromaps, so set them to 0
 
-   ED%Input(1)%BlPitchCom = caseData%Pitch
-   ED%Input(1)%YawMom = 0.0
-   ED%Input(1)%HSSBrTrqC = 0.0
-   ED%Input(1)%GenTrq = 0.0
+   ED%Input(1,iED)%BlPitchCom = caseData%Pitch
+   ED%Input(1,iED)%YawMom = 0.0
+   ED%Input(1,iED)%HSSBrTrqC = 0.0
+   ED%Input(1,iED)%GenTrq = 0.0
 
    ! BeamDyn
    if (p_FAST%CompElast == Module_BD) then

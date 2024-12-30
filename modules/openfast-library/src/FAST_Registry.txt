@@ -336,7 +336,6 @@ typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Arr
 # [ the last dimension of each allocatable array is for the instance of BeamDyn being used ]
 # note that I'm making the allocatable-for-instance-used part INSIDE the data type (as opposed to an array of IceDyn_Data types) because I want to pass arrays of x, xd, z, x_pred, etc)
 typedef	FAST	BeamDyn_Data	BD_ContinuousStateType	x	{:}{:}	-	-	"Continuous states"
-typedef	^	^	BD_ContinuousStateType	dxdt	{:}	-	-	"Continuous state derivatives"
 typedef	^	^	BD_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
 typedef	^	^	BD_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
 typedef	^	^	BD_OtherStateType	OtherSt	{:}{:}	-	-	"Other states"
@@ -347,16 +346,15 @@ typedef	^	^	BD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with Input
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
 
 # ..... ElastoDyn data .......................................................................................................
-typedef	FAST	ElastoDyn_Data	ED_ContinuousStateType	x	{:}	-	-	"Continuous states"
-typedef	^	^	ED_ContinuousStateType	dxdt	-	-	-	"Continuous state derivatives"
-typedef	^	^	ED_DiscreteStateType	xd	{:}	-	-	"Discrete states"
-typedef	^	^	ED_ConstraintStateType	z	{:}	-	-	"Constraint states"
-typedef	^	^	ED_OtherStateType	OtherSt	{:}	-	-	"Other states"
-typedef	^	^	ED_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	ED_OutputType	y	-	-	-	"System outputs"
-typedef	^	^	ED_MiscVarType	m	-	-	-	"Misc (optimization) variables not associated with time"
-typedef	^	^	ED_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
+typedef	FAST	ElastoDyn_Data	ED_ContinuousStateType	x	{:}{:}	-	-	"Continuous states"
+typedef	^	^	ED_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
+typedef	^	^	ED_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
+typedef	^	^	ED_OtherStateType	OtherSt	{:}{:}	-	-	"Other states"
+typedef	^	^	ED_ParameterType	p	{:}	-	-	"Parameters"
+typedef	^	^	ED_OutputType	y	{:}	-	-	"System outputs"
+typedef	^	^	ED_MiscVarType	m	{:}	-	-	"Misc (optimization) variables not associated with time"
+typedef	^	^	ED_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
 
 
 # ..... Simplified-ElastoDyn data ............................................................................................
@@ -673,7 +671,7 @@ typedef	^	FAST_MiscVarType	FAST_MiscLinType	Lin	-	-	-	"misc data for linearizati
 
 # ..... FAST_InitData data .......................................................................................................
 typedef   ^   FAST_InitData    ED_InitInputType             InData_ED       -  -  -  "ED Initialization input data"
-typedef   ^   FAST_InitData    ED_InitOutputType           OutData_ED       -  -  -  "ED Initialization output data"
+typedef   ^   FAST_InitData    ED_InitOutputType           OutData_ED       :  -  -  "ED Initialization output data"
 typedef   ^   FAST_InitData    SED_InitInputType            InData_SED      -  -  -  "SED Initialization input data"
 typedef   ^   FAST_InitData    SED_InitOutputType          OutData_SED      -  -  -  "SED Initialization output data"
 typedef   ^   FAST_InitData    BD_InitInputType             InData_BD       -  -  -  "BD Initialization input data"

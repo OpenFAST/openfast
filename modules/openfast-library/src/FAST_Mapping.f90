@@ -84,7 +84,7 @@ subroutine FAST_InputMeshPointer(ModData, Turbine, MeshLoc, Mesh, iInput, ErrSta
    case (Module_BD)
       Mesh => BD_InputMeshPointer(Turbine%BD%Input(iInput, ModData%Ins), MeshLoc)
    case (Module_ED)
-      Mesh => ED_InputMeshPointer(Turbine%ED%Input(iInput), MeshLoc)
+      Mesh => ED_InputMeshPointer(Turbine%ED%Input(iInput, ModData%Ins), MeshLoc)
    case (Module_SED)
       Mesh => SED_InputMeshPointer(Turbine%SED%Input(iInput), MeshLoc)
    case (Module_ExtInfw)
@@ -155,7 +155,7 @@ subroutine FAST_OutputMeshPointer(ModData, Turbine, MeshLoc, Mesh, ErrStat, ErrM
    case (Module_BD)
       Mesh => BD_OutputMeshPointer(Turbine%BD%y(ModData%Ins), MeshLoc)
    case (Module_ED)
-      Mesh => ED_OutputMeshPointer(Turbine%ED%y, MeshLoc)
+      Mesh => ED_OutputMeshPointer(Turbine%ED%y(ModData%Ins), MeshLoc)
    case (Module_SED)
       Mesh => SED_OutputMeshPointer(Turbine%SED%y, MeshLoc)
    case (Module_ExtInfw)
@@ -392,7 +392,8 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
       case (Module_ED)
          call MapCustom(MappingsTmp, Custom_ED_Tower_Damping, Mods(iModDst), Mods(iModDst), &
                         Active=Turbine%p_FAST%CalcSteady)
-         do i = 1, Turbine%ED%p%NumBl
+         
+         do i = 1, Turbine%ED%p(Mods(iModDst)%Ins)%NumBl
             call MapCustom(MappingsTmp, Custom_ED_Blade_Damping, Mods(iModDst), Mods(iModDst), &
                            i=i, Active=Turbine%p_FAST%CalcSteady .and. (Turbine%p_FAST%CompElast == Module_ED))
          end do
@@ -502,7 +503,7 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
 
             ! Create temporary motion mesh as cousin of load mesh, to compute get
             ! velocities at load locations for computing damping forces
-            call MeshCopy(SrcMesh=Turbine%ED%Input(INPUT_CURR)%TowerPtLoads, &
+            call MeshCopy(SrcMesh=Turbine%ED%Input(INPUT_CURR, Mapping%DstIns)%TowerPtLoads, &
                           DestMesh=Mapping%TmpMotionMesh, &
                           CtrlCode=MESH_COUSIN, &
                           IOS=COMPONENT_OUTPUT, &
@@ -513,17 +514,17 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
             if (Failed()) return
 
             ! Create motion mapping from original motion mesh to temporary motion mesh
-            call MeshMapCreate(Turbine%ED%y%TowerLn2Mesh, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
+            call MeshMapCreate(Turbine%ED%y(Mapping%DstIns)%TowerLn2Mesh, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
             if (Failed()) return
 
             ! Determine mesh transfer type and save to mapping
-            Mapping%XfrType = MeshTransferType(Turbine%ED%y%TowerLn2Mesh, Mapping%TmpMotionMesh)
+            Mapping%XfrType = MeshTransferType(Turbine%ED%y(Mapping%DstIns)%TowerLn2Mesh, Mapping%TmpMotionMesh)
 
          case (Custom_ED_Blade_Damping)
 
             ! Create temporary motion mesh as cousin of load mesh, to compute get
             ! velocities at load locations for computing damping forces
-            call MeshCopy(SrcMesh=Turbine%ED%Input(INPUT_CURR)%BladePtLoads(Mapping%i), &
+            call MeshCopy(SrcMesh=Turbine%ED%Input(INPUT_CURR, Mapping%DstIns)%BladePtLoads(Mapping%i), &
                           DestMesh=Mapping%TmpMotionMesh, &
                           CtrlCode=MESH_COUSIN, &
                           IOS=COMPONENT_OUTPUT, &
@@ -534,11 +535,11 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
             if (Failed()) return
 
             ! Create motion mapping from original motion mesh to temporary motion mesh
-            call MeshMapCreate(Turbine%ED%y%BladeLn2Mesh(Mapping%i), Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
+            call MeshMapCreate(Turbine%ED%y(Mapping%DstIns)%BladeLn2Mesh(Mapping%i), Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat2, ErrMsg2)
             if (Failed()) return
 
             ! Determine mesh transfer type and save to mapping
-            Mapping%XfrType = MeshTransferType(Turbine%ED%y%BladeLn2Mesh(Mapping%i), Mapping%TmpMotionMesh)
+            Mapping%XfrType = MeshTransferType(Turbine%ED%y(Mapping%DstIns)%BladeLn2Mesh(Mapping%i), Mapping%TmpMotionMesh)
 
          case (Custom_BD_Blade_Damping)
 
@@ -610,7 +611,7 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       ! Blade motion
       if (Turbine%p_FAST%CompElast == Module_ED) then
-         do i = 1, size(Turbine%ED%y%BladeLn2Mesh)
+         do i = 1, size(Turbine%ED%y(SrcMod%Ins)%BladeLn2Mesh)
             call MapMotionMesh(Turbine, Mappings, &
                                SrcMod=SrcMod, SrcDL=DatLoc(ED_y_BladeLn2Mesh, i), &                     ! ED%y%BladeLn2Mesh(i)
                                DstMod=DstMod, DstDL=DatLoc(AD_u_BladeMotion, i), &   ! AD%u%rotors(DstMod%Ins)%BladeMotion(i)
@@ -621,7 +622,7 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       end if
 
       ! Blade root motion
-      do i = 1, size(Turbine%ED%y%BladeRootMotion)
+      do i = 1, size(Turbine%ED%y(SrcMod%Ins)%BladeRootMotion)
          call MapMotionMesh(Turbine, Mappings, &
                             SrcMod=SrcMod, SrcDL=DatLoc(ED_y_BladeRootMotion, i), &        ! ED%y%BladeRootMotion(i)
                             DstMod=DstMod, DstDL=DatLoc(AD_u_BladeRootMotion, i), &        ! AD%u%rotors(DstMod%Ins)%BladeRootMotion(i)
@@ -904,7 +905,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    case (Module_AD)
 
       ! Blade Loads
-      do i = 1, Turbine%ED%p%NumBl
+      do i = 1, Turbine%ED%p(DstMod%Ins)%NumBl
          call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                           SrcDL=DatLoc(AD_y_BladeLoad, i), &            ! AD%y%rotors(SrcMod%Ins)%BladeLoad(i)
                           SrcDispDL=DatLoc(AD_u_BladeMotion, i), &      ! AD%u%rotors(SrcMod%Ins)%BladeMotion(i)
@@ -984,7 +985,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    case (Module_ExtLd)
 
       ! Blade loads
-      do i = 1, Turbine%ED%p%NumBl
+      do i = 1, Turbine%ED%p(DstMod%Ins)%NumBl
          call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                           SrcDL=DatLoc(ExtLd_y_BladeLoad, i), &            ! ExtLd%y%BladeLoad(i)
                           SrcDispDL=DatLoc(ExtLd_u_BladeMotion, i), &      ! ExtLd%u%BladeMotion(i)
@@ -1138,7 +1139,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       ! Blade Structural Controller (if ElastoDyn is used for blades)
       do j = 1, Turbine%SrvD%p%NumBStC
-         do i = 1, Turbine%ED%p%NumBl
+         do i = 1, Turbine%ED%p(DstMod%Ins)%NumBl
             call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                              SrcDL=DatLoc(SrvD_y_BStCLoadMesh, i, j), &        ! SrvD%y%BStCLoadMesh(i, j), &
                              SrcDispDL=DatLoc(SrvD_u_BStCMotionMesh, i, j), &  ! SrvD%u%BStCMotionMesh(i, j)
@@ -1302,7 +1303,7 @@ subroutine InitMappings_ExtLd(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg
    case (Module_AD)
 
       ! Blade Loads
-      do i = 1, Turbine%ED%p%NumBl
+      do i = 1, size(Turbine%AD%y%rotors(SrcMod%Ins)%BladeLoad)
          call MapLoadMesh(Turbine, Mappings, &
                           SrcMod=SrcMod, &
                           SrcDL=DatLoc(AD_y_BladeLoad, i), &            ! AD%y%rotors(SrcMod%Ins)%BladeLoad(i)
@@ -1340,7 +1341,7 @@ subroutine InitMappings_ExtLd(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg
       call MapCustom(Mappings, Custom_ED_to_ExtLd, SrcMod, DstMod)
 
       ! Blade motion
-      do i = 1, Turbine%ED%p%NumBl
+      do i = 1, Turbine%ED%p(SrcMod%Ins)%NumBl
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                             SrcDL=DatLoc(ED_y_BladeLn2Mesh, i), &        ! ED%y%BladeLn2Mesh(i)
                             DstDL=DatLoc(ExtLd_u_BladeMotion, i), &      ! ExtLd%u%BladeMotion(i)
@@ -1350,7 +1351,7 @@ subroutine InitMappings_ExtLd(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg
       end do
 
       ! Blade root motion
-      do i = 1, Turbine%ED%p%NumBl
+      do i = 1, Turbine%ED%p(SrcMod%Ins)%NumBl
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                             SrcDL=DatLoc(ED_y_BladeRootMotion, i), &     ! ED%y%BladeRootMotion(i)
                             DstDL=DatLoc(ExtLd_u_BladeRootMotion, i), &  ! ExtLd%u%BladeRootMotion(i)
@@ -1964,7 +1965,7 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       ! Blade Structural Controller (if ElastoDyn blades)
       do j = 1, Turbine%SrvD%p%NumBStC
-         do i = 1, Turbine%ED%p%NumBl
+         do i = 1, Turbine%ED%p(SrcMod%Ins)%NumBl
             call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                                SrcDL=DatLoc(ED_y_BladeLn2Mesh, i), &         ! ED%y%BladeLn2Mesh(i)
                                DstDL=DatLoc(SrvD_u_BStCMotionMesh, i, j), &  ! SrvD%u%BStCMotionMesh(i, j)
@@ -2691,7 +2692,7 @@ subroutine VarUnpackInput(ModData, Var, ValAry, T, iInput, ErrStat, ErrMsg)
    case (Module_BD)
       call BD_VarUnpackInput(Var, ValAry, T%BD%Input(iInput, ModData%Ins))
    case (Module_ED)
-      call ED_VarUnpackInput(Var, ValAry, T%ED%Input(iInput))
+      call ED_VarUnpackInput(Var, ValAry, T%ED%Input(iInput, ModData%Ins))
    case (Module_SED)
       call SED_VarUnpackInput(Var, ValAry, T%SED%Input(iInput))
    case (Module_ExtLd)
@@ -2744,7 +2745,7 @@ subroutine VarPackOutput(ModData, Var, ValAry, T, ErrStat, ErrMsg)
    case (Module_BD)
       call BD_VarPackOutput(Var, T%BD%y(ModData%Ins), ValAry)
    case (Module_ED)
-      call ED_VarPackOutput(Var, T%ED%y, ValAry)
+      call ED_VarPackOutput(Var, T%ED%y(ModData%Ins), ValAry)
    case (Module_SED)
       call SED_VarPackOutput(Var, T%SED%y, ValAry)
    case (Module_ExtLd)
@@ -3056,8 +3057,8 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_ED_to_ADsk)
 
-      T%ADsk%Input(iInput)%RotSpeed   = T%ED%y%RotSpeed
-      T%ADsk%Input(iInput)%BlPitch    = T%ED%y%BlPitch(1)   ! ADsk only uses collective blade pitch
+      T%ADsk%Input(iInput)%RotSpeed   = T%ED%y(ModSrc%Ins)%RotSpeed
+      T%ADsk%Input(iInput)%BlPitch    = T%ED%y(ModSrc%Ins)%BlPitch(1)   ! ADsk only uses collective blade pitch
 
    case (Custom_SED_to_ADsk)
 
@@ -3071,8 +3072,9 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
    case (Custom_BD_Blade_Damping)
 
       ! Get rotational velocity and current hub position
-      omega_c = T%ED%y%RotSpeed * T%ED%y%HubPtMotion%Orientation(1,:,1)
-      r_hub   = T%ED%y%HubPtMotion%Position(:,1) + T%ED%y%HubPtMotion%TranslationDisp(:,1)
+      ! TODO: correlate ED instance with BD instance
+      omega_c = T%ED%y(1)%RotSpeed * T%ED%y(1)%HubPtMotion%Orientation(1,:,1)
+      r_hub   = T%ED%y(1)%HubPtMotion%Position(:,1) + T%ED%y(1)%HubPtMotion%TranslationDisp(:,1)
 
       ! Get blade velocities at load mesh locations
       call TransferMesh(Mapping%XfrType, T%BD%y(Mapping%DstIns)%BldMotion, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
@@ -3094,28 +3096,29 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_SrvD_to_ED)
 
-      T%ED%Input(iInput)%GenTrq = T%SrvD%y%GenTrq
-      T%ED%Input(iInput)%HSSBrTrqC = T%SrvD%y%HSSBrTrqC
-      T%ED%Input(iInput)%BlPitchCom = T%SrvD%y%BlPitchCom
-      T%ED%Input(iInput)%YawMom = T%SrvD%y%YawMom
+      T%ED%Input(iInput, ModDst%Ins)%GenTrq = T%SrvD%y%GenTrq
+      T%ED%Input(iInput, ModDst%Ins)%HSSBrTrqC = T%SrvD%y%HSSBrTrqC
+      T%ED%Input(iInput, ModDst%Ins)%BlPitchCom = T%SrvD%y%BlPitchCom
+      T%ED%Input(iInput, ModDst%Ins)%YawMom = T%SrvD%y%YawMom
 
    case (Custom_ED_Tower_Damping)
 
       ! Get tower velocities at load mesh locations
-      call TransferMesh(Mapping%XfrType, T%ED%y%TowerLn2Mesh, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      call TransferMesh(Mapping%XfrType, T%ED%y(ModDst%Ins)%TowerLn2Mesh, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
       ! Apply damping force as Twr_Kdmp*(node velocity)
-      T%ED%Input(iInput)%TowerPtLoads%Force = T%ED%Input(iInput)%TowerPtLoads%Force - T%p_FAST%Twr_Kdmp * Mapping%TmpMotionMesh%TranslationVel
+      T%ED%Input(iInput, Mapping%DstIns)%TowerPtLoads%Force = T%ED%Input(iInput, Mapping%DstIns)%TowerPtLoads%Force - T%p_FAST%Twr_Kdmp * Mapping%TmpMotionMesh%TranslationVel
 
    case (Custom_ED_Blade_Damping)
 
       ! Get rotational velocity and current hub position
-      omega_c = T%ED%y%RotSpeed * T%ED%y%HubPtMotion%Orientation(1,:,1)
-      r_hub   = T%ED%y%HubPtMotion%Position(:,1) + T%ED%y%HubPtMotion%TranslationDisp(:,1)
+      ! TODO: correlate ED instance with BD instance
+      omega_c = T%ED%y(ModDst%Ins)%RotSpeed * T%ED%y(ModDst%Ins)%HubPtMotion%Orientation(1,:,1)
+      r_hub   = T%ED%y(ModDst%Ins)%HubPtMotion%Position(:,1) + T%ED%y(ModDst%Ins)%HubPtMotion%TranslationDisp(:,1)
 
       ! Get blade velocities at load mesh locations
-      call TransferMesh(Mapping%XfrType, T%ED%y%BladeLn2Mesh(Mapping%i), Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      call TransferMesh(Mapping%XfrType, T%ED%y(1)%BladeLn2Mesh(Mapping%i), Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
       ! Remove rotor rotational velocity from node velocity
@@ -3126,7 +3129,7 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       end do
 
       ! Apply damping force as Bld_Kdmp*(node velocity)
-      T%ED%Input(iInput)%BladePtLoads(Mapping%i)%Force = T%ED%Input(iInput)%BladePtLoads(Mapping%i)%Force - T%p_FAST%Bld_Kdmp * Mapping%TmpMotionMesh%TranslationVel
+      T%ED%Input(iInput, Mapping%DstIns)%BladePtLoads(Mapping%i)%Force = T%ED%Input(iInput, Mapping%DstIns)%BladePtLoads(Mapping%i)%Force - T%p_FAST%Bld_Kdmp * Mapping%TmpMotionMesh%TranslationVel
 
 !-------------------------------------------------------------------------------
 ! SED Inputs
@@ -3146,8 +3149,8 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_ED_to_ExtLd)
 
-      T%ExtLd%u%az = T%ED%y%LSSTipPxa
-      T%ExtLd%u%DX_u%bldPitch(:) = T%ED%y%BlPitch
+      T%ExtLd%u%az = T%ED%y(ModSrc%Ins)%LSSTipPxa
+      T%ExtLd%u%DX_u%bldPitch(:) = T%ED%y(ModSrc%Ins)%BlPitch
 
       ! Note: this may be better inside CalcOutput
       call ExtLd_ConvertInpDataForExtProg(T%ExtLd%u, T%ExtLd%p, ErrStat2, ErrMsg2)
@@ -3161,14 +3164,14 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
    case (Custom_ED_to_IfW)
 
       ! This section should be refactored so that IfW uses a hub point mesh
-      T%IfW%Input(iInput)%HubPosition = T%ED%y%HubPtMotion%Position(:, 1) + &
-                                        T%ED%y%HubPtMotion%TranslationDisp(:, 1)
-      T%IfW%Input(iInput)%HubOrientation = T%ED%y%HubPtMotion%Orientation(:, :, 1)
+      T%IfW%Input(iInput)%HubPosition = T%ED%y(ModSrc%Ins)%HubPtMotion%Position(:, 1) + &
+                                        T%ED%y(ModSrc%Ins)%HubPtMotion%TranslationDisp(:, 1)
+      T%IfW%Input(iInput)%HubOrientation = T%ED%y(ModSrc%Ins)%HubPtMotion%Orientation(:, :, 1)
 
       ! Set Lidar position directly from hub motion mesh
-      T%IfW%Input(iInput)%lidar%HubDisplacementX = T%ED%y%HubPtMotion%TranslationDisp(1, 1)
-      T%IfW%Input(iInput)%lidar%HubDisplacementY = T%ED%y%HubPtMotion%TranslationDisp(2, 1)
-      T%IfW%Input(iInput)%lidar%HubDisplacementZ = T%ED%y%HubPtMotion%TranslationDisp(3, 1)
+      T%IfW%Input(iInput)%lidar%HubDisplacementX = T%ED%y(ModSrc%Ins)%HubPtMotion%TranslationDisp(1, 1)
+      T%IfW%Input(iInput)%lidar%HubDisplacementY = T%ED%y(ModSrc%Ins)%HubPtMotion%TranslationDisp(2, 1)
+      T%IfW%Input(iInput)%lidar%HubDisplacementZ = T%ED%y(ModSrc%Ins)%HubPtMotion%TranslationDisp(3, 1)
 
    case (Custom_SED_to_IfW)
 
@@ -3214,47 +3217,48 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_BD_to_SrvD)
 
-      T%SrvD%Input(iInput)%RootMxc(Mapping%SrcIns) = T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y%BlPitch(Mapping%SrcIns)) + &
-                                                     T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y%BlPitch(Mapping%SrcIns))
-      T%SrvD%Input(iInput)%RootMyc(Mapping%SrcIns) = -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y%BlPitch(Mapping%SrcIns)) + &
-                                                     T%BD%y(Mapping%SrcIns)%RootMyr*cos(T%ED%y%BlPitch(Mapping%SrcIns))
+      ! TODO: correlate BD instance to ED instance
+      T%SrvD%Input(iInput)%RootMxc(Mapping%SrcIns) = T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y(1)%BlPitch(Mapping%SrcIns)) + &
+                                                     T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y(1)%BlPitch(Mapping%SrcIns))
+      T%SrvD%Input(iInput)%RootMyc(Mapping%SrcIns) = -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y(1)%BlPitch(Mapping%SrcIns)) + &
+                                                     T%BD%y(Mapping%SrcIns)%RootMyr*cos(T%ED%y(1)%BlPitch(Mapping%SrcIns))
 
    case (Custom_ED_to_SrvD)
 
       ! Blade root moment if not using BeamDyn
       if (T%p_FAST%CompElast /= Module_BD) then
-         T%SrvD%Input(iInput)%RootMxc = T%ED%y%RootMxc ! fixed-size arrays: always size 3
-         T%SrvD%Input(iInput)%RootMyc = T%ED%y%RootMyc ! fixed-size arrays: always size 3
+         T%SrvD%Input(iInput)%RootMxc = T%ED%y(ModSrc%Ins)%RootMxc ! fixed-size arrays: always size 3
+         T%SrvD%Input(iInput)%RootMyc = T%ED%y(ModSrc%Ins)%RootMyc ! fixed-size arrays: always size 3
       end if
 
-      T%SrvD%Input(iInput)%YawAngle = T%ED%y%YawAngle ! nacelle yaw plus platform yaw
+      T%SrvD%Input(iInput)%YawAngle = T%ED%y(ModSrc%Ins)%YawAngle ! nacelle yaw plus platform yaw
       T%SrvD%Input(iInput)%YawErr = T%SrvD%Input(iInput)%WindDir - T%SrvD%Input(iInput)%YawAngle ! the nacelle yaw error estimate (positive about zi-axis)
 
-      T%SrvD%Input(iInput)%BlPitch = T%ED%y%BlPitch
-      T%SrvD%Input(iInput)%LSS_Spd = T%ED%y%LSS_Spd
-      T%SrvD%Input(iInput)%RotSpeed = T%ED%y%RotSpeed
+      T%SrvD%Input(iInput)%BlPitch = T%ED%y(ModSrc%Ins)%BlPitch
+      T%SrvD%Input(iInput)%LSS_Spd = T%ED%y(ModSrc%Ins)%LSS_Spd
+      T%SrvD%Input(iInput)%RotSpeed = T%ED%y(ModSrc%Ins)%RotSpeed
 
-      T%SrvD%Input(iInput)%YawBrTAxp = T%ED%y%YawBrTAxp
-      T%SrvD%Input(iInput)%YawBrTAyp = T%ED%y%YawBrTAyp
-      T%SrvD%Input(iInput)%LSSTipPxa = T%ED%y%LSSTipPxa
+      T%SrvD%Input(iInput)%YawBrTAxp = T%ED%y(ModSrc%Ins)%YawBrTAxp
+      T%SrvD%Input(iInput)%YawBrTAyp = T%ED%y(ModSrc%Ins)%YawBrTAyp
+      T%SrvD%Input(iInput)%LSSTipPxa = T%ED%y(ModSrc%Ins)%LSSTipPxa
 
-      T%SrvD%Input(iInput)%LSSTipMxa = T%ED%y%LSSTipMxa
-      T%SrvD%Input(iInput)%LSSTipMya = T%ED%y%LSSTipMya
-      T%SrvD%Input(iInput)%LSSTipMza = T%ED%y%LSSTipMza
-      T%SrvD%Input(iInput)%LSSTipMys = T%ED%y%LSSTipMys
-      T%SrvD%Input(iInput)%LSSTipMzs = T%ED%y%LSSTipMzs
+      T%SrvD%Input(iInput)%LSSTipMxa = T%ED%y(ModSrc%Ins)%LSSTipMxa
+      T%SrvD%Input(iInput)%LSSTipMya = T%ED%y(ModSrc%Ins)%LSSTipMya
+      T%SrvD%Input(iInput)%LSSTipMza = T%ED%y(ModSrc%Ins)%LSSTipMza
+      T%SrvD%Input(iInput)%LSSTipMys = T%ED%y(ModSrc%Ins)%LSSTipMys
+      T%SrvD%Input(iInput)%LSSTipMzs = T%ED%y(ModSrc%Ins)%LSSTipMzs
 
-      T%SrvD%Input(iInput)%YawBrMyn = T%ED%y%YawBrMyn
-      T%SrvD%Input(iInput)%YawBrMzn = T%ED%y%YawBrMzn
-      T%SrvD%Input(iInput)%NcIMURAxs = T%ED%y%NcIMURAxs
-      T%SrvD%Input(iInput)%NcIMURAys = T%ED%y%NcIMURAys
-      T%SrvD%Input(iInput)%NcIMURAzs = T%ED%y%NcIMURAzs
+      T%SrvD%Input(iInput)%YawBrMyn = T%ED%y(ModSrc%Ins)%YawBrMyn
+      T%SrvD%Input(iInput)%YawBrMzn = T%ED%y(ModSrc%Ins)%YawBrMzn
+      T%SrvD%Input(iInput)%NcIMURAxs = T%ED%y(ModSrc%Ins)%NcIMURAxs
+      T%SrvD%Input(iInput)%NcIMURAys = T%ED%y(ModSrc%Ins)%NcIMURAys
+      T%SrvD%Input(iInput)%NcIMURAzs = T%ED%y(ModSrc%Ins)%NcIMURAzs
 
-      T%SrvD%Input(iInput)%RotPwr = T%ED%y%RotPwr
+      T%SrvD%Input(iInput)%RotPwr = T%ED%y(ModSrc%Ins)%RotPwr
 
-      T%SrvD%Input(iInput)%LSShftFxa = T%ED%y%LSShftFxa
-      T%SrvD%Input(iInput)%LSShftFys = T%ED%y%LSShftFys
-      T%SrvD%Input(iInput)%LSShftFzs = T%ED%y%LSShftFzs
+      T%SrvD%Input(iInput)%LSShftFxa = T%ED%y(ModSrc%Ins)%LSShftFxa
+      T%SrvD%Input(iInput)%LSShftFys = T%ED%y(ModSrc%Ins)%LSShftFys
+      T%SrvD%Input(iInput)%LSShftFzs = T%ED%y(ModSrc%Ins)%LSShftFzs
 
    case (Custom_SED_to_SrvD)
 
