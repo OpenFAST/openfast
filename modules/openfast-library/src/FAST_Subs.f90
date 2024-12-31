@@ -459,6 +459,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       END IF
 
       ! lidar
+      Init%InData_IfW%LidarEnabled                 = .true.    ! allowed with OF, but not FF
       Init%InData_IfW%lidar%Tmax                   = p_FAST%TMax
       if (p_FAST%CompElast == Module_SED) then
          Init%InData_IfW%lidar%HubPosition = SED%y%HubPtMotion%Position(:,1)
@@ -484,6 +485,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          Init%InData_IfW%Use4Dext        = .false.
       END IF
 
+      ! OLAF might be used in AD, in which case we need to allow out of bounds for some calcs. To do that
+      ! the average values for the entire wind profile must be calculated and stored (we don't know if OLAF
+      ! is used until after AD_Init below).
+      if (p_FAST%CompAero == Module_AD) then
+         Init%InData_IfW%BoxExceedAllow = .true.
+      endif
+
       ! Call module initialization routine
       CALL InflowWind_Init(Init%InData_IfW, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR),  &
                            IfW%OtherSt(STATE_CURR), IfW%y, IfW%m, p_FAST%dt_module( MODULE_IfW ), Init%OutData_IfW, ErrStat2, ErrMsg2)
@@ -497,33 +505,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         Init%OutData_IfW%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
       p_FAST%ModuleInitialized(Module_IfW) = .TRUE.
-
-      IF ( p_FAST%CompServo == Module_SrvD ) THEN !assign the number of gates to ServD
-         if (allocated(IfW%y%lidar%LidSpeed)) then    ! make sure we have the array allocated before setting it
-            CALL AllocAry(Init%InData_SrvD%LidSpeed, size(IfW%y%lidar%LidSpeed), 'Init%InData_SrvD%LidSpeed', ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            Init%InData_SrvD%LidSpeed = IfW%y%lidar%LidSpeed
-         endif
-         if (allocated(IfW%y%lidar%MsrPositionsX)) then    ! make sure we have the array allocated before setting it
-            CALL AllocAry(Init%InData_SrvD%MsrPositionsX, size(IfW%y%lidar%MsrPositionsX), 'Init%InData_SrvD%MsrPositionsX', ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            Init%InData_SrvD%MsrPositionsX = IfW%y%lidar%MsrPositionsX
-         endif
-         if (allocated(IfW%y%lidar%MsrPositionsY)) then    ! make sure we have the array allocated before setting it
-            CALL AllocAry(Init%InData_SrvD%MsrPositionsY, size(IfW%y%lidar%MsrPositionsY), 'Init%InData_SrvD%MsrPositionsY', ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            Init%InData_SrvD%MsrPositionsY = IfW%y%lidar%MsrPositionsY
-         endif
-         if (allocated(IfW%y%lidar%MsrPositionsZ)) then    ! make sure we have the array allocated before setting it
-            CALL AllocAry(Init%InData_SrvD%MsrPositionsZ, size(IfW%y%lidar%MsrPositionsZ), 'Init%InData_SrvD%MsrPositionsZ', ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            Init%InData_SrvD%MsrPositionsZ = IfW%y%lidar%MsrPositionsZ
-         endif
-         Init%InData_SrvD%SensorType    = IfW%p%lidar%SensorType
-         Init%InData_SrvD%NumBeam       = IfW%p%lidar%NumBeam
-         Init%InData_SrvD%NumPulseGate  = IfW%p%lidar%NumPulseGate
-         Init%InData_SrvD%PulseSpacing  = IfW%p%lidar%PulseSpacing
-      END IF
 
    case (Module_ExtInfw)
       ! ExtInfw requires initialization of AD first, so nothing executed here
@@ -665,7 +646,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       endif
 
       ! Note: not passing tailfin position and orientation at init
-      Init%InData_AD%rotors(1)%AeroProjMod        = APM_BEM_NoSweepPitchTwist
+      Init%InData_AD%rotors(1)%AeroProjMod  = -1  ! -1 means AeroDyn will decide based on BEM_Mod
 
       ! Set pointers to flowfield
       IF (p_FAST%CompInflow == Module_IfW) Init%InData_AD%FlowField => Init%OutData_IfW%FlowField
@@ -1301,6 +1282,33 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          Init%InData_SrvD%NumCtrl2SC = 0
       END IF
       
+      IF ( p_FAST%CompInflow == Module_IfW ) THEN !assign the number of gates to ServD
+         if (allocated(IfW%y%lidar%LidSpeed)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%LidSpeed, size(IfW%y%lidar%LidSpeed), 'Init%InData_SrvD%LidSpeed',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%LidSpeed = IfW%y%lidar%LidSpeed
+         endif
+         if (allocated(IfW%y%lidar%MsrPositionsX)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%MsrPositionsX, size(IfW%y%lidar%MsrPositionsX), 'Init%InData_SrvD%MsrPositionsX',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%MsrPositionsX = IfW%y%lidar%MsrPositionsX
+         endif
+         if (allocated(IfW%y%lidar%MsrPositionsY)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%MsrPositionsY, size(IfW%y%lidar%MsrPositionsY), 'Init%InData_SrvD%MsrPositionsY',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%MsrPositionsY = IfW%y%lidar%MsrPositionsY
+         endif
+         if (allocated(IfW%y%lidar%MsrPositionsZ)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%MsrPositionsZ, size(IfW%y%lidar%MsrPositionsZ), 'Init%InData_SrvD%MsrPositionsZ',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%MsrPositionsZ = IfW%y%lidar%MsrPositionsZ
+         endif
+         Init%InData_SrvD%SensorType    = IfW%p%lidar%SensorType
+         Init%InData_SrvD%NumBeam       = IfW%p%lidar%NumBeam
+         Init%InData_SrvD%NumPulseGate  = IfW%p%lidar%NumPulseGate
+         Init%InData_SrvD%PulseSpacing  = IfW%p%lidar%PulseSpacing
+      END IF
+
       ! Set cable controls inputs (if requested by other modules)  -- There is probably a nicer way to do this, but this will work for now.
       call SetSrvDCableControls()
 
@@ -2348,11 +2356,14 @@ end do
          y_FAST%ActualChanLen = max( y_FAST%ActualChanLen, LEN_TRIM(y_FAST%ChannelUnits(I)) )
       ENDDO ! I
 
-      CALL GetNewUnit( y_FAST%UnOu, ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) RETURN
 
-      CALL OpenFOutFile ( y_FAST%UnOu, TRIM(p_FAST%OutFileRoot)//'.out', ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) RETURN
+      !$OMP critical(fileopen)
+      CALL GetNewUnit( y_FAST%UnOu, ErrStat, ErrMsg )
+      IF ( ErrStat < AbortErrLev ) then
+         CALL OpenFOutFile ( y_FAST%UnOu, TRIM(p_FAST%OutFileRoot)//'.out', ErrStat, ErrMsg )
+      ENDIF
+      !$OMP end critical(fileopen)
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Add some file information:
 
@@ -2484,18 +2495,18 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
 
       ! Get an available unit number for the file.
 
+   !$OMP critical(fileopen)
    CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
+   if ( ErrStat < AbortErrLev ) then
       ! Open the Primary input file.
-
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+      CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN
-      end if
+   endif
+   !$OMP end critical(fileopen)
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      RETURN
+   end if
 
    p%NumSSCases = 0
    p%RotSpeedInit = 0.0_ReKi
@@ -4535,11 +4546,13 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
 
       ! Get a unit number and open the file:
 
+   !$OMP critical(fileopen)
    CALL GetNewUnit( y_FAST%UnSum, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-   CALL OpenFOutFile ( y_FAST%UnSum, TRIM(p_FAST%OutFileRoot)//'.sum', ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) RETURN
+   if ( ErrStat < AbortErrLev ) then
+      CALL OpenFOutFile ( y_FAST%UnSum, TRIM(p_FAST%OutFileRoot)//'.sum', ErrStat, ErrMsg )
+   endif
+   !$OMP end critical(fileopen)
+   IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Add some file information:
 
@@ -6464,8 +6477,10 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
 
       ! Open the binary output file:
    unOut=-1
+   !$OMP critical(fileopen)
    CALL GetNewUnit( unOut, ErrStat, ErrMsg )
    CALL OpenBOutFile ( unOut, TRIM(FileName), ErrStat, ErrMsg )
+   !$OMP end critical(fileopen)
       IF (ErrStat /= ErrID_None) RETURN
 
    ! note that I'm not doing anything with the errors here, so it won't tell
@@ -6546,9 +6561,11 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_
 
       ! Open the binary output file and write a header:
    if (unOut<0) then
+      !$OMP critical(fileopen)
       CALL GetNewUnit( unOut, ErrStat, ErrMsg )
 
       CALL OpenBOutFile ( unOut, TRIM(FileName), ErrStat, ErrMsg )
+      !$OMP end critical(fileopen)
          IF (ErrStat /= ErrID_None) RETURN
 
          ! Add a file identification number (in case we ever have to change this):
@@ -6825,11 +6842,13 @@ SUBROUTINE ExitThisProgram_T( Turbine, ErrLevel_in, StopTheProgram, ErrLocMsg, S
    endif
 
    ! End all modules
-   CALL FAST_ModEnd(Turbine%m_Glue%ModData, Turbine, ErrStat, ErrMsg)
-   IF (ErrStat /= ErrID_None) THEN
-      CALL WrScr(NewLine//RoutineName//':'//TRIM(ErrMsg)//NewLine)
-      ErrorLevel = MAX(ErrorLevel,ErrStat)
-   END IF
+   if (allocated(Turbine%m_Glue%ModData)) then
+      CALL FAST_ModEnd(Turbine%m_Glue%ModData, Turbine, ErrStat, ErrMsg)
+      IF (ErrStat /= ErrID_None) THEN
+         CALL WrScr(NewLine//RoutineName//':'//TRIM(ErrMsg)//NewLine)
+         ErrorLevel = MAX(ErrorLevel,ErrStat)
+      END IF
+   end if
 
    ! Write output to file (do this after ending modules so that we have more memory to use if needed)
    call FAST_EndOutput(Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, ErrStat, ErrMsg)
@@ -7103,10 +7122,12 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
 
    IF ( unOut < 0 ) THEN
 
-      CALL GetNewUnit(unOut, ErrStat2, ErrMsg2)
-      CALL OpenBOutFile (unOut, FileName, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev)  then
+      !$OMP critical(fileopen)
+      CALL GetNewUnit( unOut, ErrStat2, ErrMsg2 )
+      CALL OpenBOutFile ( unOut, FileName, ErrStat2, ErrMsg2)
+      !$OMP end critical(fileopen)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev ) then
             IF (.NOT. PRESENT(Unit)) THEN
                CLOSE(unOut)
                unOut = -1
@@ -7256,11 +7277,12 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
 
    IF ( unIn < 0 ) THEN
 
+      !$OMP critical(fileopen)
       CALL GetNewUnit( unIn, ErrStat2, ErrMsg2 )
-
-      CALL OpenBInpFile(unIn, FileName, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev ) return
+      CALL OpenBInpFile ( unIn, FileName, ErrStat2, ErrMsg2)
+      !$OMP end critical(fileopen)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev ) RETURN
 
       READ (unIn, IOSTAT=ErrStat2)   AbortErrLev   ! Abort error level
       READ (unIn, IOSTAT=ErrStat2)   NumTurbines   ! Number of turbines
@@ -7637,9 +7659,11 @@ SUBROUTINE ReadModeShapeMatlabFile(p_FAST, ErrStat, ErrMsg)
    ErrMsg  = ""
 
       !  Open data file.
+   !$OMP critical(fileopen)
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
 
    CALL OpenBInpFile ( UnIn, trim(p_FAST%VTK_modes%MatlabFileName), ErrStat2, ErrMsg2 )
+   !$OMP end critical(fileopen)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7763,9 +7787,11 @@ SUBROUTINE ReadModeShapeFile(p_FAST, InputFile, ErrStat, ErrMsg, checkpointOnly)
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
       !  Open data file.
+   !$OMP critical(fileopen)
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
 
    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+   !$OMP end critical(fileopen)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 

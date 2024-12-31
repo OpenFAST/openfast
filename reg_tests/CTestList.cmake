@@ -104,7 +104,7 @@ endfunction(of_aeromap_regression)
 
 function(of_fastlib_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
-  set(OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast_cpp_driver")
+  set(OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast_lib_driver")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
   # extra flag in call to "regression" on next line sets the ${TESTDIR}
@@ -121,12 +121,13 @@ function(of_regression_aeroacoustic TESTNAME LABEL)
 endfunction(of_regression_aeroacoustic)
 
 # FAST Farm
-function(ff_regression TESTNAME LABEL)
+function(ff_regression TESTNAME OTHER_FLAGS LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeFASTFarmRegressionCase.py")
   set(FASTFARM_EXECUTABLE "${CTEST_FASTFARM_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/fast-farm")
-  regression(${TEST_SCRIPT} ${FASTFARM_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}" " ")
+  set(OTHER_FLAGS "${OTHER_FLAGS}")    # Set name of file to compare, otherwise default
+  regression(${TEST_SCRIPT} ${FASTFARM_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}" "${OTHER_FLAGS}")
 endfunction(ff_regression)
 
 # openfast linearized
@@ -292,6 +293,19 @@ endfunction(sed_regression)
 #   add_test(${TESTNAME} ${Python_EXECUTABLE} ${test_module} ${input_file} )
 # endfunction(py_openfast_library_regression)
 
+# Python-based OpenFAST IO Library tests
+function(py_openfast_io_library_pytest TESTNAME LABEL)
+  set(module "-m")
+  set(pytest "pytest")
+  set(pytestVerbose "--verbose")
+  set(py_test_file "${CMAKE_CURRENT_LIST_DIR}/../openfast_io/openfast_io/tests/test_of_io_pytest.py")
+  set(executable "--executable=${CTEST_OPENFAST_EXECUTABLE}")
+  set(source_dir "--source_dir=${CMAKE_CURRENT_LIST_DIR}/..")
+  set(build_dir "--build_dir=${CTEST_BINARY_DIR}")
+  add_test(${TESTNAME} ${Python_EXECUTABLE} ${module} ${pytest} ${pytestVerbose} ${py_test_file} ${executable} ${source_dir} ${build_dir})
+  set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")
+endfunction(py_openfast_io_library_pytest)
+
 
 #===============================================================================
 # Regression tests
@@ -347,11 +361,11 @@ if(BUILD_OPENFAST_CPP_DRIVER)
   of_cpp_interface_regression("5MW_Restart_cpp"        "openfast;fastlib;cpp;restart")
 endif()
 
-# OpenFAST C++ Driver test for OpenFAST Library
+# OpenFAST Driver test for OpenFAST C++ Library
 # This tests the FAST Library and FAST_Library.h
-if(BUILD_OPENFAST_CPP_DRIVER)
+if(BUILD_OPENFAST_LIB_DRIVER)
   of_fastlib_regression("AWT_YFree_WSt"                    "fastlib;elastodyn;aerodyn;servodyn")
-endif(BUILD_OPENFAST_CPP_DRIVER)
+endif()
 
 # OpenFAST Python API test
 of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;fastlib;python;elastodyn;aerodyn;servodyn")
@@ -387,12 +401,13 @@ of_regression_linear("5MW_OC3Mnpl_Linear"             ""                "openfas
 
 # FAST Farm regression tests
 if(BUILD_FASTFARM)
-  ff_regression("TSinflow"  "fastfarm")
-  ff_regression("LESinflow"  "fastfarm")
-#   ff_regression("Uninflow_curl"  "fastfarm")
-  ff_regression("TSinflow_curl"  "fastfarm")
-  ff_regression("ModAmb_3"  "fastfarm")
-  ff_regression("TSinflowADskSED"  "fastfarm;aerodisk;simple-elastodyn")
+  ff_regression("TSinflow"          ""                               "fastfarm")
+  ff_regression("LESinflow"         ""                               "fastfarm")
+# ff_regression("Uninflow_curl"     ""                               "fastfarm")
+  ff_regression("TSinflow_curl"     ""                               "fastfarm")
+  ff_regression("ModAmb_3"          ""                               "fastfarm")
+  ff_regression("TSinflowADskSED"   ""                               "fastfarm;aerodisk;simple-elastodyn")
+  ff_regression("MD_Shared"         "-compFile=FAST.Farm.FarmMD.MD"  "fastfarm;moordyn")
 endif()
 
 # AeroDyn regression tests
@@ -509,6 +524,9 @@ md_regression("md_vertical"                                   "moordyn")
 py_md_regression("py_md_5MW_OC4Semi"                          "moordyn;python")
 # the following tests are excessively slow in double precision, so skip these in normal testing
 #md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")
+
+#  OpenFAST IO Library regression tests
+py_openfast_io_library_pytest("openfast_io_library" "openfast_io;python")
 
 # AeroDisk regression tests
 adsk_regression("adsk_timeseries_shutdown"                    "aerodisk")

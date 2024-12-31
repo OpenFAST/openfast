@@ -170,8 +170,14 @@ typedef	^	ED_InputFile	ReKi	TeetSSSp	-	-	-	"Rotor-teeter soft-stop linear-spring
 typedef	^	ED_InputFile	ReKi	TeetHSSp	-	-	-	"Rotor-teeter hard-stop linear-spring constant"	N-m/rad
 typedef ^       ED_InputFile    IntKi   YawFrctMod      -       -       -       "Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], 2 [does use Fz at bearing], or 3 [user defined model]"     -
 typedef ^       ED_InputFile    R8Ki    M_CD    -       -       -       "Dynamic friction moment at null yaw rate"      N-m
+typedef ^       ED_InputFile    R8Ki    M_FCD   -       -       -       "Dynamic friction moment at null yaw rate proportional to yaw bearing shear force"      N-m
+typedef ^       ED_InputFile    R8Ki    M_MCD   -       -       -       "Dynamic friction moment at null yaw rate proportional to yaw bearing bending moment"   N-m
 typedef ^       ED_InputFile    R8Ki    M_CSMAX -       -       -       "Maximum Coulomb friction torque" N-m
-typedef ^       ED_InputFile    R8Ki    sig_v   -       -       -       "Viscous friction coefficient"  N-m/(rad/s)
+typedef ^       ED_InputFile    R8Ki    M_FCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing shear force"    N-m
+typedef ^       ED_InputFile    R8Ki    M_MCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing bending moment" N-m
+typedef ^       ED_InputFile    R8Ki    sig_v   -       -       -       "Linear viscous friction coefficient"     N-m/(rad/s)
+typedef ^       ED_InputFile    R8Ki    sig_v2  -       -       -       "Quadratic viscous friction coefficient"  N-m/(rad/s)^2
+typedef ^       ED_InputFile    R8Ki    OmgCut  -       -       -       "Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized"  rad/s
 typedef	^	ED_InputFile	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"	%
 typedef	^	ED_InputFile	ReKi	GBRatio	-	-	-	"Gearbox ratio"	-
 typedef	^	ED_InputFile	ReKi	DTTorSpr	-	-	-	"Drivetrain torsional spring"	N-m/rad
@@ -753,8 +759,14 @@ typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is
 typedef	^	ParameterType	LOGICAL	RigidAero	-	-	-	"flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used"	-
 typedef ^       ParameterType   IntKi   YawFrctMod      -       -       -       "Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], or 2 [does use Fz at bearing]"     -
 typedef ^       ParameterType   R8Ki    M_CD    -       -       -       "Dynamic friction moment at null yaw rate"      N-m
+typedef ^       ParameterType   R8Ki    M_FCD   -       -       -       "Dynamic friction moment at null yaw rate proportional to yaw bearing shear force"      N-m
+typedef ^       ParameterType   R8Ki    M_MCD   -       -       -       "Dynamic friction moment at null yaw rate proportional to yaw bearing bending moment"   N-m
 typedef ^       ParameterType   R8Ki    M_CSMAX -       -       -       "Maximum Coulomb friction torque"       N-m
-typedef ^       ParameterType   R8Ki    sig_v   -       -       -       "Viscous friction coefficient"  N-m/(rad/s)
+typedef ^       ParameterType   R8Ki    M_FCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing shear force"       N-m
+typedef ^       ParameterType   R8Ki    M_MCSMAX -      -       -       "Maximum Coulomb friction torque proportional to yaw bearing bending moment"    N-m
+typedef ^       ParameterType   R8Ki    sig_v   -       -       -       "Linear viscous friction coefficient"     N-m/(rad/s)
+typedef ^       ParameterType   R8Ki    sig_v2  -       -       -       "Quadratic viscous friction coefficient"  N-m/(rad/s)^2
+typedef ^       ParameterType   R8Ki    OmgCut  -       -       -       "Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized"  rad/s
 #typedef        ^       ParameterType   R8Ki    thr_omg -       -       -       "Yaw rate stiction threshold"   rad/s
 #typedef        ^       ParameterType   R8Ki    thr_omgdot      -       -       -       "Yaw acceleration stiction threshold"   rad/s^2
 
@@ -844,7 +856,8 @@ typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	
 typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
 typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
 typedef ^       MiscVarType     ReKi    OgnlYawRow      {:}     -       -       "Original DOF_Yaw row in AugMat"        -
-typedef ^       MiscVarType     ReKi    FrcONcRt        -       -       -       "Fz acting on yaw bearing including inertial contributions"     N
+typedef ^       MiscVarType     ReKi    FrcONcRt        3       -       -       "Force acting on yaw bearing including inertial contributions"     N
+typedef ^       MiscVarType     ReKi    MomONcRt        3       -       -       "Moment acting on yaw bearing including inertial contributions"    N-m
 typedef ^       MiscVarType     ReKi    YawFriMz      -       -       -       "External loading on yaw bearing not including inertial contributions"  N-m
 typedef	^	MiscVarType	ModJacType	Jac	-	-	-   "Values corresponding to module variables"
 typedef	^	MiscVarType	ED_ContinuousStateType	x_perturb	-	-	-	""	-

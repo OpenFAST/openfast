@@ -193,8 +193,14 @@ IMPLICIT NONE
     REAL(ReKi)  :: TeetHSSp = 0.0_ReKi      !< Rotor-teeter hard-stop linear-spring constant [N-m/rad]
     INTEGER(IntKi)  :: YawFrctMod = 0_IntKi      !< Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], 2 [does use Fz at bearing], or 3 [user defined model] [-]
     REAL(R8Ki)  :: M_CD = 0.0_R8Ki      !< Dynamic friction moment at null yaw rate [N-m]
+    REAL(R8Ki)  :: M_FCD = 0.0_R8Ki      !< Dynamic friction moment at null yaw rate proportional to yaw bearing shear force [N-m]
+    REAL(R8Ki)  :: M_MCD = 0.0_R8Ki      !< Dynamic friction moment at null yaw rate proportional to yaw bearing bending moment [N-m]
     REAL(R8Ki)  :: M_CSMAX = 0.0_R8Ki      !< Maximum Coulomb friction torque [N-m]
-    REAL(R8Ki)  :: sig_v = 0.0_R8Ki      !< Viscous friction coefficient [N-m/(rad/s)]
+    REAL(R8Ki)  :: M_FCSMAX = 0.0_R8Ki      !< Maximum Coulomb friction torque proportional to yaw bearing shear force [N-m]
+    REAL(R8Ki)  :: M_MCSMAX = 0.0_R8Ki      !< Maximum Coulomb friction torque proportional to yaw bearing bending moment [N-m]
+    REAL(R8Ki)  :: sig_v = 0.0_R8Ki      !< Linear viscous friction coefficient [N-m/(rad/s)]
+    REAL(R8Ki)  :: sig_v2 = 0.0_R8Ki      !< Quadratic viscous friction coefficient [N-m/(rad/s)^2]
+    REAL(R8Ki)  :: OmgCut = 0.0_R8Ki      !< Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized [rad/s]
     REAL(ReKi)  :: GBoxEff = 0.0_ReKi      !< Gearbox efficiency [%]
     REAL(ReKi)  :: GBRatio = 0.0_ReKi      !< Gearbox ratio [-]
     REAL(ReKi)  :: DTTorSpr = 0.0_ReKi      !< Drivetrain torsional spring [N-m/rad]
@@ -758,8 +764,14 @@ IMPLICIT NONE
     LOGICAL  :: RigidAero = .false.      !< flag to determine if ElastoDyn if blades are rigid for aero -- when AeroDisk is used [-]
     INTEGER(IntKi)  :: YawFrctMod = 0_IntKi      !< Identifier for YawFrctMod (0 [no friction], 1 [does not use Fz at bearing], or 2 [does use Fz at bearing] [-]
     REAL(R8Ki)  :: M_CD = 0.0_R8Ki      !< Dynamic friction moment at null yaw rate [N-m]
+    REAL(R8Ki)  :: M_FCD = 0.0_R8Ki      !< Dynamic friction moment at null yaw rate proportional to yaw bearing shear force [N-m]
+    REAL(R8Ki)  :: M_MCD = 0.0_R8Ki      !< Dynamic friction moment at null yaw rate proportional to yaw bearing bending moment [N-m]
     REAL(R8Ki)  :: M_CSMAX = 0.0_R8Ki      !< Maximum Coulomb friction torque [N-m]
-    REAL(R8Ki)  :: sig_v = 0.0_R8Ki      !< Viscous friction coefficient [N-m/(rad/s)]
+    REAL(R8Ki)  :: M_FCSMAX = 0.0_R8Ki      !< Maximum Coulomb friction torque proportional to yaw bearing shear force [N-m]
+    REAL(R8Ki)  :: M_MCSMAX = 0.0_R8Ki      !< Maximum Coulomb friction torque proportional to yaw bearing bending moment [N-m]
+    REAL(R8Ki)  :: sig_v = 0.0_R8Ki      !< Linear viscous friction coefficient [N-m/(rad/s)]
+    REAL(R8Ki)  :: sig_v2 = 0.0_R8Ki      !< Quadratic viscous friction coefficient [N-m/(rad/s)^2]
+    REAL(R8Ki)  :: OmgCut = 0.0_R8Ki      !< Nacelle yaw angular velocity cutoff below which viscous friction is to be linearized [rad/s]
     INTEGER(IntKi)  :: BldNd_NumOuts = 0_IntKi      !< Number of requested output channels per blade node (ED_AllBldNdOuts) [-]
     INTEGER(IntKi)  :: BldNd_TotNumOuts = 0_IntKi      !< Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -844,7 +856,8 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QD2T      !< Solution (acceleration) vector; the first time derivative of QDT [-]
     LOGICAL  :: IgnoreMod = .false.      !< whether to ignore the modulo in ED outputs (necessary for linearization perturbations) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OgnlYawRow      !< Original DOF_Yaw row in AugMat [-]
-    REAL(ReKi)  :: FrcONcRt = 0.0_ReKi      !< Fz acting on yaw bearing including inertial contributions [N]
+    REAL(ReKi) , DIMENSION(1:3)  :: FrcONcRt = 0.0_ReKi      !< Force acting on yaw bearing including inertial contributions [N]
+    REAL(ReKi) , DIMENSION(1:3)  :: MomONcRt = 0.0_ReKi      !< Moment acting on yaw bearing including inertial contributions [N-m]
     REAL(ReKi)  :: YawFriMz = 0.0_ReKi      !< External loading on yaw bearing not including inertial contributions [N-m]
     TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
     TYPE(ED_ContinuousStateType)  :: x_perturb      !<  [-]
@@ -1750,8 +1763,14 @@ subroutine ED_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%TeetHSSp = SrcInputFileData%TeetHSSp
    DstInputFileData%YawFrctMod = SrcInputFileData%YawFrctMod
    DstInputFileData%M_CD = SrcInputFileData%M_CD
+   DstInputFileData%M_FCD = SrcInputFileData%M_FCD
+   DstInputFileData%M_MCD = SrcInputFileData%M_MCD
    DstInputFileData%M_CSMAX = SrcInputFileData%M_CSMAX
+   DstInputFileData%M_FCSMAX = SrcInputFileData%M_FCSMAX
+   DstInputFileData%M_MCSMAX = SrcInputFileData%M_MCSMAX
    DstInputFileData%sig_v = SrcInputFileData%sig_v
+   DstInputFileData%sig_v2 = SrcInputFileData%sig_v2
+   DstInputFileData%OmgCut = SrcInputFileData%OmgCut
    DstInputFileData%GBoxEff = SrcInputFileData%GBoxEff
    DstInputFileData%GBRatio = SrcInputFileData%GBRatio
    DstInputFileData%DTTorSpr = SrcInputFileData%DTTorSpr
@@ -2119,8 +2138,14 @@ subroutine ED_PackInputFile(RF, Indata)
    call RegPack(RF, InData%TeetHSSp)
    call RegPack(RF, InData%YawFrctMod)
    call RegPack(RF, InData%M_CD)
+   call RegPack(RF, InData%M_FCD)
+   call RegPack(RF, InData%M_MCD)
    call RegPack(RF, InData%M_CSMAX)
+   call RegPack(RF, InData%M_FCSMAX)
+   call RegPack(RF, InData%M_MCSMAX)
    call RegPack(RF, InData%sig_v)
+   call RegPack(RF, InData%sig_v2)
+   call RegPack(RF, InData%OmgCut)
    call RegPack(RF, InData%GBoxEff)
    call RegPack(RF, InData%GBRatio)
    call RegPack(RF, InData%DTTorSpr)
@@ -2319,8 +2344,14 @@ subroutine ED_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%TeetHSSp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%YawFrctMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_CD); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_FCD); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_MCD); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_CSMAX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_FCSMAX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_MCSMAX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%sig_v); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%sig_v2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OmgCut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GBoxEff); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GBRatio); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DTTorSpr); if (RegCheckErr(RF, RoutineName)) return
@@ -5712,8 +5743,14 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%RigidAero = SrcParamData%RigidAero
    DstParamData%YawFrctMod = SrcParamData%YawFrctMod
    DstParamData%M_CD = SrcParamData%M_CD
+   DstParamData%M_FCD = SrcParamData%M_FCD
+   DstParamData%M_MCD = SrcParamData%M_MCD
    DstParamData%M_CSMAX = SrcParamData%M_CSMAX
+   DstParamData%M_FCSMAX = SrcParamData%M_FCSMAX
+   DstParamData%M_MCSMAX = SrcParamData%M_MCSMAX
    DstParamData%sig_v = SrcParamData%sig_v
+   DstParamData%sig_v2 = SrcParamData%sig_v2
+   DstParamData%OmgCut = SrcParamData%OmgCut
    DstParamData%BldNd_NumOuts = SrcParamData%BldNd_NumOuts
    DstParamData%BldNd_TotNumOuts = SrcParamData%BldNd_TotNumOuts
    if (allocated(SrcParamData%BldNd_OutParam)) then
@@ -6209,8 +6246,14 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%RigidAero)
    call RegPack(RF, InData%YawFrctMod)
    call RegPack(RF, InData%M_CD)
+   call RegPack(RF, InData%M_FCD)
+   call RegPack(RF, InData%M_MCD)
    call RegPack(RF, InData%M_CSMAX)
+   call RegPack(RF, InData%M_FCSMAX)
+   call RegPack(RF, InData%M_MCSMAX)
    call RegPack(RF, InData%sig_v)
+   call RegPack(RF, InData%sig_v2)
+   call RegPack(RF, InData%OmgCut)
    call RegPack(RF, InData%BldNd_NumOuts)
    call RegPack(RF, InData%BldNd_TotNumOuts)
    call RegPack(RF, allocated(InData%BldNd_OutParam))
@@ -6472,8 +6515,14 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%RigidAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%YawFrctMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_CD); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_FCD); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_MCD); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M_CSMAX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_FCSMAX); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%M_MCSMAX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%sig_v); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%sig_v2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OmgCut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldNd_NumOuts); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BldNd_TotNumOuts); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BldNd_OutParam)) deallocate(OutData%BldNd_OutParam)
@@ -7085,6 +7134,7 @@ subroutine ED_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%OgnlYawRow = SrcMiscData%OgnlYawRow
    end if
    DstMiscData%FrcONcRt = SrcMiscData%FrcONcRt
+   DstMiscData%MomONcRt = SrcMiscData%MomONcRt
    DstMiscData%YawFriMz = SrcMiscData%YawFriMz
    call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -7169,6 +7219,7 @@ subroutine ED_PackMisc(RF, Indata)
    call RegPack(RF, InData%IgnoreMod)
    call RegPackAlloc(RF, InData%OgnlYawRow)
    call RegPack(RF, InData%FrcONcRt)
+   call RegPack(RF, InData%MomONcRt)
    call RegPack(RF, InData%YawFriMz)
    call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call ED_PackContState(RF, InData%x_perturb) 
@@ -7198,6 +7249,7 @@ subroutine ED_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%IgnoreMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OgnlYawRow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FrcONcRt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MomONcRt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%YawFriMz); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call ED_UnpackContState(RF, OutData%x_perturb) ! x_perturb 

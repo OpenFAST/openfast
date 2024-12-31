@@ -785,6 +785,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    type(MD_InitInputType)                         :: MD_InitInp
    type(MD_InitOutputType)                        :: MD_InitOut
 
+   character(1025)                                :: Path, FileRoot                  ! for vtk outputs
    INTEGER(IntKi)                                 :: nt                              ! loop counter for rotor number
    INTEGER(IntKi)                                 :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                           :: ErrMsg2                         ! Temporary Error message
@@ -846,6 +847,14 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    MD_InitInp%rhoW      = 1025.0
    MD_InitInp%WtrDepth  =    0.0   !TODO: eventually connect this to a global depth input variable <<<
 
+   ! Visualization of shared moorings
+   if (farm%p%WrMooringVis) then
+      MD_InitInp%VisMeshes=.true.
+      farm%MD%VTK_Count = 0
+      call GetPath ( MD_InitInp%RootName, Path, FileRoot ) ! the returned DVR_Outs%VTK_OutFileRoot includes a file separator character at the end
+      farm%MD%VTK_OutFileRoot = trim(Path)//PathSep//'vtk'//PathSep//trim(FileRoot)
+      farm%MD%VTK_TWidth = 5        !FIXME: this should be set based on sim length
+   endif
 
    ! allocate MoorDyn inputs (assuming size 2 for linear interpolation/extrapolation... >
    ALLOCATE( farm%MD%Input( 2 ), farm%MD%InputTimes( 2 ), STAT = ErrStat2 )
@@ -1008,7 +1017,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          
       end if
    end do
-   
+
 
 contains
    logical function Failed()
@@ -1659,7 +1668,7 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
-   INTEGER(IntKi)                          :: nt                    
+   INTEGER(IntKi)                          :: nt,j
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_CalcOutput'
@@ -1757,6 +1766,31 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    call Farm_WriteOutput(n, t, farm, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
+   !.......................................................................................
+   ! Write shared moorings visualization
+   !.......................................................................................
+
+   ! Write visualization meshes
+   if (farm%p%MooringMod == 3) then
+      if (farm%MD%p%VisMeshes) then
+         if (allocated(farm%MD%y%VisLinesMesh)) then
+            do j=1,size(farm%MD%y%VisLinesMesh)
+               if (farm%MD%y%VisLinesMesh(j)%Committed) then
+                  call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), farm%MD%y%VisLinesMesh(j), trim(farm%MD%VTK_OutFileRoot)//'.MD_Line'//trim(Num2LStr(j)), farm%MD%VTK_count, .false., ErrSTat2, ErrMsg2, farm%MD%VTK_tWidth )
+               endif
+            enddo
+         endif
+         if (allocated(farm%MD%y%VisRodsMesh)) then
+            do j=1,size(farm%MD%y%VisRodsMesh)
+               if (farm%MD%y%VisRodsMesh(j)%Committed) then
+                  call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), farm%MD%y%VisRodsMesh(j), trim(farm%MD%VTK_OutFileRoot)//'.MD_Rod'//trim(Num2LStr(j)), farm%MD%VTK_count, .false., ErrSTat2, ErrMsg2, farm%MD%VTK_tWidth )
+               endif
+            enddo
+         endif
+         farm%MD%VTK_Count = farm%MD%VTK_Count + 1
+      endif
+   endif
+
  !  write(*,*) 'Total Farm_CO-serial took '//trim(num2lstr(omp_get_wtime()-tm1))//' seconds.' 
    
 end subroutine FARM_CalcOutput
@@ -1843,7 +1877,7 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    
       !--------------
       ! 6. End farm-level MoorDyn
-   if (farm%p%MooringMod == 3) then
+   if (farm%p%MooringMod == 3 .and. allocated(farm%MD%Input)) then
       call MD_End(farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       !TODO: any related items need to be cleared?

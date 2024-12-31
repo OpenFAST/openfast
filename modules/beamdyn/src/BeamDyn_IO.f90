@@ -588,9 +588,11 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
+   !$OMP critical(filename)
    CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL OpenFInpFile(UnIn,InputFile,ErrStat2,ErrMsg2)
+   !$OMP end critical(filename)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -1046,9 +1048,11 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   !$OMP critical(filename)
    CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL OpenFInpFile (UnIn,BldFile,ErrStat2,ErrMsg2)
+   !$OMP end critical(filename)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev) then
             return
@@ -1938,8 +1942,10 @@ SUBROUTINE BD_PrintSum( p, x, OtherState, m, InitInp, ErrStat, ErrMsg )
 
    ! Open the summary file and give it a heading.
 
+   !$OMP critical(filename)
    CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
    CALL OpenFOutFile ( UnSu, TRIM( InitInp%RootName )//'.sum.yaml', ErrStat, ErrMsg )
+   !$OMP end critical(filename)
    IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! Heading:

@@ -1014,9 +1014,11 @@ ErrMsg  = ""
 UnEc = -1 
 Echo = .FALSE.
 
+!$OMP critical(fileopen)
 CALL GetNewUnit( UnIn )   
   
 CALL OpenFInpfile(UnIn, TRIM(SDInputFile), ErrStat2, ErrMsg2)
+!$OMP end critical(fileopen)
 
 IF ( ErrStat2 /= ErrID_None ) THEN
    Call Fatal('Could not open SubDyn input file')
@@ -3606,6 +3608,7 @@ END SUBROUTINE OutModes
 
 
 !> Write the common part of the JSON file (Nodes, Connectivity, Element prop)
+!FIXME: error handling is broken here!!!
 SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, ErrStat, ErrMsg)
    use JSON, only: json_write_array
    TYPE(SD_InitType),          INTENT(INOUT)  :: Init           !< Input data for initialization routine
@@ -3627,8 +3630,10 @@ SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, Err
 
    ! --- Create file  and get unit
    UnSum = -1 ! we haven't opened the summary file, yet.   
+   !$OMP critical(fileopen)
    call GetNewUnit( UnSum )
    call OpenFOutFile ( UnSum, FileName, ErrStat2, ErrMsg2 ) 
+   !$OMP end critical(fileopen)
    write(UnSum, '(A)')'{'
 
    ! --- Misc

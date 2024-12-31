@@ -40,7 +40,8 @@ public :: IfW_SteadyWind_Init, &
 public :: Uniform_WriteHH, &
           Grid3D_WriteBladed, &
           Grid3D_WriteHAWC, &
-          Grid3D_WriteVTK
+          Grid3D_WriteVTK, &
+          Grid3D_WriteVTKsliceXY
 
 type(ProgDesc), parameter :: InflowWind_IO_Ver = ProgDesc('InflowWind_IO', '', '')
 
@@ -249,12 +250,8 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
    UF%RefHeight = InitInp%RefHt
    UF%RefLength = InitInp%RefLength
 
-   ! Read wind data from file or init input data
-   if (InitInp%UseInputFile) then
-      call ProcessComFile(InitInp%WindFileName, WindFileInfo, TmpErrStat, TmpErrMsg)
-   else
-      call NWTC_Library_CopyFileInfoType(InitInp%PassedFileInfo, WindFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
-   end if
+   ! Read wind data from file
+   call ProcessComFile(InitInp%WindFileName, WindFileInfo, TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -605,12 +602,13 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Get a unit number to use for the wind file
+   !$OMP critical(fileopen)
    call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
-   ! Open binary file
-   call OpenBInpFile(WindFileUnit, TRIM(InitInp%WindFileName), TmpErrStat, TmpErrMsg)
+   if (TmpErrStat < AbortErrLev) then
+      ! Open binary file
+      call OpenBInpFile(WindFileUnit, TRIM(InitInp%WindFileName), TmpErrStat, TmpErrMsg)
+   endif
+   !$OMP end critical(fileopen)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -970,16 +968,17 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
               TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2))// &
               ' m above ground) with a characteristic wind speed of '//TRIM(Num2LStr(G3D%MeanWS))//' m/s. ')
 
-   ! Get a unit number to use for the wind file
-   call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
    ! Loop through wind components (X, Y, Z)
    do IC = 1, G3D%NComp
 
-      ! Open wind file for this component
-      call OpenBInpFile(WindFileUnit, InitInp%WindFileName(IC), TmpErrStat, TmpErrMsg)
+      ! Get a unit number to use for the wind file
+      !$OMP critical(fileopen)
+      call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
+      if (TmpErrStat < AbortErrLev) then
+         ! Open wind file for this component
+         call OpenBInpFile(WindFileUnit, InitInp%WindFileName(IC), TmpErrStat, TmpErrMsg)
+      endif
+      !$OMP end critical(fileopen)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
@@ -1209,16 +1208,18 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
    end if
 
    ! Get a unit number to use
+   !$OMP critical(fileopen)
    call GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   if (TmpErrStat < AbortErrLev) then
 
    !----------------------------------------------------------------------------
    ! Open the binary file, read its "header" (first 2-byte integer) to
    ! determine what format binary file it is, and close it.
    !----------------------------------------------------------------------------
 
-   call OpenBInpFile(UnitWind, TRIM(BinFileName), TmpErrStat, TmpErrMsg)
+      call OpenBInpFile(UnitWind, TRIM(BinFileName), TmpErrStat, TmpErrMsg)
+   endif
+   !$OMP end critical(fileopen)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -3010,5 +3011,88 @@ subroutine Grid3D_WriteHAWC(G3D, FileRootName, unit, ErrStat, ErrMsg)
    end do
 
 end subroutine Grid3D_WriteHAWC
+
+
+!> This subroutine writes a VTK slice in the XY plane at a designated height (rounds to nearest point)
+!! This feature is mostly useful for testing when a grid is needed for comparison elsewhere
+subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, vtk_dir, XYslice_height, unit, ErrStat, ErrMsg)
+   type(Grid3DFieldType),  intent(in   )  :: G3D            !< Parameters
+   character(*),           intent(in   )  :: FileRootName   !< RootName for output files
+   character(*),           intent(in   )  :: vtk_dir        !< directory for vtk file for output files
+   real(ReKi),             intent(in   )  :: XYslice_height
+   integer(IntKi),         intent(in   )  :: unit           !< Error status of the operation
+   integer(IntKi),         intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),           intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter                :: RoutineName = 'Grid3D_WriteVTKsliceXY'
+   character(1024)                        :: RootPathName
+   character(1024)                        :: FileName
+   character(3)                           :: ht_str
+   character(8)                           :: t_str, t_fmt
+   integer                                :: it, ix, iy, iz, twidth
+   real(ReKi)                             :: time        !< time for this slice
+   real(ReKi)                             :: ht          !< nearest grid slice elevation
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   call GetPath(FileRootName, RootPathName)
+   RootPathName = trim(RootPathName)//PathSep//vtk_dir
+   call MkDir(trim(RootPathName))  ! make this directory if it doesn't already exist
+
+   ! get indices for this slice
+   iz    = nint((G3D%GridBase + XYslice_height)*G3D%InvDZ)
+   ht    = real(iz,ReKi) / G3D%InvDZ + G3D%GridBase         ! nearest height index
+   write(ht_str,'(i0.3)') nint(ht)
+
+   ! get width of string for time
+   twidth=ceiling(log10(real(G3D%NSteps)))
+   t_fmt='(i0.'//trim(Num2LStr(twidth))//')'
+
+   ! check for errors in slice height
+   if (iz <= 0_IntKi .or. iz > G3D%NZGrids) then
+      call SetErrStat(ErrID_Warn,"No grid points near XY slice height of "//trim(num2lstr(XYslice_height))//".  Skipping writing slice file.",ErrStat,ErrMsg,RoutineName)
+      return
+   endif
+
+   ! Loop through time steps
+   do it = 1, G3D%NSteps
+      time  = real(it - 1, ReKi)*G3D%DTime
+
+      ! time string
+      write(t_str,t_fmt) it
+
+      ! Create the output vtk file with naming <WindFilePath>/vtk/DisYZ.t<i>.vtk
+      FileName = trim(RootPathName)//PathSep//"DisXY.Z"//ht_str//".t"//trim(t_str)//".vtp"
+ 
+      ! see WrVTK_SP_header
+      call OpenFOutFile(unit, TRIM(FileName), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+ 
+      write (unit, '(A)') '# vtk DataFile Version 3.0'
+      write (unit, '(A)') "InflowWind XY Slice at T= "//trim(num2lstr(time))//" s"
+      write (unit, '(A)') 'ASCII'
+      write (unit, '(A)') 'DATASET STRUCTURED_POINTS'
+ 
+      ! Note: gridVals must be stored such that the left-most dimension is X
+      ! and the right-most dimension is Z (see WrVTK_SP_vectors3D)
+      write (unit, '(A,3(i5,1X))') 'DIMENSIONS ', G3D%NSteps, G3D%NYGrids, 1
+      write (unit, '(A,3(f10.2,1X))') 'ORIGIN ', G3D%InitXPosition+time*G3D%MeanWS, -G3D%YHWid, ht
+      write (unit, '(A,3(f10.2,1X))') 'SPACING ', -G3D%Dtime*G3D%MeanWS, 1.0_ReKi/G3D%InvDY, 0.0_ReKi
+      write (unit, '(A,i9)') 'POINT_DATA ', G3D%NSteps*G3D%NYGrids
+      write (unit, '(A)') 'VECTORS DisXY float'
+
+      do iy = 1, G3D%NYGrids
+         do ix = 1, G3D%NSteps      ! time and X are interchangeable
+            write (unit, '(3(f10.2,1X))') G3D%Vel(:, iy, iz, ix)
+         end do
+      end do
+
+      close (unit)
+   enddo
+end subroutine Grid3D_WriteVTKsliceXY
 
 end module InflowWind_IO

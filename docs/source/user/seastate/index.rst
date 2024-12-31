@@ -1,3 +1,5 @@
+.. _SeaSt:
+
 SeaState User Guide and Theory Manual
 =====================================
 

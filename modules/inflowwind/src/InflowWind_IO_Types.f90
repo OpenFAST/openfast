@@ -70,7 +70,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: RefLength = 0.0_ReKi      !< Reference length for linear horizontal and vertical sheer [-]
     REAL(ReKi)  :: PropagationDir = 0.0_ReKi      !< Direction of wind propagation [radians]
     LOGICAL  :: UseInputFile = .true.      !< Flag for toggling file based IO in wind type 2. [-]
-    TYPE(FileInfoType)  :: PassedFileInfo      !< Optional slot for wind type 2 data if file IO is not used. [-]
   END TYPE Uniform_InitInputType
 ! =======================
 ! =========  Grid3D_InitInputType  =======
@@ -282,8 +281,6 @@ subroutine InflowWind_IO_CopyUniform_InitInputType(SrcUniform_InitInputTypeData,
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyUniform_InitInputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -292,22 +289,15 @@ subroutine InflowWind_IO_CopyUniform_InitInputType(SrcUniform_InitInputTypeData,
    DstUniform_InitInputTypeData%RefLength = SrcUniform_InitInputTypeData%RefLength
    DstUniform_InitInputTypeData%PropagationDir = SrcUniform_InitInputTypeData%PropagationDir
    DstUniform_InitInputTypeData%UseInputFile = SrcUniform_InitInputTypeData%UseInputFile
-   call NWTC_Library_CopyFileInfoType(SrcUniform_InitInputTypeData%PassedFileInfo, DstUniform_InitInputTypeData%PassedFileInfo, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine InflowWind_IO_DestroyUniform_InitInputType(Uniform_InitInputTypeData, ErrStat, ErrMsg)
    type(Uniform_InitInputType), intent(inout) :: Uniform_InitInputTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyUniform_InitInputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call NWTC_Library_DestroyFileInfoType(Uniform_InitInputTypeData%PassedFileInfo, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_IO_PackUniform_InitInputType(RF, Indata)
@@ -320,7 +310,6 @@ subroutine InflowWind_IO_PackUniform_InitInputType(RF, Indata)
    call RegPack(RF, InData%RefLength)
    call RegPack(RF, InData%PropagationDir)
    call RegPack(RF, InData%UseInputFile)
-   call NWTC_Library_PackFileInfoType(RF, InData%PassedFileInfo) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -334,7 +323,6 @@ subroutine InflowWind_IO_UnPackUniform_InitInputType(RF, OutData)
    call RegUnpack(RF, OutData%RefLength); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PropagationDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UseInputFile); if (RegCheckErr(RF, RoutineName)) return
-   call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileInfo) ! PassedFileInfo 
 end subroutine
 
 subroutine InflowWind_IO_CopyGrid3D_InitInputType(SrcGrid3D_InitInputTypeData, DstGrid3D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)

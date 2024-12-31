@@ -42,7 +42,7 @@ option(CTEST_NO_RUN_FLAG  "Complete the regression test comparison but do not ex
 # Set the OpenFAST executable configuration option and default
 set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
-if(BUILD_OPENFAST_CPP_API)
+if(BUILD_OPENFAST_CPP_DRIVER)
   # Set the OpenFAST executable configuration option and default
   set(CTEST_OPENFASTCPP_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast-cpp/openfastcpp${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the OpenFAST C++ executable to use in testing.")
 endif()
@@ -90,7 +90,7 @@ add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/r-test")
 
 # build and seed the test directories with the data they need to run the tests
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
-foreach(regTest glue-codes/openfast glue-codes/openfast-cpp modules/aerodyn modules/beamdyn modules/hydrodyn modules/inflowwind modules/moordyn modules/subdyn)
+foreach(regTest glue-codes/openfast glue-codes/openfast-cpp modules/aerodyn modules/beamdyn modules/hydrodyn modules/inflowwind modules/moordyn modules/subdyn openfast_io)
   file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
 
