@@ -623,7 +623,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   WRITE( InputFileData%UnSum, '(1X,I10,2X,E12.5)',ADVANCE='no' ) K, K*p%WAMIT(1)%Conv_Rdtn%RdtnDT
                   do i = 1,6*p%NBody
                      do j = 1,6*p%NBody
-                        WRITE( InputFileData%UnSum, '(2X,ES16.5)',ADVANCE='no' ) p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(k,i,j)
+                        WRITE( InputFileData%UnSum, '(2X,ES16.5)',ADVANCE='no' ) p%WAMIT(1)%Conv_Rdtn%RdtnKrnl(i,j,k)
                      end do
                   end do
                   write(InputFileData%UnSum,'()')  ! end of line character
