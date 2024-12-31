@@ -2143,13 +2143,15 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
 
    IF ( ALLOCATED( Init%OutData_IfW%WriteOutputHdr  ) ) y_FAST%numOuts(Module_IfW)  = SIZE(Init%OutData_IfW%WriteOutputHdr)
    IF ( ALLOCATED( Init%OutData_ExtInfw%WriteOutputHdr ) ) y_FAST%numOuts(Module_ExtInfw) = SIZE(Init%OutData_ExtInfw%WriteOutputHdr)
-do i=1,NumED
-   IF ( ALLOCATED( Init%OutData_ED(i)%WriteOutputHdr   ) ) y_FAST%numOuts(Module_ED)   = y_FAST%numOuts(Module_ED) + SIZE(Init%OutData_ED(iED)%WriteOutputHdr)
-end do
+   IF ( ALLOCATED( Init%OutData_ED ) ) then
+      do i = 1, NumED
+         IF ( ALLOCATED( Init%OutData_ED(i)%WriteOutputHdr   ) ) y_FAST%numOuts(Module_ED)   = y_FAST%numOuts(Module_ED) + SIZE(Init%OutData_ED(iED)%WriteOutputHdr)
+      end do
+   end if
    IF ( ALLOCATED( Init%OutData_SED%WriteOutputHdr  ) ) y_FAST%numOuts(Module_SED)  = SIZE(Init%OutData_SED%WriteOutputHdr)
-do i=1,p_FAST%nBeams
-   IF ( ALLOCATED( Init%OutData_BD(i)%WriteOutputHdr) ) y_FAST%numOuts(Module_BD)   = y_FAST%numOuts(Module_BD) + SIZE(Init%OutData_BD(i)%WriteOutputHdr)
-end do
+   do i=1,p_FAST%nBeams
+      IF ( ALLOCATED( Init%OutData_BD(i)%WriteOutputHdr) ) y_FAST%numOuts(Module_BD)   = y_FAST%numOuts(Module_BD) + SIZE(Init%OutData_BD(i)%WriteOutputHdr)
+   end do
 
    IF ( ALLOCATED( Init%OutData_AD%rotors)) then
       IF ( ALLOCATED( Init%OutData_AD%rotors(1)%WriteOutputHdr)) y_FAST%numOuts(Module_AD) = SIZE(Init%OutData_AD%rotors(1)%WriteOutputHdr)
