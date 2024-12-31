@@ -115,3 +115,27 @@ be performed in a different order than if both angles are specified in the same 
 
 [U V W] = R(wind direction: InflowWind) * R(upflow: InflowWind) * R(wind direction: UniformWind) * R(upflow: UniformWind) * [u v w]
 
+.. _inflow_superposition:
+
+Superposition of Wave and Current Inflow
+========================================
+For MHK turbines, wave and current velocities and accelerations are superimposed (i.e., summed) such that all submerged components are exposed
+to the same inflow field. Both AeroDyn and HydroDyn can query SeaState for wave field infomation. SeaState then queries InflowWind for the current
+field, sums the velocities and accelerations, and returns the superimposed flow field information. This has several implications for modeling
+MHK turbines, which are listed below. Note that dynamic pressure contributions from InflowWind are neglected.
+
+When modeling a rotor or rotor/tower only (i.e., hydrodynamics modeled in AeroDyn only):
+
+- SeaState must be used when defining a flow field with waves
+- Current definition in SeaState must always be set to 0
+- InflowWind must be used when defining a flow field with currents
+- For combined wave and current flow fields, SeaState will query InflowWind
+
+When modeling a rotor or rotor/tower and support structure (i.e., hydrodynamics modeled in AeroDyn and HydroDyn):
+
+- SeaState must always be used, even when defining a flow field with no waves
+- Current definition in SeaState must always be set to 0
+- InflowWind must be used when defining a flow field with currents
+- For wave only cases, InflowWind will not be called
+- For current only cases, set the SeaState wave field to 0; current information will be passed through SeaState from InflowWind
+- For combined wave and current flow fields, SeaState will query InflowWind
