@@ -128,6 +128,7 @@ When modeling a rotor or rotor/tower only (i.e., hydrodynamics modeled in AeroDy
 
 - SeaState must be used when defining a flow field with waves
 - Current definition in SeaState must always be set to 0
+- If SeaState is activated, InflowWind must also be activated, though the current can be set to 0
 - InflowWind must be used when defining a flow field with currents
 - For combined wave and current flow fields, SeaState will query InflowWind
 
@@ -135,7 +136,7 @@ When modeling a rotor or rotor/tower and support structure (i.e., hydrodynamics 
 
 - SeaState must always be used, even when defining a flow field with no waves
 - Current definition in SeaState must always be set to 0
+- If SeaState is activated, InflowWind must also be activated, though the current can be set to 0
 - InflowWind must be used when defining a flow field with currents
-- For wave only cases, InflowWind will not be called
 - For current only cases, set the SeaState wave field to 0; current information will be passed through SeaState from InflowWind
 - For combined wave and current flow fields, SeaState will query InflowWind
