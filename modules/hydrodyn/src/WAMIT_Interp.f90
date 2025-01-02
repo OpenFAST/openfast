@@ -668,15 +668,15 @@ function WAMIT_ForceWaves_Interp_3D_vec6(Time, pos, pKinXX, WF_p, WF_m, ErrStat3
 
    ! interpolate
    do i = 1,6
-      u(1)  = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), i )
-      u(2)  = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), i )
+      u(1)  = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), i )
+      u(2)  = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), i )
       u(3)  = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), i )
-      u(4)  = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), i )
-      u(5)  = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), i )
-      u(6)  = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), i )
+      u(4)  = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), i )
+      u(5)  = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), i )
+      u(6)  = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), i )
       u(7)  = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), i )
-      u(8)  = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), i )
-      WAMIT_ForceWaves_Interp_3D_vec6(i) = SUM ( WF_m%N3D * u )
+      u(8)  = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), i )
+      WAMIT_ForceWaves_Interp_3D_vec6(i) = dot_product(WF_m%N3D, u)
    end do
 end function
 
@@ -702,22 +702,22 @@ function WAMIT_ForceWaves_Interp_4D_vec6(Time, pos, pKinXX, WF_p, WF_m, ErrStat3
    ! interpolate
    do i = 1,6
       u( 1) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
-      u( 2) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
-      u( 3) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
-      u( 4) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
-      u( 5) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
-      u( 6) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
+      u( 2) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
+      u( 3) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
+      u( 4) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
+      u( 5) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
+      u( 6) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
       u( 7) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
-      u( 8) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
-      u( 9) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
+      u( 8) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
+      u( 9) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
       u(10) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
-      u(11) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
-      u(12) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
-      u(13) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Lo(4), i )
-      u(14) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
-      u(15) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Lo(4), i )
+      u(11) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
+      u(12) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Lo(3), WF_m%Indx_Hi(4), i )
+      u(13) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
+      u(14) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Lo(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
+      u(15) = pKinXX( WF_m%Indx_Lo(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
       u(16) = pKinXX( WF_m%Indx_Hi(1), WF_m%Indx_Hi(2), WF_m%Indx_Hi(3), WF_m%Indx_Hi(4), i )
-      WAMIT_ForceWaves_Interp_4D_vec6(i) = SUM ( WF_m%N4D * u )
+      WAMIT_ForceWaves_Interp_4D_vec6(i) = dot_product(WF_m%N4D, u)
    end do
 end function
 

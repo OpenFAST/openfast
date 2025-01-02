@@ -76,7 +76,7 @@
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IntDir>$(PlatformName)\$(ConfigurationName)</IntDir>
+<IntDir>$(PlatformName)\$(ConfigurationName)</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -87,7 +87,7 @@
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IntDir>$(PlatformName)\$(ConfigurationName)</IntDir>
+<IntDir>$(PlatformName)\$(ConfigurationName)</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

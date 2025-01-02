@@ -2625,8 +2625,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    
    ! Loop through each member
    DO im = 1, p%NMembers    
-      N   = p%Members(im)%NElements
       mem = p%Members(im)
+      N   = mem%NElements
       call YawMember(mem, u%PtfmRefY, ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -2761,7 +2761,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   Zeta2 = 0.0_ReKi
                END IF
                Is1stElement = ( i .EQ. 1)
-               CALL getElementHstLds_Mod1( Time, pos1, pos2, Zeta1, Zeta2, k_hat, r1b, r2b, dl, mem%alpha(i), Is1stElement, F_B0, F_B1, F_B2, ErrStat2, ErrMsg2 )
+               CALL getElementHstLds_Mod1(mem, Time, pos1, pos2, Zeta1, Zeta2, k_hat, r1b, r2b, dl, mem%alpha(i), Is1stElement, F_B0, F_B1, F_B2, ErrStat2, ErrMsg2 )
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                ! Add nodal loads to mesh
                IF ( .NOT. Is1stElement ) THEN
@@ -3607,7 +3607,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    SUBROUTINE GetFreeSurfaceNormal( Time, pos, r, n, ErrStat, ErrMsg)
       REAL(DbKi),      INTENT( In    ) :: Time
-      REAL(ReKi),      INTENT( In    ) :: pos(*)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
+      REAL(ReKi),      INTENT( In    ) :: pos(:)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
       REAL(ReKi),      INTENT( In    ) :: r       ! Distance for central differencing
       REAL(ReKi),      INTENT(   OUT ) :: n(3)    ! Free-surface normal vector
       INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
@@ -3623,7 +3623,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    END SUBROUTINE GetFreeSurfaceNormal
 
-   SUBROUTINE GetSectionUnitVectors( k, y, z )
+   PURE SUBROUTINE GetSectionUnitVectors( k, y, z )
       REAL(ReKi),      INTENT( In    ) :: k(3) ! Member axial unit vector
       REAL(ReKi),      INTENT(   OUT ) :: y(3) ! Horizontal unit vector perpendicular to k
       REAL(ReKi),      INTENT(   OUT ) :: z(3) ! Unit vector perpendicular to k and y with positive vertical component
@@ -3640,7 +3640,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
    END SUBROUTINE GetSectionUnitVectors
 
-   SUBROUTINE GetSectionFreeSurfaceIntersects( pos0, FSPt, k_hat, y_hat, z_hat, n_hat, R, theta1, theta2, secStat)
+   PURE SUBROUTINE GetSectionFreeSurfaceIntersects( pos0, FSPt, k_hat, y_hat, z_hat, n_hat, R, theta1, theta2, secStat)
       REAL(DbKi),      INTENT( In    ) :: pos0(3)
       REAL(DbKi),      INTENT( In    ) :: FSPt(3)
       REAL(ReKi),      INTENT( In    ) :: k_hat(3)
@@ -3688,7 +3688,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    END SUBROUTINE GetSectionFreeSurfaceIntersects
 
-   SUBROUTINE GetSectionHstLds( origin, pos0, k_hat, y_hat, z_hat, R, dRdl, theta1, theta2, dFdl)
+   PURE SUBROUTINE GetSectionHstLds( origin, pos0, k_hat, y_hat, z_hat, R, dRdl, theta1, theta2, dFdl)
 
       REAL(DbKi),      INTENT( IN    ) :: origin(3)
       REAL(DbKi),      INTENT( IN    ) :: pos0(3)
@@ -3898,7 +3898,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    END SUBROUTINE RefineElementHstLds
 
-   SUBROUTINE GetEndPlateHstLds(pos0, k_hat, y_hat, z_hat, R, theta1, theta2, F)
+   PURE SUBROUTINE GetEndPlateHstLds(pos0, k_hat, y_hat, z_hat, R, theta1, theta2, F)
 
       REAL(ReKi),      INTENT( IN    ) :: pos0(3)
       REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
@@ -3964,8 +3964,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    END SUBROUTINE GetEndPlateHstLds
 
-   SUBROUTINE getElementHstLds_Mod1( Time, pos1, pos2, Zeta1, Zeta2, k_hat, r1, r2, dl, alphaIn, Is1stElement, F_B0, F_B1, F_B2, ErrStat, ErrMsg )
+   SUBROUTINE getElementHstLds_Mod1( mem, Time, pos1, pos2, Zeta1, Zeta2, k_hat, r1, r2, dl, alphaIn, Is1stElement, F_B0, F_B1, F_B2, ErrStat, ErrMsg )
       
+      TYPE(Morison_MemberType), intent(in) :: mem
       REAL(DbKi),      INTENT( IN    ) :: Time
       REAL(ReKi),      INTENT( IN    ) :: pos1(3)
       REAL(ReKi),      INTENT( IN    ) :: pos2(3)
@@ -4196,7 +4197,7 @@ subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )
 end subroutine LumpDistrHydroLoads
 !----------------------------------------------------------------------------------------------------------------------------------
 ! Takes loads on node i in element tilted frame and converts to 6DOF loads at node i and adjacent node
-SUBROUTINE DistributeElementLoads(Fl, Fr, M, sinPhi, cosPhi, SinBeta, cosBeta, alpha, F1, F2)
+PURE SUBROUTINE DistributeElementLoads(Fl, Fr, M, sinPhi, cosPhi, SinBeta, cosBeta, alpha, F1, F2)
    
    REAL(ReKi),                     INTENT    ( IN    )  :: Fl        ! (N)   axial load about node i
    REAL(ReKi),                     INTENT    ( IN    )  :: Fr        ! (N)   radial load about node i in direction of tilt
@@ -4209,25 +4210,22 @@ SUBROUTINE DistributeElementLoads(Fl, Fr, M, sinPhi, cosPhi, SinBeta, cosBeta, a
    
    REAL(ReKi),                     INTENT    ( OUT   )  :: F1(6)   ! (N, Nm) force/moment vector for node i
    REAL(ReKi),                     INTENT    ( OUT   )  :: F2(6)   ! (N, Nm) force/moment vector for the other node (whether i+1, or i-1)
+   REAL(ReKi)                                           :: F(6)
    
-   F1(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   F1(2) =  sinBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   F1(3) =          (Fl*cosPhi - Fr*sinPhi)*alpha
-   F1(4) = -sinBeta * M                    *alpha
-   F1(5) =  cosBeta * M                    *alpha
-   F1(6) =  0.0
-      
-   F2(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   F2(2) =  sinBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   F2(3) =          (Fl*cosPhi - Fr*sinPhi)*(1-alpha)
-   F2(4) = -sinBeta * M                    *(1-alpha)
-   F2(5) =  cosBeta * M                    *(1-alpha)
-   F2(6) =  0.0
+   F(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)
+   F(2) =  sinBeta*(Fl*sinPhi + Fr*cosPhi)
+   F(3) =          (Fl*cosPhi - Fr*sinPhi)
+   F(4) = -sinBeta * M                    
+   F(5) =  cosBeta * M                    
+   F(6) =  0.0
+
+   F1 = F*alpha
+   F2 = F*(1.0_ReKi-alpha)
    
 END SUBROUTINE DistributeElementLoads
 !----------------------------------------------------------------------------------------------------------------------------------
 ! Takes loads on end node i and converts to 6DOF loads, adding to the nodes existing loads
-SUBROUTINE AddEndLoad(Fl, M, sinPhi, cosPhi, SinBeta, cosBeta, Fi)
+PURE SUBROUTINE AddEndLoad(Fl, M, sinPhi, cosPhi, SinBeta, cosBeta, Fi)
    
    REAL(ReKi),                     INTENT    ( IN    )  :: Fl        ! (N)   axial load about node i
    REAL(ReKi),                     INTENT    ( IN    )  :: M         ! (N-m) radial moment about node i, positive in direction of tilt angle

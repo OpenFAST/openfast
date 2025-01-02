@@ -39,7 +39,7 @@ from fast_linearization_file import FASTLinearizationFile
 # from weio.fast_linearization_file import FASTLinearizationFile
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.yaml','.sum','.log','.md']
+excludeExt=['.ech','.yaml','.sum','.log','.md']
 
 def file_line_count(filename):
     file_handle = open(filename, 'r')
@@ -164,7 +164,8 @@ else:
 # 
 # Copying the actual test directory
 # if not os.path.isdir(testBuildDirectory):
-rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, renameExtDict={'.lin':'.ref_lin'})
+rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, 
+             renameExtDict={'.lin':'.ref_lin', '.out': '.ref.out', '.outb': '.ref.outb'})
 
 ### Run openfast on the test case
 if not noExec:
@@ -432,7 +433,7 @@ for i, f in enumerate(localOutFiles):
     ErrorsLoc, ElemErrorsLoc = compareLin(f,ff1,ff2)
     Errors += ErrorsLoc
     if len(ElemErrorsLoc)>0:
-        Errors += ElemErrorsLoc[:3] # Just a couple of them
+        Errors += ElemErrorsLoc[:5] # Just a couple of them
 
 freqFileClose(ff1,ff2)
 

@@ -39,8 +39,12 @@ USE WAMIT2_Types
 USE Morison_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs = 510      ! The maximum number of output channels supported by this module [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxUserOutputs = 5150      !  Total possible number of output channels:  SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4626 + HydroDyn=510   =  5150 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxHDOutputs                     = 510      ! The maximum number of output channels supported by this module [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxUserOutputs                   = 5150      !  Total possible number of output channels:  SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4626 + HydroDyn=510   =  5150 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_WaveElev0             = -1      ! WaveElev0 Extended input DatLoc number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_HWindSpeed            = -2      ! HWindSpeed extended input DatLoc number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_PLexp                 = -3      ! PLexp extended input DatLoc number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HydroDyn_u_PropagationDir        = -4      ! PropagationDir extended input DatLoc number [-]
 ! =========  HydroDyn_InputFile  =======
   TYPE, PUBLIC :: HydroDyn_InputFile
     LOGICAL  :: EchoFlag = .false.      !< Echo the input file [-]
@@ -99,6 +103,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  HydroDyn_InitOutputType  =======
   TYPE, PUBLIC :: HydroDyn_InitOutputType
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
     TYPE(Morison_InitOutputType)  :: Morison      !< Initialization output from the Morison module [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all HD-related output channel header strings (includes all sub-module channels) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all HD-related output channel unit strings (includes all sub-module channels) [-]
@@ -141,21 +146,6 @@ IMPLICIT NONE
     TYPE(WAMIT_OtherStateType) , DIMENSION(:), ALLOCATABLE  :: WAMIT      !< OtherState information from the WAMIT module [-]
     TYPE(Morison_OtherStateType)  :: Morison      !< OtherState information from the Morison module [-]
   END TYPE HydroDyn_OtherStateType
-! =======================
-! =========  HydroDyn_MiscVarType  =======
-  TYPE, PUBLIC :: HydroDyn_MiscVarType
-    TYPE(MeshType)  :: AllHdroOrigin      !< An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh [-]
-    TYPE(HD_ModuleMapType)  :: HD_MeshMap 
-    INTEGER(IntKi)  :: Decimate = 0_IntKi      !< The output decimation counter [-]
-    REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_PtfmAdd      !< The total forces and moments due to additional pre-load, stiffness, and damping [-]
-    REAL(ReKi) , DIMENSION(1:6)  :: F_Hydro = 0.0_ReKi      !< The total hydrodynamic forces and moments integrated about the (0,0,0) platform reference point [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_Waves      !< The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules) [-]
-    TYPE(WAMIT_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: WAMIT      !< misc var information from the WAMIT module [-]
-    TYPE(WAMIT2_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: WAMIT2      !< misc var information from the WAMIT2 module [-]
-    TYPE(Morison_MiscVarType)  :: Morison      !< misc var information from the Morison module [-]
-    TYPE(WAMIT_InputType) , DIMENSION(:), ALLOCATABLE  :: u_WAMIT      !< WAMIT module inputs [-]
-  END TYPE HydroDyn_MiscVarType
 ! =======================
 ! =========  HydroDyn_ParameterType  =======
   TYPE, PUBLIC :: HydroDyn_ParameterType
@@ -211,7 +201,47 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Outputs to be written to the output file(s) [-]
   END TYPE HydroDyn_OutputType
 ! =======================
-CONTAINS
+! =========  HydroDyn_MiscVarType  =======
+  TYPE, PUBLIC :: HydroDyn_MiscVarType
+    TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
+    TYPE(HydroDyn_ContinuousStateType)  :: x_perturb      !< Temporary variables for Jacobian calculations [-]
+    TYPE(HydroDyn_InputType)  :: u_perturb      !< Temporary variables for Jacobian calculations [-]
+    TYPE(HydroDyn_ContinuousStateType)  :: dxdt_lin      !< Temporary variables for Jacobian calculations [-]
+    TYPE(HydroDyn_OutputType)  :: y_lin      !< Temporary variables for Jacobian calculations [-]
+    TYPE(MeshType)  :: AllHdroOrigin      !< An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh [-]
+    TYPE(HD_ModuleMapType)  :: HD_MeshMap 
+    INTEGER(IntKi)  :: Decimate = 0_IntKi      !< The output decimation counter [-]
+    REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_PtfmAdd      !< The total forces and moments due to additional pre-load, stiffness, and damping [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: F_Hydro = 0.0_ReKi      !< The total hydrodynamic forces and moments integrated about the (0,0,0) platform reference point [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_Waves      !< The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules) [-]
+    TYPE(WAMIT_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: WAMIT      !< misc var information from the WAMIT module [-]
+    TYPE(WAMIT2_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: WAMIT2      !< misc var information from the WAMIT2 module [-]
+    TYPE(Morison_MiscVarType)  :: Morison      !< misc var information from the Morison module [-]
+    TYPE(WAMIT_InputType) , DIMENSION(:), ALLOCATABLE  :: u_WAMIT      !< WAMIT module inputs [-]
+  END TYPE HydroDyn_MiscVarType
+! =======================
+   integer(IntKi), public, parameter :: HydroDyn_x_WAMIT_SS_Rdtn_x       =   1 ! HydroDyn%WAMIT(DL%i1)%SS_Rdtn%x
+   integer(IntKi), public, parameter :: HydroDyn_x_WAMIT_SS_Exctn_x      =   2 ! HydroDyn%WAMIT(DL%i1)%SS_Exctn%x
+   integer(IntKi), public, parameter :: HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState =   3 ! HydroDyn%WAMIT(DL%i1)%Conv_Rdtn%DummyContState
+   integer(IntKi), public, parameter :: HydroDyn_x_Morison_DummyContState =   4 ! HydroDyn%Morison%DummyContState
+   integer(IntKi), public, parameter :: HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState =   5 ! HydroDyn%WAMIT%Conv_Rdtn%DummyConstrState
+   integer(IntKi), public, parameter :: HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState =   6 ! HydroDyn%WAMIT%SS_Rdtn%DummyConstrState
+   integer(IntKi), public, parameter :: HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState =   7 ! HydroDyn%WAMIT%SS_Exctn%DummyConstrState
+   integer(IntKi), public, parameter :: HydroDyn_z_Morison_DummyConstrState =   8 ! HydroDyn%Morison%DummyConstrState
+   integer(IntKi), public, parameter :: HydroDyn_u_Morison_Mesh          =   9 ! HydroDyn%Morison%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_u_Morison_PtfmRefY      =  10 ! HydroDyn%Morison%PtfmRefY
+   integer(IntKi), public, parameter :: HydroDyn_u_WAMITMesh             =  11 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_u_PRPMesh               =  12 ! HydroDyn%PRPMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_Mesh            =  13 ! HydroDyn%WAMIT(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT2_Mesh           =  14 ! HydroDyn%WAMIT2(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_Mesh          =  15 ! HydroDyn%Morison%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_VisMesh       =  16 ! HydroDyn%Morison%VisMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_WriteOutput   =  17 ! HydroDyn%Morison%WriteOutput
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMITMesh             =  18 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WriteOutput           =  19 ! HydroDyn%WriteOutput
+
+contains
 
 subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(HydroDyn_InputFile), intent(in) :: SrcInputFileData
@@ -708,6 +738,9 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    call Morison_CopyInitOutput(SrcInitOutputData%Morison, DstInitOutputData%Morison, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -809,6 +842,8 @@ subroutine HydroDyn_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Morison_DestroyInitOutput(InitOutputData%Morison, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%WriteOutputHdr)) then
@@ -841,6 +876,7 @@ subroutine HydroDyn_PackInitOutput(RF, Indata)
    type(HydroDyn_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInitOutput'
    if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    call Morison_PackInitOutput(RF, InData%Morison) 
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
@@ -861,6 +897,7 @@ subroutine HydroDyn_UnPackInitOutput(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call Morison_UnpackInitOutput(RF, OutData%Morison) ! Morison 
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
@@ -1309,260 +1346,6 @@ subroutine HydroDyn_UnPackOtherState(RF, OutData)
       end do
    end if
    call Morison_UnpackOtherState(RF, OutData%Morison) ! Morison 
-end subroutine
-
-subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(HydroDyn_MiscVarType), intent(inout) :: SrcMiscData
-   type(HydroDyn_MiscVarType), intent(inout) :: DstMiscData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)                  :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'HydroDyn_CopyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call MeshCopy(SrcMiscData%AllHdroOrigin, DstMiscData%AllHdroOrigin, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call HydroDyn_CopyHD_ModuleMapType(SrcMiscData%HD_MeshMap, DstMiscData%HD_MeshMap, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   DstMiscData%Decimate = SrcMiscData%Decimate
-   DstMiscData%LastOutTime = SrcMiscData%LastOutTime
-   if (allocated(SrcMiscData%F_PtfmAdd)) then
-      LB(1:1) = lbound(SrcMiscData%F_PtfmAdd)
-      UB(1:1) = ubound(SrcMiscData%F_PtfmAdd)
-      if (.not. allocated(DstMiscData%F_PtfmAdd)) then
-         allocate(DstMiscData%F_PtfmAdd(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_PtfmAdd.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%F_PtfmAdd = SrcMiscData%F_PtfmAdd
-   end if
-   DstMiscData%F_Hydro = SrcMiscData%F_Hydro
-   if (allocated(SrcMiscData%F_Waves)) then
-      LB(1:1) = lbound(SrcMiscData%F_Waves)
-      UB(1:1) = ubound(SrcMiscData%F_Waves)
-      if (.not. allocated(DstMiscData%F_Waves)) then
-         allocate(DstMiscData%F_Waves(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_Waves.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%F_Waves = SrcMiscData%F_Waves
-   end if
-   if (allocated(SrcMiscData%WAMIT)) then
-      LB(1:1) = lbound(SrcMiscData%WAMIT)
-      UB(1:1) = ubound(SrcMiscData%WAMIT)
-      if (.not. allocated(DstMiscData%WAMIT)) then
-         allocate(DstMiscData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WAMIT.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call WAMIT_CopyMisc(SrcMiscData%WAMIT(i1), DstMiscData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcMiscData%WAMIT2)) then
-      LB(1:1) = lbound(SrcMiscData%WAMIT2)
-      UB(1:1) = ubound(SrcMiscData%WAMIT2)
-      if (.not. allocated(DstMiscData%WAMIT2)) then
-         allocate(DstMiscData%WAMIT2(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WAMIT2.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call WAMIT2_CopyMisc(SrcMiscData%WAMIT2(i1), DstMiscData%WAMIT2(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call Morison_CopyMisc(SrcMiscData%Morison, DstMiscData%Morison, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcMiscData%u_WAMIT)) then
-      LB(1:1) = lbound(SrcMiscData%u_WAMIT)
-      UB(1:1) = ubound(SrcMiscData%u_WAMIT)
-      if (.not. allocated(DstMiscData%u_WAMIT)) then
-         allocate(DstMiscData%u_WAMIT(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_WAMIT.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call WAMIT_CopyInput(SrcMiscData%u_WAMIT(i1), DstMiscData%u_WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-end subroutine
-
-subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
-   type(HydroDyn_MiscVarType), intent(inout) :: MiscData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call MeshDestroy( MiscData%AllHdroOrigin, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call HydroDyn_DestroyHD_ModuleMapType(MiscData%HD_MeshMap, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(MiscData%F_PtfmAdd)) then
-      deallocate(MiscData%F_PtfmAdd)
-   end if
-   if (allocated(MiscData%F_Waves)) then
-      deallocate(MiscData%F_Waves)
-   end if
-   if (allocated(MiscData%WAMIT)) then
-      LB(1:1) = lbound(MiscData%WAMIT)
-      UB(1:1) = ubound(MiscData%WAMIT)
-      do i1 = LB(1), UB(1)
-         call WAMIT_DestroyMisc(MiscData%WAMIT(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%WAMIT)
-   end if
-   if (allocated(MiscData%WAMIT2)) then
-      LB(1:1) = lbound(MiscData%WAMIT2)
-      UB(1:1) = ubound(MiscData%WAMIT2)
-      do i1 = LB(1), UB(1)
-         call WAMIT2_DestroyMisc(MiscData%WAMIT2(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%WAMIT2)
-   end if
-   call Morison_DestroyMisc(MiscData%Morison, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(MiscData%u_WAMIT)) then
-      LB(1:1) = lbound(MiscData%u_WAMIT)
-      UB(1:1) = ubound(MiscData%u_WAMIT)
-      do i1 = LB(1), UB(1)
-         call WAMIT_DestroyInput(MiscData%u_WAMIT(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(MiscData%u_WAMIT)
-   end if
-end subroutine
-
-subroutine HydroDyn_PackMisc(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(HydroDyn_MiscVarType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'HydroDyn_PackMisc'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   if (RF%ErrStat >= AbortErrLev) return
-   call MeshPack(RF, InData%AllHdroOrigin) 
-   call HydroDyn_PackHD_ModuleMapType(RF, InData%HD_MeshMap) 
-   call RegPack(RF, InData%Decimate)
-   call RegPack(RF, InData%LastOutTime)
-   call RegPackAlloc(RF, InData%F_PtfmAdd)
-   call RegPack(RF, InData%F_Hydro)
-   call RegPackAlloc(RF, InData%F_Waves)
-   call RegPack(RF, allocated(InData%WAMIT))
-   if (allocated(InData%WAMIT)) then
-      call RegPackBounds(RF, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
-      LB(1:1) = lbound(InData%WAMIT)
-      UB(1:1) = ubound(InData%WAMIT)
-      do i1 = LB(1), UB(1)
-         call WAMIT_PackMisc(RF, InData%WAMIT(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%WAMIT2))
-   if (allocated(InData%WAMIT2)) then
-      call RegPackBounds(RF, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
-      LB(1:1) = lbound(InData%WAMIT2)
-      UB(1:1) = ubound(InData%WAMIT2)
-      do i1 = LB(1), UB(1)
-         call WAMIT2_PackMisc(RF, InData%WAMIT2(i1)) 
-      end do
-   end if
-   call Morison_PackMisc(RF, InData%Morison) 
-   call RegPack(RF, allocated(InData%u_WAMIT))
-   if (allocated(InData%u_WAMIT)) then
-      call RegPackBounds(RF, 1, lbound(InData%u_WAMIT), ubound(InData%u_WAMIT))
-      LB(1:1) = lbound(InData%u_WAMIT)
-      UB(1:1) = ubound(InData%u_WAMIT)
-      do i1 = LB(1), UB(1)
-         call WAMIT_PackInput(RF, InData%u_WAMIT(i1)) 
-      end do
-   end if
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine HydroDyn_UnPackMisc(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(HydroDyn_MiscVarType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'HydroDyn_UnPackMisc'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   call MeshUnpack(RF, OutData%AllHdroOrigin) ! AllHdroOrigin 
-   call HydroDyn_UnpackHD_ModuleMapType(RF, OutData%HD_MeshMap) ! HD_MeshMap 
-   call RegUnpack(RF, OutData%Decimate); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%F_PtfmAdd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%F_Hydro); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%F_Waves); if (RegCheckErr(RF, RoutineName)) return
-   if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%WAMIT(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call WAMIT_UnpackMisc(RF, OutData%WAMIT(i1)) ! WAMIT 
-      end do
-   end if
-   if (allocated(OutData%WAMIT2)) deallocate(OutData%WAMIT2)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%WAMIT2(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT2.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call WAMIT2_UnpackMisc(RF, OutData%WAMIT2(i1)) ! WAMIT2 
-      end do
-   end if
-   call Morison_UnpackMisc(RF, OutData%Morison) ! Morison 
-   if (allocated(OutData%u_WAMIT)) deallocate(OutData%u_WAMIT)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%u_WAMIT(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call WAMIT_UnpackInput(RF, OutData%u_WAMIT(i1)) ! u_WAMIT 
-      end do
-   end if
 end subroutine
 
 subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -2211,6 +1994,295 @@ subroutine HydroDyn_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_MiscVarType), intent(inout) :: SrcMiscData
+   type(HydroDyn_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call HydroDyn_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call HydroDyn_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call HydroDyn_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call HydroDyn_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcMiscData%AllHdroOrigin, DstMiscData%AllHdroOrigin, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call HydroDyn_CopyHD_ModuleMapType(SrcMiscData%HD_MeshMap, DstMiscData%HD_MeshMap, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstMiscData%Decimate = SrcMiscData%Decimate
+   DstMiscData%LastOutTime = SrcMiscData%LastOutTime
+   if (allocated(SrcMiscData%F_PtfmAdd)) then
+      LB(1:1) = lbound(SrcMiscData%F_PtfmAdd)
+      UB(1:1) = ubound(SrcMiscData%F_PtfmAdd)
+      if (.not. allocated(DstMiscData%F_PtfmAdd)) then
+         allocate(DstMiscData%F_PtfmAdd(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_PtfmAdd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_PtfmAdd = SrcMiscData%F_PtfmAdd
+   end if
+   DstMiscData%F_Hydro = SrcMiscData%F_Hydro
+   if (allocated(SrcMiscData%F_Waves)) then
+      LB(1:1) = lbound(SrcMiscData%F_Waves)
+      UB(1:1) = ubound(SrcMiscData%F_Waves)
+      if (.not. allocated(DstMiscData%F_Waves)) then
+         allocate(DstMiscData%F_Waves(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_Waves.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_Waves = SrcMiscData%F_Waves
+   end if
+   if (allocated(SrcMiscData%WAMIT)) then
+      LB(1:1) = lbound(SrcMiscData%WAMIT)
+      UB(1:1) = ubound(SrcMiscData%WAMIT)
+      if (.not. allocated(DstMiscData%WAMIT)) then
+         allocate(DstMiscData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WAMIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_CopyMisc(SrcMiscData%WAMIT(i1), DstMiscData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcMiscData%WAMIT2)) then
+      LB(1:1) = lbound(SrcMiscData%WAMIT2)
+      UB(1:1) = ubound(SrcMiscData%WAMIT2)
+      if (.not. allocated(DstMiscData%WAMIT2)) then
+         allocate(DstMiscData%WAMIT2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WAMIT2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT2_CopyMisc(SrcMiscData%WAMIT2(i1), DstMiscData%WAMIT2(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   call Morison_CopyMisc(SrcMiscData%Morison, DstMiscData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcMiscData%u_WAMIT)) then
+      LB(1:1) = lbound(SrcMiscData%u_WAMIT)
+      UB(1:1) = ubound(SrcMiscData%u_WAMIT)
+      if (.not. allocated(DstMiscData%u_WAMIT)) then
+         allocate(DstMiscData%u_WAMIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_WAMIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_CopyInput(SrcMiscData%u_WAMIT(i1), DstMiscData%u_WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+end subroutine
+
+subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(HydroDyn_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( MiscData%AllHdroOrigin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyHD_ModuleMapType(MiscData%HD_MeshMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(MiscData%F_PtfmAdd)) then
+      deallocate(MiscData%F_PtfmAdd)
+   end if
+   if (allocated(MiscData%F_Waves)) then
+      deallocate(MiscData%F_Waves)
+   end if
+   if (allocated(MiscData%WAMIT)) then
+      LB(1:1) = lbound(MiscData%WAMIT)
+      UB(1:1) = ubound(MiscData%WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_DestroyMisc(MiscData%WAMIT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%WAMIT)
+   end if
+   if (allocated(MiscData%WAMIT2)) then
+      LB(1:1) = lbound(MiscData%WAMIT2)
+      UB(1:1) = ubound(MiscData%WAMIT2)
+      do i1 = LB(1), UB(1)
+         call WAMIT2_DestroyMisc(MiscData%WAMIT2(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%WAMIT2)
+   end if
+   call Morison_DestroyMisc(MiscData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(MiscData%u_WAMIT)) then
+      LB(1:1) = lbound(MiscData%u_WAMIT)
+      UB(1:1) = ubound(MiscData%u_WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_DestroyInput(MiscData%u_WAMIT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%u_WAMIT)
+   end if
+end subroutine
+
+subroutine HydroDyn_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(HydroDyn_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'HydroDyn_PackMisc'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call HydroDyn_PackContState(RF, InData%x_perturb) 
+   call HydroDyn_PackInput(RF, InData%u_perturb) 
+   call HydroDyn_PackContState(RF, InData%dxdt_lin) 
+   call HydroDyn_PackOutput(RF, InData%y_lin) 
+   call MeshPack(RF, InData%AllHdroOrigin) 
+   call HydroDyn_PackHD_ModuleMapType(RF, InData%HD_MeshMap) 
+   call RegPack(RF, InData%Decimate)
+   call RegPack(RF, InData%LastOutTime)
+   call RegPackAlloc(RF, InData%F_PtfmAdd)
+   call RegPack(RF, InData%F_Hydro)
+   call RegPackAlloc(RF, InData%F_Waves)
+   call RegPack(RF, allocated(InData%WAMIT))
+   if (allocated(InData%WAMIT)) then
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
+      LB(1:1) = lbound(InData%WAMIT)
+      UB(1:1) = ubound(InData%WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_PackMisc(RF, InData%WAMIT(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%WAMIT2))
+   if (allocated(InData%WAMIT2)) then
+      call RegPackBounds(RF, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
+      LB(1:1) = lbound(InData%WAMIT2)
+      UB(1:1) = ubound(InData%WAMIT2)
+      do i1 = LB(1), UB(1)
+         call WAMIT2_PackMisc(RF, InData%WAMIT2(i1)) 
+      end do
+   end if
+   call Morison_PackMisc(RF, InData%Morison) 
+   call RegPack(RF, allocated(InData%u_WAMIT))
+   if (allocated(InData%u_WAMIT)) then
+      call RegPackBounds(RF, 1, lbound(InData%u_WAMIT), ubound(InData%u_WAMIT))
+      LB(1:1) = lbound(InData%u_WAMIT)
+      UB(1:1) = ubound(InData%u_WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_PackInput(RF, InData%u_WAMIT(i1)) 
+      end do
+   end if
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine HydroDyn_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(HydroDyn_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'HydroDyn_UnPackMisc'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call HydroDyn_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
+   call HydroDyn_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call HydroDyn_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
+   call HydroDyn_UnpackOutput(RF, OutData%y_lin) ! y_lin 
+   call MeshUnpack(RF, OutData%AllHdroOrigin) ! AllHdroOrigin 
+   call HydroDyn_UnpackHD_ModuleMapType(RF, OutData%HD_MeshMap) ! HD_MeshMap 
+   call RegUnpack(RF, OutData%Decimate); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_PtfmAdd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%F_Hydro); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_Waves); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%WAMIT(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_UnpackMisc(RF, OutData%WAMIT(i1)) ! WAMIT 
+      end do
+   end if
+   if (allocated(OutData%WAMIT2)) deallocate(OutData%WAMIT2)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%WAMIT2(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAMIT2.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT2_UnpackMisc(RF, OutData%WAMIT2(i1)) ! WAMIT2 
+      end do
+   end if
+   call Morison_UnpackMisc(RF, OutData%Morison) ! Morison 
+   if (allocated(OutData%u_WAMIT)) deallocate(OutData%u_WAMIT)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%u_WAMIT(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_WAMIT.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_UnpackInput(RF, OutData%u_WAMIT(i1)) ! u_WAMIT 
+      end do
+   end if
+end subroutine
+
 subroutine HydroDyn_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
    !
    ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
@@ -2568,5 +2640,389 @@ SUBROUTINE HydroDyn_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrSta
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function HydroDyn_InputMeshPointer(u, DL) result(Mesh)
+   type(HydroDyn_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (HydroDyn_u_Morison_Mesh)
+       Mesh => u%Morison%Mesh
+   case (HydroDyn_u_WAMITMesh)
+       Mesh => u%WAMITMesh
+   case (HydroDyn_u_PRPMesh)
+       Mesh => u%PRPMesh
+   end select
+end function
+
+function HydroDyn_OutputMeshPointer(y, DL) result(Mesh)
+   type(HydroDyn_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (HydroDyn_y_WAMIT_Mesh)
+       Mesh => y%WAMIT(DL%i1)%Mesh
+   case (HydroDyn_y_WAMIT2_Mesh)
+       Mesh => y%WAMIT2(DL%i1)%Mesh
+   case (HydroDyn_y_Morison_Mesh)
+       Mesh => y%Morison%Mesh
+   case (HydroDyn_y_Morison_VisMesh)
+       Mesh => y%Morison%VisMesh
+   case (HydroDyn_y_WAMITMesh)
+       Mesh => y%WAMITMesh
+   end select
+end function
+
+subroutine HydroDyn_VarsPackContState(Vars, x, ValAry)
+   type(HydroDyn_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call HydroDyn_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine HydroDyn_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(HydroDyn_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (HydroDyn_x_WAMIT_SS_Rdtn_x)
+         VarVals = x%WAMIT(DL%i1)%SS_Rdtn%x(V%iLB:V%iUB)                      ! Rank 1 Array
+      case (HydroDyn_x_WAMIT_SS_Exctn_x)
+         VarVals = x%WAMIT(DL%i1)%SS_Exctn%x(V%iLB:V%iUB)                     ! Rank 1 Array
+      case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
+         VarVals(1) = x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState                 ! Scalar
+      case (HydroDyn_x_Morison_DummyContState)
+         VarVals(1) = x%Morison%DummyContState                                ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine HydroDyn_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(HydroDyn_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call HydroDyn_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine HydroDyn_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(HydroDyn_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (HydroDyn_x_WAMIT_SS_Rdtn_x)
+         x%WAMIT(DL%i1)%SS_Rdtn%x(V%iLB:V%iUB) = VarVals                      ! Rank 1 Array
+      case (HydroDyn_x_WAMIT_SS_Exctn_x)
+         x%WAMIT(DL%i1)%SS_Exctn%x(V%iLB:V%iUB) = VarVals                     ! Rank 1 Array
+      case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
+         x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState = VarVals(1)                 ! Scalar
+      case (HydroDyn_x_Morison_DummyContState)
+         x%Morison%DummyContState = VarVals(1)                                ! Scalar
+      end select
+   end associate
+end subroutine
+
+function HydroDyn_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (HydroDyn_x_WAMIT_SS_Rdtn_x)
+       Name = "x%WAMIT("//trim(Num2LStr(DL%i1))//")%SS_Rdtn%x"
+   case (HydroDyn_x_WAMIT_SS_Exctn_x)
+       Name = "x%WAMIT("//trim(Num2LStr(DL%i1))//")%SS_Exctn%x"
+   case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
+       Name = "x%WAMIT("//trim(Num2LStr(DL%i1))//")%Conv_Rdtn%DummyContState"
+   case (HydroDyn_x_Morison_DummyContState)
+       Name = "x%Morison%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine HydroDyn_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(HydroDyn_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call HydroDyn_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine HydroDyn_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(HydroDyn_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (HydroDyn_x_WAMIT_SS_Rdtn_x)
+         VarVals = x%WAMIT(DL%i1)%SS_Rdtn%x(V%iLB:V%iUB)                      ! Rank 1 Array
+      case (HydroDyn_x_WAMIT_SS_Exctn_x)
+         VarVals = x%WAMIT(DL%i1)%SS_Exctn%x(V%iLB:V%iUB)                     ! Rank 1 Array
+      case (HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState)
+         VarVals(1) = x%WAMIT(DL%i1)%Conv_Rdtn%DummyContState                 ! Scalar
+      case (HydroDyn_x_Morison_DummyContState)
+         VarVals(1) = x%Morison%DummyContState                                ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine HydroDyn_VarsPackConstrState(Vars, z, ValAry)
+   type(HydroDyn_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%z)
+      call HydroDyn_VarPackConstrState(Vars%z(i), z, ValAry)
+   end do
+end subroutine
+
+subroutine HydroDyn_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(HydroDyn_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
+         VarVals(1) = z%WAMIT%Conv_Rdtn%DummyConstrState                      ! Scalar
+      case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
+         VarVals(1) = z%WAMIT%SS_Rdtn%DummyConstrState                        ! Scalar
+      case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
+         VarVals(1) = z%WAMIT%SS_Exctn%DummyConstrState                       ! Scalar
+      case (HydroDyn_z_Morison_DummyConstrState)
+         VarVals(1) = z%Morison%DummyConstrState                              ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine HydroDyn_VarsUnpackConstrState(Vars, ValAry, z)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(HydroDyn_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%z)
+      call HydroDyn_VarUnpackConstrState(Vars%z(i), ValAry, z)
+   end do
+end subroutine
+
+subroutine HydroDyn_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(HydroDyn_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
+         z%WAMIT%Conv_Rdtn%DummyConstrState = VarVals(1)                      ! Scalar
+      case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
+         z%WAMIT%SS_Rdtn%DummyConstrState = VarVals(1)                        ! Scalar
+      case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
+         z%WAMIT%SS_Exctn%DummyConstrState = VarVals(1)                       ! Scalar
+      case (HydroDyn_z_Morison_DummyConstrState)
+         z%Morison%DummyConstrState = VarVals(1)                              ! Scalar
+      end select
+   end associate
+end subroutine
+
+function HydroDyn_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
+       Name = "z%WAMIT%Conv_Rdtn%DummyConstrState"
+   case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
+       Name = "z%WAMIT%SS_Rdtn%DummyConstrState"
+   case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
+       Name = "z%WAMIT%SS_Exctn%DummyConstrState"
+   case (HydroDyn_z_Morison_DummyConstrState)
+       Name = "z%Morison%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine HydroDyn_VarsPackInput(Vars, u, ValAry)
+   type(HydroDyn_InputType), intent(in)    :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call HydroDyn_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine HydroDyn_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(HydroDyn_InputType), intent(in)    :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (HydroDyn_u_Morison_Mesh)
+         call MV_PackMesh(V, u%Morison%Mesh, ValAry)                          ! Mesh
+      case (HydroDyn_u_Morison_PtfmRefY)
+         VarVals(1) = u%Morison%PtfmRefY                                      ! Scalar
+      case (HydroDyn_u_WAMITMesh)
+         call MV_PackMesh(V, u%WAMITMesh, ValAry)                             ! Mesh
+      case (HydroDyn_u_PRPMesh)
+         call MV_PackMesh(V, u%PRPMesh, ValAry)                               ! Mesh
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine HydroDyn_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(HydroDyn_InputType), intent(inout) :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call HydroDyn_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine HydroDyn_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(HydroDyn_InputType), intent(inout) :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (HydroDyn_u_Morison_Mesh)
+         call MV_UnpackMesh(V, ValAry, u%Morison%Mesh)                        ! Mesh
+      case (HydroDyn_u_Morison_PtfmRefY)
+         u%Morison%PtfmRefY = VarVals(1)                                      ! Scalar
+      case (HydroDyn_u_WAMITMesh)
+         call MV_UnpackMesh(V, ValAry, u%WAMITMesh)                           ! Mesh
+      case (HydroDyn_u_PRPMesh)
+         call MV_UnpackMesh(V, ValAry, u%PRPMesh)                             ! Mesh
+      end select
+   end associate
+end subroutine
+
+function HydroDyn_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (HydroDyn_u_Morison_Mesh)
+       Name = "u%Morison%Mesh"
+   case (HydroDyn_u_Morison_PtfmRefY)
+       Name = "u%Morison%PtfmRefY"
+   case (HydroDyn_u_WAMITMesh)
+       Name = "u%WAMITMesh"
+   case (HydroDyn_u_PRPMesh)
+       Name = "u%PRPMesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine HydroDyn_VarsPackOutput(Vars, y, ValAry)
+   type(HydroDyn_OutputType), intent(in)   :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call HydroDyn_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine HydroDyn_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(HydroDyn_OutputType), intent(in)   :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (HydroDyn_y_WAMIT_Mesh)
+         call MV_PackMesh(V, y%WAMIT(DL%i1)%Mesh, ValAry)                     ! Mesh
+      case (HydroDyn_y_WAMIT2_Mesh)
+         call MV_PackMesh(V, y%WAMIT2(DL%i1)%Mesh, ValAry)                    ! Mesh
+      case (HydroDyn_y_Morison_Mesh)
+         call MV_PackMesh(V, y%Morison%Mesh, ValAry)                          ! Mesh
+      case (HydroDyn_y_Morison_VisMesh)
+         call MV_PackMesh(V, y%Morison%VisMesh, ValAry)                       ! Mesh
+      case (HydroDyn_y_Morison_WriteOutput)
+         VarVals = y%Morison%WriteOutput(V%iLB:V%iUB)                         ! Rank 1 Array
+      case (HydroDyn_y_WAMITMesh)
+         call MV_PackMesh(V, y%WAMITMesh, ValAry)                             ! Mesh
+      case (HydroDyn_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine HydroDyn_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(HydroDyn_OutputType), intent(inout) :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call HydroDyn_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine HydroDyn_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(HydroDyn_OutputType), intent(inout) :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (HydroDyn_y_WAMIT_Mesh)
+         call MV_UnpackMesh(V, ValAry, y%WAMIT(DL%i1)%Mesh)                   ! Mesh
+      case (HydroDyn_y_WAMIT2_Mesh)
+         call MV_UnpackMesh(V, ValAry, y%WAMIT2(DL%i1)%Mesh)                  ! Mesh
+      case (HydroDyn_y_Morison_Mesh)
+         call MV_UnpackMesh(V, ValAry, y%Morison%Mesh)                        ! Mesh
+      case (HydroDyn_y_Morison_VisMesh)
+         call MV_UnpackMesh(V, ValAry, y%Morison%VisMesh)                     ! Mesh
+      case (HydroDyn_y_Morison_WriteOutput)
+         y%Morison%WriteOutput(V%iLB:V%iUB) = VarVals                         ! Rank 1 Array
+      case (HydroDyn_y_WAMITMesh)
+         call MV_UnpackMesh(V, ValAry, y%WAMITMesh)                           ! Mesh
+      case (HydroDyn_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function HydroDyn_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (HydroDyn_y_WAMIT_Mesh)
+       Name = "y%WAMIT("//trim(Num2LStr(DL%i1))//")%Mesh"
+   case (HydroDyn_y_WAMIT2_Mesh)
+       Name = "y%WAMIT2("//trim(Num2LStr(DL%i1))//")%Mesh"
+   case (HydroDyn_y_Morison_Mesh)
+       Name = "y%Morison%Mesh"
+   case (HydroDyn_y_Morison_VisMesh)
+       Name = "y%Morison%VisMesh"
+   case (HydroDyn_y_Morison_WriteOutput)
+       Name = "y%Morison%WriteOutput"
+   case (HydroDyn_y_WAMITMesh)
+       Name = "y%WAMITMesh"
+   case (HydroDyn_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE HydroDyn_Types
+
 !ENDOFREGISTRYGENERATEDFILE

@@ -49,6 +49,7 @@ MODULE IceFloe
    use randomCrushing
    use IceCpldCrushing
    use NWTC_IO, only : DispNVD
+   use ModVar
 
    IMPLICIT NONE
 
@@ -347,6 +348,11 @@ SUBROUTINE IceFloe_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
             InitOut%WriteOutputUnt(4*n-3:4*n) = (/"m/s", "m/s", "kN ", "kN "/)
          enddo
       endif
+
+      ! Initialize module variables
+      CALL IceFloe_InitVars(u, p, x, y, m, InitOut%Vars, .false., ErrStat, ErrMsg)
+      call iceErrorHndlr (iceLog, ErrStat, 'Error in allocation of output memory', 1)
+      if (ErrStat >= AbortErrLev) return  
       
    !  Let the user know if there have been warnings
       if (iceLog%WarnFlag) then
@@ -363,6 +369,55 @@ SUBROUTINE IceFloe_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       endif
 
 END SUBROUTINE IceFloe_Init
+
+
+subroutine IceFloe_InitVars(u, p, x, y, m, Vars, Linearize, ErrStat, ErrMsg)
+   type(IceFloe_InputType),            intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+   type(IceFloe_ParameterType),        intent(inout)  :: p              !< Parameters
+   type(IceFloe_ContinuousStateType),  intent(inout)  :: x              !< Continuous state
+   type(IceFloe_OutputType),           intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
+   type(IceFloe_MiscVarType),          intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+   type(ModVarsType),                  intent(inout)  :: Vars           !< Module variables
+   logical,                            intent(in)     :: Linearize      !< Flag to initialize linearization variables
+   integer(IntKi),                     intent(out)    :: ErrStat        !< Error status of the operation
+   character(*),                       intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_No   ne
+
+   character(*), parameter             :: RoutineName = 'IceFloe_InitVars'
+   integer(IntKi)                      :: ErrStat2
+   character(ErrMsgLen)                :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Initialization dependent on linearization
+   !----------------------------------------------------------------------------
+
+   call MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call IceFloe_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call IceFloe_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call IceFloe_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call IceFloe_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE IceFloe_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )

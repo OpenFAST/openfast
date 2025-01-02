@@ -139,6 +139,10 @@ macro(set_fast_gfortran)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS},--stack,${stack_size}")
   endif()
 
+  # Profiling
+  # set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -pg")
+  # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
+
   check_f2008_features()
 endmacro(set_fast_gfortran)
 

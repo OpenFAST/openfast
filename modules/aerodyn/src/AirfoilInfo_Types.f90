@@ -33,18 +33,18 @@ MODULE AirfoilInfo_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_1 = 1      ! 1D interpolation on AoA (first table only) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2Re = 2      ! 2D interpolation on AoA and Re [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2User = 3      ! 2D interpolation on AoA and UserProp [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_None = 0      ! Steady aerodynamics, using the same angle of attack convention as UA [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Baseline = 1      ! UAMod = 1 [Baseline model (Original)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Gonzalez = 2      ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce = 3      ! Minnema/Pierce variant (changes in Cc and Cm) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGM = 4      ! continuous variant of HGM (Hansen) model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV = 5      ! continuous variant of HGM (Hansen) model with vortex modifications [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Oye = 6      ! Stieg Oye dynamic stall model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_BV = 7      ! Boeing-Vertol dynamic stall model (e.g. used in CACTUS) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV360 = 8      ! continuous variant of HGM (Hansen) model with vortex modifications modified for 360-deg [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_1                       = 1      ! 1D interpolation on AoA (first table only) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2Re                     = 2      ! 2D interpolation on AoA and Re [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFITable_2User                   = 3      ! 2D interpolation on AoA and UserProp [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_None                          = 0      ! Steady aerodynamics, using the same angle of attack convention as UA [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Baseline                      = 1      ! UAMod = 1 [Baseline model (Original)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Gonzalez                      = 2      ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_MinnemaPierce                 = 3      ! Minnema/Pierce variant (changes in Cc and Cm) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGM                           = 4      ! continuous variant of HGM (Hansen) model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV                          = 5      ! continuous variant of HGM (Hansen) model with vortex modifications [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_Oye                           = 6      ! Stieg Oye dynamic stall model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_BV                            = 7      ! Boeing-Vertol dynamic stall model (e.g. used in CACTUS) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_HGMV360                       = 8      ! continuous variant of HGM (Hansen) model with vortex modifications modified for 360-deg [-]
 ! =========  AFI_UA_BL_Type  =======
   TYPE, PUBLIC :: AFI_UA_BL_Type
     REAL(ReKi)  :: alpha0 = 0.0_ReKi      !< Angle of attack for zero lift (also used in HGM) [input in degrees; stored as radians]
@@ -204,7 +204,20 @@ IMPLICIT NONE
     REAL(ReKi)  :: FullyAttached = 0.      !< fully attached cn or cl polar function (used for UA models) [-]
   END TYPE AFI_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: AFI_u_AoA                        =   1 ! AFI%AoA
+   integer(IntKi), public, parameter :: AFI_u_UserProp                   =   2 ! AFI%UserProp
+   integer(IntKi), public, parameter :: AFI_u_Re                         =   3 ! AFI%Re
+   integer(IntKi), public, parameter :: AFI_y_Cl                         =   4 ! AFI%Cl
+   integer(IntKi), public, parameter :: AFI_y_Cd                         =   5 ! AFI%Cd
+   integer(IntKi), public, parameter :: AFI_y_Cm                         =   6 ! AFI%Cm
+   integer(IntKi), public, parameter :: AFI_y_Cpmin                      =   7 ! AFI%Cpmin
+   integer(IntKi), public, parameter :: AFI_y_Cd0                        =   8 ! AFI%Cd0
+   integer(IntKi), public, parameter :: AFI_y_Cm0                        =   9 ! AFI%Cm0
+   integer(IntKi), public, parameter :: AFI_y_f_st                       =  10 ! AFI%f_st
+   integer(IntKi), public, parameter :: AFI_y_FullySeparate              =  11 ! AFI%FullySeparate
+   integer(IntKi), public, parameter :: AFI_y_FullyAttached              =  12 ! AFI%FullyAttached
+
+contains
 
 subroutine AFI_CopyUA_BL_Type(SrcUA_BL_TypeData, DstUA_BL_TypeData, CtrlCode, ErrStat, ErrMsg)
    type(AFI_UA_BL_Type), intent(in) :: SrcUA_BL_TypeData
@@ -1438,5 +1451,199 @@ SUBROUTINE AFI_UA_BL_Type_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat
    CALL Angles_ExtrapInterp( u1%alphaBreakLower, u2%alphaBreakLower, u3%alphaBreakLower, tin, u_out%alphaBreakLower, tin_out )
    u_out%CnBreakLower = a1*u1%CnBreakLower + a2*u2%CnBreakLower + a3*u3%CnBreakLower
 END SUBROUTINE
+
+function AFI_InputMeshPointer(u, DL) result(Mesh)
+   type(AFI_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function AFI_OutputMeshPointer(y, DL) result(Mesh)
+   type(AFI_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine AFI_VarsPackInput(Vars, u, ValAry)
+   type(AFI_InputType), intent(in)         :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call AFI_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine AFI_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AFI_InputType), intent(in)         :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AFI_u_AoA)
+         VarVals(1) = u%AoA                                                   ! Scalar
+      case (AFI_u_UserProp)
+         VarVals(1) = u%UserProp                                              ! Scalar
+      case (AFI_u_Re)
+         VarVals(1) = u%Re                                                    ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AFI_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(AFI_InputType), intent(inout)      :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call AFI_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine AFI_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AFI_InputType), intent(inout)      :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AFI_u_AoA)
+         u%AoA = VarVals(1)                                                   ! Scalar
+      case (AFI_u_UserProp)
+         u%UserProp = VarVals(1)                                              ! Scalar
+      case (AFI_u_Re)
+         u%Re = VarVals(1)                                                    ! Scalar
+      end select
+   end associate
+end subroutine
+
+function AFI_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AFI_u_AoA)
+       Name = "u%AoA"
+   case (AFI_u_UserProp)
+       Name = "u%UserProp"
+   case (AFI_u_Re)
+       Name = "u%Re"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine AFI_VarsPackOutput(Vars, y, ValAry)
+   type(AFI_OutputType), intent(in)        :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call AFI_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine AFI_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AFI_OutputType), intent(in)        :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AFI_y_Cl)
+         VarVals(1) = y%Cl                                                    ! Scalar
+      case (AFI_y_Cd)
+         VarVals(1) = y%Cd                                                    ! Scalar
+      case (AFI_y_Cm)
+         VarVals(1) = y%Cm                                                    ! Scalar
+      case (AFI_y_Cpmin)
+         VarVals(1) = y%Cpmin                                                 ! Scalar
+      case (AFI_y_Cd0)
+         VarVals(1) = y%Cd0                                                   ! Scalar
+      case (AFI_y_Cm0)
+         VarVals(1) = y%Cm0                                                   ! Scalar
+      case (AFI_y_f_st)
+         VarVals(1) = y%f_st                                                  ! Scalar
+      case (AFI_y_FullySeparate)
+         VarVals(1) = y%FullySeparate                                         ! Scalar
+      case (AFI_y_FullyAttached)
+         VarVals(1) = y%FullyAttached                                         ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AFI_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(AFI_OutputType), intent(inout)     :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call AFI_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine AFI_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AFI_OutputType), intent(inout)     :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AFI_y_Cl)
+         y%Cl = VarVals(1)                                                    ! Scalar
+      case (AFI_y_Cd)
+         y%Cd = VarVals(1)                                                    ! Scalar
+      case (AFI_y_Cm)
+         y%Cm = VarVals(1)                                                    ! Scalar
+      case (AFI_y_Cpmin)
+         y%Cpmin = VarVals(1)                                                 ! Scalar
+      case (AFI_y_Cd0)
+         y%Cd0 = VarVals(1)                                                   ! Scalar
+      case (AFI_y_Cm0)
+         y%Cm0 = VarVals(1)                                                   ! Scalar
+      case (AFI_y_f_st)
+         y%f_st = VarVals(1)                                                  ! Scalar
+      case (AFI_y_FullySeparate)
+         y%FullySeparate = VarVals(1)                                         ! Scalar
+      case (AFI_y_FullyAttached)
+         y%FullyAttached = VarVals(1)                                         ! Scalar
+      end select
+   end associate
+end subroutine
+
+function AFI_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AFI_y_Cl)
+       Name = "y%Cl"
+   case (AFI_y_Cd)
+       Name = "y%Cd"
+   case (AFI_y_Cm)
+       Name = "y%Cm"
+   case (AFI_y_Cpmin)
+       Name = "y%Cpmin"
+   case (AFI_y_Cd0)
+       Name = "y%Cd0"
+   case (AFI_y_Cm0)
+       Name = "y%Cm0"
+   case (AFI_y_f_st)
+       Name = "y%f_st"
+   case (AFI_y_FullySeparate)
+       Name = "y%FullySeparate"
+   case (AFI_y_FullyAttached)
+       Name = "y%FullyAttached"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE AirfoilInfo_Types
+
 !ENDOFREGISTRYGENERATEDFILE

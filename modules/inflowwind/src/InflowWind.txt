@@ -28,6 +28,13 @@ param    ^                       -                 IntKi             Highest_Win
 
 param    ^                       -                 IntKi             IfW_NumPtsAvg        -     144    -     "Number of points averaged for rotor-average wind speed"                                           -
 
+param    ^                       -                 IntKi             InflowWind_u_HWindSpeed     -   -1   -  "DatLoc number for HWindSpeed extended input" -
+param    ^                       -                 IntKi             InflowWind_u_PLExp          -   -2   -  "DatLoc number for PLExp extended input" -
+param    ^                       -                 IntKi             InflowWind_u_PropagationDir -   -3   -  "DatLoc number for PropagationDir extended input" -
+param    ^                       -                 IntKi             InflowWind_y_HWindSpeed     -   -4   -  "DatLoc number for HWindSpeed extended output" -
+param    ^                       -                 IntKi             InflowWind_y_PLExp          -   -5   -  "DatLoc number for PLExp extended output" -
+param    ^                       -                 IntKi             InflowWind_y_PropagationDir -   -6   -  "DatLoc number for PropagationDir extended output" -
+
 #########################
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
@@ -112,7 +119,8 @@ typedef  ^                       ^                 CHARACTER(LinChanLen)  LinNam
 typedef  ^                       ^                 LOGICAL                RotFrame_y       {:}  -   -    "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
 typedef  ^                       ^                 LOGICAL                RotFrame_u       {:}  -   -    "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef  ^                       ^                 LOGICAL                IsLoad_u         {:}  -   -    "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
-typedef  ^                       ^                 FlowFieldType         *FlowField        -   -   -    "Flow field data to represent all wind types"  -
+typedef  ^                       ^                 FlowFieldType         *FlowField        -    -   -    "Flow field data to represent all wind types"  -
+typedef	 ^                       ^                 ModVarsType            Vars             -    -   -    "Module Variables"
 
 
 # ..... Parameters ................................................................................................................
@@ -168,3 +176,4 @@ typedef  ^                       ^                 InflowWind_InputType  u_Avg  
 typedef  ^                       ^                 InflowWind_OutputType y_Avg         -     -     -     "outputs for computing rotor-averaged values"  -
 typedef  ^                       ^                 InflowWind_InputType  u_Hub         -     -     -     "inputs for computing hub values"  -
 typedef  ^                       ^                 InflowWind_OutputType y_Hub         -     -     -     "outputs for computing hub values"  -
+typedef  ^                       ^                 ModJacType        Jac               -     -     -     "Values corresponding to module variables" -

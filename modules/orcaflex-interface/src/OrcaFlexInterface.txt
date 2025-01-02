@@ -22,6 +22,7 @@ typedef  ^                       ^              ReKi            TMax            
 typedef   ^   InitOutputType ProgDesc   Ver   -   -   -   "This module's name, version, and date"   -
 typedef   ^   ^               CHARACTER(ChanLen)   WriteOutputHdr   {:} -  -     "Names of the output-to-file channels"   -
 typedef   ^   ^               CHARACTER(ChanLen)   WriteOutputUnt   {:} -  -     "Units of the output-to-file channels"   -
+typedef   ^   ^               ModVarsType          *Vars             -  -  -     "Module Variables"
 
 
 # Inputfile information
@@ -44,7 +45,8 @@ typedef  ^  OtherStateType    SiKi              DummyOtherState    - - -  "Remov
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef  ^  MiscVarType       ReKi              PtfmAM               {6}{6} - -  "Added mass matrix results from OrcaFlex"    -
+typedef  ^  MiscVarType       ModJacType        Jac                  -      - -  "Jacobian matrices and arrays corresponding to module variables"
+typedef  ^  ^                 ReKi              PtfmAM               {6}{6} - -  "Added mass matrix results from OrcaFlex"    -
 typedef  ^  ^                 ReKi              PtfmFt               {6}    - -  "Force/moment results from OrcaFlex"         -
 typedef  ^  ^                 ReKi              F_PtfmAM             {6}   -  -  "Force/moment results calculated from the added mass and accel"   -
 typedef  ^  ^                 ReKi              AllOuts              :  -  -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
@@ -52,7 +54,10 @@ typedef  ^  ^                 DbKi              LastTimeStep         -  -  -    
 
 
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^  ParameterType     DbKi              DT                   -  -  -     "Time step for continuous state integration & discrete state update"       seconds
+typedef  ^  ParameterType     ModVarsType      &Vars                 -  -  -     "Module Variables"
+typedef  ^  ^                 IntKi             iVarPtfmMeshU        -  -  -     "Index of platform mesh input variable"
+typedef  ^  ^                 IntKi             iVarPtfmMeshY        -  -  -     "Index of platform mesh output variable"
+typedef  ^  ^                 DbKi              DT                   -  -  -     "Time step for continuous state integration & discrete state update"       seconds
 typedef  ^  ^                 DLL_Type          DLL_Orca             -  -  -     "Info for the OrcaFlex DLL"                                                -
 typedef  ^  ^                 CHARACTER(1024)   SimNamePath          -  -  -     "Path with simulation rootname with null end character for passing to C"   -
 typedef  ^  ^                 IntKi             SimNamePathLen       -  -  -     "Length of SimNamePath (including null char)"                              -

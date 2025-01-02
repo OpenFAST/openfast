@@ -35,8 +35,8 @@ USE AirfoilInfo_Types
 USE UnsteadyAero_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelocity = 1      ! Grid stores velocity field [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelVorticity = 2      ! Grid stores velocity and vorticity [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelocity                   = 1      ! Grid stores velocity field [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelVorticity               = 2      ! Grid stores velocity and vorticity [-]
 ! =========  GridOutType  =======
   TYPE, PUBLIC :: GridOutType
     CHARACTER(100)  :: name      !< Grid name [-]
@@ -352,7 +352,24 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Dummy = 0_IntKi      !< Empty parameter to satisfy framework [-]
   END TYPE FVW_InitOutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: FVW_x_W_Gamma_NW                 =   1 ! FVW%W(DL%i1)%Gamma_NW
+   integer(IntKi), public, parameter :: FVW_x_W_Gamma_FW                 =   2 ! FVW%W(DL%i1)%Gamma_FW
+   integer(IntKi), public, parameter :: FVW_x_W_Eps_NW                   =   3 ! FVW%W(DL%i1)%Eps_NW
+   integer(IntKi), public, parameter :: FVW_x_W_Eps_FW                   =   4 ! FVW%W(DL%i1)%Eps_FW
+   integer(IntKi), public, parameter :: FVW_x_W_r_NW                     =   5 ! FVW%W(DL%i1)%r_NW
+   integer(IntKi), public, parameter :: FVW_x_W_r_FW                     =   6 ! FVW%W(DL%i1)%r_FW
+   integer(IntKi), public, parameter :: FVW_x_UA_element_x               =   7 ! FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x
+   integer(IntKi), public, parameter :: FVW_z_W_Gamma_LL                 =   8 ! FVW%W(DL%i1)%Gamma_LL
+   integer(IntKi), public, parameter :: FVW_z_residual                   =   9 ! FVW%residual
+   integer(IntKi), public, parameter :: FVW_u_rotors_HubOrientation      =  10 ! FVW%rotors(DL%i1)%HubOrientation
+   integer(IntKi), public, parameter :: FVW_u_rotors_HubPosition         =  11 ! FVW%rotors(DL%i1)%HubPosition
+   integer(IntKi), public, parameter :: FVW_u_W_Vwnd_LL                  =  12 ! FVW%W(DL%i1)%Vwnd_LL
+   integer(IntKi), public, parameter :: FVW_u_W_omega_z                  =  13 ! FVW%W(DL%i1)%omega_z
+   integer(IntKi), public, parameter :: FVW_u_WingsMesh                  =  14 ! FVW%WingsMesh(DL%i1)
+   integer(IntKi), public, parameter :: FVW_u_V_wind                     =  15 ! FVW%V_wind
+   integer(IntKi), public, parameter :: FVW_y_W_Vind                     =  16 ! FVW%W(DL%i1)%Vind
+
+contains
 
 subroutine FVW_CopyGridOutType(SrcGridOutTypeData, DstGridOutTypeData, CtrlCode, ErrStat, ErrMsg)
    type(GridOutType), intent(in) :: SrcGridOutTypeData
@@ -4079,5 +4096,363 @@ SUBROUTINE FVW_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
       END DO
    END IF ! check if allocated
 END SUBROUTINE
+
+function FVW_InputMeshPointer(u, DL) result(Mesh)
+   type(FVW_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (FVW_u_WingsMesh)
+       Mesh => u%WingsMesh(DL%i1)
+   end select
+end function
+
+function FVW_OutputMeshPointer(y, DL) result(Mesh)
+   type(FVW_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine FVW_VarsPackContState(Vars, x, ValAry)
+   type(FVW_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FVW_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine FVW_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FVW_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FVW_x_W_Gamma_NW)
+         VarVals = x%W(DL%i1)%Gamma_NW(V%iLB:V%iUB,V%j)                       ! Rank 2 Array
+      case (FVW_x_W_Gamma_FW)
+         VarVals = x%W(DL%i1)%Gamma_FW(V%iLB:V%iUB,V%j)                       ! Rank 2 Array
+      case (FVW_x_W_Eps_NW)
+         VarVals = x%W(DL%i1)%Eps_NW(V%iLB:V%iUB, V%j, V%k)                   ! Rank 3 Array
+      case (FVW_x_W_Eps_FW)
+         VarVals = x%W(DL%i1)%Eps_FW(V%iLB:V%iUB, V%j, V%k)                   ! Rank 3 Array
+      case (FVW_x_W_r_NW)
+         VarVals = x%W(DL%i1)%r_NW(V%iLB:V%iUB, V%j, V%k)                     ! Rank 3 Array
+      case (FVW_x_W_r_FW)
+         VarVals = x%W(DL%i1)%r_FW(V%iLB:V%iUB, V%j, V%k)                     ! Rank 3 Array
+      case (FVW_x_UA_element_x)
+         VarVals = x%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iLB:V%iUB)           ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FVW_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FVW_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FVW_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine FVW_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FVW_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FVW_x_W_Gamma_NW)
+         x%W(DL%i1)%Gamma_NW(V%iLB:V%iUB, V%j) = VarVals                      ! Rank 2 Array
+      case (FVW_x_W_Gamma_FW)
+         x%W(DL%i1)%Gamma_FW(V%iLB:V%iUB, V%j) = VarVals                      ! Rank 2 Array
+      case (FVW_x_W_Eps_NW)
+         x%W(DL%i1)%Eps_NW(V%iLB:V%iUB, V%j, V%k) = VarVals                   ! Rank 3 Array
+      case (FVW_x_W_Eps_FW)
+         x%W(DL%i1)%Eps_FW(V%iLB:V%iUB, V%j, V%k) = VarVals                   ! Rank 3 Array
+      case (FVW_x_W_r_NW)
+         x%W(DL%i1)%r_NW(V%iLB:V%iUB, V%j, V%k) = VarVals                     ! Rank 3 Array
+      case (FVW_x_W_r_FW)
+         x%W(DL%i1)%r_FW(V%iLB:V%iUB, V%j, V%k) = VarVals                     ! Rank 3 Array
+      case (FVW_x_UA_element_x)
+         x%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iLB:V%iUB) = VarVals           ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function FVW_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FVW_x_W_Gamma_NW)
+       Name = "x%W("//trim(Num2LStr(DL%i1))//")%Gamma_NW"
+   case (FVW_x_W_Gamma_FW)
+       Name = "x%W("//trim(Num2LStr(DL%i1))//")%Gamma_FW"
+   case (FVW_x_W_Eps_NW)
+       Name = "x%W("//trim(Num2LStr(DL%i1))//")%Eps_NW"
+   case (FVW_x_W_Eps_FW)
+       Name = "x%W("//trim(Num2LStr(DL%i1))//")%Eps_FW"
+   case (FVW_x_W_r_NW)
+       Name = "x%W("//trim(Num2LStr(DL%i1))//")%r_NW"
+   case (FVW_x_W_r_FW)
+       Name = "x%W("//trim(Num2LStr(DL%i1))//")%r_FW"
+   case (FVW_x_UA_element_x)
+       Name = "x%UA("//trim(Num2LStr(DL%i1))//")%element("//trim(Num2LStr(DL%i2))//", "//trim(Num2LStr(DL%i3))//")%x"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine FVW_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(FVW_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FVW_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine FVW_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FVW_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FVW_x_W_Gamma_NW)
+         VarVals = x%W(DL%i1)%Gamma_NW(V%iLB:V%iUB,V%j)                       ! Rank 2 Array
+      case (FVW_x_W_Gamma_FW)
+         VarVals = x%W(DL%i1)%Gamma_FW(V%iLB:V%iUB,V%j)                       ! Rank 2 Array
+      case (FVW_x_W_Eps_NW)
+         VarVals = x%W(DL%i1)%Eps_NW(V%iLB:V%iUB, V%j, V%k)                   ! Rank 3 Array
+      case (FVW_x_W_Eps_FW)
+         VarVals = x%W(DL%i1)%Eps_FW(V%iLB:V%iUB, V%j, V%k)                   ! Rank 3 Array
+      case (FVW_x_W_r_NW)
+         VarVals = x%W(DL%i1)%r_NW(V%iLB:V%iUB, V%j, V%k)                     ! Rank 3 Array
+      case (FVW_x_W_r_FW)
+         VarVals = x%W(DL%i1)%r_FW(V%iLB:V%iUB, V%j, V%k)                     ! Rank 3 Array
+      case (FVW_x_UA_element_x)
+         VarVals = x%UA(DL%i1)%element(DL%i2, DL%i3)%x(V%iLB:V%iUB)           ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FVW_VarsPackConstrState(Vars, z, ValAry)
+   type(FVW_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%z)
+      call FVW_VarPackConstrState(Vars%z(i), z, ValAry)
+   end do
+end subroutine
+
+subroutine FVW_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FVW_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FVW_z_W_Gamma_LL)
+         VarVals = z%W(DL%i1)%Gamma_LL(V%iLB:V%iUB)                           ! Rank 1 Array
+      case (FVW_z_residual)
+         VarVals(1) = z%residual                                              ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FVW_VarsUnpackConstrState(Vars, ValAry, z)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FVW_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%z)
+      call FVW_VarUnpackConstrState(Vars%z(i), ValAry, z)
+   end do
+end subroutine
+
+subroutine FVW_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FVW_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FVW_z_W_Gamma_LL)
+         z%W(DL%i1)%Gamma_LL(V%iLB:V%iUB) = VarVals                           ! Rank 1 Array
+      case (FVW_z_residual)
+         z%residual = VarVals(1)                                              ! Scalar
+      end select
+   end associate
+end subroutine
+
+function FVW_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FVW_z_W_Gamma_LL)
+       Name = "z%W("//trim(Num2LStr(DL%i1))//")%Gamma_LL"
+   case (FVW_z_residual)
+       Name = "z%residual"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine FVW_VarsPackInput(Vars, u, ValAry)
+   type(FVW_InputType), intent(in)         :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call FVW_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine FVW_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FVW_InputType), intent(in)         :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FVW_u_rotors_HubOrientation)
+         VarVals = u%rotors(DL%i1)%HubOrientation(V%iLB:V%iUB,V%j)            ! Rank 2 Array
+      case (FVW_u_rotors_HubPosition)
+         VarVals = u%rotors(DL%i1)%HubPosition(V%iLB:V%iUB)                   ! Rank 1 Array
+      case (FVW_u_W_Vwnd_LL)
+         VarVals = u%W(DL%i1)%Vwnd_LL(V%iLB:V%iUB,V%j)                        ! Rank 2 Array
+      case (FVW_u_W_omega_z)
+         VarVals = u%W(DL%i1)%omega_z(V%iLB:V%iUB)                            ! Rank 1 Array
+      case (FVW_u_WingsMesh)
+         call MV_PackMesh(V, u%WingsMesh(DL%i1), ValAry)                      ! Mesh
+      case (FVW_u_V_wind)
+         VarVals = u%V_wind(V%iLB:V%iUB,V%j)                                  ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FVW_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FVW_InputType), intent(inout)      :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call FVW_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine FVW_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FVW_InputType), intent(inout)      :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FVW_u_rotors_HubOrientation)
+         u%rotors(DL%i1)%HubOrientation(V%iLB:V%iUB, V%j) = VarVals           ! Rank 2 Array
+      case (FVW_u_rotors_HubPosition)
+         u%rotors(DL%i1)%HubPosition(V%iLB:V%iUB) = VarVals                   ! Rank 1 Array
+      case (FVW_u_W_Vwnd_LL)
+         u%W(DL%i1)%Vwnd_LL(V%iLB:V%iUB, V%j) = VarVals                       ! Rank 2 Array
+      case (FVW_u_W_omega_z)
+         u%W(DL%i1)%omega_z(V%iLB:V%iUB) = VarVals                            ! Rank 1 Array
+      case (FVW_u_WingsMesh)
+         call MV_UnpackMesh(V, ValAry, u%WingsMesh(DL%i1))                    ! Mesh
+      case (FVW_u_V_wind)
+         u%V_wind(V%iLB:V%iUB, V%j) = VarVals                                 ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function FVW_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FVW_u_rotors_HubOrientation)
+       Name = "u%rotors("//trim(Num2LStr(DL%i1))//")%HubOrientation"
+   case (FVW_u_rotors_HubPosition)
+       Name = "u%rotors("//trim(Num2LStr(DL%i1))//")%HubPosition"
+   case (FVW_u_W_Vwnd_LL)
+       Name = "u%W("//trim(Num2LStr(DL%i1))//")%Vwnd_LL"
+   case (FVW_u_W_omega_z)
+       Name = "u%W("//trim(Num2LStr(DL%i1))//")%omega_z"
+   case (FVW_u_WingsMesh)
+       Name = "u%WingsMesh("//trim(Num2LStr(DL%i1))//")"
+   case (FVW_u_V_wind)
+       Name = "u%V_wind"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine FVW_VarsPackOutput(Vars, y, ValAry)
+   type(FVW_OutputType), intent(in)        :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call FVW_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine FVW_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FVW_OutputType), intent(in)        :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FVW_y_W_Vind)
+         VarVals = y%W(DL%i1)%Vind(V%iLB:V%iUB,V%j)                           ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FVW_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FVW_OutputType), intent(inout)     :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call FVW_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine FVW_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FVW_OutputType), intent(inout)     :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FVW_y_W_Vind)
+         y%W(DL%i1)%Vind(V%iLB:V%iUB, V%j) = VarVals                          ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function FVW_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FVW_y_W_Vind)
+       Name = "y%W("//trim(Num2LStr(DL%i1))//")%Vind"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE FVW_Types
+
 !ENDOFREGISTRYGENERATEDFILE

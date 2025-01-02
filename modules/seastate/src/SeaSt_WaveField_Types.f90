@@ -34,20 +34,20 @@ MODULE SeaSt_WaveField_Types
 USE IfW_FlowField_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_None = 0      ! WaveDirMod = 0 [Directional spreading function is NONE] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_COS2S = 1      ! WaveDirMod = 1 [Directional spreading function is COS2S] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_None = 0      ! WaveMod = 0   [Incident wave kinematics model: NONE (still water)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_Regular = 1      ! WaveMod = 1   [Incident wave kinematics model: Regular (periodic)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_RegularUsrPh = 10      ! WaveMod = 1P# [Incident wave kinematics model: Regular (user specified phase)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_JONSWAP = 2      ! WaveMod = 2   [Incident wave kinematics model: JONSWAP/Pierson-Moskowitz spectrum (irregular)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_WhiteNoise = 3      ! WaveMod = 3   [Incident wave kinematics model: White noise spectrum (irregular)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserSpctrm = 4      ! WaveMod = 4   [Incident wave kinematics model: user-defined spectrum from routine UserWaveSpctrm (irregular)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_None = 0      ! ConstWaveMod = 0 [Constrained wave model: No constrained waves] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_CrestElev = 1      ! ConstWaveMod = 1 [Constrained wave model: Constrained wave with specified crest elevation, alpha] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_Peak2Trough = 2      ! ConstWaveMod = 2 [Constrained wave model: Constrained wave with guaranteed peak-to-trough crest height, HCrest] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_None                  = 0      ! WaveDirMod = 0 [Directional spreading function is NONE] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_COS2S                 = 1      ! WaveDirMod = 1 [Directional spreading function is COS2S] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_None                     = 0      ! WaveMod = 0   [Incident wave kinematics model: NONE (still water)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_Regular                  = 1      ! WaveMod = 1   [Incident wave kinematics model: Regular (periodic)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_RegularUsrPh             = 10      ! WaveMod = 1P# [Incident wave kinematics model: Regular (user specified phase)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_JONSWAP                  = 2      ! WaveMod = 2   [Incident wave kinematics model: JONSWAP/Pierson-Moskowitz spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_WhiteNoise               = 3      ! WaveMod = 3   [Incident wave kinematics model: White noise spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserSpctrm               = 4      ! WaveMod = 4   [Incident wave kinematics model: user-defined spectrum from routine UserWaveSpctrm (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev                  = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull                  = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq                 = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_None                = 0      ! ConstWaveMod = 0 [Constrained wave model: No constrained waves] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_CrestElev           = 1      ! ConstWaveMod = 1 [Constrained wave model: Constrained wave with specified crest elevation, alpha] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ConstWaveMod_Peak2Trough         = 2      ! ConstWaveMod = 2 [Constrained wave model: Constrained wave with guaranteed peak-to-trough crest height, HCrest] [-]
 ! =========  SeaSt_WaveField_ParameterType  =======
   TYPE, PUBLIC :: SeaSt_WaveField_ParameterType
     INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the t, x, y, and z directions [-]
@@ -108,7 +108,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine SeaSt_WaveField_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(SeaSt_WaveField_ParameterType), intent(in) :: SrcParamData
@@ -607,5 +608,7 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(RF, OutData)
    call RegUnpack(RF, OutData%NStepWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NStepWave2); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE SeaSt_WaveField_Types
+
 !ENDOFREGISTRYGENERATEDFILE

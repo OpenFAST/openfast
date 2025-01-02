@@ -1632,7 +1632,7 @@ CONTAINS
 !!
 !! Note that the numbers are added together in this routine, so overflow can result if comparing two "huge" numbers. \n
 !! Use EqualRealNos (nwtc_num::equalrealnos) instead of directly calling a specific routine in the generic interface. 
-   FUNCTION EqualRealNos4 ( ReNum1, ReNum2 )
+   PURE FUNCTION EqualRealNos4 ( ReNum1, ReNum2 )
 
       ! passed variables
 
@@ -1666,7 +1666,7 @@ CONTAINS
    END FUNCTION EqualRealNos4
 !=======================================================================
 !> \copydoc nwtc_num::equalrealnos4
-   FUNCTION EqualRealNos8 ( ReNum1, ReNum2 )
+   PURE FUNCTION EqualRealNos8 ( ReNum1, ReNum2 )
 
       ! passed variables
 

@@ -811,7 +811,7 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
    integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
    character(*), parameter                          :: RoutineName = 'SetHDInputs'
-   real(R8Ki)                                       :: yInterp(size(drvrData%PRPin,2))
+   real(R8Ki), allocatable                          :: yInterp(:)
    integer(intKi)                                   :: indxHigh, indxMid, indxLow
    integer(intKi)                                   :: i
    
@@ -820,6 +820,10 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
 
    ! PRPInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
    IF ( drvrData%PRPInputsMod == 2 ) THEN
+
+      call AllocAry(yInterp, size(drvrData%PRPin,2), "yInterp", ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
       call InterpStpMat( time, drvrData%PRPinTime, drvrData%PRPin, mappingData%Ind, size(drvrData%PRPinTime), yInterp )
       
       u_HD%PRPMesh%TranslationDisp(:,1)   = yInterp(1:3) 

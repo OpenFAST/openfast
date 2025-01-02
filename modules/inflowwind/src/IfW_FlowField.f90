@@ -26,7 +26,6 @@ implicit none
 
 public IfW_FlowField_GetVelAcc
 public IfW_UniformField_CalcAccel, IfW_Grid3DField_CalcAccel
-public IfW_UniformWind_GetOP, IfW_UniformWind_Perturb       ! for linearization
 public Grid3D_to_Uniform, Uniform_to_Grid3D
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
@@ -709,41 +708,6 @@ contains
    end subroutine
 
 end subroutine
-
-!> Routine to compute the Jacobians of the output (Y) function with respect to the inputs (u). The partial
-!! derivative dY/du is returned. This submodule does not follow the modularization framework.
-subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
-   type(UniformFieldType), intent(IN)  :: UF             !< Parameters
-   real(DbKi), intent(IN)              :: t              !< Current simulation time in seconds
-   logical, intent(in)                 :: InterpCubic    !< flag for using cubic interpolation
-   real(ReKi), intent(OUT)             :: OP_out(3)      !< operating point (HWindSpeed, PLexp, and AngleH)
-
-   type(UniformField_Interp)           :: op         ! interpolated values of InterpParams
-
-   ! Linearly interpolate parameters in time at operating point (or use nearest-neighbor to extrapolate)
-   if (InterpCubic) then
-      op = UniformField_InterpCubic(UF, t)
-   else
-      op = UniformField_InterpLinear(UF, t)
-   end if
-
-   OP_out(1) = op%VelH
-   OP_out(2) = op%ShrV
-   OP_out(3) = op%AngleH
-end subroutine
-
-
-!> Routine to perturb the wind extended outputs (needed by AeroDyn)
-!! NOTE: we are not passing the pointer here, but doing pass by reference to the FlowField since
-!!    this can only be used with linearization, and linearization requires using Uniform winds.
-subroutine IfW_UniformWind_Perturb(FF_perturb, du)
-   type(FlowFieldType),    intent(INOUT)  :: FF_perturb     !< Parameters to be modified
-   real(R8Ki),             intent(IN   )  :: du(3)          !< perturbations to apply
-   FF_perturb%Uniform%VelH(:) = FF_perturb%Uniform%VelH(:) + du(1)
-   FF_perturb%Uniform%ShrV(:) = FF_perturb%Uniform%ShrV(:) + du(2)
-   FF_perturb%PropagationDir  = FF_perturb%PropagationDir  + du(3)
-end subroutine
-
 
 subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
                                VelCell, AccCell, Xi, Is3D, ErrStat, ErrMsg)

@@ -139,7 +139,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumWindPoints = 0_IntKi      !< Number of points where wind components will be provided [-]
   END TYPE Points_InitInputType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine InflowWind_IO_CopyWindFileDat(SrcWindFileDatData, DstWindFileDatData, CtrlCode, ErrStat, ErrMsg)
    type(WindFileDat), intent(in) :: SrcWindFileDatData
@@ -725,5 +726,7 @@ subroutine InflowWind_IO_UnPackPoints_InitInputType(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%NumWindPoints); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE InflowWind_IO_Types
+
 !ENDOFREGISTRYGENERATEDFILE

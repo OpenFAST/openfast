@@ -74,6 +74,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of flow field data type [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE ExtInfw_InitOutputType
 ! =======================
 ! =========  ExtInfw_MiscVarType_C  =======
@@ -82,6 +83,7 @@ IMPLICIT NONE
   END TYPE ExtInfw_MiscVarType_C
   TYPE, PUBLIC :: ExtInfw_MiscVarType
     TYPE( ExtInfw_MiscVarType_C ) :: C_obj
+    TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: ActForceMotionsPoints      !< point mesh for transferring AeroDyn motions to ExternalInflow  (includes hub+blades+nacelle+tower+tailfin) [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: ActForceLoadsPoints      !< point mesh for transferring AeroDyn distributed loads to ExternalInflow (includes hub+blades+nacelle+tower+tailfin) [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: Line2_to_Point_Loads      !< mapping data structure to convert line2 loads to point loads [-]
@@ -110,6 +112,7 @@ IMPLICIT NONE
   END TYPE ExtInfw_ParameterType_C
   TYPE, PUBLIC :: ExtInfw_ParameterType
     TYPE( ExtInfw_ParameterType_C ) :: C_obj
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density for normalization of loads sent to ExternalInflow [kg/m^3]
     INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of blades [-]
     INTEGER(IntKi)  :: NMappings = 0_IntKi      !< Number of mappings [-]
@@ -204,7 +207,29 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE ExtInfw_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: ExtInfw_u_pxVel                  =   1 ! ExtInfw%pxVel
+   integer(IntKi), public, parameter :: ExtInfw_u_pyVel                  =   2 ! ExtInfw%pyVel
+   integer(IntKi), public, parameter :: ExtInfw_u_pzVel                  =   3 ! ExtInfw%pzVel
+   integer(IntKi), public, parameter :: ExtInfw_u_pxForce                =   4 ! ExtInfw%pxForce
+   integer(IntKi), public, parameter :: ExtInfw_u_pyForce                =   5 ! ExtInfw%pyForce
+   integer(IntKi), public, parameter :: ExtInfw_u_pzForce                =   6 ! ExtInfw%pzForce
+   integer(IntKi), public, parameter :: ExtInfw_u_xdotForce              =   7 ! ExtInfw%xdotForce
+   integer(IntKi), public, parameter :: ExtInfw_u_ydotForce              =   8 ! ExtInfw%ydotForce
+   integer(IntKi), public, parameter :: ExtInfw_u_zdotForce              =   9 ! ExtInfw%zdotForce
+   integer(IntKi), public, parameter :: ExtInfw_u_pOrientation           =  10 ! ExtInfw%pOrientation
+   integer(IntKi), public, parameter :: ExtInfw_u_fx                     =  11 ! ExtInfw%fx
+   integer(IntKi), public, parameter :: ExtInfw_u_fy                     =  12 ! ExtInfw%fy
+   integer(IntKi), public, parameter :: ExtInfw_u_fz                     =  13 ! ExtInfw%fz
+   integer(IntKi), public, parameter :: ExtInfw_u_momentx                =  14 ! ExtInfw%momentx
+   integer(IntKi), public, parameter :: ExtInfw_u_momenty                =  15 ! ExtInfw%momenty
+   integer(IntKi), public, parameter :: ExtInfw_u_momentz                =  16 ! ExtInfw%momentz
+   integer(IntKi), public, parameter :: ExtInfw_u_forceNodesChord        =  17 ! ExtInfw%forceNodesChord
+   integer(IntKi), public, parameter :: ExtInfw_y_u                      =  18 ! ExtInfw%u
+   integer(IntKi), public, parameter :: ExtInfw_y_v                      =  19 ! ExtInfw%v
+   integer(IntKi), public, parameter :: ExtInfw_y_w                      =  20 ! ExtInfw%w
+   integer(IntKi), public, parameter :: ExtInfw_y_WriteOutput            =  21 ! ExtInfw%WriteOutput
+
+contains
 
 subroutine ExtInfw_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(ExtInfw_InitInputType), intent(in) :: SrcInitInputData
@@ -465,6 +490,7 @@ subroutine ExtInfw_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%FlowField => SrcInitOutputData%FlowField
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
 end subroutine
 
 subroutine ExtInfw_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -485,6 +511,7 @@ subroutine ExtInfw_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(InitOutputData%FlowField)
+   nullify(InitOutputData%Vars)
 end subroutine
 
 subroutine ExtInfw_PackInitOutput(RF, Indata)
@@ -505,6 +532,13 @@ subroutine ExtInfw_PackInitOutput(RF, Indata)
       call RegPackPointer(RF, c_loc(InData%FlowField), PtrInIndex)
       if (.not. PtrInIndex) then
          call IfW_FlowField_PackFlowFieldType(RF, InData%FlowField) 
+      end if
+   end if
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
       end if
    end if
    if (RegCheckErr(RF, RoutineName)) return
@@ -540,6 +574,24 @@ subroutine ExtInfw_UnPackInitOutput(RF, OutData)
       end if
    else
       OutData%FlowField => null()
+   end if
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
    end if
 end subroutine
 
@@ -590,6 +642,9 @@ subroutine ExtInfw_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ExtInfw_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%ActForceMotionsPoints)) then
       LB(1:1) = lbound(SrcMiscData%ActForceMotionsPoints)
       UB(1:1) = ubound(SrcMiscData%ActForceMotionsPoints)
@@ -679,6 +734,8 @@ subroutine ExtInfw_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ExtInfw_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%ActForceMotionsPoints)) then
       LB(1:1) = lbound(MiscData%ActForceMotionsPoints)
       UB(1:1) = ubound(MiscData%ActForceMotionsPoints)
@@ -735,6 +792,7 @@ subroutine ExtInfw_PackMisc(RF, Indata)
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
    end if
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call RegPack(RF, allocated(InData%ActForceMotionsPoints))
    if (allocated(InData%ActForceMotionsPoints)) then
       call RegPackBounds(RF, 1, lbound(InData%ActForceMotionsPoints), ubound(InData%ActForceMotionsPoints))
@@ -792,6 +850,7 @@ subroutine ExtInfw_UnPackMisc(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    if (allocated(OutData%ActForceMotionsPoints)) deallocate(OutData%ActForceMotionsPoints)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -906,9 +965,22 @@ subroutine ExtInfw_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    character(*),    intent(  out) :: ErrMsg
    integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtInfw_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
    DstParamData%AirDens = SrcParamData%AirDens
    DstParamData%C_obj%AirDens = SrcParamData%C_obj%AirDens
    DstParamData%NumBl = SrcParamData%NumBl
@@ -967,9 +1039,17 @@ subroutine ExtInfw_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(ExtInfw_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtInfw_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
    if (associated(ParamData%forceBldRnodes)) then
       deallocate(ParamData%forceBldRnodes)
       ParamData%forceBldRnodes => null()
@@ -993,6 +1073,13 @@ subroutine ExtInfw_PackParam(RF, Indata)
    if (c_associated(InData%C_obj%object)) then
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
+   end if
+   call RegPack(RF, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+      end if
    end if
    call RegPack(RF, InData%AirDens)
    call RegPack(RF, InData%NumBl)
@@ -1020,6 +1107,24 @@ subroutine ExtInfw_UnPackParam(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%AirDens = OutData%AirDens
    call RegUnpack(RF, OutData%NumBl); if (RegCheckErr(RF, RoutineName)) return
@@ -2728,5 +2833,253 @@ SUBROUTINE ExtInfw_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function ExtInfw_InputMeshPointer(u, DL) result(Mesh)
+   type(ExtInfw_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function ExtInfw_OutputMeshPointer(y, DL) result(Mesh)
+   type(ExtInfw_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine ExtInfw_VarsPackInput(Vars, u, ValAry)
+   type(ExtInfw_InputType), intent(in)     :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call ExtInfw_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine ExtInfw_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtInfw_InputType), intent(in)     :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtInfw_u_pxVel)
+         VarVals = u%pxVel(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case (ExtInfw_u_pyVel)
+         VarVals = u%pyVel(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case (ExtInfw_u_pzVel)
+         VarVals = u%pzVel(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case (ExtInfw_u_pxForce)
+         VarVals = u%pxForce(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (ExtInfw_u_pyForce)
+         VarVals = u%pyForce(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (ExtInfw_u_pzForce)
+         VarVals = u%pzForce(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (ExtInfw_u_xdotForce)
+         VarVals = u%xdotForce(V%iLB:V%iUB)                                   ! Rank 1 Array
+      case (ExtInfw_u_ydotForce)
+         VarVals = u%ydotForce(V%iLB:V%iUB)                                   ! Rank 1 Array
+      case (ExtInfw_u_zdotForce)
+         VarVals = u%zdotForce(V%iLB:V%iUB)                                   ! Rank 1 Array
+      case (ExtInfw_u_pOrientation)
+         VarVals = u%pOrientation(V%iLB:V%iUB)                                ! Rank 1 Array
+      case (ExtInfw_u_fx)
+         VarVals = u%fx(V%iLB:V%iUB)                                          ! Rank 1 Array
+      case (ExtInfw_u_fy)
+         VarVals = u%fy(V%iLB:V%iUB)                                          ! Rank 1 Array
+      case (ExtInfw_u_fz)
+         VarVals = u%fz(V%iLB:V%iUB)                                          ! Rank 1 Array
+      case (ExtInfw_u_momentx)
+         VarVals = u%momentx(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (ExtInfw_u_momenty)
+         VarVals = u%momenty(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (ExtInfw_u_momentz)
+         VarVals = u%momentz(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (ExtInfw_u_forceNodesChord)
+         VarVals = u%forceNodesChord(V%iLB:V%iUB)                             ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtInfw_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ExtInfw_InputType), intent(inout)  :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call ExtInfw_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine ExtInfw_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtInfw_InputType), intent(inout)  :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtInfw_u_pxVel)
+         u%pxVel(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      case (ExtInfw_u_pyVel)
+         u%pyVel(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      case (ExtInfw_u_pzVel)
+         u%pzVel(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      case (ExtInfw_u_pxForce)
+         u%pxForce(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (ExtInfw_u_pyForce)
+         u%pyForce(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (ExtInfw_u_pzForce)
+         u%pzForce(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (ExtInfw_u_xdotForce)
+         u%xdotForce(V%iLB:V%iUB) = VarVals                                   ! Rank 1 Array
+      case (ExtInfw_u_ydotForce)
+         u%ydotForce(V%iLB:V%iUB) = VarVals                                   ! Rank 1 Array
+      case (ExtInfw_u_zdotForce)
+         u%zdotForce(V%iLB:V%iUB) = VarVals                                   ! Rank 1 Array
+      case (ExtInfw_u_pOrientation)
+         u%pOrientation(V%iLB:V%iUB) = VarVals                                ! Rank 1 Array
+      case (ExtInfw_u_fx)
+         u%fx(V%iLB:V%iUB) = VarVals                                          ! Rank 1 Array
+      case (ExtInfw_u_fy)
+         u%fy(V%iLB:V%iUB) = VarVals                                          ! Rank 1 Array
+      case (ExtInfw_u_fz)
+         u%fz(V%iLB:V%iUB) = VarVals                                          ! Rank 1 Array
+      case (ExtInfw_u_momentx)
+         u%momentx(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (ExtInfw_u_momenty)
+         u%momenty(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (ExtInfw_u_momentz)
+         u%momentz(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (ExtInfw_u_forceNodesChord)
+         u%forceNodesChord(V%iLB:V%iUB) = VarVals                             ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function ExtInfw_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtInfw_u_pxVel)
+       Name = "u%pxVel"
+   case (ExtInfw_u_pyVel)
+       Name = "u%pyVel"
+   case (ExtInfw_u_pzVel)
+       Name = "u%pzVel"
+   case (ExtInfw_u_pxForce)
+       Name = "u%pxForce"
+   case (ExtInfw_u_pyForce)
+       Name = "u%pyForce"
+   case (ExtInfw_u_pzForce)
+       Name = "u%pzForce"
+   case (ExtInfw_u_xdotForce)
+       Name = "u%xdotForce"
+   case (ExtInfw_u_ydotForce)
+       Name = "u%ydotForce"
+   case (ExtInfw_u_zdotForce)
+       Name = "u%zdotForce"
+   case (ExtInfw_u_pOrientation)
+       Name = "u%pOrientation"
+   case (ExtInfw_u_fx)
+       Name = "u%fx"
+   case (ExtInfw_u_fy)
+       Name = "u%fy"
+   case (ExtInfw_u_fz)
+       Name = "u%fz"
+   case (ExtInfw_u_momentx)
+       Name = "u%momentx"
+   case (ExtInfw_u_momenty)
+       Name = "u%momenty"
+   case (ExtInfw_u_momentz)
+       Name = "u%momentz"
+   case (ExtInfw_u_forceNodesChord)
+       Name = "u%forceNodesChord"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine ExtInfw_VarsPackOutput(Vars, y, ValAry)
+   type(ExtInfw_OutputType), intent(in)    :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call ExtInfw_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine ExtInfw_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtInfw_OutputType), intent(in)    :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtInfw_y_u)
+         VarVals = y%u(V%iLB:V%iUB)                                           ! Rank 1 Array
+      case (ExtInfw_y_v)
+         VarVals = y%v(V%iLB:V%iUB)                                           ! Rank 1 Array
+      case (ExtInfw_y_w)
+         VarVals = y%w(V%iLB:V%iUB)                                           ! Rank 1 Array
+      case (ExtInfw_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtInfw_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ExtInfw_OutputType), intent(inout) :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call ExtInfw_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine ExtInfw_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtInfw_OutputType), intent(inout) :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtInfw_y_u)
+         y%u(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
+      case (ExtInfw_y_v)
+         y%v(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
+      case (ExtInfw_y_w)
+         y%w(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
+      case (ExtInfw_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function ExtInfw_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtInfw_y_u)
+       Name = "y%u"
+   case (ExtInfw_y_v)
+       Name = "y%v"
+   case (ExtInfw_y_w)
+       Name = "y%w"
+   case (ExtInfw_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE ExternalInflow_Types
+
 !ENDOFREGISTRYGENERATEDFILE
