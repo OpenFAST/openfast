@@ -3,17 +3,15 @@ IEA Wind Task 37 land-based reference wind turbine
 ====== General Options ===================================================
 False          Echo        - Echo the input to "<rootname>.AD.ech"? (flag)
 "default"      DTAero      - Time interval for aerodynamic calculations {or "default"} (s)
-1              WakeMod     - Type of wake/induction model (switch) {0=none, 1=BEMT}
-2              AFAeroMod   - Type of blade airfoil aerodynamics model (switch
-0              TwrPotent   - Type of tower influence on wind around the tower (switch)
-0              TwrShadow   - Type of tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
+1              Wake_Mod    - Wake/induction model (switch) {0=none, 1=BEMT, 3=OLAF} [Wake_Mod cannot be 2 or 3 when linearizing]
+0              TwrPotent   - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+0              TwrShadow   - Calculate tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
 False          TwrAero     - Calculate tower aerodynamic loads? (flag)
-False          FrozenWake  - Assume frozen wake during linearization? (flag
-False          CavitCheck  - Perform cavitation check? (flag)
+False          CavitCheck  - Perform cavitation check? (flag) [UA_Mod must be 0 when CavitCheck=true]
 False          NacelleDrag - Include Nacelle Drag effects? (flag)
-True           CompAA      - Flag to compute AeroAcoustics calculation
-"AeroAcousticsInput.dat"   AA_InputFile
-====== Environmental Conditions ==========================================
-"default"      AirDens     - Air density (kg/m^3)
+True           CompAA      - Flag to compute AeroAcoustics calculation [used only when Wake_Mod = 1 or 2]
+"AeroAcousticsInput.dat"   AA_InputFile   - AeroAcoustics input file [used only when CompAA=true]
+======  Environmental Conditions  ===================================================================
+"default"     AirDens            - Air density (kg/m^3)
 
 File continues...
