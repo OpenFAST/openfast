@@ -116,6 +116,9 @@ typedef  ^            ^                DbKi               M              {6}{6} 
 typedef  ^            ^                DbKi               M0             {6}{6}  -  -   "body 6-dof mass and inertia matrix in its own frame"
 typedef  ^            ^                DbKi               OrMat          {3}{3}  -  -   "DCM for body orientation"
 typedef  ^            ^                DbKi               rCG            {3}     -  -   "vector in body frame from ref point to CG (before rods etc..)"
+typedef  ^            ^                DbKi               Fext           {3}     -  -   "vector of user-defined external force on the body" [N]
+typedef  ^            ^                DbKi               Blin           {3}     -  -   "user-defined linear translational damping on the body" [N/(m/s)]
+typedef  ^            ^                DbKi               Bquad          {3}     -  -   "user-defined quadratic translational damping on the body" [N/(m/s)^2]
 
 # this is the Point type, which holds data for each point object
 typedef  ^            MD_Point       IntKi              IdNum          -       -  -   "integer identifier of this point"
@@ -275,6 +278,12 @@ typedef  ^            ^                DbKi               EndMomentB   {3}      
 typedef  ^            ^                IntKi              LineUnOut     -        -  -   "unit number of line output file"
 typedef  ^            ^                DbKi               LineWrOutput {:}       -  -   "one row of output data for this line"
 
+# this is the ExtLd type, which holds data for each external load specification
+typedef  ^            MD_ExtLd         IntKi              IdNum          -       -  -   "integer identifier of this external load entry"
+typedef  ^            ^                DbKi               Fext           {3}     -  -   "user-defined external force on the object" [N]
+typedef  ^            ^                DbKi               Blin           {3}     -  -   "user-defined linear translational damping on the object" [N/(m/s)]
+typedef  ^            ^                DbKi               Bquad          {3}     -  -   "user-defined quadratic translational damping on the object" [N/(m/s)^2]
+
 # this is the Fail type, which holds data for possible line failure descriptors 
 typedef  ^            MD_Fail          IntKi              IdNum           -        -  -   "integer identifier of this failure" "-"
 typedef  ^            ^                IntKi              attachID        -        -  -   "ID of connection or Rod the lines are attached to" "-"
@@ -334,6 +343,7 @@ typedef   ^       ^                    MD_Body             BodyList         {:} 
 typedef   ^       ^                    MD_Rod              RodList          {:}  -  -   "array of rod objects"   -
 typedef   ^       ^                    MD_Point            PointList      {:}  -  -   "array of point objects"   -
 typedef   ^       ^                    MD_Line             LineList         {:}  -  -   "array of line objects"   -
+typedef   ^       ^                    MD_ExtLd            ExtLdList        {:}  -  -   "array of external load objects" - 
 typedef   ^       ^                    MD_Fail             FailList         {:}  -  -   "array of line objects"   -
 typedef   ^       ^                    IntKi               FreePointIs        {:}  -  -   "array of free point indices in PointList vector"         ""
 typedef   ^       ^                    IntKi               CpldPointIs        {:}{:} -  -   "array of coupled/fairlead point indices in PointList vector"         ""
@@ -372,6 +382,7 @@ typedef   ^       ^                    IntKi               nPointsExtra -     0 
 typedef   ^       ^                    IntKi               nBodies        -     0    -   "number of Body objects"                     ""
 typedef   ^       ^                    IntKi               nRods          -     0    -   "number of Rod objects"                      ""
 typedef   ^       ^                    IntKi               nLines         -     0    -   "number of Line objects"                     ""
+typedef   ^       ^                    IntKi               nExtLds        -     0    -   "number of external loads or damping"        ""
 typedef   ^       ^                    IntKi               nCtrlChans     -     0    -   "number of distinct control channels specified for use as inputs"        ""
 typedef   ^       ^                    IntKi               nFails         -     0    -   "number of failure conditions"                     ""
 typedef   ^       ^                    IntKi               nFreeBodies    -     0    -   ""             ""

@@ -364,6 +364,19 @@ CONTAINS
                   Line = NextLine(i)
                END DO
 
+            else if (INDEX(Line, "EXTERNAL LOADS") > 0) then ! if external load and damping header
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               ! find how many elements of this type there are
+               Line = NextLine(i)
+               DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
+                  p%nExtLds = p%nExtLds + 1
+                  Line = NextLine(i)
+               END DO
+
             else if (INDEX(Line, "CONTROL") > 0) then ! if control conditions header
 
                IF (wordy > 1) print *, "   Reading control channels: ";
@@ -564,7 +577,7 @@ CONTAINS
       ALLOCATE(m%RodList(     p%nRods     ), STAT = ErrStat2 ); if(AllocateFailed("RodList"     )) return
       ALLOCATE(m%PointList( p%nPointsExtra), STAT = ErrStat2 ); if(AllocateFailed("PointList"   )) return
       ALLOCATE(m%LineList(    p%nLines    ), STAT = ErrStat2 ); if(AllocateFailed("LineList"    )) return
-      
+      ALLOCATE(m%ExtLdList(    p%nExtLds  ), STAT = ErrStat2 ); if(AllocateFailed("ExtLdList"   )) return
       ALLOCATE(m%FailList(    p%nFails    ), STAT = ErrStat2 ); if(AllocateFailed("FailList"    )) return
     
       
@@ -1591,7 +1604,63 @@ CONTAINS
 
                END DO   ! l = 1,p%nLines
 
+            !-------------------------------------------------------------------------------------------
+            else if (INDEX(Line, "EXTERNAL LOADS") > 0) then ! if external load header
 
+               IF (wordy > 0) print *, "   Reading external load entries";
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               ! process each line
+               DO l = 1,p%nExtLds
+
+                  !read into a line
+                  Line = NextLine(i)
+
+                  IF ( CountWords( Line ) /= 11) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 11 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
+                  END IF
+
+                  IF (ErrStat2 == 0) THEN
+                     READ(Line,*,IOSTAT=ErrStat2) m%ExtLdList(l)%IdNum, tempString1, &
+                        m%ExtLdList(l)%Fext(1),  m%ExtLdList(l)%Fext(2),  m%ExtLdList(l)%Fext(3), &
+                        m%ExtLdList(l)%Blin(1),  m%ExtLdList(l)%Blin(2),  m%ExtLdList(l)%Blin(3), &
+                        m%ExtLdList(l)%Bquad(1), m%ExtLdList(l)%Bquad(2), m%ExtLdList(l)%Bquad(3)
+                     IF ( (m%ExtLdList(l)%Blin(1)<0.0) .OR. (m%ExtLdList(l)%Blin(2)<0.0) .OR. (m%ExtLdList(l)%Blin(3)<0.0) .OR. &
+                          (m%ExtLdList(l)%Bquad(1)<0.0) .OR. (m%ExtLdList(l)%Bquad(2)<0.0) .OR. (m%ExtLdList(l)%Bquad(3)<0.0) ) THEN
+                         CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Damping coefficients must be non-negative.', ErrStat, ErrMsg, RoutineName )
+                         CALL CleanUp()
+                         RETURN
+                     END IF
+                     CALL Conv2UC(tempString1) ! convert to uppercase so that matching is not case-sensitive
+                     CALL DecomposeString(tempString1, let1, num1, let2, num2, let3)
+                     IF (let1 == "BODY") THEN
+                         IF (len_trim(num1) > 0) THEN
+                            READ(num1, *) J   ! convert to int, representing parent body index
+                            IF ((J <= p%nBodies) .and. (J > 0)) THEN
+                               m%BodyList(J)%Fext = m%BodyList(J)%Fext + m%ExtLdList(l)%Fext
+                               m%BodyList(J)%Blin = m%BodyList(J)%Blin + m%ExtLdList(l)%Blin
+                               m%BodyList(J)%Bquad = m%BodyList(J)%Bquad + m%ExtLdList(l)%Bquad
+                            ELSE
+                               CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
+                               return
+                            END IF
+                         ELSE
+                            CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )
+                               return
+                         END IF
+                     ELSE
+                         CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. External load can only be applied to bodies at the moment.', ErrStat, ErrMsg, RoutineName )
+                         CALL CleanUp()
+                         RETURN
+                     END IF
+                  END IF
+
+               END DO
 
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "CONTROL") > 0) then ! if control inputs header
@@ -1958,6 +2027,7 @@ CONTAINS
    IF (wordy > 1) print *, "nBodies        = ",p%nBodies       
    IF (wordy > 1) print *, "nRods          = ",p%nRods         
    IF (wordy > 1) print *, "nLines         = ",p%nLines        
+   IF (wordy > 1) print *, "nExtLds        = ",p%nExtLds
    IF (wordy > 1) print *, "nCtrlChans     = ",p%nCtrlChans        
    IF (wordy > 1) print *, "nFails         = ",p%nFails        
    IF (wordy > 1) print *, "nFreeBodies    = ",p%nFreeBodies   
