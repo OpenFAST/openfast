@@ -372,6 +372,7 @@ subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, V
    character(*), parameter                         :: RoutineName = 'MV_AddModule'
    integer(IntKi)                                  :: ErrStat2
    character(ErrMsgLen)                            :: ErrMsg2
+   type(ModDataType), allocatable                  :: ModDataAryTmp(:)
    type(ModDataType)                               :: ModData
    integer(IntKi)                                  :: i, StartIndex
 
@@ -425,9 +426,12 @@ subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, V
    !----------------------------------------------------------------------------
 
    if (.not. allocated(ModDataAry)) then
-      ModDataAry = [ModData]
+      allocate(ModDataAry(1), source=ModData)
    else
-      ModDataAry = [ModDataAry, ModData]
+      call move_alloc(ModDataAry, ModDataAryTmp)
+      allocate(ModDataAry(size(ModDataAryTmp) + 1))
+      ModDataAry(:size(ModDataAryTmp)) = ModDataAryTmp
+      ModDataAry(size(ModDataAry)) = ModData
    end if
 
 contains
@@ -888,6 +892,7 @@ subroutine MV_AddVar(VarAry, Name, Field, DL, Num, iAry, jAry, kAry, Flags, Deri
    logical, optional, intent(in)                :: Active
    integer(IntKi)                               :: i
    type(ModVarType)                             :: Var
+   type(ModVarType), allocatable                :: VarAryTmp(:)
 
    ! If active argument specified and not active, return
    if (present(Active)) then
@@ -940,9 +945,12 @@ subroutine MV_AddVar(VarAry, Name, Field, DL, Num, iAry, jAry, kAry, Flags, Deri
 
    ! Append Var to VarArray
    if (allocated(VarAry)) then
-      VarAry = [VarAry, Var]
+      call move_alloc(VarAry, VarAryTmp)
+      allocate(VarAry(size(VarAryTmp) + 1))
+      VarAry(:size(VarAryTmp)) = VarAryTmp
+      VarAry(size(VarAry)) = Var
    else
-      VarAry = [Var]
+      allocate(VarAry(1), source=Var)
    end if
 
 end subroutine

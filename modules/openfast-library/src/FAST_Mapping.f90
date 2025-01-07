@@ -2012,14 +2012,14 @@ end subroutine
 
 subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
                        DstMod, DstDL, DstDispDL, ErrStat, ErrMsg, Active)
-   type(FAST_TurbineType), target         :: Turbine
-   type(MappingType), allocatable         :: Mappings(:)
-   type(ModDataType), intent(inout)       :: SrcMod, DstMod
-   type(DatLoc), intent(in)               :: SrcDL, DstDL
-   type(DatLoc), intent(in)               :: SrcDispDL, DstDispDL
-   integer(IntKi), intent(out)            :: ErrStat
-   character(*), intent(out)              :: ErrMsg
-   logical, optional, intent(in)          :: Active
+   type(FAST_TurbineType), target                  :: Turbine
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(ModDataType), intent(inout)                :: SrcMod, DstMod
+   type(DatLoc), intent(in)                        :: SrcDL, DstDL
+   type(DatLoc), intent(in)                        :: SrcDispDL, DstDispDL
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+   logical, optional, intent(in)                   :: Active
 
    character(*), parameter                :: RoutineName = 'MapLoadMesh'
    integer(IntKi)                         :: ErrStat2
@@ -2128,7 +2128,7 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    end if
 
    ! Add mapping to array of mappings
-   Mappings = [Mappings, Mapping]
+   call AppendMapping(Mappings, Mapping)
 
 contains
    logical function Failed()
@@ -2158,13 +2158,13 @@ contains
 end subroutine
 
 subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
-   type(FAST_TurbineType), target         :: Turbine
-   type(MappingType), allocatable         :: Mappings(:)
-   type(ModDataType), intent(inout)       :: SrcMod, DstMod
-   type(DatLoc), intent(in)               :: SrcDL, DstDL
-   integer(IntKi), intent(out)            :: ErrStat
-   character(*), intent(out)              :: ErrMsg
-   logical, optional, intent(in)          :: Active
+   type(FAST_TurbineType), target                  :: Turbine
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(ModDataType), intent(inout)                :: SrcMod, DstMod
+   type(DatLoc), intent(in)                        :: SrcDL, DstDL
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+   logical, optional, intent(in)                   :: Active
 
    character(*), parameter                :: RoutineName = 'MapMotionMesh'
    integer(IntKi)                         :: ErrStat2
@@ -2221,7 +2221,7 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrSta
    call MeshMapCreate(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Add mapping to array of mappings
-   Mappings = [Mappings, Mapping]
+   call AppendMapping(Mappings, Mapping)
 
 contains
    logical function Failed()
@@ -2230,15 +2230,15 @@ contains
    end function
 end subroutine
 
-subroutine MapVariable(Maps, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
-   type(MappingType), allocatable      :: Maps(:)
-   type(ModDataType), intent(inout)    :: SrcMod, DstMod
-   type(DatLoc), intent(in)            :: SrcDL, DstDL
-   integer(IntKi), intent(out)         :: ErrStat
-   character(*), intent(out)           :: ErrMsg
-   logical, optional, intent(in)       :: Active
-   type(MappingType)                   :: Mapping
-   integer(IntKi)                      :: iVarSrc, iVarDst
+subroutine MapVariable(Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(ModDataType), intent(inout)                :: SrcMod, DstMod
+   type(DatLoc), intent(in)                        :: SrcDL, DstDL
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+   logical, optional, intent(in)                   :: Active
+   type(MappingType)                               :: Mapping
+   integer(IntKi)                                  :: iVarSrc, iVarDst
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -2298,18 +2298,19 @@ subroutine MapVariable(Maps, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Acti
    ! Allocate variable data storage
    call AllocAry(Mapping%VarData, max(Mapping%SrcVar%Num, Mapping%DstVar%Num), "VarData", ErrStat, ErrMsg)
 
-   Maps = [Maps, Mapping]
+   ! Add mapping to array of mappings
+   call AppendMapping(Mappings, Mapping)
 end subroutine
 
 !> MapCustom creates a custom mapping that is not included in linearization.
 !! Each custom mapping needs an entry in FAST_InputSolve to actually perform the transfer.
-subroutine MapCustom(Maps, Desc, SrcMod, DstMod, i, Active)
-   type(MappingType), allocatable         :: Maps(:)
-   character(*), intent(in)               :: Desc
-   type(ModDataType), intent(inout)       :: SrcMod, DstMod
-   integer(IntKi), optional, intent(in)   :: i
-   logical, optional, intent(in)          :: Active
-   type(MappingType)                      :: Mapping
+subroutine MapCustom(Mappings, Desc, SrcMod, DstMod, i, Active)
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   character(*), intent(in)                        :: Desc
+   type(ModDataType), intent(inout)                :: SrcMod, DstMod
+   integer(IntKi), optional, intent(in)            :: i
+   logical, optional, intent(in)                   :: Active
+   type(MappingType)                               :: Mapping
 
    if (present(Active)) then
       if (.not. Active) return
@@ -2326,7 +2327,24 @@ subroutine MapCustom(Maps, Desc, SrcMod, DstMod, i, Active)
    Mapping%DstIns = DstMod%Ins
    if (present(i)) Mapping%i = i
 
-   Maps = [Maps, Mapping]
+   ! Add mapping to array of mappings
+   call AppendMapping(Mappings, Mapping)
+end subroutine
+
+! Append mapping to array of mappings
+subroutine AppendMapping(Mappings, Mapping)
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(MappingType), intent(in)                   :: Mapping
+   type(MappingType), allocatable                  :: MappingsTmp(:)
+
+   if (allocated(Mappings)) then
+      call move_alloc(Mappings, MappingsTmp)
+      allocate(Mappings(size(MappingsTmp) + 1))
+      Mappings(:size(MappingsTmp)) = MappingsTmp
+      Mappings(size(Mappings)) = Mapping
+   else
+      allocate(Mappings(1), source=Mapping)
+   end if
 end subroutine
 
 subroutine SetMapVarFlags(Mapping, SrcMod, DstMod)
