@@ -101,7 +101,7 @@ CONTAINS
 
       ! allocate node force vectors
       ALLOCATE(Rod%W(3, 0:N), Rod%Bo(3, 0:N), Rod%Dp(3, 0:N), Rod%Dq(3, 0:N), Rod%Ap(3, 0:N), &
-         Rod%Aq(3, 0:N), Rod%Pd(3, 0:N), Rod%B(3, 0:N), Rod%Fnet(3, 0:N), STAT=ErrStat2)
+         Rod%Aq(3, 0:N), Rod%Pd(3, 0:N), Rod%B(3, 0:N), Rod%Bp(3, 0:N), Rod%Fnet(3, 0:N), STAT=ErrStat2)
          if(AllocateFailed("Rod: force arrays")) return
       
       ! allocate mass and inverse mass matrices for each node (including ends)
@@ -763,10 +763,11 @@ CONTAINS
             MagVq = sqrt(SumSqVq)
 
             ! transverse and tangenential drag
-            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp - Rod%Blin * Vp_lin * dL  ! linear damping added 
+            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp 
             Rod%Dq(:,I) = 0.0_DbKi ! 0.25*p%rhoW*Rod%Cdt* Pi*Rod%d* dL * MagVq * Vq <<< should these axial side loads be included?
 
-
+            ! Transverse damping force
+            Rod%Bp(:,I) = -Rod%Blin * Vp_lin * dL  ! linear damping added. Quadratic damping tbd
 
             ! fluid acceleration components for current node
             aq = DOT_PRODUCT(Rod%Ud(:,I), Rod%q) * Rod%q  ! tangential component of fluid acceleration
@@ -803,6 +804,7 @@ CONTAINS
             Rod%Aq = 0.0_DbKi
             Rod%Pd = 0.0_DbKi
             Rod%B  = 0.0_DbKi
+            Rod%Bp = 0.0_DbKi
             
          END IF
          
@@ -873,7 +875,7 @@ CONTAINS
          ! ---------------------------- total forces for this node -----------------------------
          
          Rod%Fnet(:,I) = Rod%W(:,I) + Rod%Bo(:,I) + Rod%Dp(:,I) + Rod%Dq(:,I) &
-                         + Rod%Ap(:,I) + Rod%Aq(:,I) + Rod%Pd(:,I) + Rod%B(:,I)
+                         + Rod%Ap(:,I) + Rod%Aq(:,I) + Rod%Pd(:,I) + Rod%B(:,I) + Rod%Bp(:,I)
          
 
       END DO  ! I  - done looping through nodes

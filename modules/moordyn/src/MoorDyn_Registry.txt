@@ -193,6 +193,7 @@ typedef  ^            ^                DbKi               Dq           {:}{:}   
 typedef  ^            ^                DbKi               Ap           {:}{:}    -  -   "node added mass forcing (transverse)"  "[N]"
 typedef  ^            ^                DbKi               Aq           {:}{:}    -  -   "node added mass forcing (axial)"  "[N]"
 typedef  ^            ^                DbKi               B            {:}{:}    -  -   "node bottom contact force"  "[N]"
+typedef  ^            ^                DbKi               Bp           {:}{:}    -  -   "transverse damping force"  "[N]"
 typedef  ^            ^                DbKi               Fnet         {:}{:}    -  -   "total force on node"  "[N]"
 typedef  ^            ^                DbKi               M            {:}{:}{:} -  -   "node mass matrix"  "[kg]"
 typedef  ^            ^                DbKi               FextA        {3}       -  -   "external forces from attached lines on/about end A " -

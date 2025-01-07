@@ -101,8 +101,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !< tangential drag coefficient [-]
     REAL(DbKi)  :: CdEnd = 0.0_R8Ki      !< drag coefficient for rod end [[-]]
     REAL(DbKi)  :: CaEnd = 0.0_R8Ki      !< added mass coefficient for rod end [[-]]
-    REAL(DbKi)  :: Blin = 0.0_R8Ki      !< Linear damping, transverse damping for body element [[N/(m/s)/m]]
-    LOGICAL  :: isBlin = .false.      !< Linear damping, transverse damping for body element is used [-]
+    REAL(DbKi)  :: Blin = 0.0_R8Ki      !< Linear damping, transverse damping for rod element [[N/(m/s)/m]]
+    LOGICAL  :: isBlin = .false.      !< Linear damping, transverse damping for rod element is used [-]
   END TYPE MD_RodProp
 ! =======================
 ! =========  MD_Body  =======
@@ -214,6 +214,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Ap      !< node added mass forcing (transverse) [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Aq      !< node added mass forcing (axial) [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< node bottom contact force [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Bp      !< transverse damping force [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Fnet      !< total force on node [[N]]
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M      !< node mass matrix [[kg]]
     REAL(DbKi) , DIMENSION(1:3)  :: FextA = 0.0_R8Ki      !< external forces from attached lines on/about end A  [-]
@@ -1350,6 +1351,18 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstRodData%B = SrcRodData%B
    end if
+   if (allocated(SrcRodData%Bp)) then
+      LB(1:2) = lbound(SrcRodData%Bp)
+      UB(1:2) = ubound(SrcRodData%Bp)
+      if (.not. allocated(DstRodData%Bp)) then
+         allocate(DstRodData%Bp(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Bp.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Bp = SrcRodData%Bp
+   end if
    if (allocated(SrcRodData%Fnet)) then
       LB(1:2) = lbound(SrcRodData%Fnet)
       UB(1:2) = ubound(SrcRodData%Fnet)
@@ -1454,6 +1467,9 @@ subroutine MD_DestroyRod(RodData, ErrStat, ErrMsg)
    if (allocated(RodData%B)) then
       deallocate(RodData%B)
    end if
+   if (allocated(RodData%Bp)) then
+      deallocate(RodData%Bp)
+   end if
    if (allocated(RodData%Fnet)) then
       deallocate(RodData%Fnet)
    end if
@@ -1517,6 +1533,7 @@ subroutine MD_PackRod(RF, Indata)
    call RegPackAlloc(RF, InData%Ap)
    call RegPackAlloc(RF, InData%Aq)
    call RegPackAlloc(RF, InData%B)
+   call RegPackAlloc(RF, InData%Bp)
    call RegPackAlloc(RF, InData%Fnet)
    call RegPackAlloc(RF, InData%M)
    call RegPack(RF, InData%FextA)
@@ -1589,6 +1606,7 @@ subroutine MD_UnPackRod(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Ap); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Aq); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%B); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Bp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Fnet); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%M); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FextA); if (RegCheckErr(RF, RoutineName)) return
