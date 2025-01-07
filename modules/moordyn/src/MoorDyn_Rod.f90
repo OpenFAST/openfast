@@ -82,8 +82,8 @@ CONTAINS
       Rod%Cdt   = RodProp%Cdt      
       Rod%CaEnd = RodProp%CaEnd      
       Rod%CdEnd = RodProp%CdEnd   
-      Rod%linDamp = RodProp%linDamp 
-      Rod%islinDamp = RodProp%islinDamp 
+      Rod%Blin = RodProp%Blin 
+      Rod%isBlin = RodProp%isBlin 
 
       ! allocate node positions and velocities (NOTE: these arrays start at ZERO)
       ALLOCATE(Rod%r(3, 0:N), Rod%rd(3, 0:N), STAT=ErrStat2);  if(AllocateFailed("")) return
@@ -763,7 +763,7 @@ CONTAINS
             MagVq = sqrt(SumSqVq)
 
             ! transverse and tangenential drag
-            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp   - Rod%linDamp * Vp_lin * dL  ! linear damping added 
+            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp - Rod%Blin * Vp_lin * dL  ! linear damping added 
             Rod%Dq(:,I) = 0.0_DbKi ! 0.25*p%rhoW*Rod%Cdt* Pi*Rod%d* dL * MagVq * Vq <<< should these axial side loads be included?
 
 
