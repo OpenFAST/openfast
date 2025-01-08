@@ -237,14 +237,6 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, SeaSt, errStat, errMsg )
    ! Compute driver outputs at t=0 
    call Set_Mesh_Motion(0, dvr, ADI, FED, errStat2, errMsg2); if(Failed()) return
 
-   ! --- Initialze AD inputs
-   DO j = 1-numInp, 0
-      call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
-      call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-   END DO              
-   ! --- AeroDyn + Inflow at T=0
-   call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
-
    ! --- Initialize SeaState
    if ( dvr%SS_InitInp%CompSeaSt == 1 ) then
 
@@ -283,6 +275,14 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, SeaSt, errStat, errMsg )
       endif
      
    end if
+
+   ! --- Initialize AD inputs
+   DO j = 1-numInp, 0
+      call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
+      call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
+   END DO              
+   ! --- AeroDyn + Inflow at T=0
+   call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize outputs
    call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
@@ -529,6 +529,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       InitInp%AD%defPvap     = dvr%Pvap
       InitInp%AD%WtrDpth     = dvr%WtrDpth
       InitInp%AD%MSL2SWL     = dvr%MSL2SWL
+      InitInp%AD%CompSeaSt   = dvr%SS_InitInp%CompSeaSt
       ! Init data per rotor
       allocate(InitInp%AD%rotors(dvr%numTurbines), stat=errStat) 
       if (errStat/=0) then
