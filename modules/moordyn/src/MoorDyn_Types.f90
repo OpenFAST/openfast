@@ -161,6 +161,9 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: PDyn      !< water dynamic pressure at node [[Pa]]
     REAL(DbKi) , DIMENSION(1:3)  :: Fnet = 0.0_R8Ki      !< total force on node (excluding inertial loads) [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: M = 0.0_R8Ki      !< node mass matrix, from attached lines [-]
+    REAL(DbKi) , DIMENSION(1:3)  :: Fext = 0.0_R8Ki      !< vector of user-defined external force on the body [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< user-defined linear translational damping on the body [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< user-defined quadratic translational damping on the body [[N/(m/s)^2]]
   END TYPE MD_Point
 ! =======================
 ! =========  MD_Rod  =======
@@ -1034,6 +1037,9 @@ subroutine MD_CopyPoint(SrcPointData, DstPointData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstPointData%Fnet = SrcPointData%Fnet
    DstPointData%M = SrcPointData%M
+   DstPointData%Fext = SrcPointData%Fext
+   DstPointData%Blin = SrcPointData%Blin
+   DstPointData%Bquad = SrcPointData%Bquad
 end subroutine
 
 subroutine MD_DestroyPoint(PointData, ErrStat, ErrMsg)
@@ -1076,6 +1082,9 @@ subroutine MD_PackPoint(RF, Indata)
    call RegPackAlloc(RF, InData%PDyn)
    call RegPack(RF, InData%Fnet)
    call RegPack(RF, InData%M)
+   call RegPack(RF, InData%Fext)
+   call RegPack(RF, InData%Blin)
+   call RegPack(RF, InData%Bquad)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1110,6 +1119,9 @@ subroutine MD_UnPackPoint(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PDyn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Fnet); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Fext); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)

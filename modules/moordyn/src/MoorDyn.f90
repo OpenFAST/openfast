@@ -1703,7 +1703,22 @@ CONTAINS
                             CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )
                                return
                          END IF
-                     ELSEIF (let1 == "ROD") THEN
+                     ELSEIF (let1 == "POINT" .OR. let1 == "P") THEN
+                        IF (len_trim(num1) > 0) THEN
+                           READ(num1, *) J   ! convert to int, representing parent body index
+                           IF ((J <= p%nBodies) .and. (J > 0)) THEN
+                              m%PointList(J)%Fext = m%PointList(J)%Fext + m%ExtLdList(l)%Fext
+                              m%PointList(J)%Blin = m%PointList(J)%Blin + m%ExtLdList(l)%Blin
+                              m%PointList(J)%Bquad = m%PointList(J)%Bquad + m%ExtLdList(l)%Bquad
+                           ELSE
+                              CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
+                              return
+                           END IF
+                        ELSE
+                           CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )
+                              return
+                        END IF
+                     ELSEIF (let1 == "ROD" .OR. let1 == "R") THEN
                         IF (len_trim(num1) > 0) THEN
                            READ(num1, *) J   ! convert to int, representing parent rod index
                            IF ((J <= p%nRods) .and. (J > 0)) THEN

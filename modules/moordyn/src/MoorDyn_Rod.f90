@@ -765,9 +765,11 @@ CONTAINS
             Rod%Dq(:,I) = 0.0_DbKi ! 0.25*p%rhoW*Rod%Cdt* Pi*Rod%d* dL * MagVq * Vq <<< should these axial side loads be included?
 
             ! transverse and tangential damping force (note this is the force per node)
-            Rod%Bp(:,I) = (-Rod%Blin(1) * Vp_vel - Rod%Bquad(1) * ABS(Vp_vel) * Vp_vel) * dL / Rod%UnstrLen
-            Rod%Bq(:,I) = (-Rod%Blin(2) * Vq_vel - Rod%Bquad(2) * ABS(Vq_vel) * Vq_vel) * dL / Rod%UnstrLen
-
+            DO J = 1, 3
+               Rod%Bp(J,I) = (-Rod%Blin(1) * Vp_vel(J) - Rod%Bquad(1) * ABS(Vp_vel(J)) * Vp_vel(J)) * dL / Rod%UnstrLen
+               Rod%Bq(J,I) = (-Rod%Blin(2) * Vq_vel(J) - Rod%Bquad(2) * ABS(Vq_vel(J)) * Vq_vel(J)) * dL / Rod%UnstrLen
+            END DO
+         
             ! fluid acceleration components for current node
             aq = DOT_PRODUCT(Rod%Ud(:,I), Rod%q) * Rod%q  ! tangential component of fluid acceleration
             ap = Rod%Ud(:,I) - aq                         ! normal component of fluid acceleration
