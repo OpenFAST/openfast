@@ -477,6 +477,8 @@ CONTAINS
                      read (OptValue,*) p%inertialF
                   else if ( OptString == 'INERTIALF_RAMPT') then
                      read (OptValue,*) p%inertialF_rampT
+                  else if ( OptString == 'OUTSWITCH') then
+                     read (OptValue,*) p%OutSwitch
                   else
                      CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
                   end if
@@ -1616,6 +1618,8 @@ CONTAINS
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%ExtLdList(l)%IdNum, tempString1, tempString2, tempString3, tempString4, tempString5
                      
+                     ! TODO: check for repeat IdNum's
+
                      ! read in object type
                      CALL Conv2UC(tempString1) ! convert to uppercase so that matching is not case-sensitive
                      CALL DecomposeString(tempString1, let1, num1, let2, num2, let3) 
