@@ -86,8 +86,6 @@ typedef  ^            ^                DbKi               Cdn            -      
 typedef  ^            ^                DbKi               Cdt            -       -  -   "tangential drag coefficient"
 typedef  ^            ^                DbKi               CdEnd          -       -  -   "drag coefficient for rod end"  "[-]"
 typedef  ^            ^                DbKi               CaEnd          -       -  -   "added mass coefficient for rod end"  "[-]"
-typedef  ^            ^                DbKi               Blin        -       -  -   "Linear damping, transverse damping for rod element" "[N/(m/s)/m]"
-typedef  ^            ^                LOGICAL            isBlin      -       -  -   "Linear damping, transverse damping for rod element is used" "-"
 
 # this is the Body type, which holds data for each body object
 typedef  ^            MD_Body          IntKi              IdNum          -       -  -   "integer identifier of this Point"
@@ -170,8 +168,6 @@ typedef  ^            ^                DbKi               Cdn            -      
 typedef  ^            ^                DbKi               Cdt            -        -  -   ""  "[-]"
 typedef  ^            ^                DbKi               CdEnd          -       -  -   "drag coefficient for rod end"  "[-]"
 typedef  ^            ^                DbKi               CaEnd          -       -  -   "added mass coefficient for rod end"  "[-]"
-typedef  ^            ^                DbKi               Blin        -       -  -   "Linear damping, transverse damping for rod element" "[N/(m/s)/m]"
-typedef  ^            ^                LOGICAL            isBlin      -       -  -   "Linear damping, transverse damping for rod element is used" "-"
 typedef  ^            ^                DbKi               time           -       -  -   "current time"         "[s]"
 typedef  ^            ^                DbKi               roll           -       -  -   "roll relative to vertical"         "[rad]"
 typedef  ^            ^                DbKi               pitch          -       -  -   "pitch relative to vertical"        "[rad]"
@@ -194,6 +190,7 @@ typedef  ^            ^                DbKi               Ap           {:}{:}   
 typedef  ^            ^                DbKi               Aq           {:}{:}    -  -   "node added mass forcing (axial)"  "[N]"
 typedef  ^            ^                DbKi               B            {:}{:}    -  -   "node bottom contact force"  "[N]"
 typedef  ^            ^                DbKi               Bp           {:}{:}    -  -   "transverse damping force"  "[N]"
+typedef  ^            ^                DbKi               Bq           {:}{:}    -  -   "axial damping force"  "[N]"
 typedef  ^            ^                DbKi               Fnet         {:}{:}    -  -   "total force on node"  "[N]"
 typedef  ^            ^                DbKi               M            {:}{:}{:} -  -   "node mass matrix"  "[kg]"
 typedef  ^            ^                DbKi               FextA        {3}       -  -   "external forces from attached lines on/about end A " -
@@ -208,6 +205,10 @@ typedef  ^            ^                DbKi               Imat         {3}{3}   
 typedef  ^            ^                DbKi               OrMat        {3}{3}    -  -   "DCM for body orientation"
 typedef  ^            ^                IntKi              RodUnOut      -        -  -   "unit number of rod output file"
 typedef  ^            ^                DbKi               RodWrOutput  {:}       -  -   "one row of output data for this rod"
+typedef  ^            ^                DbKi               FextU        {3}       -  -   "vector of user-defined external force on the rod end A" [N]
+typedef  ^            ^                DbKi               Blin         {2}       -  -   "linear damping, transverse damping for rod element" "[N/(m/s)]"
+typedef  ^            ^                DbKi               Bquad        {2}       -  -   "quadratic damping, transverse damping for rod element" "[N/(m/s)^2]"
+
 
 
 # this is the Line type, which holds data for each line object
