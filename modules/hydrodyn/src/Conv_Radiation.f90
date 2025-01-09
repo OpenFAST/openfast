@@ -164,14 +164,14 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, E
          RETURN
       END IF
 
-      ALLOCATE ( p%RdtnKrnl (0:p%NStepRdtn-1,6*p%NBody,6*p%NBody) , STAT=ErrStat )
+      ALLOCATE ( p%RdtnKrnl (6*p%NBody,6*p%NBody,0:p%NStepRdtn-1) , STAT=ErrStat )
       IF ( ErrStat /= ErrID_None )  THEN
          ErrMsg = ' Error allocating memory for the RdtnKrnl array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
 
-      ALLOCATE ( xd%XDHistory(0:p%NStepRdtn  ,6*p%NBody  ) , STAT=ErrStat )   ! In the numerical convolution we must have NStepRdtn1 elements within the XDHistory array, which is one more than the NStepRdtn elements that are in the RdtnKrnl array
+      ALLOCATE ( xd%XDHistory(6*p%NBody,0:p%NStepRdtn) , STAT=ErrStat )   ! In the numerical convolution we must have NStepRdtn1 elements within the XDHistory array, which is one more than the NStepRdtn elements that are in the RdtnKrnl array
       IF ( ErrStat /= ErrID_None )  THEN
          ErrMsg = ' Error allocating memory for the XDHistory array.'
          ErrStat = ErrID_Fatal
@@ -181,7 +181,7 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, E
          ! Initialize all elements of the xd%XDHistory array with the intial values of u%Velocity
       DO K = 0,p%NStepRdtn-1
          DO J = 1,6*p%NBody                 ! Loop through all DOFs
-            xd%XDHistory(K,J) = u%Velocity(J)
+            xd%XDHistory(J,K) = u%Velocity(J)
          END DO
       END DO
 
@@ -221,7 +221,7 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, E
             DO J = 1,6*p%NBody        ! Loop through all rows    of RdtnKrnl
                DO K = 1,6*p%NBody     ! Loop through all columns of RdtnKrnl above and including the diagonal
                   !Indx = Indx + 1
-                  p%RdtnKrnl(I,J,K) = Krnl_Fact*Omega*( InterpStp( Omega, InitInp%HdroFreq(:), &
+                  p%RdtnKrnl(J,K,I) = Krnl_Fact*Omega*( InterpStp( Omega, InitInp%HdroFreq(:), &
                                                                                 InitInp%HdroAddMs(:       ,J,K), LastInd, InitInp%NInpFreq ) &
                                                       -                         InitInp%HdroAddMs(InitInp%NInpFreq,J,K)                      )
                END DO          ! K - All columns of RdtnKrnl above and including the diagonal
@@ -245,7 +245,7 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, E
 
          DO J = 1,6*p%NBody                 ! Loop through all rows    of RdtnKrnl
             DO K = 1,6*p%NBody              ! Loop through all columns of RdtnKrnl above and including the diagonal
-               CALL ApplySINT( p%RdtnKrnl(:,J,K), FFT_Data, ErrStat )
+               CALL ApplySINT( p%RdtnKrnl(J,K,:), FFT_Data, ErrStat )
                IF ( ErrStat /= ErrID_None ) RETURN
             END DO                   ! K - All columns of RdtnKrnl above and including the diagonal
          END DO                      ! J - All rows    of RdtnKrnl
@@ -293,7 +293,7 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, E
             DO J = 1,6*p%NBody        ! Loop through all rows    of RdtnKrnl
                DO K = 1,6*p%NBody     ! Loop through all columns of RdtnKrnl above and including the diagonal
                   !Indx = Indx + 1
-                  p%RdtnKrnl(I,J,K) = Krnl_Fact*InterpStp ( Omega, InitInp%HdroFreq(:), InitInp%HdroDmpng(:,J,K), LastInd, InitInp%NInpFreq )
+                  p%RdtnKrnl(J,K,I) = Krnl_Fact*InterpStp ( Omega, InitInp%HdroFreq(:), InitInp%HdroDmpng(:,J,K), LastInd, InitInp%NInpFreq )
                END DO          ! K - All columns of RdtnKrnl above and including the diagonal
             END DO             ! J - All rows    of RdtnKrnl
 
@@ -314,7 +314,7 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, E
 
          DO J = 1,6*p%NBody                          ! Loop through all rows    of RdtnKrnl
             DO K = 1,6*p%NBody                       ! Loop through all columns of RdtnKrnl above and including the diagonal
-               CALL ApplyCOST( p%RdtnKrnl(:,J,K), FFT_Data, ErrStat )
+               CALL ApplyCOST( p%RdtnKrnl(J,K,:), FFT_Data, ErrStat )
                IF ( ErrStat /= ErrID_None ) THEN
                   ErrMsg  = 'Error applying Cosine Transform'
                   ErrStat = ErrID_Fatal
@@ -481,6 +481,7 @@ END SUBROUTINE Conv_Rdtn_UpdateStates
 !> Routine for computing outputs, used in both loose and tight coupling.
 SUBROUTINE Conv_Rdtn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
+   use NWTC_LAPACK, only: LAPACK_gemm
 
       REAL(DbKi),                          INTENT(IN   )  :: Time        !< Current simulation time in seconds
       TYPE(Conv_Rdtn_InputType),           INTENT(IN   )  :: u           !< Inputs at Time
@@ -495,52 +496,60 @@ SUBROUTINE Conv_Rdtn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat
       INTEGER(IntKi),                       INTENT(  OUT) :: ErrStat     !< Error status of the operation
       CHARACTER(*),                         INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-!      REAL(ReKi)                           :: F_Rdtn (6)
-      REAL(ReKi)                           :: F_RdtnDT (6*p%NBody)                            ! The portion of the total load contribution from wave radiation damping associated with the convolution integral proportional to ( RdtnDT - RdtnRmndr ) (N, N-m)
+      character(*), parameter              :: RoutineName = 'Conv_Rdtn_CalcOutput'
+      integer(IntKi)                       :: ErrStat2
+      character(ErrMsgLen)                 :: ErrMsg2
+      REAL(SiKi), allocatable              :: F_RdtnDT(:,:)                      ! The portion of the total load contribution from wave radiation damping associated with the convolution integral proportional to ( RdtnDT - RdtnRmndr ) (N, N-m)
 
       INTEGER                              :: I                                       ! Generic index
       INTEGER                              :: J                                       ! Generic index
       INTEGER                              :: K                                       ! Generic index
 
       INTEGER(IntKi)                       :: MaxInd
-         ! Initialize ErrStat
 
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-
-      ! Perform numerical convolution to determine the load contribution from wave
-      !   radiation damping:
-
       MaxInd = MIN(p%NStepRdtn-1,OtherState%IndRdtn)  ! Note: xd%IndRdtn index is from the previous time-step since this state was for the previous time-step
 
-      DO I = 1,6*p%NBody                 ! Loop through all wave radiation damping forces and moments
+      call AllocAry(F_RdtnDT, 6*p%NBody, 1, 'F_RdtnDT', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
-         F_RdtnDT   (I) = 0.0
-       !  F_RdtnRmndr(I) = 0.0
+      ! Perform numerical convolution to determine the load contribution from wave radiation damping:
+      ! Contribution from the first and last time steps are halved to make the integration 2nd-order accurate
 
-         DO J = 1,6*p%NBody              ! Loop through all platform DOFs
-            ! Contribution from the first and last time steps are halved to make the integration 2nd-order accurate
-            F_RdtnDT(I) = F_RdtnDT(I) - 0.5_SiKi * p%RdtnKrnl(MaxInd,I,J)*xd%XDHistory(0,J) &
-                                      - 0.5_SiKi * p%RdtnKrnl(0,I,J)*xd%XDHistory(MaxInd,J)
-            DO K = 1, MaxInd-1 ! Loop through all remaining NStepRdtn-2 time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
-               F_RdtnDT(I) = F_RdtnDT(I) - p%RdtnKrnl(MaxInd-K,I,J)*xd%XDHistory(K,J)
-            END DO
-            !DO K = MAX(0,xd%IndRdtn-p%NStepRdtn  ),xd%IndRdtn-1  ! Loop through all NStepRdtn time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
-            !   F_RdtnDT   (I) = F_RdtnDT   (I) - p%RdtnKrnl(xd%IndRdtn-1-K,I,J)*xd%XDHistory(MOD(K,p%NStepRdtn1),J)
-            !END DO                                        ! K - All NStepRdtn time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
+      ! First time step
+      call LAPACK_gemm('N', 'N', -0.5_SiKi, p%RdtnKrnl(:,:,MaxInd), xd%XDHistory(:,0:0), 0.0_SiKi, F_RdtnDT, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
-            !DO K = MAX(0,xd%IndRdtn-p%NStepRdtn+1),xd%IndRdtn    ! Loop through all NStepRdtn time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
-            !   F_RdtnRmndr(I) = F_RdtnRmndr(I) - p%RdtnKrnl(xd%IndRdtn  -K,I,J)*xd%XDHistory(MOD(K,p%NStepRdtn1),J)
-            !END DO                                        ! K - All NStepRdtn time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
+      ! Last time step
+      call LAPACK_gemm('N', 'N', -0.5_SiKi, p%RdtnKrnl(:,:,0), xd%XDHistory(:,MaxInd:MaxInd), 1.0_SiKi, F_RdtnDT, ErrStat2, ErrMsg2)
 
-         END DO                   ! J - All platform DOFs
+      ! Intermediate time steps
+      do K = 1, MaxInd-1 
+         call LAPACK_gemm('N', 'N', -1.0_SiKi, p%RdtnKrnl(:,:,MaxInd-K), xd%XDHistory(:,K:K), 1.0_SiKi, F_RdtnDT, ErrStat2, ErrMsg2)
+      end do
 
-         !F_Rdtn     (I) = ( p%RdtnDT - xd%RdtnRmndr )*F_RdtnDT(I) + xd%RdtnRmndr*F_RdtnRmndr(I)
+      y%F_Rdtn = p%RdtnDT*real(F_RdtnDT(:,1), ReKi) !F_Rdtn
 
-      END DO                      ! I - All wave radiation damping forces and moments
+      ! Loop through all wave radiation damping forces and moments
+      ! F_RdtnDT = 0.0
+      ! DO I = 1, 6*p%NBody                
+      !    DO J = 1,6*p%NBody              ! Loop through all platform DOFs
+      !       ! Contribution from the first and last time steps are halved to make the integration 2nd-order accurate
+      !       F_RdtnDT(I) = F_RdtnDT(I) - 0.5_SiKi * p%RdtnKrnl(MaxInd,I,J)*xd%XDHistory(0,J) &
+      !                                 - 0.5_SiKi * p%RdtnKrnl(0,I,J)*xd%XDHistory(MaxInd,J)
+            
+      !       ! Loop through all remaining NStepRdtn-2 time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
+      !       DO K = 1, MaxInd-1 
+      !          F_RdtnDT(I) = F_RdtnDT(I) - p%RdtnKrnl(MaxInd-K,I,J)*xd%XDHistory(K,J)
+      !       END DO  
+      !    END DO    ! J - All platform DOFs
+      ! END DO       ! I - All wave radiation damping forces and moments
 
-      y%F_Rdtn = p%RdtnDT*F_RdtnDT !F_Rdtn
+      ! y%F_Rdtn = p%RdtnDT*F_RdtnDT !F_Rdtn
 
 END SUBROUTINE Conv_Rdtn_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -635,18 +644,18 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, Er
 
       IF ( OtherState%IndRdtn < (p%NStepRdtn) )  THEN
          DO J = 1,6*p%NBody  ! Loop through all platform DOFs
-            xd%XDHistory(OtherState%IndRdtn,J) = u%Velocity(J)  ! XDHistory was allocated as a zero-based array!
+            xd%XDHistory(J,OtherState%IndRdtn) = u%Velocity(J)  ! XDHistory was allocated as a zero-based array!
          END DO       ! J - All platform DOFs
       ELSE
 
          ! Shift the stored history by one index
          DO K = 0,p%NStepRdtn-2
             DO J = 1,6*p%NBody                 ! Loop through all DOFs
-               xd%XDHistory(K,J) = xd%XDHistory(K+1,J)
+               xd%XDHistory(J,K) = xd%XDHistory(J,K+1)
             END DO
          END DO
          DO J = 1,6*p%NBody  ! Loop through all platform DOFs
-            xd%XDHistory(p%NStepRdtn-1,J) = u%Velocity(J) ! Set the last array element to the current velocity
+            xd%XDHistory(J,p%NStepRdtn-1) = u%Velocity(J) ! Set the last array element to the current velocity
          END DO       ! J - All platform DOFs
       END IF
 

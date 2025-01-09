@@ -268,12 +268,19 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
       !............................................................................................
    CALL AllocAry( InitOut%WriteOutputHdr, 3, 'WriteOutputHdr', ErrStat2, ErrMsg2 ); if (Failed()) return;
    CALL AllocAry( InitOut%WriteOutputUnt, 3, 'WriteOutputUnt', ErrStat2, ErrMsg2 ); if (Failed()) return;
-   CALL AllocAry( ExtInfw%y%WriteOutput,     3, 'WriteOutput',    ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL AllocAry( ExtInfw%y%WriteOutput,  3, 'WriteOutput',    ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    InitOut%WriteOutputHdr(1) = 'Wind1VelX'; InitOut%WriteOutputUnt(1) = '(m/s)'
    InitOut%WriteOutputHdr(2) = 'Wind1VelY'; InitOut%WriteOutputUnt(2) = '(m/s)'
    InitOut%WriteOutputHdr(3) = 'Wind1VelZ'; InitOut%WriteOutputUnt(3) = '(m/s)'
    ExtInfw%y%WriteOutput = 0.0_ReKi
+
+      !............................................................................................
+      ! Module Variables
+      !............................................................................................
+
+   call ExtInfw_InitVars(ExtInfw%u, ExtInfw%p, ExtInfw%y, ExtInfw%m, InitOut, .false., ErrStat2, ErrMsg2)
+   if (Failed()) return
 
    InitOut%Ver = ExtInfw_Ver
 
@@ -292,6 +299,62 @@ contains
       endif
    end function Failed2
 END SUBROUTINE Init_ExtInfw
+
+!----------------------------------------------------------------------------------------------------------------------------------
+
+subroutine ExtInfw_InitVars(u, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+   type(ExtInfw_InputType),        intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
+   type(ExtInfw_ParameterType),    intent(inout)  :: p           !< Parameters
+   type(ExtInfw_OutputType),       intent(inout)  :: y           !< Initial system outputs (outputs are not calculated;
+   type(ExtInfw_MiscVarType),      intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+   type(ExtInfw_InitOutputType),   intent(inout)  :: InitOut     !< Output for initialization routine
+   logical,                        intent(in   )  :: Linearize   !< Flag to initialize linearization variables
+   integer(IntKi),                 intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                   intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'ExtInfw_InitVars'
+   INTEGER(IntKi)          :: ErrStat2
+   CHARACTER(ErrMsgLen)    :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Add pointers to vars to initialization output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Values
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
+
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ExtInfw_UpdateFlowField(p_FAST, ExtInfw, ErrStat, ErrMsg)
    TYPE(FAST_ParameterType),       INTENT(IN   )   :: p_FAST      ! Parameters for the glue code

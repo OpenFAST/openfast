@@ -58,7 +58,8 @@ IMPLICIT NONE
     REAL(SiKi)  :: PCurrVyiPz0 = 0.0_R4Ki      !<  [-]
   END TYPE Current_InitOutputType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(Current_InitInputType), intent(in) :: SrcInitInputData
@@ -232,5 +233,7 @@ subroutine Current_UnPackInitOutput(RF, OutData)
    call RegUnpack(RF, OutData%PCurrVxiPz0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PCurrVyiPz0); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE Current_Types
+
 !ENDOFREGISTRYGENERATEDFILE

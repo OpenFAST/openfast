@@ -111,7 +111,7 @@ typedef    IceDyn/IceD  InitOutputType   CHARACTER(ChanLen) WriteOutputHdr  {:} 
 typedef    ^           ^                 ^                  WriteOutputUnt  {:}  -    -    "Units of the output-to-file channels" -
 typedef    ^           ^                 IntKi              numLegs          -   -    -    "Number of legs on the structure" -
 typedef    ^           ^                 ProgDesc           Ver              -   -    -    "This module's name, version, and date"   -
-
+typedef    ^           ^                 ModVarsType        Vars             -   -    -    "Module Variables"
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -141,13 +141,6 @@ typedef    ^             ^                   IntKi                   Splitf     
 typedef    ^             ^                   ReKi                    dxc              -     -    -    "crushed depth of ice" m
 typedef    ^             ^                  IceD_ContinuousStateType xdot            {:}    -    -    "previous state deriv for multi-step" m
 typedef    ^             ^                   IntKi                    n               -     -    -    "tracks time step for which OtherState was updated" -
-
-
-# ..... Misc/Optimization variables.................................................................................................
-# Define any data that are used only for efficiency purposes (these variables are not associated with time):
-#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef    ^              MiscVarType        IntKi     DummyMiscVar - - -  "Remove this variable if you have misc/optimization variables" -
-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -232,3 +225,12 @@ typedef    IceDyn/IceD  InputType            MeshType               PointMesh   
 typedef    IceDyn/IceD  OutputType           MeshType              PointMesh      -    -    -    "contains Ice force" N
 typedef    ^            ^                    ReKi                  WriteOutput   {:}   -    -    "Data to be written to an output file: see WriteOutputHdr for names of each variable"  "see WriteOutputUnt"
 
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef    ^              MiscVarType        IntKi     DummyMiscVar - - -  "Remove this variable if you have misc/optimization variables" -
+typedef    ^              MiscVarType        ModJacType                 Jac       -    -    -    Values corresponding to module variables"
+typedef    ^              MiscVarType        IceD_ContinuousStateType   x_perturb -    -    -    ""      -
+typedef    ^              MiscVarType        IceD_ContinuousStateType   dxdt_lin  -    -    -    ""      -
+typedef    ^              MiscVarType        IceD_InputType             u_perturb -    -    -    ""      -
+typedef    ^              MiscVarType        IceD_OutputType            y_lin     -    -    -    ""      -

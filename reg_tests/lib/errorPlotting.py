@@ -42,6 +42,23 @@ def _validateAndExpandInputs(argv):
 def _parseSolution(solution):
     try:
         data, info, _ = load_output(solution)
+        
+        # Remove solution iteration columns
+        for col in 'ConvIter ConvError NumUJac'.split():
+            
+            # If column exists, get index
+            try:
+                i = info['attribute_names'].index(col)
+            except ValueError as e:
+                continue
+
+            # Remove column from data array
+            data = np.delete(data, i, axis=1)
+
+            # Remove column from attribute names and units
+            del info['attribute_names'][i]
+            del info['attribute_units'][i]
+            
         return (data, info)
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))

@@ -37,4 +37,3 @@ typedef     ^               ^               R8Ki                     LoadLn2_F  
 typedef     ^               ^               R8Ki                     LoadLn2_M         {:}{:}    - - "The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)"
 typedef     ^             ^                 MeshMapLinearizationType dM
 #typedef     ^               ^               MeshType                 Lumped_Points_Dest -        - - "temporary mesh for debugging the lumped values in the line2-to-line2"
-
