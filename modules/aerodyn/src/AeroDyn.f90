@@ -1685,7 +1685,7 @@ subroutine SetAddedMassInertiaParameters( InputFileData, p, ErrStat, ErrMsg )
          p%BlIT(j,k) = (InputFileData%BladeProps(k)%BlCpt(j) + InputFileData%BladeProps(k)%BlCat(j)) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j tangential-to-chord inertia factor
          p%BlAN(j,k) = -InputFileData%BladeProps(k)%BlCan(j) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j normal-to-chord added mass factor
          p%BlAT(j,k) = -InputFileData%BladeProps(k)%BlCat(j) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j tangential-to-chord added mass factor
-         p%BlAM(j,k) = -InputFileData%BladeProps(k)%BlCam(j) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) * (InputFileData%BladeProps(k)%BlChord(j)**2 + InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j)**2) ! node j pitch added mass factor
+         p%BlAM(j,k) = -InputFileData%BladeProps(k)%BlCam(j)/12.0_ReKi * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) * (InputFileData%BladeProps(k)%BlChord(j)**2 + InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j)**2) ! node j pitch added mass factor
       end do ! j = nodes
 
    end do ! k = blades

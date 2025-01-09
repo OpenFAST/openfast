@@ -255,12 +255,14 @@ where :math:`C_p` is the dynamic pressure coefficient.
 The fluid density and added mass and dynamic pressure coeffcients are user-specified. Added mass and fluid
 inertia loads can be turned off by setting the relevant coefficients to zero. Additional information about calculating added mass coefficients can be
 found in :numref:`AD_user_guide` ("Determination of Added Mass Coefficients for Floating Hydrokinetic Turbine Blades using Computational Fluid Dynamics").
-The body and fluid accelerations are calculated internally and passed to AeroDyn. Body accelerations are available from the structural solver (or driver)
+The body and fluid accelerations are calculated internally and passed to AeroDyn. Body accelerations are available from the structural solver (or driver),
 and fluid accelerations are calculated based on the inflow velocity time series. Added mass and fluid inertia loads are calculated as per-unit-length within
 AeroDyn. Therefore, :math:`V` is taken as the cross-sectional area at the node of interest. For the blades, the reference cross-sectional area for the normal
 and tangential terms is chord*thickness (:math:`ct`). This is expressed as :math:`(c^2)(t/c)`, where :math:`t/c` (i.e., ``t_c``) is specified
-in the AeroDyn blade input file and cannot be less than 0. The reference cross-sectional area for the blade pitch term is XX (check 1/12 factor).
-For the tower, the reference cross-sectional area is :math:`\pi r^2` where :math:`r` is calculated as (0.5 ``TwrDiam``).
+in the AeroDyn blade input file and cannot be less than 0. For the tower, the reference cross-sectional area is :math:`\pi r^2` where :math:`r` 
+is calculated as (0.5 ``TwrDiam``). The normalization for the ``BlCpn``, ``BlCpt``, ``BlCan``, and ``BlCat`` coefficients should be :math:`\rho ct`;
+the normalization for the ``BlCam`` coefficient should be :math:`(1/12)\rho ct(c^2+t^2)`; and the normalization for the ``TwrCp`` and ``TwrCa`` coefficients should
+be :math:`\rho\pi(0.5` ``TwrDiam``) :math:`^2`.
 
 Blade Added Mass and Fluid Inertia
 ----------------------------------
