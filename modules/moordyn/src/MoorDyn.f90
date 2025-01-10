@@ -1617,8 +1617,12 @@ CONTAINS
 
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%ExtLdList(l)%IdNum, tempString1, tempString2, tempString3, tempString4, tempString5
-                     
-                     ! TODO: check for repeat IdNum's
+                     ! Check for sequential IdNums
+                     IF ( m%ExtLdList(l)%IdNum .NE. l ) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'External load ID numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
 
                      ! read in object type
                      CALL Conv2UC(tempString1) ! convert to uppercase so that matching is not case-sensitive
@@ -1626,26 +1630,32 @@ CONTAINS
 
                      ! Read in CSys local or global
                      CALL Conv2UC(tempString5) ! convert to uppercase so that matching is not case-sensitive
-                     if (tempString5 == "G") then
-                        m%ExtLdList(l)%isGlobal = .true.
-                     else if (tempString5 == "L") then
+
+                     ! Check if object type and coordinate system are valid
+                     if (let1 == "BODY") then
+                        if (tempString5 == "G") then
+                           m%ExtLdList(l)%isGlobal = .true.
+                        else if (tempString5 == "L") then
+                           m%ExtLdList(l)%isGlobal = .false.
+                        else
+                           CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Coordinate system (CSys) for BODY must be either G for global (earth fixed) or L for local (body fixed). ' , ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           RETURN
+                        end if
+                     else if ( (let1 == "ROD") .or. (let1 == "R") ) then
+                        if (tempString5/="-") then
+                           CALL SetErrStat( ErrID_Warn, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Coordinate system (CSys) cannot be specified for ROD. External force is always in the global earth-fixed system and applied to end A. Transverse and axial damping are always in the local body-fixed system. Enter "-" for CSys to avoid this warning. ' , ErrStat, ErrMsg, RoutineName )
+                        end if
                         m%ExtLdList(l)%isGlobal = .false.
+                     else if ( (let1 == "POINT") .or. (let1 == "P") ) then
+                        if (tempString5/="-") then
+                           CALL SetErrStat( ErrID_Warn, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Coordinate system (CSys) cannot be specified for POINT. Global earth-fixed system is always used. Enter "-" for CSys to avoid this warning. ' , ErrStat, ErrMsg, RoutineName )
+                        end if
+                        m%ExtLdList(l)%isGlobal = .true.
                      else
-                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Coordinate system (CSys) must be either G for global or L for local (body fixed) ' , ErrStat, ErrMsg, RoutineName )
+                        CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. External load and damping can only be assigned to POINT, ROD, or BODY.', ErrStat, ErrMsg, RoutineName )
                         CALL CleanUp()
                         RETURN
-                     end if
-                     if ( (let1 == "ROD") .or. (let1 == "R") ) then
-                        if (m%ExtLdList(l)%isGlobal) then
-                           m%ExtLdList(l)%isGlobal = .false.
-                           CALL SetErrStat( ErrID_Info, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Setting coordinate system (CSys) to L for rods ' , ErrStat, ErrMsg, RoutineName )
-                        end if
-                     end if
-                     if ( (let1 == "POINT") .or. (let1 == "P") ) then
-                        if (.not. m%ExtLdList(l)%isGlobal) then
-                           m%ExtLdList(l)%isGlobal = .true.
-                           CALL SetErrStat( ErrID_Info, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Setting coordinate system (CSys) to G for points ' , ErrStat, ErrMsg, RoutineName )
-                        end if
                      end if
 
                      ! process translational force
@@ -1734,7 +1744,7 @@ CONTAINS
                                return
                             END IF
                          ELSE
-                            CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )
+                            CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" BODY attachment.", ErrStat, ErrMsg, RoutineName )
                                return
                          END IF
                      ELSEIF (let1 == "POINT" .OR. let1 == "P") THEN
@@ -1749,7 +1759,7 @@ CONTAINS
                               return
                            END IF
                         ELSE
-                           CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" Point attachment.", ErrStat, ErrMsg, RoutineName )
+                           CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" POINT attachment.", ErrStat, ErrMsg, RoutineName )
                               return
                         END IF
                      ELSEIF (let1 == "ROD" .OR. let1 == "R") THEN
@@ -1764,13 +1774,9 @@ CONTAINS
                               return
                            END IF
                         ELSE
-                           CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" Rod attachment.", ErrStat, ErrMsg, RoutineName )
+                           CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" ROD attachment.", ErrStat, ErrMsg, RoutineName )
                               return
                         END IF
-                     ELSE
-                         CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. External load can only be applied to points, bodies, or rods.', ErrStat, ErrMsg, RoutineName )
-                         CALL CleanUp()
-                         RETURN
                      END IF
                      
                   END IF

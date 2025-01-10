@@ -438,6 +438,7 @@ CONTAINS
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
 
       INTEGER(IntKi)             :: l         ! index of attached lines
+      INTEGER(IntKi)             :: i         ! Generic loop counter
 
       Real(DbKi)                 :: Fgrav(3)           ! body weight force
       Real(DbKi)                 :: body_rCGrotated(3) ! instantaneous vector from body ref point to CG
@@ -472,18 +473,18 @@ CONTAINS
       body_rCGrotated = MATMUL(Body%OrMat, Body%rCG) ! rotateVector3(body_rCG, OrMat, body_rCGrotated); ! relative vector to body CG in inertial orientation
       CALL translateForce3to6DOF(body_rCGrotated, Fgrav, Body%F6net)  ! gravity forces and moments about body ref point given CG location
 
-      ! Add user-defined external force and damping on body defined in the global coordinate system (assumed to be applied at the body ref point)
+      ! Add user-defined external force and damping on body defined in the global earth-fixed coordinate system (assumed to be applied at the body ref point)
       Body%F6net(1:3) = Body%F6net(1:3) + Body%FextG
-      Body%F6net(1)   = Body%F6net(1)   - Body%BlinG(1) * Body%v6(1) - Body%BquadG(1) * ABS(Body%v6(1)) * Body%v6(1)
-      Body%F6net(2)   = Body%F6net(2)   - Body%BlinG(2) * Body%v6(2) - Body%BquadG(2) * ABS(Body%v6(2)) * Body%v6(2)
-      Body%F6net(3)   = Body%F6net(3)   - Body%BlinG(3) * Body%v6(3) - Body%BquadG(3) * ABS(Body%v6(3)) * Body%v6(3)
+      do i = 1,3
+         Body%F6net(i) = Body%F6net(i) - Body%BlinG(i) * Body%v6(i) - Body%BquadG(i) * ABS(Body%v6(i)) * Body%v6(i)
+      end do
 
       ! Add user-defined external force and damping on body defined in the local body-fixed coordinate system (assumed to be applied at the body ref point)
       Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, Body%FextL)
       v3L = MATMUL( TRANSPOSE(Body%OrMat), Body%v6(1:3) )
-      FDL(1) = - Body%BlinL(1) * v3L(1) - Body%BquadL(1) * ABS(v3L(1)) * v3L(1)
-      FDL(2) = - Body%BlinL(2) * v3L(2) - Body%BquadL(2) * ABS(v3L(2)) * v3L(2)
-      FDL(3) = - Body%BlinL(3) * v3L(3) - Body%BquadL(3) * ABS(v3L(3)) * v3L(3)
+      do i = 1,3
+         FDL(i) = - Body%BlinL(i) * v3L(i) - Body%BquadL(i) * ABS(v3L(i)) * v3L(i)
+      end do
       Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, FDL )
 
       ! Centripetal force and moment due to COM not being at body origin plus gyroscopic moment
