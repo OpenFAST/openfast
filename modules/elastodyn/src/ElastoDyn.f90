@@ -9759,12 +9759,12 @@ SUBROUTINE ED_PrintSum( p, OtherState, ErrStat, ErrMsg )
 
    ! Open the summary file and give it a heading.
    
-   !$OMP critical(filename)
+   !$OMP critical(fileopen_critical)
    CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
    if (ErrStat < AbortErrLev) then
       CALL OpenFOutFile ( UnSu, TRIM( p%RootName )//'.sum', ErrStat, ErrMsg )
    endif
-   !$OMP end critical(filename)
+   !$OMP end critical(fileopen_critical)
    IF ( ErrStat /= ErrID_None ) RETURN
 
    

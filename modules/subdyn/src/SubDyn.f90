@@ -934,11 +934,11 @@ ErrMsg  = ""
 UnEc = -1 
 Echo = .FALSE.
 
-!$OMP critical(fileopen)
+!$OMP critical(fileopen_critical)
 CALL GetNewUnit( UnIn )   
   
 CALL OpenFInpfile(UnIn, TRIM(SDInputFile), ErrStat2, ErrMsg2)
-!$OMP end critical(fileopen)
+!$OMP end critical(fileopen_critical)
 
 IF ( ErrStat2 /= ErrID_None ) THEN
    Call Fatal('Could not open SubDyn input file')
@@ -3648,10 +3648,10 @@ SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, Err
 
    ! --- Create file  and get unit
    UnSum = -1 ! we haven't opened the summary file, yet.   
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    call GetNewUnit( UnSum )
    call OpenFOutFile ( UnSum, FileName, ErrStat2, ErrMsg2 ) 
-   !$OMP end critical(fileopen)
+   !$OMP end critical(fileopen_critical)
    write(UnSum, '(A)')'{'
 
    ! --- Misc

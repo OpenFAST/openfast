@@ -2494,7 +2494,7 @@ END SUBROUTINE CheckR8Var
 
       ! Get a unit number for the echo file:
 
-   !$OMP critical(fileopenNWTCio)
+   !$OMP critical(fileopenNWTCio_critical)
    IF ( Un < 0 ) THEN
       CALL GetNewUnit( Un, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat, ErrMsg, RoutineName )
@@ -2505,7 +2505,7 @@ END SUBROUTINE CheckR8Var
 
    CALL OpenFOutFile( Un, OutFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat, ErrMsg, RoutineName )
-   !$OMP end critical(fileopenNWTCio)
+   !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStat >= AbortErrLev ) RETURN
 
 
@@ -4732,13 +4732,13 @@ END SUBROUTINE CheckR8Var
       RETURN
    END IF
    
-   !$OMP critical(fileopenNWTCio)
+   !$OMP critical(fileopenNWTCio_critical)
    CALL GetNewUnit ( UnIn, ErrStatLcl, ErrMsg2 )
       CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL OpenFInpFile ( UnIn, FileInfo%FileList(FileIndx), ErrStatLcl, ErrMsg2 )
       CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !$OMP end critical(fileopenNWTCio)
+   !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStat >= AbortErrLev )  RETURN
 
 
@@ -6668,11 +6668,11 @@ end subroutine ReadR8AryWDefault
 
          ! Open the input file.
       UnIn = -1
-      !$OMP critical(fileopenNWTCio)
+      !$OMP critical(fileopenNWTCio_critical)
       CALL GetNewUnit ( UnIn, ErrStatLcl, ErrMsg2 )
 
       CALL OpenFInpFile ( UnIn, Filename, ErrStatLcl, ErrMsg2 )
-      !$OMP end critical(fileopenNWTCio)
+      !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
@@ -6980,7 +6980,7 @@ end subroutine ReadR8AryWDefault
 
       ! Generate the unit number for the binary file
    UnIn = 0
-   !$OMP critical(fileopenNWTCio)
+   !$OMP critical(fileopenNWTCio_critical)
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -6990,7 +6990,7 @@ end subroutine ReadR8AryWDefault
 
    CALL OpenBOutFile ( UnIn, TRIM(FileName), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !$OMP end critical(fileopenNWTCio)
+   !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN

@@ -1446,10 +1446,10 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, c
    UnIn = -1
    
    ! Open the input file for blade K.
-   !$OMP critical(filename)
+   !$OMP critical(fileopen_critical)
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
    CALL OpenFInpFile ( UnIn, ADBlFile, ErrStat2, ErrMsg2 )
-   !$OMP end critical(filename)
+   !$OMP end critical(fileopen_critical)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -1752,10 +1752,10 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, NumBlades, BladeInputFileD
 
    ! Open the summary file and give it a heading.
       
-   !$OMP critical(filename)
+   !$OMP critical(fileopen_critical)
    CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
    CALL OpenFOutFile ( UnSu, TRIM( p%RootName )//'.sum', ErrStat, ErrMsg )
-   !$OMP end critical(filename)
+   !$OMP end critical(fileopen_critical)
    IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! Heading:
