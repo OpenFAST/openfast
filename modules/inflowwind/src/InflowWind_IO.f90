@@ -540,7 +540,7 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
       ! Open binary file
       call OpenBInpFile(WindFileUnit, TRIM(InitInp%WindFileName), TmpErrStat, TmpErrMsg)
    endif
-   !$OMP end critical(fileopen)
+   !$OMP end critical(fileopen_critical)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -910,7 +910,7 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
          ! Open wind file for this component
          call OpenBInpFile(WindFileUnit, InitInp%WindFileName(IC), TmpErrStat, TmpErrMsg)
       endif
-      !$OMP end critical(fileopen)
+      !$OMP end critical(fileopen_critical)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
@@ -1151,7 +1151,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
 
       call OpenBInpFile(UnitWind, TRIM(BinFileName), TmpErrStat, TmpErrMsg)
    endif
-   !$OMP end critical(fileopen)
+   !$OMP end critical(fileopen_critical)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 

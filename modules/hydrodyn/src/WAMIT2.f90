@@ -3112,7 +3112,7 @@ END SUBROUTINE WAMIT2_Init
             ! Open the file
          CALL OpenFInpFile(  UnitDataFile, TRIM(Filename3D), ErrStat, ErrMsg )  ! Open file containing mean drift information
       endif
-      !$OMP end critical(fileopen)
+      !$OMP end critical(fileopen_critical)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          UnitDataFile = -1
@@ -3783,7 +3783,7 @@ END SUBROUTINE WAMIT2_Init
          ! Open the file
          CALL OpenFInpFile(  UnitDataFile, TRIM(Filename4D), ErrStatTmp, ErrMsgTmp )  ! Open file containing mean drift information
       endif
-      !$OMP end critical(fileopen)
+      !$OMP end critical(fileopen_critical)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
