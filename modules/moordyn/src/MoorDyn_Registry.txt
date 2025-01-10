@@ -114,9 +114,12 @@ typedef  ^            ^                DbKi               M              {6}{6} 
 typedef  ^            ^                DbKi               M0             {6}{6}  -  -   "body 6-dof mass and inertia matrix in its own frame"
 typedef  ^            ^                DbKi               OrMat          {3}{3}  -  -   "DCM for body orientation"
 typedef  ^            ^                DbKi               rCG            {3}     -  -   "vector in body frame from ref point to CG (before rods etc..)"
-typedef  ^            ^                DbKi               Fext           {3}     -  -   "vector of user-defined external force on the body" [N]
-typedef  ^            ^                DbKi               Blin           {3}     -  -   "user-defined linear translational damping on the body" [N/(m/s)]
-typedef  ^            ^                DbKi               Bquad          {3}     -  -   "user-defined quadratic translational damping on the body" [N/(m/s)^2]
+typedef  ^            ^                DbKi               FextG          {3}     -  -   "vector of user-defined external force on the body in the global frame" [N]
+typedef  ^            ^                DbKi               BlinG          {3}     -  -   "user-defined linear translational damping on the body in the global frame" [N/(m/s)]
+typedef  ^            ^                DbKi               BquadG         {3}     -  -   "user-defined quadratic translational damping on the body in the global frame" [N/(m/s)^2]
+typedef  ^            ^                DbKi               FextL          {3}     -  -   "vector of user-defined external force on the body in the local body-fixed frame" [N]
+typedef  ^            ^                DbKi               BlinL          {3}     -  -   "user-defined linear translational damping on the body in the local body-fixed frame" [N/(m/s)]
+typedef  ^            ^                DbKi               BquadL         {3}     -  -   "user-defined quadratic translational damping on the body in the local body-fixed frame" [N/(m/s)^2]
 
 # this is the Point type, which holds data for each point object
 typedef  ^            MD_Point       IntKi              IdNum          -       -  -   "integer identifier of this point"
@@ -142,9 +145,9 @@ typedef  ^            ^                DbKi               zeta           -      
 typedef  ^            ^                DbKi               PDyn         {:}       -  -   "water dynamic pressure at node"  "[Pa]"
 typedef  ^            ^                DbKi               Fnet           {3}     -  -   "total force on node (excluding inertial loads)"
 typedef  ^            ^                DbKi               M              {3}{3}  -  -   "node mass matrix, from attached lines"
-typedef  ^            ^                DbKi               Fext           {3}     -  -   "vector of user-defined external force on the body" [N]
-typedef  ^            ^                DbKi               Blin           {3}     -  -   "user-defined linear translational damping on the body" [N/(m/s)]
-typedef  ^            ^                DbKi               Bquad          {3}     -  -   "user-defined quadratic translational damping on the body" [N/(m/s)^2]
+typedef  ^            ^                DbKi               Fext           {3}     -  -   "vector of user-defined external force on the point always in the global frame" [N]
+typedef  ^            ^                DbKi               Blin           {3}     -  -   "user-defined linear translational damping on the point always in the global frame" [N/(m/s)]
+typedef  ^            ^                DbKi               Bquad          {3}     -  -   "user-defined quadratic translational damping on the point always in the global frame" [N/(m/s)^2]
 
 # this is the Rod type, which holds data for each Rod object
 typedef  ^            MD_Rod           IntKi              IdNum         -        -  -   "integer identifier of this Line"
@@ -208,9 +211,9 @@ typedef  ^            ^                DbKi               Imat         {3}{3}   
 typedef  ^            ^                DbKi               OrMat        {3}{3}    -  -   "DCM for body orientation"
 typedef  ^            ^                IntKi              RodUnOut      -        -  -   "unit number of rod output file"
 typedef  ^            ^                DbKi               RodWrOutput  {:}       -  -   "one row of output data for this rod"
-typedef  ^            ^                DbKi               FextU        {3}       -  -   "vector of user-defined external force on the rod end A" [N]
-typedef  ^            ^                DbKi               Blin         {2}       -  -   "linear damping, transverse damping for rod element" "[N/(m/s)]"
-typedef  ^            ^                DbKi               Bquad        {2}       -  -   "quadratic damping, transverse damping for rod element" "[N/(m/s)^2]"
+typedef  ^            ^                DbKi               FextU        {3}       -  -   "vector of user-defined external force on the rod end A always in the local body-fixed frame" "[N]"
+typedef  ^            ^                DbKi               Blin         {2}       -  -   "linear damping, transverse damping for rod element always in the local body-fixed frame" "[N/(m/s)]"
+typedef  ^            ^                DbKi               Bquad        {2}       -  -   "quadratic damping, transverse damping for rod element always in the local body-fixed frame" "[N/(m/s)^2]"
 
 
 
@@ -288,6 +291,7 @@ typedef  ^            MD_ExtLd         IntKi              IdNum          -      
 typedef  ^            ^                DbKi               Fext           {3}     -  -   "user-defined external force on the object" [N]
 typedef  ^            ^                DbKi               Blin           {3}     -  -   "user-defined linear translational damping on the object" [N/(m/s)]
 typedef  ^            ^                DbKi               Bquad          {3}     -  -   "user-defined quadratic translational damping on the object" [N/(m/s)^2]
+typedef  ^            ^                LOGICAL            isGlobal        -      -  -   "external forces and damping to be applied in the global frame of reference" -
 
 # this is the Fail type, which holds data for possible line failure descriptors 
 typedef  ^            MD_Fail          IntKi              IdNum           -        -  -   "integer identifier of this failure" "-"

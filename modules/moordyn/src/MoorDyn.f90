@@ -1610,7 +1610,7 @@ CONTAINS
                   Line = NextLine(i)
 
                   IF ( CountWords( Line ) /= 6) THEN
-                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 5 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 6 columns.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
                       RETURN
                   END IF
@@ -1624,61 +1624,89 @@ CONTAINS
                      CALL Conv2UC(tempString1) ! convert to uppercase so that matching is not case-sensitive
                      CALL DecomposeString(tempString1, let1, num1, let2, num2, let3) 
 
-                     ! TODO: read in local or global 
+                     ! Read in CSys local or global
                      CALL Conv2UC(tempString5) ! convert to uppercase so that matching is not case-sensitive
-                     ! if length of tempstring5 > 1 throw error
-                     ! if tempString5 == L set local flag
-                     ! elseif tempstring 5 == G set global flag
-                     ! else throw error
+                     if (tempString5 == "G") then
+                        m%ExtLdList(l)%isGlobal = .true.
+                     else if (tempString5 == "L") then
+                        m%ExtLdList(l)%isGlobal = .false.
+                     else
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Coordinate system (CSys) must be either G for global or L for local (body fixed) ' , ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     end if
+                     if ( (let1 == "ROD") .or. (let1 == "R") ) then
+                        if (m%ExtLdList(l)%isGlobal) then
+                           m%ExtLdList(l)%isGlobal = .false.
+                           CALL SetErrStat( ErrID_Info, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Setting coordinate system (CSys) to L for rods ' , ErrStat, ErrMsg, RoutineName )
+                        end if
+                     end if
+                     if ( (let1 == "POINT") .or. (let1 == "P") ) then
+                        if (.not. m%ExtLdList(l)%isGlobal) then
+                           m%ExtLdList(l)%isGlobal = .true.
+                           CALL SetErrStat( ErrID_Info, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Setting coordinate system (CSys) to G for points ' , ErrStat, ErrMsg, RoutineName )
+                        end if
+                     end if
 
                      ! process translational force
                      CALL SplitByBars(tempString2, N, tempStrings)
-                     if (N==1) then ! one force provided. Used for all force directions (useful for when force is zero)
+                     if (N==1) then ! one force provided; must be zero.
                         READ(tempStrings(1), *) m%ExtLdList(l)%Fext(1)
                         m%ExtLdList(l)%Fext(2) = m%ExtLdList(l)%Fext(1)
                         m%ExtLdList(l)%Fext(3) = m%ExtLdList(l)%Fext(1)
+                        if (m%ExtLdList(l)%Fext(1) /= 0.0) then
+                           CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0 or have 3 numbers' , ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           RETURN
+                        end if
                      elseif (N==3) then ! all three forces provided. Note rod forces will be applied to end A.
                         READ(tempStrings(1), *) m%ExtLdList(l)%Fext(1)
                         READ(tempStrings(2), *) m%ExtLdList(l)%Fext(2)
                         READ(tempStrings(3), *) m%ExtLdList(l)%Fext(3)
                      else
-                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must have 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0 or have 3 numbers' , ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
                      end if
 
                      ! process linear damping coefficient
                      CALL SplitByBars(tempString4, N, tempStrings)
-                     if (N == 1) then                                   ! if only one entry, use it for all directions
+                     if ((N==1) .and. (let1 /= "ROD") .and. (let1 /= "R")) then                                     ! if only one entry, use it for all directions, not rods
                         READ(tempString4, *) m%ExtLdList(l)%Blin(1)
                         m%ExtLdList(l)%Blin(2) = m%ExtLdList(l)%Blin(1)
                         m%ExtLdList(l)%Blin(3) = m%ExtLdList(l)%Blin(1)
-                     else if ((N==2) .and. (let1 == "ROD")) then                                ! two directions provided, this is for rods
+                     else if ((N==2) .and. ((let1 == "ROD") .or. (let1 == "R"))) then                               ! two directions provided, this is for rods
                         READ(tempStrings(1), *) m%ExtLdList(l)%Blin(1)
                         READ(tempStrings(2), *) m%ExtLdList(l)%Blin(2)
                         m%ExtLdList(l)%Blin(3) = 0.0_DbKi 
-                     else if ((N==3) .and. (let1 /= "ROD")) then                                ! all three directions provided, not rods
+                     else if ((N==3) .and. (let1 /= "ROD") .and. (let1 /= "R")) then                                ! all three directions provided, not rods
                         READ(tempStrings(1), *) m%ExtLdList(l)%Blin(1)
                         READ(tempStrings(2), *) m%ExtLdList(l)%Blin(2)
                         READ(tempStrings(3), *) m%ExtLdList(l)%Blin(3)
                      else
-                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Blin entry must have 1 or 3 numbers for non-rod objects and 1 or 2 entries for rod objects.' , ErrStat, ErrMsg, RoutineName )
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Blin entry must have 1 or 3 numbers for non-rod objects and 2 entries for rod objects.' , ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
                      end if
 
                      ! process quadratic damping coefficient
                      CALL SplitByBars(tempString4, N, tempStrings)
-                     if (N == 1) then                                   ! if only one entry, use it for all directions
+                     if ((N==1) .and. (let1 /= "ROD") .and. (let1 /= "R")) then                                    ! if only one entry, use it for all directions, not rods
                         READ(tempString4, *) m%ExtLdList(l)%Bquad(1)
                         m%ExtLdList(l)%Bquad(2) = m%ExtLdList(l)%Bquad(1)
                         m%ExtLdList(l)%Bquad(3) = m%ExtLdList(l)%Bquad(1)
-                     else if ((N==2) .and. (let1 == "ROD")) then                                ! two directions provided, this is for rods
+                     else if ((N==2) .and. ((let1 == "ROD") .or. (let1 == "R"))) then                              ! two directions provided, this is for rods
                         READ(tempStrings(1), *) m%ExtLdList(l)%Bquad(1)
                         READ(tempStrings(2), *) m%ExtLdList(l)%Bquad(2)
                         m%ExtLdList(l)%Bquad(3) = 0.0_DbKi 
-                     else if ((N==3) .and. (let1 /= "ROD")) then                                ! all three directions provided, not rods
+                     else if ((N==3) .and. (let1 /= "ROD") .and. (let1 /= "R")) then                               ! all three directions provided, not rods
                         READ(tempStrings(1), *) m%ExtLdList(l)%Bquad(1)
                         READ(tempStrings(2), *) m%ExtLdList(l)%Bquad(2)
                         READ(tempStrings(3), *) m%ExtLdList(l)%Bquad(3)
                      else
                         CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Bquad entry must have 1 or 3 numbers for non-rod objects and 1 or 2 entries for rod objects.' , ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
                      end if
 
                      IF ( (m%ExtLdList(l)%Blin(1)<0.0) .OR. (m%ExtLdList(l)%Blin(2)<0.0) .OR. (m%ExtLdList(l)%Blin(3)<0.0) .OR. &
@@ -1692,9 +1720,15 @@ CONTAINS
                          IF (len_trim(num1) > 0) THEN
                             READ(num1, *) J   ! convert to int, representing parent body index
                             IF ((J <= p%nBodies) .and. (J > 0)) THEN
-                               m%BodyList(J)%Fext = m%BodyList(J)%Fext + m%ExtLdList(l)%Fext
-                               m%BodyList(J)%Blin = m%BodyList(J)%Blin + m%ExtLdList(l)%Blin
-                               m%BodyList(J)%Bquad = m%BodyList(J)%Bquad + m%ExtLdList(l)%Bquad
+                               IF (m%ExtLdList(l)%isGlobal) THEN
+                                  m%BodyList(J)%FextG  = m%BodyList(J)%FextG  + m%ExtLdList(l)%Fext
+                                  m%BodyList(J)%BlinG  = m%BodyList(J)%BlinG  + m%ExtLdList(l)%Blin
+                                  m%BodyList(J)%BquadG = m%BodyList(J)%BquadG + m%ExtLdList(l)%Bquad
+                               ELSE
+                                  m%BodyList(J)%FextL  = m%BodyList(J)%FextL  + m%ExtLdList(l)%Fext
+                                  m%BodyList(J)%BlinL  = m%BodyList(J)%BlinL  + m%ExtLdList(l)%Blin
+                                  m%BodyList(J)%BquadL = m%BodyList(J)%BquadL + m%ExtLdList(l)%Bquad
+                               END IF
                             ELSE
                                CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
                                return
@@ -1705,17 +1739,17 @@ CONTAINS
                          END IF
                      ELSEIF (let1 == "POINT" .OR. let1 == "P") THEN
                         IF (len_trim(num1) > 0) THEN
-                           READ(num1, *) J   ! convert to int, representing parent body index
-                           IF ((J <= p%nBodies) .and. (J > 0)) THEN
+                           READ(num1, *) J   ! convert to int, representing parent point index
+                           IF ((J <= p%nPoints) .and. (J > 0)) THEN
                               m%PointList(J)%Fext = m%PointList(J)%Fext + m%ExtLdList(l)%Fext
                               m%PointList(J)%Blin = m%PointList(J)%Blin + m%ExtLdList(l)%Blin
                               m%PointList(J)%Bquad = m%PointList(J)%Bquad + m%ExtLdList(l)%Bquad
                            ELSE
-                              CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
+                              CALL SetErrStat( ErrID_Fatal,  "Point ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
                               return
                            END IF
                         ELSE
-                           CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )
+                           CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" Point attachment.", ErrStat, ErrMsg, RoutineName )
                               return
                         END IF
                      ELSEIF (let1 == "ROD" .OR. let1 == "R") THEN
@@ -1734,7 +1768,7 @@ CONTAINS
                               return
                         END IF
                      ELSE
-                         CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. External load can only be applied to bodies or rods at the moment.', ErrStat, ErrMsg, RoutineName )
+                         CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. External load can only be applied to points, bodies, or rods.', ErrStat, ErrMsg, RoutineName )
                          CALL CleanUp()
                          RETURN
                      END IF

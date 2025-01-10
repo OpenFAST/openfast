@@ -131,9 +131,12 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:6,1:6)  :: M0 = 0.0_R8Ki      !< body 6-dof mass and inertia matrix in its own frame [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: OrMat = 0.0_R8Ki      !< DCM for body orientation [-]
     REAL(DbKi) , DIMENSION(1:3)  :: rCG = 0.0_R8Ki      !< vector in body frame from ref point to CG (before rods etc..) [-]
-    REAL(DbKi) , DIMENSION(1:3)  :: Fext = 0.0_R8Ki      !< vector of user-defined external force on the body [[N]]
-    REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< user-defined linear translational damping on the body [[N/(m/s)]]
-    REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< user-defined quadratic translational damping on the body [[N/(m/s)^2]]
+    REAL(DbKi) , DIMENSION(1:3)  :: FextG = 0.0_R8Ki      !< vector of user-defined external force on the body in the global frame [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BlinG = 0.0_R8Ki      !< user-defined linear translational damping on the body in the global frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BquadG = 0.0_R8Ki      !< user-defined quadratic translational damping on the body in the global frame [[N/(m/s)^2]]
+    REAL(DbKi) , DIMENSION(1:3)  :: FextL = 0.0_R8Ki      !< vector of user-defined external force on the body in the local body-fixed frame [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BlinL = 0.0_R8Ki      !< user-defined linear translational damping on the body in the local body-fixed frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BquadL = 0.0_R8Ki      !< user-defined quadratic translational damping on the body in the local body-fixed frame [[N/(m/s)^2]]
   END TYPE MD_Body
 ! =======================
 ! =========  MD_Point  =======
@@ -161,9 +164,9 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: PDyn      !< water dynamic pressure at node [[Pa]]
     REAL(DbKi) , DIMENSION(1:3)  :: Fnet = 0.0_R8Ki      !< total force on node (excluding inertial loads) [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: M = 0.0_R8Ki      !< node mass matrix, from attached lines [-]
-    REAL(DbKi) , DIMENSION(1:3)  :: Fext = 0.0_R8Ki      !< vector of user-defined external force on the body [[N]]
-    REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< user-defined linear translational damping on the body [[N/(m/s)]]
-    REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< user-defined quadratic translational damping on the body [[N/(m/s)^2]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Fext = 0.0_R8Ki      !< vector of user-defined external force on the point always in the global frame [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< user-defined linear translational damping on the point always in the global frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< user-defined quadratic translational damping on the point always in the global frame [[N/(m/s)^2]]
   END TYPE MD_Point
 ! =======================
 ! =========  MD_Rod  =======
@@ -229,9 +232,9 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: OrMat = 0.0_R8Ki      !< DCM for body orientation [-]
     INTEGER(IntKi)  :: RodUnOut = 0_IntKi      !< unit number of rod output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: RodWrOutput      !< one row of output data for this rod [-]
-    REAL(DbKi) , DIMENSION(1:3)  :: FextU = 0.0_R8Ki      !< vector of user-defined external force on the rod end A [[N]]
-    REAL(DbKi) , DIMENSION(1:2)  :: Blin = 0.0_R8Ki      !< linear damping, transverse damping for rod element [[N/(m/s)]]
-    REAL(DbKi) , DIMENSION(1:2)  :: Bquad = 0.0_R8Ki      !< quadratic damping, transverse damping for rod element [[N/(m/s)^2]]
+    REAL(DbKi) , DIMENSION(1:3)  :: FextU = 0.0_R8Ki      !< vector of user-defined external force on the rod end A always in the local body-fixed frame [[N]]
+    REAL(DbKi) , DIMENSION(1:2)  :: Blin = 0.0_R8Ki      !< linear damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:2)  :: Bquad = 0.0_R8Ki      !< quadratic damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)^2]]
   END TYPE MD_Rod
 ! =======================
 ! =========  MD_Line  =======
@@ -310,6 +313,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3)  :: Fext = 0.0_R8Ki      !< user-defined external force on the object [[N]]
     REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< user-defined linear translational damping on the object [[N/(m/s)]]
     REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< user-defined quadratic translational damping on the object [[N/(m/s)^2]]
+    LOGICAL  :: isGlobal = .false.      !< external forces and damping to be applied in the global frame of reference [-]
   END TYPE MD_ExtLd
 ! =======================
 ! =========  MD_Fail  =======
@@ -905,9 +909,12 @@ subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
    DstBodyData%M0 = SrcBodyData%M0
    DstBodyData%OrMat = SrcBodyData%OrMat
    DstBodyData%rCG = SrcBodyData%rCG
-   DstBodyData%Fext = SrcBodyData%Fext
-   DstBodyData%Blin = SrcBodyData%Blin
-   DstBodyData%Bquad = SrcBodyData%Bquad
+   DstBodyData%FextG = SrcBodyData%FextG
+   DstBodyData%BlinG = SrcBodyData%BlinG
+   DstBodyData%BquadG = SrcBodyData%BquadG
+   DstBodyData%FextL = SrcBodyData%FextL
+   DstBodyData%BlinL = SrcBodyData%BlinL
+   DstBodyData%BquadL = SrcBodyData%BquadL
 end subroutine
 
 subroutine MD_DestroyBody(BodyData, ErrStat, ErrMsg)
@@ -950,9 +957,12 @@ subroutine MD_PackBody(RF, Indata)
    call RegPack(RF, InData%M0)
    call RegPack(RF, InData%OrMat)
    call RegPack(RF, InData%rCG)
-   call RegPack(RF, InData%Fext)
-   call RegPack(RF, InData%Blin)
-   call RegPack(RF, InData%Bquad)
+   call RegPack(RF, InData%FextG)
+   call RegPack(RF, InData%BlinG)
+   call RegPack(RF, InData%BquadG)
+   call RegPack(RF, InData%FextL)
+   call RegPack(RF, InData%BlinL)
+   call RegPack(RF, InData%BquadL)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -987,9 +997,12 @@ subroutine MD_UnPackBody(RF, OutData)
    call RegUnpack(RF, OutData%M0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OrMat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rCG); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Fext); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FextG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BlinG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BquadG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FextL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BlinL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BquadL); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyPoint(SrcPointData, DstPointData, CtrlCode, ErrStat, ErrMsg)
@@ -2307,6 +2320,7 @@ subroutine MD_CopyExtLd(SrcExtLdData, DstExtLdData, CtrlCode, ErrStat, ErrMsg)
    DstExtLdData%Fext = SrcExtLdData%Fext
    DstExtLdData%Blin = SrcExtLdData%Blin
    DstExtLdData%Bquad = SrcExtLdData%Bquad
+   DstExtLdData%isGlobal = SrcExtLdData%isGlobal
 end subroutine
 
 subroutine MD_DestroyExtLd(ExtLdData, ErrStat, ErrMsg)
@@ -2327,6 +2341,7 @@ subroutine MD_PackExtLd(RF, Indata)
    call RegPack(RF, InData%Fext)
    call RegPack(RF, InData%Blin)
    call RegPack(RF, InData%Bquad)
+   call RegPack(RF, InData%isGlobal)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2339,6 +2354,7 @@ subroutine MD_UnPackExtLd(RF, OutData)
    call RegUnpack(RF, OutData%Fext); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%isGlobal); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyFail(SrcFailData, DstFailData, CtrlCode, ErrStat, ErrMsg)

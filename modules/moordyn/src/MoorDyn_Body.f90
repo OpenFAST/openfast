@@ -72,11 +72,14 @@ CONTAINS
       Body%v6 = 0.0_DbKi
 
       ! set external load to zero
-      Body%Fext = 0.0_DbKi
+      Body%FextG = 0.0_DbKi
+      Body%FextL = 0.0_DbKi
 
       ! set external damping to zero
-      Body%Blin  = 0.0_DbKi
-      Body%Bquad = 0.0_DbKi
+      Body%BlinG  = 0.0_DbKi
+      Body%BquadG = 0.0_DbKi
+      Body%BlinL  = 0.0_DbKi
+      Body%BquadL = 0.0_DbKi
 
       !also set number of attached rods and points to zero initially
       Body%nAttachedC = 0
@@ -449,6 +452,8 @@ CONTAINS
       Real(DbKi)                 :: w(3)                     ! body angular velocity vector
       Real(DbKi)                 :: Fcentripetal(3)        ! centripetal force
       Real(DbKi)                 :: Mcentripetal(3)        ! centripetal moment     
+      Real(DbKi)                 :: v3L(3)             ! Body translational velocity in the local body-fixed coordinate system
+      Real(DbKi)                 :: FDL(3)             ! Part of user-defined damping force defined in the local body-fixed coordinate system
 
 
       ! Initialize variables
@@ -467,11 +472,19 @@ CONTAINS
       body_rCGrotated = MATMUL(Body%OrMat, Body%rCG) ! rotateVector3(body_rCG, OrMat, body_rCGrotated); ! relative vector to body CG in inertial orientation
       CALL translateForce3to6DOF(body_rCGrotated, Fgrav, Body%F6net)  ! gravity forces and moments about body ref point given CG location
 
-      ! Added user-defined external force and damping on body (assumed to be applied at the body ref point)
-      Body%F6net(1:3) = Body%F6net(1:3) + Body%Fext
-      Body%F6net(1)   = Body%F6net(1)   - Body%Blin(1) * Body%v6(1) - Body%Bquad(1) * ABS(Body%v6(1)) * Body%v6(1)
-      Body%F6net(2)   = Body%F6net(2)   - Body%Blin(2) * Body%v6(2) - Body%Bquad(2) * ABS(Body%v6(2)) * Body%v6(2)
-      Body%F6net(3)   = Body%F6net(3)   - Body%Blin(3) * Body%v6(3) - Body%Bquad(3) * ABS(Body%v6(3)) * Body%v6(3)
+      ! Add user-defined external force and damping on body defined in the global coordinate system (assumed to be applied at the body ref point)
+      Body%F6net(1:3) = Body%F6net(1:3) + Body%FextG
+      Body%F6net(1)   = Body%F6net(1)   - Body%BlinG(1) * Body%v6(1) - Body%BquadG(1) * ABS(Body%v6(1)) * Body%v6(1)
+      Body%F6net(2)   = Body%F6net(2)   - Body%BlinG(2) * Body%v6(2) - Body%BquadG(2) * ABS(Body%v6(2)) * Body%v6(2)
+      Body%F6net(3)   = Body%F6net(3)   - Body%BlinG(3) * Body%v6(3) - Body%BquadG(3) * ABS(Body%v6(3)) * Body%v6(3)
+
+      ! Add user-defined external force and damping on body defined in the local body-fixed coordinate system (assumed to be applied at the body ref point)
+      Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, Body%FextL)
+      v3L = MATMUL( TRANSPOSE(Body%OrMat), Body%v6(1:3) )
+      FDL(1) = - Body%BlinL(1) * v3L(1) - Body%BquadL(1) * ABS(v3L(1)) * v3L(1)
+      FDL(2) = - Body%BlinL(2) * v3L(2) - Body%BquadL(2) * ABS(v3L(2)) * v3L(2)
+      FDL(3) = - Body%BlinL(3) * v3L(3) - Body%BquadL(3) * ABS(v3L(3)) * v3L(3)
+      Body%F6net(1:3) = Body%F6net(1:3) + MATMUL( Body%OrMat, FDL )
 
       ! Centripetal force and moment due to COM not being at body origin plus gyroscopic moment
       w = Body%v6(4:6)
