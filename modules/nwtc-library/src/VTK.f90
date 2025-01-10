@@ -93,7 +93,7 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
       !$OMP end critical(fileopen)
@@ -159,7 +159,7 @@ contains
          closeOnReturn = .FALSE.
       END IF
       
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFInpFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
       !$OMP end critical(fileopen)
@@ -361,7 +361,7 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
       !$OMP end critical(fileopen)
@@ -452,7 +452,7 @@ contains
         logical :: b
 
         if (.not. mvtk%bFileOpen) then
-            !$OMP critical(fileopen)
+            !$OMP critical(fileopen_critical)
             CALL GetNewUnit( mvtk%vtk_unit )   
             if (mvtk%bBinary) then
                 ! Fortran 2003 stream, otherwise intel fortran !

@@ -3106,7 +3106,7 @@ END SUBROUTINE WAMIT2_Init
          !------------------------------------------------------------------------------
 
          ! Find a unit number to use
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
       if (ErrStatTmp < AbortErrLev) then
             ! Open the file
@@ -3777,7 +3777,7 @@ END SUBROUTINE WAMIT2_Init
          !------------------------------------------------------------------------------
 
          ! Find a unit number to use
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
       if (ErrStatTmp < AbortErrLev) then
          ! Open the file

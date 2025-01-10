@@ -282,7 +282,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, WaveDT, X_
       
 
       WvName = TRIM(Rootname) // TRIM(extension(iFile))
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( UnWv )
       CALL OpenFOutFile ( UnWv, WvName, ErrStat, ErrMsg ) 
       !$OMP end critical(fileopen)
@@ -333,7 +333,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, WaveDT, X_
    
    ! WaveElevation Grid
    WvName = TRIM(Rootname) // '.Elev'
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    CALL GetNewUnit( UnWv )
    CALL OpenFOutFile ( UnWv, WvName, ErrStat, ErrMsg ) 
    !$OMP end critical(fileopen)
@@ -451,7 +451,7 @@ subroutine SeaStOut_WriteWaveElev0( Rootname, NStepWave, NGrid, WaveElev1, WaveE
    WvName = TRIM(Rootname) // '.Elev'
    i = NGrid(1) / 2 + 1 
    j = NGrid(2) / 2 + 1 
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    CALL GetNewUnit( UnWv )
    CALL OpenFOutFile ( UnWv, WvName, ErrStat, ErrMsg ) 
    !$OMP end critical(fileopen)
@@ -723,7 +723,7 @@ SUBROUTINE SeaStOut_OpenOutput( SeaSt_ProgDesc, OutRootName,  p, InitOut, ErrSta
          ! Open the file for output
       OutFileName = TRIM(OutRootName)//'.out'
  
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( p%UnOutFile )
       CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
       !$OMP end critical(fileopen)
@@ -1018,7 +1018,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, ErrStat, ErrMsg )
       SummaryName = trim(InitInp%OutRootName)//'.sum'
       UnSum = -1
 
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( UnSum )
       CALL OpenFOutFile ( UnSum, SummaryName, ErrStat2, ErrMsg2 )
       !$OMP end critical(fileopen)

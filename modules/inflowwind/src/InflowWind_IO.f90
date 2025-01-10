@@ -534,7 +534,7 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Get a unit number to use for the wind file
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
    if (TmpErrStat < AbortErrLev) then
       ! Open binary file
@@ -904,7 +904,7 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    do IC = 1, G3D%NComp
 
       ! Get a unit number to use for the wind file
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
       if (TmpErrStat < AbortErrLev) then
          ! Open wind file for this component
@@ -1140,7 +1140,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
    end if
 
    ! Get a unit number to use
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    call GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
    if (TmpErrStat < AbortErrLev) then
 

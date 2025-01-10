@@ -148,7 +148,7 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
    WaveElevData%FileName   =  TRIM(InitInp%WvKinFile)//'.Elev'
 
    ! Open the file containing the wave elevation timeseries
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    CALL GetNewUnit( WaveElevUnit )
    CALL OpenFInpFile(  WaveElevUnit, WaveElevData%FileName, ErrStatTmp, ErrMsgTmp )
    !$OMP end critical(fileopen)
@@ -495,7 +495,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
       FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(iFile))
    
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( UnWv )
       CALL OpenFInpFile ( UnWv, FileName, ErrStatTmp, ErrMsgTmp )
       !$OMP end critical(fileopen)
@@ -557,7 +557,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
    FileName = TRIM(InitInp%WvKinFile) // '.Elev'
    
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    CALL GetNewUnit( UnWv )
    CALL OpenFInpFile ( UnWv, FileName, ErrStatTmp, ErrMsgTmp ) 
    !$OMP end critical(fileopen)
@@ -699,7 +699,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, WaveDOmega, WaveCompData, ErrStat, ErrMs
    WaveCompData%FileName   =  TRIM(InitInp%WvKinFile)
 
    ! Open the file containing the list of wave components
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    CALL GetNewUnit( WaveCompUnit )
    CALL OpenFInpFile(  WaveCompUnit, WaveCompData%FileName, ErrStatTmp, ErrMsgTmp )
    !$OMP end critical(fileopen)
