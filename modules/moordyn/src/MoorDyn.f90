@@ -1681,7 +1681,7 @@ CONTAINS
 
                      ! process linear damping coefficient
                      CALL SplitByBars(tempString4, N, tempStrings)
-                     if ((N==1) .and. (let1 /= "ROD") .and. (let1 /= "R")) then                                     ! if only one entry, use it for all directions, not rods
+                     if (N==1) then                                                                                 ! if only one entry, use it for all directions
                         READ(tempString4, *) m%ExtLdList(l)%Blin(1)
                         m%ExtLdList(l)%Blin(2) = m%ExtLdList(l)%Blin(1)
                         m%ExtLdList(l)%Blin(3) = m%ExtLdList(l)%Blin(1)
@@ -1694,14 +1694,14 @@ CONTAINS
                         READ(tempStrings(2), *) m%ExtLdList(l)%Blin(2)
                         READ(tempStrings(3), *) m%ExtLdList(l)%Blin(3)
                      else
-                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Blin entry must have 1 or 3 numbers for non-rod objects and 2 entries for rod objects.' , ErrStat, ErrMsg, RoutineName )
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Blin entry can have 1 number, 2 numbers (for rods only), or 3 numbers (for non-rod objects). ' , ErrStat, ErrMsg, RoutineName )
                         CALL CleanUp()
                         RETURN
                      end if
 
                      ! process quadratic damping coefficient
                      CALL SplitByBars(tempString4, N, tempStrings)
-                     if ((N==1) .and. (let1 /= "ROD") .and. (let1 /= "R")) then                                    ! if only one entry, use it for all directions, not rods
+                     if (N==1) then                                                                                ! if only one entry, use it for all directions
                         READ(tempString4, *) m%ExtLdList(l)%Bquad(1)
                         m%ExtLdList(l)%Bquad(2) = m%ExtLdList(l)%Bquad(1)
                         m%ExtLdList(l)%Bquad(3) = m%ExtLdList(l)%Bquad(1)
@@ -1714,7 +1714,7 @@ CONTAINS
                         READ(tempStrings(2), *) m%ExtLdList(l)%Bquad(2)
                         READ(tempStrings(3), *) m%ExtLdList(l)%Bquad(3)
                      else
-                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Bquad entry must have 1 or 3 numbers for non-rod objects and 1 or 2 entries for rod objects.' , ErrStat, ErrMsg, RoutineName )
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Bquad entry can have 1 number, 2 numbers (for rods only), or 3 numbers (for non-rod objects). ' , ErrStat, ErrMsg, RoutineName )
                         CALL CleanUp()
                         RETURN
                      end if
