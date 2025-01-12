@@ -3,6 +3,7 @@ import copy
 import operator
 import numpy as np
 import yaml
+import sys
 from functools import reduce
 from deepdiff import DeepDiff
 try:
@@ -137,6 +138,11 @@ def save_yaml(outdir, fname, data_out):
     yaml.dump(data_out, f)
     f.close()
 
+def print_yaml(data_struct):
+    data_struct = remove_numpy(data_struct)
+    yaml=ry.YAML()
+    yaml.indent(mapping=4, sequence=6, offset=3)
+    yaml.dump(data_struct,sys.stdout)
 
 def select_cases(cases, var_sel, val_sel):
     # Find a variable value from the AeroelasticSE case_matrix

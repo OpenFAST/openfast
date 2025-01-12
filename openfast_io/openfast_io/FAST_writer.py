@@ -226,10 +226,10 @@ class InputWriter_OpenFAST(object):
             self.write_MAP()
         elif self.fst_vt['Fst']['CompMooring'] == 3:
             self.write_MoorDyn()
-            if 'WaterKin' in self.fst_vt['MoorDyn']['options']:
+            if 'options' in self.fst_vt['MoorDyn'] and 'WaterKin' in self.fst_vt['MoorDyn']['options']:
                 self.write_WaterKin(os.path.join(self.FAST_runDirectory,self.fst_vt['MoorDyn']['WaterKin_file']))
 
-        if self.fst_vt['Fst']['CompElast'] == 2 or 'Echo' in self.fst_vt['BeamDyn']:
+        if self.fst_vt['Fst']['CompElast'] == 2:
             self.write_BeamDyn()
 
         self.write_MainInput()
@@ -785,9 +785,9 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['VFlowAng'], 'VFlowAng', '- Upflow angle (degrees) (not used for native Bladed format WindType=7)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['VelInterpCubic'], 'VelInterpCubic', '- Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['NWindVel'], 'NWindVel', '- Number of points to output the wind velocity    (0 to 9)\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['InflowWind']['WindVxiList']), 'WindVxiList', '- List of coordinates in the inertial X direction (m)\n'))        
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['InflowWind']['WindVyiList']), 'WindVyiList', '- List of coordinates in the inertial Y direction (m)\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['InflowWind']['WindVziList']), 'WindVziList', '- List of coordinates in the inertial Z direction (m)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['InflowWind']['WindVxiList'], dtype=str)), 'WindVxiList', '- List of coordinates in the inertial X direction (m)\n'))        
+        f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['InflowWind']['WindVyiList'], dtype=str)), 'WindVyiList', '- List of coordinates in the inertial Y direction (m)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['InflowWind']['WindVziList'], dtype=str)), 'WindVziList', '- List of coordinates in the inertial Z direction (m)\n'))
         f.write('================== Parameters for Steady Wind Conditions [used only for WindType = 1] =========================\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['HWindSpeed'], 'HWindSpeed', '- Horizontal wind speed                            (m/s)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['RefHt'], 'RefHt', '- Reference height for horizontal wind speed      (m)\n'))
@@ -981,7 +981,7 @@ class InputWriter_OpenFAST(object):
         #     f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['AeroDyn']['TwOutNd']), 'TwOutNd', '- Tower nodes whose values will be output  (-)\n'))
         # else:
         #     f.write('{:<22} {:<11} {:}'.format(0, 'TwOutNd', '- Tower nodes whose values will be output  (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['AeroDyn']['TwOutNd']), 'TwOutNd', '- Tower nodes whose values will be output  (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['AeroDyn']['TwOutNd'], dtype=str)), 'TwOutNd', '- Tower nodes whose values will be output  (-)\n'))
         f.write('                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
 
         outlist = self.get_outlist(self.fst_vt['outlist'], ['AeroDyn'])      
@@ -1522,7 +1522,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['PotMod'], 'PotMod', '- Potential-flow model {0: none=no potential flow, 1: frequency-to-time-domain transforms based on WAMIT output, 2: fluid-impulse theory (FIT)} (switch)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['ExctnMod'], 'ExctnMod', '- Wave-excitation model {0: no wave-excitation calculation, 1: DFT, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ssexctn INPUT FILE]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['ExctnDisp'], 'ExctnDisp','- Method of computing Wave Excitation {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0 and SeaState\'s WaveMod>0]} (switch)\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['ExctnCutOff'], 'ExctnCutOff','- Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2]) [only used when PotMod=1 and ExctnMod>0 and SeaState\'s WaveMod>0]} (switch)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['ExctnCutOff'], 'ExctnCutOff','- Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2]) [only used when PotMod=1 and ExctnMod>0 and SeaState\'s WaveMod>0]} (switch)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['PtfmYMod'], 'PtfmYMod', '- Model for large platform yaw offset {0: Static reference yaw offset based on PtfmRefY, 1: dynamic reference yaw offset based on low-pass filtering the PRP yaw motion with cutoff frequency PtfmYCutOff} (switch)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['PtfmRefY'], 'PtfmRefY', '- Constant (if PtfmYMod=0) or initial (if PtfmYMod=1) platform reference yaw offset (deg)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['PtfmYCutOff'], 'PtfmYCutOff', '- Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [unused when PtfmYMod=0] (Hz)\n'))
@@ -1532,8 +1532,8 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['RdtnDT'], 'RdtnDT', '- Time step for wave radiation kernel calculations (sec) [only used when PotMod=1 and ExctnMod>0 or RdtnMod>0; DT<=RdtnDT<=0.1 recommended; determines RdtnOmegaMax=Pi/RdtnDT in the cosine transform]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NBody'], 'NBody', '- Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NBodyMod'], 'NBodyMod', '- Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join([f'"{pf}"' for pf in self.fst_vt['HydroDyn']['PotFile']]), 'PotFile', '- Root name of potential-flow model data; WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3) (quoted string) [1 to NBody if NBodyMod>1] [MAKE SURE THE FREQUENCIES INHERENT IN THESE WAMIT FILES SPAN THE PHYSICALLY-SIGNIFICANT RANGE OF FREQUENCIES FOR THE GIVEN PLATFORM; THEY MUST CONTAIN THE ZERO- AND INFINITE-FREQUENCY LIMITS!]\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['WAMITULEN']]), 'WAMITULEN', '- Characteristic body length scale used to redimensionalize WAMIT output (meters) [1 to NBody if NBodyMod>1] [only used when PotMod=1]\n'))
+        f.write('{:<22} {:<11} {:}'.format('"{}"'.format('", "'.join(self.fst_vt['HydroDyn']['PotFile']) if isinstance(self.fst_vt['HydroDyn']['PotFile'], list) else self.fst_vt['HydroDyn']['PotFile']), 'PotFile', '- Root name of potential-flow model data; WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3) (quoted string) [1 to NBody if NBodyMod>1] [MAKE SURE THE FREQUENCIES INHERENT IN THESE WAMIT FILES SPAN THE PHYSICALLY-SIGNIFICANT RANGE OF FREQUENCIES FOR THE GIVEN PLATFORM; THEY MUST CONTAIN THE ZERO- AND INFINITE-FREQUENCY LIMITS!]\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in np.array(self.fst_vt['HydroDyn']['WAMITULEN'])]), 'WAMITULEN', '- Characteristic body length scale used to redimensionalize WAMIT output (meters) [1 to NBody if NBodyMod>1] [only used when PotMod=1]\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['PtfmRefxt']]), 'PtfmRefxt', '- The xt offset of the body reference point(s) from (0,0,0) (meters) [1 to NBody] [only used when PotMod=1]\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['PtfmRefyt']]), 'PtfmRefyt', '- The yt offset of the body reference point(s) from (0,0,0) (meters) [1 to NBody] [only used when PotMod=1]\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['PtfmRefzt']]), 'PtfmRefzt', '- The zt offset of the body reference point(s) from (0,0,0) (meters) [1 to NBody] [only used when PotMod=1. If NBodyMod=2,PtfmRefzt=0.0]\n'))
@@ -1863,8 +1863,8 @@ class InputWriter_OpenFAST(object):
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['OutFmt'], 'OutFmt','- Output format for numerical results (quoted string) [not checked for validity!]\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['OutSFmt'], 'OutSFmt','- Output format for header strings (quoted string) [not checked for validity!]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['NWaveElev'], 'NWaveElev','- Number of points where the incident wave elevations can be computed (-)       [maximum of 9 output locations]\n'))
-        f.write('{:<22} {:<11} {:}'.format(", ".join([f'{val:f}' for val in self.fst_vt['SeaState']['WaveElevxi']]), 'WaveElevxi', '- List of xi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]\n'))
-        f.write('{:<22} {:<11} {:}'.format(", ".join([f'{val:f}' for val in self.fst_vt['SeaState']['WaveElevyi']]), 'WaveElevyi', '- List of yi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]\n'))
+        f.write('{:<22} {:<11} {:}'.format(", ".join([f'{float(val):f}' for val in self.fst_vt['SeaState']['WaveElevxi']]), 'WaveElevxi', '- List of xi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]\n'))
+        f.write('{:<22} {:<11} {:}'.format(", ".join([f'{float(val):f}' for val in self.fst_vt['SeaState']['WaveElevyi']]), 'WaveElevyi', '- List of yi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['NWaveKin'], 'NWaveKin','- Number of points where the wave kinematics can be output (-)       [maximum of 9 output locations]\n'))
         
         if self.fst_vt['SeaState']['NWaveKin'] > 0 :
@@ -2298,7 +2298,7 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CdAx'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CaAx'][i]))
             f.write(" ".join(ln) + '\n')
-        if self.fst_vt['MoorDyn']['Rod_Name']:
+        if 'Rod_Name' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Rod_Name']:
             f.write('----------------------- ROD TYPES ------------------------------------------\n')
             f.write(" ".join(['{:^11s}'.format(i) for i in ['TypeName', 'Diam', 'Mass/m', 'Cd', 'Ca', 'CdEnd', 'CaEnd']])+'\n')
             f.write(" ".join(['{:^11s}'.format(i) for i in ['(name)', '(m)', '(kg/m)', '(-)', '(-)', '(-)', '(-)']])+'\n')
@@ -2314,7 +2314,7 @@ class InputWriter_OpenFAST(object):
                 f.write(" ".join(ln) + '\n')
 
 
-        if self.fst_vt['MoorDyn']['Body_ID']:
+        if 'Body_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Body_ID']:
             f.write('----------------------- BODIES ------------------------------------------\n')
             f.write(" ".join(['{:^11s}'.format(i) for i in ['ID', 'Attachement', 'X0', 'Y0', 'Z0', 'r0',  'p0','y0','Mass','CG*','I*','Volume','CdA*','Ca*']])+'\n')
             f.write(" ".join(['{:^11s}'.format(i) for i in ['(#)', '(word)', '(m)', '(m)', '(m)', '(deg)',  '(deg)','(deg)','(kg)','(m)','(kg-m^2)','(m^3)','m^2','(kg/m^3)']])+'\n')
@@ -2336,7 +2336,7 @@ class InputWriter_OpenFAST(object):
                 ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['Body_Ca'][i]]))
                 f.write(" ".join(ln) + '\n')
 
-        if self.fst_vt['MoorDyn']['Rod_ID']:
+        if 'Rod_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Rod_ID']:
             f.write('----------------------- RODS ------------------------------------------\n')
             f.write(" ".join(['{:^11s}'.format(i) for i in ['ID', 'RodType', 'Attachment', 'Xa', 'Ya', 'Za', 'Xb','Yb','Zb','NumSegs','RodOutputs']])+'\n')
             f.write(" ".join(['{:^11s}'.format(i) for i in ['(#)', '(name)', '(word/ID)', '(m)', '(m)', '(m)', '(m)','(m)','(m)','(-)','(-)']])+'\n')
@@ -2385,7 +2385,7 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Outputs'][i]))
             f.write(" ".join(ln) + '\n')
 
-        if self.fst_vt['MoorDyn']['ChannelID']: # There are control inputs
+        if 'ChannelID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['ChannelID']: # There are control inputs
             f.write('---------------------- CONTROL ---------------------------------------\n')
             f.write(" ".join(['{:^11s}'.format(i) for i in ['ChannelID', 'Line(s)']])+'\n')
             f.write(" ".join(['{:^11s}'.format(i) for i in ['()', '(,)']])+'\n')
@@ -2403,12 +2403,13 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['TmaxIC'], 'TmaxIC', '- max time for ic gen (s)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['CdScaleIC'], 'CdScaleIC', '- factor by which to scale drag coefficients during dynamic relaxation (-)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['threshIC'], 'threshIC', '- threshold for IC convergence (-)\n'))
-        if 'inertialF' in self.fst_vt['MoorDyn']['options']:
-            f.write('{:<22d} {:<11} {:}'.format(int(self.fst_vt['MoorDyn']['inertialF']), 'inertialF', '- Compute the inertial forces (0: no, 1: yes). Switch to 0 if you get: Warning: extreme pitch moment from body-attached Rod.\n'))
+        if 'options' in self.fst_vt['MoorDyn']:
+            if 'inertialF' in self.fst_vt['MoorDyn']['options']:
+                f.write('{:<22d} {:<11} {:}'.format(int(self.fst_vt['MoorDyn']['inertialF']), 'inertialF', '- Compute the inertial forces (0: no, 1: yes). Switch to 0 if you get: Warning: extreme pitch moment from body-attached Rod.\n'))
 
-        if 'WaterKin' in self.fst_vt['MoorDyn']['options']:
-            self.fst_vt['MoorDyn']['WaterKin_file'] = self.FAST_namingOut + '_WaterKin.dat'
-            f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['MoorDyn']['WaterKin_file']+'"', 'WaterKin', '- WaterKin input file\n'))
+            if 'WaterKin' in self.fst_vt['MoorDyn']['options']:
+                self.fst_vt['MoorDyn']['WaterKin_file'] = self.FAST_namingOut + '_WaterKin.dat'
+                f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['MoorDyn']['WaterKin_file']+'"', 'WaterKin', '- WaterKin input file\n'))
 
         
         # f.write('{:^11s} {:<11} {:}'.format(self.fst_vt['MoorDyn']['WaterKin'], 'WaterKin', 'Handling of water motion (0=off, 1=on)\n'))
