@@ -174,7 +174,7 @@ class InputReader_OpenFAST(object):
         self.path2dll       = None   # Path to dll file
         self.fst_vt         = {}
         self.fst_vt['Fst']  = {}
-        self.fst_vt['outlist']  = FstOutput
+        self.fst_vt['outlist']  = copy.deepcopy(FstOutput)
         self.fst_vt['ElastoDyn'] = {}
         self.fst_vt['SimpleElastoDyn'] = {}
         self.fst_vt['ElastoDynBlade'] = {}
@@ -3169,17 +3169,17 @@ class InputReader_OpenFAST(object):
             if self.fst_vt['ServoDyn']['VSContrl'] == 3: # user-defined from routine UserVSCont refered
                 self.read_spd_trq('spd_trq.dat')
         hd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['HydroFile']))
-        if os.path.isfile(hd_file): 
+        if self.fst_vt['Fst']['CompHydro'] == 1: 
             self.read_HydroDyn(hd_file)
         ss_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['SeaStFile']))
-        if os.path.isfile(ss_file):
+        if self.fst_vt['Fst']['CompSeaSt'] == 1:
             self.read_SeaState(ss_file)
         sd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['SubFile']))
-        if os.path.isfile(sd_file): 
-            if self.fst_vt['Fst']['CompSub'] == 1:
-                self.read_SubDyn(sd_file)
-            elif self.fst_vt['Fst']['CompSub'] == 2:
-                self.read_ExtPtfm(sd_file)
+        # if os.path.isfile(sd_file): 
+        if self.fst_vt['Fst']['CompSub'] == 1:
+            self.read_SubDyn(sd_file)
+        elif self.fst_vt['Fst']['CompSub'] == 2:
+            self.read_ExtPtfm(sd_file)
         if self.fst_vt['Fst']['CompMooring'] == 1: # only MAP++ implemented for mooring models
             map_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['MooringFile']))
             if os.path.isfile(map_file):
@@ -3189,7 +3189,7 @@ class InputReader_OpenFAST(object):
             if os.path.isfile(moordyn_file):
                 self.read_MoorDyn(moordyn_file)
         bd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(1)']))
-        if os.path.isfile(bd_file):
+        if self.fst_vt['Fst']['CompElast'] == 2:
             self.read_BeamDyn(bd_file)
 
 if __name__=="__main__":
