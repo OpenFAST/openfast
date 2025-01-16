@@ -1438,12 +1438,12 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
    ! --- Write to File
    if ((p%NumOuts > 0) .and. p%UA_OUTS==2) then
       call WrScr('   UA: Writing separate output file: '//trim(InitInp%OutRootName)//'.out')
-      !$OMP critical(filename)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( p%unOutFile, ErrStat2, ErrMsg2 )
       if (ErrStat2 < AbortErrLev) then
          CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.UA.out', ErrStat2, ErrMsg2 )
       endif
-      !$OMP end critical(filename)
+      !$OMP end critical(fileopen_critical)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
 

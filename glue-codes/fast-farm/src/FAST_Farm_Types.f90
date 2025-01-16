@@ -60,6 +60,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WT_Position      !< X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number [meters]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) {0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin} [-]
     INTEGER(IntKi)  :: MooringMod = 0_IntKi      !< Mod_SharedMooring is a flag for array-level mooring. (switch) {0: none, 3: yes/MoorDyn} [-]
+    LOGICAL  :: WrMooringVis = .false.      !< Write shared mooring visualization (-) [only used for Mod_SharedMooring=3] [-]
     CHARACTER(1024)  :: MD_FileName      !< Name/location of the farm-level MoorDyn input file [-]
     REAL(DbKi)  :: DT_mooring = 0.0_R8Ki      !< Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0] [seconds]
     INTEGER(IntKi)  :: n_mooring = 0_IntKi      !< Number of FAST and MoorDyn time steps per FAST.Farm timestep when mooring > 0 [-]
@@ -185,6 +186,9 @@ IMPLICIT NONE
     TYPE(MD_OutputType)  :: y      !< System outputs [-]
     TYPE(MD_MiscVarType)  :: m      !< Misc/optimization variables [-]
     LOGICAL  :: IsInitialized = .FALSE.      !< Has MD_Init been called [-]
+    INTEGER(IntKi)  :: VTK_count = 0      !< Counter for VTK output of shared moorings [-]
+    INTEGER(IntKi)  :: VTK_TWidth = 0_IntKi      !< width for VTK_count field in output name [-]
+    character(1024)  :: VTK_OutFileRoot      !< Rootfilename for VTK output [-]
   END TYPE MD_Data
 ! =======================
 ! =========  WAT_IfW_data  =======
@@ -249,6 +253,7 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstParamData%WaveFieldMod = SrcParamData%WaveFieldMod
    DstParamData%MooringMod = SrcParamData%MooringMod
+   DstParamData%WrMooringVis = SrcParamData%WrMooringVis
    DstParamData%MD_FileName = SrcParamData%MD_FileName
    DstParamData%DT_mooring = SrcParamData%DT_mooring
    DstParamData%n_mooring = SrcParamData%n_mooring
@@ -452,6 +457,7 @@ subroutine Farm_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%WT_Position)
    call RegPack(RF, InData%WaveFieldMod)
    call RegPack(RF, InData%MooringMod)
+   call RegPack(RF, InData%WrMooringVis)
    call RegPack(RF, InData%MD_FileName)
    call RegPack(RF, InData%DT_mooring)
    call RegPack(RF, InData%n_mooring)
@@ -534,6 +540,7 @@ subroutine Farm_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WT_Position); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MooringMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WrMooringVis); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MD_FileName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT_mooring); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_mooring); if (RegCheckErr(RF, RoutineName)) return
@@ -1257,6 +1264,9 @@ subroutine Farm_CopyMD_Data(SrcMD_DataData, DstMD_DataData, CtrlCode, ErrStat, E
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstMD_DataData%IsInitialized = SrcMD_DataData%IsInitialized
+   DstMD_DataData%VTK_count = SrcMD_DataData%VTK_count
+   DstMD_DataData%VTK_TWidth = SrcMD_DataData%VTK_TWidth
+   DstMD_DataData%VTK_OutFileRoot = SrcMD_DataData%VTK_OutFileRoot
 end subroutine
 
 subroutine Farm_DestroyMD_Data(MD_DataData, ErrStat, ErrMsg)
@@ -1326,6 +1336,9 @@ subroutine Farm_PackMD_Data(RF, Indata)
    call MD_PackOutput(RF, InData%y) 
    call MD_PackMisc(RF, InData%m) 
    call RegPack(RF, InData%IsInitialized)
+   call RegPack(RF, InData%VTK_count)
+   call RegPack(RF, InData%VTK_TWidth)
+   call RegPack(RF, InData%VTK_OutFileRoot)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1361,6 +1374,9 @@ subroutine Farm_UnPackMD_Data(RF, OutData)
    call MD_UnpackOutput(RF, OutData%y) ! y 
    call MD_UnpackMisc(RF, OutData%m) ! m 
    call RegUnpack(RF, OutData%IsInitialized); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VTK_count); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VTK_TWidth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%VTK_OutFileRoot); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Farm_CopyWAT_IfW_data(SrcWAT_IfW_dataData, DstWAT_IfW_dataData, CtrlCode, ErrStat, ErrMsg)
