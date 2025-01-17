@@ -296,6 +296,75 @@ def remove_nested_keys(dictionary, keys_to_remove):
 
     return dictionary
 
+def removeDeactivatedModules(fst_vt):
+    # Mapping of deactivated modules to their corresponding module names
+    OFmodules = {
+        'CompElast': {
+            1: ['ElastoDyn', 'ElastoDynBlade', 'ElastoDynTower'],
+            2: ['ElastoDyn', 'ElastoDynTower', 'BeamDyn', 'BeamDynBlade'],
+            3: ['SimpleElastoDyn']
+        },
+        'CompInflow': {
+            0: [],
+            1: ['InflowWind']
+        },
+        'CompAero': {
+            0: [],
+            1: ['AeroDisk'], 
+            2: ['AeroDyn', 'AeroDynBlade', 'AeroDynPolar']
+        },
+        'CompServo': {
+            0: [],
+            1: ['ServoDyn', 'DISCON_in']
+        }, 
+        'CompSeaSt': {
+            0: [],
+            1: ['SeaState']
+        },
+        'CompHydro': {
+            0: [],
+            1: ['HydroDyn']
+        },
+        'CompSub': {
+            0: [],
+            1: ['SubDyn'],
+            2: ['read_ExtPtfm']
+        },
+        'CompMooring': {
+            0: [],
+            1: ['MAP'],
+            2: [],
+            3: ['MoorDyn', 'WaterKin'],
+            4: []
+        },
+        'CompIce': {
+            0: [],
+            1: [],
+            2: []
+        }
+        # 'MHK': {0:[]}, # no special handling for MHK
+    }
+
+    keys2keep = []
+    keys2remove = []
+    # loop throught the keys of OFmodules, and make two lists, one of the needed ones,
+    # and one of the ones to remove, then remove the ones to remove
+    for module, active in fst_vt['Fst'].items():
+        if module in OFmodules:
+            if active in OFmodules[module]:
+                # get the list of modules to keep
+                keys2keep.extend(OFmodules[module][active])
+
+                # get the list of modules to remove
+                for key, value in OFmodules[module].items():
+                    if key != active:
+                        keys2remove.extend(value)
+    
+    # remove the keys in keys2remove and NOT in keys2keep
+    fst_vt = remove_nested_keys(fst_vt, [key for key in keys2remove if key not in keys2keep])
+
+    return fst_vt
+
 def cleanup_fstvt(fst_vt, ignoreVars=None, removeFileRef=False, removeArrayProps=False,
                     removeDeactivatedModules=False):
     # sanitize the dictionaries from numpy data types
@@ -347,71 +416,8 @@ def cleanup_fstvt(fst_vt, ignoreVars=None, removeFileRef=False, removeArrayProps
 
 
     if removeDeactivatedModules:
-        # Mapping of deactivated modules to their corresponding module names
-        OFmodules = {
-            'CompElast': {
-                1: ['ElastoDyn', 'ElastoDynBlade', 'ElastoDynTower'],
-                2: ['ElastoDyn', 'ElastoDynTower', 'BeamDyn', 'BeamDynBlade'],
-                3: ['SimpleElastoDyn']
-            },
-            'CompInflow': {
-                0: [],
-                1: ['InflowWind']
-            },
-            'CompAero': {
-                0: [],
-                1: ['AeroDisk'], 
-                2: ['AeroDyn', 'AeroDynBlade', 'AeroDynPolar']
-            },
-            'CompServo': {
-                0: [],
-                1: ['ServoDyn', 'DISCON_in']
-            }, 
-            'CompSeaSt': {
-                0: [],
-                1: ['SeaState']
-            },
-            'CompHydro': {
-                0: [],
-                1: ['HydroDyn']
-            },
-            'CompSub': {
-                0: [],
-                1: ['SubDyn'],
-                2: ['read_ExtPtfm']
-            },
-            'CompMooring': {
-                0: [],
-                1: ['MAP'],
-                2: [],
-                3: ['MoorDyn', 'WaterKin'],
-                4: []
-            },
-            'CompIce': {
-                0: [],
-                1: [],
-                2: []
-            }
-            # 'MHK': {0:[]}, # no special handling for MHK
-        }
+        fst_vt = removeDeactivatedModules(fst_vt)
 
-        keys2keep = []
-        keys2remove = []
-        # loop throught the keys of OFmodules, and make two lists, one of the needed ones,
-        # and one of the ones to remove, then remove the ones to remove
-        for module, active in fst_vt['Fst'].items():
-            if module in OFmodules:
-                if active in OFmodules[module]:
-                    # get the list of modules to keep
-                    keys2keep.extend(OFmodules[module][active])
-
-                    # get the list of modules to remove
-                    for key, value in OFmodules[module].items():
-                        if key != active:
-                            keys2remove.extend(value)
-        
-        # remove the keys in keys2remove and NOT in keys2keep
-        fst_vt = remove_nested_keys(fst_vt, [key for key in keys2remove if key not in keys2keep])
 
     return fst_vt
 
