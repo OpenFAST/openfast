@@ -255,11 +255,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_xmg_u      !< element local x-moment of inertia of marine growth in upper portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_ymg_l      !< element local y-moment of inertia of marine growth in lower portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_ymg_u      !< element local y-moment of inertia of marine growth in upper portion of each element [kg-m^2]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cfl_fb      !< axial force constant due to flooded ballast, for each element [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cfr_fb      !< radial force constant due to flooded ballast, for each element [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cfx_fb      !< element local x-force constant due to flooded ballast, for each element [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cfy_fb      !< element local y-force constant due to flooded ballast, for each element [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CM0_fb      !< moment constant due to flooded ballast, for each element about lower node [Nm]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NodeWBallast      !< Internal ballast weight associated with each node [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NodeWhcBallast      !< Internal ballast weight associated with each node times distance from node to ballast CG [Nm]
     REAL(ReKi)  :: MGvolume = 0.0_ReKi      !< Volume of marine growth material for this member/element [m^3]
     INTEGER(IntKi)  :: MSecGeom = 0_IntKi      !< Member cross section geometry. 1: Circular. 2: Rectangular [-]
     REAL(ReKi)  :: MSpinOrient = 0.0_ReKi      !< Member orientation in terms of rotation angle about the member axis [rad]
@@ -2004,65 +2001,29 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       end if
       DstMemberTypeData%I_ymg_u = SrcMemberTypeData%I_ymg_u
    end if
-   if (allocated(SrcMemberTypeData%Cfl_fb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Cfl_fb)
-      UB(1:1) = ubound(SrcMemberTypeData%Cfl_fb)
-      if (.not. allocated(DstMemberTypeData%Cfl_fb)) then
-         allocate(DstMemberTypeData%Cfl_fb(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcMemberTypeData%NodeWBallast)) then
+      LB(1:1) = lbound(SrcMemberTypeData%NodeWBallast)
+      UB(1:1) = ubound(SrcMemberTypeData%NodeWBallast)
+      if (.not. allocated(DstMemberTypeData%NodeWBallast)) then
+         allocate(DstMemberTypeData%NodeWBallast(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Cfl_fb.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%NodeWBallast.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstMemberTypeData%Cfl_fb = SrcMemberTypeData%Cfl_fb
+      DstMemberTypeData%NodeWBallast = SrcMemberTypeData%NodeWBallast
    end if
-   if (allocated(SrcMemberTypeData%Cfr_fb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Cfr_fb)
-      UB(1:1) = ubound(SrcMemberTypeData%Cfr_fb)
-      if (.not. allocated(DstMemberTypeData%Cfr_fb)) then
-         allocate(DstMemberTypeData%Cfr_fb(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcMemberTypeData%NodeWhcBallast)) then
+      LB(1:1) = lbound(SrcMemberTypeData%NodeWhcBallast)
+      UB(1:1) = ubound(SrcMemberTypeData%NodeWhcBallast)
+      if (.not. allocated(DstMemberTypeData%NodeWhcBallast)) then
+         allocate(DstMemberTypeData%NodeWhcBallast(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Cfr_fb.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%NodeWhcBallast.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstMemberTypeData%Cfr_fb = SrcMemberTypeData%Cfr_fb
-   end if
-   if (allocated(SrcMemberTypeData%Cfx_fb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Cfx_fb)
-      UB(1:1) = ubound(SrcMemberTypeData%Cfx_fb)
-      if (.not. allocated(DstMemberTypeData%Cfx_fb)) then
-         allocate(DstMemberTypeData%Cfx_fb(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Cfx_fb.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMemberTypeData%Cfx_fb = SrcMemberTypeData%Cfx_fb
-   end if
-   if (allocated(SrcMemberTypeData%Cfy_fb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%Cfy_fb)
-      UB(1:1) = ubound(SrcMemberTypeData%Cfy_fb)
-      if (.not. allocated(DstMemberTypeData%Cfy_fb)) then
-         allocate(DstMemberTypeData%Cfy_fb(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Cfy_fb.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMemberTypeData%Cfy_fb = SrcMemberTypeData%Cfy_fb
-   end if
-   if (allocated(SrcMemberTypeData%CM0_fb)) then
-      LB(1:1) = lbound(SrcMemberTypeData%CM0_fb)
-      UB(1:1) = ubound(SrcMemberTypeData%CM0_fb)
-      if (.not. allocated(DstMemberTypeData%CM0_fb)) then
-         allocate(DstMemberTypeData%CM0_fb(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%CM0_fb.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMemberTypeData%CM0_fb = SrcMemberTypeData%CM0_fb
+      DstMemberTypeData%NodeWhcBallast = SrcMemberTypeData%NodeWhcBallast
    end if
    DstMemberTypeData%MGvolume = SrcMemberTypeData%MGvolume
    DstMemberTypeData%MSecGeom = SrcMemberTypeData%MSecGeom
@@ -2275,20 +2236,11 @@ subroutine Morison_DestroyMemberType(MemberTypeData, ErrStat, ErrMsg)
    if (allocated(MemberTypeData%I_ymg_u)) then
       deallocate(MemberTypeData%I_ymg_u)
    end if
-   if (allocated(MemberTypeData%Cfl_fb)) then
-      deallocate(MemberTypeData%Cfl_fb)
+   if (allocated(MemberTypeData%NodeWBallast)) then
+      deallocate(MemberTypeData%NodeWBallast)
    end if
-   if (allocated(MemberTypeData%Cfr_fb)) then
-      deallocate(MemberTypeData%Cfr_fb)
-   end if
-   if (allocated(MemberTypeData%Cfx_fb)) then
-      deallocate(MemberTypeData%Cfx_fb)
-   end if
-   if (allocated(MemberTypeData%Cfy_fb)) then
-      deallocate(MemberTypeData%Cfy_fb)
-   end if
-   if (allocated(MemberTypeData%CM0_fb)) then
-      deallocate(MemberTypeData%CM0_fb)
+   if (allocated(MemberTypeData%NodeWhcBallast)) then
+      deallocate(MemberTypeData%NodeWhcBallast)
    end if
 end subroutine
 
@@ -2379,11 +2331,8 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPackAlloc(RF, InData%I_xmg_u)
    call RegPackAlloc(RF, InData%I_ymg_l)
    call RegPackAlloc(RF, InData%I_ymg_u)
-   call RegPackAlloc(RF, InData%Cfl_fb)
-   call RegPackAlloc(RF, InData%Cfr_fb)
-   call RegPackAlloc(RF, InData%Cfx_fb)
-   call RegPackAlloc(RF, InData%Cfy_fb)
-   call RegPackAlloc(RF, InData%CM0_fb)
+   call RegPackAlloc(RF, InData%NodeWBallast)
+   call RegPackAlloc(RF, InData%NodeWhcBallast)
    call RegPack(RF, InData%MGvolume)
    call RegPack(RF, InData%MSecGeom)
    call RegPack(RF, InData%MSpinOrient)
@@ -2490,11 +2439,8 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%I_xmg_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%I_ymg_l); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%I_ymg_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Cfl_fb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Cfr_fb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Cfx_fb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Cfy_fb); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%CM0_fb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NodeWBallast); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%NodeWhcBallast); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MGvolume); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSecGeom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSpinOrient); if (RegCheckErr(RF, RoutineName)) return

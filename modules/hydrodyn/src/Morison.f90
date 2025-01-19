@@ -1186,7 +1186,7 @@ end subroutine Morison_GenerateSimulationNodes
 
 
 !====================================================================================================
-SUBROUTINE SetCylDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, AxCa, AxCp, Cb )
+SUBROUTINE SetDepthBasedCoefs_Cyl( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, AxCa, AxCp, Cb )
    
    REAL(ReKi), INTENT (IN   )             :: z ! Z location relative to MSL inertial system
    REAL(ReKi), INTENT (IN   )             :: tMG
@@ -1254,11 +1254,11 @@ SUBROUTINE SetCylDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd
    end if
    
 
-END SUBROUTINE SetCylDepthBasedCoefs
+END SUBROUTINE SetDepthBasedCoefs_Cyl
 
 
 !====================================================================================================
-SUBROUTINE SetRecDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, CdA, CdB, CaA, CaB, Cp, AxCd, AxCa, AxCp, Cb )
+SUBROUTINE SetDepthBasedCoefs_Rec( z, tMG, NCoefDpth, CoefDpths, CdA, CdB, CaA, CaB, Cp, AxCd, AxCa, AxCp, Cb )
    
    REAL(ReKi), INTENT (IN   )             :: z ! Z location relative to MSL inertial system
    REAL(ReKi), INTENT (IN   )             :: tMG
@@ -1332,12 +1332,12 @@ SUBROUTINE SetRecDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, CdA, CdB, CaA, C
    end if
    
 
-END SUBROUTINE SetRecDepthBasedCoefs
+END SUBROUTINE SetDepthBasedCoefs_Rec
 
 
 
 !====================================================================================================
-SUBROUTINE SetCylExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
+SUBROUTINE SetExternalHydroCoefs_Cyl(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
                                    SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplCb, SimplCbMG, SimplMCF, CoefMembers,    &
                                    NCoefDpth, CoefDpths, nodes, member )   
 !     This private subroutine generates the Cd, Ca, Cp, Cb, CdMG, CaMG, CpMG, and CbMG coefs for the member based on
@@ -1395,7 +1395,7 @@ SUBROUTINE SetCylExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd
       member%PropMCF = SimplMCF
    CASE (2) ! Depth-based model: coefficients are set using depth-based table data
       do i = 1, member%NElements + 1
-         CALL SetCylDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%Cd(i), member%Ca(i), &
+         CALL SetDepthBasedCoefs_Cyl( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%Cd(i), member%Ca(i), &
                                     member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i), member%Cb(i) )
       end do
       member%PropMCF = CoefDpths(1)%DpthMCF
@@ -1424,10 +1424,10 @@ SUBROUTINE SetCylExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd
       member%propMCF = CoefMembers(MmbrCoefIDIndx)%MemberMCF
    end select
   
-end subroutine SetCylExternalHydroCoefs
+end subroutine SetExternalHydroCoefs_Cyl
 
 !====================================================================================================
-SUBROUTINE SetRecExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCdA, SimplCdAMG, SimplCdB, SimplCdBMG, SimplCaA, SimplCaAMG, SimplCaB, SimplCaBMG, SimplCp, &
+SUBROUTINE SetExternalHydroCoefs_Rec(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCdA, SimplCdAMG, SimplCdB, SimplCdBMG, SimplCaA, SimplCaAMG, SimplCaB, SimplCaBMG, SimplCp, &
                                    SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplCb, SimplCbMG, SimplMCF, CoefMembers,    &
                                    NCoefDpth, CoefDpths, nodes, member )   
 !     This private subroutine generates the Cd, Ca, Cp, Cb, CdMG, CaMG, CpMG, and CbMG coefs for the member based on
@@ -1493,7 +1493,7 @@ SUBROUTINE SetRecExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd
       member%PropMCF = SimplMCF
    CASE (2) ! Depth-based model: coefficients are set using depth-based table data
       do i = 1, member%NElements + 1
-         CALL SetRecDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%CdA(i), member%CdB(i), & 
+         CALL SetDepthBasedCoefs_Rec( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%CdA(i), member%CdB(i), & 
                                      member%CaA(i), member%CaB(i), member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i), member%Cb(i) )
       end do
       member%PropMCF = CoefDpths(1)%DpthMCF
@@ -1526,7 +1526,7 @@ SUBROUTINE SetRecExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd
       member%propMCF = CoefMembers(MmbrCoefIDIndx)%MemberMCF
    end select
   
-end subroutine SetRecExternalHydroCoefs
+end subroutine SetExternalHydroCoefs_Rec
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1616,8 +1616,10 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry(member%h_cmg_u      , member%NElements,   'member%h_cmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%I_lmg_l      , member%NElements,   'member%I_lmg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%I_lmg_u      , member%NElements,   'member%I_lmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%Cfl_fb       , member%NElements,   'member%Cfl_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%CM0_fb       , member%NElements,   'member%CM0_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName) 
+   ! call AllocAry(member%Cfl_fb       , member%NElements,   'member%Cfl_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   ! call AllocAry(member%CM0_fb       , member%NElements,   'member%CM0_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName) 
+   call AllocAry(member%NodeWBallast  , member%NElements+1,'member%NodeWBallast '  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry(member%NodeWhcBallast, member%NElements+1,'member%NodeWhcBallast ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%tMG          , member%NElements+1, 'member%tMG          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%MGdensity    , member%NElements+1, 'member%MGdensity    ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%Cp           , member%NElements+1, 'member%Cp           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1643,7 +1645,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
       call AllocAry(member%I_rfb_u      , member%NElements,   'member%I_rfb_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%I_rmg_l      , member%NElements,   'member%I_rmg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%I_rmg_u      , member%NElements,   'member%I_rmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-      call AllocAry(member%Cfr_fb       , member%NElements,   'member%Cfr_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      ! call AllocAry(member%Cfr_fb       , member%NElements,   'member%Cfr_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%R            , member%NElements+1, 'member%R            ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%RMG          , member%NElements+1, 'member%RMG          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%RMGB         , member%NElements+1, 'member%RMGB         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1665,8 +1667,8 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
       call AllocAry(member%I_xmg_u      , member%NElements,   'member%I_xmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%I_ymg_l      , member%NElements,   'member%I_ymg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%I_ymg_u      , member%NElements,   'member%I_ymg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-      call AllocAry(member%Cfx_fb       , member%NElements,   'member%Cfx_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-      call AllocAry(member%Cfy_fb       , member%NElements,   'member%Cfy_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      ! call AllocAry(member%Cfx_fb       , member%NElements,   'member%Cfx_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+      ! call AllocAry(member%Cfy_fb       , member%NElements,   'member%Cfy_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%Sa           , member%NElements+1, 'member%Sa           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%SaMG         , member%NElements+1, 'member%SaMG         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%SaMGB        , member%NElements+1, 'member%SaMGB        ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1701,8 +1703,11 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    member%h_cmg_u       = 0.0_ReKi
    member%I_lmg_l       = 0.0_ReKi
    member%I_lmg_u       = 0.0_ReKi
-   member%Cfl_fb        = 0.0_ReKi
-   member%CM0_fb        = 0.0_ReKi
+   ! member%Cfl_fb        = 0.0_ReKi
+   ! member%CM0_fb        = 0.0_ReKi
+   member%NodeWBallast   = 0.0_ReKi
+   member%NodeWhcBallast = 0.0_ReKi
+
    member%tMG           = 0.0_ReKi
    member%MGdensity     = 0.0_ReKi
    member%Cp            = 0.0_ReKi
@@ -1727,7 +1732,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
       member%I_rfb_u       = 0.0_ReKi
       member%I_rmg_l       = 0.0_ReKi
       member%I_rmg_u       = 0.0_ReKi
-      member%Cfr_fb        = 0.0_ReKi
+      ! member%Cfr_fb        = 0.0_ReKi
       member%R             = 0.0_ReKi
       member%RMG           = 0.0_ReKi
       member%RMGB          = 0.0_ReKi
@@ -1749,8 +1754,8 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
       member%I_xmg_u       = 0.0_ReKi
       member%I_ymg_l       = 0.0_ReKi
       member%I_ymg_u       = 0.0_ReKi
-      member%Cfx_fb        = 0.0_ReKi
-      member%Cfy_fb        = 0.0_ReKi
+      ! member%Cfx_fb        = 0.0_ReKi
+      ! member%Cfy_fb        = 0.0_ReKi
       member%Sa            = 0.0_ReKi
       member%SaMG          = 0.0_ReKi
       member%SaMGB         = 0.0_ReKi
@@ -1808,7 +1813,7 @@ subroutine FlipMemberNodeData( member, nodes, doSwap)
    
 end subroutine FlipMemberNodeData
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
+subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
    real(ReKi),                   intent (in   )  :: gravity
    type(Morison_MemberType),     intent (inout)  :: member
    integer(IntKi),               intent (in   )  :: MCoefMod
@@ -1819,6 +1824,8 @@ subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
    type(Morison_InitInputType),  intent (in   )  :: InitInp
    integer(IntKi),               intent (  out)  :: errStat              ! returns a non-zero value when an error occurs            
    character(*),                 intent (  out)  :: errMsg               ! Error message if errStat /= ErrID_None
+
+   character(*), parameter                       :: RoutineName = 'SetMemberProperties_Cyl'
 
    integer(IntKi) :: N, i
    real(ReKi)     :: s, dl
@@ -1879,7 +1886,7 @@ subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
       member%RMG(i) =  member%R(i) + member%tMG(i)
    end do
 
-   call SetCylExternalHydroCoefs(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
+   call SetExternalHydroCoefs_Cyl(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
                                    InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, &
                                    InitInp%SimplCb, InitInp%SimplCbMG, InitInp%SimplMCF, & 
                                    InitInp%CoefMembers, InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%Nodes, member )
@@ -1897,25 +1904,25 @@ subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
    IF ( member%PropMCF .AND. ( .NOT. member%PropPot )) THEN
       ! Check if surface piercing
       IF ( Za*Zb > 0 ) THEN ! Two end joints of the member on the same side of the SWL
-         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          RETURN
       END IF
       ! Check inclination
       If ( ABS(phi) .GE. 0.174533 ) THEN ! If inclination from vertical is greater than 10 deg
-         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be within 10 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be within 10 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          RETURN
       END IF
       ! Check radius
       DO i = 1, member%NElements+1
          IF ( (member%RMG(i) .GT. 1.1_ReKi*REAL(0.5_SiKi*InitInp%WaveField%MCFD)) .OR. (member%RMG(i) .LT. 0.9_ReKi*REAL(0.5_SiKi*InitInp%WaveField%MCFD)) ) THEN
             ! Error because MacCamy-Fuchs members must have a diameter within +/-10% of MCFD specified in seastate.
-            CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must have a diameter within +/-10% of MCFD specified in the SeaState input file.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+            CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must have a diameter within +/-10% of MCFD specified in the SeaState input file.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
             RETURN
          END IF
       END DO
       ! Check draft-to-radius ratio
       IF ( (-InitInp%Nodes(member%NodeIndx(1))%Position(3)) < 0.5_SiKi*InitInp%WaveField%MCFD ) THEN
-         CALL SetErrStat(ErrID_Fatal, 'Initial draft of MacCamy-Fuchs members should be at least as large as their radius.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         CALL SetErrStat(ErrID_Fatal, 'Initial draft of MacCamy-Fuchs members should be at least as large as their radius.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          RETURN
       END IF
    END IF
@@ -1958,14 +1965,14 @@ subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
    if (.not. member%PropPot) then 
       if (member%MHstLMod == 1) then
          if ( abs(Zb) < abs(member%Rmg(N+1)*sinPhi) ) then
-            call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+            call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          end if
          if ( abs(Za) < abs(member%Rmg(1)*sinPhi) ) then
-            call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+            call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          end if
       end if
       if ( ( Za < -InitInp%WaveField%EffWtrDpth .and. Zb >= -InitInp%WaveField%EffWtrDpth ) .and. ( phi > 10.0*d2r .or. abs((member%RMG(N+1) - member%RMG(1))/member%RefLength)>0.1 ) ) then
-         call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
       end if
       
    end if
@@ -1981,7 +1988,7 @@ subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
          if (Za > -InitInp%WaveField%EffWtrDpth) then            ! find the lowest node above the seabed
             
             if (cosPhi < 0.173648178 ) then ! phi > 80 degrees and member is seabed crossing
-               call SetErrStat(ErrID_Fatal, 'A seabed crossing member must have an inclination angle of <= 80 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )
+               call SetErrStat(ErrID_Fatal, 'A seabed crossing member must have an inclination angle of <= 80 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )
             end if
             
             member%h_floor = (-InitInp%WaveField%EffWtrDpth-Za)/cosPhi  ! get the distance from the node to the seabed along the member axis (negative value)
@@ -2102,7 +2109,7 @@ subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
             member%Vsubmerged = member%Vsubmerged + Vouter_l + Vouter_u
          else if ((0.0 > Za) .AND. (0.0 < Zb)) then ! Bug fix per OpenFAST issue #844   GJH 2/3/2022
             ! if (i == 1) then
-            !    call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties')
+            !    call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName)
             ! end if
             
             ! partially submerged element
@@ -2132,51 +2139,27 @@ subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
       else if (member%memfloodstatus > 0 .and. member%FillFSLoc > Zb) then  
          member%floodstatus(i) = 1
          member%Vballast = member%Vballast + Vballast_l + Vballast_u
-         ! depth-adjusted force distribution constant
-         member%alpha_fb_star(i) = member%alpha_fb(i)*( Zb - member%FillFSLoc )**3 / ( ( (1-member%alpha_fb(i))*(Za - member%FillFSLoc))**3 + member%alpha_fb(i)*(Zb - member%FillFSLoc)**3 )
-         
-         ! force and moment magnitude constants
 
-         
-         member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * dl *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)* member%dRdl_in(i) + member%Rin(i))*dl + 1.0/3.0* member%dRdl_in(i)*dl**2 )
-         member%Cfr_fb(i) =    Pi *                     member%FillDens * gravity * dl *( member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)*dl +1.0/3.0 * member%dRdl_in(i)**2 *dl**2 )
-         member%CM0_fb(i) = TwoPi *                     member%FillDens * gravity * dl *( 0.25*dl**3* member%dRdl_in(i)**4 + 0.25*dl**3* member%dRdl_in(i)**2 + dl**2* member%dRdl_in(i)**3*member%Rin(i) + 2.0/3.0*dl**2* member%dRdl_in(i)*member%Rin(i) + 1.5*dl* member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*dl*member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)**3 )
-         
-         
+         member%NodeWBallast(i)     = member%NodeWBallast(i)     + member%FillDens * gravity * Vballast_l
+         member%NodeWBallast(i+1)   = member%NodeWBallast(i+1)   + member%FillDens * gravity * Vballast_u
+         member%NodeWhcBallast(i)   = member%NodeWhcBallast(i)   + member%FillDens * gravity * member%h_cfb_l(i) * Vballast_l
+         member%NodeWhcBallast(i+1) = member%NodeWhcBallast(i+1) + member%FillDens * gravity * member%h_cfb_u(i) * Vballast_u
+
       ! partially filled element
       else if ((member%memfloodstatus > 0) .and. (member%FillFSLoc > Za) .AND. (member%FillFSLoc < Zb)) then
-         
-         ! Need to enforce the modeling requirement that the first/bottom-most element of a member be fully flooded
-         if (i == 1) then
-            call SetErrStat(ErrID_Fatal,'The modeling of partially flooded/ballested members requires that the first/bottom-most element of a member must be fully flooded. This is not true for MemberID '//trim(num2lstr(member%MemberID)),ErrStat,ErrMsg,'SetMemberProperties')
-            return
-         end if
-         ! Need to enforce the modeling requirement that a partially flooded member must not be close to horizontal
-         if ( (InitInp%Nodes(member%NodeIndx(N+1))%Position(3) - member%Rin(N+1)*sinPhi) < member%FillFSLoc ) then
-            call SetErrStat(ErrID_Fatal,'The modeling of partially flooded/ballested members requires the the member not be near horizontal.  This is not true for MemberID '//trim(num2lstr(member%MemberID)),ErrStat,ErrMsg,'SetMemberProperties') 
-            return
-         end if
          
          member%floodstatus(i) = 2
          
          ! length along axis from node i to fill level
          member%h_fill = member%l_fill - (i-1)*dl
-         !Since this element is only partially flooded/ballasted, compute the Volume fraction which is filled
+         ! Since this element is only partially flooded/ballasted, compute the Volume fraction which is filled
          call CylTaperCalc( member%Rin(i), member%Rin(i)+member%h_fill*member%dRdl_in(i), member%h_fill, Vballast_l, h_c)
          Vballast_u = 0.0
-         member%Vballast = member%Vballast + Vballast_l + Vballast_u ! Note: Vballast_l will match calculations above
+         member%Vballast = member%Vballast + Vballast_l ! Note: Vballast_l will match calculations above
        
+         member%NodeWBallast(i)     = member%NodeWBallast(i)     + member%FillDens * gravity * Vballast_l
+         member%NodeWhcBallast(i)   = member%NodeWhcBallast(i)   + member%FillDens * gravity * h_c * Vballast_l
          
-         ! depth-adjusted force distribution constant
-         member%alpha_fb_star(i) = (1 - member%alpha_fb(i))*( Za - member%FillFSLoc )**3 / ( ( (1-member%alpha_fb(i))*(Za - member%FillFSLoc))**3 - member%alpha_fb(i)*(Zb - member%FillFSLoc)**3 )
-         
-         ! force and moment magnitude constants
-         member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * member%h_fill *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)*member%dRdl_in(i) + member%Rin(i))*member%h_fill + 1.0/3.0*member%dRdl_in(i)*member%h_fill**2 )
-         member%Cfr_fb(i) =    Pi * member%FillDens * gravity * member%h_fill *( member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)*member%h_fill +1.0/3.0 *member%dRdl_in(i)**2 *member%h_fill**2 )
-         member%CM0_fb(i) = TwoPi * member%FillDens * gravity * member%h_fill *( 0.25*member%h_fill**3*member%dRdl_in(i)**4 + 0.25*member%h_fill**3*member%dRdl_in(i)**2 + member%h_fill**2*member%dRdl_in(i)**3*member%Rin(i) + 2.0/3.0*member%h_fill**2*member%dRdl_in(i)*member%Rin(i)  &
-                                                                                 + 1.5*member%h_fill*member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*member%h_fill*member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)**3 ) &
-                                    -0.25 * member%FillDens * gravity * Pi * (  member%Rin(i) + member%h_fill*member%dRdl_in(i))**4
-      
       ! unflooded element
       else
          member%floodstatus(i) = 0
@@ -2187,9 +2170,9 @@ subroutine SetCylMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
    end do ! end looping through elements   
   
  
-end subroutine SetCylMemberProperties
+end subroutine SetMemberProperties_Cyl
 
-subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
+subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
    real(ReKi),                   intent (in   )  :: gravity
    type(Morison_MemberType),     intent (inout)  :: member
    integer(IntKi),               intent (in   )  :: MCoefMod
@@ -2200,6 +2183,8 @@ subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
    type(Morison_InitInputType),  intent (in   )  :: InitInp
    integer(IntKi),               intent (  out)  :: errStat              ! returns a non-zero value when an error occurs            
    character(*),                 intent (  out)  :: errMsg               ! Error message if errStat /= ErrID_None
+
+   character(*), parameter                       :: RoutineName = 'SetMemberProperties_Rec'
 
    integer(IntKi) :: N, i
    real(ReKi)     :: s, dl
@@ -2269,7 +2254,7 @@ subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
       member%SbMG(i) =  member%Sb(i) + 2.0 * member%tMG(i)
    end do
 
-   call SetRecExternalHydroCoefs(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplRecCdA, InitInp%SimplRecCdAMG, InitInp%SimplRecCdB, InitInp%SimplRecCdBMG, &
+   call SetExternalHydroCoefs_Rec(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplRecCdA, InitInp%SimplRecCdAMG, InitInp%SimplRecCdB, InitInp%SimplRecCdBMG, &
                                    InitInp%SimplRecCaA, InitInp%SimplRecCaAMG, InitInp%SimplRecCaB, InitInp%SimplRecCaBMG, InitInp%SimplRecCp, &
                                    InitInp%SimplRecCpMG, InitInp%SimplRecAxCd, InitInp%SimplRecAxCdMG, InitInp%SimplRecAxCa, InitInp%SimplRecAxCaMG, InitInp%SimplRecAxCp, InitInp%SimplRecAxCpMG, &
                                    InitInp%SimplRecCb, InitInp%SimplRecCbMG, InitInp%SimplRecMCF, & 
@@ -2289,15 +2274,15 @@ subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
    IF ( member%PropMCF .AND. ( .NOT. member%PropPot )) THEN
       ! Check if surface piercing
       IF ( Za*Zb > 0 ) THEN ! Two end joints of the member on the same side of the SWL
-         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          RETURN
       END IF
       ! Check inclination
       If ( ABS(phi) .GE. 0.174533 ) THEN ! If inclination from vertical is greater than 10 deg
-         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be within 10 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be within 10 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          RETURN
       END IF
-      CALL SetErrStat(ErrID_Info, 'Applying MacCamy-Fuchs diffraction correction to a rectangular member with ID '//trim(num2lstr(member%MemberID))//'; accuracy not guaranteed.', errStat, errMsg, 'SetMemberProperties' )   
+      CALL SetErrStat(ErrID_Info, 'Applying MacCamy-Fuchs diffraction correction to a rectangular member with ID '//trim(num2lstr(member%MemberID))//'; accuracy not guaranteed.', errStat, errMsg, RoutineName )   
    END IF
 
    ! find fill location of member (previously in SetElementFillProps)
@@ -2339,14 +2324,14 @@ subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
       ! MHstLMod=1 is not allowed for rectangular members at the moment. Skip the following check.
       ! if (member%MHstLMod == 1) then
       !    if ( abs(Zb) < abs(member%Rmg(N+1)*sinPhi) ) then
-      !       call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+      !       call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
       !    end if
       !    if ( abs(Za) < abs(member%Rmg(1)*sinPhi) ) then
-      !       call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+      !       call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
       !    end if
       ! end if
       if ( ( Za < -InitInp%WaveField%EffWtrDpth .and. Zb >= -InitInp%WaveField%EffWtrDpth ) .and. ( phi > 10.0*d2r .or. abs((member%SaMG(N+1) - member%SaMG(1))/member%RefLength)>0.1 .or. abs((member%SbMG(N+1) - member%SbMG(1))/member%RefLength)>0.1 ) ) then
-         call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
       end if      
    end if
 
@@ -2360,7 +2345,7 @@ subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
          if (Za > -InitInp%WaveField%EffWtrDpth) then            ! find the lowest node above the seabed
             
             if (cosPhi < 0.173648178 ) then ! phi > 80 degrees and member is seabed crossing
-               call SetErrStat(ErrID_Fatal, 'A seabed crossing member must have an inclination angle of <= 80 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )
+               call SetErrStat(ErrID_Fatal, 'A seabed crossing member must have an inclination angle of <= 80 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )
             end if
             
             member%h_floor = (-InitInp%WaveField%EffWtrDpth-Za)/cosPhi  ! get the distance from the node to the seabed along the member axis (negative value)
@@ -2488,7 +2473,7 @@ subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
             member%Vsubmerged = member%Vsubmerged + Vouter_l + Vouter_u
          else if ((0.0 > Za) .AND. (0.0 < Zb)) then ! Bug fix per OpenFAST issue #844   GJH 2/3/2022
             ! if (i == 1) then
-            !    call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties')
+            !    call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName)
             ! end if
             
             ! partially submerged element
@@ -2518,27 +2503,14 @@ subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
       else if (member%memfloodstatus > 0 .and. member%FillFSLoc > Zb) then  
          member%floodstatus(i) = 1
          member%Vballast = member%Vballast + Vballast_l + Vballast_u
-         ! depth-adjusted force distribution constant
-         ! member%alpha_fb_star(i) = member%alpha_fb(i)*( Zb - member%FillFSLoc )**3 / ( ( (1-member%alpha_fb(i))*(Za - member%FillFSLoc))**3 + member%alpha_fb(i)*(Zb - member%FillFSLoc)**3 )
          
-         ! force and moment magnitude constants         
-         ! member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * dl *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)* member%dRdl_in(i) + member%Rin(i))*dl + 1.0/3.0* member%dRdl_in(i)*dl**2 )
-         ! member%Cfr_fb(i) =    Pi *                     member%FillDens * gravity * dl *( member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)*dl +1.0/3.0 * member%dRdl_in(i)**2 *dl**2 )
-         ! member%CM0_fb(i) = TwoPi *                     member%FillDens * gravity * dl *( 0.25*dl**3* member%dRdl_in(i)**4 + 0.25*dl**3* member%dRdl_in(i)**2 + dl**2* member%dRdl_in(i)**3*member%Rin(i) + 2.0/3.0*dl**2* member%dRdl_in(i)*member%Rin(i) + 1.5*dl* member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*dl*member%Rin(i)**2 +  member%dRdl_in(i)*member%Rin(i)**3 )
+         member%NodeWBallast(i)     = member%NodeWBallast(i)     + member%FillDens * gravity * Vballast_l
+         member%NodeWBallast(i+1)   = member%NodeWBallast(i+1)   + member%FillDens * gravity * Vballast_u
+         member%NodeWhcBallast(i)   = member%NodeWhcBallast(i)   + member%FillDens * gravity * member%h_cfb_l(i) * Vballast_l
+         member%NodeWhcBallast(i+1) = member%NodeWhcBallast(i+1) + member%FillDens * gravity * member%h_cfb_u(i) * Vballast_u
          
       ! partially filled element
       else if ((member%memfloodstatus > 0) .and. (member%FillFSLoc > Za) .AND. (member%FillFSLoc < Zb)) then
-         
-         ! Need to enforce the modeling requirement that the first/bottom-most element of a member be fully flooded
-         if (i == 1) then
-            call SetErrStat(ErrID_Fatal,'The modeling of partially flooded/ballested members requires that the first/bottom-most element of a member must be fully flooded. This is not true for MemberID '//trim(num2lstr(member%MemberID)),ErrStat,ErrMsg,'SetMemberProperties')
-            return
-         end if
-         ! Need to enforce the modeling requirement that a partially flooded member must not be close to horizontal
-         ! if ( (InitInp%Nodes(member%NodeIndx(N+1))%Position(3) - sqrt(member%Sain(N+1)**2+member%Sbin(N+1)**2) *sinPhi) < member%FillFSLoc ) then
-         !    call SetErrStat(ErrID_Fatal,'The modeling of partially flooded/ballested members requires that the member not be near horizontal.  This is not true for MemberID '//trim(num2lstr(member%MemberID)),ErrStat,ErrMsg,'SetMemberProperties') 
-         !    return
-         ! end if
          
          member%floodstatus(i) = 2
          
@@ -2547,17 +2519,11 @@ subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
          !Since this element is only partially flooded/ballasted, compute the Volume fraction which is filled
          call RecTaperCalc( member%Sain(i), member%Sain(i)+member%h_fill*member%dSadl_in(i), member%Sbin(i), member%Sbin(i)+member%h_fill*member%dSbdl_in(i), member%h_fill, Vballast_l, h_c)
          Vballast_u = 0.0
-         member%Vballast = member%Vballast + Vballast_l + Vballast_u ! Note: Vballast_l will match calculations above
-       
-         ! depth-adjusted force distribution constant
-         ! member%alpha_fb_star(i) = (1 - member%alpha_fb(i))*( Za - member%FillFSLoc )**3 / ( ( (1-member%alpha_fb(i))*(Za - member%FillFSLoc))**3 - member%alpha_fb(i)*(Zb - member%FillFSLoc)**3 )
-         
-         ! force and moment magnitude constants
-         ! member%Cfl_fb(i) = TwoPi * member%dRdl_in(i) * member%FillDens * gravity * member%h_fill *( (li - member%l_fill)*member%Rin(i) + 0.5*((li - member%l_fill)*member%dRdl_in(i) + member%Rin(i))*member%h_fill + 1.0/3.0*member%dRdl_in(i)*member%h_fill**2 )
-         ! member%Cfr_fb(i) =    Pi * member%FillDens * gravity * member%h_fill *( member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)*member%h_fill +1.0/3.0 *member%dRdl_in(i)**2 *member%h_fill**2 )
-         ! member%CM0_fb(i) = TwoPi * member%FillDens * gravity * member%h_fill *( 0.25*member%h_fill**3*member%dRdl_in(i)**4 + 0.25*member%h_fill**3*member%dRdl_in(i)**2 + member%h_fill**2*member%dRdl_in(i)**3*member%Rin(i) + 2.0/3.0*member%h_fill**2*member%dRdl_in(i)*member%Rin(i)  &
-         !                                                                         + 1.5*member%h_fill*member%dRdl_in(i)**2*member%Rin(i)**2 + 0.5*member%h_fill*member%Rin(i)**2 + member%dRdl_in(i)*member%Rin(i)**3 ) &
-         !                            -0.25 * member%FillDens * gravity * Pi * (  member%Rin(i) + member%h_fill*member%dRdl_in(i))**4
+         member%Vballast = member%Vballast + Vballast_l  ! Note: Vballast_l will match calculations above
+
+         member%NodeWBallast(i)     = member%NodeWBallast(i)     + member%FillDens * gravity * Vballast_l
+         member%NodeWhcBallast(i)   = member%NodeWhcBallast(i)   + member%FillDens * gravity * h_c * Vballast_l
+      
       ! unflooded element
       else
          member%floodstatus(i) = 0
@@ -2565,7 +2531,7 @@ subroutine SetRecMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, Mm
       
    end do ! end looping through elements   
 
-end subroutine SetRecMemberProperties
+end subroutine SetMemberProperties_Rec
 
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
@@ -2627,9 +2593,9 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
       end if
       ! Now populate the various member data arrays using the HydroDyn input file data
       if (p%Members(i)%MSecGeom == MSecGeom_Cyl) then
-         call SetCylMemberProperties( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+         call SetMemberProperties_Cyl( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
       else if (p%Members(i)%MSecGeom == MSecGeom_Rec) then
-         call SetRecMemberProperties( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MRecPropSets(prop1Indx), InitInp%MRecPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+         call SetMemberProperties_Rec( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MRecPropSets(prop1Indx), InitInp%MRecPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
       end if
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
       if (ErrStat >= AbortErrLev) return
@@ -2888,7 +2854,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          ! loop through each member attached to the joint, getting the radius of its appropriate end
          DO J = 1, InitInp%InpJoints(I)%NConnections
       
-            ! identify attached member and which end to us
+            ! identify attached member and which end to use
             IF (InitInp%InpJoints(I)%ConnectionList(J) > 0) THEN         ! set up for end node 1
                !TODO: Should not perform a copy here?  A pointer to data would be better?
                member = p%Members(InitInp%InpJoints(I)%ConnectionList(J))   
@@ -2906,32 +2872,44 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
             IF ( MemberEndIndx == 1 ) THEN
                sgn = -1.0                                ! Local coord sys points into member at starting node, so flip sign of local z vector
             ELSE
-               sgn = 1.0                                 ! Local coord sys points out of member at ending node, so leave sign of local z vector
+               sgn =  1.0                                ! Local coord sys points out of member at ending node, so leave sign of local z vector
             END IF
 
             ! Account for reordering of what the original node for the end was -- This affects the sign of the An term which can pose a problem for members crossing the waterline
             if (member%Flipped)   sgn = -1.0 * sgn
                
-            ! Compute the signed quantities for this member end (for drag regardless of PropPot value), and add them to the joint values
-            An_drag = An_drag + sgn* member%k*Pi*(member%RMG(MemberEndIndx))**2     ! area-weighted normal vector
-               
-            ! For the following quantities, the attached member cannot be modeled using WAMIT if we're to count it
-            IF  (.NOT. member%PropPot) THEN
-
-               ! Compute the signed quantities for this member end, and add them to the joint values
-               An = An + sgn* member%k*Pi*(member%RMG(MemberEndIndx))**2     ! area-weighted normal vector
-               Vn = Vn + sgn* member%k*   (member%RMG(MemberEndIndx))**3     ! r^3-weighted normal vector used for mass
-               I_n=I_n + sgn* member%k*Pi*(member%RMG(MemberEndIndx))**4     ! r^4-weighted normal vector used for moments of inertia
-               if (tMG == -999.0) then
-                  ! All member nodes at this joint will have the same MG thickness and density, so only do this once
-                  tMG = member%tMG(MemberEndIndx)
-                  MGdens = member%MGdensity(MemberEndIndx) 
-               end if
+            IF ( member%MSecGeom == MSecGeom_Cyl ) THEN
+               ! Compute the signed quantities for this member end (for drag regardless of PropPot value), and add them to the joint values
+               An_drag = An_drag + sgn* member%k*Pi*(member%RMG(MemberEndIndx))**2     ! area-weighted normal vector
+               ! For the following quantities, the attached member cannot be modeled using WAMIT if we're to count it
+               IF  (.NOT. member%PropPot) THEN
+                  ! Compute the signed quantities for this member end, and add them to the joint values
+                  An = An + sgn* member%k*Pi*(member%RMG(MemberEndIndx))**2                 ! area-weighted normal vector
+                  Vn = Vn + sgn* member%k*TwoPi/3.0_ReKi*(member%RMG(MemberEndIndx))**3     ! r^3-weighted normal vector used for mass
+                  I_n=I_n + sgn* member%k*Pi*(member%RMG(MemberEndIndx))**4                 ! r^4-weighted normal vector used for moments of inertia
+               END IF
+            ELSE IF ( member%MSecGeom == MSecGeom_Rec ) THEN
+               ! Compute the signed quantities for this member end (for drag regardless of PropPot value), and add them to the joint values
+               An_drag = An_drag + sgn* member%k*(member%SaMG(MemberEndIndx) * member%SbMG(MemberEndIndx))     ! area-weighted normal vector
+               ! For the following quantities, the attached member cannot be modeled using WAMIT if we're to count it
+               IF  (.NOT. member%PropPot) THEN
+                  ! Compute the signed quantities for this member end, and add them to the joint values
+                  An = An + sgn* member%k*(member%SaMG(MemberEndIndx) * member%SbMG(MemberEndIndx))                                       ! area-weighted normal vector
+                  Vn = Vn + sgn* member%k*2.0_ReKi/3.0_ReKi*SQRT((member%SaMG(MemberEndIndx)*member%SbMG(MemberEndIndx)))**3/SQRT(Pi)     ! volume-weighted normal vector used for mass
+                  ! Don't have a good way to handle marine growth moment of inertia for rectangular endplates. Use an approximation for now, which should be reasonble for nearly square members
+                  I_n=I_n + sgn* member%k* ( (member%SaMG(MemberEndIndx)**3 * member%SbMG(MemberEndIndx)) + (member%SaMG(MemberEndIndx) * member%SbMG(MemberEndIndx)**3) ) /6.0_ReKi
+               END IF
+            ELSE
+               call SetErrStat( ErrId_Fatal, " Unrecognized member cross section geometry ", errStat, errMsg, RoutineName ); return
             END IF
-         
-         END DO   !J = 1, InitInp%InpJoints(I)%NConnections
 
-         Vn = Vn*TwoPi/3.0_ReKi ! Semisphere volume is Vn = 2/3 pi \sum (r_MG^3 k)
+            IF (tMG == -999.0) THEN
+               ! All member nodes at this joint will have the same MG thickness and density, so only do this once
+               tMG = member%tMG(MemberEndIndx)
+               MGdens = member%MGdensity(MemberEndIndx) 
+            END IF
+
+         END DO   !J = 1, InitInp%InpJoints(I)%NConnections
          
          p%An_End(:,i) = An_drag 
          Amag_drag = Dot_Product(An_drag ,An_drag)
@@ -2958,8 +2936,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          endif
          
          ! marine growth mass/inertia magnitudes
-         p%Mass_MG_End(i) = MGdens * tMG * Amag
-         p%F_WMG_End(3,i) =        -MGdens * tMG * Amag * InitInp%Gravity  ! Z component of the directional force due to marine growth mass at joint
+         p%Mass_MG_End(i) =  MGdens * tMG * Amag
+         p%F_WMG_End(3,i) = -MGdens * tMG * Amag * InitInp%Gravity  ! Z component of the directional force due to marine growth mass at joint
          Ir_MG_end   =  0.25 * MGdens * tMG * Imag  ! radial moment of inertia magnitude
          Il_MG_end   =  0.5  * MGdens * tMG * Imag  ! axial moment of inertia magnitude
       
@@ -2967,7 +2945,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          call RodrigMat(I_n, R_I, errStat, errMsg)
          IF ( errStat >= AbortErrLev ) RETURN
 
-         ! globally-oreinted moment of inertia matrix for joint
+         ! globally-oriented moment of inertia matrix for joint
          Irl_mat = 0.0
          Irl_mat(1,1) = Ir_MG_end
          Irl_mat(2,2) = Ir_MG_end
@@ -3169,6 +3147,32 @@ SUBROUTINE RodrigMat(a, R, errStat, errMsg)
    end if
    
 END SUBROUTINE RodrigMat
+
+SUBROUTINE GetDirCos(k, MSpinOrient, R)
+   ! Calculates orientation matrix for rectangular members using axial unit vector and spin angle
+   REAL(ReKi),      INTENT ( IN    )  :: k(3)        ! Axial unit vector of the member
+   REAL(ReKi),      INTENT ( IN    )  :: MSpinOrient ! Member spin orientation about axial direction
+   REAL(ReKi),      INTENT (   OUT )  :: R(3,3)      ! Member orientation matrix
+
+   REAL(ReKi)                         :: Rs(3,3)     ! Spin rotation matrix about z axis
+
+   R(1:3,3) = k
+   if ( EqualRealNos( ABS(k(3)), 1.0_ReKi ) ) then
+      ! Vertical member
+      R(1:3,1) = (/1.0,0.0,0.0/)
+   else
+      R(1:3,1) = (/k(2),-k(1),0.0_ReKi/)
+   end if 
+   R(1:3,2) = cross_product(k,R(1:3,1));
+
+   Rs = 0.0_ReKi;
+   Rs(1,1) =  cos(MSpinOrient)
+   Rs(2,2) =  Rs(1,1)
+   Rs(1,2) = -sin(MSpinOrient)
+   Rs(2,1) = -Rs(1,2)
+   Rs(3,3) =  1.0_ReKi
+   R = matmul(R,Rs)
+END SUBROUTINE
 
 !----------------------------------------------------------------------------------------------------------------------------------
 FUNCTION GetAlphaCyl(R1,R2)
@@ -3651,51 +3655,51 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! ------------------ flooded ballast weight : sides : Section 5.1.2 & 5.2.2  : Always compute regardless of PropPot setting ---------------------
          
          ! NOTE: For memfloodstatus and floodstatus: 0 = fully buried or not ballasted, 1 = fully flooded, 2 = partially flooded
-         
+         ! LW: Temporarily comment out ballast weight calculation. Need to reimplement.
          ! fully filled elements
          if (mem%floodstatus(i) == 1) then
             
-            ! Compute lstar
-            if ( mem%memfloodstatus == 2) then  
-               ! partially flooded MEMBER
-               lstar = dl*(i-1) - mem%l_fill
-            elseif (cosPhi >= 0.0 ) then
-               lstar = dl*(i-N-1) 
-            else
-               lstar = dl*(i-1)
-            end if
-            Fl =TwoPi * mem%dRdl_in(i) * mem%FillDens * p%gravity * dl *( -( mem%Rin(i) + 0.5* mem%dRdl_in(i)*dl )*mem%z_overfill +  &
-                        ( lstar*mem%Rin(i) + 0.5*(lstar*mem%dRdl_in(i) + mem%Rin(i) )*dl + mem%dRdl_in(i)*dl**2/3.0 )*cosphi )
+            ! ! Compute lstar
+            ! if ( mem%memfloodstatus == 2) then  
+            !    ! partially flooded MEMBER
+            !    lstar = dl*(i-1) - mem%l_fill
+            ! elseif (cosPhi >= 0.0 ) then
+            !    lstar = dl*(i-N-1) 
+            ! else
+            !    lstar = dl*(i-1)
+            ! end if
+            ! Fl =TwoPi * mem%dRdl_in(i) * mem%FillDens * p%gravity * dl *( -( mem%Rin(i) + 0.5* mem%dRdl_in(i)*dl )*mem%z_overfill +  &
+            !             ( lstar*mem%Rin(i) + 0.5*(lstar*mem%dRdl_in(i) + mem%Rin(i) )*dl + mem%dRdl_in(i)*dl**2/3.0 )*cosphi )
 
-            ! forces and moment in tilted coordinates about node i
-            Fr = mem%Cfr_fb(i)*sinPhi     
-            Moment  = mem%CM0_fb(i)*sinPhi - Fr*mem%alpha_fb_star(i)*dl
+            ! ! forces and moment in tilted coordinates about node i
+            ! Fr = mem%Cfr_fb(i)*sinPhi     
+            ! Moment  = mem%CM0_fb(i)*sinPhi - Fr*mem%alpha_fb_star(i)*dl
            
-            ! calculate full vector and distribute to nodes
-            call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, (1-mem%alpha_fb_star(i)), F_B1, F_B2)
-            m%memberLoads(im)%F_BF(:, i)   = m%memberLoads(im)%F_BF(:, i) + F_B2  ! 1-alpha
-            m%memberLoads(im)%F_BF(:, i+1) = m%memberLoads(im)%F_BF(:, i+1) + F_B1 ! alpha
-            y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B2(1:3)
-            y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B2(4:6)
-            y%Mesh%Force (:,mem%NodeIndx(i+1)) = y%Mesh%Force (:,mem%NodeIndx(i+1)) + F_B1(1:3)
-            y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_B1(4:6)
+            ! ! calculate full vector and distribute to nodes
+            ! call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, (1-mem%alpha_fb_star(i)), F_B1, F_B2)
+            ! m%memberLoads(im)%F_BF(:, i)   = m%memberLoads(im)%F_BF(:, i) + F_B2  ! 1-alpha
+            ! m%memberLoads(im)%F_BF(:, i+1) = m%memberLoads(im)%F_BF(:, i+1) + F_B1 ! alpha
+            ! y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B2(1:3)
+            ! y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B2(4:6)
+            ! y%Mesh%Force (:,mem%NodeIndx(i+1)) = y%Mesh%Force (:,mem%NodeIndx(i+1)) + F_B1(1:3)
+            ! y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_B1(4:6)
            
          ! partially filled element
          else if (mem%floodstatus(i) == 2) then
            
-            ! forces and moment in tilted coordinates about node i
-            Fl = mem%Cfl_fb(i)*cosPhi     
-            Fr = mem%Cfr_fb(i)*sinPhi     
-            Moment  = mem%CM0_fb(i)*sinPhi + Fr*(1 - mem%alpha_fb_star(i))*dl
+            ! ! forces and moment in tilted coordinates about node i
+            ! Fl = mem%Cfl_fb(i)*cosPhi     
+            ! Fr = mem%Cfr_fb(i)*sinPhi     
+            ! Moment  = mem%CM0_fb(i)*sinPhi + Fr*(1 - mem%alpha_fb_star(i))*dl
         
-            ! calculate full vector and distribute to nodes
-            call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, mem%alpha_fb_star(i), F_B1, F_B2)
-            m%memberLoads(im)%F_BF(:, i) = m%memberLoads(im)%F_BF(:, i) + F_B1     ! alpha
-            m%memberLoads(im)%F_BF(:, i-1) = m%memberLoads(im)%F_BF(:, i-1) + F_B2 ! 1- alpha
-            y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B1(1:3)
-            y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B1(4:6)
-            y%Mesh%Force (:,mem%NodeIndx(i-1)) = y%Mesh%Force (:,mem%NodeIndx(i-1)) + F_B2(1:3)
-            y%Mesh%Moment(:,mem%NodeIndx(i-1)) = y%Mesh%Moment(:,mem%NodeIndx(i-1)) + F_B2(4:6)    
+            ! ! calculate full vector and distribute to nodes
+            ! call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, mem%alpha_fb_star(i), F_B1, F_B2)
+            ! m%memberLoads(im)%F_BF(:, i) = m%memberLoads(im)%F_BF(:, i) + F_B1     ! alpha
+            ! m%memberLoads(im)%F_BF(:, i-1) = m%memberLoads(im)%F_BF(:, i-1) + F_B2 ! 1- alpha
+            ! y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B1(1:3)
+            ! y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B1(4:6)
+            ! y%Mesh%Force (:,mem%NodeIndx(i-1)) = y%Mesh%Force (:,mem%NodeIndx(i-1)) + F_B2(1:3)
+            ! y%Mesh%Moment(:,mem%NodeIndx(i-1)) = y%Mesh%Moment(:,mem%NodeIndx(i-1)) + F_B2(4:6)    
         
          ! no load for unflooded element or element fully below seabed
         
