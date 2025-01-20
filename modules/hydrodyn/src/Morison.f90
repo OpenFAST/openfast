@@ -35,7 +35,11 @@ MODULE Morison
 
    TYPE(ProgDesc), PARAMETER            :: Morison_ProgDesc = ProgDesc( 'Morison', '', '' )
 
-   
+   INTERFACE Morison_DirCosMtrx
+      MODULE PROCEDURE Morison_DirCosMtrx_Spin
+      MODULE PROCEDURE Morison_DirCosMtrx_noSpin
+   END INTERFACE
+
       ! ..... Public Subroutines ...................................................................................................
    PUBLIC:: Morison_GenerateSimulationNodes
    
@@ -45,69 +49,109 @@ MODULE Morison
    
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Morison_DirCosMtrx( pos0, pos1, DirCos )
+SUBROUTINE Morison_DirCosMtrx_Spin( pos0, pos1, spin, DirCos )
+! Compute the direction cosine matrix given two end points and a spin angle for rectangular members
+! Left multiplying DirCos with a vector in element local sys returns vector in global sys
+! Updated to match the convention in SubDyn for consistency
 
-! Compute the direction cosine matrix given two points along the axis of a cylinder
+   REAL(ReKi), INTENT( IN    )  ::   pos0(3), pos1(3), spin
+   Real(ReKi), INTENT(   OUT )  ::   DirCos(3,3)
+   Real(DbKi)                   ::   Le, Lexy
+   Real(DbKi)                   ::   dx, dy, dz
+   Real(DbKi)                   ::   Rspin(3,3)
+
+   DirCos = 0.0
+   Rspin  = 0.0
+
+   dx = pos1(1) - pos0(1)
+   dy = pos1(2) - pos0(2)
+   dz = pos1(3) - pos0(3)
+
+   Lexy = sqrt( dx*dx + dy*dy )
+
+   IF ( EqualRealNos(Lexy, 0.0) ) THEN
+      IF (dz > 0) THEN
+         DirCos(1,1) =  1.0
+         DirCos(2,2) =  1.0
+         DirCos(3,3) =  1.0
+      ELSE
+         DirCos(1,1) =  1.0
+         DirCos(2,2) = -1.0
+         DirCos(3,3) = -1.0
+      END IF
+   ELSE
+      Le = sqrt( dx*dx + dy*dy + dz*dz )
+
+      DirCos(1, 1) =  dy/Lexy
+      DirCos(1, 2) =  dx*dz/(Lexy*Le)
+      DirCos(1, 3) =  dx/Le
+
+      DirCos(2, 1) = -dx/Lexy
+      DirCos(2, 2) =  dy*dz/(Lexy*Le)
+      DirCos(2, 3) =  dy/Le
+
+      DirCos(3, 1) =  0.0
+      DirCos(3, 2) = -Lexy/Le
+      DirCos(3, 3) =  dz/Le
+   END IF
+
+   IF ( .not. EqualRealNos(spin, 0.0) ) THEN
+      ! Spin the member about its axis first
+      Rspin(1,1) =  cos(spin)
+      Rspin(2,2) =  Rspin(1,1)
+      Rspin(1,2) = -sin(spin)
+      Rspin(2,1) = -Rspin(1,2)
+      Rspin(3,3) =  1.0
+      DirCos  =  matmul(DirCos,Rspin)
+   END IF
+
+END SUBROUTINE Morison_DirCosMtrx_Spin
+
+SUBROUTINE Morison_DirCosMtrx_noSpin( pos0, pos1, DirCos )
+! Compute the direction cosine matrix given two end points without spin for cylindrical members
+! Left multiplying DirCos with a vector in element local sys returns vector in global sys
+! Updated to match the convention in SubDyn for consistency
 
    REAL(ReKi), INTENT( IN    )  ::   pos0(3), pos1(3)
    Real(ReKi), INTENT(   OUT )  ::   DirCos(3,3)
-   Real(DbKi)                   ::   xz, xyz
-   Real(DbKi)                   ::   x0, y0, z0
-   Real(DbKi)                   ::   x1, y1, z1
-!   Real(DbKi)                   ::   temp
+   Real(DbKi)                   ::   Le, Lexy
+   Real(DbKi)                   ::   dx, dy, dz
 
-   x0 = pos0(1)
-   y0 = pos0(2)
-   z0 = pos0(3)
-   x1 = pos1(1)
-   y1 = pos1(2)
-   z1 = pos1(3)
-   
-      ! Need to verify that z0 <= z1, but this was already handled in the element construction process!!! GJH 9/24/13 
-   !IF ( z0 > z1 ) THEN
-   !   temp = x0
-   !   x0   = x1
-   !   x1   = temp
-   !   temp = y0
-   !   y0   = y1
-   !   y1   = temp
-   !   temp = z0
-   !   z0   = z1
-   !   z1   = temp
-   !END IF
-   
-   xz  = sqrt((x0-x1)*(x0-x1)+(z0-z1)*(z0-z1))
-   xyz = sqrt((x0-x1)*(x0-x1)+(y0-y1)*(y0-y1)+(z0-z1)*(z0-z1))
-   
-   IF ( xz==0 ) THEN
-      
-      IF (y1<y0) THEN
-         
-         DirCos = transpose(reshape((/ 1, 0, 0, 0, 0, -1, 0, 1, 0 /), shape(DirCos)))
-          
+   DirCos = 0.0
+
+   dx = pos1(1) - pos0(1)
+   dy = pos1(2) - pos0(2)
+   dz = pos1(3) - pos0(3)
+
+   Lexy = sqrt( dx*dx + dy*dy )
+
+   IF ( EqualRealNos(Lexy, 0.0) ) THEN
+      IF (dz > 0) THEN
+         DirCos(1,1) =  1.0
+         DirCos(2,2) =  1.0
+         DirCos(3,3) =  1.0
       ELSE
-         
-         DirCos = transpose(reshape((/ 1, 0, 0, 0, 0, 1, 0, -1, 0 /), shape(DirCos)))
-         
+         DirCos(1,1) =  1.0
+         DirCos(2,2) = -1.0
+         DirCos(3,3) = -1.0
       END IF
-      
    ELSE
-      
-      DirCos(1, 1) = (z1-z0)/xz
-      DirCos(1, 2) = -(x1-x0)*(y1-y0)/(xz*xyz)
-      DirCos(1, 3) = (x1-x0)/xyz
-      
-      DirCos(2, 1) = 0.0
-      DirCos(2, 2) = xz/xyz
-      DirCos(2, 3) = (y1-y0)/xyz
-      
-      DirCos(3, 1) = -(x1-x0)/xz
-      DirCos(3, 2) = -(y1-y0)*(z1-z0)/(xz*xyz)
-      DirCos(3, 3) = (z1-z0)/xyz
+      Le = sqrt( dx*dx + dy*dy + dz*dz )
 
-   END IF    
-   
-END SUBROUTINE Morison_DirCosMtrx
+      DirCos(1, 1) =  dy/Lexy
+      DirCos(1, 2) =  dx*dz/(Lexy*Le)
+      DirCos(1, 3) =  dx/Le
+
+      DirCos(2, 1) = -dx/Lexy
+      DirCos(2, 2) =  dy*dz/(Lexy*Le)
+      DirCos(2, 3) =  dy/Le
+
+      DirCos(3, 1) =  0.0
+      DirCos(3, 2) = -Lexy/Le
+      DirCos(3, 3) =  dz/Le
+   END IF
+
+END SUBROUTINE Morison_DirCosMtrx_noSpin
 
 !====================================================================================================
 SUBROUTINE GetDistance ( a, b, l )
@@ -3380,9 +3424,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    LOGICAL                  :: Is1stElement
 
    ! Initialize errStat
-   errStat = ErrID_None         
-   errMsg  = ""               
-   Imat    = 0.0_ReKi   
+   errStat = ErrID_None
+   errMsg  = ""
+   Imat    = 0.0_ReKi
    g       = p%Gravity
    
    !===============================================================================================
