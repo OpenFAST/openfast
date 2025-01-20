@@ -930,6 +930,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
                         //trim( Int2LStr(FileInfo_In%FileLine(CurLine)))//' of file '//trim(FileInfo_In%FileList(FileInfo_In%FileIndx(CurLine)))
             if (Failed())  return;
          END IF
+         InputFileData%Morison%InpMembers(I)%MSpinOrient = InputFileData%Morison%InpMembers(I)%MSpinOrient * D2R
 
          if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))     ! Echo this line
          CurLine = CurLine+1
@@ -2565,6 +2566,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
          IF ( InputFileData%Morison%InpMembers(I)%MHstLMod /= 0 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 1 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
             CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 1 for column-type hydrostatic load calculation or 2 for ship-like calculation.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
+         IF ( InputFileData%Morison%InpMembers(I)%MSecGeom == MSecGeom_Rec .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 2 for rectangular members.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
 
