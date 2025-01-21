@@ -3335,7 +3335,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: tanPhi
    REAL(ReKi)               :: sinBeta, sinBeta1, sinBeta2
    REAL(ReKi)               :: cosBeta, cosBeta1, cosBeta2
-   REAL(ReKi)               :: CMatrix(3,3), CTrans(3,3) ! Direction cosine matrix for element, and its transpose
+   REAL(ReKi)               :: CMatrix(3,3), CMatrix1(3,3), CMatrix2(3,3), CTrans(3,3) ! Direction cosine matrix for element, and its transpose
    REAL(ReKi)               :: z1, z2, r1, r2, r1b, r2b, rMidb
    REAL(ReKi)               :: Sa1, Sa2, Sa1b, Sa2b, SaMidb
    REAL(ReKi)               :: Sb1, Sb2, Sb1b, Sb2b, SbMidb
@@ -4201,6 +4201,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       z1 = m%DispNodePosHst(3,mem%NodeIndx(  1))
       z2 = m%DispNodePosHst(3,mem%NodeIndx(N+1))
       
+      if (mem%MSecGeom == MSecGeom_Rec) then
+         ! Compute total orientation matrix of starting and ending joints
+         call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(1)), u%Mesh%Position(:,mem%NodeIndx(  2)), mem%MSpinOrient, CMatrix1 )
+         CMatrix1 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(1  ))),CMatrix1)
+         call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(N)), u%Mesh%Position(:,mem%NodeIndx(N+1)), mem%MSpinOrient, CMatrix2 )
+         CMatrix2 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(N+1))),CMatrix2)
+      end if
+
       !----------------------------------- filled buoyancy loads: starts -----------------------------------!
       !TODO: Do the equations below still work if z1 > z2 ?
       !TODO: Should not have to test seabed crossing in time-marching loop
@@ -4247,8 +4255,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! Get positions and scaled radii of member end nodes
          pos1 = m%DispNodePosHst(:,mem%NodeIndx(  1))
          pos2 = m%DispNodePosHst(:,mem%NodeIndx(N+1))
-         r1      = mem%RMGB(  1)
-         r2      = mem%RMGB(N+1)
+         if (mem%MSecGeom==MSecGeom_Cyl) then
+            r1      = mem%RMGB(  1)
+            r2      = mem%RMGB(N+1)
+         else if (mem%MSecGeom==MSecGeom_Rec) then
+            Sa1     = mem%SaMGB(  1)
+            Sa2     = mem%SaMGB(N+1)
+            Sb1     = mem%SbMGB(  1)
+            Sb2     = mem%SbMGB(N+1)
+         end if
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             ! Compute loads on the end plate of node 1
             IF (p%WaveField%WaveStMod > 0) THEN
@@ -4261,16 +4276,23 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                FSPt = (/pos1(1),pos1(2),0.0_ReKi/)
                n_hat = (/0.0,0.0,1.0/)
             END IF
-            CALL GetSectionUnitVectors_Cyl( k_hat1, y_hat, z_hat )
-            CALL GetSectionFreeSurfaceIntersects_Cyl( REAL(pos1,DbKi), REAL(FSPt,DbKi), k_hat1, y_hat, z_hat, n_hat, REAL(r1,DbKi), theta1, theta2, secStat)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            CALL GetEndPlateHstLds_Cyl(pos1, k_hat1, y_hat, z_hat, r1, theta1, theta2, F_B_End)
-            m%F_B_End(:, mem%NodeIndx(  1)) = m%F_B_End(:, mem%NodeIndx(  1)) + F_B_End
-            IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
-               IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
-                   CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+
+            if (mem%MSecGeom==MSecGeom_Cyl) then
+               CALL GetSectionUnitVectors_Cyl( k_hat1, y_hat, z_hat )
+               CALL GetSectionFreeSurfaceIntersects_Cyl( REAL(pos1,DbKi), REAL(FSPt,DbKi), k_hat1, y_hat, z_hat, n_hat, REAL(r1,DbKi), theta1, theta2, secStat)
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               CALL GetEndPlateHstLds_Cyl(pos1, k_hat1, y_hat, z_hat, r1, theta1, theta2, F_B_End)
+               IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
+                  IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
+                      CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+                  END IF
                END IF
-            END IF
+            else if (mem%MSecGeom==MSecGeom_Rec) then
+               CALL GetSectionUnitVectors_Rec( CMatrix1, x_hat, y_hat )
+               CALL GetEndPlateHstLds_Rec(pos1, k_hat1, x_hat, y_hat, Sa1, Sb1, FSPt, n_hat, F_B_End)
+            end if
+            m%F_B_End(:, mem%NodeIndx(  1)) = m%F_B_End(:, mem%NodeIndx(  1)) + F_B_End
+
             ! Compute loads on the end plate of node N+1
             IF (p%WaveField%WaveStMod > 0) THEN
                CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
@@ -4282,16 +4304,23 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                FSPt = (/pos2(1),pos2(2),0.0_ReKi/)
                n_hat = (/0.0,0.0,1.0/)
             END IF
-            CALL GetSectionUnitVectors_Cyl( k_hat2, y_hat, z_hat )
-            CALL GetSectionFreeSurfaceIntersects_Cyl( REAL(pos2,DbKi), REAL(FSPt,DbKi), k_hat2, y_hat, z_hat, n_hat, REAL(r2,DbKi), theta1, theta2, secStat)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            CALL GetEndPlateHstLds_Cyl(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
-            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
-            IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
-               IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
-                   CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+
+            if (mem%MSecGeom==MSecGeom_Cyl) then
+               CALL GetSectionUnitVectors_Cyl( k_hat2, y_hat, z_hat )
+               CALL GetSectionFreeSurfaceIntersects_Cyl( REAL(pos2,DbKi), REAL(FSPt,DbKi), k_hat2, y_hat, z_hat, n_hat, REAL(r2,DbKi), theta1, theta2, secStat)
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               CALL GetEndPlateHstLds_Cyl(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
+               IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
+                  IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
+                      CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+                  END IF
                END IF
-            END IF
+            else if (mem%MSecGeom==MSecGeom_Rec) then
+               CALL GetSectionUnitVectors_Rec( CMatrix2, x_hat, y_hat )
+               CALL GetEndPlateHstLds_Rec(pos2, k_hat2, x_hat, y_hat, Sa2, Sb2, FSPt, n_hat, F_B_End)
+            end if
+            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
+
          elseif ( mem%doEndBuoyancy ) then ! The member crosses the seabed line so only the upper end potentially have hydrostatic load
             ! Only compute the loads on the end plate of node N+1
             IF (p%WaveField%WaveStMod > 0) THEN
@@ -4304,25 +4333,32 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                FSPt = (/pos2(1),pos2(2),0.0_ReKi/)
                n_hat = (/0.0,0.0,1.0/)
             END IF
-            CALL GetSectionUnitVectors_Cyl( k_hat2, y_hat, z_hat )
-            CALL GetSectionFreeSurfaceIntersects_Cyl( REAL(pos2,DbKi), REAL(FSPt,DbKi), k_hat2, y_hat, z_hat, n_hat, REAL(r2,DbKi), theta1, theta2, secStat)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            CALL GetEndPlateHstLds_Cyl(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
-            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
-            IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
-               IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
-                   CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+
+            if (mem%MSecGeom==MSecGeom_Cyl) then
+               CALL GetSectionUnitVectors_Cyl( k_hat2, y_hat, z_hat )
+               CALL GetSectionFreeSurfaceIntersects_Cyl( REAL(pos2,DbKi), REAL(FSPt,DbKi), k_hat2, y_hat, z_hat, n_hat, REAL(r2,DbKi), theta1, theta2, secStat)
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               CALL GetEndPlateHstLds_Cyl(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
+               IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
+                  IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
+                      CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+                  END IF
                END IF
-            END IF
+            else if (mem%MSecGeom==MSecGeom_Rec) then
+               CALL GetSectionUnitVectors_Rec( CMatrix2, x_hat, y_hat )
+               CALL GetEndPlateHstLds_Rec(pos2, k_hat2, x_hat, y_hat, Sa2, Sb2, FSPt, n_hat, F_B_End)
+            end if
+            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
+
          ! else
             ! entire member is buried below the seabed
          end if
-         
+
       end if   ! PropPot
       !----------------------------------- external buoyancy loads: ends -----------------------------------!
 
    end do ! im - looping through members
-    
+
    !---------------------------------------------------------------------------------------------------------------!
    !                                     External Hydrodynamic Joint Loads - Start                                 !
    !                                        F_D_End, F_I_End, F_A_End, F_IMG_End                                   !
@@ -5110,6 +5146,217 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       F(4:6) = p%WaveField%WtrDens * g * (My*y_hat + Mz*z_hat)
 
    END SUBROUTINE GetEndPlateHstLds_Cyl
+
+   SUBROUTINE GetEndPlateHstLds_Rec(pos0, k_hat, x_hat, y_hat, Sa, Sb, rFS, nFS, F)
+
+      REAL(ReKi),      INTENT( IN    ) :: pos0(3)
+      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: x_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: Sa, Sb
+      REAL(ReKi),      INTENT( IN    ) :: rFS(3)
+      REAL(ReKi),      INTENT( IN    ) :: nFS(3)
+      REAL(ReKi),      INTENT(   OUT ) :: F(6)
+
+      INTEGER(IntKi)                   :: i, numVInWtr
+      REAL(DbKi)                       :: z0, s1, s2, h1s1, h1s2, h2s1, h2s2
+      REAL(DbKi)                       :: rv(3,4), Ftmp(6)
+      LOGICAL                          :: vInWtr(4)
+
+      z0     = pos0(3)
+      ! Global coordinates of the four vertices of the section
+      rv(:,1) = pos0 + x_hat * (-0.5*Sa) + y_hat * (-0.5*Sb)
+      rv(:,2) = pos0 + x_hat * ( 0.5*Sa) + y_hat * (-0.5*Sb)
+      rv(:,3) = pos0 + x_hat * ( 0.5*Sa) + y_hat * ( 0.5*Sb)
+      rv(:,4) = pos0 + x_hat * (-0.5*Sa) + y_hat * ( 0.5*Sb)
+
+      ! Check for and count vertices in water
+      numVInWtr = 0
+      do i = 1,4
+         vInWtr(i) = ( Dot_Product(rv(:,i)-rFS,nFS) <= 0.0 )
+         if ( vInWtr(i) ) then
+            numVInWtr = numVInWtr + 1
+         end if
+      end do
+
+      if (numVInWtr == 0) then ! Dry endplate
+         F = 0.0
+      else if (numVInWtr == 1) then ! Only one vertex in water
+         if (vInWtr(1)) then
+            ! Sides 4 & 1 intersects the free surface
+            h2s1 =  Sb * ( 0.5 - dot_product(rFS-rv(:,4),nFS)/dot_product(rv(:,1)-rv(:,4),nFS) )
+            h2s2 = -0.5*Sb
+            h1s1 = -0.5*Sb
+            h1s2 = -0.5*Sb
+            s1   = -0.5*Sa
+            s2   =  Sa * (-0.5 + dot_product(rFS-rv(:,1),nFS)/dot_product(rv(:,2)-rv(:,1),nFS) )
+         else if (vInWtr(2)) then
+            ! Sides 1 & 2 intersects the free surface
+            h2s1 = -0.5*Sb
+            h2s2 =  Sb * (-0.5 + dot_product(rFS-rv(:,2),nFS)/dot_product(rv(:,3)-rv(:,2),nFS) )
+            h1s1 = -0.5*Sb
+            h1s2 = -0.5*Sb
+            s1   =  Sa * (-0.5 + dot_product(rFS-rv(:,1),nFS)/dot_product(rv(:,2)-rv(:,1),nFS) )
+            s2   =  0.5*Sa
+         else if (vInWtr(3)) then
+            ! Sides 2 & 3 intersects the free surface
+            h2s1 =  0.5*Sb
+            h2s2 =  0.5*Sb
+            h1s1 =  0.5*Sb
+            h1s2 =  Sb * (-0.5 + dot_product(rFS-rv(:,2),nFS)/dot_product(rv(:,3)-rv(:,2),nFS) )
+            s1   =  Sa * ( 0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
+            s2   =  0.5*Sa
+         else if (vInWtr(4)) then
+            ! Sides 3 & 4 intersects the free surface
+            h2s1 =  0.5*Sb
+            h2s2 =  0.5*Sb
+            h1s1 =  Sb * ( 0.5 - dot_product(rFS-rv(:,4),nFS)/dot_product(rv(:,1)-rv(:,4),nFS) )
+            h1s2 =  0.5*Sb
+            s1   = -0.5*Sa
+            s2   =  Sa * (0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
+         end if
+         call GetHstLdsOnTrapezoid(pos0,s1,s2,h1s1,h1s2,h2s1,h2s2,k_hat,x_hat,y_hat,F)
+      else if (numVInWtr == 2) then ! Two neighboring vertices in water
+         if (vInWtr(1) .and. vInWtr(2)) then
+            ! Sides 2 & 4 intersects the free surface
+            ! Side 1 submerged and side 3 dry
+            h2s1 =  Sb * ( 0.5 - dot_product(rFS-rv(:,4),nFS)/dot_product(rv(:,1)-rv(:,4),nFS) )
+            h2s2 =  Sb * (-0.5 + dot_product(rFS-rv(:,2),nFS)/dot_product(rv(:,3)-rv(:,2),nFS) )
+            h1s1 = -0.5*Sb
+            h1s2 = -0.5*Sb
+            s1   = -0.5*Sa
+            s2   =  0.5*Sa
+         else if (vInWtr(2) .and. vInWtr(3)) then
+            ! Sides 1 & 3 intersects the free surface
+            ! Side 2 submerged and side 4 dry
+            ! Integrate in two pieces
+            h2s1 = -0.5*Sb
+            h2s2 =  0.5*Sb
+            h1s1 = -0.5*Sb
+            h1s2 = -0.5*Sb
+            s1   =  Sa * (-0.5 + dot_product(rFS-rv(:,1),nFS)/dot_product(rv(:,2)-rv(:,1),nFS) )
+            s2   =  Sa * (0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
+            call GetHstLdsOnTrapezoid(pos0,s2,0.5*Sa,-0.5*Sb,-0.5*Sb,0.5*Sb,0.5*Sb,k_hat,x_hat,y_hat,Ftmp)
+         else if (vInWtr(3) .and. vInWtr(4)) then
+            ! Sides 2 & 4 intersects the free surface
+            ! Side 3 submerged and side 1 dry
+            h2s1 =  0.5*Sb
+            h2s2 =  0.5*Sb
+            h1s1 =  Sb * ( 0.5 - dot_product(rFS-rv(:,4),nFS)/dot_product(rv(:,1)-rv(:,4),nFS) )
+            h1s2 =  Sb * (-0.5 + dot_product(rFS-rv(:,2),nFS)/dot_product(rv(:,3)-rv(:,2),nFS) )
+            s1   = -0.5*Sa
+            s2   =  0.5*Sa
+         else if (vInWtr(4) .and. vInWtr(1)) then
+            ! Sides 1 & 3 intersects the free surface
+            ! Side 4 submerged and side 2 dry
+            ! Integrate in two pieces
+            h2s1 =  0.5*Sb
+            h2s2 = -0.5*Sb
+            h1s1 = -0.5*Sb
+            h1s2 = -0.5*Sb
+            s1   =  Sa * ( 0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
+            s2   =  Sa * (-0.5 + dot_product(rFS-rv(:,1),nFS)/dot_product(rv(:,2)-rv(:,1),nFS) )
+            call GetHstLdsOnTrapezoid(pos0,-0.5*Sa,s1,-0.5*Sb,-0.5*Sb,0.5*Sb,0.5*Sb,k_hat,x_hat,y_hat,Ftmp)
+         end if
+         call GetHstLdsOnTrapezoid(pos0,s1,s2,h1s1,h1s2,h2s1,h2s2,k_hat,x_hat,y_hat,F)
+         F = F + Ftmp
+      else if (numVInWtr == 3) then ! Only one vertex out of water
+         if (.not. vInWtr(1)) then
+            ! Sides 4 & 1 intersects the free surface
+            h2s1 =  Sb * ( 0.5 - dot_product(rFS-rv(:,4),nFS)/dot_product(rv(:,1)-rv(:,4),nFS) )
+            h2s2 = -0.5*Sb
+            h1s1 = -0.5*Sb
+            h1s2 = -0.5*Sb
+            s1   = -0.5*Sa;
+            s2   =  Sa * (-0.5 + dot_product(rFS-rv(:,1),nFS)/dot_product(rv(:,2)-rv(:,1),nFS) )
+         else if (.not. vInWtr(2)) then
+            ! Sides 1 & 2 intersects the free surface
+            h2s1 = -0.5*Sb
+            h2s2 =  Sb * (-0.5 + dot_product(rFS-rv(:,2),nFS)/dot_product(rv(:,3)-rv(:,2),nFS) )
+            h1s1 = -0.5*Sb
+            h1s2 = -0.5*Sb
+            s1   =  Sa * (-0.5 + dot_product(rFS-rv(:,1),nFS)/dot_product(rv(:,2)-rv(:,1),nFS) )
+            s2   =  0.5*Sa
+         else if (.not. vInWtr(3)) then
+            ! Sides 2 & 3 intersects the free surface
+            h2s1 =  0.5*Sb
+            h2s2 =  0.5*Sb
+            h1s1 =  0.5*Sb
+            h1s2 =  Sb * (-0.5 + dot_product(rFS-rv(:,2),nFS)/dot_product(rv(:,3)-rv(:,2),nFS) )
+            s1   =  Sa * ( 0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
+            s2   =  0.5*Sa
+         else if (.not. vInWtr(4)) then
+            ! Sides 3 & 4 intersects the free surface
+            h2s1 =  0.5*Sb
+            h2s2 =  0.5*Sb
+            h1s1 =  Sb * ( 0.5 - dot_product(rFS-rv(:,4),nFS)/dot_product(rv(:,1)-rv(:,4),nFS) )
+            h1s2 =  0.5*Sb
+            s1   = -0.5*Sa
+            s2   =  Sa * ( 0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
+         end if
+         call GetHstLdsOnTrapezoid(pos0,s1,s2,h1s1,h1s2,h2s1,h2s2,k_hat,x_hat,y_hat,F)
+         F(1:3) = -z0*Sa*Sb*k_hat - F(1:3)
+         F(4:6) = (Sa**3*Sb*x_hat(3)*y_hat-Sa*Sb**3*y_hat(3)*x_hat)/12.0 - F(4:6)
+      else if (numVInWtr == 4) then ! Submerged endplate
+         F(1:3) = -z0*Sa*Sb*k_hat
+         F(4:6) = (Sa**3*Sb*x_hat(3)*y_hat-Sa*Sb**3*y_hat(3)*x_hat)/12.0
+      end if
+
+   END SUBROUTINE GetEndPlateHstLds_Rec
+
+   SUBROUTINE GetHstLdsOnTrapezoid(pos0, s1, s2, h1s1, h1s2, h2s1, h2s2, k_hat, x_hat, y_hat, F)
+      REAL(DbKi),      INTENT( IN    ) :: pos0(3)
+      REAL(DbKi),      INTENT( IN    ) :: s1, s2, h1s1, h1s2, h2s1, h2s2
+      REAL(DbKi),      INTENT( IN    ) :: k_hat(3), x_hat(3), y_hat(3)
+      REAL(DbKi),      INTENT(   OUT ) :: F(6)
+
+      REAL(DbKi)                       :: z0
+      REAL(DbKi)                       :: ds, ds2, ds3, ds4
+      REAL(DbKi)                       :: p1, q1, p2, q2
+      REAL(DbKi)                       :: dp, dp2, dp3
+      REAL(DbKi)                       :: dq, dq2, dq3
+      REAL(DbKi)                       :: dpq, dp2q, dpq2, tmp
+
+      if (EqualRealNos(s1,s2)) then
+         F = 0.0
+         return;
+      end if
+
+      z0   = pos0(3)
+      ds   = s2   -s1
+      ds2  = s2**2-s1**2
+      ds3  = s2**3-s1**3
+      ds4  = s2**4-s1**4
+      p1   = (h1s2-h1s1)/ds
+      q1   = (h1s1*s2-h1s2*s1)/ds
+      p2   = (h2s2-h2s1)/ds
+      q2   = (h2s1*s2-h2s2*s1)/ds
+      dp   = p2-p1
+      dq   = q2-q1
+      dp2  = p2**2-p1**2
+      dq2  = q2**2-q1**2
+      dp3  = p2**3-p1**3
+      dq3  = q2**3-q1**3
+      dpq  = p2*q2-p1*q1
+      dp2q = p2**2*q2-p1**2*q1
+      dpq2 = p2*q2**2-p1*q1**2
+      tmp  = 3.0*dp2*ds4+8.0*dpq*ds3+6.0*dq2*ds2
+
+      F(1:3) = -( 0.5*z0*(dp*ds2+2.0*dq*ds) &
+                 +x_hat(3)/6.0*(2.0*dp*ds3+3.0*dq*ds2) &
+                 +y_hat(3)/6.0*(dp2*ds3+3.0*dpq*ds2+3.0*(q2**2-q1**2)*ds) &
+                ) * k_hat
+
+      F(4:6) = -( z0/6.0*(dp2*ds3+3.0*dpq*ds2+3.0*dq2*ds) &
+                 +x_hat(3)/24.0*tmp &
+                 +y_hat(3)/12.0*(dp3*ds4+4.0*dp2q*ds3+6.0*dpq2*ds2+4.0*dq3*ds) )*x_hat &
+               +( z0/6.0*(2.0*dp*ds3+3.0*dq*ds2) &
+                 +x_hat(3)/12.0*(3.0*dp*ds4+4.0*dq*ds3) &
+                 +y_hat(3)/24.0*tmp )*y_hat
+
+      F = p%WaveField%WtrDens * g * F
+
+   END SUBROUTINE GetHstLdsOnTrapezoid
 
    SUBROUTINE getElementHstLds_Mod1( Time, pos1, pos2, Zeta1, Zeta2, k_hat, r1, r2, dl, alphaIn, Is1stElement, F_B0, F_B1, F_B2, ErrStat, ErrMsg )
       
