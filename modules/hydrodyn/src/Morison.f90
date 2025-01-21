@@ -2245,7 +2245,7 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    real(ReKi)     :: Lmid
    real(ReKi)     :: li
    real(ReKi)     :: Vinner_l, Vinner_u, Vouter_l, Vouter_u, Vballast_l, Vballast_u
-   real(ReKi)     :: tk(1,3), Imat(3,3)
+   real(ReKi)     :: tk(1,3), Imat(3,3), CMatrix(3,3)
    REAL(ReKi)     :: h_c    ! center of mass offset from first node
    
    errStat = ErrID_None
@@ -2265,6 +2265,11 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    member%kkt    = matmul(transpose(tk),tk)
    call Eye(Imat,errStat,errMsg)
    member%Ak     =  Imat - member%kkt
+   IF (member%MSecGeom == MSecGeom_Rec) THEN
+      CALL Morison_DirCosMtrx( InitInp%Nodes(member%NodeIndx(1))%Position, InitInp%Nodes(member%NodeIndx(N+1))%Position, member%MSpinOrient, CMatrix )
+      member%x_hat = CMatrix(1:3,1)
+      member%y_hat = CMatrix(1:3,2)
+   END IF
    phi = acos( max(-1.0_ReKi, min(1.0_ReKi, vec(3)/memLength) ) )  ! incline angle   
    sinPhi = sin(phi)
    cosPhi = cos(phi)  
@@ -2316,17 +2321,7 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
 
    ! Check if members with the MacCamy-Fuchs diffraction model and not modeled by potential flow satisfy the necessary criteria.
    IF ( member%PropMCF .AND. ( .NOT. member%PropPot )) THEN
-      ! Check if surface piercing
-      IF ( Za*Zb > 0 ) THEN ! Two end joints of the member on the same side of the SWL
-         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
-         RETURN
-      END IF
-      ! Check inclination
-      If ( ABS(phi) .GE. 0.174533 ) THEN ! If inclination from vertical is greater than 10 deg
-         CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be within 10 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
-         RETURN
-      END IF
-      CALL SetErrStat(ErrID_Info, 'Applying MacCamy-Fuchs diffraction correction to a rectangular member with ID '//trim(num2lstr(member%MemberID))//'; accuracy not guaranteed.', errStat, errMsg, RoutineName )   
+      CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs diffraction correction cannot be applied to rectangular members. Check member with ID '//trim(num2lstr(member%MemberID))//'. ', errStat, errMsg, RoutineName )   
    END IF
 
    ! find fill location of member (previously in SetElementFillProps)
@@ -3357,7 +3352,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: omega_s2(3)
    REAL(ReKi)               :: pos1(3), pos2(3)
    REAL(ReKi)               :: Imat(3,3)
-   REAL(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal, deltalLeft, deltalRight
+   REAL(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, dSadl_p, dSadl_pp, dSbdl_p, dSbdl_pp, f_hydro(3), Am(3,3), lstar, deltal, deltalLeft, deltalRight
    REAL(ReKi)               :: h, h_c_AM, deltal_AM
    REAL(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B0(6), F_B1(6), F_B2(6), F_B_End(6)
    REAL(ReKi)               :: AM_End(3,3), An_End(3), DP_Const_End(3), I_MG_End(3,3)
@@ -3481,14 +3476,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
             call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
             ! Compute element to global DirCos matrix for undisplaced structure first
             call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(i  )), u%Mesh%Position(:,mem%NodeIndx(i+1)), mem%MSpinOrient, CMatrix )
             ! Prepend body motion - Assuming the rotation of the starting node is representative of the whole element
             CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(i))),CMatrix)
             CTrans  = transpose(CMatrix)
             ! Note: CMatrix is element local to global displaced. CTrans is the opposite.
-            
             ! save some commonly used variables   
             dl        = mem%dl
             z1        = pos1(3)          ! get node z locations from input mesh
@@ -3499,7 +3492,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             a_s2      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i+1))
             alpha_s2  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
             omega_s2  = u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
-
             IF (mem%MSecGeom == MSecGeom_Cyl) THEN
                r1         = mem%RMG(i  )      ! outer radius at element nodes including marine growth
                r2         = mem%RMG(i+1)
@@ -3662,32 +3654,53 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          ! Compute element to global DirCos matrix for undisplaced structure first
          call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(i  )), u%Mesh%Position(:,mem%NodeIndx(i+1)), mem%MSpinOrient, CMatrix )
-         ! Prepend body motion
+         ! Prepend body motion - Assuming the rotation of the starting node is representative of the whole element
          CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(i))),CMatrix)
          CTrans  = transpose(CMatrix)
+         ! Note: CMatrix is element local to global displaced. CTrans is the opposite.
          ! save some commonly used variables   
          dl        = mem%dl
          z1        = pos1(3)          ! get node z locations from input mesh
          z2        = pos2(3)
-         r1        = mem%RMG(i  )     ! outer radius at element nodes including marine growth
-         r2        = mem%RMG(i+1)
-         r1b       = mem%RMGB(i  )    ! outer radius at element nodes including marine growth scaled by sqrt(Cb)
-         r2b       = mem%RMGB(i+1)
-         dRdl_mg   = mem%dRdl_mg(i)   ! Taper of element including marine growth
-         dRdl_mg_b = mem%dRdl_mg_b(i) ! Taper of element including marine growth with radius scaling by sqrt(Cb)
          a_s1      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i  ))
          alpha_s1  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i  ))
          omega_s1  = u%Mesh%RotationVel   (:, mem%NodeIndx(i  ))
          a_s2      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i+1))
          alpha_s2  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
          omega_s2  = u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
+         IF (mem%MSecGeom == MSecGeom_Cyl) THEN
+            r1         = mem%RMG(i  )      ! outer radius at element nodes including marine growth
+            r2         = mem%RMG(i+1)
+            r1b        = mem%RMGB(i  )     ! outer radius at element nodes including marine growth scaled by sqrt(Cb)
+            r2b        = mem%RMGB(i+1)
+            dRdl_mg    = mem%dRdl_mg(i)    ! Taper of element including marine growth
+            dRdl_mg_b  = mem%dRdl_mg_b(i)  ! Taper of element including marine growth with radius scaling by sqrt(Cb)
+         ELSE IF (mem%MSecGeom == MSecGeom_Rec) THEN
+            Sa1        = mem%SaMG(i  )     ! outer side A at element nodes including marine growth
+            Sa2        = mem%SaMG(i+1)
+            Sb1        = mem%SbMG(i  )     ! outer side B at element nodes including marine growth
+            Sb2        = mem%SbMG(i+1)
+            Sa1b       = mem%SaMGB(i  )    ! outer side A at element nodes including marine growth scaled by sqrt(Cb)
+            Sa2b       = mem%SaMGB(i+1)
+            Sb1b       = mem%SbMGB(i  )    ! outer side B at element nodes including marine growth scaled by sqrt(Cb)
+            Sb2b       = mem%SbMGB(i+1)
+            dSadl_mg   = mem%dSadl_mg(i)   ! Taper of element side A including marine growth
+            dSadl_mg_b = mem%dSadl_mg_b(i) ! Taper of element side A including marine growth with radius scaling by sqrt(Cb)
+            dSbdl_mg   = mem%dSbdl_mg(i)   ! Taper of element side B including marine growth
+            dSbdl_mg_b = mem%dSbdl_mg_b(i) ! Taper of element side B including marine growth with radius scaling by sqrt(Cb)
+         END IF
 
          ! ------------------ flooded ballast inertia: sides: Section 6.1.1 : Always compute regardless of PropPot setting ---------------------
          ! lower node
          Ioffset   = mem%h_cfb_l(i)*mem%h_cfb_l(i)*mem%m_fb_l(i)
          Imat      = 0.0_ReKi
-         Imat(1,1) = mem%I_rfb_l(i) - Ioffset
-         Imat(2,2) = mem%I_rfb_l(i) - Ioffset
+         IF (mem%MSecGeom == MSecGeom_Cyl) THEN
+            Imat(1,1) = mem%I_rfb_l(i) - Ioffset
+            Imat(2,2) = mem%I_rfb_l(i) - Ioffset
+         ELSE IF (mem%MSecGeom == MSecGeom_Rec) THEN
+            Imat(1,1) = mem%I_xfb_l(i) - Ioffset
+            Imat(2,2) = mem%I_yfb_l(i) - Ioffset
+         END IF
          Imat(3,3) = mem%I_lfb_l(i)
          Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
          iArm = mem%h_cfb_l(i) * k_hat
@@ -3702,8 +3715,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! upper node
          Ioffset   = mem%h_cfb_u(i)*mem%h_cfb_u(i)*mem%m_fb_u(i)
          Imat      = 0.0_ReKi
-         Imat(1,1) = mem%I_rfb_u(i) - Ioffset
-         Imat(2,2) = mem%I_rfb_u(i) - Ioffset
+         IF (mem%MSecGeom == MSecGeom_Cyl) THEN
+            Imat(1,1) = mem%I_rfb_u(i) - Ioffset
+            Imat(2,2) = mem%I_rfb_u(i) - Ioffset
+         ELSE IF (mem%MSecGeom == MSecGeom_Rec) THEN
+            Imat(1,1) = mem%I_xfb_u(i) - Ioffset
+            Imat(2,2) = mem%I_yfb_u(i) - Ioffset
+         END IF
          Imat(3,3) = mem%I_lfb_u(i)
          Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
          iArm = mem%h_cfb_u(i) * k_hat
@@ -3787,7 +3805,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            ! Get positions of node i and i+1
            pos1 = m%DispNodePosHdn(:,mem%NodeIndx(i  ))
            pos2 = m%DispNodePosHdn(:,mem%NodeIndx(i+1))
-           
+
            ! Free surface elevation above or below node i and i+1
            Zeta1 = m%WaveElev(mem%NodeIndx(i))
            Zeta2 = m%WaveElev(mem%NodeIndx(i+1))
@@ -3815,22 +3833,49 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
              FSInt = SubRatio * (pos2-pos1) + pos1
            END IF
          
-           ! Compute the slope of member radius
-           IF (i == 1) THEN
-              dRdl_p  = abs(mem%dRdl_mg(i))
-              dRdl_pp = mem%dRdl_mg(i)   
-           ELSE IF ( i > 1 .AND. i < (N+1)) THEN
-              dRdl_p  = 0.5*( abs(mem%dRdl_mg(i-1)) + abs(mem%dRdl_mg(i)) )
-              dRdl_pp = 0.5*( mem%dRdl_mg(i-1) + mem%dRdl_mg(i) )
-           ELSE
-              dRdl_p  = abs(mem%dRdl_mg(N))
-              dRdl_pp = mem%dRdl_mg(N)
+           ! Compute the slope of member radius/side length
+           IF (mem%MSecGeom==MSecGeom_Cyl) THEN
+              IF (i == 1) THEN
+                 dRdl_p  = abs(mem%dRdl_mg(i))
+                 dRdl_pp = mem%dRdl_mg(i)
+              ELSE IF ( i > 1 .AND. i < (N+1)) THEN
+                 dRdl_p  = 0.5*( abs(mem%dRdl_mg(i-1)) + abs(mem%dRdl_mg(i)) )
+                 dRdl_pp = 0.5*( mem%dRdl_mg(i-1) + mem%dRdl_mg(i) )
+              ELSE
+                 dRdl_p  = abs(mem%dRdl_mg(N))
+                 dRdl_pp = mem%dRdl_mg(N)
+              END IF
+           ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
+              IF (i == 1) THEN
+                 dSadl_p  = abs(mem%dSadl_mg(i))
+                 dSadl_pp = mem%dSadl_mg(i)
+                 dSbdl_p  = abs(mem%dSbdl_mg(i))
+                 dSbdl_pp = mem%dSbdl_mg(i)
+              ELSE IF ( i > 1 .AND. i < (N+1)) THEN
+                 dSadl_p  = 0.5*( abs(mem%dSadl_mg(i-1)) + abs(mem%dSadl_mg(i)) )
+                 dSadl_pp = 0.5*( mem%dSadl_mg(i-1) + mem%dSadl_mg(i) )
+                 dSbdl_p  = 0.5*( abs(mem%dSbdl_mg(i-1)) + abs(mem%dSbdl_mg(i)) )
+                 dSbdl_pp = 0.5*( mem%dSbdl_mg(i-1) + mem%dSbdl_mg(i) )
+              ELSE
+                 dSadl_p  = abs(mem%dSadl_mg(N))
+                 dSadl_pp = mem%dSadl_mg(N)
+                 dSbdl_p  = abs(mem%dSbdl_mg(N))
+                 dSbdl_pp = mem%dSbdl_mg(N)
+              END IF
            END IF
-       
+
            !-------------------- hydrodynamic drag loads: sides: Section 7.1.2 ------------------------!
            vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
-           f_hydro = mem%Cd(i)*p%WaveField%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
-                     0.5*mem%AxCd(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*dRdl_p * abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
+           IF (mem%MSecGeom==MSecGeom_Cyl) THEN
+              f_hydro = mem%Cd(i)*p%WaveField%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &                                              ! radial part
+                        0.5*mem%AxCd(i)*p%WaveField%WtrDens * pi*mem%RMG(i)*dRdl_p * &                                               ! axial part
+                        abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
+           ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
+              f_hydro = 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  &       ! local x-direction
+                        0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat  +  &       ! local z-direction
+                        0.25*mem%AxCd(i)*p%WaveField%WtrDens * (dSadl_p*mem%SbMG(i) + dSbdl_p*mem%SaMG) * &                          ! axial part
+                        abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
+           END IF
            CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
            y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(4:6, i)
@@ -3840,9 +3885,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
            IF ( .NOT. mem%PropPot ) THEN
               !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
-              Am = mem%Ca(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
-              f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
-
+              IF (mem%MSecGeom==MSecGeom_Cyl) THEN
+                 Am = mem%Ca(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
+                 f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
+              ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
+                 f_hydro = -p%WaveField%WtrDens*mem%CaB(i) * 0.25*pi*mem%SbMG(i)*mem%SbMG(i) * Dot_Product(u%Mesh%TranslationAcc(:,mem%NodeIndx(i)),mem%x_hat)*mem%x_hat &
+                           -p%WaveField%WtrDens*mem%CaA(i) * 0.25*pi*mem%SaMG(i)*mem%SaMG(i) * Dot_Product(u%Mesh%TranslationAcc(:,mem%NodeIndx(i)),mem%y_hat)*mem%y_hat &
+                       -0.5*p%WaveField%WtrDens*mem%AxCa(i) * (dSbdl_p*mem%SaMG(i)+dSadl_p*mem%SbMG(i))*SQRT(mem%SaMG(i)*mem%SbMG(i)) * Dot_Product(u%Mesh%TranslationAcc(:,mem%NodeIndx(i)),mem%k)*mem%k
+              END IF
               IF ( p%AMMod .EQ. 0_IntKi ) THEN ! Compute added-mass force up to the SWL
                  z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%WaveField%MSL2SWL ! Undisplaced z-position of the current node
                  IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL undisplaced; zero added-mass force
@@ -3873,16 +3923,25 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
               
               !--------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
-              IF (mem%PropMCF) THEN
-                 f_hydro=                     p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
-                              2.0*mem%AxCa(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
-                              2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
-              ELSE
-                 f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)        * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
-                              2.0*mem%AxCa(i) *p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
-                              2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              IF (mem%MSecGeom==MSecGeom_Cyl) THEN
+                 IF (mem%PropMCF) THEN
+                    f_hydro=                     p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
+                                 2.0*mem%AxCa(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                                 2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k
+                 ELSE
+                    f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)        * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
+                                 2.0*mem%AxCa(i) *p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                                 2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k
+                 END IF
+              ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
+                 ! Note: MacCamy-Fuchs correction cannot be applied to rectangular members
+                 f_hydro= mem%Cp(i)*p%WaveField%WtrDens* mem%SaMG(i)*mem%SbMG(i) * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &                            ! transver FK component
+                          m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)* (mem%SaMG(i)*dSbdl_pp+dSadl_pp*mem%SbMG(i)) *mem%k + &                                       ! axial FK component
+                          p%WaveField%WtrDens*mem%CaB(i) * 0.25*pi*mem%SbMG(i)*mem%SbMG(i) * Dot_Product(m%FA(:,mem%NodeIndx(i)),mem%x_hat)*mem%x_hat + &    ! x-component of diffraction part
+                          p%WaveField%WtrDens*mem%CaA(i) * 0.25*pi*mem%SaMG(i)*mem%SaMG(i) * Dot_Product(m%FA(:,mem%NodeIndx(i)),mem%y_hat)*mem%y_hat + &    ! y-component of diffraction part
+                      0.5*p%WaveField%WtrDens*mem%AxCa(i) * (dSbdl_p*mem%SaMG(i)+dSadl_p*mem%SbMG(i))*SQRT(mem%SaMG(i)*mem%SbMG(i)) * &                      ! axial component of diffraction part
+                          Dot_Product(m%FA(:,mem%NodeIndx(i)),mem%k)*mem%k                                                                                   ! axial component of diffraction part cont'd
               END IF
-              
               CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
@@ -5527,7 +5586,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       Integer(IntKi),           intent(  out) :: ErrStat
       Character(*),             intent(  out) :: ErrMsg
 
-      Real(ReKi)                              :: k(3)
+      Real(ReKi)                              :: k(3), x_hat(3), y_hat(3)
       Real(ReKi)                              :: kkt(3,3)
       Real(ReKi)                              :: Ak(3,3)
       Integer(IntKi)                          :: ErrStat2
@@ -5549,6 +5608,18 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       call hiFrameTransform(h2i,PtfmRefY,member%Ak,Ak,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       member%Ak  = Ak
+
+      IF (member%MSecGeom == MSecGeom_Rec) THEN
+
+         call hiFrameTransform(h2i,PtfmRefY,member%x_hat,x_hat,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         member%x_hat   = x_hat
+
+         call hiFrameTransform(h2i,PtfmRefY,member%y_hat,y_hat,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         member%y_hat   = y_hat
+
+      END IF
 
    END SUBROUTINE YawMember
 
