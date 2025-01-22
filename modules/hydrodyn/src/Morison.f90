@@ -69,7 +69,7 @@ SUBROUTINE Morison_DirCosMtrx_Spin( pos0, pos1, spin, DirCos )
 
    Lexy = sqrt( dx*dx + dy*dy )
 
-   IF ( EqualRealNos(Lexy, 0.0) ) THEN
+   IF ( EqualRealNos(Lexy, 0.0_DbKi) ) THEN
       IF (dz > 0) THEN
          DirCos(1,1) =  1.0
          DirCos(2,2) =  1.0
@@ -125,7 +125,7 @@ SUBROUTINE Morison_DirCosMtrx_noSpin( pos0, pos1, DirCos )
 
    Lexy = sqrt( dx*dx + dy*dy )
 
-   IF ( EqualRealNos(Lexy, 0.0) ) THEN
+   IF ( EqualRealNos(Lexy, 0.0_DbKi) ) THEN
       IF (dz > 0) THEN
          DirCos(1,1) =  1.0
          DirCos(2,2) =  1.0
@@ -3377,6 +3377,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: Df_hydro_lumped(6)
    REAL(ReKi)               :: FVFSInt(3)
    REAL(ReKi)               :: FAFSInt(3)
+   REAL(ReKi)               :: SAFSInt(3)
    REAL(ReKi)               :: FDynPFSInt
    REAL(ReKi)               :: vrelFSInt(3)
    REAL(ReKi)               :: FAMCFFSInt(3)
@@ -3966,7 +3967,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         END IF
         ! Structure translational acceleration at the free surface intersection
         SAFSInt = SubRatio  * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem+1)) + &
-             (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
+             (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  ))
 
         ! Viscous drag:
         ! Compute relative velocity at the free surface intersection. 
@@ -5306,7 +5307,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
       INTEGER(IntKi)                   :: i, numVInWtr
       REAL(DbKi)                       :: z0, s1, s2, h1s1, h1s2, h2s1, h2s2
-      REAL(DbKi)                       :: rv(3,4), Ftmp(6)
+      REAL(DbKi)                       :: rv(3,4), Ftmp1(6), Ftmp2(6)
       LOGICAL                          :: vInWtr(4)
 
       z0     = pos0(3)
@@ -5361,7 +5362,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             s1   = -0.5*Sa
             s2   =  Sa * (0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
          end if
-         call GetHstLdsOnTrapezoid(pos0,s1,s2,h1s1,h1s2,h2s1,h2s2,k_hat,x_hat,y_hat,F)
+         call GetHstLdsOnTrapezoid(REAL(pos0,DbKi),s1,s2,h1s1,h1s2,h2s1,h2s2,REAL(k_hat,DbKi),REAL(x_hat,DbKi),REAL(y_hat,DbKi),Ftmp1)
+         F = Ftmp1
       else if (numVInWtr == 2) then ! Two neighboring vertices in water
          if (vInWtr(1) .and. vInWtr(2)) then
             ! Sides 2 & 4 intersects the free surface
@@ -5372,6 +5374,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             h1s2 = -0.5*Sb
             s1   = -0.5*Sa
             s2   =  0.5*Sa
+            Ftmp2 = 0.0_DbKi
          else if (vInWtr(2) .and. vInWtr(3)) then
             ! Sides 1 & 3 intersects the free surface
             ! Side 2 submerged and side 4 dry
@@ -5382,7 +5385,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             h1s2 = -0.5*Sb
             s1   =  Sa * (-0.5 + dot_product(rFS-rv(:,1),nFS)/dot_product(rv(:,2)-rv(:,1),nFS) )
             s2   =  Sa * (0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
-            call GetHstLdsOnTrapezoid(pos0,s2,0.5*Sa,-0.5*Sb,-0.5*Sb,0.5*Sb,0.5*Sb,k_hat,x_hat,y_hat,Ftmp)
+            call GetHstLdsOnTrapezoid(REAL(pos0,DbKi),s2,0.5_DbKi*Sa,-0.5_DbKi*Sb,-0.5_DbKi*Sb,0.5_DbKi*Sb,0.5_DbKi*Sb,REAL(k_hat,DbKi),REAL(x_hat,DbKi),REAL(y_hat,DbKi),Ftmp2)
          else if (vInWtr(3) .and. vInWtr(4)) then
             ! Sides 2 & 4 intersects the free surface
             ! Side 3 submerged and side 1 dry
@@ -5392,6 +5395,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             h1s2 =  Sb * (-0.5 + dot_product(rFS-rv(:,2),nFS)/dot_product(rv(:,3)-rv(:,2),nFS) )
             s1   = -0.5*Sa
             s2   =  0.5*Sa
+            Ftmp2 = 0.0_DbKi
          else if (vInWtr(4) .and. vInWtr(1)) then
             ! Sides 1 & 3 intersects the free surface
             ! Side 4 submerged and side 2 dry
@@ -5402,10 +5406,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             h1s2 = -0.5*Sb
             s1   =  Sa * ( 0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
             s2   =  Sa * (-0.5 + dot_product(rFS-rv(:,1),nFS)/dot_product(rv(:,2)-rv(:,1),nFS) )
-            call GetHstLdsOnTrapezoid(pos0,-0.5*Sa,s1,-0.5*Sb,-0.5*Sb,0.5*Sb,0.5*Sb,k_hat,x_hat,y_hat,Ftmp)
+            call GetHstLdsOnTrapezoid(REAL(pos0,DbKi),-0.5_DbKi*Sa,s1,-0.5_DbKi*Sb,-0.5_DbKi*Sb,0.5_DbKi*Sb,0.5_DbKi*Sb,REAL(k_hat,DbKi),REAL(x_hat,DbKi),REAL(y_hat,DbKi),Ftmp2)
          end if
-         call GetHstLdsOnTrapezoid(pos0,s1,s2,h1s1,h1s2,h2s1,h2s2,k_hat,x_hat,y_hat,F)
-         F = F + Ftmp
+         call GetHstLdsOnTrapezoid(REAL(pos0,DbKi),s1,s2,h1s1,h1s2,h2s1,h2s2,REAL(k_hat,DbKi),REAL(x_hat,DbKi),REAL(y_hat,DbKi),Ftmp1)
+         F = Ftmp1 + Ftmp2
       else if (numVInWtr == 3) then ! Only one vertex out of water
          if (.not. vInWtr(1)) then
             ! Sides 4 & 1 intersects the free surface
@@ -5440,9 +5444,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             s1   = -0.5*Sa
             s2   =  Sa * ( 0.5 - dot_product(rFS-rv(:,3),nFS)/dot_product(rv(:,4)-rv(:,3),nFS) )
          end if
-         call GetHstLdsOnTrapezoid(pos0,s1,s2,h1s1,h1s2,h2s1,h2s2,k_hat,x_hat,y_hat,F)
-         F(1:3) = -p%WaveField%WtrDens*g*z0*Sa*Sb*k_hat - F(1:3)
-         F(4:6) =  p%WaveField%WtrDens*g*(Sa**3*Sb*x_hat(3)*y_hat-Sa*Sb**3*y_hat(3)*x_hat)/12.0 - F(4:6)
+         call GetHstLdsOnTrapezoid(REAL(pos0,DbKi),s1,s2,h1s1,h1s2,h2s1,h2s2,REAL(k_hat,DbKi),REAL(x_hat,DbKi),REAL(y_hat,DbKi),Ftmp1)
+         F(1:3) = -p%WaveField%WtrDens*g*z0*Sa*Sb*k_hat - Ftmp1(1:3)
+         F(4:6) =  p%WaveField%WtrDens*g*(Sa**3*Sb*x_hat(3)*y_hat-Sa*Sb**3*y_hat(3)*x_hat)/12.0 - Ftmp1(4:6)
       else if (numVInWtr == 4) then ! Submerged endplate
          F(1:3) = -p%WaveField%WtrDens*g*z0*Sa*Sb*k_hat
          F(4:6) =  p%WaveField%WtrDens*g*(Sa**3*Sb*x_hat(3)*y_hat-Sa*Sb**3*y_hat(3)*x_hat)/12.0
