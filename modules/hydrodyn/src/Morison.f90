@@ -3352,7 +3352,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: omega_s2(3)
    REAL(ReKi)               :: pos1(3), pos2(3)
    REAL(ReKi)               :: Imat(3,3)
-   REAL(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, dSadl_p, dSadl_pp, dSbdl_p, dSbdl_pp, f_hydro(3), Am(3,3), lstar, deltal, deltalLeft, deltalRight
+   REAL(ReKi)               :: iArm(3), iTerm(3), h_c, dRdl_p, dRdl_pp, dSadl_p, dSadl_pp, dSbdl_p, dSbdl_pp, f_hydro(3), Am(3,3), lstar, deltal, deltalLeft, deltalRight
    REAL(ReKi)               :: h, h_c_AM, deltal_AM
    REAL(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B0(6), F_B1(6), F_B2(6), F_B_End(6)
    REAL(ReKi)               :: AM_End(3,3), An_End(3), DP_Const_End(3), I_MG_End(3,3)
@@ -3537,42 +3537,40 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             
             ! ----- marine growth inertial load
             ! lower node
-            Ioffset   = mem%h_cmg_l(i)*mem%h_cmg_l(i)*mem%m_mg_l(i)
             Imat      = 0.0_ReKi
             IF (mem%MSecGeom == MSecGeom_Cyl) THEN
-               Imat(1,1) = mem%I_rmg_l(i) - Ioffset
-               Imat(2,2) = mem%I_rmg_l(i) - Ioffset
+               Imat(1,1) = mem%I_rmg_l(i)
+               Imat(2,2) = mem%I_rmg_l(i)
             ELSE IF (mem%MSecGeom == MSecGeom_Rec) THEN
-               Imat(1,1) = mem%I_xmg_l(i) - Ioffset
-               Imat(2,2) = mem%I_ymg_l(i) - Ioffset
+               Imat(1,1) = mem%I_xmg_l(i)
+               Imat(2,2) = mem%I_ymg_l(i)
             END IF
             Imat(3,3) = mem%I_lmg_l(i)
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_l(i) * k_hat
             iTerm     = ( -a_s1 - cross_product(omega_s1, cross_product(omega_s1,iArm )) - cross_product(alpha_s1,iArm) ) * mem%m_mg_l(i)
             F_IMG(1:3) = iTerm
-            F_IMG(4:6) = - cross_product(a_s1 * mem%m_mg_l(i), mem%h_cmg_l(i) * k_hat) + matmul(Imat, alpha_s1)  &
+            F_IMG(4:6) = - matmul(Imat, alpha_s1) - cross_product(iArm,a_s1 * mem%m_mg_l(i)) &
                          - cross_product(omega_s1,matmul(Imat,omega_s1))
             m%memberLoads(im)%F_IMG(:,i) = m%memberLoads(im)%F_IMG(:,i) + F_IMG
             y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + F_IMG(1:3)
             y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_IMG(4:6)
 
             ! upper node
-            Ioffset   = mem%h_cmg_u(i)*mem%h_cmg_u(i)*mem%m_mg_u(i)
             Imat      = 0.0_ReKi
             IF (mem%MSecGeom == MSecGeom_Cyl) THEN
-               Imat(1,1) = mem%I_rmg_u(i) - Ioffset
-               Imat(2,2) = mem%I_rmg_u(i) - Ioffset
+               Imat(1,1) = mem%I_rmg_u(i)
+               Imat(2,2) = mem%I_rmg_u(i)
             ELSE IF (mem%MSecGeom == MSecGeom_Rec) THEN
-               Imat(1,1) = mem%I_xmg_u(i) - Ioffset
-               Imat(2,2) = mem%I_ymg_u(i) - Ioffset
+               Imat(1,1) = mem%I_xmg_u(i)
+               Imat(2,2) = mem%I_ymg_u(i)
             END IF
             Imat(3,3) = mem%I_lmg_u(i)
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_u(i) * k_hat
             iTerm     = ( -a_s2 - cross_product(omega_s2, cross_product(omega_s2,iArm )) - cross_product(alpha_s2,iArm) ) * mem%m_mg_u(i)
             F_IMG(1:3) = iTerm
-            F_IMG(4:6) = - cross_product(a_s2 * mem%m_mg_u(i), mem%h_cmg_u(i) * k_hat) + matmul(Imat, alpha_s2) &
+            F_IMG(4:6) = - matmul(Imat, alpha_s2) - cross_product(iArm,a_s2 * mem%m_mg_u(i)) &
                          - cross_product(omega_s2,matmul(Imat,omega_s2))
             m%memberLoads(im)%F_IMG(:,i+1) = m%memberLoads(im)%F_IMG(:,i+1) + F_IMG
             y%Mesh%Force (:,mem%NodeIndx(i+1)) = y%Mesh%Force (:,mem%NodeIndx(i+1)) + F_IMG(1:3)
@@ -3693,42 +3691,40 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
          ! ------------------ flooded ballast inertia: sides: Section 6.1.1 : Always compute regardless of PropPot setting ---------------------
          ! lower node
-         Ioffset   = mem%h_cfb_l(i)*mem%h_cfb_l(i)*mem%m_fb_l(i)
          Imat      = 0.0_ReKi
          IF (mem%MSecGeom == MSecGeom_Cyl) THEN
-            Imat(1,1) = mem%I_rfb_l(i) - Ioffset
-            Imat(2,2) = mem%I_rfb_l(i) - Ioffset
+            Imat(1,1) = mem%I_rfb_l(i)
+            Imat(2,2) = mem%I_rfb_l(i)
          ELSE IF (mem%MSecGeom == MSecGeom_Rec) THEN
-            Imat(1,1) = mem%I_xfb_l(i) - Ioffset
-            Imat(2,2) = mem%I_yfb_l(i) - Ioffset
+            Imat(1,1) = mem%I_xfb_l(i)
+            Imat(2,2) = mem%I_yfb_l(i)
          END IF
          Imat(3,3) = mem%I_lfb_l(i)
          Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
          iArm = mem%h_cfb_l(i) * k_hat
          iTerm     = ( -a_s1  - cross_product(omega_s1, cross_product(omega_s1,iArm ))  -  cross_product(alpha_s1,iArm) ) * mem%m_fb_l(i)
          F_If(1:3) =  iTerm
-         F_If(4:6) =  - cross_product(a_s1 * mem%m_fb_l(i), mem%h_cfb_l(i) * k_hat) + matmul(Imat, alpha_s1) &
+         F_If(4:6) =  - matmul(Imat, alpha_s1) - cross_product(iArm,a_s1 * mem%m_fb_l(i)) &
                       - cross_product(omega_s1,matmul(Imat,omega_s1)) 
          m%memberLoads(im)%F_If(:,i) = m%memberLoads(im)%F_If(:,i) + F_If
          y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + F_If(1:3)
          y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_If(4:6)
          
          ! upper node
-         Ioffset   = mem%h_cfb_u(i)*mem%h_cfb_u(i)*mem%m_fb_u(i)
          Imat      = 0.0_ReKi
          IF (mem%MSecGeom == MSecGeom_Cyl) THEN
-            Imat(1,1) = mem%I_rfb_u(i) - Ioffset
-            Imat(2,2) = mem%I_rfb_u(i) - Ioffset
+            Imat(1,1) = mem%I_rfb_u(i)
+            Imat(2,2) = mem%I_rfb_u(i)
          ELSE IF (mem%MSecGeom == MSecGeom_Rec) THEN
-            Imat(1,1) = mem%I_xfb_u(i) - Ioffset
-            Imat(2,2) = mem%I_yfb_u(i) - Ioffset
+            Imat(1,1) = mem%I_xfb_u(i)
+            Imat(2,2) = mem%I_yfb_u(i)
          END IF
          Imat(3,3) = mem%I_lfb_u(i)
          Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
          iArm = mem%h_cfb_u(i) * k_hat
          iTerm     = ( -a_s2  - cross_product(omega_s2, cross_product(omega_s2,iArm ))  -  cross_product(alpha_s2,iArm) ) * mem%m_fb_u(i)
          F_If(1:3) = iTerm
-         F_If(4:6) = - cross_product(a_s2 * mem%m_fb_u(i), mem%h_cfb_u(i) * k_hat) + matmul(Imat, alpha_s2) &
+         F_If(4:6) = - matmul(Imat, alpha_s2) - cross_product(iArm,a_s2 * mem%m_fb_u(i)) &
                      - cross_product(omega_s2,matmul(Imat,omega_s2)) 
          m%memberLoads(im)%F_If(:,i+1) = m%memberLoads(im)%F_If(:,i+1) + F_If
          y%Mesh%Force (:,mem%NodeIndx(i+1)) = y%Mesh%Force (:,mem%NodeIndx(i+1)) + F_If(1:3)
