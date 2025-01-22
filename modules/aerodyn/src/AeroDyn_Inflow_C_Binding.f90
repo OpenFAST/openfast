@@ -466,7 +466,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
-   character(IntfStrLen)                                          :: OutVTKdir         !< Output directory for files (relative to current location)
+   character(IntfStrLen)                                          :: OutVTKDir         !< Output directory for files (relative to current location)
    integer(IntKi)                                                 :: i,j,k             !< generic index variables
    integer(IntKi)                                                 :: iWT               !< current turbine number (iterate through during setup for ADI_Init call)
    integer(IntKi)                                                 :: AeroProjMod       !< for checking that all turbines use the same AeroProjMod
@@ -517,10 +517,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
    if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
 
-   ! OutVTKdir -- output directory
-   OutVTKdir = TRANSFER( OutVTKdir_C, OutVTKdir )
-   i = INDEX(OutVTKdir,C_NULL_CHAR) - 1               ! if this has a c null character at the end...
-   if ( i > 0 ) OutVTKdir = OutVTKdir(1:I)            ! remove it
+   ! OutVTKDir -- output directory
+   OutVTKDir = TRANSFER( OutVTKDir_C, OutVTKDir )
+   i = INDEX(OutVTKDir,C_NULL_CHAR) - 1               ! if this has a c null character at the end...
+   if ( i > 0 ) OutVTKDir = OutVTKDir(1:I)            ! remove it
 
    ! For debugging the interface:
    if (DebugLevel > 0) then
@@ -669,10 +669,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    call SetupMotionLoadsInterfaceMeshes();    if (Failed())  return
    ! setup meshes
    if (WrOutputsData%WrVTK > 0_IntKi) then
-      if (len_trim(OutVTKdir) <= 0) then
-         OutVTKdir = 'vtk-ADI'
+      if (len_trim(OutVTKDir) <= 0) then
+         OutVTKDir = 'vtk-ADI'
       endif
-      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, OutVTKdir)
+      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, OutVTKDir)
       if (Failed())  return
    endif
    ! write meshes for this rotor
