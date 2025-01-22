@@ -3873,7 +3873,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
               f_hydro = 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  &       ! local x-direction
                         0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat  +  &       ! local z-direction
-                        0.25*mem%AxCd(i)*p%WaveField%WtrDens * (dSadl_p*mem%SbMG(i) + dSbdl_p*mem%SaMG) * &                          ! axial part
+                        0.25*mem%AxCd(i)*p%WaveField%WtrDens * (dSadl_p*mem%SbMG(i) + dSbdl_p*mem%SaMG(i)) * &                       ! axial part
                         abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
            END IF
            CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
@@ -3964,6 +3964,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         IF ( mem%PropMCF .AND. ( .NOT. mem%PropPot ) ) THEN
            FAMCFFSInt = REAL(FAMCF,ReKi)
         END IF
+        ! Structure translational acceleration at the free surface intersection
+        SAFSInt = SubRatio  * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem+1)) + &
+             (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
 
         ! Viscous drag:
         ! Compute relative velocity at the free surface intersection. 
@@ -3972,38 +3975,74 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                SubRatio  * u%Mesh%TranslationVel(:,mem%NodeIndx(FSElem+1)) + &
           (1.0-SubRatio) * u%Mesh%TranslationVel(:,mem%NodeIndx(FSElem  ))   &
         )
-        dRdl_p  = abs(mem%dRdl_mg(FSElem))
-        RMGFSInt = SubRatio * mem%RMG(FSElem+1) + (1.0-SubRatio) * mem%RMG(FSElem)
 
-        vec = matmul( mem%Ak,vrelFSInt )
-        F_DS = mem%Cd(FSElem)*p%WaveField%WtrDens*RMGFSInt*TwoNorm(vec)*vec  +  &
-                  0.5*mem%AxCd(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*dRdl_p * & 
-                  abs(dot_product( mem%k, vrelFSInt )) * matmul( mem%kkt, vrelFSInt )
+        IF (mem%MSecGeom==MSecGeom_Cyl) THEN
+           dRdl_p  = abs(mem%dRdl_mg(FSElem))
+           dRdl_pp =     mem%dRdl_mg(FSElem)
+           RMGFSInt = SubRatio * mem%RMG(FSElem+1) + (1.0-SubRatio) * mem%RMG(FSElem)
 
-        ! Hydrodynamic added mass and inertia loads
-        IF ( .NOT. mem%PropPot ) THEN
-           
-           ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
-           IF (p%AMMod > 0_IntKi) THEN
-              Am =      mem%Ca(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt*mem%Ak + &
-                  2.0*mem%AxCa(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p*mem%kkt
-              F_AS = -matmul( Am, &
-                         SubRatio  * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem+1)) + &
-                    (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
+           vec = matmul( mem%Ak,vrelFSInt )
+           F_DS = mem%Cd(FSElem)*p%WaveField%WtrDens*RMGFSInt*TwoNorm(vec)*vec  +  &
+                     0.5*mem%AxCd(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*dRdl_p * &
+                     abs(dot_product( mem%k, vrelFSInt )) * matmul( mem%kkt, vrelFSInt )
+
+           ! Hydrodynamic added mass and inertia loads
+           IF ( .NOT. mem%PropPot ) THEN
+
+              ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
+              IF (p%AMMod > 0_IntKi) THEN
+                 Am =      mem%Ca(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt*mem%Ak + &
+                     2.0*mem%AxCa(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p*mem%kkt
+                 F_AS = -matmul( Am, &
+                            SubRatio  * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem+1)) + &
+                       (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
+              END IF
+
+              ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
+              IF ( mem%PropMCF) THEN
+                 F_IS=                             p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt   * matmul( mem%Ak,  FAMCFFSInt ) + &
+                              2.0*mem%AxCa(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
+                              2.0*mem%AxCp(FSElem)          *pi*RMGFSInt                *dRdl_pp * FDynPFSInt*mem%k
+              ELSE
+                 F_IS=(mem%Ca(FSElem)+mem%Cp(FSElem))*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt   * matmul( mem%Ak,  FAFSInt ) + &
+                              2.0*mem%AxCa(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
+                              2.0*mem%AxCp(FSElem)          *pi*RMGFSInt                *dRdl_pp * FDynPFSInt*mem%k
+              END IF
            END IF
+        ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
+           dSadl_p  = abs(mem%dSadl_mg(FSElem))
+           dSadl_pp =     mem%dSadl_mg(FSElem)
+           dSbdl_p  = abs(mem%dSbdl_mg(FSElem))
+           dSbdl_pp =     mem%dSbdl_mg(FSElem)
+           SaMGFSInt = SubRatio * mem%SaMG(FSElem+1) + (1.0-SubRatio) * mem%SaMG(FSElem)
+           SbMGFSInt = SubRatio * mem%SbMG(FSElem+1) + (1.0-SubRatio) * mem%SbMG(FSElem)
+
+           vec = matmul( mem%Ak,vrelFSInt )
+           F_DS = 0.5*mem%CdB(FSElem)*p%WaveField%WtrDens*SbMGFSInt*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  &       ! local x-direction
+                  0.5*mem%CdA(FSElem)*p%WaveField%WtrDens*SaMGFSInt*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat  +  &       ! local z-direction
+                  0.25*mem%AxCd(FSElem)*p%WaveField%WtrDens * (dSadl_p*SbMGFSInt + dSbdl_p*SaMGFSInt) * &                         ! axial part
+                  abs(dot_product( mem%k, vrelFSInt )) * matmul( mem%kkt, vrelFSInt )                                             ! axial part cont'd
+
+           ! Hydrodynamic added mass and inertia loads
+           IF ( .NOT. mem%PropPot ) THEN
+
+              ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
+              IF (p%AMMod > 0_IntKi) THEN
+                 F_AS = -p%WaveField%WtrDens*mem%CaB(FSElem) * 0.25*pi*SbMGFSInt*SbMGFSInt * Dot_Product(SAFSInt,mem%x_hat)*mem%x_hat &
+                        -p%WaveField%WtrDens*mem%CaA(FSElem) * 0.25*pi*SaMGFSInt*SaMGFSInt * Dot_Product(SAFSInt,mem%y_hat)*mem%y_hat &
+                    -0.5*p%WaveField%WtrDens*mem%AxCa(FSElem) * (dSbdl_p*SaMGFSInt+dSadl_p*SbMGFSInt)*SQRT(SaMGFSInt*SbMGFSInt) * Dot_Product(SAFSInt,mem%k)*mem%k
+              END IF
          
-           ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
-           IF ( mem%PropMCF) THEN
-              F_IS=                             p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt   * matmul( mem%Ak,  FAMCFFSInt ) + &
-                           2.0*mem%AxCa(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
-                           2.0*mem%AxCp(FSElem)          *pi*RMGFSInt                *dRdl_pp * FDynPFSInt*mem%k
-           ELSE
-              F_IS=(mem%Ca(FSElem)+mem%Cp(FSElem))*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt   * matmul( mem%Ak,  FAFSInt ) + &
-                           2.0*mem%AxCa(FSElem)*p%WaveField%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
-                           2.0*mem%AxCp(FSElem)          *pi*RMGFSInt                *dRdl_pp * FDynPFSInt*mem%k
+              ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
+              F_IS= mem%Cp(FSElem)*p%WaveField%WtrDens* SaMGFSInt*SbMGFSInt * matmul( mem%Ak,  FAFSInt ) + &                            ! transver FK component
+                    FDynPFSInt*mem%AxCp(FSElem)* (SaMGFSInt*dSbdl_pp+dSadl_pp*SbMGFSInt) *mem%k + &                                     ! axial FK component
+                    p%WaveField%WtrDens*mem%CaB(FSElem) * 0.25*pi*SbMGFSInt*SbMGFSInt * Dot_Product(FAFSInt,mem%x_hat)*mem%x_hat + &    ! x-component of diffraction part
+                    p%WaveField%WtrDens*mem%CaA(FSElem) * 0.25*pi*SaMGFSInt*SaMGFSInt * Dot_Product(FAFSInt,mem%y_hat)*mem%y_hat + &    ! y-component of diffraction part
+                0.5*p%WaveField%WtrDens*mem%AxCa(FSElem) * (dSbdl_p*SaMGFSInt+dSadl_p*SbMGFSInt)*SQRT(SaMGFSInt*SbMGFSInt) * &          ! axial component of diffraction part
+                    Dot_Product(FAFSInt,mem%k)*mem%k                                                                                    ! axial component of diffraction part cont'd
+
            END IF
         END IF
-        
         !----------------------------------------------------------------------------------------------------!
         !                         Perform the load redistribution for smooth time series                     !
         !----------------------------------------------------------------------------------------------------!
@@ -4154,30 +4193,63 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               h_c    = 0.5_ReKi * ( deltalRight - deltalLeft )
            END IF
 
-           ! Compute the slope of the member radius
-           IF (i == 1) THEN
-              dRdl_p  = abs(mem%dRdl_mg(i))
-              dRdl_pp = mem%dRdl_mg(i)   
-           ELSE IF ( i > 1 .AND. i < (N+1)) THEN
-              dRdl_p  = 0.5*( abs(mem%dRdl_mg(i-1)) + abs(mem%dRdl_mg(i)) )
-              dRdl_pp = 0.5*( mem%dRdl_mg(i-1) + mem%dRdl_mg(i) )
-           ELSE
-              dRdl_p  = abs(mem%dRdl_mg(N))
-              dRdl_pp = mem%dRdl_mg(N)
+           ! Compute the slope of member radius/side length
+           IF (mem%MSecGeom==MSecGeom_Cyl) THEN
+              IF (i == 1) THEN
+                 dRdl_p  = abs(mem%dRdl_mg(i))
+                 dRdl_pp = mem%dRdl_mg(i)
+              ELSE IF ( i > 1 .AND. i < (N+1)) THEN
+                 dRdl_p  = 0.5*( abs(mem%dRdl_mg(i-1)) + abs(mem%dRdl_mg(i)) )
+                 dRdl_pp = 0.5*( mem%dRdl_mg(i-1) + mem%dRdl_mg(i) )
+              ELSE
+                 dRdl_p  = abs(mem%dRdl_mg(N))
+                 dRdl_pp = mem%dRdl_mg(N)
+              END IF
+           ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
+              IF (i == 1) THEN
+                 dSadl_p  = abs(mem%dSadl_mg(i))
+                 dSadl_pp = mem%dSadl_mg(i)
+                 dSbdl_p  = abs(mem%dSbdl_mg(i))
+                 dSbdl_pp = mem%dSbdl_mg(i)
+              ELSE IF ( i > 1 .AND. i < (N+1)) THEN
+                 dSadl_p  = 0.5*( abs(mem%dSadl_mg(i-1)) + abs(mem%dSadl_mg(i)) )
+                 dSadl_pp = 0.5*( mem%dSadl_mg(i-1) + mem%dSadl_mg(i) )
+                 dSbdl_p  = 0.5*( abs(mem%dSbdl_mg(i-1)) + abs(mem%dSbdl_mg(i)) )
+                 dSbdl_pp = 0.5*( mem%dSbdl_mg(i-1) + mem%dSbdl_mg(i) )
+              ELSE
+                 dSadl_p  = abs(mem%dSadl_mg(N))
+                 dSadl_pp = mem%dSadl_mg(N)
+                 dSbdl_p  = abs(mem%dSbdl_mg(N))
+                 dSbdl_pp = mem%dSbdl_mg(N)
+              END IF
            END IF
          
            !--------------------- hydrodynamic drag loads: sides: Section 7.1.2 --------------------------------! 
            vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
-           f_hydro = mem%Cd(i)*p%WaveField%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
-                     0.5*mem%AxCd(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*dRdl_p * abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
+           IF (mem%MSecGeom==MSecGeom_Cyl) THEN
+              f_hydro = mem%Cd(i)*p%WaveField%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &                                              ! radial part
+                        0.5*mem%AxCd(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*dRdl_p * &                                                 ! axial part
+                        abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
+           ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
+              f_hydro = 0.5*mem%CdB(i)*p%WaveField%WtrDens*mem%SbMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%x_hat)*mem%x_hat  +  &       ! local x-direction
+                        0.5*mem%CdA(i)*p%WaveField%WtrDens*mem%SaMG(i)*TwoNorm(vec)*Dot_Product(vec,mem%y_hat)*mem%y_hat  +  &       ! local z-direction
+                        0.25*mem%AxCd(i)*p%WaveField%WtrDens * (dSadl_p*mem%SbMG(i) + dSbdl_p*mem%SaMG(i)) * &                       ! axial part
+                        abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )          ! axial part cont'd
+           END IF
            CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
            y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(4:6, i)
             
            IF ( .NOT. mem%PropPot ) THEN
               !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
-              Am = mem%Ca(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
-              f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
+              IF (mem%MSecGeom==MSecGeom_Cyl) THEN
+                 Am = mem%Ca(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
+                 f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
+              ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
+                 f_hydro = -p%WaveField%WtrDens*mem%CaB(i) * 0.25*pi*mem%SbMG(i)*mem%SbMG(i) * Dot_Product(u%Mesh%TranslationAcc(:,mem%NodeIndx(i)),mem%x_hat)*mem%x_hat &
+                           -p%WaveField%WtrDens*mem%CaA(i) * 0.25*pi*mem%SaMG(i)*mem%SaMG(i) * Dot_Product(u%Mesh%TranslationAcc(:,mem%NodeIndx(i)),mem%y_hat)*mem%y_hat &
+                       -0.5*p%WaveField%WtrDens*mem%AxCa(i) * (dSbdl_p*mem%SaMG(i)+dSadl_p*mem%SbMG(i))*SQRT(mem%SaMG(i)*mem%SbMG(i)) * Dot_Product(u%Mesh%TranslationAcc(:,mem%NodeIndx(i)),mem%k)*mem%k
+              END IF
               IF ( p%AMMod .EQ. 0_IntKi ) THEN ! Always compute added-mass force on nodes below SWL when undisplaced
                  z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%WaveField%MSL2SWL ! Undisplaced z-position of the current node
                  IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL when undisplaced; zero added-mass force
@@ -4213,14 +4285,24 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
               
               !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ---------------------------!
-              IF ( mem%PropMCF ) THEN
-                 f_hydro=                     p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)        * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
-                              2.0*mem%AxCa(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
-                              2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
-              ELSE
-                 f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
-                              2.0*mem%AxCa(i) *p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
-                              2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
+              IF (mem%MSecGeom==MSecGeom_Cyl) THEN
+                 IF ( mem%PropMCF ) THEN
+                    f_hydro=                     p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)        * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
+                                 2.0*mem%AxCa(i)*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                                 2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k
+                 ELSE
+                    f_hydro=(mem%Ca(i)+mem%Cp(i))*p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &
+                                 2.0*mem%AxCa(i) *p%WaveField%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
+                                 2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k
+                 END IF
+              ELSE IF (mem%MSecGeom==MSecGeom_Rec) THEN
+                 ! Note: MacCamy-Fuchs correction cannot be applied to rectangular members
+                 f_hydro= mem%Cp(i)*p%WaveField%WtrDens* mem%SaMG(i)*mem%SbMG(i) * matmul( mem%Ak,  m%FA(:,mem%NodeIndx(i)) ) + &                            ! transver FK component
+                          m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)* (mem%SaMG(i)*dSbdl_pp+dSadl_pp*mem%SbMG(i)) *mem%k + &                                       ! axial FK component
+                          p%WaveField%WtrDens*mem%CaB(i) * 0.25*pi*mem%SbMG(i)*mem%SbMG(i) * Dot_Product(m%FA(:,mem%NodeIndx(i)),mem%x_hat)*mem%x_hat + &    ! x-component of diffraction part
+                          p%WaveField%WtrDens*mem%CaA(i) * 0.25*pi*mem%SaMG(i)*mem%SaMG(i) * Dot_Product(m%FA(:,mem%NodeIndx(i)),mem%y_hat)*mem%y_hat + &    ! y-component of diffraction part
+                      0.5*p%WaveField%WtrDens*mem%AxCa(i) * (dSbdl_p*mem%SaMG(i)+dSadl_p*mem%SbMG(i))*SQRT(mem%SaMG(i)*mem%SbMG(i)) * &                      ! axial component of diffraction part
+                          Dot_Product(m%FA(:,mem%NodeIndx(i)),mem%k)*mem%k                                                                                   ! axial component of diffraction part cont'd
               END IF
               CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
