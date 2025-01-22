@@ -4513,7 +4513,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    ! NOTE:  All wave kinematics have already been zeroed out above the SWL or instantaneous wave height (for WaveStMod > 0), 
    ! so loads derived from the kinematics will be correct without the use of a nodeInWater value, but other loads need to be 
    ! multiplied by nodeInWater to zero them out above the SWL or instantaneous wave height.
-   !TODO: Where's F_WMF_End computed?
 
    DO J = 1, p%NJoints
       ! Obtain the node index because WaveVel, WaveAcc, and WaveDynP are defined in the node indexing scheme, not the markers (No longer relevant?)
@@ -4540,11 +4539,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       m%F_I_End(:,J) =   (DP_Const_End * m%FDynP(j) + matmul(AM_End,m%FA(:,j)))
          
       ! Marine growth inertia: ends: Section 4.2.2
-      ! With wave stretching, m%nodeInWater is based on the instantaneous free surface and the current body position if (WaveDisp/=0).
-      ! This should still be ok because with wave stretching, we do not allow joints to come out of water if initially submerged or 
-      ! enter water if initially out of water. This is enforced when computing the side loads above.
-      m%F_IMG_End(1:3,j) = -m%nodeInWater(j) * p%Mass_MG_End(j)*qdotdot(1:3)
-      m%F_IMG_End(4:6,j) = -m%nodeInWater(j) * (matmul(I_MG_End,qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(I_MG_End,u%Mesh%RotationVel(:,J))))
+      m%F_IMG_End(1:3,j) = -p%Mass_MG_End(j)*qdotdot(1:3)
+      m%F_IMG_End(4:6,j) = -matmul(I_MG_End,qdotdot(4:6)) - cross_product(u%Mesh%RotationVel(:,J),matmul(I_MG_End,u%Mesh%RotationVel(:,J)))
 
       ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
       ! m%nodeInWater(j) is probably not necessary because m%vrel is zeroed when the node is out of water
