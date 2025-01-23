@@ -192,8 +192,8 @@ class InputReader_OpenFAST(object):
         self.fst_vt['SubDyn'] = {}
         self.fst_vt['ExtPtfm'] = {}
         self.fst_vt['MAP'] = {}
-        self.fst_vt['BeamDyn'] = {}
-        self.fst_vt['BeamDynBlade'] = {}
+        self.fst_vt['BeamDyn'] = [{}, {}, {}]  # One dict per blade, We will reduce this down to one, if all the files are the same
+        self.fst_vt['BeamDynBlade'] = [{}, {}, {}]  # One dict per blade, We will reduce this down to one, if all the files are the same
         self.fst_vt['WaterKin'] = {}
 
     def set_outlist(self, vartree_head, channel_list):
@@ -773,34 +773,37 @@ class InputReader_OpenFAST(object):
 
         f.close()
 
-    def read_BeamDyn(self, bd_file):
+    def read_BeamDyn(self, bd_file, BladeNumber = 0):
+
+        # If BladeNumber is 0 or not specified, assuming all the blades are the same
+
         # BeamDyn Input File
         f = open(bd_file)
         f.readline()
         f.readline()
         f.readline()
         # ---------------------- SIMULATION CONTROL --------------------------------------
-        self.fst_vt['BeamDyn']['Echo']             = bool_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['QuasiStaticInit']  = bool_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['rhoinf']           = float_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['quadrature']       = int_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['refine']           = int_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['n_fact']           = int_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['DTBeam']           = float_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['load_retries']     = int_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['NRMax']            = int_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['stop_tol']         = float_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['tngt_stf_fd']      = bool_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['tngt_stf_comp']    = bool_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['tngt_stf_pert']    = float_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['tngt_stf_difftol'] = float_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['RotStates']        = bool_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['Echo']             = bool_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['QuasiStaticInit']  = bool_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['rhoinf']           = float_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['quadrature']       = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['refine']           = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['n_fact']           = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['DTBeam']           = float_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['load_retries']     = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['NRMax']            = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['stop_tol']         = float_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['tngt_stf_fd']      = bool_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['tngt_stf_comp']    = bool_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['tngt_stf_pert']    = float_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['tngt_stf_difftol'] = float_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['RotStates']        = bool_read(f.readline().split()[0])
         f.readline()
         #---------------------- GEOMETRY PARAMETER --------------------------------------
-        self.fst_vt['BeamDyn']['member_total']     = int_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['kp_total']         = int_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['members']          = []
-        for i in range(self.fst_vt['BeamDyn']['member_total']):
+        self.fst_vt['BeamDyn'][BladeNumber]['member_total']     = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['kp_total']         = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['members']          = []
+        for i in range(self.fst_vt['BeamDyn'][BladeNumber]['member_total']):
             ln = f.readline().split()
             n_pts_i                   = int(ln[1])
             member_i                  = {}
@@ -817,25 +820,25 @@ class InputReader_OpenFAST(object):
                 member_i['kp_zr'][j]          = float(ln[2])
                 member_i['initial_twist'][j]  = float(ln[3])
 
-            self.fst_vt['BeamDyn']['members'].append(member_i)
+            self.fst_vt['BeamDyn'][BladeNumber]['members'].append(member_i)
         #---------------------- MESH PARAMETER ------------------------------------------
         f.readline()
-        self.fst_vt['BeamDyn']['order_elem']  = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['order_elem']  = int_read(f.readline().split()[0])
         #---------------------- MATERIAL PARAMETER --------------------------------------
         f.readline()
-        self.fst_vt['BeamDyn']['BldFile']     = f.readline().split()[0].replace('"','').replace("'",'')
+        self.fst_vt['BeamDyn'][BladeNumber]['BldFile']     = f.readline().split()[0].replace('"','').replace("'",'')
         #---------------------- PITCH ACTUATOR PARAMETERS -------------------------------
         f.readline()
-        self.fst_vt['BeamDyn']['UsePitchAct'] = bool_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['PitchJ']      = float_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['PitchK']      = float_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['PitchC']      = float_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['UsePitchAct'] = bool_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['PitchJ']      = float_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['PitchK']      = float_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['PitchC']      = float_read(f.readline().split()[0])
         #---------------------- OUTPUTS -------------------------------------------------
         f.readline()
-        self.fst_vt['BeamDyn']['SumPrint']    = bool_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['OutFmt']      = quoted_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['NNodeOuts']   = int_read(f.readline().split()[0])
-        self.fst_vt['BeamDyn']['OutNd']       = [idx.strip() for idx in f.readline().split('OutNd')[0].split(',')]
+        self.fst_vt['BeamDyn'][BladeNumber]['SumPrint']    = bool_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['OutFmt']      = quoted_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['NNodeOuts']   = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDyn'][BladeNumber]['OutNd']       = [idx.strip() for idx in f.readline().split('OutNd')[0].split(',')]
         # BeamDyn Outlist
         f.readline()
         data = f.readline()
@@ -849,7 +852,7 @@ class InputReader_OpenFAST(object):
         try:
             f.readline()
             # self.fst_vt['BeamDyn']['BldNd_BladesOut']    = int(f.readline().split()[0])
-            self.fst_vt['BeamDyn']['BldNd_BlOutNd']    = f.readline().split()[0]
+            self.fst_vt['BeamDyn'][BladeNumber]['BldNd_BlOutNd']    = f.readline().split()[0]
 
             f.readline()
             data =  f.readline()
@@ -871,10 +874,11 @@ class InputReader_OpenFAST(object):
 
         f.close()
 
-        beamdyn_blade_file = os.path.join(os.path.dirname(bd_file), self.fst_vt['BeamDyn']['BldFile'])
-        self.read_BeamDynBlade(beamdyn_blade_file)
+        beamdyn_blade_file = os.path.join(os.path.dirname(bd_file), self.fst_vt['BeamDyn'][BladeNumber]['BldFile'])
+        self.read_BeamDynBlade(beamdyn_blade_file, BladeNumber)
 
-    def read_BeamDynBlade(self, beamdyn_blade_file):
+    def read_BeamDynBlade(self, beamdyn_blade_file, BladeNumber = 0):
+        # if BladeNumber is 0 or not specified, assuming all the blades are the same
         # BeamDyn Blade
 
         f = open(beamdyn_blade_file)
@@ -883,32 +887,32 @@ class InputReader_OpenFAST(object):
         f.readline()
         f.readline()
         #---------------------- BLADE PARAMETERS --------------------------------------
-        self.fst_vt['BeamDynBlade']['station_total'] = int_read(f.readline().split()[0])
-        self.fst_vt['BeamDynBlade']['damp_type']     = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['station_total'] = int_read(f.readline().split()[0])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['damp_type']     = int_read(f.readline().split()[0])
         f.readline()
         f.readline()
         f.readline()
         #---------------------- DAMPING COEFFICIENT------------------------------------
         ln = f.readline().split()
-        self.fst_vt['BeamDynBlade']['mu1']           = float(ln[0])
-        self.fst_vt['BeamDynBlade']['mu2']           = float(ln[1])
-        self.fst_vt['BeamDynBlade']['mu3']           = float(ln[2])
-        self.fst_vt['BeamDynBlade']['mu4']           = float(ln[3])
-        self.fst_vt['BeamDynBlade']['mu5']           = float(ln[4])
-        self.fst_vt['BeamDynBlade']['mu6']           = float(ln[5])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['mu1']           = float(ln[0])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['mu2']           = float(ln[1])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['mu3']           = float(ln[2])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['mu4']           = float(ln[3])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['mu5']           = float(ln[4])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['mu6']           = float(ln[5])
         f.readline()
         #---------------------- DISTRIBUTED PROPERTIES---------------------------------
         
-        self.fst_vt['BeamDynBlade']['radial_stations'] = np.zeros((self.fst_vt['BeamDynBlade']['station_total']))
-        self.fst_vt['BeamDynBlade']['beam_stiff']      = np.zeros((self.fst_vt['BeamDynBlade']['station_total'], 6, 6))
-        self.fst_vt['BeamDynBlade']['beam_inertia']    = np.zeros((self.fst_vt['BeamDynBlade']['station_total'], 6, 6))
-        for i in range(self.fst_vt['BeamDynBlade']['station_total']):
-            self.fst_vt['BeamDynBlade']['radial_stations'][i]  = float_read(f.readline().split()[0])
+        self.fst_vt['BeamDynBlade'][BladeNumber]['radial_stations'] = np.zeros((self.fst_vt['BeamDynBlade'][BladeNumber]['station_total']))
+        self.fst_vt['BeamDynBlade'][BladeNumber]['beam_stiff']      = np.zeros((self.fst_vt['BeamDynBlade'][BladeNumber]['station_total'], 6, 6))
+        self.fst_vt['BeamDynBlade'][BladeNumber]['beam_inertia']    = np.zeros((self.fst_vt['BeamDynBlade'][BladeNumber]['station_total'], 6, 6))
+        for i in range(self.fst_vt['BeamDynBlade'][BladeNumber]['station_total']):
+            self.fst_vt['BeamDynBlade'][BladeNumber]['radial_stations'][i]  = float_read(f.readline().split()[0])
             for j in range(6):
-                self.fst_vt['BeamDynBlade']['beam_stiff'][i,j,:] = np.array([float(val) for val in f.readline().strip().split()])
+                self.fst_vt['BeamDynBlade'][BladeNumber]['beam_stiff'][i,j,:] = np.array([float(val) for val in f.readline().strip().split()])
             f.readline()
             for j in range(6):
-                self.fst_vt['BeamDynBlade']['beam_inertia'][i,j,:] = np.array([float(val) for val in f.readline().strip().split()])
+                self.fst_vt['BeamDynBlade'][BladeNumber]['beam_inertia'][i,j,:] = np.array([float(val) for val in f.readline().strip().split()])
             f.readline()
 
         f.close()
@@ -3188,9 +3192,39 @@ class InputReader_OpenFAST(object):
             moordyn_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['MooringFile']))
             if os.path.isfile(moordyn_file):
                 self.read_MoorDyn(moordyn_file)
-        bd_file = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(1)']))
         if self.fst_vt['Fst']['CompElast'] == 2:
-            self.read_BeamDyn(bd_file)
+            bd_file1 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(1)']))
+            bd_file2 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(2)']))
+            bd_file3 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(3)']))
+
+            # if the files are the same then we only need to read it once, need to handle the cases where we have a 2 or 1 bladed rotor
+            # Check unique BeamDyn blade files and read only once if identical
+            if bd_file1 == bd_file2 and bd_file1 == bd_file3:
+                # All blades are identical - read once
+                self.read_BeamDyn(bd_file1, BladeNumber=0)
+                # Copy data to other blade slots
+                self.fst_vt['BeamDyn'] = self.fst_vt['BeamDyn'][0] 
+                self.fst_vt['BeamDynBlade'] = self.fst_vt['BeamDynBlade'][0]
+            elif self.fst_vt['ElastoDyn']['NumBl'] == 2 and bd_file1 == bd_file2:
+                # Two-bladed rotor with identical blades
+                self.read_BeamDyn(bd_file1, BladeNumber=0)
+                # Copy data to second blade slot
+                self.fst_vt['BeamDyn'] = self.fst_vt['BeamDyn'][0]
+                self.fst_vt['BeamDynBlade'] = self.fst_vt['BeamDynBlade'][0]
+                # Read unique third file
+                self.read_BeamDyn(bd_file3, BladeNumber=2)
+            else:
+                # All blades unique or single blade
+                self.read_BeamDyn(bd_file1, BladeNumber=0)
+                if self.fst_vt['ElastoDyn']['NumBl'] > 1:
+                    self.read_BeamDyn(bd_file2, BladeNumber=1)
+                if self.fst_vt['ElastoDyn']['NumBl'] > 2:
+                    self.read_BeamDyn(bd_file3, BladeNumber=2)
+                else:
+                    # We habve a single blade and need to copy it to the other slots
+                    self.fst_vt['BeamDyn'] = self.fst_vt['BeamDyn'][0]
+                    self.fst_vt['BeamDynBlade'] = self.fst_vt['BeamDynBlade'][0]
+
 
 if __name__=="__main__":
     from openfast_io.FileTools import check_rtest_cloned

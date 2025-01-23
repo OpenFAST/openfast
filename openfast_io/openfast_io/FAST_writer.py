@@ -230,7 +230,21 @@ class InputWriter_OpenFAST(object):
                 self.write_WaterKin(os.path.join(self.FAST_runDirectory,self.fst_vt['MoorDyn']['WaterKin_file']))
 
         if self.fst_vt['Fst']['CompElast'] == 2:
-            self.write_BeamDyn()
+
+            # look at if the the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
+            # if its a dictionary, just write the same BeamDyn file 
+
+            if isinstance(self.fst_vt['BeamDyn'], list):
+                for i_BD, BD in enumerate(self.fst_vt['BeamDyn']):
+
+                    self.fst_vt['Fst']['BDBldFile(%d)'%(i_BD+1)] = self.FAST_namingOut + '_BeamDyn_%d.dat'%(i_BD+1)
+                    self.write_BeamDyn(bldInd = i_BD)
+
+            elif isinstance(self.fst_vt['BeamDyn'], dict):
+                self.fst_vt['Fst']['BDBldFile(1)'] = self.FAST_namingOut + '_BeamDyn.dat'
+                self.fst_vt['Fst']['BDBldFile(2)'] = self.fst_vt['Fst']['BDBldFile(1)']
+                self.fst_vt['Fst']['BDBldFile(3)'] = self.fst_vt['Fst']['BDBldFile(1)']
+                self.write_BeamDyn() 
 
         self.write_MainInput()
 
@@ -659,39 +673,50 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_BeamDyn(self):
-        self.fst_vt['Fst']['BDBldFile(1)'] = self.FAST_namingOut + '_BeamDyn.dat'
-        self.fst_vt['Fst']['BDBldFile(2)'] = self.fst_vt['Fst']['BDBldFile(1)']
-        self.fst_vt['Fst']['BDBldFile(3)'] = self.fst_vt['Fst']['BDBldFile(1)']
+    def write_BeamDyn(self, bldInd = None):
+        # self.fst_vt['Fst']['BDBldFile(1)'] = self.FAST_namingOut + '_BeamDyn.dat'
+        # self.fst_vt['Fst']['BDBldFile(2)'] = self.fst_vt['Fst']['BDBldFile(1)']
+        # self.fst_vt['Fst']['BDBldFile(3)'] = self.fst_vt['Fst']['BDBldFile(1)']
 
-        self.write_BeamDynBlade()
+        # if we have bldInd is None, 
+        if bldInd is None:
 
-        beamdyn_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['BDBldFile(1)'])
+            self.fst_vt['BeamDyn']['BldFile'] = self.FAST_namingOut + '_BeamDyn_Blade.dat'
+            bd_dict = self.fst_vt['BeamDyn']
+            beamdyn_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['BDBldFile(1)'])
+        else:
+            self.fst_vt['BeamDyn'][bldInd]['BldFile'] = self.FAST_namingOut + '_BeamDyn_Blade_%d.dat'%bldInd
+            bd_dict = self.fst_vt['BeamDyn'][bldInd]
+            beamdyn_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['BDBldFile(%s)'%bldInd])
+
+
+        self.write_BeamDynBlade(bldInd = bldInd)
+
         f            = open(beamdyn_file, 'w')
 
         f.write('--------- BEAMDYN with OpenFAST INPUT FILE -------------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['Echo'], 'Echo', '- Echo input data to "<RootName>.ech" (flag)\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['QuasiStaticInit'], 'QuasiStaticInit', '- Use quasistatic pre-conditioning with centripetal accelerations in initialization (flag) [dynamic solve only]\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['rhoinf'], 'rhoinf', '- Numerical damping parameter for generalized-alpha integrator\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['quadrature'], 'quadrature', '- Quadrature method: 1=Gaussian; 2=Trapezoidal (switch)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['refine'], 'refine', '- Refinement factor for trapezoidal quadrature (-) [DEFAULT = 1; used only when quadrature=2]\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['n_fact'], 'n_fact', '- Factorization frequency for the Jacobian in N-R iteration(-) [DEFAULT = 5]\n'))
-        f.write(float_default_out(self.fst_vt['BeamDyn']['DTBeam']) + '   {:<11} {:}'.format('DTBeam', '- Time step size (s).\n'))
-        f.write(int_default_out(self.fst_vt['BeamDyn']['load_retries']) + '   {:<11} {:}'.format('load_retries', '- Number of factored load retries before quitting the aimulation [DEFAULT = 20]\n'))
-        f.write(int_default_out(self.fst_vt['BeamDyn']['NRMax']) + '   {:<11} {:}'.format('NRMax', '- Max number of iterations in Newton-Raphson algorithm (-). [DEFAULT = 10]\n'))
-        f.write(float_default_out(self.fst_vt['BeamDyn']['stop_tol']) + '   {:<11} {:}'.format('stop_tol', '- Tolerance for stopping criterion (-) [DEFAULT = 1E-5]\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['tngt_stf_fd'], 'tngt_stf_fd', '- Use finite differenced tangent stiffness matrix? (flag)\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['tngt_stf_comp'], 'tngt_stf_comp', '- Compare analytical finite differenced tangent stiffness matrix? (flag)\n'))
-        f.write(float_default_out(self.fst_vt['BeamDyn']['tngt_stf_pert']) + '   {:<11} {:}'.format('tngt_stf_pert', '- Perturbation size for finite differencing (-) [DEFAULT = 1E-6]\n'))
-        f.write(float_default_out(self.fst_vt['BeamDyn']['tngt_stf_difftol']) + '   {:<11} {:}'.format('tngt_stf_difftol', '- Maximum allowable relative difference between analytical and fd tangent stiffness (-); [DEFAULT = 0.1]\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['RotStates'], 'RotStates', '- Orient states in the rotating frame during linearization? (flag) [used only when linearizing]\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['Echo'], 'Echo', '- Echo input data to "<RootName>.ech" (flag)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['QuasiStaticInit'], 'QuasiStaticInit', '- Use quasistatic pre-conditioning with centripetal accelerations in initialization (flag) [dynamic solve only]\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['rhoinf'], 'rhoinf', '- Numerical damping parameter for generalized-alpha integrator\n'))
+        f.write('{:<22d} {:<11} {:}'.format(bd_dict['quadrature'], 'quadrature', '- Quadrature method: 1=Gaussian; 2=Trapezoidal (switch)\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['refine'], 'refine', '- Refinement factor for trapezoidal quadrature (-) [DEFAULT = 1; used only when quadrature=2]\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['n_fact'], 'n_fact', '- Factorization frequency for the Jacobian in N-R iteration(-) [DEFAULT = 5]\n'))
+        f.write(float_default_out(bd_dict['DTBeam']) + '   {:<11} {:}'.format('DTBeam', '- Time step size (s).\n'))
+        f.write(int_default_out(bd_dict['load_retries']) + '   {:<11} {:}'.format('load_retries', '- Number of factored load retries before quitting the aimulation [DEFAULT = 20]\n'))
+        f.write(int_default_out(bd_dict['NRMax']) + '   {:<11} {:}'.format('NRMax', '- Max number of iterations in Newton-Raphson algorithm (-). [DEFAULT = 10]\n'))
+        f.write(float_default_out(bd_dict['stop_tol']) + '   {:<11} {:}'.format('stop_tol', '- Tolerance for stopping criterion (-) [DEFAULT = 1E-5]\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['tngt_stf_fd'], 'tngt_stf_fd', '- Use finite differenced tangent stiffness matrix? (flag)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['tngt_stf_comp'], 'tngt_stf_comp', '- Compare analytical finite differenced tangent stiffness matrix? (flag)\n'))
+        f.write(float_default_out(bd_dict['tngt_stf_pert']) + '   {:<11} {:}'.format('tngt_stf_pert', '- Perturbation size for finite differencing (-) [DEFAULT = 1E-6]\n'))
+        f.write(float_default_out(bd_dict['tngt_stf_difftol']) + '   {:<11} {:}'.format('tngt_stf_difftol', '- Maximum allowable relative difference between analytical and fd tangent stiffness (-); [DEFAULT = 0.1]\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['RotStates'], 'RotStates', '- Orient states in the rotating frame during linearization? (flag) [used only when linearizing]\n'))
         f.write('---------------------- GEOMETRY PARAMETER --------------------------------------\n')
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['member_total'], 'member_total', '- Total number of members (-)\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['kp_total'], 'kp_total', '- Total number of key points (-) [must be at least 3]\n'))
-        for i in range(self.fst_vt['BeamDyn']['member_total']):
-            mem = self.fst_vt['BeamDyn']['members'][i]
+        f.write('{:<22d} {:<11} {:}'.format(bd_dict['member_total'], 'member_total', '- Total number of members (-)\n'))
+        f.write('{:<22d} {:<11} {:}'.format(bd_dict['kp_total'], 'kp_total', '- Total number of key points (-) [must be at least 3]\n'))
+        for i in range(bd_dict['member_total']):
+            mem = bd_dict['members'][i]
             f.write('{:<22} {:<11} {:}'.format(' '.join(['%d'%(i+1),'%d'%len(mem['kp_xr'])]), '', '- Member number; Number of key points in this member\n'))
             f.write(" ".join(['{:^21s}'.format(i) for i in ['kp_xr', 'kp_yr', 'kp_zr', 'initial_twist']])+'\n')
             f.write(" ".join(['{:^21s}'.format(i) for i in ['(m)', '(m)', '(m)', '(deg)']])+'\n')
@@ -703,19 +728,19 @@ class InputWriter_OpenFAST(object):
                 ln.append('{: 2.14e}'.format(mem['initial_twist'][j]))
                 f.write(" ".join(ln) + '\n')
         f.write('---------------------- MESH PARAMETER ------------------------------------------\n')
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['order_elem'], 'order_elem', '- Order of interpolation (basis) function (-)\n'))
+        f.write('{:<22d} {:<11} {:}'.format(bd_dict['order_elem'], 'order_elem', '- Order of interpolation (basis) function (-)\n'))
         f.write('---------------------- MATERIAL PARAMETER --------------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['BeamDyn']['BldFile']+'"', 'BldFile', '- Name of file containing properties for blade (quoted string)\n'))
+        f.write('{:<22} {:<11} {:}'.format('"'+bd_dict['BldFile']+'"', 'BldFile', '- Name of file containing properties for blade (quoted string)\n'))
         f.write('---------------------- PITCH ACTUATOR PARAMETERS -------------------------------\n')
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['UsePitchAct'], 'UsePitchAct', '- Whether a pitch actuator should be used (flag)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['PitchJ'], 'PitchJ', '- Pitch actuator inertia (kg-m^2) [used only when UsePitchAct is true]\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['PitchK'], 'PitchK', '- Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['PitchC'], 'PitchC', '- Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['UsePitchAct'], 'UsePitchAct', '- Whether a pitch actuator should be used (flag)\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['PitchJ'], 'PitchJ', '- Pitch actuator inertia (kg-m^2) [used only when UsePitchAct is true]\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['PitchK'], 'PitchK', '- Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['PitchC'], 'PitchC', '- Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]\n'))
         f.write('---------------------- OUTPUTS -------------------------------------------------\n')
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['SumPrint'], 'SumPrint', '- Print summary data to "<RootName>.sum" (flag)\n'))
-        f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['BeamDyn']['OutFmt']+'"', 'OutFmt', '- Format used for text tabular output, excluding the time channel.\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['NNodeOuts'], 'NNodeOuts', '- Number of nodes to output to file [0 - 9] (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['BeamDyn']['OutNd']), 'OutNd', '- Nodes whose values will be output  (-)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['SumPrint'], 'SumPrint', '- Print summary data to "<RootName>.sum" (flag)\n'))
+        f.write('{:<22} {:<11} {:}'.format('"'+bd_dict['OutFmt']+'"', 'OutFmt', '- Format used for text tabular output, excluding the time channel.\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['NNodeOuts'], 'NNodeOuts', '- Number of nodes to output to file [0 - 9] (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(bd_dict['OutNd']), 'OutNd', '- Nodes whose values will be output  (-)\n'))
         f.write('          OutList            - The next line(s) contains a list of output parameters. See OutListParameters.xlsx for a listing of available output channels, (-)\n')
         outlist = self.get_outlist(self.fst_vt['outlist'], ['BeamDyn'])
         for channel_list in outlist:
@@ -724,10 +749,10 @@ class InputWriter_OpenFAST(object):
         f.write('END of input file (the word "END" must appear in the first 3 columns of the last OutList line)\n')
                 
         # Optional nodal output section
-        if 'BldNd_BlOutNd' in self.fst_vt['BeamDyn']:
+        if 'BldNd_BlOutNd' in bd_dict:
             f.write('====== Outputs for all blade stations (same ending as above for B1N1.... =========================== [optional section]\n')
-            # f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['BldNd_BladesOut'], 'BldNd_BladesOut', '- Number of blades to output all node information at.  Up to number of blades on turbine. (-)\n'))
-            f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['BldNd_BlOutNd'], 'BldNd_BlOutNd', '- Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)\n'))
+            # f.write('{:<22d} {:<11} {:}'.format(bd_dict['BldNd_BladesOut'], 'BldNd_BladesOut', '- Number of blades to output all node information at.  Up to number of blades on turbine. (-)\n'))
+            f.write('{!s:<22} {:<11} {:}'.format(bd_dict['BldNd_BlOutNd'], 'BldNd_BlOutNd', '- Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)\n'))
             f.write('                   OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, BeamDyn_Nodes tab for a listing of available output channels, (-)\n')
             
             opt_outlist = self.get_outlist(self.fst_vt['outlist'], ['BeamDyn_Nodes'])      
@@ -741,32 +766,36 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_BeamDynBlade(self):
+    def write_BeamDynBlade(self, bldInd = None):
 
-        # bd_blade_file = self.fst_vt['BeamDyn']['BldFile']
-        self.fst_vt['BeamDyn']['BldFile'] = self.FAST_namingOut + '_BeamDyn_Blade.dat'
-        bd_blade_file = os.path.abspath(os.path.join(self.FAST_runDirectory, self.fst_vt['BeamDyn']['BldFile']))
+        if bldInd is None:
+            bd_blade_dict = self.fst_vt['BeamDynBlade']
+            bd_blade_file = os.path.abspath(os.path.join(self.FAST_runDirectory, self.fst_vt['BeamDyn']['BldFile']))
+        else:
+            bd_blade_dict = self.fst_vt['BeamDynBlade'][bldInd]
+            bd_blade_file = os.path.abspath(os.path.join(self.FAST_runDirectory, self.fst_vt['BeamDyn'][bldInd]['BldFile']))
+
         f = open(bd_blade_file, 'w')
 
         f.write('------- BEAMDYN INDIVIDUAL BLADE INPUT FILE --------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- BLADE PARAMETERS --------------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDynBlade']['station_total'], 'station_total', '- Number of blade input stations (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDynBlade']['damp_type'], 'damp_type', '- Damping type: 0: no damping; 1: damped\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_blade_dict['station_total'], 'station_total', '- Number of blade input stations (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_blade_dict['damp_type'], 'damp_type', '- Damping type: 0: no damping; 1: damped\n'))
         f.write('---------------------- DAMPING COEFFICIENT------------------------------------\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['mu1','mu2','mu3','mu4','mu5','mu6']])+'\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)','(-)','(-)','(-)','(-)','(-)']])+'\n')
-        mu = [self.fst_vt['BeamDynBlade']['mu1'], self.fst_vt['BeamDynBlade']['mu2'], self.fst_vt['BeamDynBlade']['mu3'], self.fst_vt['BeamDynBlade']['mu4'], self.fst_vt['BeamDynBlade']['mu5'], self.fst_vt['BeamDynBlade']['mu6']]
+        mu = [bd_blade_dict['mu1'], bd_blade_dict['mu2'], bd_blade_dict['mu3'], bd_blade_dict['mu4'], bd_blade_dict['mu5'], bd_blade_dict['mu6']]
         f.write(" ".join(['{:^11f}'.format(i) for i in mu])+'\n')
         f.write('---------------------- DISTRIBUTED PROPERTIES---------------------------------\n')
 
-        for i in range(len(self.fst_vt['BeamDynBlade']['radial_stations'])):
-            f.write('{: 2.15e}\n'.format(self.fst_vt['BeamDynBlade']['radial_stations'][i]))
+        for i in range(len(bd_blade_dict['radial_stations'])):
+            f.write('{: 2.15e}\n'.format(bd_blade_dict['radial_stations'][i]))
             for j in range(6):
-                f.write(" ".join(['{: 2.15e}'.format(i) for i in self.fst_vt['BeamDynBlade']['beam_stiff'][i,j,:]])+'\n')
+                f.write(" ".join(['{: 2.15e}'.format(i) for i in bd_blade_dict['beam_stiff'][i,j,:]])+'\n')
             f.write('\n')
             for j in range(6):
-                f.write(" ".join(['{: 2.15e}'.format(i) for i in self.fst_vt['BeamDynBlade']['beam_inertia'][i,j,:]])+'\n')
+                f.write(" ".join(['{: 2.15e}'.format(i) for i in bd_blade_dict['beam_inertia'][i,j,:]])+'\n')
             f.write('\n')
 
         f.write('\n')
