@@ -517,6 +517,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_BF_End      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n      !< Normal relative flow velocity at joints [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n_HiPass      !< High-pass filtered normal relative flow velocity at joints [m/s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: zFillGroup      !< Instantaneous highest point of each filled group [m]
     TYPE(MeshMapType)  :: VisMeshMap      !< Mesh mapping for visualization mesh [-]
     TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
   END TYPE Morison_MiscVarType
@@ -550,6 +551,8 @@ IMPLICIT NONE
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< SeaState wave field [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     INTEGER(IntKi)  :: PtfmYMod = 0_IntKi      !< Large yaw model [-]
+    INTEGER(IntKi)  :: NFillGroups = 0_IntKi      !<  [-]
+    TYPE(Morison_FilledGroupType) , DIMENSION(:), ALLOCATABLE  :: FilledGroups      !<  [-]
   END TYPE Morison_ParameterType
 ! =======================
 ! =========  Morison_InputType  =======
@@ -4645,6 +4648,18 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%V_rel_n_HiPass = SrcMiscData%V_rel_n_HiPass
    end if
+   if (allocated(SrcMiscData%zFillGroup)) then
+      LB(1:1) = lbound(SrcMiscData%zFillGroup)
+      UB(1:1) = ubound(SrcMiscData%zFillGroup)
+      if (.not. allocated(DstMiscData%zFillGroup)) then
+         allocate(DstMiscData%zFillGroup(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%zFillGroup.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%zFillGroup = SrcMiscData%zFillGroup
+   end if
    call NWTC_Library_CopyMeshMapType(SrcMiscData%VisMeshMap, DstMiscData%VisMeshMap, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -4730,6 +4745,9 @@ subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%V_rel_n_HiPass)) then
       deallocate(MiscData%V_rel_n_HiPass)
    end if
+   if (allocated(MiscData%zFillGroup)) then
+      deallocate(MiscData%zFillGroup)
+   end if
    call NWTC_Library_DestroyMeshMapType(MiscData%VisMeshMap, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
@@ -4771,6 +4789,7 @@ subroutine Morison_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%F_BF_End)
    call RegPackAlloc(RF, InData%V_rel_n)
    call RegPackAlloc(RF, InData%V_rel_n_HiPass)
+   call RegPackAlloc(RF, InData%zFillGroup)
    call NWTC_Library_PackMeshMapType(RF, InData%VisMeshMap) 
    call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
    if (RegCheckErr(RF, RoutineName)) return
@@ -4817,6 +4836,7 @@ subroutine Morison_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%F_BF_End); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%V_rel_n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%V_rel_n_HiPass); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%zFillGroup); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackMeshMapType(RF, OutData%VisMeshMap) ! VisMeshMap 
    call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
 end subroutine
@@ -5031,6 +5051,23 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%WaveField => SrcParamData%WaveField
    DstParamData%VisMeshes = SrcParamData%VisMeshes
    DstParamData%PtfmYMod = SrcParamData%PtfmYMod
+   DstParamData%NFillGroups = SrcParamData%NFillGroups
+   if (allocated(SrcParamData%FilledGroups)) then
+      LB(1:1) = lbound(SrcParamData%FilledGroups)
+      UB(1:1) = ubound(SrcParamData%FilledGroups)
+      if (.not. allocated(DstParamData%FilledGroups)) then
+         allocate(DstParamData%FilledGroups(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FilledGroups.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call Morison_CopyFilledGroupType(SrcParamData%FilledGroups(i1), DstParamData%FilledGroups(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
 end subroutine
 
 subroutine Morison_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -5111,6 +5148,15 @@ subroutine Morison_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%OutParam)
    end if
    nullify(ParamData%WaveField)
+   if (allocated(ParamData%FilledGroups)) then
+      LB(1:1) = lbound(ParamData%FilledGroups)
+      UB(1:1) = ubound(ParamData%FilledGroups)
+      do i1 = LB(1), UB(1)
+         call Morison_DestroyFilledGroupType(ParamData%FilledGroups(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ParamData%FilledGroups)
+   end if
 end subroutine
 
 subroutine Morison_PackParam(RF, Indata)
@@ -5186,6 +5232,16 @@ subroutine Morison_PackParam(RF, Indata)
    end if
    call RegPack(RF, InData%VisMeshes)
    call RegPack(RF, InData%PtfmYMod)
+   call RegPack(RF, InData%NFillGroups)
+   call RegPack(RF, allocated(InData%FilledGroups))
+   if (allocated(InData%FilledGroups)) then
+      call RegPackBounds(RF, 1, lbound(InData%FilledGroups), ubound(InData%FilledGroups))
+      LB(1:1) = lbound(InData%FilledGroups)
+      UB(1:1) = ubound(InData%FilledGroups)
+      do i1 = LB(1), UB(1)
+         call Morison_PackFilledGroupType(RF, InData%FilledGroups(i1)) 
+      end do
+   end if
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -5292,6 +5348,20 @@ subroutine Morison_UnPackParam(RF, OutData)
    end if
    call RegUnpack(RF, OutData%VisMeshes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmYMod); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NFillGroups); if (RegCheckErr(RF, RoutineName)) return
+   if (allocated(OutData%FilledGroups)) deallocate(OutData%FilledGroups)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%FilledGroups(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FilledGroups.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call Morison_UnpackFilledGroupType(RF, OutData%FilledGroups(i1)) ! FilledGroups 
+      end do
+   end if
 end subroutine
 
 subroutine Morison_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

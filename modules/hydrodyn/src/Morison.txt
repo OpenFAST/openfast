@@ -447,6 +447,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}         -         -         ""        -
 typedef   ^                            ^                             ReKi                     V_rel_n                       {:}            -         -         "Normal relative flow velocity at joints"        m/s
 typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                {:}            -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
+typedef   ^                            ^                             ReKi                     zFillGroup                    {:}            -         -         "Instantaneous highest point of each filled group"  m
 typedef   ^                            ^                             MeshMapType              VisMeshMap                      -            -         -         "Mesh mapping for visualization mesh" -
 typedef   ^                            ^                          SeaSt_WaveField_MiscVarType WaveField_m                     -            -         -         "misc var information from the SeaState Interpolation module"   -
 
@@ -481,6 +482,8 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                     -          -        -         "SeaState wave field" -
 typedef   ^                            ^                             logical                  VisMeshes                     -       .false.     -         "Output visualization meshes" -
 typedef   ^                            ^                             INTEGER                  PtfmYMod                      -          -        -         "Large yaw model" -
+typedef   ^                            ^                             INTEGER                  NFillGroups                   -          -        -         ""        -
+typedef   ^                            ^                             Morison_FilledGroupType  FilledGroups                  {:}        -        -         ""        -
 #
 #
 # ..... Inputs ....................................................................................................................

@@ -2007,7 +2007,7 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
 
     ! Check the member does not exhibit any of the following conditions
    if (.not. member%PropPot) then 
-      if (member%MHstLMod == 1) then
+      if (member%MHstLMod == 1) then ! Only cylindrical members are allowed to use MHstLMod = 1
          if ( abs(Zb) < abs(member%Rmg(N+1)*sinPhi) ) then
             call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, RoutineName )   
          end if
@@ -3006,6 +3006,18 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
    END DO ! looping through nodes that are joints, i
           
+   p%NFillGroups = InitInp%NFillGroups
+   ALLOCATE ( p%FilledGroups(p%NFillGroups), STAT = ErrStat2 )
+      IF ( ErrStat2 /= 0 ) THEN
+         call SetErrStat(ErrID_Fatal,'Error allocating space for FilledGroups array.',errStat,errMsg,RoutineName ); return
+      END IF
+   DO i=1,p%NFillGroups
+      CALL Morison_CopyFilledGroupType(InitInp%FilledGroups(i),p%FilledGroups(i),0,ErrStat2,ErrMsg2)
+      IF ( ErrStat2 /= 0 ) THEN
+         call SetErrStat(ErrID_Fatal,'Error copying FilledGroups array.',errStat,errMsg,RoutineName ); return
+      END IF
+   END DO
+
          ! Define initial guess for the system inputs here:
          !    u%DummyInput = 0
          ! Define system output initializations (set up mesh) here:  
@@ -3263,6 +3275,7 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    call AllocAry( p%DP_Const_End ,    3, p%NJoints, 'p%DP_Const_End'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%V_rel_n        ,     p%NJoints, 'm%V_rel_n'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%V_rel_n_HiPass ,     p%NJoints, 'm%V_rel_n_HiPass', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%zFillGroup   ,   p%NFillGroups, 'm%zFillGroup'    , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%DragMod_End    ,     p%NJoints, 'p%DragMod_End'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%DragLoFSc_End  ,     p%NJoints, 'p%DragLoFSc_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( p%VRelNFiltConst ,     p%NJoints, 'p%VRelNFiltConst', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -3331,7 +3344,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: sinBeta, sinBeta1, sinBeta2
    REAL(ReKi)               :: cosBeta, cosBeta1, cosBeta2
    REAL(ReKi)               :: CMatrix(3,3), CMatrix1(3,3), CMatrix2(3,3), CTrans(3,3) ! Direction cosine matrix for element, and its transpose
-   REAL(ReKi)               :: z1, z2, r1, r2, r1b, r2b, rn, rn1, rn2
+   REAL(ReKi)               :: z1, z2, r1, r2, r1b, r2b, rn, rn1, rn2, z_hi
    REAL(ReKi)               :: Sa1, Sa2, Sa1b, Sa2b, SaMidb
    REAL(ReKi)               :: Sb1, Sb2, Sb1b, Sb2b, SbMidb
    REAL(ReKi)               :: dRdl_mg,   dSadl_mg,   dSbdl_mg    ! shorthand for taper including marine growth of element i
@@ -3407,6 +3420,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    ! Compute fluid velocity relative to the structure
    DO j = 1, p%NNodes
       m%vrel(:,j)  = ( m%FV(:,j) - u%Mesh%TranslationVel(:,j) ) * m%nodeInWater(j)
+   END DO
+
+   !===============================================================================================
+   ! Get the instantaneous highest point of internal ballast for each filled group
+   ! This is the elevation with zero internal hydrostatic pressure
+   DO i = 1,p%NFillGroups
+      DO j = 1,p%FilledGroups(i)%FillNumM
+         im = p%FilledGroups(i)%FillMList(j)
+         CALL getMemHiPt(p%Members(im),z_hi)
+         IF (j==1) THEN
+            m%zFillGroup(i) = z_hi
+         ELSE
+            m%zFillGroup(i) = MAX(m%zFillGroup(i), z_hi)
+         END IF
+      END DO
    END DO
 
    ! ==============================================================================================
@@ -5730,6 +5758,67 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    END SUBROUTINE YawJoint
 
+   SUBROUTINE getMemHiPt(member,z_hi)
+      ! This subroutine returns the highest point of a member
+      Type(Morison_MemberType), intent(in   ) :: member
+      Real(ReKi),               intent(  out) :: z_hi
+
+      Integer(IntKi)                          :: N
+      Real(ReKi)                              :: CMatrix(3,3)
+      Real(ReKi)                              :: k_hat(3), x_hat(3), y_hat(3), z_hat(3)
+      Real(ReKi)                              :: rIn, SaIn, SbIn, z0, pos1(3), pos2(3)
+
+      N  = member%NElements
+
+      IF (member%MSecGeom == MSecGeom_Cyl) THEN
+
+         ! Check the starting section
+         pos1 = m%DispNodePosHst(:,member%NodeIndx(1  ))
+         pos2 = m%DispNodePosHst(:,member%NodeIndx(2  ))
+         k_hat = pos2-pos1
+         k_hat = k_hat / SQRT(Dot_Product(k_hat,k_hat))
+         CALL GetSectionUnitVectors_Cyl( k_hat, y_hat, z_hat )
+         rIn = member%Rin(1)
+         z_hi =      pos1(3) + rIn * z_hat(3)
+
+         ! Check the ending section
+         pos1 = m%DispNodePosHst(:,member%NodeIndx(N  ))
+         pos2 = m%DispNodePosHst(:,member%NodeIndx(N+1))
+         k_hat = pos2-pos1
+         k_hat = k_hat / SQRT(Dot_Product(k_hat,k_hat))
+         CALL GetSectionUnitVectors_Cyl( k_hat, y_hat, z_hat )
+         rIn = member%Rin(N+1)
+         z_hi = MAX( pos2(3) + rIn * z_hat(3), z_hi)
+
+      ELSE IF (member%MSecGeom == MSecGeom_Rec) THEN
+
+         ! Check the vertices of the starting section
+         z0 = m%DispNodePosHst(3,member%NodeIndx(1  ))
+         CALL Morison_DirCosMtrx( u%Mesh%Position(:,member%NodeIndx(1  )), u%Mesh%Position(:,member%NodeIndx(2  )), member%MSpinOrient, CMatrix )
+         CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(1  ))),CMatrix)
+         CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
+         SaIn = member%SaIn(1)
+         SbIn = member%SbIn(1)
+         z_hi =     z0 - 0.5*SaIn*x_hat(3) - 0.5*SbIn*y_hat(3)
+         z_hi = MAX(z0 + 0.5*SaIn*x_hat(3) - 0.5*SbIn*y_hat(3), z_hi)
+         z_hi = MAX(z0 + 0.5*SaIn*x_hat(3) + 0.5*SbIn*y_hat(3), z_hi)
+         z_hi = MAX(z0 - 0.5*SaIn*x_hat(3) + 0.5*SbIn*y_hat(3), z_hi)
+
+         ! Check the vertices of the ending section
+         z0 = m%DispNodePosHst(3,member%NodeIndx(N+1))
+         CALL Morison_DirCosMtrx( u%Mesh%Position(:,member%NodeIndx(N  )), u%Mesh%Position(:,member%NodeIndx(N+1)), member%MSpinOrient, CMatrix )
+         CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(N+1))),CMatrix)
+         CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
+         SaIn = member%SaIn(N+1)
+         SbIn = member%SbIn(N+1)
+         z_hi = MAX(z0 - 0.5*SaIn*x_hat(3) - 0.5*SbIn*y_hat(3), z_hi)
+         z_hi = MAX(z0 + 0.5*SaIn*x_hat(3) - 0.5*SbIn*y_hat(3), z_hi)
+         z_hi = MAX(z0 + 0.5*SaIn*x_hat(3) + 0.5*SbIn*y_hat(3), z_hi)
+         z_hi = MAX(z0 - 0.5*SaIn*x_hat(3) + 0.5*SbIn*y_hat(3), z_hi)
+
+      END IF
+
+   END SUBROUTINE getMemHiPt
 
 END SUBROUTINE Morison_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------

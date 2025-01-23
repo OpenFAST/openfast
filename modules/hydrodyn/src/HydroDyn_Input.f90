@@ -2614,6 +2614,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
                   InputFileData%Morison%InpMembers(k)%MmbrFilledIDIndx = I
 
+                  ! Set entries of member list of the filled group to the member index instead of ID for quick lookup later
+                  InputFileData%Morison%FilledGroups(I)%FillMList(J) = K
+
                END IF
             END DO
 
