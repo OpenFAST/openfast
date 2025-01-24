@@ -257,8 +257,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_xmg_u      !< element local x-moment of inertia of marine growth in upper portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_ymg_l      !< element local y-moment of inertia of marine growth in lower portion of each element [kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: I_ymg_u      !< element local y-moment of inertia of marine growth in upper portion of each element [kg-m^2]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NodeWBallast      !< Internal ballast weight associated with each node [N]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NodeWhcBallast      !< Internal ballast weight associated with each node times distance from node to ballast CG [Nm]
     REAL(ReKi)  :: MGvolume = 0.0_ReKi      !< Volume of marine growth material for this member/element [m^3]
     INTEGER(IntKi)  :: MSecGeom = 0_IntKi      !< Member cross section geometry. 1: Circular. 2: Rectangular [-]
     REAL(ReKi)  :: MSpinOrient = 0.0_ReKi      !< Member orientation in terms of rotation angle about the member axis [rad]
@@ -2008,30 +2006,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
       end if
       DstMemberTypeData%I_ymg_u = SrcMemberTypeData%I_ymg_u
    end if
-   if (allocated(SrcMemberTypeData%NodeWBallast)) then
-      LB(1:1) = lbound(SrcMemberTypeData%NodeWBallast)
-      UB(1:1) = ubound(SrcMemberTypeData%NodeWBallast)
-      if (.not. allocated(DstMemberTypeData%NodeWBallast)) then
-         allocate(DstMemberTypeData%NodeWBallast(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%NodeWBallast.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMemberTypeData%NodeWBallast = SrcMemberTypeData%NodeWBallast
-   end if
-   if (allocated(SrcMemberTypeData%NodeWhcBallast)) then
-      LB(1:1) = lbound(SrcMemberTypeData%NodeWhcBallast)
-      UB(1:1) = ubound(SrcMemberTypeData%NodeWhcBallast)
-      if (.not. allocated(DstMemberTypeData%NodeWhcBallast)) then
-         allocate(DstMemberTypeData%NodeWhcBallast(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%NodeWhcBallast.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMemberTypeData%NodeWhcBallast = SrcMemberTypeData%NodeWhcBallast
-   end if
    DstMemberTypeData%MGvolume = SrcMemberTypeData%MGvolume
    DstMemberTypeData%MSecGeom = SrcMemberTypeData%MSecGeom
    DstMemberTypeData%MSpinOrient = SrcMemberTypeData%MSpinOrient
@@ -2243,12 +2217,6 @@ subroutine Morison_DestroyMemberType(MemberTypeData, ErrStat, ErrMsg)
    if (allocated(MemberTypeData%I_ymg_u)) then
       deallocate(MemberTypeData%I_ymg_u)
    end if
-   if (allocated(MemberTypeData%NodeWBallast)) then
-      deallocate(MemberTypeData%NodeWBallast)
-   end if
-   if (allocated(MemberTypeData%NodeWhcBallast)) then
-      deallocate(MemberTypeData%NodeWhcBallast)
-   end if
 end subroutine
 
 subroutine Morison_PackMemberType(RF, Indata)
@@ -2340,8 +2308,6 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPackAlloc(RF, InData%I_xmg_u)
    call RegPackAlloc(RF, InData%I_ymg_l)
    call RegPackAlloc(RF, InData%I_ymg_u)
-   call RegPackAlloc(RF, InData%NodeWBallast)
-   call RegPackAlloc(RF, InData%NodeWhcBallast)
    call RegPack(RF, InData%MGvolume)
    call RegPack(RF, InData%MSecGeom)
    call RegPack(RF, InData%MSpinOrient)
@@ -2450,8 +2416,6 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%I_xmg_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%I_ymg_l); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%I_ymg_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%NodeWBallast); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%NodeWhcBallast); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MGvolume); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSecGeom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSpinOrient); if (RegCheckErr(RF, RoutineName)) return
