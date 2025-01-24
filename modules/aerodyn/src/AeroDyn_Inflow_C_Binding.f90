@@ -1511,6 +1511,9 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
       if (Failed())  return
    endif
 
+   ! check Mesh points for blade specification
+   call CheckMeshPts(iWT); if (Failed()) return
+
    call SetupMotionMesh()
 
    ! Set error status
@@ -1541,8 +1544,9 @@ contains
    !> This subroutine prints out all the variables that are passed in.  Use this only
    !! for debugging the interface on the Fortran side.
    subroutine ShowPassedData()
-      character(1) :: TmpFlag
-      integer      :: i,j
+      character(1)   :: TmpFlag
+      integer        :: i,j
+      character(35)  :: TmpStr
       call WrSCr("")
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
@@ -1584,9 +1588,27 @@ contains
             j=9*(i-1)
             call WrMatrix(InitMeshOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
          enddo
+         call WrScr("          Node mapping")
+         call WrScr("               MeshPt      Blade")
+         do i=1,int(NumMeshPts_C,IntKi)
+            write(TmpStr,'(15X,I5,10X,I5)') i,int(MeshPtToBladeNum_C(i),IntKi)
+            call WrScr(TmpStr)
+         enddo
       endif
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
+
+   !> very basic checks on mesh points
+   subroutine CheckMeshPts(iWT)
+      integer(IntKi), intent(in) :: iWT
+      do i=1,size(MeshPtToBladeNum_C)
+         if ((MeshPtToBladeNum_C(i) < 1_c_int) .or. (MeshPtToBladeNum_C(i) > int(Sim%WT(iWT)%NumBlades))) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2 = 'Mesh Point '//trim(Num2LStr(i))//' assigned to invalid blade '//trim(Num2LStr(MeshPtToBladeNum_C(i)))//' on rotor '//trim(Num2LStr(iWT))
+            if (Failed()) return
+         endif
+      enddo
+   end subroutine CheckMeshPts
 
    subroutine SetupMotionMesh()
       real(ReKi)     :: InitPos(3)
