@@ -177,7 +177,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['outlist']  = copy.deepcopy(FstOutput)
         self.fst_vt['ElastoDyn'] = {}
         self.fst_vt['SimpleElastoDyn'] = {}
-        self.fst_vt['ElastoDynBlade'] = {}
+        self.fst_vt['ElastoDynBlade'] = [{}, {}, {}] # One dict per blade, We will reduce this down to one, if all the files are the same
         self.fst_vt['ElastoDynTower'] = {}
         self.fst_vt['InflowWind'] = {}
         self.fst_vt['AeroDyn'] = {}
@@ -654,7 +654,7 @@ class InputReader_OpenFAST(object):
 
 
 
-    def read_ElastoDynBlade(self, blade_file):
+    def read_ElastoDynBlade(self, blade_file, BladeNumber = 0):
         # ElastoDyn v1.00 Blade Input File
         # Currently no differences between FASTv8.16 and OpenFAST.
 
@@ -665,49 +665,49 @@ class InputReader_OpenFAST(object):
         f.readline()
         
         # Blade Parameters
-        self.fst_vt['ElastoDynBlade']['NBlInpSt'] = int(f.readline().split()[0])
-        self.fst_vt['ElastoDynBlade']['BldFlDmp1'] = float_read(f.readline().split()[0])
-        self.fst_vt['ElastoDynBlade']['BldFlDmp2'] = float_read(f.readline().split()[0])
-        self.fst_vt['ElastoDynBlade']['BldEdDmp1'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt'] = int(f.readline().split()[0])
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['BldFlDmp1'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['BldFlDmp2'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['BldEdDmp1'] = float_read(f.readline().split()[0])
         
         # Blade Adjustment Factors
         f.readline()
-        self.fst_vt['ElastoDynBlade']['FlStTunr1'] = float_read(f.readline().split()[0])
-        self.fst_vt['ElastoDynBlade']['FlStTunr2'] = float_read(f.readline().split()[0])
-        self.fst_vt['ElastoDynBlade']['AdjBlMs'] = float_read(f.readline().split()[0])
-        self.fst_vt['ElastoDynBlade']['AdjFlSt'] = float_read(f.readline().split()[0])
-        self.fst_vt['ElastoDynBlade']['AdjEdSt'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['FlStTunr1'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['FlStTunr2'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['AdjBlMs'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['AdjFlSt'] = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['AdjEdSt'] = float_read(f.readline().split()[0])
         
         # Distrilbuted Blade Properties
         f.readline()
         f.readline()
         f.readline()
-        self.fst_vt['ElastoDynBlade']['BlFract'] = [None] * self.fst_vt['ElastoDynBlade']['NBlInpSt']
-        self.fst_vt['ElastoDynBlade']['PitchAxis'] = [None] * self.fst_vt['ElastoDynBlade']['NBlInpSt']
-        self.fst_vt['ElastoDynBlade']['StrcTwst'] = [None] * self.fst_vt['ElastoDynBlade']['NBlInpSt']
-        self.fst_vt['ElastoDynBlade']['BMassDen'] = [None] * self.fst_vt['ElastoDynBlade']['NBlInpSt']
-        self.fst_vt['ElastoDynBlade']['FlpStff'] = [None] * self.fst_vt['ElastoDynBlade']['NBlInpSt']
-        self.fst_vt['ElastoDynBlade']['EdgStff'] = [None] * self.fst_vt['ElastoDynBlade']['NBlInpSt']
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['BlFract'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['PitchAxis'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['StrcTwst'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['BMassDen'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['FlpStff'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['EdgStff'] = [None] * self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']
 
-        for i in range(self.fst_vt['ElastoDynBlade']['NBlInpSt']):
+        for i in range(self.fst_vt['ElastoDynBlade'][BladeNumber]['NBlInpSt']):
             data = f.readline().split()          
-            self.fst_vt['ElastoDynBlade']['BlFract'][i]  = float_read(data[0])
-            self.fst_vt['ElastoDynBlade']['PitchAxis'][i]  = float_read(data[1])
-            self.fst_vt['ElastoDynBlade']['StrcTwst'][i]  = float_read(data[2])
-            self.fst_vt['ElastoDynBlade']['BMassDen'][i]  = float_read(data[3])
-            self.fst_vt['ElastoDynBlade']['FlpStff'][i]  = float_read(data[4])
-            self.fst_vt['ElastoDynBlade']['EdgStff'][i]  = float_read(data[5])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['BlFract'][i]  = float_read(data[0])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['PitchAxis'][i]  = float_read(data[1])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['StrcTwst'][i]  = float_read(data[2])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['BMassDen'][i]  = float_read(data[3])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['FlpStff'][i]  = float_read(data[4])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['EdgStff'][i]  = float_read(data[5])
 
         f.readline()
-        self.fst_vt['ElastoDynBlade']['BldFl1Sh'] = [None] * 5
-        self.fst_vt['ElastoDynBlade']['BldFl2Sh'] = [None] * 5        
-        self.fst_vt['ElastoDynBlade']['BldEdgSh'] = [None] * 5
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['BldFl1Sh'] = [None] * 5
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['BldFl2Sh'] = [None] * 5        
+        self.fst_vt['ElastoDynBlade'][BladeNumber]['BldEdgSh'] = [None] * 5
         for i in range(5):
-            self.fst_vt['ElastoDynBlade']['BldFl1Sh'][i]  = float_read(f.readline().split()[0])
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['BldFl1Sh'][i]  = float_read(f.readline().split()[0])
         for i in range(5):
-            self.fst_vt['ElastoDynBlade']['BldFl2Sh'][i]  = float_read(f.readline().split()[0])            
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['BldFl2Sh'][i]  = float_read(f.readline().split()[0])            
         for i in range(5):
-            self.fst_vt['ElastoDynBlade']['BldEdgSh'][i]  = float_read(f.readline().split()[0])        
+            self.fst_vt['ElastoDynBlade'][BladeNumber]['BldEdgSh'][i]  = float_read(f.readline().split()[0])        
 
         f.close()
 
@@ -3163,10 +3163,46 @@ class InputReader_OpenFAST(object):
             self.read_SimpleElastoDyn(ed_file)
         else:
             self.read_ElastoDyn(ed_file)
-            if not os.path.isabs(self.fst_vt['ElastoDyn']['BldFile1']):
-                ed_blade_file = os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['BldFile1'])
-            if self.fst_vt['Fst']['CompElast'] == 1 or  os.path.isfile(ed_blade_file): # If elastodyn blade is being used OR if the blade file exists
-                self.read_ElastoDynBlade(ed_blade_file)
+            # keeping the previous logic to read in the files if self.fst_vt['Fst']['CompElast'] == 1 OR
+            # if the blade file exists, but include the possibility of having three unique blade files
+            
+            # Making sure the blade files pointing to the correct location
+            bldFile1 = self.fst_vt['ElastoDyn']['BldFile1'] if os.path.isabs(self.fst_vt['ElastoDyn']['BldFile1']) else os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['BldFile1'])
+            bldFile2 = self.fst_vt['ElastoDyn']['BldFile2'] if os.path.isabs(self.fst_vt['ElastoDyn']['BldFile2']) else os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['BldFile2'])
+            bldFile3 = self.fst_vt['ElastoDyn']['BldFile3'] if os.path.isabs(self.fst_vt['ElastoDyn']['BldFile3']) else os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['BldFile3'])
+
+            if bldFile1 == bldFile2 and bldFile1 == bldFile3:
+                # All blades are identical - verify if the file exists and self.fst_vt['Fst']['CompElast'] == 1
+                if self.fst_vt['Fst']['CompElast'] == 1 or os.path.isfile(bldFile1):
+                    self.read_ElastoDynBlade(bldFile1, BladeNumber=0)
+                    # Copy data to other blade slots
+                    self.fst_vt['ElastoDynBlade'] = self.fst_vt['ElastoDynBlade'][0]
+
+            elif self.fst_vt['ElastoDyn']['NumBl'] == 2 and bldFile1 == bldFile2:
+                # two bladed with identical blades
+                if self.fst_vt['Fst']['CompElast'] == 1 or os.path.isfile(bldFile1):
+                    self.read_ElastoDynBlade(bldFile1, BladeNumber=0)
+                    self.fst_vt['ElastoDynBlade'] = self.fst_vt['ElastoDynBlade'][0]
+
+            elif self.fst_vt['ElastoDyn']['NumBl'] == 1 and os.path.isfile(bldFile1):
+                # one bladed rotor
+                if self.fst_vt['Fst']['CompElast'] == 1: # we rarely have this case
+                    self.read_ElastoDynBlade(bldFile1, BladeNumber=0)
+                    self.fst_vt['ElastoDynBlade'] = self.fst_vt['ElastoDynBlade'][0]
+            else:
+                # we have three unique blades
+                if self.fst_vt['Fst']['CompElast'] == 1 or os.path.isfile(bldFile1):
+                    self.read_ElastoDynBlade(bldFile1, BladeNumber=0)
+                if self.fst_vt['Fst']['CompElast'] == 1 or os.path.isfile(bldFile2):
+                    self.read_ElastoDynBlade(bldFile2, BladeNumber=1)
+                if self.fst_vt['Fst']['CompElast'] == 1 or os.path.isfile(bldFile3):
+                    self.read_ElastoDynBlade(bldFile3, BladeNumber=2)
+
+            # if not os.path.isabs(self.fst_vt['ElastoDyn']['BldFile1']):
+            #     ed_blade_file = os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['BldFile1'])
+            # if self.fst_vt['Fst']['CompElast'] == 1 or  os.path.isfile(ed_blade_file): # If elastodyn blade is being used OR if the blade file exists
+            #     self.read_ElastoDynBlade(ed_blade_file)
+
             if not os.path.isabs(self.fst_vt['ElastoDyn']['TwrFile']):
                 ed_tower_file = os.path.join(os.path.dirname(ed_file), self.fst_vt['ElastoDyn']['TwrFile'])
             self.read_ElastoDynTower(ed_tower_file)
