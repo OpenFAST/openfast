@@ -182,8 +182,7 @@ class InputReader_OpenFAST(object):
         self.fst_vt['InflowWind'] = {}
         self.fst_vt['AeroDyn'] = {}
         self.fst_vt['AeroDisk'] = {}
-        self.fst_vt['AeroDynBlade'] = {}
-        self.fst_vt['AeroDynPolar'] = {}
+        self.fst_vt['AeroDynBlade'] = [{}, {}, {}]  # One dict per blade, We will reduce this down to one, if all the files are the same
         self.fst_vt['ServoDyn'] = {}
         self.fst_vt['DISCON_in'] = {}
         self.fst_vt['HydroDyn'] = {}
@@ -1225,54 +1224,77 @@ class InputReader_OpenFAST(object):
 
         f.close()
 
-        self.read_AeroDynBlade()
+        # Improved handling for multiple AeroDyn blade files
+        ad_bld_file1 = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile1'])
+        ad_bld_file2 = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile2'])
+        ad_bld_file3 = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile3'])
+
+        if ad_bld_file1 == ad_bld_file2 and ad_bld_file1 == ad_bld_file3:
+            # all blades are identical
+            self.read_AeroDynBlade(ad_bld_file1, BladeNumber=0)
+            # Copy data into the generic AeroDynBlade
+            self.fst_vt['AeroDynBlade'] = self.fst_vt['AeroDynBlade'][0]
+        elif self.fst_vt['ElastoDyn']['NumBl'] == 2 and ad_bld_file1 == ad_bld_file2:
+            # 2 blades are identical
+            self.read_AeroDynBlade(ad_bld_file1, BladeNumber=0)
+            self.fst_vt['AeroDynBlade'] = self.fst_vt['AeroDynBlade'][0]
+        else:
+            # all blades are different
+            self.read_AeroDynBlade(ad_bld_file1, BladeNumber=0)
+            if self.fst_vt['ElastoDyn']['NumBl'] > 1:
+                self.read_AeroDynBlade(ad_bld_file2, BladeNumber=1)
+            if self.fst_vt['ElastoDyn']['NumBl'] > 2:
+                self.read_AeroDynBlade(ad_bld_file3, BladeNumber=2)
+            else:
+                # we have a single blade
+                self.fst_vt['AeroDynBlade'] = self.fst_vt['AeroDynBlade'][0]
+
         self.read_AeroDynPolar()
         self.read_AeroDynCoord()
         olaf_filename = os.path.join(self.FAST_directory, self.fst_vt['AeroDyn']['OLAFInputFileName'])
         if os.path.isfile(olaf_filename):
             self.read_AeroDynOLAF(olaf_filename)
 
-    def read_AeroDynBlade(self):
+    def read_AeroDynBlade(self, ad_blade_file, BladeNumber = 0):
         # AeroDyn v5.00 Blade Definition File
 
-        ad_blade_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile1'])
+        # ad_blade_file = os.path.join(self.FAST_directory, self.fst_vt['Fst']['AeroFile_path'], self.fst_vt['AeroDyn']['ADBlFile1'])
         f = open(ad_blade_file)
 
         f.readline()
         f.readline()
         f.readline()
         # Blade Properties
-        self.fst_vt['AeroDynBlade']['NumBlNds']       = int(f.readline().split()[0])
+        self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']       = int(f.readline().split()[0])
         f.readline()
         f.readline()
-        self.fst_vt['AeroDynBlade']['BlSpn']          = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        self.fst_vt['AeroDynBlade']['BlCrvAC']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        self.fst_vt['AeroDynBlade']['BlSwpAC']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        self.fst_vt['AeroDynBlade']['BlCrvAng']       = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        self.fst_vt['AeroDynBlade']['BlTwist']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        self.fst_vt['AeroDynBlade']['BlChord']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        self.fst_vt['AeroDynBlade']['BlAFID']         = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        self.fst_vt['AeroDynBlade']['BlCb']           = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        self.fst_vt['AeroDynBlade']['BlCenBn']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        self.fst_vt['AeroDynBlade']['BlCenBt']        = [None]*self.fst_vt['AeroDynBlade']['NumBlNds']
-        for i in range(self.fst_vt['AeroDynBlade']['NumBlNds']):
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlSpn']          = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCrvAC']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlSwpAC']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCrvAng']       = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlTwist']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlChord']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlAFID']         = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCb']           = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBn']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBt']        = [None]*self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']
+        for i in range(self.fst_vt['AeroDynBlade'][BladeNumber]['NumBlNds']):
             data = [float(val) for val in f.readline().split()]
-            self.fst_vt['AeroDynBlade']['BlSpn'][i]   = data[0] 
-            self.fst_vt['AeroDynBlade']['BlCrvAC'][i] = data[1] 
-            self.fst_vt['AeroDynBlade']['BlSwpAC'][i] = data[2]
-            self.fst_vt['AeroDynBlade']['BlCrvAng'][i]= data[3]
-            self.fst_vt['AeroDynBlade']['BlTwist'][i] = data[4]
-            self.fst_vt['AeroDynBlade']['BlChord'][i] = data[5]
-            self.fst_vt['AeroDynBlade']['BlAFID'][i]  = data[6]
+            self.fst_vt['AeroDynBlade'][BladeNumber]['BlSpn'][i]   = data[0] 
+            self.fst_vt['AeroDynBlade'][BladeNumber]['BlCrvAC'][i] = data[1] 
+            self.fst_vt['AeroDynBlade'][BladeNumber]['BlSwpAC'][i] = data[2]
+            self.fst_vt['AeroDynBlade'][BladeNumber]['BlCrvAng'][i]= data[3]
+            self.fst_vt['AeroDynBlade'][BladeNumber]['BlTwist'][i] = data[4]
+            self.fst_vt['AeroDynBlade'][BladeNumber]['BlChord'][i] = data[5]
+            self.fst_vt['AeroDynBlade'][BladeNumber]['BlAFID'][i]  = data[6]
             if len(data) == 9:
-                self.fst_vt['AeroDynBlade']['BlCb'][i]    = data[7]
-                self.fst_vt['AeroDynBlade']['BlCenBn'][i] = data[8]
-                self.fst_vt['AeroDynBlade']['BlCenBt'][i] = data[9]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCb'][i]    = data[7]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBn'][i] = data[8]
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBt'][i] = data[9]
             else:
-                self.fst_vt['AeroDynBlade']['BlCb'][i]    = 0.0
-                self.fst_vt['AeroDynBlade']['BlCenBn'][i] = 0.0
-                self.fst_vt['AeroDynBlade']['BlCenBt'][i] = 0.0
-
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCb'][i]    = 0.0
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBn'][i] = 0.0
+                self.fst_vt['AeroDynBlade'][BladeNumber]['BlCenBt'][i] = 0.0
         
         f.close()
 
@@ -3211,8 +3233,6 @@ class InputReader_OpenFAST(object):
                 # Copy data to second blade slot
                 self.fst_vt['BeamDyn'] = self.fst_vt['BeamDyn'][0]
                 self.fst_vt['BeamDynBlade'] = self.fst_vt['BeamDynBlade'][0]
-                # Read unique third file
-                self.read_BeamDyn(bd_file3, BladeNumber=2)
             else:
                 # All blades unique or single blade
                 self.read_BeamDyn(bd_file1, BladeNumber=0)

@@ -674,9 +674,6 @@ class InputWriter_OpenFAST(object):
         f.close()
 
     def write_BeamDyn(self, bldInd = None):
-        # self.fst_vt['Fst']['BDBldFile(1)'] = self.FAST_namingOut + '_BeamDyn.dat'
-        # self.fst_vt['Fst']['BDBldFile(2)'] = self.fst_vt['Fst']['BDBldFile(1)']
-        # self.fst_vt['Fst']['BDBldFile(3)'] = self.fst_vt['Fst']['BDBldFile(1)']
 
         # if we have bldInd is None, 
         if bldInd is None:
@@ -887,8 +884,28 @@ class InputWriter_OpenFAST(object):
     def write_AeroDyn(self):
         # AeroDyn v15.03
 
+
+        # self.fst_vt['AeroDyn']['ADBlFile1'] = self.FAST_namingOut + '_AeroDyn_blade.dat'
+        # self.fst_vt['AeroDyn']['ADBlFile2'] = self.fst_vt['AeroDyn']['ADBlFile1']
+        # self.fst_vt['AeroDyn']['ADBlFile3'] = self.fst_vt['AeroDyn']['ADBlFile1']
+        # filename = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn']['ADBlFile1'])
+
+
+
         # Generate AeroDyn v15 blade input file
-        self.write_AeroDynBlade()
+        if isinstance(self.fst_vt['AeroDynBlade'], list):
+            for i_adBld, adBld in enumerate(self.fst_vt['AeroDynBlade']):
+                self.fst_vt['AeroDyn']['ADBlFile%d'%(i_adBld+1)] = self.FAST_namingOut + '_AeroDyn_blade_%d.dat'%(i_adBld+1)
+                self.write_AeroDynBlade(bldInd = i_adBld)
+
+        elif isinstance(self.fst_vt['AeroDynBlade'], dict):
+            self.fst_vt['AeroDyn']['ADBlFile1'] = self.FAST_namingOut + '_AeroDyn_blade.dat'
+            self.fst_vt['AeroDyn']['ADBlFile2'] = self.fst_vt['AeroDyn']['ADBlFile1']
+            self.fst_vt['AeroDyn']['ADBlFile3'] = self.fst_vt['AeroDyn']['ADBlFile1']
+            self.write_AeroDynBlade()
+
+
+        # self.write_AeroDynBlade()
 
         # Generate AeroDyn v15 polars
         self.write_AeroDynPolar()
@@ -1037,30 +1054,33 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_AeroDynBlade(self):
-        # AeroDyn v15.00 Blade
-        self.fst_vt['AeroDyn']['ADBlFile1'] = self.FAST_namingOut + '_AeroDyn_blade.dat'
-        self.fst_vt['AeroDyn']['ADBlFile2'] = self.fst_vt['AeroDyn']['ADBlFile1']
-        self.fst_vt['AeroDyn']['ADBlFile3'] = self.fst_vt['AeroDyn']['ADBlFile1']
-        filename = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn']['ADBlFile1'])
+    def write_AeroDynBlade(self, bldInd = None):
+
+        if bldInd is None:
+            filename = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn']['ADBlFile1'])
+            adBld_dict = self.fst_vt['AeroDynBlade']
+        else:
+            filename = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn']['ADBlFile%d'%(bldInd+1)])
+            adBld_dict = self.fst_vt['AeroDynBlade'][bldInd]
+        
         f = open(filename, 'w')
 
         f.write('------- AERODYN15 BLADE DEFINITION INPUT FILE -------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('======  Blade Properties =================================================================\n')
-        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['AeroDynBlade']['NumBlNds'], 'NumBlNds', '- Number of blade nodes used in the analysis (-)\n'))
+        f.write('{:<11d} {:<11} {:}'.format(adBld_dict['NumBlNds'], 'NumBlNds', '- Number of blade nodes used in the analysis (-)\n'))
         f.write('    BlSpn        BlCrvAC        BlSwpAC        BlCrvAng       BlTwist        BlChord          BlAFID       BlCb        BlCenBn      BlCenBt\n')
         f.write('     (m)           (m)            (m)            (deg)         (deg)           (m)              (-)        (-)         (m)             (m)\n')
-        BlSpn    = self.fst_vt['AeroDynBlade']['BlSpn']
-        BlCrvAC  = self.fst_vt['AeroDynBlade']['BlCrvAC']
-        BlSwpAC  = self.fst_vt['AeroDynBlade']['BlSwpAC']
-        BlCrvAng = self.fst_vt['AeroDynBlade']['BlCrvAng']
-        BlTwist  = self.fst_vt['AeroDynBlade']['BlTwist']
-        BlChord  = self.fst_vt['AeroDynBlade']['BlChord']
-        BlAFID   = self.fst_vt['AeroDynBlade']['BlAFID']
-        BlCb     = self.fst_vt['AeroDynBlade']['BlCb']
-        BlCenBn  = self.fst_vt['AeroDynBlade']['BlCenBn']
-        BlCenBt  = self.fst_vt['AeroDynBlade']['BlCenBt']
+        BlSpn    = adBld_dict['BlSpn']
+        BlCrvAC  = adBld_dict['BlCrvAC']
+        BlSwpAC  = adBld_dict['BlSwpAC']
+        BlCrvAng = adBld_dict['BlCrvAng']
+        BlTwist  = adBld_dict['BlTwist']
+        BlChord  = adBld_dict['BlChord']
+        BlAFID   = adBld_dict['BlAFID']
+        BlCb     = adBld_dict['BlCb']
+        BlCenBn  = adBld_dict['BlCenBn']
+        BlCenBt  = adBld_dict['BlCenBt']
         for Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, AFID, BlCb, BlCenBn, BlCenBt in zip(BlSpn, BlCrvAC, BlSwpAC, BlCrvAng, BlTwist, BlChord, BlAFID, BlCb, BlCenBn, BlCenBt):
             f.write('{: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 8d} {: 2.15e} {: 2.15e} {: 2.15e}\n'.format(Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, int(AFID), BlCb, BlCenBn, BlCenBt))
         
