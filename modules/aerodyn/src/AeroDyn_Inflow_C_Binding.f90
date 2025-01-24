@@ -2342,7 +2342,7 @@ contains
 
       ! Blade point motion (structural mesh from driver)
       do iBlade=1,Sim%WT(iWT)%NumBlades
-         call MeshWrVTKreference(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//'B'//trim(Num2LStr(iBlade)), ErrStat3, ErrMsg3)
+         call MeshWrVTKreference(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(Num2LStr(iBlade)), ErrStat3, ErrMsg3)
          if (ErrStat3 >= AbortErrLev) return
       enddo
 
@@ -2449,7 +2449,7 @@ contains
 
       ! Blade point motion (structural mesh from driver)
       do iBlade=1,Sim%WT(iWT)%NumBlades
-         call MeshWrVTK(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(num2lstr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+         call MeshWrVTK(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(Num2LStr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
          if (ErrStat3 >= AbortErrLev) return
       enddo
 
