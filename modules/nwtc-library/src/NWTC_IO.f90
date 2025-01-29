@@ -2074,7 +2074,6 @@ END SUBROUTINE CheckR8Var
    INTEGER                        :: iWord                                        ! Word index.
    INTEGER                        :: i                                            ! Character index in line.
    INTEGER                        :: iChar                                        ! Character index in word.
-   CHARACTER(len=1)               :: Char                                         ! Current character
    LOGICAL                        :: InQuotes                                     ! Flag indicating text is within quotes
    LOGICAL                        :: IgnoreQuotesLoc                              ! Local flag to ignore quotes
 
@@ -2108,11 +2107,8 @@ END SUBROUTINE CheckR8Var
    ! Loop through characters in line
    do i = 1, len_trim(line)
 
-      ! Get current character
-      Char = Line(i:i)
-
       ! Select based on character
-      select case (Char)
+      select case (Line(i:i))
       case ('"', "'")               ! Double quotes, single quotes
          if (IgnoreQuotesLoc .or. InQuotes) then
             InQuotes = .false.
