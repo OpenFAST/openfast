@@ -2148,7 +2148,7 @@ END SUBROUTINE CheckR8Var
       end if
 
       ! Add character to word
-      Words(iWord)(iChar:iChar) = Char
+      Words(iWord)(iChar:iChar) = Line(i:i)
 
    end do
    
