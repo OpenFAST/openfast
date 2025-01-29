@@ -69,6 +69,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: FillFSLoc = 0.0_ReKi      !< The free-surface location (in Z) for this fill group [m]
     CHARACTER(80)  :: FillDensChr      !< String version of the Fill density [can be DEFAULT which sets the fill density to WtrDens] [kg/m^3]
     REAL(ReKi)  :: FillDens = 0.0_ReKi      !< Numerical fill density [kg/m^3]
+    LOGICAL  :: IsOpen = .false.      !< Whether the internal ballast is open to the outside through the open end of members buried in the seabed [-]
   END TYPE Morison_FilledGroupType
 ! =======================
 ! =========  Morison_CoefDpths  =======
@@ -211,6 +212,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Vouter = 0.0_ReKi      !< Member volume including marine growth [m^3]
     REAL(ReKi)  :: Vballast = 0.0_ReKi      !< Member ballast volume [m^3]
     REAL(ReKi)  :: Vsubmerged = 0.0_ReKi      !< Submerged volume corresponding to portion of Member in the water [m^3]
+    INTEGER(IntKi)  :: elem_fill = 0_IntKi      !< Last (partially) filled element of the member [-]
     REAL(ReKi)  :: l_fill = 0.0_ReKi      !< fill length along member axis from start node 1 [m]
     REAL(ReKi)  :: h_fill = 0.0_ReKi      !< fill length of partially flooded element [m]
     REAL(ReKi)  :: z_overfill = 0.0_ReKi      !< if member is fully filled, the head height of the fill pressure at the end node N+1. Zero if member is partially filled. [m]
@@ -742,6 +744,7 @@ subroutine Morison_CopyFilledGroupType(SrcFilledGroupTypeData, DstFilledGroupTyp
    DstFilledGroupTypeData%FillFSLoc = SrcFilledGroupTypeData%FillFSLoc
    DstFilledGroupTypeData%FillDensChr = SrcFilledGroupTypeData%FillDensChr
    DstFilledGroupTypeData%FillDens = SrcFilledGroupTypeData%FillDens
+   DstFilledGroupTypeData%IsOpen = SrcFilledGroupTypeData%IsOpen
 end subroutine
 
 subroutine Morison_DestroyFilledGroupType(FilledGroupTypeData, ErrStat, ErrMsg)
@@ -766,6 +769,7 @@ subroutine Morison_PackFilledGroupType(RF, Indata)
    call RegPack(RF, InData%FillFSLoc)
    call RegPack(RF, InData%FillDensChr)
    call RegPack(RF, InData%FillDens)
+   call RegPack(RF, InData%IsOpen)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -782,6 +786,7 @@ subroutine Morison_UnPackFilledGroupType(RF, OutData)
    call RegUnpack(RF, OutData%FillFSLoc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FillDensChr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FillDens); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IsOpen); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Morison_CopyCoefDpths(SrcCoefDpthsData, DstCoefDpthsData, CtrlCode, ErrStat, ErrMsg)
@@ -1531,6 +1536,7 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
    DstMemberTypeData%Vouter = SrcMemberTypeData%Vouter
    DstMemberTypeData%Vballast = SrcMemberTypeData%Vballast
    DstMemberTypeData%Vsubmerged = SrcMemberTypeData%Vsubmerged
+   DstMemberTypeData%elem_fill = SrcMemberTypeData%elem_fill
    DstMemberTypeData%l_fill = SrcMemberTypeData%l_fill
    DstMemberTypeData%h_fill = SrcMemberTypeData%h_fill
    DstMemberTypeData%z_overfill = SrcMemberTypeData%z_overfill
@@ -2262,6 +2268,7 @@ subroutine Morison_PackMemberType(RF, Indata)
    call RegPack(RF, InData%Vouter)
    call RegPack(RF, InData%Vballast)
    call RegPack(RF, InData%Vsubmerged)
+   call RegPack(RF, InData%elem_fill)
    call RegPack(RF, InData%l_fill)
    call RegPack(RF, InData%h_fill)
    call RegPack(RF, InData%z_overfill)
@@ -2370,6 +2377,7 @@ subroutine Morison_UnPackMemberType(RF, OutData)
    call RegUnpack(RF, OutData%Vouter); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Vballast); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Vsubmerged); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%elem_fill); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%l_fill); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%h_fill); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%z_overfill); if (RegCheckErr(RF, RoutineName)) return

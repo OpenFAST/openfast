@@ -2175,36 +2175,38 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
       ! NOTE: this section of code is somewhat redundant with "flooded ballast inertia" section above
 
       li = dl*(i-1)
-      ! fully buried element
-      if (Zb < -InitInp%WaveField%EffWtrDpth) then
+      member%elem_fill = 0     ! Last (partially) filled element of the member
+      member%h_fill    = 0.0   ! Axial length of elem_fill occupied by water ballast
+
+      if (Zb < -InitInp%WaveField%EffWtrDpth) then                                                                             ! Fully buried element
+
          member%floodstatus(i) = 0
       
-      ! fully filled elements 
-      else if (member%memfloodstatus > 0 .and. member%FillFSLoc >= Zb) then
+      else if (member%memfloodstatus > 0 .and. member%FillFSLoc >= Zb) then                                                    ! Fully flooded elements
+
          member%floodstatus(i) = 1
+         if ( EqualRealNos(member%FillFSLoc, Zb) .or. (i==member%NElements) ) then  ! No partially filled elements
+            member%elem_fill = i
+            member%h_fill    = dl
+         end if
          member%Vballast = member%Vballast + Vballast_l + Vballast_u
 
-      ! partially filled element
-      else if ((member%memfloodstatus > 0) .and. (member%FillFSLoc > Za) .AND. (member%FillFSLoc < Zb)) then
+      else if ((member%memfloodstatus > 0) .and. (member%FillFSLoc > Za) .AND. (member%FillFSLoc < Zb)) then                   ! Partially flooded element
          
          member%floodstatus(i) = 2
-         
-         ! length along axis from node i to fill level
-         member%h_fill = member%l_fill - (i-1)*dl
-         ! Since this element is only partially flooded/ballasted, compute the Volume fraction which is filled
+         member%elem_fill      = i
+         member%h_fill         = member%l_fill - (i-1)*dl
          call CylTaperCalc( member%Rin(i), member%Rin(i)+member%h_fill*member%dRdl_in(i), member%h_fill, Vballast_l, h_c)
          member%Vballast = member%Vballast + Vballast_l ! Note: Vballast_l will match calculations above
-         
-      ! unflooded element
-      else
+
+      else                                                                                                                     ! Unflooded element
+
          member%floodstatus(i) = 0
       
       end if
-      
 
-   end do ! end looping through elements   
-  
- 
+   end do ! end looping through elements
+
 end subroutine SetMemberProperties_Cyl
 
 subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
@@ -2653,7 +2655,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    character(*), parameter                           :: RoutineName = 'Morison_Init'
 
    TYPE(Morison_MemberType) :: member      ! the current member
-   INTEGER                  :: i, j
+   INTEGER                  :: i, j, im
    REAL(ReKi)               :: v2D(3,1), pos(3)
    real(ReKi)               :: An(3), An_drag(3), Vn(3), I_n(3), sgn, Amag, Amag_drag, Vmag, Imag, Ir_MG_end, Il_MG_end, R_I(3,3), IRl_mat(3,3), tMG, MGdens
    integer(IntKi)           :: MemberEndIndx
@@ -2997,6 +2999,17 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       IF ( ErrStat2 /= 0 ) THEN
          call SetErrStat(ErrID_Fatal,'Error copying FilledGroups array.',errStat,errMsg,RoutineName ); return
       END IF
+   END DO
+   ! Determine if the filled group is open to the environment through the open end of members buried in the seabed
+   DO i = 1,p%NFillGroups
+      p%FilledGroups(i)%IsOpen = .false.
+      DO j = 1,p%FilledGroups(i)%FillNumM
+         im = p%FilledGroups(i)%FillMList(j)
+         IF ( p%Members(im)%i_floor > 0 ) THEN
+            p%FilledGroups(i)%IsOpen = .true.
+            EXIT
+         END IF
+      END DO
    END DO
 
          ! Define initial guess for the system inputs here:
@@ -3377,7 +3390,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: FAMCFFSInt(3)
    INTEGER(IntKi)           :: MemSubStat, NumFSX
    REAL(DbKi)               :: theta1, theta2
-   REAL(ReKi)               :: x_hat(3), y_hat(3), z_hat(3), posMid(3), zetaMid, FSPt(3)
+   REAL(ReKi)               :: x_hat(3), x_hat1(3), x_hat2(3), y_hat(3), y_hat1(3), y_hat2(3), z_hat(3), posMid(3), zetaMid, FSPt(3)
    INTEGER(IntKi)           :: secStat
    INTEGER(IntKi)           :: nodeInWater
    REAL(SiKi)               :: WaveElev1, WaveElev2, WaveElev, FDynP, FV(3), FA(3), FAMCF(3)
@@ -3407,19 +3420,23 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    ! Get the instantaneous highest point of internal ballast for each filled group
    ! This is the elevation with zero internal hydrostatic pressure
    DO i = 1,p%NFillGroups
-      Is1stFloodedMember = .true.
-      DO j = 1,p%FilledGroups(i)%FillNumM
-         im = p%FilledGroups(i)%FillMList(j)
-         IF (p%Members(im)%memfloodstatus>0) THEN
-            CALL getMemBallastHiPt(p%Members(im),z_hi,ErrStat2,ErrMsg2); if (Failed()) return
-            IF ( Is1stFloodedMember ) THEN
-               m%zFillGroup(i) = z_hi
-               Is1stFloodedMember = .false.
-            ELSE
-               m%zFillGroup(i) = MAX(m%zFillGroup(i), z_hi)
+      IF ( p%FilledGroups(i)%IsOpen ) THEN
+         m%zFillGroup(i) = 0.0  ! SWL because ballast group open to the environment follows the external hydrostatic pressure field
+      ELSE
+         Is1stFloodedMember = .true.
+         DO j = 1,p%FilledGroups(i)%FillNumM
+            im = p%FilledGroups(i)%FillMList(j)
+            IF (p%Members(im)%memfloodstatus>0) THEN
+               CALL getMemBallastHiPt(p%Members(im),z_hi,ErrStat2,ErrMsg2); if (Failed()) return
+               IF ( Is1stFloodedMember ) THEN
+                  m%zFillGroup(i) = z_hi
+                  Is1stFloodedMember = .false.
+               ELSE
+                  m%zFillGroup(i) = MAX(m%zFillGroup(i), z_hi)
+               END IF
             END IF
-         END IF
-      END DO
+         END DO
+      END IF
    END DO
 
    ! ==============================================================================================
@@ -3756,30 +3773,37 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   F_B1(1:2) = 0.0
                   F_B1(3)   = - p%gravity * mem%m_fb_l(i)
                   F_B1(1:3) = F_B1(1:3) + mem%FillDens * p%gravity * pi * ( rMidIn*rMidIn*(zMid-zFillGroup) - r1In*r1In*(z1-zFillGroup) ) * k_hat
-                  F_B1(4:6) = -( p%gravity * mem%m_fb_l(i) * mem%h_cfb_l(i) + mem%FillDens * p%gravity * 0.25*pi*(rMidIn**4-r1In**4) ) * Cross_Product(k_hat,(/0.0,0.0,0.1/))
+                  F_B1(4:6) = -( p%gravity * mem%m_fb_l(i) * mem%h_cfb_l(i) + mem%FillDens * p%gravity * 0.25*pi*(rMidIn**4-r1In**4) ) * Cross_Product(k_hat,(/0.0,0.0,1.0/))
                   IF ( mem%FloodStatus(i) == 1 ) THEN
                      F_B2(1:2) = 0.0
                      F_B2(3)   = - p%gravity * mem%m_fb_u(i)
                      F_B2(1:3) = F_B2(1:3) + mem%FillDens * p%gravity * pi * ( r2In*r2In*(z2-zFillGroup) - rMidIn*rMidIn*(zMid-zFillGroup) ) * k_hat
-                     F_B2(4:6) = -( p%gravity * mem%m_fb_u(i) * mem%h_cfb_u(i) + mem%FillDens * p%gravity * 0.25*pi*(r2In**4-rMidIn**4) ) * Cross_Product(k_hat,(/0.0,0.0,0.1/))
+                     F_B2(4:6) = -( p%gravity * mem%m_fb_u(i) * mem%h_cfb_u(i) + mem%FillDens * p%gravity * 0.25*pi*(r2In**4-rMidIn**4) ) * Cross_Product(k_hat,(/0.0,0.0,1.0/))
+                  ELSE IF ( i == mem%elem_fill ) THEN ! Need to include end load here
+                     F_B1(1:3) = F_B1(1:3) + mem%FillDens * p%gravity *        pi * rMidIn**2* (zFillGroup - zMid) * k_hat
+                     F_B1(4:6) = F_B1(4:6) + mem%FillDens * p%gravity * 0.25 * pi * rMidIn**4* Cross_Product(k_hat,(/0.0,0.0,1.0/))
                   END IF
                ELSE IF (mem%MSecGeom == MSecGeom_Rec) THEN
                   CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
                   F_B1(1:2) = 0.0
                   F_B1(3)   = - p%gravity * mem%m_fb_l(i)
                   F_B1(1:3) = F_B1(1:3) + mem%FillDens * p%gravity * ( SaMidIn*SbMidIn*(zMid-zFillGroup) - Sa1In*Sb1In*(z1-zFillGroup) ) * k_hat
-                  F_B1(4:6) = - p%gravity * mem%m_fb_l(i) * mem%h_cfb_l(i) * Cross_Product(k_hat,(/0.0,0.0,0.1/)) &
+                  F_B1(4:6) = - p%gravity * mem%m_fb_l(i) * mem%h_cfb_l(i) * Cross_Product(k_hat,(/0.0,0.0,1.0/)) &
                               + mem%FillDens * p%gravity / 12.0 * ( (Sa1In**3*Sb1In*x_hat(3)*y_hat - Sa1In*Sb1In**3*y_hat(3)*x_hat ) - &
                                                                     (SaMidIn**3*SbMidIn*x_hat(3)*y_hat - SaMidIn*SbMidIn**3*y_hat(3)*x_hat ) )
                   IF ( mem%FloodStatus(i) == 1 ) THEN
                      F_B2(1:2) = 0.0
                      F_B2(3)   = - p%gravity * mem%m_fb_u(i)
                      F_B2(1:3) = F_B2(1:3) + mem%FillDens * p%gravity * ( Sa2In*Sb2In*(z2-zFillGroup) - SaMidIn*SbMidIn*(zMid-zFillGroup) ) * k_hat
-                     F_B2(4:6) = - p%gravity * mem%m_fb_u(i) * mem%h_cfb_u(i) * Cross_Product(k_hat,(/0.0,0.0,0.1/)) &
+                     F_B2(4:6) = - p%gravity * mem%m_fb_u(i) * mem%h_cfb_u(i) * Cross_Product(k_hat,(/0.0,0.0,1.0/)) &
                                  + mem%FillDens * p%gravity / 12.0 * ( (SaMidIn**3*SbMidIn*x_hat(3)*y_hat - SaMidIn*SbMidIn**3*y_hat(3)*x_hat ) - &
                                                                        (Sa2In**3*Sb2In*x_hat(3)*y_hat - Sa2In*Sb2In**3*y_hat(3)*x_hat ) )
+                  ELSE IF ( i == mem%elem_fill ) THEN ! Need to include end load here
+                     F_B1(1:3) = F_B1(1:3) + mem%FillDens * p%gravity * SaMidIn*SbMidIn*(zFillGroup-zMid) * k_hat
+                     F_B1(4:6) = F_B1(4:6) + mem%FillDens * p%gravity / 12.0 * (SaMidIn**3*SbMidIn*x_hat(3)*y_hat - SaMidIn*SbMidIn**3*y_hat(3)*x_hat)
                   END IF
                END IF
+
                m%memberLoads(im)%F_BF(:, i  ) = m%memberLoads(im)%F_BF(:, i  ) + F_B1
                m%memberLoads(im)%F_BF(:, i+1) = m%memberLoads(im)%F_BF(:, i+1) + F_B2
                y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B1(1:3)
@@ -4347,49 +4371,39 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       
       if (mem%MSecGeom == MSecGeom_Rec) then
          ! Compute total orientation matrix of starting and ending joints
-         call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(1)), u%Mesh%Position(:,mem%NodeIndx(  2)), mem%MSpinOrient, CMatrix1 )
-         CMatrix1 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(1  ))),CMatrix1)
-         call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(N)), u%Mesh%Position(:,mem%NodeIndx(N+1)), mem%MSpinOrient, CMatrix2 )
-         CMatrix2 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(N+1))),CMatrix2)
+         call Morison_DirCosMtrx( u%Mesh%Position(:,mem%NodeIndx(1)), u%Mesh%Position(:,mem%NodeIndx(N+1)), mem%MSpinOrient, CMatrix )
+         CMatrix1 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(1  ))),CMatrix)
+         CALL GetSectionUnitVectors_Rec( CMatrix1, x_hat1, y_hat1 )
+         CMatrix2 = matmul(transpose(u%Mesh%Orientation(:,:,mem%NodeIndx(N+1))),CMatrix)
+         CALL GetSectionUnitVectors_Rec( CMatrix2, x_hat2, y_hat2 )
       end if
 
 
       !----------------------------------- filled buoyancy loads: starts -----------------------------------!
-      !TODO: Do the equations below still work if z1 > z2 ?
-      !TODO: Should not have to test seabed crossing in time-marching loop
-      if ( mem%i_floor == 0 ) then   ! both ends are above seabed
-         !--- Water ballast buoyancy ---
-         ! if member is fully flooded
-         if (mem%memfloodstatus == 1) then
-         !if (mem%z_overfill >= 0) then 
-            Fl      = -mem%FillDens * g * pi *mem%Rin(  1)**2* (mem%z_overfill + max(z2-z1, 0.0_ReKi))
-            Moment  =  mem%FillDens * g * pi *0.25*mem%Rin(  1)**4*sinPhi
-            call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_BF_End(:, mem%NodeIndx(1)))
-            
-            Fl      =   mem%FillDens * g * pi *mem%Rin(N+1)**2* (mem%z_overfill + max(z1-z2, 0.0_ReKi))
-            Moment  =  -mem%FillDens * g * pi *0.25*mem%Rin(N+1)**4*sinPhi            
-            call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_BF_End(:, mem%NodeIndx(N+1)))
-            
-         ! if member is partially flooded
-         else if (mem%l_fill > 0) then 
-            Fl      = -mem%FillDens * g * pi *mem%Rin(1)**2*mem%l_fill*cosPhi
-            Moment  =  mem%FillDens * g * pi *0.25*mem%Rin(1)**4*sinPhi
-            call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_BF_End(:, mem%NodeIndx(1)))
-         else
-            ! no load if member is not flooded at all
+      if ( mem%memfloodstatus > 0 ) then
+
+         if ( mem%i_floor == 0 ) then                                                ! If the member is not buried in the seabed, compute the internal hydrostatic load on the starting endplate
+            if ( mem%MSecGeom == MSecGeom_Cyl ) then
+               m%F_BF_End(1:3, mem%NodeIndx(  1)) = m%F_BF_End(1:3, mem%NodeIndx(  1)) - mem%FillDens * g *        pi * mem%Rin(  1)**2* (zFillGroup - z1) * k_hat1
+               m%F_BF_End(4:6, mem%NodeIndx(  1)) = m%F_BF_End(4:6, mem%NodeIndx(  1)) - mem%FillDens * g * 0.25 * pi * mem%Rin(  1)**4* Cross_Product(k_hat1,(/0.0,0.0,1.0/))
+            else if ( mem%MSecGeom == MSecGeom_Rec ) then
+               m%F_BF_End(1:3, mem%NodeIndx(  1)) = m%F_BF_End(1:3, mem%NodeIndx(  1)) - mem%FillDens * g *         mem%SaIn(  1)   *mem%SbIn(  1)* (zFillGroup - z1) * k_hat1
+               m%F_BF_End(4:6, mem%NodeIndx(  1)) = m%F_BF_End(4:6, mem%NodeIndx(  1)) - mem%FillDens * g / 12.0 * (mem%SaIn(  1)**3*mem%SbIn(  1)*x_hat1(3)*y_hat1 - mem%SaIn(1)*mem%SbIn(1)**3*y_hat1(3)*x_hat1)
+            end if
          end if
-         
-      elseif ( mem%i_floor < mem%NElements+1 ) then ! upper node is still above the seabed, but lower node is below seabed
-         !if (mem%z_overfill >= 0) then 
-         if (mem%memfloodstatus == 1) then
-            Fl      =   mem%FillDens * g * pi *mem%Rin(N+1)**2* (mem%z_overfill + max(z1-z2, 0.0_ReKi))
-            Moment  =  -mem%FillDens * g * pi *0.25*mem%Rin(N+1)**4*sinPhi            
-            call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_BF_End(:, mem%NodeIndx(N+1)))
+
+         if ( (mem%i_floor<mem%NElements+1) .and. (mem%memfloodstatus==1) ) then     ! If the member is not fully buried in the seabed and fully filled, compute the internal hydrostatic load on the ending endplate
+            ! Note: If member is not fully filled, the endplate load is added to the appropriate member internal node under F_BF above
+            if ( mem%MSecGeom == MSecGeom_Cyl ) then
+               m%F_BF_End(1:3, mem%NodeIndx(N+1)) = m%F_BF_End(1:3, mem%NodeIndx(N+1)) + mem%FillDens * g *        pi * mem%Rin(N+1)**2* (zFillGroup - z2) * k_hat2
+               m%F_BF_End(4:6, mem%NodeIndx(N+1)) = m%F_BF_End(4:6, mem%NodeIndx(N+1)) + mem%FillDens * g * 0.25 * pi * mem%Rin(N+1)**4* Cross_Product(k_hat2,(/0.0,0.0,1.0/))
+            else if ( mem%MSecGeom == MSecGeom_Rec ) then
+               m%F_BF_End(1:3, mem%NodeIndx(N+1)) = m%F_BF_End(1:3, mem%NodeIndx(N+1)) + mem%FillDens * g *         mem%SaIn(N+1)   *mem%SbIn(N+1)* (zFillGroup - z2) * k_hat2
+               m%F_BF_End(4:6, mem%NodeIndx(N+1)) = m%F_BF_End(4:6, mem%NodeIndx(N+1)) + mem%FillDens * g / 12.0 * (mem%SaIn(N+1)**3*mem%SbIn(N+1)*x_hat2(3)*y_hat2 - mem%SaIn(N+1)*mem%SbIn(N+1)**3*y_hat2(3)*x_hat2)
+            end if
          end if
-         
-      else    
-         ! no loads because both end nodes are below seabed
-      end if
+
+       end if
 
       !------------------------------------ filled buoyancy loads: ends ------------------------------------!
 
@@ -5759,24 +5773,34 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
 
       N     = member%NElements
-      pos1  = m%DispNodePosHst(:,member%NodeIndx(1  ))
-      pos2  = m%DispNodePosHst(:,member%NodeIndx(N+1))
-      k_hat = pos2-pos1
-      k_hat = k_hat / SQRT(Dot_Product(k_hat,k_hat))
 
       IF (member%MSecGeom == MSecGeom_Cyl) THEN
+         pos1  = m%DispNodePosHst(:,member%NodeIndx(1))
+         pos2  = m%DispNodePosHst(:,member%NodeIndx(2))
+         k_hat = pos2-pos1
+         k_hat = k_hat / SQRT(Dot_Product(k_hat,k_hat))
          CALL GetSectionUnitVectors_Cyl( k_hat, y_hat, z_hat )
          ! Check the starting section
          rIn   = member%Rin(1)
          z_hi  = pos1(3) + rIn * z_hat(3)
          IF (member%memfloodstatus == 1) THEN            ! Fully flooded, check other end
+            pos1  = m%DispNodePosHst(:,member%NodeIndx(N  ))
+            pos2  = m%DispNodePosHst(:,member%NodeIndx(N+1))
+            k_hat = pos2-pos1
+            k_hat = k_hat / SQRT(Dot_Product(k_hat,k_hat))
+            CALL GetSectionUnitVectors_Cyl( k_hat, y_hat, z_hat )
             ! Check the ending section
             rIn    = member%Rin(N+1)
             z_hi   = MAX( pos2(3) + rIn * z_hat(3), z_hi)
          ELSE IF (member%memfloodstatus == 2) THEN       ! Partially flooded, check the end of the flooded section
-            pos2   = pos1 + member%l_fill * k_hat        ! End of flooded section
-            elemNo = CEILING(member%l_fill/member%dl)
-            l      = (member%l_fill - member%dl * (elemNo-1))/member%dl
+            elemNo = member%elem_fill
+            pos1  = m%DispNodePosHst(:,member%NodeIndx(elemNo  ))
+            pos2  = m%DispNodePosHst(:,member%NodeIndx(elemNo+1))
+            k_hat = pos2-pos1
+            k_hat = k_hat / SQRT(Dot_Product(k_hat,k_hat))
+            CALL GetSectionUnitVectors_Cyl( k_hat, y_hat, z_hat )
+            pos2   = pos1 + member%h_fill * k_hat        ! End of flooded section
+            l      = member%h_fill/member%dl
             rIn    = member%Rin(elemNo) * (1.0-l) + member%Rin(elemNo+1) * l
             z_hi   = MAX( pos2(3) + rIn * z_hat(3), z_hi)
          END IF
@@ -5784,6 +5808,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! DirCos matrix of undisplaced member
          CALL Morison_DirCosMtrx( u%Mesh%Position(:,member%NodeIndx(1  )), u%Mesh%Position(:,member%NodeIndx(N+1)), member%MSpinOrient, CMatrix0 )
          ! Check the vertices of the starting section
+         pos1  = m%DispNodePosHst(:,member%NodeIndx(1))
+         pos2  = m%DispNodePosHst(:,member%NodeIndx(2))
          z0 = pos1(3)
          CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(1  ))),CMatrix0)
          CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
@@ -5795,6 +5821,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          z_hi = MAX(z0 - 0.5*SaIn*x_hat(3) + 0.5*SbIn*y_hat(3), z_hi)
          IF (member%memfloodstatus == 1) THEN            ! Fully flooded, check other end
             ! Check the vertices of the ending section
+            pos1  = m%DispNodePosHst(:,member%NodeIndx(N  ))
+            pos2  = m%DispNodePosHst(:,member%NodeIndx(N+1))
             z0 = pos2(3)
             CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(N+1))),CMatrix0)
             CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
@@ -5805,12 +5833,19 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             z_hi = MAX(z0 + 0.5*SaIn*x_hat(3) + 0.5*SbIn*y_hat(3), z_hi)
             z_hi = MAX(z0 - 0.5*SaIn*x_hat(3) + 0.5*SbIn*y_hat(3), z_hi)
          ELSE IF (member%memfloodstatus == 2) THEN       ! Partially flooded, check the end of the flooded section
-            pos2 = pos1 + member%l_fill * k_hat          ! End of filled section
-            z0   = pos2(3)
-            elemNo = CEILING(member%l_fill/member%dl)
-            CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(elemNo))),CMatrix0)
+            elemNo = member%elem_fill
+            pos1  = m%DispNodePosHst(:,member%NodeIndx(elemNo  ))
+            pos2  = m%DispNodePosHst(:,member%NodeIndx(elemNo+1))
+            if ( member%h_fill>0.5*member%dl ) then
+               CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(elemNo+1))),CMatrix0)
+            else
+               CMatrix = matmul(transpose(u%Mesh%Orientation(:,:,member%NodeIndx(elemNo  ))),CMatrix0)
+            end if
             CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
-            l = (member%l_fill - member%dl * (elemNo-1))/member%dl
+            k_hat = Cross_Product(x_hat,y_hat)
+            pos2 = pos1 + member%h_fill * k_hat          ! End of filled section
+            z0   = pos2(3)
+            l = member%h_fill/member%dl
             SaIn = member%SaIn(elemNo) * (1.0-l) + member%SaIn(elemNo+1) * l
             SbIn = member%SbIn(elemNo) * (1.0-l) + member%SbIn(elemNo+1) * l
             z_hi = MAX(z0 - 0.5*SaIn*x_hat(3) - 0.5*SbIn*y_hat(3), z_hi)

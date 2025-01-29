@@ -37,6 +37,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         "The free-surface location (in Z) for this fill group"    m
 typedef   ^                            ^                             CHARACTER(80)    FillDensChr              -          -        -         "String version of the Fill density [can be DEFAULT which sets the fill density to WtrDens]"   kg/m^3
 typedef   ^                            ^                             ReKi             FillDens                 -          -        -         "Numerical fill density"    kg/m^3
+typedef   ^                            ^                             LOGICAL          IsOpen                   -          -        -         "Whether the internal ballast is open to the outside through the open end of members buried in the seabed"  -
 typedef   ^                            Morison_CoefDpths             ReKi             Dpth                     -          -        -         "Depth location for these depth-based hydrodynamic coefs"    m
 typedef   ^                            ^                             ReKi             DpthCd                   -          -        -         "Depth-based drag coef"    -
 typedef   ^                            ^                             ReKi             DpthCdMG                 -          -        -         "Depth-based drag coef for marine growth"    -
@@ -158,6 +159,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           Vouter                   -          -        -         "Member volume including marine growth"   m^3
 typedef   ^                            ^                             ReKi           Vballast                 -          -        -         "Member ballast volume"   m^3
 typedef   ^                            ^                             ReKi           Vsubmerged               -          -        -         "Submerged volume corresponding to portion of Member in the water"   m^3
+typedef   ^                            ^                             IntKi          elem_fill                -          -        -         "Last (partially) filled element of the member" -
 typedef   ^                            ^                             ReKi           l_fill                   -          -        -         "fill length along member axis from start node 1"   m
 typedef   ^                            ^                             ReKi           h_fill                   -          -        -         "fill length of partially flooded element"   m
 typedef   ^                            ^                             ReKi           z_overfill               -          -        -         "if member is fully filled, the head height of the fill pressure at the end node N+1. Zero if member is partially filled."   m
