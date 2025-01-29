@@ -466,7 +466,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
-   character(IntfStrLen)                                          :: OutVTKdir         !< Output directory for files (relative to current location)
+   character(IntfStrLen)                                          :: OutVTKDir         !< Output directory for files (relative to current location)
    integer(IntKi)                                                 :: i,j,k             !< generic index variables
    integer(IntKi)                                                 :: iWT               !< current turbine number (iterate through during setup for ADI_Init call)
    integer(IntKi)                                                 :: AeroProjMod       !< for checking that all turbines use the same AeroProjMod
@@ -517,10 +517,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
    if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
 
-   ! OutVTKdir -- output directory
-   OutVTKdir = TRANSFER( OutVTKdir_C, OutVTKdir )
-   i = INDEX(OutVTKdir,C_NULL_CHAR) - 1               ! if this has a c null character at the end...
-   if ( i > 0 ) OutVTKdir = OutVTKdir(1:I)            ! remove it
+   ! OutVTKDir -- output directory
+   OutVTKDir = TRANSFER( OutVTKDir_C, OutVTKDir )
+   i = INDEX(OutVTKDir,C_NULL_CHAR) - 1               ! if this has a c null character at the end...
+   if ( i > 0 ) OutVTKDir = OutVTKDir(1:I)            ! remove it
 
    ! For debugging the interface:
    if (DebugLevel > 0) then
@@ -669,10 +669,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    call SetupMotionLoadsInterfaceMeshes();    if (Failed())  return
    ! setup meshes
    if (WrOutputsData%WrVTK > 0_IntKi) then
-      if (len_trim(OutVTKdir) <= 0) then
-         OutVTKdir = 'vtk-ADI'
+      if (len_trim(OutVTKDir) <= 0) then
+         OutVTKDir = 'vtk-ADI'
       endif
-      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, OutVTKdir)
+      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, OutVTKDir)
       if (Failed())  return
    endif
    ! write meshes for this rotor
@@ -682,6 +682,8 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
       enddo
       if (Failed())  return
    endif
+   ! Map the meshes (doing this after writing so we can check if it fails)
+   call MapLoadsInterfaceMeshes();    if (Failed())  return
 
    ! Setup points for calculating disk average velocity
    do iWT=1,Sim%NumTurbines
@@ -771,10 +773,12 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
 
 
 CONTAINS
-   logical function Failed()
+   logical function Failed(Msg)
+      character(*), optional :: Msg
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
       if (Failed) then
+         if (present(Msg)) ErrMsg = trim(ErrMsg)//' ('//trim(Msg)//')'
          call ClearTmpStorage()
          call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
       endif
@@ -959,8 +963,8 @@ CONTAINS
          do iBlade=1,Sim%WT(iWT)%NumBlades
             !-------------------------------------------------------------
             ! Load mesh for blades
-            CALL MeshCopy( SrcMesh  = BldStrMotionMesh(iWT)%Mesh(iBlade)   ,&
-                           DestMesh = BldStrLoadMesh(iWT)%Mesh(iBlade)     ,&
+            CALL MeshCopy( SrcMesh  = BldStrMotionMesh(iWT)%Mesh(iBlade)  ,&
+                           DestMesh = BldStrLoadMesh(iWT)%Mesh(iBlade)    ,&
                            CtrlCode = MESH_SIBLING                        ,&
                            IOS      = COMPONENT_OUTPUT                    ,&
                            ErrStat  = ErrStat2                            ,&
@@ -971,8 +975,8 @@ CONTAINS
             BldStrMotionMesh(iWT)%Mesh(iBlade)%RemapFlag  = .FALSE.
 
             ! Temp mesh for load transfer
-            CALL MeshCopy( SrcMesh  = BldStrLoadMesh(iWT)%Mesh(iBlade)       ,&
-                           DestMesh = BldStrLoadMesh_tmp(iWT)%Mesh(iBlade)   ,&
+            CALL MeshCopy( SrcMesh  = BldStrLoadMesh(iWT)%Mesh(iBlade)      ,&
+                           DestMesh = BldStrLoadMesh_tmp(iWT)%Mesh(iBlade)  ,&
                            CtrlCode = MESH_COUSIN                           ,&
                            IOS      = COMPONENT_OUTPUT                      ,&
                            ErrStat  = ErrStat2                              ,&
@@ -985,16 +989,30 @@ CONTAINS
             ! For checking the mesh
             ! Note: CU is is output unit (platform dependent).
             if (DebugLevel >= 4)  call MeshPrintInfo( CU, BldStrLoadMesh(iWT)%Mesh(iBlade), MeshName='BldStrLoadMesh'//trim(Num2LStr(iWT))//'_'//trim(Num2LStr(iBlade)) )
+         enddo ! iBlade
+      enddo ! iWT
+   end subroutine SetupMotionLoadsInterfaceMeshes
 
+   !> This subroutine sets the interface meshes to map to the input motions to the AD
+   !! meshes
+   subroutine MapLoadsInterfaceMeshes()
+      integer(IntKi) :: iWT            !< current rotor/turbine
+      integer(IntKi) :: iBlade         !< current blade
+
+      ! Step through all turbine rotors
+      do iWT=1,Sim%NumTurbines
+         !-------------------------------------------------------------
+         ! Load mesh for blades
+         ! Step through all blades on this rotor
+         do iBlade=1,Sim%WT(iWT)%NumBlades
             !-------------------------------------------------------------
             ! Set the mapping meshes
             ! blades
-            call MeshMapCreate( BldStrMotionMesh(iWT)%Mesh(iBlade),      ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(iBlade, iWT),   ErrStat2, ErrMsg2 ); if(Failed()) return
-            call MeshMapCreate( ADI%y%AD%rotors(iWT)%BladeLoad(iBlade), BldStrLoadMesh(iWT)%Mesh(iBlade),             Map_AD_BldLoad_P_2_BldStrLoad(iBlade, iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
+            call MeshMapCreate( BldStrMotionMesh(iWT)%Mesh(iBlade),     ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(iBlade, iWT),   ErrStat2, ErrMsg2 ); if(Failed('Struct to blade '//trim(Num2LStr(iBlade)))) return
+            call MeshMapCreate( ADI%y%AD%rotors(iWT)%BladeLoad(iBlade), BldStrLoadMesh(iWT)%Mesh(iBlade),            Map_AD_BldLoad_P_2_BldStrLoad(iBlade, iWT), ErrStat2, ErrMsg2 ); if(Failed('Blade '//trim(Num2LStr(iBlade))//' to struct')) return
          enddo ! iBlade
       enddo ! iWT
-
-   end subroutine SetupMotionLoadsInterfaceMeshes
+   end subroutine MapLoadsInterfaceMeshes
 
 
    !-------------------------------------------------------------
@@ -1424,7 +1442,7 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
    integer(IntKi)                                                 :: i,j,k             !< generic index variables
-   character(*), parameter                                        :: RoutineName = 'ADI_C_Init'  !< for error handling
+   character(*), parameter                                        :: RoutineName = 'ADI_C_SetupRotor'  !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -1493,6 +1511,9 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
       if (Failed())  return
    endif
 
+   ! check Mesh points for blade specification
+   call CheckMeshPts(iWT); if (Failed()) return
+
    call SetupMotionMesh()
 
    ! Set error status
@@ -1523,8 +1544,9 @@ contains
    !> This subroutine prints out all the variables that are passed in.  Use this only
    !! for debugging the interface on the Fortran side.
    subroutine ShowPassedData()
-      character(1) :: TmpFlag
-      integer      :: i,j
+      character(1)   :: TmpFlag
+      integer        :: i,j
+      character(35)  :: TmpStr
       call WrSCr("")
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
@@ -1566,9 +1588,27 @@ contains
             j=9*(i-1)
             call WrMatrix(InitMeshOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
          enddo
+         call WrScr("          Node mapping")
+         call WrScr("               MeshPt      Blade")
+         do i=1,int(NumMeshPts_C,IntKi)
+            write(TmpStr,'(15X,I5,10X,I5)') i,int(MeshPtToBladeNum_C(i),IntKi)
+            call WrScr(TmpStr)
+         enddo
       endif
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
+
+   !> very basic checks on mesh points
+   subroutine CheckMeshPts(iWT)
+      integer(IntKi), intent(in) :: iWT
+      do i=1,size(MeshPtToBladeNum_C)
+         if ((MeshPtToBladeNum_C(i) < 1_c_int) .or. (MeshPtToBladeNum_C(i) > int(Sim%WT(iWT)%NumBlades))) then
+            ErrStat2=ErrID_Fatal
+            ErrMsg2 = 'Mesh Point '//trim(Num2LStr(i))//' assigned to invalid blade '//trim(Num2LStr(MeshPtToBladeNum_C(i)))//' on rotor '//trim(Num2LStr(iWT))
+            if (Failed()) return
+         endif
+      enddo
+   end subroutine CheckMeshPts
 
    subroutine SetupMotionMesh()
       real(ReKi)     :: InitPos(3)
@@ -2302,7 +2342,7 @@ contains
 
       ! Blade point motion (structural mesh from driver)
       do iBlade=1,Sim%WT(iWT)%NumBlades
-         call MeshWrVTKreference(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh', ErrStat3, ErrMsg3)
+         call MeshWrVTKreference(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(Num2LStr(iBlade)), ErrStat3, ErrMsg3)
          if (ErrStat3 >= AbortErrLev) return
       enddo
 
@@ -2409,7 +2449,7 @@ contains
 
       ! Blade point motion (structural mesh from driver)
       do iBlade=1,Sim%WT(iWT)%NumBlades
-         call MeshWrVTK(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(num2lstr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+         call MeshWrVTK(RefPoint, BldStrMotionMesh(iWT)%Mesh(iBlade), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldStrMotionMesh'//trim(Num2LStr(iBlade)), n_VTK, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
          if (ErrStat3 >= AbortErrLev) return
       enddo
 
