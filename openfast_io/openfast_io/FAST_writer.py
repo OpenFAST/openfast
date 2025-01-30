@@ -897,14 +897,6 @@ class InputWriter_OpenFAST(object):
     def write_AeroDyn(self):
         # AeroDyn v15.03
 
-
-        # self.fst_vt['AeroDyn']['ADBlFile1'] = self.FAST_namingOut + '_AeroDyn_blade.dat'
-        # self.fst_vt['AeroDyn']['ADBlFile2'] = self.fst_vt['AeroDyn']['ADBlFile1']
-        # self.fst_vt['AeroDyn']['ADBlFile3'] = self.fst_vt['AeroDyn']['ADBlFile1']
-        # filename = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn']['ADBlFile1'])
-
-
-
         # Generate AeroDyn v15 blade input file
         if isinstance(self.fst_vt['AeroDynBlade'], list):
             for i_adBld, adBld in enumerate(self.fst_vt['AeroDynBlade']):
