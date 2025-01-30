@@ -11,6 +11,13 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 
 
 
+OpenFAST v4.0.0 to OpenFAST v4.0.1
+----------------------------------
+
+No input file changes are required.  MoorDyn can contain an option section for
+`External Loads` (see the MoorDyn documentation for details).
+
+
 OpenFAST v3.5.5 to OpenFAST 4.0.0
 ---------------------------------
 
