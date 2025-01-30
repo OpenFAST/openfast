@@ -77,5 +77,8 @@ After posting and tagging release
    git ls-files -v | grep "^[a-z]"
    git update-index --no-assume-unchanged <files-from-cmd-above>
    ```
-
+## Post-release
+### Docker Image push to ghcr.io
+1. Build latest `OpenFAST/main` image locally.
+2. Push image to ghcr.io/openfast/openfast using tags `latest` and `<version>`
 
