@@ -364,6 +364,19 @@ CONTAINS
                   Line = NextLine(i)
                END DO
 
+            else if (INDEX(Line, "EXTERNAL LOADS") > 0) then ! if external load and damping header
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               ! find how many elements of this type there are
+               Line = NextLine(i)
+               DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
+                  p%nExtLds = p%nExtLds + 1
+                  Line = NextLine(i)
+               END DO
+
             else if (INDEX(Line, "CONTROL") > 0) then ! if control conditions header
 
                IF (wordy > 1) print *, "   Reading control channels: ";
@@ -464,6 +477,8 @@ CONTAINS
                      read (OptValue,*) p%inertialF
                   else if ( OptString == 'INERTIALF_RAMPT') then
                      read (OptValue,*) p%inertialF_rampT
+                  else if ( OptString == 'OUTSWITCH') then
+                     read (OptValue,*) p%OutSwitch
                   else
                      CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
                   end if
@@ -564,7 +579,7 @@ CONTAINS
       ALLOCATE(m%RodList(     p%nRods     ), STAT = ErrStat2 ); if(AllocateFailed("RodList"     )) return
       ALLOCATE(m%PointList( p%nPointsExtra), STAT = ErrStat2 ); if(AllocateFailed("PointList"   )) return
       ALLOCATE(m%LineList(    p%nLines    ), STAT = ErrStat2 ); if(AllocateFailed("LineList"    )) return
-      
+      ALLOCATE(m%ExtLdList(    p%nExtLds  ), STAT = ErrStat2 ); if(AllocateFailed("ExtLdList"   )) return
       ALLOCATE(m%FailList(    p%nFails    ), STAT = ErrStat2 ); if(AllocateFailed("FailList"    )) return
     
       
@@ -729,22 +744,10 @@ CONTAINS
                        RETURN
                    END IF
                    
-                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd  LinDamp
+                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd
                    IF (ErrStat2 == 0) THEN
                       READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
-                         m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd,&
-                         m%RodTypeList(l)%LinDamp    ! Linear damping coefficient
-
-                      if (ErrStat2 == 0) then
-                          m%RodTypeList(l)%isLinDamp = .TRUE.     ! linear damping was read
-                      else    ! Linear damping not present, so reread the line without it
-                          READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
-                          m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd
-
-                          m%RodTypeList(l)%LinDamp = 0.0
-                          m%RodTypeList(l)%isLinDamp = .FALSE. 
-                      end if
-
+                         m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd
 
                       m%RodTypeList(l)%Cdt = 0.0_DbKi ! not used
                       m%RodTypeList(l)%Cat = 0.0_DbKi ! not used
@@ -1591,7 +1594,196 @@ CONTAINS
 
                END DO   ! l = 1,p%nLines
 
+            !-------------------------------------------------------------------------------------------
+            else if (INDEX(Line, "EXTERNAL LOADS") > 0) then ! if external load header
 
+               IF (wordy > 0) print *, "   Reading external load entries";
+
+               ! skip following two lines (label line and unit line)
+               Line = NextLine(i)
+               Line = NextLine(i)
+
+               ! process each line
+               DO l = 1,p%nExtLds
+
+                  !read into a line
+                  Line = NextLine(i)
+
+                  IF ( CountWords( Line ) /= 6) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 6 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
+                  END IF
+
+                  IF (ErrStat2 == 0) THEN
+                     READ(Line,*,IOSTAT=ErrStat2) m%ExtLdList(l)%IdNum, tempString1, tempString2, tempString3, tempString4, tempString5
+                     ! Check for sequential IdNums
+                     IF ( m%ExtLdList(l)%IdNum .NE. l ) THEN
+                        CALL SetErrStat( ErrID_Fatal, 'External load ID numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     END IF
+
+                     ! read in object type
+                     CALL Conv2UC(tempString1) ! convert to uppercase so that matching is not case-sensitive
+                     CALL DecomposeString(tempString1, let1, num1, let2, num2, let3) 
+
+                     ! Read in CSys local or global
+                     CALL Conv2UC(tempString5) ! convert to uppercase so that matching is not case-sensitive
+
+                     ! Check if object type and coordinate system are valid
+                     if (let1 == "BODY") then
+                        if (tempString5 == "G") then
+                           m%ExtLdList(l)%isGlobal = .true.
+                        else if (tempString5 == "L") then
+                           m%ExtLdList(l)%isGlobal = .false.
+                        else
+                           CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Coordinate system (CSys) for BODY must be either G for global (earth fixed) or L for local (body fixed). ' , ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           RETURN
+                        end if
+                     else if ( (let1 == "ROD") .or. (let1 == "R") ) then
+                        if (tempString5/="-") then
+                           CALL SetErrStat( ErrID_Warn, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Coordinate system (CSys) cannot be specified for ROD. External force is always in the global earth-fixed system and applied to end A. Transverse and axial damping are always in the local body-fixed system. Enter "-" for CSys to avoid this warning. ' , ErrStat, ErrMsg, RoutineName )
+                        end if
+                        m%ExtLdList(l)%isGlobal = .false.
+                     else if ( (let1 == "POINT") .or. (let1 == "P") ) then
+                        if (tempString5/="-") then
+                           CALL SetErrStat( ErrID_Warn, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Coordinate system (CSys) cannot be specified for POINT. Global earth-fixed system is always used. Enter "-" for CSys to avoid this warning. ' , ErrStat, ErrMsg, RoutineName )
+                        end if
+                        m%ExtLdList(l)%isGlobal = .true.
+                     else
+                        CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. External load and damping can only be assigned to POINT, ROD, or BODY.', ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     end if
+
+                     ! process translational force
+                     CALL SplitByBars(tempString2, N, tempStrings)
+                     if (N==1) then ! one force provided; must be zero.
+                        READ(tempStrings(1), *) m%ExtLdList(l)%Fext(1)
+                        m%ExtLdList(l)%Fext(2) = m%ExtLdList(l)%Fext(1)
+                        m%ExtLdList(l)%Fext(3) = m%ExtLdList(l)%Fext(1)
+                        if (m%ExtLdList(l)%Fext(1) /= 0.0) then
+                           CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0 or have 3 numbers' , ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
+                           RETURN
+                        end if
+                     elseif (N==3) then ! all three forces provided. Note rod forces will be applied to end A.
+                        READ(tempStrings(1), *) m%ExtLdList(l)%Fext(1)
+                        READ(tempStrings(2), *) m%ExtLdList(l)%Fext(2)
+                        READ(tempStrings(3), *) m%ExtLdList(l)%Fext(3)
+                     else
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Force entry must be 0 or have 3 numbers' , ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     end if
+
+                     ! process linear damping coefficient
+                     CALL SplitByBars(tempString3, N, tempStrings)
+                     if (N==1) then                                                                                 ! if only one entry, use it for all directions
+                        READ(tempString4, *) m%ExtLdList(l)%Blin(1)
+                        m%ExtLdList(l)%Blin(2) = m%ExtLdList(l)%Blin(1)
+                        m%ExtLdList(l)%Blin(3) = m%ExtLdList(l)%Blin(1)
+                     else if ((N==2) .and. ((let1 == "ROD") .or. (let1 == "R"))) then                               ! two directions provided, this is for rods
+                        READ(tempStrings(1), *) m%ExtLdList(l)%Blin(1)
+                        READ(tempStrings(2), *) m%ExtLdList(l)%Blin(2)
+                        m%ExtLdList(l)%Blin(3) = 0.0_DbKi 
+                     else if ((N==3) .and. (let1 /= "ROD") .and. (let1 /= "R")) then                                ! all three directions provided, not rods
+                        READ(tempStrings(1), *) m%ExtLdList(l)%Blin(1)
+                        READ(tempStrings(2), *) m%ExtLdList(l)%Blin(2)
+                        READ(tempStrings(3), *) m%ExtLdList(l)%Blin(3)
+                     else
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Blin entry can have 1 number, 2 numbers (for rods only), or 3 numbers (for non-rod objects). ' , ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     end if
+
+                     ! process quadratic damping coefficient
+                     CALL SplitByBars(tempString4, N, tempStrings)
+                     if (N==1) then                                                                                ! if only one entry, use it for all directions
+                        READ(tempString4, *) m%ExtLdList(l)%Bquad(1)
+                        m%ExtLdList(l)%Bquad(2) = m%ExtLdList(l)%Bquad(1)
+                        m%ExtLdList(l)%Bquad(3) = m%ExtLdList(l)%Bquad(1)
+                     else if ((N==2) .and. ((let1 == "ROD") .or. (let1 == "R"))) then                              ! two directions provided, this is for rods
+                        READ(tempStrings(1), *) m%ExtLdList(l)%Bquad(1)
+                        READ(tempStrings(2), *) m%ExtLdList(l)%Bquad(2)
+                        m%ExtLdList(l)%Bquad(3) = 0.0_DbKi 
+                     else if ((N==3) .and. (let1 /= "ROD") .and. (let1 /= "R")) then                               ! all three directions provided, not rods
+                        READ(tempStrings(1), *) m%ExtLdList(l)%Bquad(1)
+                        READ(tempStrings(2), *) m%ExtLdList(l)%Bquad(2)
+                        READ(tempStrings(3), *) m%ExtLdList(l)%Bquad(3)
+                     else
+                        CALL SetErrStat( ErrID_Fatal, 'External load entry '//trim(Num2LStr(m%ExtLdList(l)%IdNum))//' Bquad entry can have 1 number, 2 numbers (for rods only), or 3 numbers (for non-rod objects). ' , ErrStat, ErrMsg, RoutineName )
+                        CALL CleanUp()
+                        RETURN
+                     end if
+
+                     IF ( (m%ExtLdList(l)%Blin(1)<0.0) .OR. (m%ExtLdList(l)%Blin(2)<0.0) .OR. (m%ExtLdList(l)%Blin(3)<0.0) .OR. &
+                          (m%ExtLdList(l)%Bquad(1)<0.0) .OR. (m%ExtLdList(l)%Bquad(2)<0.0) .OR. (m%ExtLdList(l)%Bquad(3)<0.0) ) THEN
+                         CALL SetErrStat( ErrID_Fatal, ' Unable to parse External Load '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Damping coefficients must be non-negative.', ErrStat, ErrMsg, RoutineName )
+                         CALL CleanUp()
+                         RETURN
+                     END IF
+
+                     IF (let1 == "BODY") THEN
+                         IF (len_trim(num1) > 0) THEN
+                            READ(num1, *) J   ! convert to int, representing parent body index
+                            IF ((J <= p%nBodies) .and. (J > 0)) THEN
+                               IF (m%ExtLdList(l)%isGlobal) THEN
+                                  m%BodyList(J)%FextG  = m%BodyList(J)%FextG  + m%ExtLdList(l)%Fext
+                                  m%BodyList(J)%BlinG  = m%BodyList(J)%BlinG  + m%ExtLdList(l)%Blin
+                                  m%BodyList(J)%BquadG = m%BodyList(J)%BquadG + m%ExtLdList(l)%Bquad
+                               ELSE
+                                  m%BodyList(J)%FextL  = m%BodyList(J)%FextL  + m%ExtLdList(l)%Fext
+                                  m%BodyList(J)%BlinL  = m%BodyList(J)%BlinL  + m%ExtLdList(l)%Blin
+                                  m%BodyList(J)%BquadL = m%BodyList(J)%BquadL + m%ExtLdList(l)%Bquad
+                               END IF
+                            ELSE
+                               CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
+                               return
+                            END IF
+                         ELSE
+                            CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" BODY attachment.", ErrStat, ErrMsg, RoutineName )
+                               return
+                         END IF
+                     ELSEIF (let1 == "POINT" .OR. let1 == "P") THEN
+                        IF (len_trim(num1) > 0) THEN
+                           READ(num1, *) J   ! convert to int, representing parent point index
+                           IF ((J <= p%nPoints) .and. (J > 0)) THEN
+                              m%PointList(J)%Fext = m%PointList(J)%Fext + m%ExtLdList(l)%Fext
+                              m%PointList(J)%Blin = m%PointList(J)%Blin + m%ExtLdList(l)%Blin
+                              m%PointList(J)%Bquad = m%PointList(J)%Bquad + m%ExtLdList(l)%Bquad
+                           ELSE
+                              CALL SetErrStat( ErrID_Fatal,  "Point ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
+                              return
+                           END IF
+                        ELSE
+                           CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" POINT attachment.", ErrStat, ErrMsg, RoutineName )
+                              return
+                        END IF
+                     ELSEIF (let1 == "ROD" .OR. let1 == "R") THEN
+                        IF (len_trim(num1) > 0) THEN
+                           READ(num1, *) J   ! convert to int, representing parent rod index
+                           IF ((J <= p%nRods) .and. (J > 0)) THEN
+                              m%RodList(J)%FextU = m%RodList(J)%FextU + m%ExtLdList(l)%Fext
+                              m%RodList(J)%Blin = m%RodList(J)%Blin(1:2) + m%ExtLdList(l)%Blin(1:2) ! rods only have axial and transverse
+                              m%RodList(J)%Bquad = m%RodList(J)%Bquad(1:2) + m%ExtLdList(l)%Bquad(1:2) ! rods only have axial and transverse
+                           ELSE
+                              CALL SetErrStat( ErrID_Fatal,  "Rod ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
+                              return
+                           END IF
+                        ELSE
+                           CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" ROD attachment.", ErrStat, ErrMsg, RoutineName )
+                              return
+                        END IF
+                     END IF
+                     
+                  END IF
+
+               END DO
+
+               ! TODO: write inputs to log file
 
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "CONTROL") > 0) then ! if control inputs header
@@ -1958,6 +2150,7 @@ CONTAINS
    IF (wordy > 1) print *, "nBodies        = ",p%nBodies       
    IF (wordy > 1) print *, "nRods          = ",p%nRods         
    IF (wordy > 1) print *, "nLines         = ",p%nLines        
+   IF (wordy > 1) print *, "nExtLds        = ",p%nExtLds
    IF (wordy > 1) print *, "nCtrlChans     = ",p%nCtrlChans        
    IF (wordy > 1) print *, "nFails         = ",p%nFails        
    IF (wordy > 1) print *, "nFreeBodies    = ",p%nFreeBodies   
