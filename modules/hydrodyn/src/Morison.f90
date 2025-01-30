@@ -4849,6 +4849,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          else
             s = Sb
          end if
+         if (EqualRealNos(s,0.0_DbKi)) cycle
          if ( vInWtr(v1) .and. vInWtr(v2) ) then
             ! Side fully submerged
             s1 = 0.0
