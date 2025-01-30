@@ -761,6 +761,27 @@ through the Intel oneAPI distributions.
 
 .. _installation_appendix:
 
+Simulink
+~~~~~~~~
+To build the MEX function for coupling OpenFAST into Simulink, there are two
+options depending on platform.
+
+Windows with Visual Studio
+--------------------------
+For Windows, build with the `Release_Matlab` option from the Visual Studio
+project in `vs-build/FAST/FAST.sln`.  Then run
+`glue-codes/simulink/src/create_FAST_SFunc.m` from MATLAB (instructions at the
+top of this file).
+
+CMake
+-----
+For CMake builds on all platforms, enable the `-DBUILD_OPENFAST_SIMULINK_API=On`
+option in CMake and build the `FAST_SFunc` target.  This will place the
+resulting `FAST_SFunc.mexXXXX` in
+`<build-dir>/glue-codes/simulink/FAST_SFunc.mexXXXX` (and in the install
+directory at `install/bin/FAST_SFunc.mexXXXX` if `make install` was called).
+
+
 Appendix
 ~~~~~~~~
 The following are additional methods for installation which may not be fully
