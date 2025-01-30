@@ -1680,7 +1680,7 @@ CONTAINS
                      end if
 
                      ! process linear damping coefficient
-                     CALL SplitByBars(tempString4, N, tempStrings)
+                     CALL SplitByBars(tempString3, N, tempStrings)
                      if (N==1) then                                                                                 ! if only one entry, use it for all directions
                         READ(tempString4, *) m%ExtLdList(l)%Blin(1)
                         m%ExtLdList(l)%Blin(2) = m%ExtLdList(l)%Blin(1)
