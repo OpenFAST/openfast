@@ -460,19 +460,26 @@ The CMake options specific to OpenFAST and their default settings are:
     BUILD_DOCUMENTATION            - Build documentation (Default: OFF)
     BUILD_FASTFARM                 - Enable FAST.Farm capabilities (Default: OFF)
     BUILD_OPENFAST_CPP_API         - Enable building OpenFAST - C++ API (Default: OFF)
+    BUILD_OPENFAST_CPP_DRIVER      - Enable building OpenFAST C++ driver using C++ CFD API (Default: OFF)
+    BUILD_OPENFAST_LIB_DRIVER      - Enable building OpenFAST driver using C++ Library API (Default: OFF)
     BUILD_OPENFAST_SIMULINK_API    - Enable building OpenFAST for use with Simulink (Default: OFF)
     BUILD_SHARED_LIBS              - Enable building shared libraries (Default: OFF)
     BUILD_TESTING                  - Build the testing tree (Default: OFF)
+    BUILD_UNIT_TESTING             - Enable unit testing (Default: ON)
     CMAKE_BUILD_TYPE               - Choose the build type: Debug Release (Default: Release)
     CMAKE_Fortran_MODULE_DIRECTORY - Set the Fortran Modules directory
     CMAKE_INSTALL_PREFIX           - Install path prefix, prepended onto install directories.
-    CODECOV                        - Enable infrastructure for measuring code coverage (Default: OFF)
+    CMAKE_MACOSX_RPATH             - Use RPATH runtime linking (Default: ON)
+    CODECOVERAGE                   - Enable infrastructure for measuring code coverage (Default: OFF)
     DOUBLE_PRECISION               - Treat REAL as double precision (Default: ON)
     FPE_TRAP_ENABLED               - Enable Floating Point Exception (FPE) trap in compiler options (Default: OFF)
     GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules (Default: OFF)
     OPENMP                         - Enable OpenMP support (Default: OFF)
-    ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: OFF)
+    ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: ON)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
+    USE_LOCAL_STATIC_LAPACK        - Enable downloading and building static LAPACK and BLAS libs (Default: OFF)
+    VARIABLE_TRACKING              - Enables variable tracking for better runtime debugging output. May increase compile time. Valid only for GNU. (Defualt: ON)
+
 
 Additional system-specific options may exist for a given system, but those
 should not impact the OpenFAST configuration. As mentioned above, the
@@ -753,6 +760,27 @@ can be installed with any package manager for macOS and Linux or
 through the Intel oneAPI distributions.
 
 .. _installation_appendix:
+
+Simulink
+~~~~~~~~
+To build the MEX function for coupling OpenFAST into Simulink, there are two
+options depending on platform.
+
+Windows with Visual Studio
+--------------------------
+For Windows, build with the `Release_Matlab` option from the Visual Studio
+project in `vs-build/FAST/FAST.sln`.  Then run
+`glue-codes/simulink/src/create_FAST_SFunc.m` from MATLAB (instructions at the
+top of this file).
+
+CMake
+-----
+For CMake builds on all platforms, enable the `-DBUILD_OPENFAST_SIMULINK_API=On`
+option in CMake and build the `FAST_SFunc` target.  This will place the
+resulting `FAST_SFunc.mexXXXX` in
+`<build-dir>/glue-codes/simulink/FAST_SFunc.mexXXXX` (and in the install
+directory at `install/bin/FAST_SFunc.mexXXXX` if `make install` was called).
+
 
 Appendix
 ~~~~~~~~
