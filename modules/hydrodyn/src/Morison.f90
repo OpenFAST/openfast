@@ -2061,9 +2061,11 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
       
    end do
 
-   member%Vinner = 0.0_ReKi  ! Total  volume of member without marine growth
-   member%Vouter = 0.0_ReKi  ! Total outer volume of member including marine growth
-   member%Vballast = 0.0_ReKi ! Total ballasted volume of member
+   member%Vinner    = 0.0_ReKi  ! Total  volume of member without marine growth
+   member%Vouter    = 0.0_ReKi  ! Total outer volume of member including marine growth
+   member%Vballast  = 0.0_ReKi  ! Total ballasted volume of member
+   member%elem_fill = 0         ! Last (partially) filled element of the member
+   member%h_fill    = 0.0       ! Axial length of elem_fill occupied by water ballast
    
    ! force-related constants for each element
    do i = 1, member%NElements
@@ -2175,8 +2177,6 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
       ! NOTE: this section of code is somewhat redundant with "flooded ballast inertia" section above
 
       li = dl*(i-1)
-      member%elem_fill = 0     ! Last (partially) filled element of the member
-      member%h_fill    = 0.0   ! Axial length of elem_fill occupied by water ballast
 
       if (Zb < -InitInp%WaveField%EffWtrDpth) then                                                                             ! Fully buried element
 
@@ -2407,9 +2407,11 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
       
    end do
 
-   member%Vinner   = 0.0_ReKi  ! Total  volume of member without marine growth
-   member%Vouter   = 0.0_ReKi  ! Total outer volume of member including marine growth
-   member%Vballast = 0.0_ReKi  ! Total ballasted volume of member
+   member%Vinner    = 0.0_ReKi  ! Total volume of member without marine growth
+   member%Vouter    = 0.0_ReKi  ! Total outer volume of member including marine growth
+   member%Vballast  = 0.0_ReKi  ! Total ballasted volume of member
+   member%elem_fill = 0         ! Last (partially) filled element of the member
+   member%h_fill    = 0.0       ! Axial length of elem_fill occupied by water ballast
    
    ! force-related constants for each element
    do i = 1, member%NElements
@@ -2526,29 +2528,32 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
       ! NOTE: this section of code is somewhat redundant with "flooded ballast inertia" section above
 
       li = dl*(i-1)
-      ! fully buried element
-      if (Zb < -InitInp%WaveField%EffWtrDpth) then
+
+      if (Zb < -InitInp%WaveField%EffWtrDpth) then                                                                    ! Fully buried element
+
          member%floodstatus(i) = 0
-      
-      ! fully filled elements 
-      else if (member%memfloodstatus > 0 .and. member%FillFSLoc >= Zb) then
+
+      else if (member%memfloodstatus > 0 .and. member%FillFSLoc >= Zb) then                                           ! Fully flooded elements
+
          member%floodstatus(i) = 1
+         if ( EqualRealNos(member%FillFSLoc, Zb) .or. (i==member%NElements) ) then  ! No partially filled elements
+            member%elem_fill = i
+            member%h_fill    = dl
+         end if
          member%Vballast = member%Vballast + Vballast_l + Vballast_u
 
-      ! partially filled element
-      else if ((member%memfloodstatus > 0) .and. (member%FillFSLoc > Za) .AND. (member%FillFSLoc < Zb)) then
+      else if ((member%memfloodstatus > 0) .and. (member%FillFSLoc > Za) .AND. (member%FillFSLoc < Zb)) then          ! Partially flooded element
          
          member%floodstatus(i) = 2
-         
-         ! length along axis from node i to fill level
-         member%h_fill = member%l_fill - (i-1)*dl
-         !Since this element is only partially flooded/ballasted, compute the Volume fraction which is filled
+         member%elem_fill      = i
+         member%h_fill         = member%l_fill - (i-1)*dl
          call RecTaperCalc( member%Sain(i), member%Sain(i)+member%h_fill*member%dSadl_in(i), member%Sbin(i), member%Sbin(i)+member%h_fill*member%dSbdl_in(i), member%h_fill, Vballast_l, h_c)
          member%Vballast = member%Vballast + Vballast_l  ! Note: Vballast_l will match calculations above
-      
-      ! unflooded element
-      else
+
+      else                                                                                                            ! Unflooded element
+
          member%floodstatus(i) = 0
+
       end if
       
    end do ! end looping through elements   
@@ -2679,6 +2684,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%AMMod      = InitInp%AMMod
    p%VisMeshes  = InitInp%VisMeshes                       ! visualization mesh for morison elements
    p%PtfmYMod   = InitInp%PtfmYMod
+   p%NFillGroups = InitInp%NFillGroups
 
    ! Pointer to SeaState WaveField
    p%WaveField => InitInp%WaveField
@@ -2989,7 +2995,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
    END DO ! looping through nodes that are joints, i
           
-   p%NFillGroups = InitInp%NFillGroups
+   ! Copy ballast group information to parameters
    ALLOCATE ( p%FilledGroups(p%NFillGroups), STAT = ErrStat2 )
       IF ( ErrStat2 /= 0 ) THEN
          call SetErrStat(ErrID_Fatal,'Error allocating space for FilledGroups array.',errStat,errMsg,RoutineName ); return
@@ -3007,6 +3013,9 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          im = p%FilledGroups(i)%FillMList(j)
          IF ( p%Members(im)%i_floor > 0 ) THEN
             p%FilledGroups(i)%IsOpen = .true.
+            IF ( p%FilledGroups(i)%FillFSLoc > p%WaveField%MSL2SWL ) THEN
+               call SetErrStat(ErrID_Fatal,' FillFSLoc cannot be higher than MSL2SWL if FillMList contains any member that is fully or partially buried in the seabed. ',errStat,errMsg,RoutineName ); return
+            END IF
             EXIT
          END IF
       END DO
