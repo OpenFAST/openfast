@@ -101,8 +101,6 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !< tangential drag coefficient [-]
     REAL(DbKi)  :: CdEnd = 0.0_R8Ki      !< drag coefficient for rod end [[-]]
     REAL(DbKi)  :: CaEnd = 0.0_R8Ki      !< added mass coefficient for rod end [[-]]
-    REAL(DbKi)  :: LinDamp = 0.0_R8Ki      !< Linear damping, transverse damping for body element [[N/(m/s)/m]]
-    LOGICAL  :: isLinDamp = .false.      !< Linear damping, transverse damping for body element is used [-]
   END TYPE MD_RodProp
 ! =======================
 ! =========  MD_Body  =======
@@ -133,6 +131,12 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:6,1:6)  :: M0 = 0.0_R8Ki      !< body 6-dof mass and inertia matrix in its own frame [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: OrMat = 0.0_R8Ki      !< DCM for body orientation [-]
     REAL(DbKi) , DIMENSION(1:3)  :: rCG = 0.0_R8Ki      !< vector in body frame from ref point to CG (before rods etc..) [-]
+    REAL(DbKi) , DIMENSION(1:3)  :: FextG = 0.0_R8Ki      !< vector of user-defined external force on the body in the global frame [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BlinG = 0.0_R8Ki      !< user-defined linear translational damping on the body in the global frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BquadG = 0.0_R8Ki      !< user-defined quadratic translational damping on the body in the global frame [[N/(m/s)^2]]
+    REAL(DbKi) , DIMENSION(1:3)  :: FextL = 0.0_R8Ki      !< vector of user-defined external force on the body in the local body-fixed frame [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BlinL = 0.0_R8Ki      !< user-defined linear translational damping on the body in the local body-fixed frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: BquadL = 0.0_R8Ki      !< user-defined quadratic translational damping on the body in the local body-fixed frame [[N/(m/s)^2]]
   END TYPE MD_Body
 ! =======================
 ! =========  MD_Point  =======
@@ -160,6 +164,9 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: PDyn      !< water dynamic pressure at node [[Pa]]
     REAL(DbKi) , DIMENSION(1:3)  :: Fnet = 0.0_R8Ki      !< total force on node (excluding inertial loads) [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: M = 0.0_R8Ki      !< node mass matrix, from attached lines [-]
+    REAL(DbKi) , DIMENSION(1:3)  :: Fext = 0.0_R8Ki      !< vector of user-defined external force on the point always in the global frame [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< user-defined linear translational damping on the point always in the global frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< user-defined quadratic translational damping on the point always in the global frame [[N/(m/s)^2]]
   END TYPE MD_Point
 ! =======================
 ! =========  MD_Rod  =======
@@ -188,8 +195,6 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: CdEnd = 0.0_R8Ki      !< drag coefficient for rod end [[-]]
     REAL(DbKi)  :: CaEnd = 0.0_R8Ki      !< added mass coefficient for rod end [[-]]
-    REAL(DbKi)  :: LinDamp = 0.0_R8Ki      !< Linear damping, transverse damping for rod element [[N/(m/s)/m]]
-    LOGICAL  :: isLinDamp = .false.      !< Linear damping, transverse damping for rod element is used [-]
     REAL(DbKi)  :: time = 0.0_R8Ki      !< current time [[s]]
     REAL(DbKi)  :: roll = 0.0_R8Ki      !< roll relative to vertical [[rad]]
     REAL(DbKi)  :: pitch = 0.0_R8Ki      !< pitch relative to vertical [[rad]]
@@ -211,6 +216,8 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Ap      !< node added mass forcing (transverse) [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Aq      !< node added mass forcing (axial) [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< node bottom contact force [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Bp      !< transverse damping force [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Bq      !< axial damping force [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Fnet      !< total force on node [[N]]
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M      !< node mass matrix [[kg]]
     REAL(DbKi) , DIMENSION(1:3)  :: FextA = 0.0_R8Ki      !< external forces from attached lines on/about end A  [-]
@@ -225,6 +232,9 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: OrMat = 0.0_R8Ki      !< DCM for body orientation [-]
     INTEGER(IntKi)  :: RodUnOut = 0_IntKi      !< unit number of rod output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: RodWrOutput      !< one row of output data for this rod [-]
+    REAL(DbKi) , DIMENSION(1:3)  :: FextU = 0.0_R8Ki      !< vector of user-defined external force on the rod end A always in the local body-fixed frame [[N]]
+    REAL(DbKi) , DIMENSION(1:2)  :: Blin = 0.0_R8Ki      !< linear damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:2)  :: Bquad = 0.0_R8Ki      !< quadratic damping, transverse damping for rod element always in the local body-fixed frame [[N/(m/s)^2]]
   END TYPE MD_Rod
 ! =======================
 ! =========  MD_Line  =======
@@ -296,6 +306,15 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: LineUnOut = 0_IntKi      !< unit number of line output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: LineWrOutput      !< one row of output data for this line [-]
   END TYPE MD_Line
+! =======================
+! =========  MD_ExtLd  =======
+  TYPE, PUBLIC :: MD_ExtLd
+    INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this external load entry [-]
+    REAL(DbKi) , DIMENSION(1:3)  :: Fext = 0.0_R8Ki      !< user-defined external force on the object [[N]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Blin = 0.0_R8Ki      !< user-defined linear translational damping on the object [[N/(m/s)]]
+    REAL(DbKi) , DIMENSION(1:3)  :: Bquad = 0.0_R8Ki      !< user-defined quadratic translational damping on the object [[N/(m/s)^2]]
+    LOGICAL  :: isGlobal = .false.      !< external forces and damping to be applied in the global frame of reference [-]
+  END TYPE MD_ExtLd
 ! =======================
 ! =========  MD_Fail  =======
   TYPE, PUBLIC :: MD_Fail
@@ -370,6 +389,7 @@ IMPLICIT NONE
     TYPE(MD_Rod) , DIMENSION(:), ALLOCATABLE  :: RodList      !< array of rod objects [-]
     TYPE(MD_Point) , DIMENSION(:), ALLOCATABLE  :: PointList      !< array of point objects [-]
     TYPE(MD_Line) , DIMENSION(:), ALLOCATABLE  :: LineList      !< array of line objects [-]
+    TYPE(MD_ExtLd) , DIMENSION(:), ALLOCATABLE  :: ExtLdList      !< array of external load objects [-]
     TYPE(MD_Fail) , DIMENSION(:), ALLOCATABLE  :: FailList      !< array of line objects [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreePointIs      !< array of free point indices in PointList vector []
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldPointIs      !< array of coupled/fairlead point indices in PointList vector []
@@ -409,6 +429,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nBodies = 0      !< number of Body objects []
     INTEGER(IntKi)  :: nRods = 0      !< number of Rod objects []
     INTEGER(IntKi)  :: nLines = 0      !< number of Line objects []
+    INTEGER(IntKi)  :: nExtLds = 0      !< number of external loads or damping []
     INTEGER(IntKi)  :: nCtrlChans = 0      !< number of distinct control channels specified for use as inputs []
     INTEGER(IntKi)  :: nFails = 0      !< number of failure conditions []
     INTEGER(IntKi)  :: nFreeBodies = 0      !<  []
@@ -446,6 +467,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: cv = 0.0_R8Ki      !< saturated damping coefficient [(-)]
     INTEGER(IntKi)  :: inertialF = 0      !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 0: no, 1: yes, 2: yes with ramp to inertialF_rampT [-]
     REAL(R8Ki)  :: inertialF_rampT = 30      !< Ramp time for inertial forces [-]
+    INTEGER(IntKi)  :: OutSwitch = 1      !< Switch to disable outputs when running with full OF. 0: no MD main outfile, 1: write MD main outfile [(-)]
     INTEGER(IntKi)  :: nxWave = 0_IntKi      !< number of x wave grid points [-]
     INTEGER(IntKi)  :: nyWave = 0_IntKi      !< number of y wave grid points [-]
     INTEGER(IntKi)  :: nzWave = 0_IntKi      !< number of z wave grid points [-]
@@ -806,8 +828,6 @@ subroutine MD_CopyRodProp(SrcRodPropData, DstRodPropData, CtrlCode, ErrStat, Err
    DstRodPropData%Cdt = SrcRodPropData%Cdt
    DstRodPropData%CdEnd = SrcRodPropData%CdEnd
    DstRodPropData%CaEnd = SrcRodPropData%CaEnd
-   DstRodPropData%LinDamp = SrcRodPropData%LinDamp
-   DstRodPropData%isLinDamp = SrcRodPropData%isLinDamp
 end subroutine
 
 subroutine MD_DestroyRodProp(RodPropData, ErrStat, ErrMsg)
@@ -834,8 +854,6 @@ subroutine MD_PackRodProp(RF, Indata)
    call RegPack(RF, InData%Cdt)
    call RegPack(RF, InData%CdEnd)
    call RegPack(RF, InData%CaEnd)
-   call RegPack(RF, InData%LinDamp)
-   call RegPack(RF, InData%isLinDamp)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -854,8 +872,6 @@ subroutine MD_UnPackRodProp(RF, OutData)
    call RegUnpack(RF, OutData%Cdt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CdEnd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CaEnd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LinDamp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%isLinDamp); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
@@ -893,6 +909,12 @@ subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
    DstBodyData%M0 = SrcBodyData%M0
    DstBodyData%OrMat = SrcBodyData%OrMat
    DstBodyData%rCG = SrcBodyData%rCG
+   DstBodyData%FextG = SrcBodyData%FextG
+   DstBodyData%BlinG = SrcBodyData%BlinG
+   DstBodyData%BquadG = SrcBodyData%BquadG
+   DstBodyData%FextL = SrcBodyData%FextL
+   DstBodyData%BlinL = SrcBodyData%BlinL
+   DstBodyData%BquadL = SrcBodyData%BquadL
 end subroutine
 
 subroutine MD_DestroyBody(BodyData, ErrStat, ErrMsg)
@@ -935,6 +957,12 @@ subroutine MD_PackBody(RF, Indata)
    call RegPack(RF, InData%M0)
    call RegPack(RF, InData%OrMat)
    call RegPack(RF, InData%rCG)
+   call RegPack(RF, InData%FextG)
+   call RegPack(RF, InData%BlinG)
+   call RegPack(RF, InData%BquadG)
+   call RegPack(RF, InData%FextL)
+   call RegPack(RF, InData%BlinL)
+   call RegPack(RF, InData%BquadL)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -969,6 +997,12 @@ subroutine MD_UnPackBody(RF, OutData)
    call RegUnpack(RF, OutData%M0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OrMat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rCG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FextG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BlinG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BquadG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FextL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BlinL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%BquadL); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyPoint(SrcPointData, DstPointData, CtrlCode, ErrStat, ErrMsg)
@@ -1016,6 +1050,9 @@ subroutine MD_CopyPoint(SrcPointData, DstPointData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstPointData%Fnet = SrcPointData%Fnet
    DstPointData%M = SrcPointData%M
+   DstPointData%Fext = SrcPointData%Fext
+   DstPointData%Blin = SrcPointData%Blin
+   DstPointData%Bquad = SrcPointData%Bquad
 end subroutine
 
 subroutine MD_DestroyPoint(PointData, ErrStat, ErrMsg)
@@ -1058,6 +1095,9 @@ subroutine MD_PackPoint(RF, Indata)
    call RegPackAlloc(RF, InData%PDyn)
    call RegPack(RF, InData%Fnet)
    call RegPack(RF, InData%M)
+   call RegPack(RF, InData%Fext)
+   call RegPack(RF, InData%Blin)
+   call RegPack(RF, InData%Bquad)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1092,6 +1132,9 @@ subroutine MD_UnPackPoint(RF, OutData)
    call RegUnpackAlloc(RF, OutData%PDyn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Fnet); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%M); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Fext); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
@@ -1129,8 +1172,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
    DstRodData%Cdt = SrcRodData%Cdt
    DstRodData%CdEnd = SrcRodData%CdEnd
    DstRodData%CaEnd = SrcRodData%CaEnd
-   DstRodData%LinDamp = SrcRodData%LinDamp
-   DstRodData%isLinDamp = SrcRodData%isLinDamp
    DstRodData%time = SrcRodData%time
    DstRodData%roll = SrcRodData%roll
    DstRodData%pitch = SrcRodData%pitch
@@ -1328,6 +1369,30 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstRodData%B = SrcRodData%B
    end if
+   if (allocated(SrcRodData%Bp)) then
+      LB(1:2) = lbound(SrcRodData%Bp)
+      UB(1:2) = ubound(SrcRodData%Bp)
+      if (.not. allocated(DstRodData%Bp)) then
+         allocate(DstRodData%Bp(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Bp.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Bp = SrcRodData%Bp
+   end if
+   if (allocated(SrcRodData%Bq)) then
+      LB(1:2) = lbound(SrcRodData%Bq)
+      UB(1:2) = ubound(SrcRodData%Bq)
+      if (.not. allocated(DstRodData%Bq)) then
+         allocate(DstRodData%Bq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Bq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Bq = SrcRodData%Bq
+   end if
    if (allocated(SrcRodData%Fnet)) then
       LB(1:2) = lbound(SrcRodData%Fnet)
       UB(1:2) = ubound(SrcRodData%Fnet)
@@ -1375,6 +1440,9 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstRodData%RodWrOutput = SrcRodData%RodWrOutput
    end if
+   DstRodData%FextU = SrcRodData%FextU
+   DstRodData%Blin = SrcRodData%Blin
+   DstRodData%Bquad = SrcRodData%Bquad
 end subroutine
 
 subroutine MD_DestroyRod(RodData, ErrStat, ErrMsg)
@@ -1432,6 +1500,12 @@ subroutine MD_DestroyRod(RodData, ErrStat, ErrMsg)
    if (allocated(RodData%B)) then
       deallocate(RodData%B)
    end if
+   if (allocated(RodData%Bp)) then
+      deallocate(RodData%Bp)
+   end if
+   if (allocated(RodData%Bq)) then
+      deallocate(RodData%Bq)
+   end if
    if (allocated(RodData%Fnet)) then
       deallocate(RodData%Fnet)
    end if
@@ -1472,8 +1546,6 @@ subroutine MD_PackRod(RF, Indata)
    call RegPack(RF, InData%Cdt)
    call RegPack(RF, InData%CdEnd)
    call RegPack(RF, InData%CaEnd)
-   call RegPack(RF, InData%LinDamp)
-   call RegPack(RF, InData%isLinDamp)
    call RegPack(RF, InData%time)
    call RegPack(RF, InData%roll)
    call RegPack(RF, InData%pitch)
@@ -1495,6 +1567,8 @@ subroutine MD_PackRod(RF, Indata)
    call RegPackAlloc(RF, InData%Ap)
    call RegPackAlloc(RF, InData%Aq)
    call RegPackAlloc(RF, InData%B)
+   call RegPackAlloc(RF, InData%Bp)
+   call RegPackAlloc(RF, InData%Bq)
    call RegPackAlloc(RF, InData%Fnet)
    call RegPackAlloc(RF, InData%M)
    call RegPack(RF, InData%FextA)
@@ -1509,6 +1583,9 @@ subroutine MD_PackRod(RF, Indata)
    call RegPack(RF, InData%OrMat)
    call RegPack(RF, InData%RodUnOut)
    call RegPackAlloc(RF, InData%RodWrOutput)
+   call RegPack(RF, InData%FextU)
+   call RegPack(RF, InData%Blin)
+   call RegPack(RF, InData%Bquad)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1544,8 +1621,6 @@ subroutine MD_UnPackRod(RF, OutData)
    call RegUnpack(RF, OutData%Cdt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CdEnd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CaEnd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LinDamp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%isLinDamp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%time); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%roll); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%pitch); if (RegCheckErr(RF, RoutineName)) return
@@ -1567,6 +1642,8 @@ subroutine MD_UnPackRod(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Ap); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Aq); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%B); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Bp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Bq); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Fnet); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%M); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FextA); if (RegCheckErr(RF, RoutineName)) return
@@ -1581,6 +1658,9 @@ subroutine MD_UnPackRod(RF, OutData)
    call RegUnpack(RF, OutData%OrMat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RodUnOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%RodWrOutput); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%FextU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
@@ -2225,6 +2305,56 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpack(RF, OutData%EndMomentB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LineUnOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LineWrOutput); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine MD_CopyExtLd(SrcExtLdData, DstExtLdData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_ExtLd), intent(in) :: SrcExtLdData
+   type(MD_ExtLd), intent(inout) :: DstExtLdData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyExtLd'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstExtLdData%IdNum = SrcExtLdData%IdNum
+   DstExtLdData%Fext = SrcExtLdData%Fext
+   DstExtLdData%Blin = SrcExtLdData%Blin
+   DstExtLdData%Bquad = SrcExtLdData%Bquad
+   DstExtLdData%isGlobal = SrcExtLdData%isGlobal
+end subroutine
+
+subroutine MD_DestroyExtLd(ExtLdData, ErrStat, ErrMsg)
+   type(MD_ExtLd), intent(inout) :: ExtLdData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyExtLd'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine MD_PackExtLd(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(MD_ExtLd), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'MD_PackExtLd'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%IdNum)
+   call RegPack(RF, InData%Fext)
+   call RegPack(RF, InData%Blin)
+   call RegPack(RF, InData%Bquad)
+   call RegPack(RF, InData%isGlobal)
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine MD_UnPackExtLd(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(MD_ExtLd), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'MD_UnPackExtLd'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%IdNum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Fext); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Blin); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Bquad); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%isGlobal); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyFail(SrcFailData, DstFailData, CtrlCode, ErrStat, ErrMsg)
@@ -2919,6 +3049,22 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   if (allocated(SrcMiscData%ExtLdList)) then
+      LB(1:1) = lbound(SrcMiscData%ExtLdList)
+      UB(1:1) = ubound(SrcMiscData%ExtLdList)
+      if (.not. allocated(DstMiscData%ExtLdList)) then
+         allocate(DstMiscData%ExtLdList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ExtLdList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyExtLd(SrcMiscData%ExtLdList(i1), DstMiscData%ExtLdList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    if (allocated(SrcMiscData%FailList)) then
       LB(1:1) = lbound(SrcMiscData%FailList)
       UB(1:1) = ubound(SrcMiscData%FailList)
@@ -3244,6 +3390,15 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%LineList)
    end if
+   if (allocated(MiscData%ExtLdList)) then
+      LB(1:1) = lbound(MiscData%ExtLdList)
+      UB(1:1) = ubound(MiscData%ExtLdList)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyExtLd(MiscData%ExtLdList(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%ExtLdList)
+   end if
    if (allocated(MiscData%FailList)) then
       LB(1:1) = lbound(MiscData%FailList)
       UB(1:1) = ubound(MiscData%FailList)
@@ -3378,6 +3533,15 @@ subroutine MD_PackMisc(RF, Indata)
          call MD_PackLine(RF, InData%LineList(i1)) 
       end do
    end if
+   call RegPack(RF, allocated(InData%ExtLdList))
+   if (allocated(InData%ExtLdList)) then
+      call RegPackBounds(RF, 1, lbound(InData%ExtLdList), ubound(InData%ExtLdList))
+      LB(1:1) = lbound(InData%ExtLdList)
+      UB(1:1) = ubound(InData%ExtLdList)
+      do i1 = LB(1), UB(1)
+         call MD_PackExtLd(RF, InData%ExtLdList(i1)) 
+      end do
+   end if
    call RegPack(RF, allocated(InData%FailList))
    if (allocated(InData%FailList)) then
       call RegPackBounds(RF, 1, lbound(InData%FailList), ubound(InData%FailList))
@@ -3505,6 +3669,19 @@ subroutine MD_UnPackMisc(RF, OutData)
          call MD_UnpackLine(RF, OutData%LineList(i1)) ! LineList 
       end do
    end if
+   if (allocated(OutData%ExtLdList)) deallocate(OutData%ExtLdList)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%ExtLdList(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ExtLdList.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_UnpackExtLd(RF, OutData%ExtLdList(i1)) ! ExtLdList 
+      end do
+   end if
    if (allocated(OutData%FailList)) deallocate(OutData%FailList)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -3567,6 +3744,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nBodies = SrcParamData%nBodies
    DstParamData%nRods = SrcParamData%nRods
    DstParamData%nLines = SrcParamData%nLines
+   DstParamData%nExtLds = SrcParamData%nExtLds
    DstParamData%nCtrlChans = SrcParamData%nCtrlChans
    DstParamData%nFails = SrcParamData%nFails
    DstParamData%nFreeBodies = SrcParamData%nFreeBodies
@@ -3663,6 +3841,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%cv = SrcParamData%cv
    DstParamData%inertialF = SrcParamData%inertialF
    DstParamData%inertialF_rampT = SrcParamData%inertialF_rampT
+   DstParamData%OutSwitch = SrcParamData%OutSwitch
    DstParamData%nxWave = SrcParamData%nxWave
    DstParamData%nyWave = SrcParamData%nyWave
    DstParamData%nzWave = SrcParamData%nzWave
@@ -4018,6 +4197,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%nBodies)
    call RegPack(RF, InData%nRods)
    call RegPack(RF, InData%nLines)
+   call RegPack(RF, InData%nExtLds)
    call RegPack(RF, InData%nCtrlChans)
    call RegPack(RF, InData%nFails)
    call RegPack(RF, InData%nFreeBodies)
@@ -4063,6 +4243,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%cv)
    call RegPack(RF, InData%inertialF)
    call RegPack(RF, InData%inertialF_rampT)
+   call RegPack(RF, InData%OutSwitch)
    call RegPack(RF, InData%nxWave)
    call RegPack(RF, InData%nyWave)
    call RegPack(RF, InData%nzWave)
@@ -4119,6 +4300,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%nBodies); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nRods); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nLines); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nExtLds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nCtrlChans); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nFails); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nFreeBodies); if (RegCheckErr(RF, RoutineName)) return
@@ -4168,6 +4350,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%cv); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%inertialF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%inertialF_rampT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutSwitch); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nxWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nyWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nzWave); if (RegCheckErr(RF, RoutineName)) return

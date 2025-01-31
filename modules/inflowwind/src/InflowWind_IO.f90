@@ -534,13 +534,13 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Get a unit number to use for the wind file
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
    if (TmpErrStat < AbortErrLev) then
       ! Open binary file
       call OpenBInpFile(WindFileUnit, TRIM(InitInp%WindFileName), TmpErrStat, TmpErrMsg)
    endif
-   !$OMP end critical(fileopen)
+   !$OMP end critical(fileopen_critical)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -904,13 +904,13 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    do IC = 1, G3D%NComp
 
       ! Get a unit number to use for the wind file
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
       if (TmpErrStat < AbortErrLev) then
          ! Open wind file for this component
          call OpenBInpFile(WindFileUnit, InitInp%WindFileName(IC), TmpErrStat, TmpErrMsg)
       endif
-      !$OMP end critical(fileopen)
+      !$OMP end critical(fileopen_critical)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
@@ -1140,7 +1140,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
    end if
 
    ! Get a unit number to use
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    call GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
    if (TmpErrStat < AbortErrLev) then
 
@@ -1151,7 +1151,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
 
       call OpenBInpFile(UnitWind, TRIM(BinFileName), TmpErrStat, TmpErrMsg)
    endif
-   !$OMP end critical(fileopen)
+   !$OMP end critical(fileopen_critical)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
