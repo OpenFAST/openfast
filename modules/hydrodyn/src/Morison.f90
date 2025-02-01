@@ -3778,13 +3778,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_If(4:6)
 
                ! ------------------ flooded ballast weight : sides : Section 5.1.2 & 5.2.2  : Always compute regardless of PropPot setting ---------------------
+               F_B1 = 0.0
+               F_B2 = 0.0
                IF (mem%MSecGeom == MSecGeom_Cyl) THEN
-                  F_B1(1:2) = 0.0
                   F_B1(3)   = - p%gravity * mem%m_fb_l(i)
                   F_B1(1:3) = F_B1(1:3) + mem%FillDens * p%gravity * pi * ( rMidIn*rMidIn*(zMid-zFillGroup) - r1In*r1In*(z1-zFillGroup) ) * k_hat
                   F_B1(4:6) = -( p%gravity * mem%m_fb_l(i) * mem%h_cfb_l(i) + mem%FillDens * p%gravity * 0.25*pi*(rMidIn**4-r1In**4) ) * Cross_Product(k_hat,(/0.0,0.0,1.0/))
                   IF ( mem%FloodStatus(i) == 1 ) THEN
-                     F_B2(1:2) = 0.0
                      F_B2(3)   = - p%gravity * mem%m_fb_u(i)
                      F_B2(1:3) = F_B2(1:3) + mem%FillDens * p%gravity * pi * ( r2In*r2In*(z2-zFillGroup) - rMidIn*rMidIn*(zMid-zFillGroup) ) * k_hat
                      F_B2(4:6) = -( p%gravity * mem%m_fb_u(i) * mem%h_cfb_u(i) + mem%FillDens * p%gravity * 0.25*pi*(r2In**4-rMidIn**4) ) * Cross_Product(k_hat,(/0.0,0.0,1.0/))
@@ -3794,14 +3794,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   END IF
                ELSE IF (mem%MSecGeom == MSecGeom_Rec) THEN
                   CALL GetSectionUnitVectors_Rec( CMatrix, x_hat, y_hat )
-                  F_B1(1:2) = 0.0
                   F_B1(3)   = - p%gravity * mem%m_fb_l(i)
                   F_B1(1:3) = F_B1(1:3) + mem%FillDens * p%gravity * ( SaMidIn*SbMidIn*(zMid-zFillGroup) - Sa1In*Sb1In*(z1-zFillGroup) ) * k_hat
                   F_B1(4:6) = - p%gravity * mem%m_fb_l(i) * mem%h_cfb_l(i) * Cross_Product(k_hat,(/0.0,0.0,1.0/)) &
                               + mem%FillDens * p%gravity / 12.0 * ( (Sa1In**3*Sb1In*x_hat(3)*y_hat - Sa1In*Sb1In**3*y_hat(3)*x_hat ) - &
                                                                     (SaMidIn**3*SbMidIn*x_hat(3)*y_hat - SaMidIn*SbMidIn**3*y_hat(3)*x_hat ) )
                   IF ( mem%FloodStatus(i) == 1 ) THEN
-                     F_B2(1:2) = 0.0
                      F_B2(3)   = - p%gravity * mem%m_fb_u(i)
                      F_B2(1:3) = F_B2(1:3) + mem%FillDens * p%gravity * ( Sa2In*Sb2In*(z2-zFillGroup) - SaMidIn*SbMidIn*(zMid-zFillGroup) ) * k_hat
                      F_B2(4:6) = - p%gravity * mem%m_fb_u(i) * mem%h_cfb_u(i) * Cross_Product(k_hat,(/0.0,0.0,1.0/)) &
