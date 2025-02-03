@@ -25,10 +25,10 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER          JointOvrlp               -          -        -         "Joint overlap code [Unused"    -
 typedef   ^                            ^                             INTEGER          NConnections             -          -        -         "Number of members connecting to this joint"    -
 typedef   ^                            ^                             INTEGER          ConnectionList           {50}       -        -         "List of Members connected to this joint.  The member index is what is stored, not the Member ID"    -
-typedef   ^                            Morison_MemberPropType        INTEGER          PropSetID                -          -        -         "User-specified integer ID for this group of properties"    -
+typedef   ^                            Morison_MemberPropTypeCyl     INTEGER          PropSetID                -          -        -         "User-specified integer ID for this group of properties"    -
 typedef   ^                            ^                             ReKi             PropD                    -          -        -         "Diameter"    m
 typedef   ^                            ^                             ReKi             PropThck                 -          -        -         "Wall thickness"    m
-typedef   ^                            Morison_RecMemberPropType     INTEGER          PropSetID                -          -        -         "User-specified integer ID for this group of properties"    -
+typedef   ^                            Morison_MemberPropTypeRec     INTEGER          PropSetID                -          -        -         "User-specified integer ID for this group of properties"    -
 typedef   ^                            ^                             ReKi             PropA                    -          -        -         "Length of side A"    m
 typedef   ^                            ^                             ReKi             PropB                    -          -        -         "Length of side B"    m
 typedef   ^                            ^                             ReKi             PropThck                 -          -        -         "Wall thickness"    m
@@ -38,7 +38,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             CHARACTER(80)    FillDensChr              -          -        -         "String version of the Fill density [can be DEFAULT which sets the fill density to WtrDens]"   kg/m^3
 typedef   ^                            ^                             ReKi             FillDens                 -          -        -         "Numerical fill density"    kg/m^3
 typedef   ^                            ^                             LOGICAL          IsOpen                   -          -        -         "Whether the internal ballast is open to the outside through the open end of members buried in the seabed"  -
-typedef   ^                            Morison_CoefDpths             ReKi             Dpth                     -          -        -         "Depth location for these depth-based hydrodynamic coefs"    m
+typedef   ^                            Morison_CoefDpthsCyl          ReKi             Dpth                     -          -        -         "Depth location for these depth-based hydrodynamic coefs"    m
 typedef   ^                            ^                             ReKi             DpthCd                   -          -        -         "Depth-based drag coef"    -
 typedef   ^                            ^                             ReKi             DpthCdMG                 -          -        -         "Depth-based drag coef for marine growth"    -
 typedef   ^                            ^                             ReKi             DpthCa                   -          -        -         "Depth-based Ca"    -
@@ -54,7 +54,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             DpthCb                   -          -        -         "Simple model hydrostatic/buoyancy load coefficient" - 
 typedef   ^                            ^                             ReKi             DpthCbMg                 -          -        -         "Simple model hydrostatic/buoyancy load coefficient for marine growth" - 
 typedef   ^                            ^                             LOGICAL          DpthMCF                  -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
-typedef   ^                            Morison_RecCoefDpths          ReKi             Dpth                     -          -        -         "Depth location for these depth-based hydrodynamic coefs"    m
+typedef   ^                            Morison_CoefDpthsRec          ReKi             Dpth                     -          -        -         "Depth location for these depth-based hydrodynamic coefs"    m
 typedef   ^                            ^                             ReKi             DpthCdA                  -          -        -         "Depth-based drag coef"    -
 typedef   ^                            ^                             ReKi             DpthCdAMG                -          -        -         "Depth-based drag coef for marine growth"    -
 typedef   ^                            ^                             ReKi             DpthCdB                  -          -        -         "Depth-based drag coef"    -
@@ -239,7 +239,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     FA                            {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_DP                          {:}{:}         -         -         "Lumped dynamic pressure loads at time t, which may not correspond to the WaveTime array of times"   -
 #
-typedef   ^                            Morison_CoefMembers           INTEGER          MemberID                 -          -        -         "User-specified integer id for the Member-based coefs"    -
+typedef   ^                            Morison_CoefMembersCyl        INTEGER          MemberID                 -          -        -         "User-specified integer id for the Member-based coefs"    -
 typedef   ^                            ^                             ReKi             MemberCd1                -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCd2                -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdMG1              -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
@@ -269,7 +269,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             MemberCbMG1              -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCbMG2              -          -        -         "Cylindrical member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             LOGICAL          MemberMCF                -          -        -         "Flag T/F for whether the cylindrical member is modeled with the MacCamy-Fuchs diffraction model"  -
-typedef   ^                            Morison_RecCoefMembers        INTEGER          MemberID                 -          -        -         "User-specified integer id for the Member-based coefs"    -
+typedef   ^                            Morison_CoefMembersRec        INTEGER          MemberID                 -          -        -         "User-specified integer id for the Member-based coefs"    -
 typedef   ^                            ^                             ReKi             MemberCdA1               -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdA2               -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberCdAMG1             -          -        -         "Rectangular member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
@@ -334,10 +334,10 @@ typedef   ^                            ^                             Morison_Joi
 typedef   ^                            ^                             Morison_NodeType         Nodes                            {:}        -        -         "Array of simulation node (some correspond to user-specified joints, others are created by software)"    -
 typedef   ^                            ^                             INTEGER                  NAxCoefs                         -          -        -         "Number of axial Coefs entries in input file table"    -
 typedef   ^                            ^                             Morison_AxialCoefType    AxialCoefs                       {:}        -        -         "List of axial coefs"    -
-typedef   ^                            ^                             INTEGER                  NPropSets                        -          -        -         "Number of cylindrical member property sets"    -
-typedef   ^                            ^                             Morison_MemberPropType   MPropSets                        {:}        -        -         "List of cylindrical member property sets"    -
-typedef   ^                            ^                             INTEGER                  NRecPropSets                     -          -        -         "Number of rectangular member property sets"    -
-typedef   ^                            ^                          Morison_RecMemberPropType   MRecPropSets                     {:}        -        -         "List of rectangular member property sets"    -
+typedef   ^                            ^                             INTEGER                  NPropSetsCyl                     -          -        -         "Number of cylindrical member property sets"    -
+typedef   ^                            ^                          Morison_MemberPropTypeCyl   MPropSetsCyl                     {:}        -        -         "List of cylindrical member property sets"    -
+typedef   ^                            ^                             INTEGER                  NPropSetsRec                     -          -        -         "Number of rectangular member property sets"    -
+typedef   ^                            ^                          Morison_MemberPropTypeRec   MPropSetsRec                     {:}        -        -         "List of rectangular member property sets"    -
 typedef   ^                            ^                             ReKi                     SimplCd                          -          -        -         "Simple model drag coef for cylindrical members"    -
 typedef   ^                            ^                             ReKi                     SimplCdMG                        -          -        -         "Simple model drag coef for cylindrical members with marine growth"    -
 typedef   ^                            ^                             ReKi                     SimplCa                          -          -        -         "Simple model Ca for cylindrical members"    -
@@ -372,14 +372,14 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     SimplRecCb                       -          -        -         "Simple model hydrostatic/buoyancy load coefficient for rectangular members" - 
 typedef   ^                            ^                             ReKi                     SimplRecCbMg                     -          -        -         "Simple model hydrostatic/buoyancy load coefficient for rectangular members with marine growth" - 
 typedef   ^                            ^                             LOGICAL                  SimplRecMCF                      -          -        -         "Flag T/F for whether the rectangular member is modeled with the MacCamy-Fuchs diffraction model"  -
-typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         ""    -
-typedef   ^                            ^                             Morison_CoefDpths        CoefDpths                        {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NRecCoefDpth                     -          -        -         ""    -
-typedef   ^                            ^                             Morison_RecCoefDpths     RecCoefDpths                     {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NCoefMembers                     -          -        -         ""    -
-typedef   ^                            ^                             Morison_CoefMembers      CoefMembers                      {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NRecCoefMembers                  -          -        -         ""    -
-typedef   ^                            ^                             Morison_RecCoefMembers   RecCoefMembers                   {:}        -        -         ""    -
+typedef   ^                            ^                             INTEGER                  NCoefDpthCyl                     -          -        -         ""    -
+typedef   ^                            ^                             Morison_CoefDpthsCyl     CoefDpthsCyl                     {:}        -        -         ""    -
+typedef   ^                            ^                             INTEGER                  NCoefDpthRec                     -          -        -         ""    -
+typedef   ^                            ^                             Morison_CoefDpthsRec     CoefDpthsRec                     {:}        -        -         ""    -
+typedef   ^                            ^                             INTEGER                  NCoefMembersCyl                  -          -        -         ""    -
+typedef   ^                            ^                             Morison_CoefMembersCyl   CoefMembersCyl                   {:}        -        -         ""    -
+typedef   ^                            ^                             INTEGER                  NCoefMembersRec                  -          -        -         ""    -
+typedef   ^                            ^                             Morison_CoefMembersRec   CoefMembersRec                   {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NMembers                         -          -        -         "Number of user-specified members in the input file"    -
 typedef   ^                            ^                             Morison_MemberInputType  InpMembers                       {:}        -        -         "Array of user-specified members"    -
 typedef   ^                            ^                             INTEGER                  NFillGroups                      -          -        -         ""    -

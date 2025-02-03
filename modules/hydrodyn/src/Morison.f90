@@ -1235,7 +1235,7 @@ SUBROUTINE SetDepthBasedCoefs_Cyl( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxC
    REAL(ReKi), INTENT (IN   )             :: z ! Z location relative to MSL inertial system
    REAL(ReKi), INTENT (IN   )             :: tMG
    INTEGER,    INTENT (IN   )             :: NCoefDpth
-   TYPE(Morison_CoefDpths), INTENT (IN   ):: CoefDpths(:)
+   TYPE(Morison_CoefDpthsCyl), INTENT (IN   ):: CoefDpths(:)
    REAL(ReKi), INTENT (  OUT)             :: Cd
    REAL(ReKi), INTENT (  OUT)             :: Ca
    REAL(ReKi), INTENT (  OUT)             :: Cp
@@ -1307,7 +1307,7 @@ SUBROUTINE SetDepthBasedCoefs_Rec( z, tMG, NCoefDpth, CoefDpths, CdA, CdB, CaA, 
    REAL(ReKi), INTENT (IN   )             :: z ! Z location relative to MSL inertial system
    REAL(ReKi), INTENT (IN   )             :: tMG
    INTEGER,    INTENT (IN   )             :: NCoefDpth
-   TYPE(Morison_RecCoefDpths), INTENT (IN   ):: CoefDpths(:)
+   TYPE(Morison_CoefDpthsRec), INTENT (IN   ):: CoefDpths(:)
    REAL(ReKi), INTENT (  OUT)             :: CdA
    REAL(ReKi), INTENT (  OUT)             :: CdB
    REAL(ReKi), INTENT (  OUT)             :: CaA
@@ -1405,9 +1405,9 @@ SUBROUTINE SetExternalHydroCoefs_Cyl(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplC
    real(ReKi),                             intent(in   )  :: SimplCb
    real(ReKi),                             intent(in   )  :: SimplCbMG
    logical,                                intent(in   )  :: SimplMCF
-   type(Morison_CoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
+   type(Morison_CoefMembersCyl), allocatable, intent(in   )  :: CoefMembers(:)
    integer(IntKi),                         intent(in   )  :: NCoefDpth
-   type(Morison_CoefDpths),   allocatable, intent(in   )  :: CoefDpths(:)
+   type(Morison_CoefDpthsCyl),allocatable, intent(in   )  :: CoefDpths(:)
    type(Morison_NodeType),    allocatable, intent(in   )  :: nodes(:)
    type(Morison_MemberType),               intent(inout)  :: member
    
@@ -1499,9 +1499,9 @@ SUBROUTINE SetExternalHydroCoefs_Rec(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplC
    real(ReKi),                                intent(in   )  :: SimplCb
    real(ReKi),                                intent(in   )  :: SimplCbMG
    logical,                                   intent(in   )  :: SimplMCF
-   type(Morison_RecCoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
+   type(Morison_CoefMembersRec), allocatable, intent(in   )  :: CoefMembers(:)
    integer(IntKi),                            intent(in   )  :: NCoefDpth
-   type(Morison_RecCoefDpths),   allocatable, intent(in   )  :: CoefDpths(:)
+   type(Morison_CoefDpthsRec),   allocatable, intent(in   )  :: CoefDpths(:)
    type(Morison_NodeType),       allocatable, intent(in   )  :: nodes(:)
    type(Morison_MemberType),                  intent(inout)  :: member
    
@@ -1613,9 +1613,7 @@ SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, MSL2SWL, tMG, MGdensity )
          tMG       = 0.0
          MGdensity = 0.0
       ELSE
-         ! Linearly interpolate the coef values based on depth
-         !CALL FindInterpFactor( z, CoefDpths(indx1)%Dpth, CoefDpths(indx2)%Dpth, s )
-      
+         ! Linearly interpolate the marine growth thickness and density based on depth      
          dd = MGDepths(indx1)%MGDpth - MGDepths(indx2)%MGDpth
          IF ( EqualRealNos(dd, 0.0_ReKi) ) THEN
             s = 0.0_ReKi
@@ -1863,8 +1861,8 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    integer(IntKi),               intent (in   )  :: MCoefMod
    integer(IntKi),               intent (in   )  :: MmbrCoefIDIndx
    integer(IntKi),               intent (in   )  :: MmbrFilledIDIndx
-   type(Morison_MemberPropType), intent (in   )  :: propSet1             ! property set of node 1
-   type(Morison_MemberPropType), intent (in   )  :: propSet2             ! property set of node N+1
+   type(Morison_MemberPropTypeCyl), intent (in   )  :: propSet1             ! property set of node 1
+   type(Morison_MemberPropTypeCyl), intent (in   )  :: propSet2             ! property set of node N+1
    type(Morison_InitInputType),  intent (in   )  :: InitInp
    integer(IntKi),               intent (  out)  :: errStat              ! returns a non-zero value when an error occurs            
    character(*),                 intent (  out)  :: errMsg               ! Error message if errStat /= ErrID_None
@@ -1930,10 +1928,10 @@ subroutine SetMemberProperties_Cyl( gravity, member, MCoefMod, MmbrCoefIDIndx, M
       member%RMG(i) =  member%R(i) + member%tMG(i)
    end do
 
-   call SetExternalHydroCoefs_Cyl(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
+   call SetExternalHydroCoefs_Cyl( InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
                                    InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, &
                                    InitInp%SimplCb, InitInp%SimplCbMG, InitInp%SimplMCF, & 
-                                   InitInp%CoefMembers, InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%Nodes, member )
+                                   InitInp%CoefMembersCyl, InitInp%NCoefDpthCyl, InitInp%CoefDpthsCyl, InitInp%Nodes, member )
    
    ! calculate member radius with marine growth scaled by sqrt(Cb) for buoyancy/hydrostatic load calculation
    do i = 1, member%NElements+1
@@ -2215,8 +2213,8 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
    integer(IntKi),               intent (in   )  :: MCoefMod
    integer(IntKi),               intent (in   )  :: MmbrCoefIDIndx
    integer(IntKi),               intent (in   )  :: MmbrFilledIDIndx
-   type(Morison_RecMemberPropType), intent (in   )  :: propSet1             ! property set of node 1
-   type(Morison_RecMemberPropType), intent (in   )  :: propSet2             ! property set of node N+1
+   type(Morison_MemberPropTypeRec), intent (in   )  :: propSet1             ! property set of node 1
+   type(Morison_MemberPropTypeRec), intent (in   )  :: propSet2             ! property set of node N+1
    type(Morison_InitInputType),  intent (in   )  :: InitInp
    integer(IntKi),               intent (  out)  :: errStat              ! returns a non-zero value when an error occurs            
    character(*),                 intent (  out)  :: errMsg               ! Error message if errStat /= ErrID_None
@@ -2296,11 +2294,11 @@ subroutine SetMemberProperties_Rec( gravity, member, MCoefMod, MmbrCoefIDIndx, M
       member%SbMG(i) =  member%Sb(i) + 2.0 * member%tMG(i)
    end do
 
-   call SetExternalHydroCoefs_Rec(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplRecCdA, InitInp%SimplRecCdAMG, InitInp%SimplRecCdB, InitInp%SimplRecCdBMG, &
+   call SetExternalHydroCoefs_Rec( InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplRecCdA, InitInp%SimplRecCdAMG, InitInp%SimplRecCdB, InitInp%SimplRecCdBMG, &
                                    InitInp%SimplRecCaA, InitInp%SimplRecCaAMG, InitInp%SimplRecCaB, InitInp%SimplRecCaBMG, InitInp%SimplRecCp, &
                                    InitInp%SimplRecCpMG, InitInp%SimplRecAxCd, InitInp%SimplRecAxCdMG, InitInp%SimplRecAxCa, InitInp%SimplRecAxCaMG, InitInp%SimplRecAxCp, InitInp%SimplRecAxCpMG, &
                                    InitInp%SimplRecCb, InitInp%SimplRecCbMG, InitInp%SimplRecMCF, & 
-                                   InitInp%RecCoefMembers, InitInp%NRecCoefDpth, InitInp%RecCoefDpths, InitInp%Nodes, member )
+                                   InitInp%CoefMembersRec, InitInp%NCoefDpthRec, InitInp%CoefDpthsRec, InitInp%Nodes, member )
    
    ! calculate member radius with marine growth scaled by sqrt(Cb) for buoyancy/hydrostatic load calculation
    do i = 1, member%NElements+1
@@ -2620,9 +2618,9 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
       end if
       ! Now populate the various member data arrays using the HydroDyn input file data
       if (p%Members(i)%MSecGeom == MSecGeom_Cyl) then
-         call SetMemberProperties_Cyl( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+         call SetMemberProperties_Cyl( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSetsCyl(prop1Indx), InitInp%MPropSetsCyl(prop2Indx), InitInp, errStat2, errMsg2 ) 
       else if (p%Members(i)%MSecGeom == MSecGeom_Rec) then
-         call SetMemberProperties_Rec( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MRecPropSets(prop1Indx), InitInp%MRecPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+         call SetMemberProperties_Rec( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSetsRec(prop1Indx), InitInp%MPropSetsRec(prop2Indx), InitInp, errStat2, errMsg2 ) 
       end if
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
       if (ErrStat >= AbortErrLev) return
