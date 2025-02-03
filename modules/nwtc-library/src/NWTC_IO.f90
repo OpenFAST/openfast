@@ -2074,7 +2074,6 @@ END SUBROUTINE CheckR8Var
    INTEGER                        :: iWord                                        ! Word index.
    INTEGER                        :: i                                            ! Character index in line.
    INTEGER                        :: iChar                                        ! Character index in word.
-   CHARACTER(len=1)               :: Char                                         ! Current character
    LOGICAL                        :: InQuotes                                     ! Flag indicating text is within quotes
    LOGICAL                        :: IgnoreQuotesLoc                              ! Local flag to ignore quotes
 
@@ -2108,11 +2107,8 @@ END SUBROUTINE CheckR8Var
    ! Loop through characters in line
    do i = 1, len_trim(line)
 
-      ! Get current character
-      Char = Line(i:i)
-
       ! Select based on character
-      select case (Char)
+      select case (Line(i:i))
       case ('"', "'")               ! Double quotes, single quotes
          if (IgnoreQuotesLoc .or. InQuotes) then
             InQuotes = .false.
@@ -2152,7 +2148,7 @@ END SUBROUTINE CheckR8Var
       end if
 
       ! Add character to word
-      Words(iWord)(iChar:iChar) = Char
+      Words(iWord)(iChar:iChar) = Line(i:i)
 
    end do
    
@@ -2494,7 +2490,7 @@ END SUBROUTINE CheckR8Var
 
       ! Get a unit number for the echo file:
 
-   !$OMP critical(fileopenNWTCio)
+   !$OMP critical(fileopenNWTCio_critical)
    IF ( Un < 0 ) THEN
       CALL GetNewUnit( Un, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat, ErrMsg, RoutineName )
@@ -2505,7 +2501,7 @@ END SUBROUTINE CheckR8Var
 
    CALL OpenFOutFile( Un, OutFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat, ErrMsg, RoutineName )
-   !$OMP end critical(fileopenNWTCio)
+   !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStat >= AbortErrLev ) RETURN
 
 
@@ -4732,13 +4728,13 @@ END SUBROUTINE CheckR8Var
       RETURN
    END IF
    
-   !$OMP critical(fileopenNWTCio)
+   !$OMP critical(fileopenNWTCio_critical)
    CALL GetNewUnit ( UnIn, ErrStatLcl, ErrMsg2 )
       CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL OpenFInpFile ( UnIn, FileInfo%FileList(FileIndx), ErrStatLcl, ErrMsg2 )
       CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !$OMP end critical(fileopenNWTCio)
+   !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStat >= AbortErrLev )  RETURN
 
 
@@ -6668,11 +6664,11 @@ end subroutine ReadR8AryWDefault
 
          ! Open the input file.
       UnIn = -1
-      !$OMP critical(fileopenNWTCio)
+      !$OMP critical(fileopenNWTCio_critical)
       CALL GetNewUnit ( UnIn, ErrStatLcl, ErrMsg2 )
 
       CALL OpenFInpFile ( UnIn, Filename, ErrStatLcl, ErrMsg2 )
-      !$OMP end critical(fileopenNWTCio)
+      !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
@@ -6980,7 +6976,7 @@ end subroutine ReadR8AryWDefault
 
       ! Generate the unit number for the binary file
    UnIn = 0
-   !$OMP critical(fileopenNWTCio)
+   !$OMP critical(fileopenNWTCio_critical)
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -6990,7 +6986,7 @@ end subroutine ReadR8AryWDefault
 
    CALL OpenBOutFile ( UnIn, TRIM(FileName), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !$OMP end critical(fileopenNWTCio)
+   !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN

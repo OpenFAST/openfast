@@ -797,10 +797,10 @@ SUBROUTINE HDOut_OpenSum( UnSum, SummaryName, HD_Prog, ErrStat, ErrMsg )
    ErrStat = ErrID_None         
    ErrMsg  = ""       
       
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    CALL GetNewUnit( UnSum )
    CALL OpenFOutFile ( UnSum, SummaryName, ErrStat, ErrMsg ) 
-   !$OMP end critical(fileopen)
+   !$OMP end critical(fileopen_critical)
    IF (ErrStat >=AbortErrLev) RETURN
       
       
@@ -1124,10 +1124,10 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
          ! Open the file for output
       OutFileName = TRIM(OutRootName)//'.out'
    
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( p%UnOutFile )
       CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
-      !$OMP end critical(fileopen)
+      !$OMP end critical(fileopen_critical)
       IF (ErrStat >=AbortErrLev) RETURN
       
       

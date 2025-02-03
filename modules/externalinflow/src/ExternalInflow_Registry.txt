@@ -29,8 +29,10 @@ typedef   ExternalInflow/ExtInfw   InitOutputType   CHARACTER(ChanLen)   WriteOu
 typedef   ^                        InitOutputType   CHARACTER(ChanLen)   WriteOutputUnt   {:} - -  "Units of the output-to-file channels"   -
 typedef   ^                        InitOutputType   ProgDesc             Ver                - - -  "This module's name, version, and date"   -
 typedef   ^                        InitOutputType   FlowFieldType       *FlowField          - - -  "Pointer of flow field data type"   - 
+typedef   ^                        InitOutputType   ModVarsType         *Vars               - - -  "Module Variables"
 
 # ..... MiscVars ................................................................................................................
+typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   ModJacType    Jac                      -  - -  "Jacobian matrices and arrays corresponding to module variables"
 typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   MeshType      ActForceMotionsPoints   {:} - -  "point mesh for transferring AeroDyn motions to ExternalInflow  (includes hub+blades+nacelle+tower+tailfin)"   -
 typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   MeshType      ActForceLoadsPoints     {:} - -  "point mesh for transferring AeroDyn distributed loads to ExternalInflow (includes hub+blades+nacelle+tower+tailfin)"   -
 typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   MeshMapType   Line2_to_Point_Loads    {:} - -  "mapping data structure to convert line2 loads to point loads"   -
@@ -39,6 +41,7 @@ typedef   ExternalInflow/ExtInfw   ExtInfw_MiscVarType   FlowFieldType   &FlowFi
 
 
 # ..... Parameters ................................................................................................................
+typedef   ExternalInflow/ExtInfw   ParameterType   ModVarsType &Vars          - - -  "Module Variables"
 typedef   ExternalInflow/ExtInfw   ParameterType   ReKi    AirDens            - - -  "Air density for normalization of loads sent to ExternalInflow"   kg/m^3
 typedef   ExternalInflow/ExtInfw   ParameterType   IntKi   NumBl              - - -  "Number of blades"   -
 typedef   ExternalInflow/ExtInfw   ParameterType   IntKi   NMappings          - - -  "Number of mappings"   -

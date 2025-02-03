@@ -150,8 +150,10 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
    integer(IntKi)       :: iWT, j !<
+   logical              :: needInitIW    ! Need to initialize IfW if any changes to wind in combined cases
    errStat = ErrID_None
    errMsg  = ""
+   needInitIW = .false.
 
    dvr%out%root = dvr%root
    dvr%iCase = iCase ! for output only..
@@ -181,6 +183,11 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
       dvr%IW_InitInp%PLexp      = dvr%Cases(iCase)%PLExp
       ADI%m%IW%HWindSpeed   = dvr%Cases(iCase)%HWindSpeed ! We need to do it again since InFlow Wind is initialized only for iCase==1
       ADI%m%IW%PLexp        = dvr%Cases(iCase)%PLExp
+      ! if wind profile changes between cases, we need to re-init
+      if (iCase > 1) then
+         if (dvr%Cases(iCase)%HWindSpeed /= dvr%Cases(iCase-1)%HWindSpeed)    needInitIW = .true.
+         if (dvr%Cases(iCase)%PLExp      /= dvr%Cases(iCase-1)%PLExp     )    needInitIW = .true.
+      endif
       ! Set motion for this case
       call setSimpleMotion(dvr%WT(1), dvr%Cases(iCase)%rotSpeed, dvr%Cases(iCase)%bldPitch, dvr%Cases(iCase)%nacYaw, dvr%Cases(iCase)%DOF, dvr%Cases(iCase)%amplitude, dvr%Cases(iCase)%frequency)
 
@@ -218,7 +225,7 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    dvr%out%unOutFile = -1
 
    ! --- Initialize ADI
-   call Init_ADI_ForDriver(iCase, ADI, dvr, FED, dvr%dt, errStat2, errMsg2); if(Failed()) return
+   call Init_ADI_ForDriver(iCase, ADI, dvr, FED, dvr%dt, needInitIW, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize meshes
    if (iCase==1) then
@@ -399,12 +406,13 @@ subroutine Dvr_CleanUp(dvr, ADI, FED, initialized, errStat, errMsg)
 end subroutine Dvr_CleanUp
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
+subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, needInitIW, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: iCase
    type(ADI_Data),               intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(Dvr_SimData), target,    intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(FED_Data), target,       intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
    real(DbKi),                   intent(inout) :: dt            ! interval
+   logical,                      intent(in   ) :: needInitIW    ! Need to initialize IfW if any changes to wind in combined cases
    integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
    character(*)                , intent(out)   :: errMsg        ! Error message if errStat /= ErrID_None
    ! locals
@@ -453,6 +461,9 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          call ADI_End( ADI%u(1:1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver'); if(Failed()) return
       endif
    endif
+
+   ! if wind profile changed in a combined case, need to re-init
+   if (needInitIW) needInit = .true.
 
    if (needInit) then
       ! ADI

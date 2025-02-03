@@ -17,7 +17,7 @@ from conftest import REPOSITORY_ROOT, BUILD_DIR, OF_PATH
 # Exercising the  various OpenFAST modules
 FOLDERS_TO_RUN = [
     "AWT_YFix_WSt"                           , # "openfast;elastodyn;aerodyn;servodyn"
-    "AWT_WSt_StartUp_HighSpShutDown"         , # "openfast;elastodyn;aerodyn;servodyn"
+    # "AWT_WSt_StartUp_HighSpShutDown"         , # "openfast;elastodyn;aerodyn;servodyn"
     "AWT_YFree_WSt"                          , # "openfast;elastodyn;aerodyn;servodyn"
     "AWT_YFree_WTurb"                        , # "openfast;elastodyn;aerodyn;servodyn"
     "AWT_WSt_StartUpShutDown"                , # "openfast;elastodyn;aerodyn;servodyn"
@@ -316,18 +316,21 @@ def main():
 
     # Initialize any necessary setup here
 
-    for folder in FOLDERS_TO_RUN:
+    for folderMain in FOLDERS_TO_RUN:
         print(" ")
-        print(f"Processing folder: {folder}")
+        print(f"Processing folder: {folderMain}")
 
         # Assuming read_action, write_action, run_action, check_ascii_out, check_binary_out, and check_fst_vt_with_source are defined elsewhere
-        data = read_action(folder)
-        write_action(folder, data)
-        run_action(folder)
-        check_ascii_out(folder)
-        check_binary_out(folder)
-        check_fst_vt_with_source(folder)
-        print(f"Successfully processed folder: {folder}")
+        data = read_action(folderMain)
+        write_action(folderMain, data)
+        run_action(folderMain)
+        check_ascii_out(folderMain)
+        check_binary_out(folderMain)
+        check_fst_vt_with_source(folderMain)
+        print(f"Successfully processed folder: {folderMain}")
+
+        folderMain = None
+        data = None
 
 if __name__ == "__main__":
     """

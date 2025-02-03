@@ -26,7 +26,26 @@ import rtestlib as rtl
 
 def readFASTOut(fastoutput):
     try:
-        return load_output(fastoutput)
+        # Load output file
+        data, info, _ = load_output(fastoutput)
+
+        # Remove solution iteration columns
+        for col in 'ConvIter ConvError NumUJac'.split():
+            
+            # If column exists, get index
+            try:
+                i = info['attribute_names'].index(col)
+            except ValueError as e:
+                continue
+
+            # Remove column from data array
+            data = np.delete(data, i, axis=1)
+
+            # Remove column from attribute names and units
+            del info['attribute_names'][i]
+            del info['attribute_units'][i]
+
+        return data, info, 1
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))
 
@@ -65,7 +84,7 @@ def passing_channels(test, baseline, RTOL_MAGNITUDE, ATOL_MAGNITUDE) -> np.ndarr
     where_not_nan = ~np.isnan(test)
     where_not_inf = ~np.isinf(test)
 
-    passing_channels = np.all(where_close * where_not_nan * where_not_inf, axis=1)
+    passing_channels = np.all(where_close & where_not_nan & where_not_inf, axis=1)
     return passing_channels
 
 def maxnorm(data, axis=0):

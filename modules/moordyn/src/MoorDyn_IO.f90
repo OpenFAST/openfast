@@ -873,7 +873,7 @@ CONTAINS
       ! Open the output file, if necessary, and write the header
       !-------------------------------------------------------------------------------------------------
 
-      IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file
+      IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0  .AND. p%OutSwitch > 0) THEN           ! Output has been requested so let's open an output file
 
          ! Open the file for output
          OutFileName = TRIM(p%RootName)//'.out'
@@ -1580,7 +1580,7 @@ CONTAINS
          end if
          ! What the above does is say if ((dtOut==0) || (t >= (floor((t-dtC)/dtOut) + 1.0)*dtOut)), continue to writing files
 
-      if ( p%NumOuts > 0_IntKi ) then  
+      if ( p%NumOuts > 0_IntKi .and. p%MDUnOut > 0 ) then  
       
          ! Write the output parameters to the file
          Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,ES15.7E2))'   ! should evenutally use user specified format?

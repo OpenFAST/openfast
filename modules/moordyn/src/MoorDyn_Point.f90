@@ -279,7 +279,13 @@ CONTAINS
          Point%M   (J,J) = Point%M   (J,J) + Point%pointV*p%rhoW*Point%pointCa;                               ! add added mass
 
       END DO
-      
+
+      ! Added user-defined external force and damping on point
+      Point%Fnet = Point%Fnet + Point%Fext
+      DO J = 1, 3
+         Point%Fnet(J) = Point%Fnet(J) - Point%Blin(J) * Point%rd(J) - Point%Bquad(J) * ABS(Point%rd(J)) * Point%rd(J)
+      END DO
+
       ! would this sub ever need to include the m*a inertial term?  Is it ever called for coupled points? <<<
 
    END SUBROUTINE Point_DoRHS

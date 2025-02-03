@@ -93,10 +93,10 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-      !$OMP end critical(fileopen)
+      !$OMP end critical(fileopen_critical)
          if (ErrStat >= AbortErrLev) return
       
       ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)
@@ -159,10 +159,10 @@ contains
          closeOnReturn = .FALSE.
       END IF
       
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFInpFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-      !$OMP end critical(fileopen)
+      !$OMP end critical(fileopen_critical)
          if (ErrStat >= AbortErrLev) return
       
        CALL ReadCom( Un, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, 0 )
@@ -361,10 +361,10 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-      !$OMP end critical(fileopen)
+      !$OMP end critical(fileopen_critical)
          if (ErrStat >= AbortErrLev) return
       
       WRITE(Un,'(A)')  '# vtk DataFile Version 3.0'
@@ -452,7 +452,7 @@ contains
         logical :: b
 
         if (.not. mvtk%bFileOpen) then
-            !$OMP critical(fileopen)
+            !$OMP critical(fileopen_critical)
             CALL GetNewUnit( mvtk%vtk_unit )   
             if (mvtk%bBinary) then
                 ! Fortran 2003 stream, otherwise intel fortran !
@@ -468,7 +468,7 @@ contains
             else
                 open(mvtk%vtk_unit,file=trim(adjustl(filename)),iostat=iostatvar,action="write",status='replace')
             endif
-            !$OMP end critical(fileopen)
+            !$OMP end critical(fileopen_critical)
             if (iostatvar == 0) then
                 if (mvtk%bBinary) then
                     write(mvtk%vtk_unit)'# vtk DataFile Version 3.0'//NewLine

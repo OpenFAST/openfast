@@ -82,8 +82,6 @@ CONTAINS
       Rod%Cdt   = RodProp%Cdt      
       Rod%CaEnd = RodProp%CaEnd      
       Rod%CdEnd = RodProp%CdEnd   
-      Rod%linDamp = RodProp%linDamp 
-      Rod%islinDamp = RodProp%islinDamp 
 
       ! allocate node positions and velocities (NOTE: these arrays start at ZERO)
       ALLOCATE(Rod%r(3, 0:N), Rod%rd(3, 0:N), STAT=ErrStat2);  if(AllocateFailed("")) return
@@ -101,7 +99,7 @@ CONTAINS
 
       ! allocate node force vectors
       ALLOCATE(Rod%W(3, 0:N), Rod%Bo(3, 0:N), Rod%Dp(3, 0:N), Rod%Dq(3, 0:N), Rod%Ap(3, 0:N), &
-         Rod%Aq(3, 0:N), Rod%Pd(3, 0:N), Rod%B(3, 0:N), Rod%Fnet(3, 0:N), STAT=ErrStat2)
+         Rod%Aq(3, 0:N), Rod%Pd(3, 0:N), Rod%B(3, 0:N), Rod%Bp(3, 0:N), Rod%Bq(3, 0:N), Rod%Fnet(3, 0:N), STAT=ErrStat2)
          if(AllocateFailed("Rod: force arrays")) return
       
       ! allocate mass and inverse mass matrices for each node (including ends)
@@ -570,8 +568,8 @@ CONTAINS
       Real(DbKi)                 :: Mass_i(3,3)  ! mass from an attached line
 
      ! Linear damping, Front Energies, July 2024 
-     Real(DbKi)                 :: Vi_lin(3)            ! velocity induced by Rod Motion 
-     Real(DbKi)                 :: Vp_lin(3), Vq_lin(3) ! transverse and axial components of Rod motion at a given node     
+     Real(DbKi)                 :: Vi_vel(3)            ! velocity induced by Rod Motion 
+     Real(DbKi)                 :: Vp_vel(3), Vq_vel(3) ! transverse and axial components of Rod motion at a given node     
 
       ! used in lumped 6DOF calculations:
       Real(DbKi)                 :: rRel(  3)              ! relative position of each node i from rRef      
@@ -742,7 +740,7 @@ CONTAINS
             !relative flow velocities
             DO J = 1, 3
                Vi(J) = Rod%U(J,I) - Rod%rd(J,I)                               ! relative flow velocity over node -- this is where wave velicites would be added
-               Vi_lin(J) = Rod%rd(J,I)                                        ! linear damping
+               Vi_vel(J) = Rod%rd(J,I)                                        ! relative node velocity
             END DO
 
             ! decomponse relative flow into components
@@ -754,20 +752,24 @@ CONTAINS
                SumSqVq = SumSqVq + Vq(J)*Vq(J)
                SumSqVp = SumSqVp + Vp(J)*Vp(J)
 
-               ! linear damping 
-               Vq_lin(J) = DOT_PRODUCT( Vi_lin , Rod%q ) * Rod%q(J)     ! tangential relative Rod velocity component
-               Vp_lin(J) = Vi_lin(J) - Vq_lin(J)                        ! transverse relative Rod velocity component
+               ! relative velocity for external damping 
+               Vq_vel(J) = DOT_PRODUCT( Vi_vel , Rod%q ) * Rod%q(J)     ! tangential relative node velocity component
+               Vp_vel(J) = Vi_vel(J) - Vq_vel(J)                        ! transverse relative node velocity component
 
             END DO
             MagVp = sqrt(SumSqVp)                                       ! get magnitudes of flow components
             MagVq = sqrt(SumSqVq)
 
             ! transverse and tangenential drag
-            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp   - Rod%linDamp * Vp_lin * dL  ! linear damping added 
+            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp 
             Rod%Dq(:,I) = 0.0_DbKi ! 0.25*p%rhoW*Rod%Cdt* Pi*Rod%d* dL * MagVq * Vq <<< should these axial side loads be included?
 
-
-
+            ! transverse and tangential damping force (note this is the force per node)
+            DO J = 1, 3
+               Rod%Bp(J,I) = (-Rod%Blin(1) * Vp_vel(J) - Rod%Bquad(1) * ABS(Vp_vel(J)) * Vp_vel(J)) * dL / Rod%UnstrLen
+               Rod%Bq(J,I) = (-Rod%Blin(2) * Vq_vel(J) - Rod%Bquad(2) * ABS(Vq_vel(J)) * Vq_vel(J)) * dL / Rod%UnstrLen
+            END DO
+         
             ! fluid acceleration components for current node
             aq = DOT_PRODUCT(Rod%Ud(:,I), Rod%q) * Rod%q  ! tangential component of fluid acceleration
             ap = Rod%Ud(:,I) - aq                         ! normal component of fluid acceleration
@@ -803,6 +805,8 @@ CONTAINS
             Rod%Aq = 0.0_DbKi
             Rod%Pd = 0.0_DbKi
             Rod%B  = 0.0_DbKi
+            Rod%Bp = 0.0_DbKi
+            Rod%Bq = 0.0_DbKi
             
          END IF
          
@@ -873,7 +877,7 @@ CONTAINS
          ! ---------------------------- total forces for this node -----------------------------
          
          Rod%Fnet(:,I) = Rod%W(:,I) + Rod%Bo(:,I) + Rod%Dp(:,I) + Rod%Dq(:,I) &
-                         + Rod%Ap(:,I) + Rod%Aq(:,I) + Rod%Pd(:,I) + Rod%B(:,I)
+                         + Rod%Ap(:,I) + Rod%Aq(:,I) + Rod%Pd(:,I) + Rod%B(:,I) + Rod%Bp(:,I) + Rod%Bq(:,I)
          
 
       END DO  ! I  - done looping through nodes
@@ -980,6 +984,9 @@ CONTAINS
       ! add centripetal force/moment, gyroscopic moment, and any moments applied from lines at either end (might be zero)
       Rod%F6net(1:3) = Rod%F6net(1:3) + Fcentripetal 
       Rod%F6net(4:6) = Rod%F6net(4:6) + Mcentripetal + Rod%Mext
+
+      ! add in user defined external forces to end A
+      Rod%F6net(1:3) = Rod%F6net(1:3) + Rod%FextU
             
       ! Note: F6net saves the Rod's net forces and moments (excluding inertial ones) for use in later output
       !       (this is what the rod will apply to whatever it's attached to, so should be zero moments if pinned).
