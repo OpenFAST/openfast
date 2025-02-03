@@ -885,7 +885,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       !if (farm%MD%p%NFairs(nt) > 0 ) then   ! only set up a mesh map if MoorDyn has connections to this turbine
       
       ! loads
-      CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%SubstructureLoads_Tmp_Farm, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
+      CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%m_Glue%Ext%SubstructureLoadsFF, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
       if (Failed()) return;
      
       ! kinematics
@@ -1010,7 +1010,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          END IF
       
          ! mapping; Note: SubstructureLoads_Tmp_Farm contains loads from the farm-level (at a previous step); gets integrated into individual turbines inside FWrap_Increment()
-         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%SubstructureLoads_Tmp_Farm,  &
+         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%m_Glue%Ext%SubstructureLoadsFF,  &
                                        farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
                                        farm%MD%Input(1)%CoupledKinematics(nt), SubstructureMotion ) !u_MD and y_ED contain the displacements needed for moment calculations
          if (Failed()) return;

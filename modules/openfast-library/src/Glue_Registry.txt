@@ -188,9 +188,12 @@ typedef ^ Glue_LinMisc          IntKi           TimeIndex               -  -  - 
 typedef ^ ^                     IntKi           AzimuthIndex            -  -  -     "" -
 typedef ^ ^                     logical         IsConverged             -  -  -     "" -
 
+typedef ^ Glue_External         MeshType        SubstructureLoadsFF     -  -  -     "Externally applied substructure loads from FAST.Farm" -
+
 typedef ^ Glue_MiscVarType      ModDataType     ModData                 :  -  -     "Module variable and value data" -
 typedef ^ ^                     MappingType     Mappings                :  -  -     "Module mapping" -
 typedef ^ ^                     ModGlueType     ModGlue                 -  -  -     "Glue code module" -
+typedef ^ ^                     Glue_External   Ext                     -  -  -     "External data (ie. FAST.Farm)" -
 typedef ^ ^                     Glue_LinMisc    Lin                     -  -  -     "Linearization misc vars"
 typedef ^ ^                     Glue_CalcSteady CS                      -  -  -     "CalcSteady calculation data"
 typedef ^ ^                     Glue_AeroMap    AM                      -  -  -     "AeroMap data"

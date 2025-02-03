@@ -622,7 +622,6 @@ typedef	^	FAST_ModuleMapType	MeshType	SubstructureLoads_Tmp	-	-	-	"copy of subst
 typedef	^	FAST_ModuleMapType	MeshType	SubstructureLoads_Tmp2	-	-	-	"copy of substructure loads input mesh (ED or SD, used only for temporary storage)"
 typedef	^	FAST_ModuleMapType	MeshType	PlatformLoads_Tmp	-	-	-	"copy of platform loads input mesh (ED)"
 typedef	^	FAST_ModuleMapType	MeshType	PlatformLoads_Tmp2	-	-	-	"copy of platform loads input mesh (ED, used only for temporary storage)"
-typedef	^	FAST_ModuleMapType	MeshType	SubstructureLoads_Tmp_Farm	-	-	-	"copy of substructure mesh used to store loads from farm-level MD"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_TowerPtloads	-	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_BladePtLoads	{:}	-	-	"copy of ED input mesh"
 typedef	^	FAST_ModuleMapType	MeshType	u_SD_TPMesh	-	-	-	"copy of SD input mesh"

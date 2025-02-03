@@ -647,7 +647,6 @@ IMPLICIT NONE
     TYPE(MeshType)  :: SubstructureLoads_Tmp2      !< copy of substructure loads input mesh (ED or SD, used only for temporary storage) [-]
     TYPE(MeshType)  :: PlatformLoads_Tmp      !< copy of platform loads input mesh (ED) [-]
     TYPE(MeshType)  :: PlatformLoads_Tmp2      !< copy of platform loads input mesh (ED, used only for temporary storage) [-]
-    TYPE(MeshType)  :: SubstructureLoads_Tmp_Farm      !< copy of substructure mesh used to store loads from farm-level MD [-]
     TYPE(MeshType)  :: u_ED_TowerPtloads      !< copy of ED input mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: u_ED_BladePtLoads      !< copy of ED input mesh [-]
     TYPE(MeshType)  :: u_SD_TPMesh      !< copy of SD input mesh [-]
@@ -9524,9 +9523,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
    call MeshCopy(SrcModuleMapTypeData%PlatformLoads_Tmp2, DstModuleMapTypeData%PlatformLoads_Tmp2, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%SubstructureLoads_Tmp_Farm, DstModuleMapTypeData%SubstructureLoads_Tmp_Farm, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    call MeshCopy(SrcModuleMapTypeData%u_ED_TowerPtloads, DstModuleMapTypeData%u_ED_TowerPtloads, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -9966,8 +9962,6 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( ModuleMapTypeData%PlatformLoads_Tmp2, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%SubstructureLoads_Tmp_Farm, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( ModuleMapTypeData%u_ED_TowerPtloads, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModuleMapTypeData%u_ED_BladePtLoads)) then
@@ -10315,7 +10309,6 @@ subroutine FAST_PackModuleMapType(RF, Indata)
    call MeshPack(RF, InData%SubstructureLoads_Tmp2) 
    call MeshPack(RF, InData%PlatformLoads_Tmp) 
    call MeshPack(RF, InData%PlatformLoads_Tmp2) 
-   call MeshPack(RF, InData%SubstructureLoads_Tmp_Farm) 
    call MeshPack(RF, InData%u_ED_TowerPtloads) 
    call RegPack(RF, allocated(InData%u_ED_BladePtLoads))
    if (allocated(InData%u_ED_BladePtLoads)) then
@@ -10759,7 +10752,6 @@ subroutine FAST_UnPackModuleMapType(RF, OutData)
    call MeshUnpack(RF, OutData%SubstructureLoads_Tmp2) ! SubstructureLoads_Tmp2 
    call MeshUnpack(RF, OutData%PlatformLoads_Tmp) ! PlatformLoads_Tmp 
    call MeshUnpack(RF, OutData%PlatformLoads_Tmp2) ! PlatformLoads_Tmp2 
-   call MeshUnpack(RF, OutData%SubstructureLoads_Tmp_Farm) ! SubstructureLoads_Tmp_Farm 
    call MeshUnpack(RF, OutData%u_ED_TowerPtloads) ! u_ED_TowerPtloads 
    if (allocated(OutData%u_ED_BladePtLoads)) deallocate(OutData%u_ED_BladePtLoads)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return

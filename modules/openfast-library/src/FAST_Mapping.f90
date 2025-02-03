@@ -58,7 +58,9 @@ character(24), parameter   :: Custom_ED_to_ExtLd = 'ED -> ExtLd', &
                               Custom_SrvD_to_MD = 'SrvD -> MD', &
                               Custom_ED_Tower_Damping = 'ED Tower Damping', &
                               Custom_ED_Blade_Damping = 'ED Blade Damping', &
-                              Custom_BD_Blade_Damping = 'BD Blade Damping'
+                              Custom_BD_Blade_Damping = 'BD Blade Damping', &
+                              Custom_FF_to_ED = 'FF -> ED', &
+                              Custom_FF_to_SD = 'FF -> SD'
 
 contains
 
@@ -390,6 +392,7 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
       ! Add mappings within module
       select case (Mods(iModDst)%ID)
       case (Module_ED)
+
          call MapCustom(MappingsTmp, Custom_ED_Tower_Damping, Mods(iModDst), Mods(iModDst), &
                         Active=Turbine%p_FAST%CalcSteady)
          
@@ -397,10 +400,42 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
             call MapCustom(MappingsTmp, Custom_ED_Blade_Damping, Mods(iModDst), Mods(iModDst), &
                            i=i, Active=Turbine%p_FAST%CalcSteady .and. (Turbine%p_FAST%CompElast == Module_ED))
          end do
+
+         ! If FAST.Farm integration enabled and substructure is not modeled with SubDyn
+         if (Turbine%p_FAST%FarmIntegration .and. (Turbine%p_FAST%CompSub /= Module_SD)) then
+
+            ! Copy ED platform load mesh to substructure loads mesh
+            call MeshCopy(Turbine%ED%Input(INPUT_CURR, Mods(iModDst)%Ins)%PlatformPtMesh, &
+                          Turbine%m_Glue%Ext%SubstructureLoadsFF, &
+                          MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+            Turbine%m_Glue%Ext%SubstructureLoadsFF%Force = 0.0_ReKi
+            Turbine%m_Glue%Ext%SubstructureLoadsFF%Moment = 0.0_ReKi
+
+            call MapCustom(MappingsTmp, Custom_FF_to_ED, Mods(iModDst), Mods(iModDst))
+
+         end if
                         
       case (Module_BD)
+
          call MapCustom(MappingsTmp, Custom_BD_Blade_Damping, Mods(iModDst), Mods(iModDst), &
                         Active=Turbine%p_FAST%CalcSteady)
+
+      case (Module_SD)
+
+         ! If FAST.Farm integration enabled
+         if (Turbine%p_FAST%FarmIntegration) then
+
+            ! Copy SD platform load mesh to substructure loads mesh
+            call MeshCopy(Turbine%SD%Input(INPUT_CURR)%LMesh, &
+                          Turbine%m_Glue%Ext%SubstructureLoadsFF, &
+                          MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+            Turbine%m_Glue%Ext%SubstructureLoadsFF%Force = 0.0_ReKi
+            Turbine%m_Glue%Ext%SubstructureLoadsFF%Moment = 0.0_ReKi
+
+            call MapCustom(MappingsTmp, Custom_FF_to_SD, Mods(iModDst), Mods(iModDst))
+
+         end if
+
       end select
 
       ! Loop through source modules
@@ -3149,6 +3184,11 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       ! Apply damping force as Bld_Kdmp*(node velocity)
       T%ED%Input(iInput, Mapping%DstIns)%BladePtLoads(Mapping%i)%Force = T%ED%Input(iInput, Mapping%DstIns)%BladePtLoads(Mapping%i)%Force - T%p_FAST%Bld_Kdmp * Mapping%TmpMotionMesh%TranslationVel
 
+   case (Custom_FF_to_ED)
+
+      T%ED%Input(iInput, Mapping%DstIns)%PlatformPtMesh%Force  = T%ED%Input(iInput, Mapping%DstIns)%PlatformPtMesh%Force  + T%m_Glue%Ext%SubstructureLoadsFF%Force
+      T%ED%Input(iInput, Mapping%DstIns)%PlatformPtMesh%Moment = T%ED%Input(iInput, Mapping%DstIns)%PlatformPtMesh%Moment + T%m_Glue%Ext%SubstructureLoadsFF%Moment
+
 !-------------------------------------------------------------------------------
 ! SED Inputs
 !-------------------------------------------------------------------------------
@@ -3228,6 +3268,11 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       if (allocated(T%SD%Input(iInput)%CableDeltaL) .and. allocated(T%SrvD%y%CableDeltaL)) then
          T%SD%Input(iInput)%CableDeltaL = T%SrvD%y%CableDeltaL   ! these should be sized identically during init
       end if
+
+   case (Custom_FF_to_SD)
+
+      T%SD%Input(iInput)%LMesh%Force  = T%SD%Input(iInput)%LMesh%Force  + T%m_Glue%Ext%SubstructureLoadsFF%Force
+      T%SD%Input(iInput)%LMesh%Moment = T%SD%Input(iInput)%LMesh%Moment + T%m_Glue%Ext%SubstructureLoadsFF%Moment
 
 !-------------------------------------------------------------------------------
 ! ServoDyn Inputs

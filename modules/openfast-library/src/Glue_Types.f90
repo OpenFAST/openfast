@@ -235,11 +235,17 @@ IMPLICIT NONE
     LOGICAL  :: IsConverged = .false.      !<  [-]
   END TYPE Glue_LinMisc
 ! =======================
+! =========  Glue_External  =======
+  TYPE, PUBLIC :: Glue_External
+    TYPE(MeshType)  :: SubstructureLoadsFF      !< Externally applied substructure loads from FAST.Farm [-]
+  END TYPE Glue_External
+! =======================
 ! =========  Glue_MiscVarType  =======
   TYPE, PUBLIC :: Glue_MiscVarType
     TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: ModData      !< Module variable and value data [-]
     TYPE(MappingType) , DIMENSION(:), ALLOCATABLE  :: Mappings      !< Module mapping [-]
     TYPE(ModGlueType)  :: ModGlue      !< Glue code module [-]
+    TYPE(Glue_External)  :: Ext      !< External data (ie. FAST.Farm) [-]
     TYPE(Glue_LinMisc)  :: Lin      !< Linearization misc vars [-]
     TYPE(Glue_CalcSteady)  :: CS      !< CalcSteady calculation data [-]
     TYPE(Glue_AeroMap)  :: AM      !< AeroMap data [-]
@@ -2108,6 +2114,52 @@ subroutine Glue_UnPackLinMisc(RF, OutData)
    call RegUnpack(RF, OutData%IsConverged); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine Glue_CopyExternal(SrcExternalData, DstExternalData, CtrlCode, ErrStat, ErrMsg)
+   type(Glue_External), intent(inout) :: SrcExternalData
+   type(Glue_External), intent(inout) :: DstExternalData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Glue_CopyExternal'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call MeshCopy(SrcExternalData%SubstructureLoadsFF, DstExternalData%SubstructureLoadsFF, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine Glue_DestroyExternal(ExternalData, ErrStat, ErrMsg)
+   type(Glue_External), intent(inout) :: ExternalData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Glue_DestroyExternal'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call MeshDestroy( ExternalData%SubstructureLoadsFF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine Glue_PackExternal(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Glue_External), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Glue_PackExternal'
+   if (RF%ErrStat >= AbortErrLev) return
+   call MeshPack(RF, InData%SubstructureLoadsFF) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_UnPackExternal(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Glue_External), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Glue_UnPackExternal'
+   if (RF%ErrStat /= ErrID_None) return
+   call MeshUnpack(RF, OutData%SubstructureLoadsFF) ! SubstructureLoadsFF 
+end subroutine
+
 subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    type(Glue_MiscVarType), intent(inout) :: SrcMiscData
    type(Glue_MiscVarType), intent(inout) :: DstMiscData
@@ -2156,6 +2208,9 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call Glue_CopyModGlueType(SrcMiscData%ModGlue, DstMiscData%ModGlue, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call Glue_CopyExternal(SrcMiscData%Ext, DstMiscData%Ext, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    call Glue_CopyLinMisc(SrcMiscData%Lin, DstMiscData%Lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -2201,6 +2256,8 @@ subroutine Glue_DestroyMisc(MiscData, ErrStat, ErrMsg)
    end if
    call Glue_DestroyModGlueType(MiscData%ModGlue, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Glue_DestroyExternal(MiscData%Ext, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Glue_DestroyLinMisc(MiscData%Lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Glue_DestroyCalcSteady(MiscData%CS, ErrStat2, ErrMsg2)
@@ -2237,6 +2294,7 @@ subroutine Glue_PackMisc(RF, Indata)
       end do
    end if
    call Glue_PackModGlueType(RF, InData%ModGlue) 
+   call Glue_PackExternal(RF, InData%Ext) 
    call Glue_PackLinMisc(RF, InData%Lin) 
    call Glue_PackCalcSteady(RF, InData%CS) 
    call Glue_PackAeroMap(RF, InData%AM) 
@@ -2280,6 +2338,7 @@ subroutine Glue_UnPackMisc(RF, OutData)
       end do
    end if
    call Glue_UnpackModGlueType(RF, OutData%ModGlue) ! ModGlue 
+   call Glue_UnpackExternal(RF, OutData%Ext) ! Ext 
    call Glue_UnpackLinMisc(RF, OutData%Lin) ! Lin 
    call Glue_UnpackCalcSteady(RF, OutData%CS) ! CS 
    call Glue_UnpackAeroMap(RF, OutData%AM) ! AM 
