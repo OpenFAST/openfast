@@ -305,6 +305,7 @@ IMPLICIT NONE
 ! =========  SrvD_DiscreteStateType  =======
   TYPE, PUBLIC :: SrvD_DiscreteStateType
     REAL(ReKi)  :: CtrlOffset = 0.0_ReKi      !< Controller offset parameter [N-m]
+    REAL(ReKi)  :: CtrlIntegral = 0      !< Controller integral parameter [N-m]
     TYPE(StC_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: BStC      !< StC module states - blade [-]
     TYPE(StC_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: NStC      !< StC module states - nacelle [-]
     TYPE(StC_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: TStC      !< StC module states - tower [-]
@@ -2643,6 +2644,7 @@ subroutine SrvD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrS
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstDiscStateData%CtrlOffset = SrcDiscStateData%CtrlOffset
+   DstDiscStateData%CtrlIntegral = SrcDiscStateData%CtrlIntegral
    if (allocated(SrcDiscStateData%BStC)) then
       LB(1:1) = lbound(SrcDiscStateData%BStC)
       UB(1:1) = ubound(SrcDiscStateData%BStC)
@@ -2766,6 +2768,7 @@ subroutine SrvD_PackDiscState(RF, Indata)
    integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%CtrlOffset)
+   call RegPack(RF, InData%CtrlIntegral)
    call RegPack(RF, allocated(InData%BStC))
    if (allocated(InData%BStC)) then
       call RegPackBounds(RF, 1, lbound(InData%BStC), ubound(InData%BStC))
@@ -2815,6 +2818,7 @@ subroutine SrvD_UnPackDiscState(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%CtrlOffset); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CtrlIntegral); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BStC)) deallocate(OutData%BStC)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then

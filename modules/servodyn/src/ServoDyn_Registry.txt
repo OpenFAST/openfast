@@ -295,6 +295,7 @@ typedef	^	ContinuousStateType	StC_ContinuousStateType	SStC	{:}	-	-	"StC module i
 
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	ReKi	CtrlOffset	-	-	-	"Controller offset parameter" N-m
+typedef	^	DiscreteStateType	ReKi	CtrlIntegral	-	0	-	"Controller integral parameter" N-m
 #typedef	^	DiscreteStateType	ReKi	BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	DiscreteStateType	StC_DiscreteStateType	BStC	{:}	-	-	"StC module states - blade"	-
 typedef	^	DiscreteStateType	StC_DiscreteStateType	NStC	{:}	-	-	"StC module states - nacelle"	-

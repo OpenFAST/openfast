@@ -2699,6 +2699,7 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       INTEGER(IntKi)                                 :: ErrStat2
       CHARACTER(ErrMsgLen)                           :: ErrMsg2
       integer(IntKi)                                 :: j           ! Index to instance of StC for location
+      real(ReKi)                                     :: speedErr
 
          ! Initialize ErrStat
 
@@ -2707,9 +2708,13 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
 
       select case (p%TrimCase)
       case (TrimCase_yaw)
-         xd%CtrlOffset = xd%CtrlOffset + (u%RotSpeed - p%RotSpeedRef) * sign(p%TrimGain, p%YawNeut + xd%CtrlOffset)
+         speedErr = (u%RotSpeed - p%RotSpeedRef) * sign(p%TrimGain, p%YawNeut + xd%CtrlOffset)
+         xd%CtrlIntegral = xd%CtrlIntegral + speedErr
+         xd%CtrlOffset = xd%CtrlIntegral + speedErr * 100.0_ReKi
       case (TrimCase_torque, TrimCase_pitch)
-         xd%CtrlOffset = xd%CtrlOffset + (u%RotSpeed - p%RotSpeedRef) * p%TrimGain
+         speedErr = (u%RotSpeed - p%RotSpeedRef) * p%TrimGain
+         xd%CtrlIntegral = xd%CtrlIntegral + speedErr
+         xd%CtrlOffset = xd%CtrlIntegral + speedErr * 1000.0_ReKi
 !     case default
 !        xd%CtrlOffset = 0.0_ReKi ! same as initialized value
       end select
