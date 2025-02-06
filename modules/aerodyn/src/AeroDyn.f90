@@ -5894,6 +5894,10 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
       call AD_CopyRotOtherStateType(OtherState, m%OtherState_init, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
       call AD_CopyRotOtherStateType(OtherState, m%OtherState_jac, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
       call AD_CopyRotConstraintStateType(z, m%z_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      if (p%DBEMT_Mod == DBEMT_frozen) then
+         call AllocAry(m%BEMT%AxInd_op, p%NumBlNds, p%numBlades, 'm%BEMT%AxInd_op', ErrStat2, ErrMsg2); if (Failed()) return
+         call AllocAry(m%BEMT%TnInd_op, p%NumBlNds, p%numBlades, 'm%BEMT%TnInd_op', ErrStat2, ErrMsg2); if (Failed()) return
+      end if
    end if
 
 contains
