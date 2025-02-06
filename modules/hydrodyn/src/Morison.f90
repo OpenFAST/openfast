@@ -730,7 +730,7 @@ SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, memb
    real(ReKi)                                  :: ptLoad(6)
    logical                                     :: fillFlag
    type(Morison_MemberType)                    :: mem
-   REAL(ReKi)                                  :: Cd1, Cd2, Ca1, Ca2, Cp1, Cp2, AxCd1, AxCd2, AxCa1, AxCa2, AxCp1, AxCp2, Cb1, Cb2, JAxCd1, JAxCd2, JAxCa1, JAxCa2, JAxCp1, JAxCp2 ! tmp coefs
+   REAL(ReKi)                                  :: Cd1, CdA1, CdB1, Cd2, CdA2, CdB2, Ca1, CaA1, CaB1, Ca2, CaA2, CaB2, Cp1, Cp2, AxCd1, AxCd2, AxCa1, AxCa2, AxCp1, AxCp2, Cb1, Cb2, JAxCd1, JAxCd2, JAxCa1, JAxCa2, JAxCp1, JAxCp2 ! tmp coefs
    real(ReKi)                                  :: F_B(6, numNodes), F_BF(6, numNodes), F_WMG(6, numNodes)
    
    INTEGER                                     :: ErrStat2
@@ -961,15 +961,15 @@ SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, memb
       WRITE( UnSum,  '(//)' ) 
       WRITE( UnSum,  '(A14,I4,A44)' ) 'Nodes (first [',numJoints,'] are joints, remainder are internal nodes)'
       WRITE( UnSum,  '(/)' ) 
-      WRITE( UnSum, '(1X,A5,21(2X,A10))' ) '  i  ', '  MbrIndx ', '   Nxi    ', '   Nyi    ', '   Nzi    ', '     R    ', '    t     ', '   tMG    ', '  MGDens  ', ' PropPot  ', 'FilledFlag', 'FilledMass', '    Cd    ', '    Ca    ', '    Cp    ', '    Cb    ', '   AxCd   ',  '   AxCa   ', '   AxCp   ', '   JAxCd  ', '   JAxCa  ', '   JAxCp  '
-      WRITE( UnSum, '(1X,A5,21(2X,A10))' ) ' (-) ', '    (-)   ', '   (m)    ', '   (m)    ', '   (m)    ', '    (m)   ', '   (m)    ', '   (m)    ', ' (kg/m^3) ', '   (-)    ', '   (-)    ', '  (kg)    ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ',  '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   '
+      WRITE( UnSum, '(1X,A5,31(2X,A10))' ) '  i  ', '  MbrIndx ', '   Nxi    ', '   Nyi    ', '   Nzi    ', '  Shape   ', '     R    ', '    SA    ', '    SB    ', '    t     ', '   tMG    ', '  MGDens  ', ' PropPot  ', 'FilledFlag', 'FilledMass', '    Cd    ', '    CdA   ', '    CdB   ', '    Ca    ', '    CaA   ', '    CaB   ', '    Cp    ', '    Cb    ', '   AxCd   ',  '   AxCa   ', '   AxCp   ', '   JAxCd  ', '   JAxCa  ', '   JAxCp  ', ' JAxFDMod ', 'JAxVnCOff ', 'JAxFDLoFSc'
+      WRITE( UnSum, '(1X,A5,31(2X,A10))' ) ' (-) ', '    (-)   ', '   (m)    ', '   (m)    ', '   (m)    ', '   (-)    ', '    (m)   ', '    (m)   ', '    (m)   ', '   (m)    ', '   (m)    ', ' (kg/m^3) ', '   (-)    ', '   (-)    ', '  (kg)    ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ',  '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   '
       
          ! Write the node data
       do I = 1,numJoints   
          ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
          pos = nodes(i)%Position
          pos(3) = pos(3) + p%WaveField%MSL2SWL
-         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),2(2X,A10),2(2X,ES10.3),10(2X,A10),3(2X,ES10.3))' ) i,'    -     ', pos, '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ',  '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp
+         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),5(2X,A10),2(2X,ES10.3),14(2X,A10),3(2X,ES10.3),1X,I10,2(2X,ES10.3))' ) i,'    -     ', pos, '    -     ', '    -     ', '    -     ', '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ',  '    -     ', '    -     ', '    -     ', '    -     ',  '    -     ', '    -     ', '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp, nodes(i)%JAxFDMod, nodes(i)%JAxVnCOff, nodes(i)%JAxFDLoFSc
       end do
       c = numJoints
       do j= 1, numMembers
@@ -988,7 +988,11 @@ SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, memb
             else
                II=I
             endif
-            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),8(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, pos, members(j)%R(ii),  members(j)%R(ii)-members(j)%Rin(ii),  members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),  members(j)%Cd(ii),  members(j)%Ca(ii),  members(j)%Cp(ii),  members(j)%Cb(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  '
+            if ( members(j)%MSecGeom == MSecGeom_Cyl ) then
+               write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),(2X,A10),(2X,ES10.3),2(2X,A10),3(2X,ES10.3),2(6X,L6),2(2X,ES10.3),2(2X,A10),(2X,ES10.3),2(2X,A10),5(2X,ES10.3),6(7x,A5))' ) c, members(j)%MemberID, pos, '    C     ', members(j)%R(ii),      '    -     ',      '    -     ',        members(j)%R(ii)-members(j)%Rin(ii),    members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),  members(j)%Cd(ii),        '    -     ',        '    -     ',  members(j)%Ca(ii),         '    -     ',       '    -     ',  members(j)%Cp(ii),  members(j)%Cb(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  ', '  -  ',  '  -  ',  '  -  '
+            else if ( members(j)%MSecGeom == MSecGeom_Rec ) then
+               write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),(2X,A10),(2X,A10),5(2X,ES10.3),2(6X,L6),(2X,ES10.3),(2X,A10),2(2X,ES10.3),(2X,A10),7(2X,ES10.3),6(7x,A5))' )                 c, members(j)%MemberID, pos, '    R     ',     '    -     ', members(j)%Sa(ii), members(j)%Sb(ii),  0.5*(members(j)%Sa(ii)-members(j)%Sain(ii)),  members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),       '    -     ',  members(j)%CdA(ii),  members(j)%CdB(ii),       '    -     ',   members(j)%CaA(ii), members(j)%CaB(ii),  members(j)%Cp(ii),  members(j)%Cb(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  ', '  -  ',  '  -  ',  '  -  '
+            end if
          end do
       end do
       
@@ -996,8 +1000,8 @@ SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, memb
       write( UnSum,  '(//)' ) 
       write( UnSum,  '(A8)' ) 'Members'
       write( UnSum,  '(/)' ) 
-      write( UnSum, '(1X,A8,2X,A6,2X,A6,33(2X,A12))' ) 'MemberID', 'joint1','joint2','  Length  ', '   NElem    ', '   Volume   ', '  MGVolume  ', '      R1    ', '     t1     ', '      R2    ', '     t2     ', ' PropPot  ', 'FilledFlag', 'FillDensity', '  FillFSLoc ', '  FillMass  ', '     Cd1    ', '    Ca1   ', '     Cp1    ', '     Cb1    ', '    AxCd1   ', '    AxCa1   ', '    AxCp1   ', '   JAxCd1   ', '   JAxCa1   ', '  JAxCp1    ', '     Cd2    ', '     Ca2    ', '     Cp2    ', '     Cb2    ', '    AxCd2   ', '    AxCa2   ', '    AxCp2   ', '   JAxCd2   ', '   JAxCa2   ', '   JAxCp2   '
-      write( UnSum, '(1X,A8,2X,A6,2X,A6,33(2X,A12))' ) '  (-)   ', ' (-)  ',' (-)  ','   (m)    ', '    (-)     ', '   (m^3)    ', '   (m^3)    ', '      (m)   ', '     (m)    ', '      (m)   ', '     (m)    ', '   (-)    ', '   (-)    ', ' (kg/m^3)  ', '     (-)    ', '    (kg)    ', '     (-)    ', '    (-)   ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '    (-)     ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    '
+      write( UnSum, '(1X,A8,2X,A6,2X,A6,45(2X,A12))' ) 'MemberID', 'joint1','joint2','  Length  ', '   NElem    ', '   Volume   ', '  MGVolume  ', '      R1    ', '     SA1    ', '     SB1    ', '     t1     ', '      R2    ', '     SA2    ', '     SB2    ', '     t2     ', ' PropPot  ', 'FilledFlag', 'FillDensity', '  FillFSLoc ', '  FillMass  ', '     Cd1    ', '    CdA1    ', '    CdB1    ', '     Ca1    ', '    CaA1    ', '    CaB1   ', '     Cp1    ', '     Cb1    ', '    AxCd1   ', '    AxCa1   ', '    AxCp1   ', '   JAxCd1   ', '  JAxCa1    ', '   JAxCp1   ', '     Cd2    ', '    CdA2    ', '    CdB2    ', '     Ca2    ', '    CaA2    ', '    CaB2    ', '     Cp2    ', '     Cb2    ', '    AxCd2   ', '    AxCa2   ', '    AxCp2   ', '   JAxCd2   ', '   JAxCa2   ', '   JAxCp2   '
+      write( UnSum, '(1X,A8,2X,A6,2X,A6,45(2X,A12))' ) '  (-)   ', ' (-)  ',' (-)  ','   (m)    ', '    (-)     ', '   (m^3)    ', '   (m^3)    ', '      (m)   ', '     (m)    ', '     (m)    ', '     (m)    ', '      (m)   ', '     (m)    ', '     (m)    ', '     (m)    ', '   (-)    ', '   (-)    ', ' (kg/m^3)  ', '     (-)    ', '    (kg)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)   ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '    (-)     ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    '
       
       
       
@@ -1021,10 +1025,22 @@ SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, memb
             filledFlag = .FALSE.
          END IF
      
-         Cd1   = members(i)%Cd(1)
-         Cd2   = members(i)%Cd(N+1)
-         Ca1   = members(i)%Ca(1)
-         Ca2   = members(i)%Ca(N+1)
+         IF ( members(i)%MSecGeom == MSecGeom_Cyl ) THEN
+            Cd1   = members(i)%Cd(1)
+            Cd2   = members(i)%Cd(N+1)
+            Ca1   = members(i)%Ca(1)
+            Ca2   = members(i)%Ca(N+1)
+         ELSE IF ( members(i)%MSecGeom == MSecGeom_Rec ) THEN
+            CdA1   = members(i)%CdA(1)
+            CdA2   = members(i)%CdA(N+1)
+            CaA1   = members(i)%CaA(1)
+            CaA2   = members(i)%CaA(N+1)
+            CdB1   = members(i)%CdB(1)
+            CdB2   = members(i)%CdB(N+1)
+            CaB1   = members(i)%CaB(1)
+            CaB2   = members(i)%CaB(N+1)
+         END IF
+
          Cp1   = members(i)%Cp(1)
          Cp2   = members(i)%Cp(N+1)
          AxCd1 = members(i)%AxCd(1)
@@ -1043,14 +1059,23 @@ SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, memb
          JAxCp1 = nodes(members(i)%NodeIndx(1  ))%JAxCp
          JAxCp2 = nodes(members(i)%NodeIndx(1+N))%JAxCp
        
-         
-         write( UnSum, '(1X,I8,2X,I6,2X,I6,2X,ES12.5,2X,I12, 6(2X,ES12.5),2(2X,L12),23(2X,ES12.5))' )  members(i)%MemberID, &
-                       members(i)%NodeIndx(1), members(i)%NodeIndx(N+1), members(i)%RefLength, N, &
-                       memberVol, MGvolume, members(i)%Rmg(1), members(i)%Rmg(1)-members(i)%Rin(1), &
-                       members(i)%Rmg(N+1), members(i)%Rmg(N+1)-members(i)%Rin(N+1),  &
-                       members(i)%PropPot, filledFlag, members(i)%FillDens, members(i)%FillFSLoc, &
-                       mass_fill, Cd1, Ca1, Cp1, Cb1, AxCd1, AxCa1, AxCp1, JAxCd1, JAxCa1, JAxCp1, &
-                       Cd2, Ca2, Cp2, Cb2, AxCd2, AxCa2, AxCp2, JAxCd2, JAxCa2, JAxCp2
+         IF ( members(i)%MSecGeom == MSecGeom_Cyl ) THEN
+            write( UnSum, '(1X,I8,2X,I6,2X,I6,2X,ES12.5,2X,I12, 3(2X,ES12.5),2(2X,A12),2(2X,ES12.5),2(2X,A12),(2X,ES12.5),2(2X,L12), 4(2X,ES12.5),2(2X,A12),(2X,ES12.5),2(2X,A12),9(2X,ES12.5),2(2X,A12),(2X,ES12.5),2(2X,A12),8(2X,ES12.5))' )  members(i)%MemberID, &
+                          members(i)%NodeIndx(1), members(i)%NodeIndx(N+1), members(i)%RefLength, N, &
+                          memberVol, MGvolume, members(i)%Rmg(1), '     -      ', '     -      ', members(i)%Rmg(1)-members(i)%Rin(1), &
+                          members(i)%Rmg(N+1), '     -      ', '     -      ', members(i)%Rmg(N+1)-members(i)%Rin(N+1),  &
+                          members(i)%PropPot, filledFlag, members(i)%FillDens, members(i)%FillFSLoc, &
+                          mass_fill, Cd1, '     -      ', '     -      ', Ca1, '     -      ', '     -      ', Cp1, Cb1, AxCd1, AxCa1, AxCp1, JAxCd1, JAxCa1, JAxCp1, &
+                          Cd2, '     -      ', '     -      ', Ca2, '     -      ', '     -      ', Cp2, Cb2, AxCd2, AxCa2, AxCp2, JAxCd2, JAxCa2, JAxCp2
+         ELSE IF ( members(i)%MSecGeom == MSecGeom_Rec ) THEN
+            write( UnSum, '(1X,I8,2X,I6,2X,I6,2X,ES12.5,2X,I12, 2(2X,ES12.5),(2X,A12),3(2X,ES12.5),(2X,A12),3(2X,ES12.5),2(2X,L12), 3(2X,ES12.5),(2X,A12),2(2X,ES12.5),(2X,A12),10(2X,ES12.5),(2X,A12),2(2X,ES12.5),(2X,A12),10(2X,ES12.5))' )  members(i)%MemberID, &
+                          members(i)%NodeIndx(1), members(i)%NodeIndx(N+1), members(i)%RefLength, N, &
+                          memberVol, MGvolume, '     -      ', members(i)%SaMG(1), members(i)%SbMG(1), 0.5*(members(i)%SaMG(1)-members(i)%SaIn(1)), &
+                          '     -      ', members(i)%SaMG(N+1), members(i)%SbMG(N+1), 0.5*(members(i)%SaMG(N+1)-members(i)%SaIn(N+1)),  &
+                          members(i)%PropPot, filledFlag, members(i)%FillDens, members(i)%FillFSLoc, &
+                          mass_fill, '     -      ', CdA1, CdB1, '     -      ', CaA1, CaB1, Cp1, Cb1, AxCd1, AxCa1, AxCp1, JAxCd1, JAxCa1, JAxCp1, &
+                          '     -      ', CdA2, CdB2, '     -      ', CaA2, CaB2, Cp2, Cb2, AxCd2, AxCa2, AxCp2, JAxCd2, JAxCa2, JAxCp2
+         END IF
       
       end do   ! i = 1,numMembers
                
