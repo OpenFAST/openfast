@@ -3039,6 +3039,9 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
             IF ( p%FilledGroups(i)%FillFSLoc > p%WaveField%MSL2SWL ) THEN
                call SetErrStat(ErrID_Fatal,' FillFSLoc cannot be higher than MSL2SWL if FillMList contains any member that is fully or partially buried in the seabed. ',errStat,errMsg,RoutineName ); return
             END IF
+            IF ( .not. EqualRealNos( p%FilledGroups(i)%FillDens, p%WaveField%WtrDens) ) THEN
+               call SetErrStat(ErrID_Fatal,' FillDens must be the same as the external water density if FillMList contains any member that is fully or partially buried in the seabed. ',errStat,errMsg,RoutineName ); return
+            END IF
             EXIT
          END IF
       END DO

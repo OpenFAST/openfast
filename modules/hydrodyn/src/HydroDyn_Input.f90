@@ -2719,6 +2719,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
                ! Deal with DEFAULT or create a REAL from the string
 
+         CALL Conv2UC( InputFileData%Morison%FilledGroups(I)%FillDensChr )
          IF ( TRIM(InputFileData%Morison%FilledGroups(I)%FillDensChr) /= 'DEFAULT' )  THEN
 
             READ (InputFileData%Morison%FilledGroups(I)%FillDensChr,*,IOSTAT=IOS)  InputFileData%Morison%FilledGroups(I)%FillDens
