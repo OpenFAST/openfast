@@ -423,7 +423,7 @@ SUBROUTINE SetExtInfwPositions(p_FAST, u_AD, ExtInfw, ErrStat, ErrMsg)
          ExtInfw%u%xdotForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(1,J),c_float)
          ExtInfw%u%ydotForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(2,J),c_float)
          ExtInfw%u%zdotForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(3,J),c_float)
-         ExtInfw%u%pOrientation((Node-1)*9_1:Node*9) = real(pack(ExtInfw%m%ActForceMotionsPoints(k)%Orientation(:,:,J),.true.),c_float)
+         ExtInfw%u%pOrientation((Node-1)*9+1:Node*9) = real(pack(ExtInfw%m%ActForceMotionsPoints(k)%Orientation(:,:,J),.true.),c_float)
       END DO
 
    END DO
