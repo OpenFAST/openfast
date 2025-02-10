@@ -24,32 +24,32 @@
 ### Main repository
 1. Merge PR
 2. Create release with new tag
-	* Copy `Changelog` section down from the changlog.md file to release notes
-	* add short intro section at top with 2 sentence synopsis (see prior release for this)
-	* copy `Precompiled Windows Binaries` section from prior release, and update as needed into the release notes
-	* check the `create discussion` box
-	* Post
+   * Copy `Changelog` section down from the changlog.md file to release notes
+   * add short intro section at top with 2 sentence synopsis (see prior release for this)
+   * copy `Precompiled Windows Binaries` section from prior release, and update as needed into the release notes
+   * check the `create discussion` box
+   * Post
 3. delete `rc-` branch if merging from one
 
 ### Windows executables build and upload
 After posting and tagging release
 1. Pull main and tags
-	* `git fetch --tags OpenFAST`
-	* `git fetch OpenFAST main:main`
-	* `git checkout main`
+   * `git fetch --tags OpenFAST`
+   * `git fetch OpenFAST main:main`
+   * `git checkout main`
 2. Delete `vs-build` and checkout again
-	* `rm -rf vs-build`
-	* `git checkout vs-build`
+   * `rm -rf vs-build`
+   * `git checkout vs-build`
 3. Set a couple of VS files to not track changes on files that VS wants to update Windows related stuff in
-   	```
+   ```
    git update-index --assume-unchanged vs-build/MAPlib/MAP_dll.vcxproj vs-uild/Registry/FAST_Registry.vcxproj
-	```
+   ```
 
 4. Compile executables for Windows builds
-	* Run one of the executables and check the version info. Muck about with VS if there is an issue.
-    * Also run `dumpbin.exe /dependents <exe>.exe` to check static linking
-	* NOTE: build the simulink last -- it messes up some things otherwise
-	 - [ ] AeroDisk_Driver_x64.exe
+   * Run one of the executables and check the version info. Muck about with VS if there is an issue.
+   * Also run `dumpbin.exe /dependents <exe>.exe` to check static linking
+   * NOTE: build the simulink last -- it messes up some things otherwise
+    - [ ] AeroDisk_Driver_x64.exe
     - [ ] AeroDyn_Driver_x64.exe
     - [ ] AeroDyn_Driver_x64_OpenMP.exe
     - [ ] AeroDyn_Inflow_C_Binding_x64.dll
@@ -71,11 +71,11 @@ After posting and tagging release
     - [ ] MoorDyn_C_Binding_x64.dll
     - [ ] OpenFAST-Simulink_x64.dll -- change `additional dependencies` in the `OpenFAST-Simulink` project in `FAST` to point to correct install of MATLAB
     - [ ] openfast_x64.exe
-	 - [ ] SeaStateDriver_x64.exe
-	 - [ ] SimpleElastoDyn_x64.exe
-	 - [ ] SubDyn_x64.exe
+    - [ ] SeaStateDriver_x64.exe
+    - [ ] SimpleElastoDyn_x64.exe
+    - [ ] SubDyn_x64.exe
     - [ ] Turbsim_x64.exe
-	 - [ ] UnsteadyAero_x64.exe
+    - [ ] UnsteadyAero_x64.exe
 5. Upload all filesUnset the no tracking of files
    ```
    git ls-files -v | grep "^[a-z]"
