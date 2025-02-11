@@ -147,22 +147,26 @@ jobs:
           version: '2021.12'
 
       - name: Build OpenFAST_x64
-        run: devenv vs-build/FAST/FAST.sln /Build "Release|x64" /Project FAST
+        run: devenv vs-build/FAST/FAST.sln /Build "Release|x64"
 
       - name: Build AeroDyn_Driver
         run: |
-          devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release|x64" /Project AeroDyn_Driver
-          devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release_OpenMP|x64" /Project AeroDyn_Driver
+          devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release|x64"
+          devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release_OpenMP|x64"
 
       - name: Build AeroDyn_Inflow_c_binding
         run: |
-          devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release|x64" /Project AeroDyn_Inflow_c_binding
-          devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release_OpenMP|x64" /Project AeroDyn_Inflow_c_binding
+          devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release|x64"
+          devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release_OpenMP|x64"
+
+      - name: Build BeamDyn_Driver
+        run: vs-build/BeamDyn/BeamDyn-w-registry.sln /Build "Release|x64"
+
+      - name: Build Controllers
+        run: vs-build/Discon/Discon.sln /Build "Release|x64" 
 
       - name: Build Turbsim
-        run: |
-          devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release|x64" /Project AeroDyn_Inflow_c_binding
-          devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release_OpenMP|x64" /Project AeroDyn_Inflow_c_binding
+        run: devenv vs-build/TurbSim/TurbSim.vfproj /Build "Release|x64"
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
