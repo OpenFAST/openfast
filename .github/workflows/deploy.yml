@@ -146,8 +146,5 @@ jobs:
           compiler: intel-classic
           version: '2021.12'
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
       - name: Build OpenFAST_x64
-        run: msbuild vs-build/FAST/FAST.sln
+        run: devenv vs-build/FAST/FAST.sln /Build Release|x64
