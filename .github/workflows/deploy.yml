@@ -139,7 +139,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   build-windows-executables:
-    runs-on: windows-2019
+    runs-on: windows-2022
     defaults:
       run:
         shell: bash
