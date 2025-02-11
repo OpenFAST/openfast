@@ -147,10 +147,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Intel Fortran
-        run: .github/scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
+        run: .github/scripts/install_windows.bat ${{ env.WINDOWS_HPCKIT_URL }} ${{ env.WINDOWS_FORTRAN_COMPONENTS }}
 
       - name: Install Intel MKL
-        run: .github/scripts/install_windows.bat $WINDOWS_BASEKIT_URL $WINDOWS_MKL_COMPONENTS
+        run: .github/scripts/install_windows.bat ${{ env.WINDOWS_BASEKIT_URL }} ${{ env.WINDOWS_MKL_COMPONENTS }}
 
       - name: Build
         run: .github/scripts/build_windows.bat
