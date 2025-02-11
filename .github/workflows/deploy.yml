@@ -18,12 +18,6 @@ on:
       - 'docs/**'
       - 'share/**'
 
-env:
-  WINDOWS_BASEKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7dff44ba-e3af-4448-841c-0d616c8da6e7/w_BaseKit_p_2024.1.0.595_offline.exe
-  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe
-  WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
-  WINDOWS_MKL_COMPONENTS: intel.oneapi.win.mkl.devel
-
 jobs:
   publish-to-pypi-test:
     runs-on: ubuntu-latest
@@ -147,22 +141,63 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Intel Fortran
-        run: .github/scripts/install_windows.bat ${{ env.WINDOWS_HPCKIT_URL }} ${{ env.WINDOWS_FORTRAN_COMPONENTS }}
+      - name: Install Intel oneAPI BaseKit (Windows)
+        env:
+          URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7dff44ba-e3af-4448-841c-0d616c8da6e7/w_BaseKit_p_2024.1.0.595_offline.exe
+          COMPONENTS: intel.oneapi.win.mkl.devel
+        run: |
+          curl.exe --output %TEMP%\webimage.exe --url %URL% --retry 5 --retry-delay 5
+          start /b /wait %TEMP%\webimage.exe -s -x -f webimage_extracted --log extract.log
+          del %TEMP%\webimage.exe
+          webimage_extracted\bootstrapper.exe -s --action install --components=%COMPONENTS% --eula=accept -p=NEED_VS2017_INTEGRATION=0 -p=NEED_VS2019_INTEGRATION=0 -p=NEED_VS2022_INTEGRATION=1 --log-dir=.
+          set installer_exit_code=%ERRORLEVEL%
+          rd /s/q "webimage_extracted"
+          exit /b %installer_exit_code%
+        shell: cmd
 
-      - name: Install Intel MKL
-        run: .github/scripts/install_windows.bat ${{ env.WINDOWS_BASEKIT_URL }} ${{ env.WINDOWS_MKL_COMPONENTS }}
+      - name: Install Intel oneAPI HPCKit (Windows)
+        env:
+          URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe
+          COMPONENTS: intel.oneapi.win.ifort-compiler
+        run: |
+          curl.exe --output %TEMP%\webimage.exe --url %URL% --retry 5 --retry-delay 5
+          start /b /wait %TEMP%\webimage.exe -s -x -f webimage_extracted --log extract.log
+          del %TEMP%\webimage.exe
+          webimage_extracted\bootstrapper.exe -s --action install --components=%COMPONENTS% --eula=accept -p=NEED_VS2017_INTEGRATION=0 -p=NEED_VS2019_INTEGRATION=0 -p=NEED_VS2022_INTEGRATION=1 --log-dir=.
+          set installer_exit_code=%ERRORLEVEL%
+          rd /s/q "webimage_extracted"
+          exit /b %installer_exit_code%
+        shell: cmd
 
       - name: Set up MATLAB
+        id: setup-matlab
         uses: matlab-actions/setup-matlab@v2
 
+      - name: Print MATLAB root folder directly
+        run: echo ${{ steps.setup-matlab.outputs.matlabroot }}
+
       - name: Build Executables
+        env:
+          MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot }}
         run: .github/scripts/build_windows.bat
 
-      - name: Run script
+      - name: Build MATLAB Mex File
         uses: matlab-actions/run-command@v2
         with:
-          command: glue-codes/simulink/src/create_FAST_SFunc.m
+          command: |
+            mexname = 'FAST_SFunc';
+            outDir = 'build/bin';
+            mex('-largeArrayDims', '-v', 
+                '-Lbuild/bin, ...
+                '-lOpenFAST-Simulink_x64', ...
+                '-Imodules/openfast-library/src', ... % "FAST_Library.h"
+                '-Imodules/supercontroller/src', ... % "SuperController_Types.h"
+                '-Imodules/externalinflow/src',  ... % "ExternalInflow_Types.h"
+                '-Imodules/extloads/src', ... % "ExtLoadsDX_Types.h"
+                '-outdir', outDir, ...
+                ['COMPFLAGS=$COMPFLAGS -MT -DS_FUNCTION_NAME=' mexname], ...
+                '-output', mexname, ...
+                'FAST_SFunc.c');
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
