@@ -410,6 +410,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WaveTi = 0_IntKi      !< current interpolation index for wave time series data []
     TYPE(MD_ContinuousStateType)  :: xTemp      !< contains temporary state vector used in integration (put here so it's only allocated once) [-]
     TYPE(MD_ContinuousStateType)  :: xdTemp      !< contains temporary state derivative vector used in integration (put here so it's only allocated once) [-]
+    TYPE(MD_ContinuousStateType)  :: kSum      !< Sum of RK4 slope estimates: k0 + 2*k1 + 2*k2 + k3 [-]
     REAL(DbKi) , DIMENSION(1:6)  :: zeros6 = 0.0_R8Ki      !< array of zeros for convenience [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: MDWrOutput      !< Data from time step to be written to a MoorDyn output file [-]
     REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Time of last writing to MD output files [-]
@@ -441,6 +442,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NConns = 0      !< number of Connect type Points - not to be confused with NPoints []
     INTEGER(IntKi)  :: NAnchs = 0      !< number of Anchor type Points []
     REAL(DbKi)  :: Tmax = 0.0_R8Ki      !< simulation duration [[s]]
+    INTEGER(IntKi)  :: tScheme = 0      !< Time integration scheme (0 = RK2, 1 = RK4). Default is RK2 [-]
     REAL(DbKi)  :: g = 9.81      !< gravitational constant (positive) [[m/s^2]]
     REAL(DbKi)  :: rhoW = 1025      !< density of seawater [[kg/m^3]]
     REAL(DbKi)  :: WtrDpth = 0.0_R8Ki      !< water depth [[m]]
@@ -3258,6 +3260,9 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call MD_CopyContState(SrcMiscData%xdTemp, DstMiscData%xdTemp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call MD_CopyContState(SrcMiscData%kSum, DstMiscData%kSum, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstMiscData%zeros6 = SrcMiscData%zeros6
    if (allocated(SrcMiscData%MDWrOutput)) then
       LB(1:1) = lbound(SrcMiscData%MDWrOutput)
@@ -3454,6 +3459,8 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MD_DestroyContState(MiscData%xdTemp, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyContState(MiscData%kSum, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%MDWrOutput)) then
       deallocate(MiscData%MDWrOutput)
    end if
@@ -3570,6 +3577,7 @@ subroutine MD_PackMisc(RF, Indata)
    call RegPack(RF, InData%WaveTi)
    call MD_PackContState(RF, InData%xTemp) 
    call MD_PackContState(RF, InData%xdTemp) 
+   call MD_PackContState(RF, InData%kSum) 
    call RegPack(RF, InData%zeros6)
    call RegPackAlloc(RF, InData%MDWrOutput)
    call RegPack(RF, InData%LastOutTime)
@@ -3714,6 +3722,7 @@ subroutine MD_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%WaveTi); if (RegCheckErr(RF, RoutineName)) return
    call MD_UnpackContState(RF, OutData%xTemp) ! xTemp 
    call MD_UnpackContState(RF, OutData%xdTemp) ! xdTemp 
+   call MD_UnpackContState(RF, OutData%kSum) ! kSum 
    call RegUnpack(RF, OutData%zeros6); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MDWrOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
@@ -3789,6 +3798,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NConns = SrcParamData%NConns
    DstParamData%NAnchs = SrcParamData%NAnchs
    DstParamData%Tmax = SrcParamData%Tmax
+   DstParamData%tScheme = SrcParamData%tScheme
    DstParamData%g = SrcParamData%g
    DstParamData%rhoW = SrcParamData%rhoW
    DstParamData%WtrDpth = SrcParamData%WtrDpth
@@ -4209,6 +4219,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%NConns)
    call RegPack(RF, InData%NAnchs)
    call RegPack(RF, InData%Tmax)
+   call RegPack(RF, InData%tScheme)
    call RegPack(RF, InData%g)
    call RegPack(RF, InData%rhoW)
    call RegPack(RF, InData%WtrDpth)
@@ -4312,6 +4323,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NConns); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NAnchs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Tmax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%tScheme); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%g); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rhoW); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
