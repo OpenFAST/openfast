@@ -141,10 +141,11 @@ jobs:
 
   build-windows-executables:
     runs-on: windows-2022
-    timeout-minutes: 500
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install Intel Fortran
         run: .github/scripts/install_windows.bat ${{ env.WINDOWS_HPCKIT_URL }} ${{ env.WINDOWS_FORTRAN_COMPONENTS }}
@@ -152,12 +153,21 @@ jobs:
       - name: Install Intel MKL
         run: .github/scripts/install_windows.bat ${{ env.WINDOWS_BASEKIT_URL }} ${{ env.WINDOWS_MKL_COMPONENTS }}
 
-      - name: Build
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v2
+
+      - name: Build Executables
         run: .github/scripts/build_windows.bat
+
+      - name: Run script
+        uses: matlab-actions/run-command@v2
+        with:
+          command: glue-codes/simulink/src/create_FAST_SFunc.m
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
+          name: openfast-binaries
           path: |
             build/bin/*.exe
             build/bin/*.dll
