@@ -19,9 +19,10 @@ on:
       - 'share/**'
 
 env:
+  WINDOWS_BASEKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7dff44ba-e3af-4448-841c-0d616c8da6e7/w_BaseKit_p_2024.1.0.595_offline.exe
   WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe
   WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
-  CACHE_NUMBER: 5
+  WINDOWS_MKL_COMPONENTS: intel.oneapi.win.mkl.devel
 
 jobs:
   publish-to-pypi-test:
@@ -140,26 +141,16 @@ jobs:
 
   build-windows-executables:
     runs-on: windows-2022
-    defaults:
-      run:
-        shell: bash
     timeout-minutes: 500
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache | Install
-        id: cache-install
-        uses: actions/cache@v3
-        with:
-          path: |
-              C:\Program Files (x86)\Intel\oneAPI\setvars-vcvarsall.bat
-              C:\Program Files (x86)\Intel\oneAPI\compiler
-          key: install-${{ env.CACHE_NUMBER }}-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/.github/scripts/cache_exclude_windows.sh') }}
+      - name: Install Intel Fortran
+        run: .github/scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
 
-      - name: Intel Fortran Install
-        if: steps.cache-install.outputs.cache-hit != 'true'
-        run: .github/scripts/install-fortran-windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
+      - name: Install Intel MKL
+        run: .github/scripts/install_windows.bat $WINDOWS_BASEKIT_URL $WINDOWS_MKL_COMPONENTS
 
       - name: Build
         run: .github/scripts/build_windows.bat
