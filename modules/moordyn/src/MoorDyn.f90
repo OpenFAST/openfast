@@ -117,6 +117,7 @@ CONTAINS
       CHARACTER(20)                :: LineOutString        ! String to temporarially hold characters specifying line output options
       CHARACTER(20)                :: OptString            ! String to temporarially hold name of option variable
       CHARACTER(40)                :: OptValue             ! String to temporarially hold value of options variable input
+      CHARACTER(40)                :: tSchemeString = 'RK2'! String to temporarially hold value of tScheme variable input (initial string sets RK2 as default if not provided by user)
       CHARACTER(40)                :: DepthValue           ! Temporarily stores the optional WtrDpth setting for MD, which could be a number or a filename
       CHARACTER(40)                :: WaterKinValue        ! Temporarily stores the optional WaterKin setting for MD, which is typically a filename
       INTEGER(IntKi)               :: nOpts                ! number of options lines in input file
@@ -443,6 +444,8 @@ CONTAINS
                      end if
                   else if ( OptString == 'DTM') THEN
                      read (OptValue,*) p%dtM0 
+                  else if ( OptString == 'TSCHEME') THEN
+                     read (OptValue,*) tSchemeString
                   else if ( OptString == 'G') then
                      read (OptValue,*) p%g
                   else if (( OptString == 'RHOW') .or. ( OptString == 'RHO')) then
@@ -491,6 +494,7 @@ CONTAINS
                if (p%writeLog > 1) then
                   write(p%UnLog, '(A)'        ) "  - Options List:"
                   write(p%UnLog, '(A17,f12.4)') "   dtm      : ", p%dtM0 
+                  write(p%UnLog, '(A17,A)'    ) "   tScheme  : ", tSchemeString
                   write(p%UnLog, '(A17,f12.4)') "   g        : ", p%g
                   write(p%UnLog, '(A17,f12.4)') "   rhoW     : ", p%rhoW
                   write(p%UnLog, '(A17,A)'    ) "   Depth    : ", DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
@@ -544,6 +548,16 @@ CONTAINS
       ! set up wave and current kinematics 
       CALL setupWaterKin(WaterKinValue, p, InitInp%Tmax, ErrStat2, ErrMsg2); if(Failed()) return
 
+      ! set up time integration method
+      IF (tSchemeString == 'RK2') THEN
+         p%tScheme = 0
+      ELSEIF (tSchemeString == 'RK4') THEN 
+         p%tScheme = 1
+      ELSE 
+         CALL SetErrStat( ErrID_Fatal, 'Unrecognized tScheme option: '//tSchemeString//' Only RK2 and RK4 supported in MD-F', ErrStat, ErrMsg, RoutineName )
+         CALL CleanUp()
+         RETURN
+      ENDIF
 
 
       ! ----------------------------- misc checks to be sorted -----------------------------
@@ -2238,15 +2252,22 @@ CONTAINS
 
       ! allocate state vector and temporary state vectors based on size just calculated
       ALLOCATE ( x%states(m%Nxtra), m%xTemp%states(m%Nxtra), m%xdTemp%states(m%Nxtra), STAT = ErrStat2 )
-      IF ( ErrStat2 /= ErrID_None ) THEN
-        ErrMsg  = ' Error allocating state vectors.'
-        !CALL CleanUp()
-        RETURN
-      END IF
+
       x%states        = 0.0_DbKi
       m%xTemp%states  = 0.0_DbKi
       m%xdTemp%states = 0.0_DbKi
 
+      ! Allocate kSum if using RK4 method. Not needed for RK2 becasue slopes not summed
+      IF (p%tScheme == 1_Intki) THEN 
+         ALLOCATE (m%kSum%states(m%Nxtra), STAT = ErrStat2)
+         m%kSum%states = 0.0_DbKi
+      END IF
+
+      IF ( ErrStat2 /= ErrID_None ) THEN
+         ErrMsg  = ' Error allocating state vectors.'
+         !CALL CleanUp()
+         RETURN
+      END IF
 
 
       ! ================================ initialize system ================================
@@ -2677,7 +2698,7 @@ CONTAINS
          t = 0.0_DbKi     ! start time at zero
 
          ! because TimeStep wants an array...
-         call MD_CopyInput( u, u_array(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! make a size=1 array of inputs (since MD_RK2 expects an array to InterpExtrap)
+         call MD_CopyInput( u, u_array(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! make a size=1 array of inputs (since MD_RK2 and MD_RK4 expects an array to InterpExtrap)
          call MD_CopyInput( u,  u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! also make an inputs object to interpExtrap to
          t_array(1) = t                                                       ! fill in the times "array" for u_array
 
@@ -2687,7 +2708,10 @@ CONTAINS
             !loop through line integration time steps
             DO J = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
 
-               CALL MD_RK2(t, dtM, u_interp, u_array, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2)
+               Call MD_Step(t, dtM, u_interp, u_array, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2)
+               IF ( ErrStat2 /= ErrID_None ) THEN
+                  CALL CheckError(ErrStat2, ErrMsg2)
+               END IF
                               
                ! check for NaNs - is this a good place/way to do it?
                DO K = 1, m%Nx
@@ -3012,8 +3036,10 @@ CONTAINS
       !loop through line integration time steps
       DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
 
-         CALL MD_RK2(t2, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2)
-         
+         Call MD_Step(t2, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2)
+         IF ( ErrStat2 /= ErrID_None ) THEN
+            CALL CheckError(ErrStat2, ErrMsg2)
+         END IF
          
          ! check for NaNs - is this a good place/way to do it?
          DO J = 1, m%Nx
@@ -3855,7 +3881,36 @@ CONTAINS
  !----------------------------------------------------------------------------------------==================
 
 
-   ! RK2 integrater (part of what was in TimeStep)
+   ! Advances the state one time step using the integration scheme specified in the input file
+   SUBROUTINE MD_Step ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+   
+      REAL(DbKi)                     , INTENT(INOUT)      :: t          ! intial time (s) for this integration step
+      REAL(DbKi)                     , INTENT(IN   )      :: dtM        ! single time step  size (s) for this integration step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
+      REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
+      TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
+      TYPE( MD_ContinuousStateType ) , INTENT(INOUT)      :: x
+      TYPE( MD_DiscreteStateType )   , INTENT(IN   )      :: xd         ! INTENT(IN   )
+      TYPE( MD_ConstraintStateType ) , INTENT(IN   )      :: z          ! INTENT(IN   )
+      TYPE( MD_OtherStateType )      , INTENT(IN   )      :: other      ! INTENT(INOUT)
+      TYPE(MD_MiscVarType)           , INTENT(INOUT)      :: m          ! INTENT(INOUT)
+      INTEGER(IntKi)                 , INTENT(  OUT)      :: ErrStat
+      CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
+
+      IF (p%tScheme == 0_Intki) THEN
+         CALL MD_RK2(t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
+      ELSEIF (p%tScheme == 1_Intki) THEN
+         CALL MD_RK4(t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
+      ELSE
+         ErrStat = ErrID_Fatal
+         ErrMsg = ' Unrecognized tScheme option in MD_Step'
+         RETURN
+      ENDIF
+
+   END SUBROUTINE MD_Step
+
+   ! RK2 integrator (part of what was in TimeStep)
    !--------------------------------------------------------------
    SUBROUTINE MD_RK2 ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
    
@@ -3887,8 +3942,9 @@ CONTAINS
       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
    
       CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg )
+         ! k0 = m%xdTemp
       DO J = 1, m%Nx
-         m%xTemp%states(J) = x%states(J) + 0.5*dtM*m%xdTemp%states(J)                                           !x1 = x0 + dt*f0/2.0;
+         m%xTemp%states(J) = x%states(J) + 0.5_DbKi*dtM*m%xdTemp%states(J)                                           !x1 = x0 + dt*k0/2.0;
       END DO
 
       ! step 2
@@ -3896,6 +3952,7 @@ CONTAINS
       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
          
       CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
+         ! k1 = m%xdTemp
       DO J = 1, m%Nx
          x%states(J) = x%states(J) + dtM*m%xdTemp%states(J)
       END DO
@@ -3907,6 +3964,85 @@ CONTAINS
    END SUBROUTINE MD_RK2
    !--------------------------------------------------------------
 
+   ! RK4 integrator
+   !--------------------------------------------------------------
+   SUBROUTINE MD_RK4 ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+   
+      REAL(DbKi)                     , INTENT(INOUT)      :: t          ! intial time (s) for this integration step
+      REAL(DbKi)                     , INTENT(IN   )      :: dtM        ! single time step  size (s) for this integration step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
+      REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
+      TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
+      TYPE( MD_ContinuousStateType ) , INTENT(INOUT)      :: x
+      TYPE( MD_DiscreteStateType )   , INTENT(IN   )      :: xd         ! INTENT(IN   )
+      TYPE( MD_ConstraintStateType ) , INTENT(IN   )      :: z          ! INTENT(IN   )
+      TYPE( MD_OtherStateType )      , INTENT(IN   )      :: other      ! INTENT(INOUT)
+      TYPE(MD_MiscVarType)           , INTENT(INOUT)      :: m          ! INTENT(INOUT)
+      INTEGER(IntKi)                 , INTENT(  OUT)      :: ErrStat
+      CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
+
+
+      INTEGER(IntKi)                                      :: I          ! counter
+      INTEGER(IntKi)                                      :: J          ! counter
+
+      ! -------------------------------------------------------------------------------
+      !       RK4 integrator written here, calling CalcContStateDeriv
+      !--------------------------------------------------------------------------------
+
+      ! k0
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+   
+      CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+         ! k0 = m%xdTemp 
+
+      ! k1
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%xdTemp%states(J) ! k0 - In loop to avoid unecessary extra loop
+         m%xTemp%states(J) = x%states(J) + 0.5_DbKi*dtM*m%xdTemp%states(J)   !x1 = x0 + dt*k0/2.0 = m%xTemp;
+      END DO
+
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+   
+      CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+         ! k1 = m%xdTemp 
+
+      ! k2
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%kSum%states(J) + 2.0_DbKi * m%xdTemp%states(J) ! 2 * k1 - In loop to avoid unecessary extra loop
+         m%xTemp%states(J) = x%states(J) + 0.5_DbKi*dtM*m%xdTemp%states(J)   !x2 = x0 + dt*k1/2.0 = m%xTemp;
+      END DO
+
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t) TODO: is this needed, it is already called for k1
+   
+      CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+         ! k2 = m%xdTemp 
+
+      ! k3
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%kSum%states(J) + 2.0_DbKi * m%xdTemp%states(J) ! 2 * k2 -  In loop to avoid unecessary extra loop
+         m%xTemp%states(J) = x%states(J) + dtM*m%xdTemp%states(J)   !x3 = x0 + dt*k2 = m%xTemp;
+      END DO
+
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+   
+      CALL MD_CalcContStateDeriv( (t + dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+         ! k3 = m%xdTemp
+
+      ! Apply
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%kSum%states(J) + m%xdTemp%states(J) ! k3 - In loop to avoid unecessary extra loop
+
+         ! x(t+dtM) =  x(t) + dtM * kSum / 6 = x(t) + dtM * (k0 + 2*k1 + 2*k2 + k3) / 6
+         x%states(J) = x%states(J) + dtM*(m%kSum%states(J)) / 6.0_DbKi
+      END DO
+
+      t = t + dtM  ! update time
+      
+      !TODO error check? <<<<
+
+   END SUBROUTINE MD_RK4
+   !--------------------------------------------------------------
 
    !----------------------------------------------------------------------------------------================
    ! this would do a full (coupling) time step and is no longer used

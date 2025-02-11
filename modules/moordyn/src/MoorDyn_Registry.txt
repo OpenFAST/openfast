@@ -373,6 +373,7 @@ typedef   ^       ^                    IntKi               Nxtra             -  
 typedef   ^       ^                    IntKi               WaveTi            -   -  -   "current interpolation index for wave time series data"                 ""
 typedef   ^       ^           MD_ContinuousStateType       xTemp             -   -  -   "contains temporary state vector used in integration (put here so it's only allocated once)"
 typedef   ^       ^           MD_ContinuousStateType       xdTemp            -   -  -   "contains temporary state derivative vector used in integration (put here so it's only allocated once)"
+typedef   ^       ^           MD_ContinuousStateType       kSum              -   -  -   "Sum of RK4 slope estimates: k0 + 2*k1 + 2*k2 + k3"
 typedef   ^       ^                    DbKi                zeros6           {6}  -  -   "array of zeros for convenience"
 typedef   ^       ^                    DbKi                MDWrOutput       {:}  -  -   "Data from time step to be written to a MoorDyn output file"
 typedef   ^       ^                    DbKi                LastOutTime      -    -  -   "Time of last writing to MD output files"
@@ -403,6 +404,7 @@ typedef   ^       ^                    IntKi               nCpldPoints      {:} 
 typedef   ^       ^                    IntKi               NConns         -     0    -   "number of Connect type Points - not to be confused with NPoints"             ""
 typedef   ^       ^                    IntKi               NAnchs         -     0    -   "number of Anchor type Points"             ""
 typedef   ^       ^                    DbKi                Tmax           -     -    -   "simulation duration" "[s]"
+typedef   ^       ^                    IntKi               tScheme        -     0    -   "Time integration scheme (0 = RK2, 1 = RK4). Default is RK2"    - 
 typedef   ^       ^                    DbKi                g              -  9.81    -   "gravitational constant (positive)"   "[m/s^2]"
 typedef   ^       ^                    DbKi                rhoW           -  1025    -   "density of seawater"              "[kg/m^3]"
 typedef   ^       ^                    DbKi                WtrDpth        -     -    -   "water depth"                      "[m]"
