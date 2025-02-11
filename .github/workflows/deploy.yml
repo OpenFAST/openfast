@@ -147,4 +147,4 @@ jobs:
           version: '2021.12'
 
       - name: Build OpenFAST_x64
-        run: devenv vs-build/FAST/FAST.sln /Build Release|x64
+        run: devenv vs-build/FAST/FAST.sln /Build "Release|x64"
