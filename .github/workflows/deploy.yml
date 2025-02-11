@@ -18,6 +18,11 @@ on:
       - 'docs/**'
       - 'share/**'
 
+env:
+  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe
+  WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
+  CACHE_NUMBER: 5
+
 jobs:
   publish-to-pypi-test:
     runs-on: ubuntu-latest
@@ -135,38 +140,29 @@ jobs:
 
   build-windows-executables:
     runs-on: windows-2019
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 500
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Fortran Compiler
-        uses: fortran-lang/setup-fortran@v1
+      - name: Cache | Install
+        id: cache-install
+        uses: actions/cache@v3
         with:
-          compiler: intel-classic
-          version: '2021.12'
+          path: |
+              C:\Program Files (x86)\Intel\oneAPI\setvars-vcvarsall.bat
+              C:\Program Files (x86)\Intel\oneAPI\compiler
+          key: install-${{ env.CACHE_NUMBER }}-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/.github/scripts/cache_exclude_windows.sh') }}
 
-      - name: Build OpenFAST_x64
-        run: devenv vs-build/FAST/FAST.sln /Build "Release|x64"
+      - name: Intel Fortran Install
+        if: steps.cache-install.outputs.cache-hit != 'true'
+        run: .github/scripts/install-fortran-windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
 
-      - name: Build AeroDyn_Driver
-        run: |
-          devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release|x64"
-          devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release_OpenMP|x64"
-
-      - name: Build AeroDyn_Inflow_c_binding
-        run: |
-          devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release|x64"
-          devenv vs-build/AeroDyn_Inflow_c_binding/AeroDyn_Inflow_c_binding.sln /Build "Release_OpenMP|x64"
-
-      - name: Build BeamDyn_Driver
-        run: vs-build/BeamDyn/BeamDyn-w-registry.sln /Build "Release|x64"
-
-      - name: Build Controllers
-        run: vs-build/Discon/Discon.sln /Build "Release|x64" 
-
-      - name: Build Turbsim
-        run: devenv vs-build/TurbSim/TurbSim.vfproj /Build "Release|x64"
+      - name: Build
+        run: .github/scripts/build_windows.bat
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
