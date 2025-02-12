@@ -173,9 +173,6 @@ jobs:
         id: setup-matlab
         uses: matlab-actions/setup-matlab@v2
 
-      - name: Print MATLAB root folder directly
-        run: echo ${{ steps.setup-matlab.outputs.matlabroot }}
-
       - name: Build Executables
         env:
           MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot }}
@@ -187,13 +184,14 @@ jobs:
           command: |
             mexname = 'FAST_SFunc';
             outDir = 'build/bin';
-            mex('-largeArrayDims', '-v', 
+            mex('-largeArrayDims', ...
+                '-v', ...
                 '-Lbuild/bin, ...
                 '-lOpenFAST-Simulink_x64', ...
                 '-Imodules/openfast-library/src', ... % "FAST_Library.h"
-                '-Imodules/supercontroller/src', ... % "SuperController_Types.h"
-                '-Imodules/externalinflow/src',  ... % "ExternalInflow_Types.h"
-                '-Imodules/extloads/src', ... % "ExtLoadsDX_Types.h"
+                '-Imodules/supercontroller/src', ...  % "SuperController_Types.h"
+                '-Imodules/externalinflow/src',  ...  % "ExternalInflow_Types.h"
+                '-Imodules/extloads/src', ...         % "ExtLoadsDX_Types.h"
                 '-outdir', outDir, ...
                 ['COMPFLAGS=$COMPFLAGS -MT -DS_FUNCTION_NAME=' mexname], ...
                 '-output', mexname, ...
