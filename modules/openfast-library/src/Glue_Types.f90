@@ -220,8 +220,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UJacIterRemain = 0      !< Number of convergence iterations until Jacobian update [-]
     INTEGER(IntKi)  :: UJacStepsRemain = 0      !< Number of time steps until Jacobian update [-]
     LOGICAL  :: ConvWarn = .false.      !< Flag to warn about convergence failure [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: XB_IO      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac_IO      !<  [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: IO_R      !< Input Solve residual (RHS) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: IO_X      !< Input Solve delta input [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: IO_Jac      !< Input Solve jacobian [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J11      !< Jacobian upper left quadrant [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J12      !< Jacobian upper right quadrant [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J21      !< Jacobian lower left quadrant [-]
@@ -1902,29 +1903,41 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
    DstTCMiscData%UJacIterRemain = SrcTCMiscData%UJacIterRemain
    DstTCMiscData%UJacStepsRemain = SrcTCMiscData%UJacStepsRemain
    DstTCMiscData%ConvWarn = SrcTCMiscData%ConvWarn
-   if (allocated(SrcTCMiscData%XB_IO)) then
-      LB(1:2) = lbound(SrcTCMiscData%XB_IO)
-      UB(1:2) = ubound(SrcTCMiscData%XB_IO)
-      if (.not. allocated(DstTCMiscData%XB_IO)) then
-         allocate(DstTCMiscData%XB_IO(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcTCMiscData%IO_R)) then
+      LB(1:1) = lbound(SrcTCMiscData%IO_R)
+      UB(1:1) = ubound(SrcTCMiscData%IO_R)
+      if (.not. allocated(DstTCMiscData%IO_R)) then
+         allocate(DstTCMiscData%IO_R(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%XB_IO.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%IO_R.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstTCMiscData%XB_IO = SrcTCMiscData%XB_IO
+      DstTCMiscData%IO_R = SrcTCMiscData%IO_R
    end if
-   if (allocated(SrcTCMiscData%Jac_IO)) then
-      LB(1:2) = lbound(SrcTCMiscData%Jac_IO)
-      UB(1:2) = ubound(SrcTCMiscData%Jac_IO)
-      if (.not. allocated(DstTCMiscData%Jac_IO)) then
-         allocate(DstTCMiscData%Jac_IO(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcTCMiscData%IO_X)) then
+      LB(1:2) = lbound(SrcTCMiscData%IO_X)
+      UB(1:2) = ubound(SrcTCMiscData%IO_X)
+      if (.not. allocated(DstTCMiscData%IO_X)) then
+         allocate(DstTCMiscData%IO_X(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%Jac_IO.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%IO_X.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstTCMiscData%Jac_IO = SrcTCMiscData%Jac_IO
+      DstTCMiscData%IO_X = SrcTCMiscData%IO_X
+   end if
+   if (allocated(SrcTCMiscData%IO_Jac)) then
+      LB(1:2) = lbound(SrcTCMiscData%IO_Jac)
+      UB(1:2) = ubound(SrcTCMiscData%IO_Jac)
+      if (.not. allocated(DstTCMiscData%IO_Jac)) then
+         allocate(DstTCMiscData%IO_Jac(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%IO_Jac.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%IO_Jac = SrcTCMiscData%IO_Jac
    end if
    if (allocated(SrcTCMiscData%J11)) then
       LB(1:2) = lbound(SrcTCMiscData%J11)
@@ -2000,11 +2013,14 @@ subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
    if (allocated(TCMiscData%IPIV)) then
       deallocate(TCMiscData%IPIV)
    end if
-   if (allocated(TCMiscData%XB_IO)) then
-      deallocate(TCMiscData%XB_IO)
+   if (allocated(TCMiscData%IO_R)) then
+      deallocate(TCMiscData%IO_R)
    end if
-   if (allocated(TCMiscData%Jac_IO)) then
-      deallocate(TCMiscData%Jac_IO)
+   if (allocated(TCMiscData%IO_X)) then
+      deallocate(TCMiscData%IO_X)
+   end if
+   if (allocated(TCMiscData%IO_Jac)) then
+      deallocate(TCMiscData%IO_Jac)
    end if
    if (allocated(TCMiscData%J11)) then
       deallocate(TCMiscData%J11)
@@ -2035,8 +2051,9 @@ subroutine Glue_PackTCMisc(RF, Indata)
    call RegPack(RF, InData%UJacIterRemain)
    call RegPack(RF, InData%UJacStepsRemain)
    call RegPack(RF, InData%ConvWarn)
-   call RegPackAlloc(RF, InData%XB_IO)
-   call RegPackAlloc(RF, InData%Jac_IO)
+   call RegPackAlloc(RF, InData%IO_R)
+   call RegPackAlloc(RF, InData%IO_X)
+   call RegPackAlloc(RF, InData%IO_Jac)
    call RegPackAlloc(RF, InData%J11)
    call RegPackAlloc(RF, InData%J12)
    call RegPackAlloc(RF, InData%J21)
@@ -2062,8 +2079,9 @@ subroutine Glue_UnPackTCMisc(RF, OutData)
    call RegUnpack(RF, OutData%UJacIterRemain); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UJacStepsRemain); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvWarn); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%XB_IO); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_IO); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IO_R); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IO_X); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IO_Jac); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J11); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J12); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J21); if (RegCheckErr(RF, RoutineName)) return
