@@ -5,6 +5,7 @@ for /f "tokens=* usebackq" %%f in (`dir /b "C:\Program Files (x86)\Intel\oneAPI\
 
 echo on
 
+@REM Build all solutions
 devenv vs-build/AeroDisk/AeroDisk_Driver.sln /Build "Release|x64"
 devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release|x64"
 devenv vs-build/AeroDyn/AeroDyn_Driver.sln /Build "Release_OpenMP|x64"
@@ -28,5 +29,8 @@ devenv vs-build/SimpleElastoDyn/SimpleElastoDyn_Driver.sln /Build "Release|x64"
 devenv vs-build/SubDyn/SubDyn.sln /Build "Release|x64"
 devenv vs-build/TurbSim/TurbSim.vfproj /Build "Release|x64"
 devenv vs-build/UnsteadyAero/UnsteadyAero.sln /Build "Release|x64"
+
+@REM Copy controllers to bin directory
+xcopy .\reg_tests\r-test\glue-codes\openfast\5MW_Baseline\ServoData\*.dll .\build\bin\ /y
 
 exit /b %ERRORLEVEL%
