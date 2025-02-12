@@ -7,9 +7,9 @@ name: deploy
 on:
   workflow_dispatch:
   
-  # release:
-  #   types:
-  #     - released
+  release:
+    types:
+      - released
 
   push:
     paths-ignore:
@@ -21,8 +21,7 @@ on:
 jobs:
   publish-to-pypi-test:
     runs-on: ubuntu-latest
-    if: false
-    # if: github.event_name == 'workflow_dispatch' 
+    if: github.event_name == 'workflow_dispatch' 
     steps:
       - uses: actions/checkout@v3
 
@@ -51,8 +50,7 @@ jobs:
 
   publish-to-pypi:
     runs-on: ubuntu-latest
-    if: false
-    # if: github.event_name == 'release'
+    if: github.event_name == 'release'
     steps:
       - uses: actions/checkout@v3
 
@@ -79,6 +77,7 @@ jobs:
         run: hatch publish 
         working-directory: openfast_io
 
+  # Disabled as it fails due to huge memory requirements
   docker-build-and-push:
     runs-on: ubuntu-latest
     if: false
@@ -135,6 +134,7 @@ jobs:
 
   build-windows-executables:
     runs-on: windows-2022
+    if: github.event_name == 'workflow_dispatch' ||  github.event_name == 'release'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -208,4 +208,3 @@ jobs:
             build/bin/*.exe
             build/bin/*.dll
             build/bin/*.mexw64
-            reg_tests/r-test/glue-codes/openfast/5MW_Baseline/ServoData/*.dll
