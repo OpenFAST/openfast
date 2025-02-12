@@ -142,6 +142,7 @@ jobs:
           submodules: recursive
 
       - name: Install Intel oneAPI BaseKit (Windows)
+        shell: cmd
         env:
           URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7dff44ba-e3af-4448-841c-0d616c8da6e7/w_BaseKit_p_2024.1.0.595_offline.exe
           COMPONENTS: intel.oneapi.win.mkl.devel
@@ -153,9 +154,9 @@ jobs:
           set installer_exit_code=%ERRORLEVEL%
           rd /s/q "webimage_extracted"
           exit /b %installer_exit_code%
-        shell: cmd
 
       - name: Install Intel oneAPI HPCKit (Windows)
+        shell: cmd
         env:
           URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe
           COMPONENTS: intel.oneapi.win.ifort-compiler
@@ -167,11 +168,12 @@ jobs:
           set installer_exit_code=%ERRORLEVEL%
           rd /s/q "webimage_extracted"
           exit /b %installer_exit_code%
-        shell: cmd
 
       - name: Set up MATLAB
         id: setup-matlab
         uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
 
       - name: Build Executables
         env:
@@ -183,21 +185,20 @@ jobs:
         with:
           command: |
             mexname = 'FAST_SFunc';
-            outDir = 'build/bin';
             mex('-largeArrayDims', ...
                 '-v', ...
-                '-Lbuild/bin', ...
-                '-lOpenFAST-Simulink_x64', ...
-                '-Imodules/openfast-library/src', ... % "FAST_Library.h"
-                '-Imodules/supercontroller/src', ...  % "SuperController_Types.h"
-                '-Imodules/externalinflow/src',  ...  % "ExternalInflow_Types.h"
-                '-Imodules/extloads/src', ...         % "ExtLoadsDX_Types.h"
+                ['-L' fullfile('build','bin')], ...
+                ['-I' fullfile('modules','openfast-library','src')], ... % "FAST_Library.h"
+                ['-I' fullfile('modules','supercontroller','src')], ...  % "SuperController_Types.h"
+                ['-I' fullfile('modules','externalinflow','src')],  ...  % "ExternalInflow_Types.h"
+                ['-I' fullfile('modules','extloads','src')], ...         % "ExtLoadsDX_Types.h"
                 ['-I' fullfile(matlabroot,'simulink','include')], ...
                 ['-I' fullfile(matlabroot,'extern','include')], ...
                 ['COMPFLAGS=$COMPFLAGS -MT -DS_FUNCTION_NAME=' mexname], ...
-                '-outdir', outDir, ...
+                '-lOpenFAST-Simulink_x64', ...
+                '-outdir', fullfile('build','bin'), ...
                 '-output', mexname, ...
-                'glue-codes/simulink/src/FAST_SFunc.c');
+                fullfile('glue-codes','simulink','src','FAST_SFunc.c''));
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
