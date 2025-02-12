@@ -27,5 +27,6 @@ devenv vs-build/SeaState/SeaStateDriver.sln /Build "Release|x64"
 devenv vs-build/SimpleElastoDyn/SimpleElastoDyn_Driver.sln /Build "Release|x64"
 devenv vs-build/SubDyn/SubDyn.sln /Build "Release|x64"
 devenv vs-build/TurbSim/TurbSim.vfproj /Build "Release|x64"
+devenv vs-build/UnsteadyAero/UnsteadyAero.sln /Build "Release|x64"
 
 exit /b %ERRORLEVEL%
