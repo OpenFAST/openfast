@@ -1224,36 +1224,50 @@ CALL ReadCom  ( UnIn, SDInputFile,             'Members '                     ,E
 CALL ReadIVar ( UnIn, SDInputFile, p%NMembers, 'NMembers', 'Number of members',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Headers'              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Units  '              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(Init%Members, p%NMembers, MembersCol, 'Members', ErrStat2, ErrMsg2)
-Init%Members(:,:) = 0.0_ReKi
-
-nColumns=MembersCol
+CALL AllocAry(Init%Members,    p%NMembers, MembersCol, 'Members',    ErrStat2, ErrMsg2)
+CALL AllocAry(Init%MemberSpin, p%NMembers,             'MemberSpin', ErrStat2, ErrMsg2)
+Init%Members(:,:)  = 0.0_IntKi
+Init%MemberSpin(:) = 0.0_ReKi
 
 if (p%NMembers == 0) then
    CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": There should be at least one SubDyn member: "'//trim(Line)//'"')
    return
 endif
 
-CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
-READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of members array'; if (Failed()) return
-CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 )
-if (ErrStat2/=0) then
-   ! We try with one column less (legacy format)
-   nColumns = MembersCol-1
-   deallocate(StrArray)
-   CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
-   CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
-   call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members. &
-   &The directional cosines will be computed based on the member nodes for all members.')
-   Init%Members(:,7) = -1 ! For the spring element, we need the direction cosine from the user. Both JointIDs are coincident, the direction cosine cannot be determined.
-endif
-! Extract fields from first line
-DO I = 1, nColumns
-   bInteger = is_integer(StrArray(I), Init%Members(1,I)) ! Convert from string to float
-   if (.not.bInteger) then
-      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found in Member line. Problematic line: "'//trim(Line)//'"')
-      return
-   endif
+CALL AllocAry(StrArray, MembersCol, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return
+DO J = 1, p%NMembers
+   READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading SubDyn members table'; if (Failed()) return
+   CALL ReadCAryFromStr ( Line, StrArray, MembersCol, 'Members', 'SubDyn members table should have 7 entries on each line', ErrStat2, ErrMsg2 ); if (Failed()) return
+   ! Extract fields from first line
+   DO I = 1, MembersCol - 1
+      bInteger = is_integer(StrArray(I), Init%Members(J,I)) ! Convert from string to integer
+      if ( (I==6) .and. ( trim(StrArray(I))=='1c' .or. trim(StrArray(I))=='1C' ) ) then
+         Init%Members(J,I) = idMemberBeamCirc
+      else if ( (I==6) .and. ( trim(StrArray(I))=='1r' .or. trim(StrArray(I))=='1R' ) ) then
+         Init%Members(J,I) = idMemberBeamRect
+      else if (.not.bInteger) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found in Member line. Problematic line: "'//trim(Line)//'"')
+         return
+      end if
+   END DO
+   I = MembersCol
+   if ( Init%Members(J,6) == idMemberBeamRect ) then
+      bNumeric = is_numeric( StrArray(I), Init%MemberSpin(J) )
+      if (.not.bNumeric) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": The last input entry for a rectangular member should be an angle in degrees for the member spin orientation (MSpin). Problematic line: "'//trim(Line)//'"')
+         return
+      end if
+      Init%MemberSpin(J) = Init%MemberSpin(J) * D2R
+      Init%Members(J,I) = -1
+   else if ( Init%Members(J,6)==idMemberBeamCirc .or. Init%Members(J,6)==idMemberCable .or. Init%Members(J,6)==idMemberRigid ) then
+      Init%Members(J,I) = -1
+   else
+      bInteger = is_integer(StrArray(I), Init%Members(J,I)) ! Convert from string to integer
+      if (.not.bInteger) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found for COSMID for a non-rectangular beam member. Problematic line: "'//trim(Line)//'"')
+         return
+      end if
+   end if
 ENDDO
 
 if (allocated(StrArray)) then
@@ -1261,27 +1275,39 @@ if (allocated(StrArray)) then
 endif
 
 ! ! Read remaining lines
-DO I = 2, p%NMembers
-   CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
-   Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
-ENDDO 
+! DO I = 2, p%NMembers
+!    CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
+!    Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
+! ENDDO
 
 IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
-!------------------ MEMBER CROSS-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 1/2 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 1/3 [isotropic material for now: use this table if circular-tubular elements ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 1/3 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsB, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Header'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Units '            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(Init%PropSetsB, Init%NPropSetsB, PropSetsBCol, 'ProSets', ErrStat2, ErrMsg2) ; if(Failed()) return
+CALL AllocAry(Init%PropSetsB, Init%NPropSetsB, PropSetsBCol, 'PropSets', ErrStat2, ErrMsg2) ; if(Failed()) return
 DO I = 1, Init%NPropSetsB
    CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
    Init%PropSetsB(I,:) = Dummy_ReAry(1:PropSetsBCol)
 ENDDO   
 IF (Check( Init%NPropSetsB < 1 , 'NPropSets must be >0')) return
 
-!------------------ MEMBER CROSS-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                  'Member CROSS-Section Property Data 2/2 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 2/3 [isotropic material for now: use this table if rectangular-tubular elements ---------------------
+CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 2/3 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsBR, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Header'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Units '            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL AllocAry(Init%PropSetsBR, Init%NPropSetsBR, PropSetsBRCol, 'PropSets', ErrStat2, ErrMsg2) ; if(Failed()) return
+DO I = 1, Init%NPropSetsBR
+   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBRCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
+   Init%PropSetsBR(I,:) = Dummy_ReAry(1:PropSetsBRCol)
+ENDDO
+IF (Check( Init%NPropSetsBR < 1 , 'NPropSets must be >0')) return
+
+!------------------ MEMBER CROSS-SECTION PROPERTY data 2/3 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                  'Member CROSS-Section Property Data 3/3 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsX, 'NXPropSets', 'Number of non-circular property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -3717,7 +3743,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    REAL(ReKi)             :: rOP(3)      ! Vector from origin to P (ref point)
    REAL(ReKi)             :: rPG(3)      ! Vector from origin to G
    REAL(FEKi),allocatable :: MBB(:,:)    ! Leader DOFs mass matrix
-   REAL(ReKi)             :: XYZ1(3),XYZ2(3) !temporary arrays
+   REAL(ReKi)             :: XYZ1(3),XYZ2(3),spin !temporary arrays
    REAL(FEKi)             :: DirCos(3,3) ! direction cosine matrix (global to local)
    CHARACTER(*),PARAMETER                 :: SectionDivide = '#____________________________________________________________________________________________________'
    real(ReKi), dimension(:,:), allocatable :: TI2 ! For Equivalent mass matrix
@@ -3977,11 +4003,12 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A, I6)') '#Direction Cosine Matrices for all Members: GLOBAL-2-LOCAL. No. of 3x3 matrices=', p%NMembers 
    WRITE(UnSum, '(A9,9(A15))')  '#Member ID', 'DC(1,1)', 'DC(1,2)', 'DC(1,3)', 'DC(2,1)','DC(2,2)','DC(2,3)','DC(3,1)','DC(3,2)','DC(3,3)'
    DO i=1,p%NMembers
-      mType = Init%Members(I, iMType)
+      mType  = Init%Members(I, iMType)
       iNode1 = FINDLOCI(Init%Joints(:,1), Init%Members(i,2)) ! index of joint 1 of member i
       iNode2 = FINDLOCI(Init%Joints(:,1), Init%Members(i,3)) ! index of joint 2 of member i
       XYZ1   = Init%Joints(iNode1,2:4)
       XYZ2   = Init%Joints(iNode2,2:4)
+      spin   = Init%MemberSpin(I)
       if ((mType == idMemberSpring) .or. (mType == idMemberBeamArb)) then ! The direction cosine for these member types must be provided by the user
          iDirCos = p%Elems(i, iMDirCosID)
          DirCos(1, 1) =  Init%COSMs(iDirCos, 2)
@@ -3994,7 +4021,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
          DirCos(2, 3) =  Init%COSMs(iDirCos, 9)
          DirCos(3, 3) =  Init%COSMs(iDirCos, 10)
       else
-         CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), mType, DirCos, mLength, ErrStat, ErrMsg)
+         CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), spin, mType, DirCos, mLength, ErrStat, ErrMsg)
       endif
       DirCos=TRANSPOSE(DirCos) !This is now global to local
       WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
