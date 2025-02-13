@@ -75,7 +75,6 @@ CONTAINS
       Line%alphaMBL   = LineProp%alphaMBL
       Line%vbeta = LineProp%vbeta
       Line%BA_D    = LineProp%BA_D
-      print*, "Line%BA_D", Line%BA_D
       Line%EI      = LineProp%EI  !<<< for bending stiffness
       
       Line%Can   = LineProp%Can
