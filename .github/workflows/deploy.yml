@@ -207,7 +207,6 @@ jobs:
                 fullfile('glue-codes','simulink','src','FAST_SFunc.c'));
 
       - name: Upload executables
-        if: false
         uses: actions/upload-artifact@v4
         with:
           name: openfast-binaries
