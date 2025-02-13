@@ -4044,117 +4044,117 @@ CONTAINS
    END SUBROUTINE MD_RK4
    !--------------------------------------------------------------
 
-   !----------------------------------------------------------------------------------------================
-   ! this would do a full (coupling) time step and is no longer used
-   SUBROUTINE TimeStep ( t, dtStep, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+   ! !----------------------------------------------------------------------------------------================
+   ! ! this would do a full (coupling) time step and is no longer used
+   ! SUBROUTINE TimeStep ( t, dtStep, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
    
-      REAL(DbKi)                     , INTENT(INOUT)      :: t
-      REAL(DbKi)                     , INTENT(IN   )      :: dtStep     ! how long to advance the time for
-      TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
-      REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
-      TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
-      TYPE( MD_ContinuousStateType ) , INTENT(INOUT)      :: x
-      TYPE( MD_DiscreteStateType )   , INTENT(IN   )      :: xd         ! INTENT(IN   )
-      TYPE( MD_ConstraintStateType ) , INTENT(IN   )      :: z          ! INTENT(IN   )
-      TYPE( MD_OtherStateType )      , INTENT(IN   )      :: other      ! INTENT(INOUT)
-      TYPE(MD_MiscVarType)           , INTENT(INOUT)      :: m          ! INTENT(INOUT)
-      INTEGER(IntKi)                 , INTENT(  OUT)      :: ErrStat
-      CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
+   !    REAL(DbKi)                     , INTENT(INOUT)      :: t
+   !    REAL(DbKi)                     , INTENT(IN   )      :: dtStep     ! how long to advance the time for
+   !    TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
+   !    REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
+   !    TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
+   !    TYPE( MD_ContinuousStateType ) , INTENT(INOUT)      :: x
+   !    TYPE( MD_DiscreteStateType )   , INTENT(IN   )      :: xd         ! INTENT(IN   )
+   !    TYPE( MD_ConstraintStateType ) , INTENT(IN   )      :: z          ! INTENT(IN   )
+   !    TYPE( MD_OtherStateType )      , INTENT(IN   )      :: other      ! INTENT(INOUT)
+   !    TYPE(MD_MiscVarType)           , INTENT(INOUT)      :: m          ! INTENT(INOUT)
+   !    INTEGER(IntKi)                 , INTENT(  OUT)      :: ErrStat
+   !    CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
 
 
-      TYPE(MD_ContinuousStateType)                        :: dxdt       ! time derivatives of continuous states (initialized in CalcContStateDeriv)
-      TYPE(MD_ContinuousStateType)                        :: x2         ! temporary copy of continuous states used in RK2 calculations
-      INTEGER(IntKi)                                      :: NdtM       ! the number of time steps to make with the mooring model
-      Real(DbKi)                                          :: dtM        ! the actual time step size to use
-      INTEGER(IntKi)                                      :: Nx         ! size of states vector
-      INTEGER(IntKi)                                      :: I          ! counter
-      INTEGER(IntKi)                                      :: J          ! counter
-      TYPE(MD_InputType)                                  :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
+   !    TYPE(MD_ContinuousStateType)                        :: dxdt       ! time derivatives of continuous states (initialized in CalcContStateDeriv)
+   !    TYPE(MD_ContinuousStateType)                        :: x2         ! temporary copy of continuous states used in RK2 calculations
+   !    INTEGER(IntKi)                                      :: NdtM       ! the number of time steps to make with the mooring model
+   !    Real(DbKi)                                          :: dtM        ! the actual time step size to use
+   !    INTEGER(IntKi)                                      :: Nx         ! size of states vector
+   !    INTEGER(IntKi)                                      :: I          ! counter
+   !    INTEGER(IntKi)                                      :: J          ! counter
+   !    TYPE(MD_InputType)                                  :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
 
-  !    Real(DbKi)                                          :: tDbKi   ! double version because that's what MD_Input_ExtrapInterp needs.
+   !    ! Real(DbKi)                                          :: tDbKi   ! double version because that's what MD_Input_ExtrapInterp needs.
       
       
-      ! allocate space for x2
-      CALL MD_CopyContState( x, x2, 0, ErrStat, ErrMsg)
+   !    ! allocate space for x2
+   !    CALL MD_CopyContState( x, x2, 0, ErrStat, ErrMsg)
          
-      ! create space for arrays/meshes in u_interp   ... is it efficient to do this every time step???
-      CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg)
+   !    ! create space for arrays/meshes in u_interp   ... is it efficient to do this every time step???
+   !    CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg)
          
 
-      Nx = size(x%states)   ! <<<< should this be the m%Nx parameter instead?
+   !    Nx = size(x%states)   ! <<<< should this be the m%Nx parameter instead?
 
 
-      ! round dt to integer number of time steps
-      NdtM = ceiling(dtStep/p%dtM0)                  ! get number of mooring time steps to do based on desired time step size
-      dtM = dtStep/REAL(NdtM,DbKi)                   ! adjust desired time step to satisfy dt with an integer number of time steps
+   !    ! round dt to integer number of time steps
+   !    NdtM = ceiling(dtStep/p%dtM0)                  ! get number of mooring time steps to do based on desired time step size
+   !    dtM = dtStep/REAL(NdtM,DbKi)                   ! adjust desired time step to satisfy dt with an integer number of time steps
 
 
-      !loop through line integration time steps
-      DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
+   !    !loop through line integration time steps
+   !    DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
       
       
-   !      tDbKi = t        ! get DbKi version of current time (why does ExtrapInterp except different time type than UpdateStates?)
+   !       ! tDbKi = t        ! get DbKi version of current time (why does ExtrapInterp except different time type than UpdateStates?)
          
       
-         ! -------------------------------------------------------------------------------
-         !       RK2 integrator written here, now calling CalcContStateDeriv
-         !--------------------------------------------------------------------------------
+   !       ! -------------------------------------------------------------------------------
+   !       !       RK2 integrator written here, now calling CalcContStateDeriv
+   !       !--------------------------------------------------------------------------------
 
-         ! step 1
+   !       ! step 1
 
-         CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+   !       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
       
-         CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
-         DO J = 1, Nx
-            x2%states(J) = x%states(J) + 0.5*dtM*dxdt%states(J)                                           !x1 = x0 + dt*f0/2.0;
-         END DO
+   !       CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
+   !       DO J = 1, Nx
+   !          x2%states(J) = x%states(J) + 0.5*dtM*dxdt%states(J)                                           !x1 = x0 + dt*f0/2.0;
+   !       END DO
 
-         ! step 2
+   !       ! step 2
    
-         CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
+   !       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
             
-         CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
-         DO J = 1, Nx
-            x%states(J) = x%states(J) + dtM*dxdt%states(J)
-         END DO
+   !       CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
+   !       DO J = 1, Nx
+   !          x%states(J) = x%states(J) + dtM*dxdt%states(J)
+   !       END DO
 
-         t = t + dtM  ! update time
+   !       t = t + dtM  ! update time
 
-         !----------------------------------------------------------------------------------
+   !       !----------------------------------------------------------------------------------
 
-   ! >>> below should no longer be necessary thanks to using ExtrapInterp of u(:) within the mooring time stepping loop.. <<<
-   !      ! update Fairlead positions by integrating velocity and last position (do this AFTER the processing of the time step rather than before)
-   !      DO J = 1, p%nCpldPoints
-   !         DO K = 1, 3
-   !          m%PointList(m%CpldPointIs(J))%r(K) = m%PointList(m%CpldPointIs(J))%r(K) + m%PointList(m%CpldPointIs(J))%rd(K)*dtM
-   !         END DO
-   !      END DO
+   !       ! >>> below should no longer be necessary thanks to using ExtrapInterp of u(:) within the mooring time stepping loop.. <<<
+   !       !      ! update Fairlead positions by integrating velocity and last position (do this AFTER the processing of the time step rather than before)
+   !       !      DO J = 1, p%nCpldPoints
+   !       !         DO K = 1, 3
+   !       !          m%PointList(m%CpldPointIs(J))%r(K) = m%PointList(m%CpldPointIs(J))%r(K) + m%PointList(m%CpldPointIs(J))%rd(K)*dtM
+   !       !         END DO
+   !       !      END DO
       
    
-      END DO  ! I  time steps
+   !    END DO  ! I  time steps
 
 
-      ! destroy dxdt and x2, and u_interp
-      CALL MD_DestroyContState( dxdt, ErrStat, ErrMsg)
-      CALL MD_DestroyContState( x2, ErrStat, ErrMsg)
-      CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error destroying dxdt or x2.'
-      END IF
-      !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_UpdateStates')
+   !    ! destroy dxdt and x2, and u_interp
+   !    CALL MD_DestroyContState( dxdt, ErrStat, ErrMsg)
+   !    CALL MD_DestroyContState( x2, ErrStat, ErrMsg)
+   !    CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
+   !    IF ( ErrStat /= ErrID_None ) THEN
+   !       ErrMsg  = ' Error destroying dxdt or x2.'
+   !    END IF
+   !    !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_UpdateStates')
 
       
-      ! check for NaNs - is this a good place/way to do it?
-      DO J = 1, Nx
-         IF (Is_NaN(x%states(J))) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' NaN state detected.'
-         END IF
-      END DO
+   !    ! check for NaNs - is this a good place/way to do it?
+   !    DO J = 1, Nx
+   !       IF (Is_NaN(x%states(J))) THEN
+   !          ErrStat = ErrID_Fatal
+   !          ErrMsg = ' NaN state detected.'
+   !       END IF
+   !    END DO
  
 
-   END SUBROUTINE TimeStep
-   !--------------------------------------------------------------
+   ! END SUBROUTINE TimeStep
+   ! !--------------------------------------------------------------
 
 
 

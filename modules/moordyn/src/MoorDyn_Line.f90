@@ -75,6 +75,7 @@ CONTAINS
       Line%alphaMBL   = LineProp%alphaMBL
       Line%vbeta = LineProp%vbeta
       Line%BA_D    = LineProp%BA_D
+      print*, "Line%BA_D", Line%BA_D
       Line%EI      = LineProp%EI  !<<< for bending stiffness
       
       Line%Can   = LineProp%Can
@@ -119,6 +120,10 @@ CONTAINS
          ! - we assume desired damping coefficient is zeta = -LineProp%BA
          ! - highest axial vibration mode of a segment is wn = sqrt(k/m) = 2N/UnstrLen*sqrt(EA/w)
          Line%BA = -LineProp%BA * Line%UnstrLen / Line%N * SQRT(LineProp%EA * LineProp%w)
+         if (p%writeLog > 0) then
+            write(p%UnLog,'(A)') "Based on -zeta of "//trim(Num2LStr(LineProp%BA))//", BA set to "//trim(Num2LStr(Line%BA))
+         end if
+         
          IF (wordy > 1) print *, 'Based on zeta, BA set to ', Line%BA
          
          IF (wordy > 1) print *, 'Negative BA input detected, treating as -zeta.  For zeta = ', -LineProp%BA, ', setting BA to ', Line%BA
@@ -129,6 +134,14 @@ CONTAINS
          IF (wordy > 1) print *, 'BA set as input to ', Line%BA, '. Corresponding zeta is ', temp
       END IF
       
+      IF (Line%BA_D < 0) THEN
+         ErrMsg  = ' Line dynamic damping cannot be a ratio'
+         ErrStat = ErrID_Fatal
+         !CALL CleanUp()
+         RETURN
+      ENDIF
+         
+
       !temp = 2*Line%N / Line%UnstrLen * sqrt( LineProp%EA / LineProp%w) / TwoPi
       !print *, 'Segment natural frequency is ', temp, ' Hz'
       
