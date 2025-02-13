@@ -1090,7 +1090,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
 
       else if (eType==idMemberBeamArb) then
 
-         p%ElemProps(i)%eType  = 1
+         ! p%ElemProps(i)%eType = 1
          if( Init%FEMMod == 1 ) then ! uniform Euler-Bernoulli
             Shear = .false.
          elseif( Init%FEMMod == 3 ) then ! uniform Timoshenko

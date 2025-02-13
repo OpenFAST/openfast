@@ -3880,27 +3880,29 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),(F15.0,","),3(ES15.6,","),ES15.6') !, comment='',label=.true.)
 
    ! Element properties
-   CALL AllocAry( DummyArray,  size(p%ElemProps), 16, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL AllocAry( DummyArray,  size(p%ElemProps), 18, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
    do i=1,size(p%ElemProps)
-      DummyArray(i,1) = p%Elems(i,1) ! Should be == i
-      DummyArray(i,2) = p%Elems(i,2) ! Node 1
-      DummyArray(i,3) = p%Elems(i,3) ! Node 2
-      DummyArray(i,4) = p%Elems(i,4) ! Prop 1
-      DummyArray(i,5) = p%Elems(i,5) ! Prop 2
-      DummyArray(i,6) = p%ElemProps(i)%eType ! Type
-      DummyArray(i,7) = p%ElemProps(i)%Length !Length
-      DummyArray(i,8) = p%ElemProps(i)%Area ! Area  m^2
-      DummyArray(i,9) = p%ElemProps(i)%Rho  ! density  kg/m^3
-      DummyArray(i,10) = p%ElemProps(i)%YoungE ! Young modulus
-      DummyArray(i,11) = p%ElemProps(i)%ShearG ! G
-      DummyArray(i,12) = p%ElemProps(i)%Kappa_x ! Shear coefficient
-      DummyArray(i,13) = p%ElemProps(i)%Ixx   ! Moment of inertia
-      DummyArray(i,14) = p%ElemProps(i)%Iyy   ! Moment of inertia
-      DummyArray(i,15) = p%ElemProps(i)%Jzz   ! Moment of inertia
-      DummyArray(i,16) = p%ElemProps(i)%T0    ! Pretension [N]
-   enddo
-   write(UnSum, '("#",4x,6(A9),10('//SFmt//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
-   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),6(ES15.6,","),ES15.6') !, comment='',label=.true.)
+      DummyArray(i,1) = p%Elems(i,1)            ! Should be == i
+      DummyArray(i,2) = p%Elems(i,2)            ! Node 1
+      DummyArray(i,3) = p%Elems(i,3)            ! Node 2
+      DummyArray(i,4) = p%Elems(i,4)            ! Prop 1
+      DummyArray(i,5) = p%Elems(i,5)            ! Prop 2
+      DummyArray(i,6) = p%ElemProps(i)%eType    ! Type
+      DummyArray(i,7) = p%ElemProps(i)%Length   ! Length [m]
+      DummyArray(i,8) = p%ElemProps(i)%Area     ! Area [m^2]
+      DummyArray(i,9) = p%ElemProps(i)%Rho      ! density [kg/m^3]
+      DummyArray(i,10) = p%ElemProps(i)%YoungE  ! Young's modulus
+      DummyArray(i,11) = p%ElemProps(i)%ShearG  ! Shear modulus
+      DummyArray(i,12) = p%ElemProps(i)%Kappa_x ! Shear area coefficient
+      DummyArray(i,13) = p%ElemProps(i)%Kappa_y ! Shear area coefficient
+      DummyArray(i,14) = p%ElemProps(i)%Ixx     ! Area moment of inertia [m^4]
+      DummyArray(i,15) = p%ElemProps(i)%Iyy     ! Area moment of inertia [m^4]
+      DummyArray(i,16) = p%ElemProps(i)%Jzz     ! Polar area moment of inertia [m^4]
+      DummyArray(i,17) = p%ElemProps(i)%Jt      ! Torsion constant [m^4]
+      DummyArray(i,18) = p%ElemProps(i)%T0      ! Pretension [N]
+   end do
+   write(UnSum, '("#",4x,6(A9),12('//SFmt//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','kappa_x_[-]','kappa_y_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','Jt_[m^4]','T0_[N]'
+   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),8(ES15.6,","),ES15.6') !, comment='',label=.true.)
    deallocate(DummyArray)
 
    ! --- C
@@ -3957,15 +3959,23 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
       propIDs=Init%Members(i,iMProp:iMProp+1) 
       if (Init%Members(I, iMType)/=idMemberSpring) then ! This check only applies for members different than springs (springs have no mass and no length)
-      mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
+         mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
       endif
       IF (ErrStat .EQ. ErrID_None) THEN
-        mType =  Init%Members(I, iMType) ! 
+        mType = Init%Members(I, iMType)
         if (mType==idMemberBeamCirc) then
            iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsB(:,1), propIDs(2))
-           mMass= BeamMass(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
+           mMass = BeamMassC(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
                              Init%PropSetsB(iProp(2),4),Init%PropSetsB(iProp(2),5),Init%PropSetsB(iProp(2),6), mLength, method=-1)
+
+           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
+        else if (mType==idMemberBeamRect) then
+           iProp(1) = FINDLOCI(Init%PropSetsBR(:,1), propIDs(1))
+           iProp(2) = FINDLOCI(Init%PropSetsBR(:,1), propIDs(2))
+           mMass = BeamMassR(Init%PropSetsBR(iProp(1),4),Init%PropSetsBR(iProp(1),5),Init%PropSetsBR(iProp(1),6),Init%PropSetsBR(iProp(1),7),   &
+                             Init%PropSetsBR(iProp(2),4),Init%PropSetsBR(iProp(2),5),Init%PropSetsBR(iProp(2),6),Init%PropSetsBR(iProp(2),7), mLength, method=-1)
 
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
@@ -3988,7 +3998,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
          else if (mType==idMemberBeamArb) then
            iProp(1) = FINDLOCI(Init%PropSetsX(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsX(:,1), propIDs(2))
-           mMass= -1 ! TODO compute mass for arbitrary beams
+           mMass = Init%PropSetsX(iProp(1),4) * Init%PropSetsX(iProp(1),5) * mLength ! Simplified calculation because arbitrary beams only support uniform section properties
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass, mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
          else
@@ -4304,10 +4314,10 @@ END FUNCTION MemberLength
 !------------------------------------------------------------------------------------------------------
 !> Calculate member mass, given properties at the ends, keep units consistent
 !! For now it works only for circular pipes or for a linearly varying area
-FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
+FUNCTION BeamMassC(rho1,D1,t1,rho2,D2,t2,L,method)
    REAL(ReKi), INTENT(IN) :: rho1,D1,t1,rho2,D2,t2 ,L       ! Density, OD and wall thickness for circular tube members at ends, Length of member
    INTEGER(IntKi), INTENT(IN) :: method ! -1: FEM compatible, 0: mid values, 1: circular tube, integral, 
-   REAL(ReKi)  :: BeamMass  !mass
+   REAL(ReKi)  :: BeamMassC  !mass
    REAL(ReKi)  :: a0,a1,a2,b0,b1,dd,dt  !temporary coefficients
    REAL(ReKi)  :: Area,r1,r2,t
    !Density allowed to vary linearly only
@@ -4325,9 +4335,9 @@ FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
       endif
       Area = Pi_D*(r1*r1-r2*r2)
       if (method==0) then 
-         BeamMass= (rho2+rho1)/2 * L  * Area
+         BeamMassC= (rho2+rho1)/2 * L  * Area
       else
-         BeamMass = rho1 * L  * Area ! WHAT is currently used by FEM
+         BeamMassC = rho1 * L  * Area ! WHAT is currently used by FEM
       endif
    ELSEIF (method==1) THEN !circular tube
       a0=pi * (D1*t1-t1**2.)
@@ -4335,18 +4345,46 @@ FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
       dd=D2-D1 !OD variation
       a1=pi * ( dd*t1 + D1*dt -2.*t1*dt)/L 
       a2=pi * ( dd*dt-dt**2.)/L**2.
-      BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+      BeamMassC = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
    ELSEIF (method==2) THEN !linearly varying area
       a0=D1  !This is an area
       a1=(D2-D1)/L !Delta area
       a2=0.
-      BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+      BeamMassC = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
    ELSE
-      print*,'Wrong call to BeamMass, method unknown',method
+      print*,'Wrong call to BeamMassC, method unknown',method
       STOP
    ENDIF
 
-END FUNCTION BeamMass
+END FUNCTION BeamMassC
+
+FUNCTION BeamMassR(rho1,Sa1,Sb1,t1,rho2,Sa2,Sb2,t2,L,method)
+   REAL(ReKi), INTENT(IN) :: rho1,Sa1,Sb1,t1,rho2,Sa2,Sb2,t2,L       ! Density, outer side lenghts and wall thickness for rectangular tube members at ends, Length of member
+   INTEGER(IntKi), INTENT(IN) :: method ! -1: FEM compatible
+   REAL(ReKi)  :: BeamMassR  !mass
+   REAL(ReKi)  :: Sa,Sb,SaIn,SbIn  !temporary coefficients
+   REAL(ReKi)  :: Area,t
+   ! Density currently not allowed to vary
+   IF (method<=0) THEN
+      ! Mid values for Sa, Sb, and t
+      Sa = 0.5_ReKi*(Sa1 + Sa2)
+      Sb = 0.5_ReKi*(Sb1 + Sb2)
+      t  = 0.5_ReKi*( t1 +  t2)
+      if ( EqualRealNos(t, 0.0_ReKi) ) then
+         SaIn = 0.0
+         SbIn = 0.0
+      else
+         SaIn = Sa - 2.0*t
+         SbIn = Sb - 2.0*t
+      endif
+      Area = Sa*Sb-SaIn*SbIn
+      BeamMassR = rho1 * L * Area ! WHAT is currently used by FEM
+   ELSE
+      print*,'Wrong call to BeamMassR, method unknown',method
+      STOP
+   ENDIF
+
+END FUNCTION BeamMassR
 
 !------------------------------------------------------------------------------------------------------
 !> Check whether MAT IS SYMMETRIC AND RETURNS THE MAXIMUM RELATIVE ERROR    
