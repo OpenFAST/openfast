@@ -3,6 +3,11 @@
 for /f "tokens=* usebackq" %%f in (`dir /b "C:\Program Files (x86)\Intel\oneAPI\compiler\" ^| findstr /V latest ^| sort`) do @set "LATEST_VERSION=%%f"
 @call "C:\Program Files (x86)\Intel\oneAPI\compiler\%LATEST_VERSION%\env\vars.bat"
 
+@REM Make git ignore changes to Types files (line endings) and 
+@REM vs-build directory so it doesn't append -dirty to version
+ECHO *_Types.f90>>".gitignore"
+ECHO vs-build>>".gitignore"
+
 echo on
 
 @REM Build all solutions
