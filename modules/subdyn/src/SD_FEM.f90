@@ -34,7 +34,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: MaxNodesPerElem = 2                     ! Maximum number of nodes per element (currently 2)
   INTEGER(IntKi),   PARAMETER  :: MembersCol      = MaxNodesPerElem + 3+1+1 ! Number of columns in Members (MemberID,MJointID1,MJointID2,MPropSetID1,MPropSetID2,COSMID) 
   INTEGER(IntKi),   PARAMETER  :: PropSetsBCCol   = 6                     ! Number of columns in PropSets of circular beam sections (PropSetID,YoungE,ShearG,MatDens,XsecD,XsecT)  !bjj: this really doesn't need to store k, does it? or is this supposed to be an ID, in which case we shouldn't be storing k (except new property sets), we should be storing IDs
-  INTEGER(IntKi),   PARAMETER  :: PropSetsBRCol   = 7                     ! Number of columns in PropSets of rectangular beam sections (PropSetID,YoungE,ShearG,MatDens,XsecA,XsecB,XsecT)
+  INTEGER(IntKi),   PARAMETER  :: PropSetsBRCol   = 7                     ! Number of columns in PropSets of rectangular beam sections (PropSetID,YoungE,ShearG,MatDens,XsecSa,XsecSb,XsecT)
   INTEGER(IntKi),   PARAMETER  :: PropSetsXCol    = 11                    ! Number of columns in XPropSets (PropSetID,YoungE,ShearG,MatDens,XsecA,XsecAsx,XsecAsy,XsecJxx,XsecJyy,XsecJ0,XsecJt)
   INTEGER(IntKi),   PARAMETER  :: PropSetsCCol    = 5                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0)
   INTEGER(IntKi),   PARAMETER  :: PropSetsRCol    = 2                     ! Number of columns in RigidPropSet (PropSetID, MatDens)

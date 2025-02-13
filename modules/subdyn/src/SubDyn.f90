@@ -3925,10 +3925,18 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    ! --- User inputs (less interesting, repeat of input file)
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A)') '#User inputs'
-   WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  '#Number of properties (NProps):',Init%NPropBC
+   WRITE(UnSum, '()')
+   WRITE(UnSum, '(A,I6)')  '#Number of circular-section beam properties (NProps):',Init%NPropBC
    WRITE(UnSum, '(A8,5(A15))')  '#Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecD',      'XsecT'
    WRITE(UnSum, '("#",I8, ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2 ) ') (NINT(Init%PropsBC(i, 1)), (Init%PropsBC(i, j), j = 2, 6), i = 1, Init%NPropBC)
+   WRITE(UnSum, '()')
+   WRITE(UnSum, '(A,I6)')  '#Number of rectangular-section beam properties (NProps):',Init%NPropBR
+   WRITE(UnSum, '(A8,6(A15))')  '#Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecSa',     'XsecSb',      'XsecT'
+   WRITE(UnSum, '("#",I8, ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2 ) ') (NINT(Init%PropsBR(i, 1)), (Init%PropsBR(i, j), j = 2, 7), i = 1, Init%NPropBR)
+   WRITE(UnSum, '()')
+   WRITE(UnSum, '(A,I6)')  '#Number of arbitrary-section beam properties (NProps):',Init%NPropSetsX
+   WRITE(UnSum, '(A8,10(A15))')  '#Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecA',     'XsecAsx',     'XsecAsy',     'XsecJxx',     'XsecJyy',     'XsecJ0',     'XsecJt'
+   WRITE(UnSum, '("#",I8, ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2 ) ') (NINT(Init%PropSetsX(i, 1)), (Init%PropSetsX(i, j), j = 2, 11), i = 1, Init%NPropSetsX)
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  '#No. of Reaction DOFs:',p%nDOFC__
