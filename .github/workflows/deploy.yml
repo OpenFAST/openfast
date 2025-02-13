@@ -141,11 +141,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Get tags for version info
         run: git fetch --tags origin
+
+      - name: Init submodules
+        run: git submodule init --recursive
 
       - name: Install Intel oneAPI BaseKit (Windows)
         shell: cmd
