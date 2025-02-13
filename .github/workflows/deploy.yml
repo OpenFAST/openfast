@@ -19,9 +19,12 @@ on:
       - 'share/**'
 
 jobs:
+
+  # Disabled as publish-to-pypi is working correctly
   publish-to-pypi-test:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' 
+    if: false
+    # if: github.event_name == 'workflow_dispatch' 
     steps:
       - uses: actions/checkout@v3
 
