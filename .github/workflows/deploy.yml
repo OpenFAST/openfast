@@ -145,11 +145,7 @@ jobs:
           submodules: true
           fetch-depth: 0
 
-      - name: Print git version
-        run: git describe --abbrev=8 --tags --dirty
-
       - name: Install Intel oneAPI BaseKit (Windows)
-        if: false
         shell: cmd
         env:
           URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7dff44ba-e3af-4448-841c-0d616c8da6e7/w_BaseKit_p_2024.1.0.595_offline.exe
@@ -164,7 +160,6 @@ jobs:
           exit /b %installer_exit_code%
 
       - name: Install Intel oneAPI HPCKit (Windows)
-        if: false
         shell: cmd
         env:
           URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe
@@ -186,7 +181,6 @@ jobs:
           products: Simulink
 
       - name: Build Executables
-        if: false
         env:
           MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot }}
         run: .github/scripts/build_windows_executables.bat
