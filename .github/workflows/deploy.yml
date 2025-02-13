@@ -146,7 +146,7 @@ jobs:
         run: git fetch --tags origin
 
       - name: Init submodules
-        run: git submodule init --recursive
+        run: git submodule update --init --recursive
 
       - name: Install Intel oneAPI BaseKit (Windows)
         shell: cmd
