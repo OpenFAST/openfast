@@ -141,12 +141,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Get git tags
-        run: git fetch --tags origin
-
-      - name: Init submodules
-        run: git submodule update --init --recursive
+        with:
+          submodules: true
+          fetch-depth: 0
 
       - name: Print git version
         run: git describe --abbrev=8 --tags --dirty
