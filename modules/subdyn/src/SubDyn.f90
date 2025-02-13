@@ -1286,15 +1286,15 @@ IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
 !------------------ MEMBER CROSS-SECTION PROPERTY data 1/3 [isotropic material for now: use this table if circular-tubular elements ------------------------
 CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 1/3 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsB, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsBC, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Header'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Units '            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(Init%PropSetsB, Init%NPropSetsB, PropSetsBCol, 'PropSets', ErrStat2, ErrMsg2) ; if(Failed()) return
-DO I = 1, Init%NPropSetsB
-   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
-   Init%PropSetsB(I,:) = Dummy_ReAry(1:PropSetsBCol)
+CALL AllocAry(Init%PropSetsBC, Init%NPropSetsBC, PropSetsBCCol, 'PropSets', ErrStat2, ErrMsg2) ; if(Failed()) return
+DO I = 1, Init%NPropSetsBC
+   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBCCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
+   Init%PropSetsBC(I,:) = Dummy_ReAry(1:PropSetsBCCol)
 ENDDO   
-IF (Check( Init%NPropSetsB < 1 , 'NPropSets must be >0')) return
+IF (Check( Init%NPropSetsBC < 1 , 'NPropSets must be >0')) return
 
 !------------------ MEMBER CROSS-SECTION PROPERTY data 2/3 [isotropic material for now: use this table if rectangular-tubular elements ---------------------
 CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 2/3 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -3926,9 +3926,9 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A)') '#User inputs'
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  '#Number of properties (NProps):',Init%NPropB
+   WRITE(UnSum, '(A,I6)')  '#Number of properties (NProps):',Init%NPropBC
    WRITE(UnSum, '(A8,5(A15))')  '#Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecD',      'XsecT'
-   WRITE(UnSum, '("#",I8, ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2 ) ') (NINT(Init%PropsB(i, 1)), (Init%PropsB(i, j), j = 2, 6), i = 1, Init%NPropB)
+   WRITE(UnSum, '("#",I8, ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2 ) ') (NINT(Init%PropsBC(i, 1)), (Init%PropsBC(i, j), j = 2, 6), i = 1, Init%NPropBC)
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  '#No. of Reaction DOFs:',p%nDOFC__
@@ -3964,10 +3964,10 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       IF (ErrStat .EQ. ErrID_None) THEN
         mType = Init%Members(I, iMType)
         if (mType==idMemberBeamCirc) then
-           iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
-           iProp(2) = FINDLOCI(Init%PropSetsB(:,1), propIDs(2))
-           mMass = BeamMassC(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
-                             Init%PropSetsB(iProp(2),4),Init%PropSetsB(iProp(2),5),Init%PropSetsB(iProp(2),6), mLength, method=-1)
+           iProp(1) = FINDLOCI(Init%PropSetsBC(:,1), propIDs(1))
+           iProp(2) = FINDLOCI(Init%PropSetsBC(:,1), propIDs(2))
+           mMass = BeamMassC(Init%PropSetsBC(iProp(1),4),Init%PropSetsBC(iProp(1),5),Init%PropSetsBC(iProp(1),6),   &
+                             Init%PropSetsBC(iProp(2),4),Init%PropSetsBC(iProp(2),5),Init%PropSetsBC(iProp(2),6), mLength, method=-1)
 
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)

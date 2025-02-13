@@ -142,7 +142,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step from Glue Code [seconds]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of joints of the sub structure [-]
     INTEGER(IntKi)  :: NPropSetsX = 0_IntKi      !< Number of extended property sets [-]
-    INTEGER(IntKi)  :: NPropSetsB = 0_IntKi      !< Number of property sets for beams with a circular section [-]
+    INTEGER(IntKi)  :: NPropSetsBC = 0_IntKi      !< Number of property sets for beams with a circular section [-]
     INTEGER(IntKi)  :: NPropSetsBR = 0_IntKi      !< Number of property sets for beams with a rectangular section [-]
     INTEGER(IntKi)  :: NPropSetsC = 0_IntKi      !< Number of property sets for cables [-]
     INTEGER(IntKi)  :: NPropSetsR = 0_IntKi      !< Number of property sets for rigid links [-]
@@ -153,7 +153,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NDiv = 0_IntKi      !< Number of divisions for each member [-]
     LOGICAL  :: CBMod = .false.      !< Perform C-B flag [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Joints      !< Joints number and coordinate values [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsB      !< Property sets number and values for circular beam sections [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsBC      !< Property sets number and values for circular beam sections [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsBR      !< Property sets number and values for rectangular beam sections [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsC      !< Property ID and values for cables [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsR      !< Property ID and values for rigid link [-]
@@ -177,14 +177,14 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Soil_Points      !< Node positions where soil stiffness will be added                           [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Soil_Nodes      !< Node indices where soil stiffness will be added                             [-]
     INTEGER(IntKi)  :: NElem = 0_IntKi      !< Total number of elements [-]
-    INTEGER(IntKi)  :: NPropB = 0_IntKi      !< Total number of property sets for Beams with a circular section [-]
+    INTEGER(IntKi)  :: NPropBC = 0_IntKi      !< Total number of property sets for Beams with a circular section [-]
     INTEGER(IntKi)  :: NPropBR = 0_IntKi      !< Total number of property sets for Beams with a rectangular section [-]
     INTEGER(IntKi)  :: NPropX = 0_IntKi      !< Total number of property sets for Beams with an arbitrary section [-]
     INTEGER(IntKi)  :: NPropC = 0_IntKi      !< Total number of property sets for Cable [-]
     INTEGER(IntKi)  :: NPropR = 0_IntKi      !< Total number of property sets for Rigid [-]
     INTEGER(IntKi)  :: NPropS = 0_IntKi      !< Total number of property sets for Spring [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Nodes      !< Nodes number and coordinates            [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsB      !< Property sets and values for Beams with a circular section [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsBC      !< Property sets and values for Beams with a circular section [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsBR      !< Property sets and values for Beams with a rectangular section [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsC      !< Property sets and values for Cable      [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsR      !< Property sets and values for Rigid link [-]
@@ -1244,7 +1244,7 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    DstInitTypeData%DT = SrcInitTypeData%DT
    DstInitTypeData%NJoints = SrcInitTypeData%NJoints
    DstInitTypeData%NPropSetsX = SrcInitTypeData%NPropSetsX
-   DstInitTypeData%NPropSetsB = SrcInitTypeData%NPropSetsB
+   DstInitTypeData%NPropSetsBC = SrcInitTypeData%NPropSetsBC
    DstInitTypeData%NPropSetsBR = SrcInitTypeData%NPropSetsBR
    DstInitTypeData%NPropSetsC = SrcInitTypeData%NPropSetsC
    DstInitTypeData%NPropSetsR = SrcInitTypeData%NPropSetsR
@@ -1266,17 +1266,17 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       end if
       DstInitTypeData%Joints = SrcInitTypeData%Joints
    end if
-   if (allocated(SrcInitTypeData%PropSetsB)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropSetsB)
-      UB(1:2) = ubound(SrcInitTypeData%PropSetsB)
-      if (.not. allocated(DstInitTypeData%PropSetsB)) then
-         allocate(DstInitTypeData%PropSetsB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcInitTypeData%PropSetsBC)) then
+      LB(1:2) = lbound(SrcInitTypeData%PropSetsBC)
+      UB(1:2) = ubound(SrcInitTypeData%PropSetsBC)
+      if (.not. allocated(DstInitTypeData%PropSetsBC)) then
+         allocate(DstInitTypeData%PropSetsBC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropSetsB.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropSetsBC.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstInitTypeData%PropSetsB = SrcInitTypeData%PropSetsB
+      DstInitTypeData%PropSetsBC = SrcInitTypeData%PropSetsBC
    end if
    if (allocated(SrcInitTypeData%PropSetsBR)) then
       LB(1:2) = lbound(SrcInitTypeData%PropSetsBR)
@@ -1488,7 +1488,7 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%Soil_Nodes = SrcInitTypeData%Soil_Nodes
    end if
    DstInitTypeData%NElem = SrcInitTypeData%NElem
-   DstInitTypeData%NPropB = SrcInitTypeData%NPropB
+   DstInitTypeData%NPropBC = SrcInitTypeData%NPropBC
    DstInitTypeData%NPropBR = SrcInitTypeData%NPropBR
    DstInitTypeData%NPropX = SrcInitTypeData%NPropX
    DstInitTypeData%NPropC = SrcInitTypeData%NPropC
@@ -1506,17 +1506,17 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       end if
       DstInitTypeData%Nodes = SrcInitTypeData%Nodes
    end if
-   if (allocated(SrcInitTypeData%PropsB)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropsB)
-      UB(1:2) = ubound(SrcInitTypeData%PropsB)
-      if (.not. allocated(DstInitTypeData%PropsB)) then
-         allocate(DstInitTypeData%PropsB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcInitTypeData%PropsBC)) then
+      LB(1:2) = lbound(SrcInitTypeData%PropsBC)
+      UB(1:2) = ubound(SrcInitTypeData%PropsBC)
+      if (.not. allocated(DstInitTypeData%PropsBC)) then
+         allocate(DstInitTypeData%PropsBC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropsB.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropsBC.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstInitTypeData%PropsB = SrcInitTypeData%PropsB
+      DstInitTypeData%PropsBC = SrcInitTypeData%PropsBC
    end if
    if (allocated(SrcInitTypeData%PropsBR)) then
       LB(1:2) = lbound(SrcInitTypeData%PropsBR)
@@ -1651,8 +1651,8 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    if (allocated(InitTypeData%Joints)) then
       deallocate(InitTypeData%Joints)
    end if
-   if (allocated(InitTypeData%PropSetsB)) then
-      deallocate(InitTypeData%PropSetsB)
+   if (allocated(InitTypeData%PropSetsBC)) then
+      deallocate(InitTypeData%PropSetsBC)
    end if
    if (allocated(InitTypeData%PropSetsBR)) then
       deallocate(InitTypeData%PropSetsBR)
@@ -1708,8 +1708,8 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    if (allocated(InitTypeData%Nodes)) then
       deallocate(InitTypeData%Nodes)
    end if
-   if (allocated(InitTypeData%PropsB)) then
-      deallocate(InitTypeData%PropsB)
+   if (allocated(InitTypeData%PropsBC)) then
+      deallocate(InitTypeData%PropsBC)
    end if
    if (allocated(InitTypeData%PropsBR)) then
       deallocate(InitTypeData%PropsBR)
@@ -1755,7 +1755,7 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%NJoints)
    call RegPack(RF, InData%NPropSetsX)
-   call RegPack(RF, InData%NPropSetsB)
+   call RegPack(RF, InData%NPropSetsBC)
    call RegPack(RF, InData%NPropSetsBR)
    call RegPack(RF, InData%NPropSetsC)
    call RegPack(RF, InData%NPropSetsR)
@@ -1766,7 +1766,7 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPack(RF, InData%NDiv)
    call RegPack(RF, InData%CBMod)
    call RegPackAlloc(RF, InData%Joints)
-   call RegPackAlloc(RF, InData%PropSetsB)
+   call RegPackAlloc(RF, InData%PropSetsBC)
    call RegPackAlloc(RF, InData%PropSetsBR)
    call RegPackAlloc(RF, InData%PropSetsC)
    call RegPackAlloc(RF, InData%PropSetsR)
@@ -1790,14 +1790,14 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPackAlloc(RF, InData%Soil_Points)
    call RegPackAlloc(RF, InData%Soil_Nodes)
    call RegPack(RF, InData%NElem)
-   call RegPack(RF, InData%NPropB)
+   call RegPack(RF, InData%NPropBC)
    call RegPack(RF, InData%NPropBR)
    call RegPack(RF, InData%NPropX)
    call RegPack(RF, InData%NPropC)
    call RegPack(RF, InData%NPropR)
    call RegPack(RF, InData%NPropS)
    call RegPackAlloc(RF, InData%Nodes)
-   call RegPackAlloc(RF, InData%PropsB)
+   call RegPackAlloc(RF, InData%PropsBC)
    call RegPackAlloc(RF, InData%PropsBR)
    call RegPackAlloc(RF, InData%PropsC)
    call RegPackAlloc(RF, InData%PropsR)
@@ -1827,7 +1827,7 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NJoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsX); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NPropSetsB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NPropSetsBC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsBR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsR); if (RegCheckErr(RF, RoutineName)) return
@@ -1838,7 +1838,7 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpack(RF, OutData%NDiv); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CBMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Joints); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%PropSetsB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PropSetsBC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropSetsBR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropSetsC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropSetsR); if (RegCheckErr(RF, RoutineName)) return
@@ -1862,14 +1862,14 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Soil_Points); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Soil_Nodes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NElem); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NPropB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NPropBC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropBR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropS); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Nodes); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%PropsB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PropsBC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropsBR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropsC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropsR); if (RegCheckErr(RF, RoutineName)) return

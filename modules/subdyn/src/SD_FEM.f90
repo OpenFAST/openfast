@@ -33,8 +33,8 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: ReactCol        = 7                     ! Number of columns in reaction matrix (JointID,ItfTDxss,ItfTDYss,ItfTDZss,ItfRDXss,ItfRDYss,ItfRDZss)
   INTEGER(IntKi),   PARAMETER  :: MaxNodesPerElem = 2                     ! Maximum number of nodes per element (currently 2)
   INTEGER(IntKi),   PARAMETER  :: MembersCol      = MaxNodesPerElem + 3+1+1 ! Number of columns in Members (MemberID,MJointID1,MJointID2,MPropSetID1,MPropSetID2,COSMID) 
-  INTEGER(IntKi),   PARAMETER  :: PropSetsBCol    = 6                     ! Number of columns in PropSets  (PropSetID,YoungE,ShearG,MatDens,XsecD,XsecT)  !bjj: this really doesn't need to store k, does it? or is this supposed to be an ID, in which case we shouldn't be storing k (except new property sets), we should be storing IDs
-  INTEGER(IntKi),   PARAMETER  :: PropSetsBRCol   = 7                     ! Number of columns in PropSets  (PropSetID,YoungE,ShearG,MatDens,XsecA,XsecB,XsecT)
+  INTEGER(IntKi),   PARAMETER  :: PropSetsBCCol   = 6                     ! Number of columns in PropSets of circular beam sections (PropSetID,YoungE,ShearG,MatDens,XsecD,XsecT)  !bjj: this really doesn't need to store k, does it? or is this supposed to be an ID, in which case we shouldn't be storing k (except new property sets), we should be storing IDs
+  INTEGER(IntKi),   PARAMETER  :: PropSetsBRCol   = 7                     ! Number of columns in PropSets of rectangular beam sections (PropSetID,YoungE,ShearG,MatDens,XsecA,XsecB,XsecT)
   INTEGER(IntKi),   PARAMETER  :: PropSetsXCol    = 11                    ! Number of columns in XPropSets (PropSetID,YoungE,ShearG,MatDens,XsecA,XsecAsx,XsecAsy,XsecJxx,XsecJyy,XsecJ0,XsecJt)
   INTEGER(IntKi),   PARAMETER  :: PropSetsCCol    = 5                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0)
   INTEGER(IntKi),   PARAMETER  :: PropSetsRCol    = 2                     ! Number of columns in RigidPropSet (PropSetID, MatDens)
@@ -81,7 +81,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_66       = 2 
   INTEGER(IntKi)               :: idGuyanDamp_Valid(3) = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
   
-  INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCol,PropSetsBRCol,PropSetsXCol,PropSetsSCol,COSMsCol,CMassCol)
+  INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCCol,PropSetsBRCol,PropSetsXCol,PropSetsSCol,COSMsCol,CMassCol)
 
   ! Output Formats
   INTEGER(IntKi),   PARAMETER  :: idOutputFormatNone  = 0
@@ -389,7 +389,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
 
          if (mType==idMemberBeamCirc) then
             sType='Member circular cross-section property'
-            p%Elems(iMem,n) = FINDLOCI(Init%PropSetsB(:,1), Init%Members(iMem, n) )
+            p%Elems(iMem,n) = FINDLOCI(Init%PropSetsBC(:,1), Init%Members(iMem, n) )
          else if (mType==idMemberBeamRect) then
             sType='Member rectangular cross-section property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsBR(:,1), Init%Members(iMem, n) )
@@ -524,11 +524,18 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           return
        endif
 
-       if (eType==idMemberBeamCirc .or. eType==idMemberBeamRect) then
-          if  ( ( .not. EqualRealNos(Init%PropSetsB(Prop1, 2),Init%PropSetsB(Prop2, 2) ) ) &
-           .or. ( .not. EqualRealNos(Init%PropSetsB(Prop1, 3),Init%PropSetsB(Prop2, 3) ) ) &
-           .or. ( .not. EqualRealNos(Init%PropSetsB(Prop1, 4),Init%PropSetsB(Prop2, 4) ) ) ) then
-             call Fatal(' Material E, G and rho in a member must be the same (See member at position '//trim(num2lstr(I))//' in member list)')
+       if (eType==idMemberBeamCirc) then
+          if  ( ( .not. EqualRealNos(Init%PropSetsBC(Prop1, 2),Init%PropSetsBC(Prop2, 2) ) ) &
+           .or. ( .not. EqualRealNos(Init%PropSetsBC(Prop1, 3),Init%PropSetsBC(Prop2, 3) ) ) &
+           .or. ( .not. EqualRealNos(Init%PropSetsBC(Prop1, 4),Init%PropSetsBC(Prop2, 4) ) ) ) then
+             call Fatal(' Material E, G and rho in a beam member must be the same (See member at position '//trim(num2lstr(I))//' in member list)')
+             return
+          endif
+       else if (eType==idMemberBeamRect) then
+          if  ( ( .not. EqualRealNos(Init%PropSetsBR(Prop1, 2),Init%PropSetsBR(Prop2, 2) ) ) &
+           .or. ( .not. EqualRealNos(Init%PropSetsBR(Prop1, 3),Init%PropSetsBR(Prop2, 3) ) ) &
+           .or. ( .not. EqualRealNos(Init%PropSetsBR(Prop1, 4),Init%PropSetsBR(Prop2, 4) ) ) ) then
+             call Fatal(' Material E, G and rho in a beam member must be the same (See member at position '//trim(num2lstr(I))//' in member list)')
              return
           endif
        else if (eType==idMemberBeamArb) then
@@ -550,7 +557,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
     if (Init%NDiv==1) then
        ! NDiv = 1
        Init%MemberNodes(1:p%NMembers, 1:2) = p%Elems(1:Init%NElem, 2:3) 
-       Init%NPropB  = Init%NPropSetsB
+       Init%NPropBC = Init%NPropSetsBC
        Init%NPropBR = Init%NPropSetsBR
        Init%NPropX  = Init%NPropSetsX
 
@@ -564,14 +571,14 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
        ! Initialize Temp arrays that will contain user inputs + input from the subdivided members
        !  We don't know how many properties will be needed, so allocated to size MaxNProp
        ! TODO add Init%NPropSetsX and use PropSetXCol in the future or allocate a new TempProps
-       MaxNProp   = Init%NPropSetsB + Init%NPropSetsBR + Init%NPropSetsX + Init%NElem*NNE ! Maximum possible number of property sets (temp): This is property set per element node, for all elements (bjj, added Init%NPropSets to account for possibility of entering many unused prop sets)
+       MaxNProp   = Init%NPropSetsBC + Init%NPropSetsBR + Init%NPropSetsX + Init%NElem*NNE ! Maximum possible number of property sets (temp): This is property set per element node, for all elements (bjj, added Init%NPropSets to account for possibility of entering many unused prop sets)
        CALL AllocAry(TempMembers, p%NMembers, MembersCol ,  'TempMembers', ErrStat2, ErrMsg2); if(Failed()) return
        CALL AllocAry(TempMemSpin, p%NMembers,               'TempMemSpin', ErrStat2, ErrMsg2); if(Failed()) return
-       CALL AllocAry(TempPropsBC, MaxNProp,   PropSetsBCol, 'TempPropsBC', ErrStat2, ErrMsg2); if(Failed()) return
+       CALL AllocAry(TempPropsBC, MaxNProp,   PropSetsBCCol,'TempPropsBC', ErrStat2, ErrMsg2); if(Failed()) return
        CALL AllocAry(TempPropsBR, MaxNProp,   PropSetsBRCol,'TempPropsBR', ErrStat2, ErrMsg2); if(Failed()) return
        TempPropsBC = -9999.
        TempPropsBR = -9999.
-       TempPropsBC(1:Init%NPropSetsB, :) = Init%PropSetsB
+       TempPropsBC(1:Init%NPropSetsBC,:) = Init%PropSetsBC
        TempPropsBR(1:Init%NPropSetsBR,:) = Init%PropSetsBR
        TempMembers = p%Elems(1:p%NMembers,:)
        TempMemSpin = p%ElemSpin(1:p%NMembers)
@@ -582,7 +589,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
        kelem = 0
        knode = Init%NJoints
 
-       kpropBC = Init%NPropSetsB
+       kpropBC = Init%NPropSetsBC
        kpropBR = Init%NPropSetsBR
 
        DO I = 1, p%NMembers !the first p%NMembers rows of p%Elems contain the element information
@@ -694,8 +701,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                   IF ( eType == idMemberBeamCirc ) THEN
                      ! create a new property set
                      kpropBC = kpropBC + 1
-                     !                       k,                    E1,                    G1,                     rho1,         d,              t
-                     CALL SetNewPropBC(kpropBC, TempPropsBC(Prop1, 2), TempPropsBC(Prop1, 3), Init%PropSetsB(Prop1, 4), d1 + J*dd,      t1 + J*dt,  TempPropsBC)
+                     !                       k,                    E1,                    G1,                      rho1,         d,              t
+                     CALL SetNewPropBC(kpropBC, TempPropsBC(Prop1, 2), TempPropsBC(Prop1, 3), Init%PropSetsBC(Prop1, 4), d1 + J*dd,      t1 + J*dt,  TempPropsBC)
                      kelem = kelem + 1
                      CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kpropBC, p, iDirCos, spin); if (ErrStat>ErrID_None) return;
                      nprop = kpropBC
@@ -719,7 +726,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           CALL SetNewElem(kelem, knode, Node2, eType, nprop, Prop2, p, iDirCos, spin); if (ErrStat>ErrID_None) return;
        ENDDO ! loop over all members
        !
-       Init%NPropB  = kpropBC
+       Init%NPropBC = kpropBC
        Init%NPropBR = kpropBR
        if(knode/=size(Init%Nodes,1)) then
           call Fatal('Implementation error. Number of nodes wrongly estimated.');return
@@ -731,14 +738,14 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
     ENDIF ! if NDiv is greater than 1
 
     ! set the props in Init
-    CALL AllocAry(Init%PropsB,  Init%NPropB,  PropSetsBCol,  'Init%PropsBeams', ErrStat2, ErrMsg2); if(Failed()) return
-    CALL AllocAry(Init%PropsBR, Init%NPropBR, PropSetsBRCol, 'Init%PropsBeams', ErrStat2, ErrMsg2); if(Failed()) return
+    CALL AllocAry(Init%PropsBC, Init%NPropBC, PropSetsBCCol, 'Init%PropsBC', ErrStat2, ErrMsg2); if(Failed()) return
+    CALL AllocAry(Init%PropsBR, Init%NPropBR, PropSetsBRCol, 'Init%PropsBR', ErrStat2, ErrMsg2); if(Failed()) return
 
     if (Init%NDiv==1) then
-       Init%PropsB(1:Init%NPropB,   1:PropSetsBCol)  = Init%PropSetsB(1:Init%NPropB,   1:PropSetsBCol)
+       Init%PropsBC(1:Init%NPropBC, 1:PropSetsBCCol) = Init%PropSetsBC(1:Init%NPropBC, 1:PropSetsBCCol)
        Init%PropsBR(1:Init%NPropBR, 1:PropSetsBRCol) = Init%PropSetsBR(1:Init%NPropBR, 1:PropSetsBRCol)
     else if (Init%NDiv>1) then
-       Init%PropsB(1:Init%NPropB,   1:PropSetsBCol)  = TempPropsBC(1:Init%NPropB,  1:PropSetsBCol)
+       Init%PropsBC(1:Init%NPropBC, 1:PropSetsBCCol) = TempPropsBC(1:Init%NPropBC, 1:PropSetsBCCol)
        Init%PropsBR(1:Init%NPropBR, 1:PropSetsBRCol) = TempPropsBR(1:Init%NPropBR, 1:PropSetsBRCol)
     endif
 
@@ -989,13 +996,13 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
   
       ! --- Properties that are specific to some elements
       if (eType==idMemberBeamCirc) then
-         E   = Init%PropsB(P1, 2) ! TODO E2
-         G   = Init%PropsB(P1, 3) ! TODO G2
-         rho = Init%PropsB(P1, 4) ! TODO rho2
-         D1  = Init%PropsB(P1, 5)
-         t1  = Init%PropsB(P1, 6)
-         D2  = Init%PropsB(P2, 5)
-         t2  = Init%PropsB(P2, 6)
+         E   = Init%PropsBC(P1, 2) ! TODO E2
+         G   = Init%PropsBC(P1, 3) ! TODO G2
+         rho = Init%PropsBC(P1, 4) ! TODO rho2
+         D1  = Init%PropsBC(P1, 5)
+         t1  = Init%PropsBC(P1, 6)
+         D2  = Init%PropsBC(P2, 5)
+         t2  = Init%PropsBC(P2, 6)
          r1 = 0.25*(D1 + D2)
          t  = 0.5*(t1+t2)
          if ( EqualRealNos(t, 0.0_ReKi) ) then
