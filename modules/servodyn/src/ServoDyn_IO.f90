@@ -2400,10 +2400,10 @@ subroutine InitializeSummaryFile(InputFileData,OutfileRoot,UnSum,ErrStat,ErrMsg)
    ErrStat  =  ErrID_None
    ErrMsg   =  ''
    if ( InputFileData%SumPrint ) then
-      !$OMP critical(fileopen)
+      !$OMP critical(fileopen_critical)
       call GetNewUnit( UnSum )
       CALL OpenEcho ( UnSum, TRIM(OutFileRoot)//'.sum', ErrStat2, ErrMsg2 )
-      !$OMP end critical(fileopen)
+      !$OMP end critical(fileopen_critical)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
    else

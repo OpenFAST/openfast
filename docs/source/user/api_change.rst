@@ -10,6 +10,28 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
+OpenFAST v4.0.1 to OpenFAST v4.0.2
+----------------------------------
+
+No input file changes were made.
+
+
+OpenFAST v4.0.0 to OpenFAST v4.0.1
+----------------------------------
+
+No input file changes are required.  MoorDyn can contain an option section for
+`External Loads` (see the MoorDyn documentation for details `here <https://moordyn.readthedocs.io/en/latest/inputs.html#the-v2-input-file>`__).
+
+============================================= ======== ==================== =================================================================================================================================================================================================
+Modified in OpenFAST `v4.0.1`                             
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== =================================================================================================================================================================================================
+MoorDyn                                       \*                            New optional sections for `EXTERNAL LOADS` (freeform file).  See MoorDyn documentation for details (`here <https://moordyn.readthedocs.io/en/latest/inputs.html#the-v2-input-file>`__)
+============================================= ======== ==================== =================================================================================================================================================================================================
+
+\*Exact line number depends on number and size of preceeding sections.
+
 
 OpenFAST v3.5.5 to OpenFAST 4.0.0
 ---------------------------------
@@ -23,7 +45,7 @@ New modules AeroDisk (see :numref:`ADsk`), Simplified-ElastoDyn (see
 documentation on those modules for exmple input files.
 
 ============================================= ======== ==================== ========================================================================================================================================================================================================
-Modified in OpenFAST `dev`                             
+Modified in OpenFAST `v4.0.0`                             
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line     Flag Name            Example Value
 ============================================= ======== ==================== ========================================================================================================================================================================================================
@@ -56,7 +78,7 @@ ElastoDyn blade file                          15                            Remo
 InflowWind driver                             27                            ----  Output VTK slices  ------------------------------------------------------
 InflowWind driver                             28       NOutWindXY           0            NOutWindXY    -- Number of XY planes for output <RootName>.XY<loc>.t<n>.vtk (-) [0 to 9]
 InflowWind driver                             29       OutWindZ             90           OutWindZ      -- Z coordinates of XY planes for output (m) [1 to NOutWindXY] [unused for NOutWindXY=0]
-MoorDyn                                       --                            New optional sections (freeform file).  See MoorDyn documentation for details
+MoorDyn                                       --                            New optional sections (freeform file).  See MoorDyn documentation for details (`here <https://moordyn.readthedocs.io/en/latest/inputs.html#the-v2-input-file>`__)
 SubDyn                                        8         --removed--         removed: GuyanLoadCorrection
 SubDyn                                        12        --removed--         removed: CBMod
 SubDyn                                        56\*                                              ----------------------- SPRING ELEMENT PROPERTIES -------------------------------------

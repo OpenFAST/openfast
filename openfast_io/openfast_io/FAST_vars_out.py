@@ -1,4 +1,4 @@
-""" Generated from FAST OutListParameters.xlsx files with AeroelasticSE/src/AeroelasticSE/Util/create_output_vars.py """
+""" Generated from FAST OutListParameters.xlsx files with openfast_io/openfast_io/create_output_vars.py """
 
 
 """ AeroDyn """

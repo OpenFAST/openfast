@@ -359,6 +359,7 @@ of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerody
 if(BUILD_OPENFAST_CPP_DRIVER)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
   of_cpp_interface_regression("5MW_Restart_cpp"        "openfast;fastlib;cpp;restart")
+  of_cpp_interface_regression("5MW_Land_DLL_WTurb_ExtInfw_cpp" "openfast;fastlib;extinfw;cpp")
 endif()
 
 # OpenFAST Driver test for OpenFAST C++ Library
@@ -520,6 +521,7 @@ md_regression("md_float"                                      "moordyn")
 md_regression("md_horizontal"                                 "moordyn")
 md_regression("md_no_line"                                    "moordyn")
 md_regression("md_vertical"                                   "moordyn")
+md_regression("md_BdyExtLdDmpg"                               "moordyn")
 py_md_regression("py_md_5MW_OC4Semi"                          "moordyn;python")
 # the following tests are excessively slow in double precision, so skip these in normal testing
 #md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")
