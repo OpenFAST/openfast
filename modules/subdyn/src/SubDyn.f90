@@ -1251,20 +1251,22 @@ DO J = 1, p%NMembers
       end if
    END DO
    I = MembersCol
-   if ( Init%Members(J,6) == idMemberBeamRect ) then
+   if ( Init%Members(J,6)==idMemberBeamCirc .or. Init%Members(J,6)==idMemberBeamRect .or. Init%Members(J,6)==idMemberBeamArb ) then
       bNumeric = is_numeric( StrArray(I), Init%MemberSpin(J) )
       if (.not.bNumeric) then
-         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": The last input entry for a rectangular member should be an angle in degrees for the member spin orientation (MSpin). Problematic line: "'//trim(Line)//'"')
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": The last input entry for a beam member should be an angle in degrees for the member spin orientation (MSpin). Problematic line: "'//trim(Line)//'"')
          return
       end if
       Init%MemberSpin(J) = Init%MemberSpin(J) * D2R
       Init%Members(J,I) = -1
-   else if ( Init%Members(J,6)==idMemberBeamCirc .or. Init%Members(J,6)==idMemberCable .or. Init%Members(J,6)==idMemberRigid ) then
+   else if ( Init%Members(J,6)==idMemberCable .or. Init%Members(J,6)==idMemberRigid ) then
+      Init%MemberSpin(J) = 0
       Init%Members(J,I) = -1
    else
+      Init%MemberSpin(J) = 0
       bInteger = is_integer(StrArray(I), Init%Members(J,I)) ! Convert from string to integer
       if (.not.bInteger) then
-         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found for COSMID for a non-rectangular beam member. Problematic line: "'//trim(Line)//'"')
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found for COSMID for a spring member. Problematic line: "'//trim(Line)//'"')
          return
       end if
    end if
@@ -4009,7 +4011,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       XYZ1   = Init%Joints(iNode1,2:4)
       XYZ2   = Init%Joints(iNode2,2:4)
       spin   = Init%MemberSpin(I)
-      if ((mType == idMemberSpring) .or. (mType == idMemberBeamArb)) then ! The direction cosine for these member types must be provided by the user
+      if ( mType == idMemberSpring ) then ! The direction cosine for these member types must be provided by the user
          iDirCos = p%Elems(i, iMDirCosID)
          DirCos(1, 1) =  Init%COSMs(iDirCos, 2)
          DirCos(2, 1) =  Init%COSMs(iDirCos, 3)

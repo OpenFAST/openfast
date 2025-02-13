@@ -1007,7 +1007,7 @@ SUBROUTINE GetDirCos(P1, P2, spin, eType, DirCos, L_out, ErrStat, ErrMsg)
       DirCos(3, 2) = -Dxy/L
       DirCos(3, 3) = +Dz/L
    ENDIF
-   IF ( eType==-1 ) THEN ! Rectangular section
+   IF ( eType==-1 .or. eType==1 .or. eType==4 ) THEN ! All beam types
       ! Right multiply the spin matrix
       RSpin(1,:) = (/COS(spin),-SIN(spin), 0.0/)
       RSpin(2,:) = (/SIN(spin), COS(spin), 0.0/)

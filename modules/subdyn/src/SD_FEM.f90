@@ -430,7 +430,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
          p%Elems(iMem,  iMDirCosID) = FINDLOCI(Init%COSMs(:,1), Init%Members(iMem,  iMDirCosID) )
       endif
       ! Member spin angle
-      if (mType==idMemberBeamCirc .or. mType==idMemberBeamRect) then
+      if (mType==idMemberBeamCirc .or. mType==idMemberBeamRect .or. mType==idMemberBeamArb) then
          p%ElemSpin(iMem) = Init%MemberSpin(iMem)
       end if
 
@@ -930,7 +930,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       Point1 = Init%Nodes(N1,2:4)
       Point2 = Init%Nodes(N2,2:4)
 
-      if (iDirCos/=-1) then
+      if (iDirCos/=-1) then    ! Spring element only
          CALL GetDirCos(Point1, Point2, spin, eType, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! sets L
          
          ! overwrites direction cosines
