@@ -147,7 +147,11 @@ jobs:
       - name: Init submodules
         run: git submodule update --init --recursive
 
+      - name: Print git version
+        run: git describe --abbrev=8 --tags --dirty
+
       - name: Install Intel oneAPI BaseKit (Windows)
+        if: false
         shell: cmd
         env:
           URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7dff44ba-e3af-4448-841c-0d616c8da6e7/w_BaseKit_p_2024.1.0.595_offline.exe
@@ -162,6 +166,7 @@ jobs:
           exit /b %installer_exit_code%
 
       - name: Install Intel oneAPI HPCKit (Windows)
+        if: false
         shell: cmd
         env:
           URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe
@@ -175,38 +180,42 @@ jobs:
           rd /s/q "webimage_extracted"
           exit /b %installer_exit_code%
 
-      # - name: Set up MATLAB
-      #   id: setup-matlab
-      #   uses: matlab-actions/setup-matlab@v2
-      #   with:
-      #     products: Simulink
+      - name: Set up MATLAB
+        if: false
+        id: setup-matlab
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
 
       - name: Build Executables
+        if: false
         env:
           MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot }}
         run: .github/scripts/build_windows_executables.bat
 
-      # - name: Build MATLAB Mex File
-      #   uses: matlab-actions/run-command@v2
-      #   with:
-      #     command: |
-      #       mexname = 'FAST_SFunc';
-      #       mex('-largeArrayDims', ...
-      #           '-v', ...
-      #           ['-L' fullfile('build','bin')], ...
-      #           ['-I' fullfile('modules','openfast-library','src')], ... % "FAST_Library.h"
-      #           ['-I' fullfile('modules','supercontroller','src')], ...  % "SuperController_Types.h"
-      #           ['-I' fullfile('modules','externalinflow','src')],  ...  % "ExternalInflow_Types.h"
-      #           ['-I' fullfile('modules','extloads','src')], ...         % "ExtLoadsDX_Types.h"
-      #           ['-I' fullfile(matlabroot,'simulink','include')], ...
-      #           ['-I' fullfile(matlabroot,'extern','include')], ...
-      #           ['COMPFLAGS=$COMPFLAGS -MT -DS_FUNCTION_NAME=' mexname], ...
-      #           '-lOpenFAST-Simulink_x64', ...
-      #           '-outdir', fullfile('build','bin'), ...
-      #           '-output', mexname, ...
-      #           fullfile('glue-codes','simulink','src','FAST_SFunc.c'));
+      - name: Build MATLAB Mex File
+        if: false
+        uses: matlab-actions/run-command@v2
+        with:
+          command: |
+            mexname = 'FAST_SFunc';
+            mex('-largeArrayDims', ...
+                '-v', ...
+                ['-L' fullfile('build','bin')], ...
+                ['-I' fullfile('modules','openfast-library','src')], ... % "FAST_Library.h"
+                ['-I' fullfile('modules','supercontroller','src')], ...  % "SuperController_Types.h"
+                ['-I' fullfile('modules','externalinflow','src')],  ...  % "ExternalInflow_Types.h"
+                ['-I' fullfile('modules','extloads','src')], ...         % "ExtLoadsDX_Types.h"
+                ['-I' fullfile(matlabroot,'simulink','include')], ...
+                ['-I' fullfile(matlabroot,'extern','include')], ...
+                ['COMPFLAGS=$COMPFLAGS -MT -DS_FUNCTION_NAME=' mexname], ...
+                '-lOpenFAST-Simulink_x64', ...
+                '-outdir', fullfile('build','bin'), ...
+                '-output', mexname, ...
+                fullfile('glue-codes','simulink','src','FAST_SFunc.c'));
 
       - name: Upload executables
+        if: false
         uses: actions/upload-artifact@v4
         with:
           name: openfast-binaries
