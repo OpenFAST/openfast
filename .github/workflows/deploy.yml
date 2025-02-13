@@ -144,6 +144,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Get tags for version info
+        run: git fetch --tags origin
+
       - name: Install Intel oneAPI BaseKit (Windows)
         shell: cmd
         env:
