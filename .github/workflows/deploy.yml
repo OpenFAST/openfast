@@ -174,7 +174,6 @@ jobs:
           exit /b %installer_exit_code%
 
       - name: Set up MATLAB
-        if: false
         id: setup-matlab
         uses: matlab-actions/setup-matlab@v2
         with:
@@ -185,8 +184,13 @@ jobs:
           MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot }}
         run: .github/scripts/build_windows_executables.bat
 
+      - name: Test version output
+        run: |
+          build/bin/openfast_x64.exe -h
+          build/bin/TurbSim_x64.exe -h
+          build/bin/FAST.Farm_x64.exe -h
+
       - name: Build MATLAB Mex File
-        if: false
         uses: matlab-actions/run-command@v2
         with:
           command: |
