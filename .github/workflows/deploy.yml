@@ -137,7 +137,7 @@ jobs:
 
   build-windows-executables:
     runs-on: windows-2022
-    # if: github.event_name == 'workflow_dispatch' ||  github.event_name == 'release'
+    if: github.event_name == 'workflow_dispatch' ||  github.event_name == 'release'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
