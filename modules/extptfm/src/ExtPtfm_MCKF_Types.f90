@@ -74,6 +74,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
+    TYPE(ModVarsType)  :: Vars      !< Module variables [-]
   END TYPE ExtPtfm_InitOutputType
 ! =======================
 ! =========  ExtPtfm_ContinuousStateType  =======
@@ -97,16 +98,6 @@ IMPLICIT NONE
     TYPE(ExtPtfm_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: xdot      !< Previous state derivs for m-step time integrator [-]
     INTEGER(IntKi)  :: n = 0_IntKi      !< Tracks time step for which OtherState was updated last [-]
   END TYPE ExtPtfm_OtherStateType
-! =======================
-! =========  ExtPtfm_MiscVarType  =======
-  TYPE, PUBLIC :: ExtPtfm_MiscVarType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xFlat      !< Flattened vector of states [-]
-    REAL(ReKi) , DIMENSION(1:18)  :: uFlat = 0.0_ReKi      !< Flattened vector of inputs [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_at_t      !< The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion). [N, N-m]
-    INTEGER(IntKi)  :: Indx = 0_IntKi      !< Index into times, to speed up interpolation [-]
-    LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium position of the CB DOF at initialization (first call) [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
-  END TYPE ExtPtfm_MiscVarType
 ! =======================
 ! =========  ExtPtfm_ParameterType  =======
   TYPE, PUBLIC :: ExtPtfm_ParameterType
@@ -154,7 +145,29 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Example of data to be written to an output file [s,-]
   END TYPE ExtPtfm_OutputType
 ! =======================
-CONTAINS
+! =========  ExtPtfm_MiscVarType  =======
+  TYPE, PUBLIC :: ExtPtfm_MiscVarType
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xFlat      !< Flattened vector of states [-]
+    REAL(ReKi) , DIMENSION(1:18)  :: uFlat = 0.0_ReKi      !< Flattened vector of inputs [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_at_t      !< The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion). [N, N-m]
+    INTEGER(IntKi)  :: Indx = 0_IntKi      !< Index into times, to speed up interpolation [-]
+    LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium position of the CB DOF at initialization (first call) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
+    TYPE(ModJacType)  :: Jac      !< Data structure for calculating module Jacobians [-]
+    TYPE(ExtPtfm_ContinuousStateType)  :: x_perturb      !<  [-]
+    TYPE(ExtPtfm_ContinuousStateType)  :: dxdt_lin      !< continuous state derivatives [-]
+    TYPE(ExtPtfm_InputType)  :: u_perturb      !<  [-]
+    TYPE(ExtPtfm_OutputType)  :: y_lin      !<  [-]
+  END TYPE ExtPtfm_MiscVarType
+! =======================
+   integer(IntKi), public, parameter :: ExtPtfm_x_qm                     =   1 ! ExtPtfm%qm
+   integer(IntKi), public, parameter :: ExtPtfm_x_qmdot                  =   2 ! ExtPtfm%qmdot
+   integer(IntKi), public, parameter :: ExtPtfm_z_DummyConstrState       =   3 ! ExtPtfm%DummyConstrState
+   integer(IntKi), public, parameter :: ExtPtfm_u_PtfmMesh               =   4 ! ExtPtfm%PtfmMesh
+   integer(IntKi), public, parameter :: ExtPtfm_y_PtfmMesh               =   5 ! ExtPtfm%PtfmMesh
+   integer(IntKi), public, parameter :: ExtPtfm_y_WriteOutput            =   6 ! ExtPtfm%WriteOutput
+
+contains
 
 subroutine ExtPtfm_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(ExtPtfm_InitInputType), intent(in) :: SrcInitInputData
@@ -482,6 +495,9 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
       end if
       DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
    end if
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine ExtPtfm_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -525,6 +541,8 @@ subroutine ExtPtfm_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%DerivOrder_x)) then
       deallocate(InitOutputData%DerivOrder_x)
    end if
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ExtPtfm_PackInitOutput(RF, Indata)
@@ -543,6 +561,7 @@ subroutine ExtPtfm_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%RotFrame_u)
    call RegPackAlloc(RF, InData%IsLoad_u)
    call RegPackAlloc(RF, InData%DerivOrder_x)
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -565,6 +584,7 @@ subroutine ExtPtfm_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine ExtPtfm_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -814,106 +834,6 @@ subroutine ExtPtfm_UnPackOtherState(RF, OutData)
       end do
    end if
    call RegUnpack(RF, OutData%n); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(ExtPtfm_MiscVarType), intent(in) :: SrcMiscData
-   type(ExtPtfm_MiscVarType), intent(inout) :: DstMiscData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(*), parameter        :: RoutineName = 'ExtPtfm_CopyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(SrcMiscData%xFlat)) then
-      LB(1:1) = lbound(SrcMiscData%xFlat)
-      UB(1:1) = ubound(SrcMiscData%xFlat)
-      if (.not. allocated(DstMiscData%xFlat)) then
-         allocate(DstMiscData%xFlat(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%xFlat.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%xFlat = SrcMiscData%xFlat
-   end if
-   DstMiscData%uFlat = SrcMiscData%uFlat
-   if (allocated(SrcMiscData%F_at_t)) then
-      LB(1:1) = lbound(SrcMiscData%F_at_t)
-      UB(1:1) = ubound(SrcMiscData%F_at_t)
-      if (.not. allocated(DstMiscData%F_at_t)) then
-         allocate(DstMiscData%F_at_t(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_at_t.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%F_at_t = SrcMiscData%F_at_t
-   end if
-   DstMiscData%Indx = SrcMiscData%Indx
-   DstMiscData%EquilStart = SrcMiscData%EquilStart
-   if (allocated(SrcMiscData%AllOuts)) then
-      LB(1:1) = lbound(SrcMiscData%AllOuts)
-      UB(1:1) = ubound(SrcMiscData%AllOuts)
-      if (.not. allocated(DstMiscData%AllOuts)) then
-         allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%AllOuts.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%AllOuts = SrcMiscData%AllOuts
-   end if
-end subroutine
-
-subroutine ExtPtfm_DestroyMisc(MiscData, ErrStat, ErrMsg)
-   type(ExtPtfm_MiscVarType), intent(inout) :: MiscData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(MiscData%xFlat)) then
-      deallocate(MiscData%xFlat)
-   end if
-   if (allocated(MiscData%F_at_t)) then
-      deallocate(MiscData%F_at_t)
-   end if
-   if (allocated(MiscData%AllOuts)) then
-      deallocate(MiscData%AllOuts)
-   end if
-end subroutine
-
-subroutine ExtPtfm_PackMisc(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(ExtPtfm_MiscVarType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'ExtPtfm_PackMisc'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPackAlloc(RF, InData%xFlat)
-   call RegPack(RF, InData%uFlat)
-   call RegPackAlloc(RF, InData%F_at_t)
-   call RegPack(RF, InData%Indx)
-   call RegPack(RF, InData%EquilStart)
-   call RegPackAlloc(RF, InData%AllOuts)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine ExtPtfm_UnPackMisc(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(ExtPtfm_MiscVarType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackMisc'
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackAlloc(RF, OutData%xFlat); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%uFlat); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%F_at_t); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Indx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%EquilStart); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -1537,6 +1457,144 @@ subroutine ExtPtfm_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
+subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(ExtPtfm_MiscVarType), intent(inout) :: SrcMiscData
+   type(ExtPtfm_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'ExtPtfm_CopyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SrcMiscData%xFlat)) then
+      LB(1:1) = lbound(SrcMiscData%xFlat)
+      UB(1:1) = ubound(SrcMiscData%xFlat)
+      if (.not. allocated(DstMiscData%xFlat)) then
+         allocate(DstMiscData%xFlat(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%xFlat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%xFlat = SrcMiscData%xFlat
+   end if
+   DstMiscData%uFlat = SrcMiscData%uFlat
+   if (allocated(SrcMiscData%F_at_t)) then
+      LB(1:1) = lbound(SrcMiscData%F_at_t)
+      UB(1:1) = ubound(SrcMiscData%F_at_t)
+      if (.not. allocated(DstMiscData%F_at_t)) then
+         allocate(DstMiscData%F_at_t(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_at_t.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_at_t = SrcMiscData%F_at_t
+   end if
+   DstMiscData%Indx = SrcMiscData%Indx
+   DstMiscData%EquilStart = SrcMiscData%EquilStart
+   if (allocated(SrcMiscData%AllOuts)) then
+      LB(1:1) = lbound(SrcMiscData%AllOuts)
+      UB(1:1) = ubound(SrcMiscData%AllOuts)
+      if (.not. allocated(DstMiscData%AllOuts)) then
+         allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%AllOuts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%AllOuts = SrcMiscData%AllOuts
+   end if
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ExtPtfm_CopyContState(SrcMiscData%x_perturb, DstMiscData%x_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ExtPtfm_CopyContState(SrcMiscData%dxdt_lin, DstMiscData%dxdt_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ExtPtfm_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ExtPtfm_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine ExtPtfm_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(ExtPtfm_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(MiscData%xFlat)) then
+      deallocate(MiscData%xFlat)
+   end if
+   if (allocated(MiscData%F_at_t)) then
+      deallocate(MiscData%F_at_t)
+   end if
+   if (allocated(MiscData%AllOuts)) then
+      deallocate(MiscData%AllOuts)
+   end if
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyContState(MiscData%x_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyContState(MiscData%dxdt_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine ExtPtfm_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(ExtPtfm_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'ExtPtfm_PackMisc'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPackAlloc(RF, InData%xFlat)
+   call RegPack(RF, InData%uFlat)
+   call RegPackAlloc(RF, InData%F_at_t)
+   call RegPack(RF, InData%Indx)
+   call RegPack(RF, InData%EquilStart)
+   call RegPackAlloc(RF, InData%AllOuts)
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call ExtPtfm_PackContState(RF, InData%x_perturb) 
+   call ExtPtfm_PackContState(RF, InData%dxdt_lin) 
+   call ExtPtfm_PackInput(RF, InData%u_perturb) 
+   call ExtPtfm_PackOutput(RF, InData%y_lin) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine ExtPtfm_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(ExtPtfm_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'ExtPtfm_UnPackMisc'
+   integer(B4Ki)   :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpackAlloc(RF, OutData%xFlat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%uFlat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_at_t); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Indx); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%EquilStart); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AllOuts); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call ExtPtfm_UnpackContState(RF, OutData%x_perturb) ! x_perturb 
+   call ExtPtfm_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
+   call ExtPtfm_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call ExtPtfm_UnpackOutput(RF, OutData%y_lin) ! y_lin 
+end subroutine
+
 subroutine ExtPtfm_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
    !
    ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
@@ -1858,5 +1916,295 @@ SUBROUTINE ExtPtfm_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function ExtPtfm_InputMeshPointer(u, DL) result(Mesh)
+   type(ExtPtfm_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (ExtPtfm_u_PtfmMesh)
+       Mesh => u%PtfmMesh
+   end select
+end function
+
+function ExtPtfm_OutputMeshPointer(y, DL) result(Mesh)
+   type(ExtPtfm_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (ExtPtfm_y_PtfmMesh)
+       Mesh => y%PtfmMesh
+   end select
+end function
+
+subroutine ExtPtfm_VarsPackContState(Vars, x, ValAry)
+   type(ExtPtfm_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call ExtPtfm_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine ExtPtfm_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtPtfm_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtPtfm_x_qm)
+         VarVals = x%qm(V%iLB:V%iUB)                                          ! Rank 1 Array
+      case (ExtPtfm_x_qmdot)
+         VarVals = x%qmdot(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtPtfm_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ExtPtfm_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call ExtPtfm_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine ExtPtfm_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtPtfm_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtPtfm_x_qm)
+         x%qm(V%iLB:V%iUB) = VarVals                                          ! Rank 1 Array
+      case (ExtPtfm_x_qmdot)
+         x%qmdot(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function ExtPtfm_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtPtfm_x_qm)
+       Name = "x%qm"
+   case (ExtPtfm_x_qmdot)
+       Name = "x%qmdot"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine ExtPtfm_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(ExtPtfm_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call ExtPtfm_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine ExtPtfm_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtPtfm_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtPtfm_x_qm)
+         VarVals = x%qm(V%iLB:V%iUB)                                          ! Rank 1 Array
+      case (ExtPtfm_x_qmdot)
+         VarVals = x%qmdot(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtPtfm_VarsPackConstrState(Vars, z, ValAry)
+   type(ExtPtfm_ConstraintStateType), intent(in) :: z
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%z)
+      call ExtPtfm_VarPackConstrState(Vars%z(i), z, ValAry)
+   end do
+end subroutine
+
+subroutine ExtPtfm_VarPackConstrState(V, z, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtPtfm_ConstraintStateType), intent(in) :: z
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtPtfm_z_DummyConstrState)
+         VarVals(1) = z%DummyConstrState                                      ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtPtfm_VarsUnpackConstrState(Vars, ValAry, z)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ExtPtfm_ConstraintStateType), intent(inout) :: z
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%z)
+      call ExtPtfm_VarUnpackConstrState(Vars%z(i), ValAry, z)
+   end do
+end subroutine
+
+subroutine ExtPtfm_VarUnpackConstrState(V, ValAry, z)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtPtfm_ConstraintStateType), intent(inout) :: z
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtPtfm_z_DummyConstrState)
+         z%DummyConstrState = VarVals(1)                                      ! Scalar
+      end select
+   end associate
+end subroutine
+
+function ExtPtfm_ConstraintStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtPtfm_z_DummyConstrState)
+       Name = "z%DummyConstrState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine ExtPtfm_VarsPackInput(Vars, u, ValAry)
+   type(ExtPtfm_InputType), intent(in)     :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call ExtPtfm_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine ExtPtfm_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtPtfm_InputType), intent(in)     :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtPtfm_u_PtfmMesh)
+         call MV_PackMesh(V, u%PtfmMesh, ValAry)                              ! Mesh
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtPtfm_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ExtPtfm_InputType), intent(inout)  :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call ExtPtfm_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine ExtPtfm_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtPtfm_InputType), intent(inout)  :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtPtfm_u_PtfmMesh)
+         call MV_UnpackMesh(V, ValAry, u%PtfmMesh)                            ! Mesh
+      end select
+   end associate
+end subroutine
+
+function ExtPtfm_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtPtfm_u_PtfmMesh)
+       Name = "u%PtfmMesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine ExtPtfm_VarsPackOutput(Vars, y, ValAry)
+   type(ExtPtfm_OutputType), intent(in)    :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call ExtPtfm_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine ExtPtfm_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtPtfm_OutputType), intent(in)    :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtPtfm_y_PtfmMesh)
+         call MV_PackMesh(V, y%PtfmMesh, ValAry)                              ! Mesh
+      case (ExtPtfm_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtPtfm_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ExtPtfm_OutputType), intent(inout) :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call ExtPtfm_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine ExtPtfm_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtPtfm_OutputType), intent(inout) :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtPtfm_y_PtfmMesh)
+         call MV_UnpackMesh(V, ValAry, y%PtfmMesh)                            ! Mesh
+      case (ExtPtfm_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function ExtPtfm_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtPtfm_y_PtfmMesh)
+       Name = "y%PtfmMesh"
+   case (ExtPtfm_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE ExtPtfm_MCKF_Types
+
 !ENDOFREGISTRYGENERATEDFILE

@@ -34,7 +34,8 @@ public :: IfW_SteadyWind_Init, &
           IfW_HAWC_Init, &
           IfW_User_Init, &
           IfW_Grid4D_Init, &
-          IfW_Points_Init
+          IfW_Points_Init, &
+          IfW_SteadyFlowField_Init
 
 public :: Uniform_WriteHH, &
           Grid3D_WriteBladed, &
@@ -87,7 +88,7 @@ subroutine IfW_SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMs
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Set parameters from inititialization input
+   ! Set parameters from initialization input
    UF%DataSize = 1
    UF%RefHeight = InitInp%RefHt
    UF%RefLength = 1.0_ReKi
@@ -152,6 +153,73 @@ subroutine IfW_SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMs
 
 end subroutine
 
+subroutine IfW_SteadyFlowField_Init(FF, RefHt, HWindSpeed, PLExp, ErrStat, ErrMsg, AngleH)
+   use InflowWind_IO_Types, only: Steady_InitInputType, WindFileDat
+   type(FlowFieldType), pointer, intent(inout)  :: FF                !< FlowField
+   real(ReKi), intent(in)                       :: RefHt             !< Hub reference height
+   real(ReKi), intent(in)                       :: HWindSpeed        !< Horizontal wind speed at reference height
+   real(ReKi), intent(in)                       :: PLExp             !< Power law shear coefficient
+   integer(IntKi), intent(out)                  :: ErrStat           !< Error status
+   character(*), intent(out)                    :: ErrMsg            !< Error message
+   real(ReKi), optional, intent(in)             :: AngleH            !< Horizontal angle
+
+   character(*), parameter    :: RoutineName = 'IfW_SteadyFlowField_Init'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+   type(Steady_InitInputType) :: InitInp
+   type(WindFileDat)          :: WFileDat
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! If FlowField pointer is already associated, destroy existing flow field;
+   ! otherwise, allocate a new flow field for pointer
+   if (associated(FF)) then
+      call IfW_FlowField_DestroyFlowFieldType(FF, ErrStat2, ErrMsg2); if (Failed()) return
+   else
+      allocate(FF, stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat(ErrID_Fatal, 'Error allocating flow field', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+   end if
+
+   ! Set flow-field type to uniform
+   FF%FieldType = Uniform_FieldType
+
+   ! Set parameters from initialization input
+   FF%Uniform%DataSize = 1
+   FF%Uniform%RefHeight = RefHt
+   FF%Uniform%RefLength = 1.0_ReKi
+
+   ! Allocate uniform wind data arrays
+   call UniformWind_AllocArrays(FF%Uniform, ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Set data values
+   FF%Uniform%Time = 0.0_ReKi
+   FF%Uniform%VelH = HWindSpeed
+   FF%Uniform%VelV = 0.0_ReKi
+   FF%Uniform%VelGust = 0.0_ReKi
+   if (present(AngleH)) then
+      FF%Uniform%AngleH = AngleH
+   else
+      FF%Uniform%AngleH = 0.0_ReKi
+   end if
+   FF%Uniform%AngleV = 0.0_ReKi
+   FF%Uniform%ShrH = 0.0_ReKi
+   FF%Uniform%ShrV = PLExp
+   FF%Uniform%LinShrV = 0.0_ReKi
+
+
+
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
 !> IfW_UniformWind_Init initializes a Uniform field from file.
 subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    type(Uniform_InitInputType), intent(in)   :: InitInp
@@ -178,7 +246,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Set parameters from inititialization input
+   ! Set parameters from initialization input
    UF%RefHeight = InitInp%RefHt
    UF%RefLength = InitInp%RefLength
 

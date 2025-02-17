@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioProject Keyword="Console Application" ProjectCreator="Intel Fortran" ProjectIdGuid="{D9220A21-8C69-42E4-B085-E5D996B867D9}" Version="11.0">
+	<Platforms>
+		<Platform Name="x64"/>
+	</Platforms>
+	<Configurations>
+		<Configuration IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Debug|x64" OutputDirectory="..\..\build\bin" UseCompiler="ifxCompiler">
+			<Tool BoundsCheck="true" DebugInformationFormat="debugEnabled" FloatingPointExceptionHandling="fpe0" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="" RuntimeLibrary="rtMultiThreadedDebug" StackFrameCheck="true" SuppressStartupBanner="true" Traceback="true" UseMkl="mklSequential" WarnInterfaces="true" WarnUnusedVariables="false"/>
+			<Tool GenerateDebugInformation="true" GenerateManifest="false" LinkIncremental="linkIncrementalNo" Name="VFLinkerTool" StackReserveSize="9999999" SubSystem="subSystemConsole" SuppressStartupBanner="true"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Debug_Double|x64" OutputDirectory="..\..\build\bin" UseCompiler="ifxCompiler">
+			<Tool BoundsCheck="true" DebugInformationFormat="debugEnabled" DoublePrecisionKIND="doublePrecisionKIND8" FloatingPointExceptionHandling="fpe0" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="" RealKIND="realKIND8" RuntimeLibrary="rtMultiThreadedDebug" StackFrameCheck="true" SuppressStartupBanner="true" Traceback="true" UseMkl="mklSequential" WarnInterfaces="true" WarnUnusedVariables="false"/>
+			<Tool GenerateDebugInformation="true" GenerateManifest="false" LinkIncremental="linkIncrementalNo" Name="VFLinkerTool" StackReserveSize="9999999" SubSystem="subSystemConsole" SuppressStartupBanner="true"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Debug_Matlab|x64" OutputDirectory="..\..\build\bin" UseCompiler="ifxCompiler">
+			<Tool BoundsCheck="true" DebugInformationFormat="debugEnabled" FloatingPointExceptionHandling="fpe0" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" RuntimeLibrary="rtMultiThreadedDebug" StackFrameCheck="true" SuppressStartupBanner="true" Traceback="true" UseMkl="mklSequential" WarnInterfaces="true" WarnUnusedVariables="false"/>
+			<Tool GenerateDebugInformation="true" GenerateManifest="false" LinkIncremental="linkIncrementalNo" Name="VFLinkerTool" StackReserveSize="9999999" SubSystem="subSystemConsole" SuppressStartupBanner="true"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release|x64" OutputDirectory="..\..\build\bin" UseCompiler="ifxCompiler">
+			<Tool MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Preprocess="preprocessYes" PreprocessorDefinitions="" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+			<Tool GenerateManifest="false" LinkIncremental="linkIncrementalNo" Name="VFLinkerTool" StackReserveSize="9999999" SubSystem="subSystemConsole" SuppressStartupBanner="true"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_Double|x64" OutputDirectory="..\..\build\bin" UseCompiler="ifxCompiler">
+			<Tool DoublePrecisionKIND="doublePrecisionKIND8" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Preprocess="preprocessYes" PreprocessorDefinitions="" RealKIND="realKIND8" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+			<Tool GenerateManifest="false" LinkIncremental="linkIncrementalNo" Name="VFLinkerTool" StackReserveSize="9999999" SubSystem="subSystemConsole" SuppressStartupBanner="true"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_Matlab|x64" OutputDirectory="..\..\build\bin" UseCompiler="ifxCompiler">
+			<Tool MultiProcessorCompilation="true" Name="VFFortranCompilerTool" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+			<Tool GenerateManifest="false" LinkIncremental="linkIncrementalNo" Name="VFLinkerTool" StackReserveSize="9999999" SubSystem="subSystemConsole" SuppressStartupBanner="true"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_OpenMP|x64" OutputDirectory="..\..\build\bin" UseCompiler="ifxCompiler">
+			<Tool EnableOpenMPSupport="OpenMPParallelCodeIFX" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode" Preprocess="preprocessYes" PreprocessorDefinitions="" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+			<Tool GenerateManifest="false" LinkIncremental="linkIncrementalNo" Name="VFLinkerTool" StackReserveSize="9999999" SubSystem="subSystemConsole" SuppressStartupBanner="true"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\" Name="Release_Double_OpenMP|x64" OutputDirectory="..\..\build\bin" UseCompiler="ifxCompiler">
+			<Tool DoublePrecisionKIND="doublePrecisionKIND8" EnableOpenMPSupport="OpenMPParallelCodeIFX" MultiProcessorCompilation="true" Name="VFFortranCompilerTool" OpenMP="OpenMPParallelCode" Preprocess="preprocessYes" PreprocessorDefinitions="" RealKIND="realKIND8" RuntimeLibrary="rtMultiThreaded" SuppressStartupBanner="true" UseMkl="mklSequential" WarnUnusedVariables="false"/>
+			<Tool GenerateManifest="false" LinkIncremental="linkIncrementalNo" Name="VFLinkerTool" StackReserveSize="9999999" SubSystem="subSystemConsole" SuppressStartupBanner="true"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+		<Filter Filter="txt" Name="Registry Files"/>
+		<Filter Filter="f90;for;f;fpp;ftn;def;odl;idl" Name="Source Files">
+			<File RelativePath="..\..\modules\beamdyn\src\Driver_Beam.f90"/>
+			<File RelativePath="..\..\modules\beamdyn\src\Driver_Beam_Subs.f90"/>
+		</Filter>
+	</Files>
+	<Globals/>
+</VisualStudioProject>

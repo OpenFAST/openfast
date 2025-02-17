@@ -66,7 +66,7 @@ typedef  ^        InitOutputType    CHARACTER(ChanLen)   WriteOutputHdr   {:} - 
 typedef  ^        InitOutputType    CHARACTER(ChanLen)   WriteOutputUnt   {:} - -   "Units of the output-to-file channels"   -
 typedef  ^        InitOutputType    ProgDesc             Ver               -  - -   "This module's name, version, and date"   -
 typedef  ^        InitOutputType    ReKi                 AirDens           -  - -   "Air density" "kg/m^3"
-
+typedef  ^        InitOutputType    ModVarsType          Vars              -  - -   "Module variables" -
 
 # ..... Inputs ....................................................................................................................
 # inputs on meshes: NONE
@@ -136,4 +136,10 @@ typedef  ^        MiscVarType          SiKi              Moment            3  - 
 typedef  ^        MiscVarType          ReKi              DiskWindPosAbs  {:}{:} - - "Disk locations for sampling to get disk avarage velocity (absolute for getting wind)" m
 typedef  ^        MiscVarType          ReKi              DiskWindVel     {:}{:} - - "Wind speed at disk locations for disk velocity"   m/s
 typedef  ^        MiscVarType          ReKi              DiskAvgVel        3  - -   "Average wind speed across rotor disk"             m/s
+typedef  ^        MiscVarType          ModJacType	             Jac       -  - -   "Values corresponding to module variables"
+typedef  ^        MiscVarType          ADsk_ContinuousStateType  x_perturb -  - -   "Continuous state type for linearization perturbation" -
+typedef  ^        MiscVarType          ADsk_ContinuousStateType  dxdt_lin  -  - -   "Continuous state type for linearization output" -
+typedef  ^        MiscVarType          ADsk_InputType            u_perturb -  - -   "Input type for linearization perturbation" -
+typedef  ^        MiscVarType          ADsk_OutputType           y_lin     -  - -   "Output type for linearization output" -
+
 

@@ -71,6 +71,23 @@ void Registry::parse(const std::string &file_name, const int recurse_level)
         auto module_name = has_slash ? fields_prev[1].substr(0, slash_index) : fields_prev[1];
         this->use_modules.push_back(module_name);
     }
+
+    // If this is not the root file, return
+    if (recurse_level != 0)
+    {
+        return;
+    }
+
+    // Get the root module
+    std::shared_ptr<Module> mod;
+    for (auto &it : this->modules)
+    {
+        if (it.second->is_root)
+        {
+            mod = it.second;
+            break;
+        }
+    }
 }
 
 int Registry::parse_line(const std::string &line, std::vector<std::string> &fields_prev,
