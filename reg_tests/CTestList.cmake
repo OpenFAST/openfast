@@ -359,6 +359,7 @@ of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerody
 if(BUILD_OPENFAST_CPP_DRIVER)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
   of_cpp_interface_regression("5MW_Restart_cpp"        "openfast;fastlib;cpp;restart")
+  of_cpp_interface_regression("5MW_Land_DLL_WTurb_ExtInfw_cpp" "openfast;fastlib;extinfw;cpp")
 endif()
 
 # OpenFAST Driver test for OpenFAST C++ Library
