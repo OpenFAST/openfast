@@ -2662,7 +2662,8 @@ SUBROUTINE BD_QPData_mEta_rho( p, m )
    do nelem = 1, p%elem_total
       qp_start = (nelem-1)*p%nqp
       do idx_qp = 1, p%nqp
-         call Calc_RR0mEta_rho(m%qp%RR0(:,:,idx_qp,nelem), &
+         call Calc_RR0mEta_rho(p%qp%mEta(:,idx_qp,nelem), &
+                               m%qp%RR0(:,:,idx_qp,nelem), &
                                p%Mass0_QP(:,:,qp_start+idx_qp), &
                                m%qp%RR0mEta(:,idx_qp,nelem), &
                                m%qp%rho(:,:,idx_qp,nelem))
@@ -2670,13 +2671,13 @@ SUBROUTINE BD_QPData_mEta_rho( p, m )
    end do
 
 contains
-   subroutine Calc_RR0mEta_rho(RR0, Mass0, RR0mEta, rho)
-      real(BDKi), intent(in)  :: RR0(:,:), Mass0(:,:)
+   subroutine Calc_RR0mEta_rho(mEta, RR0, Mass0, RR0mEta, rho)
+      real(BDKi), intent(in)  :: mEta(:), RR0(:,:), Mass0(:,:)
       real(BDKi), intent(out)  :: RR0mEta(:), rho(:,:)
 
          !> Calculate the new center of mass times mass at the deflected location
          !! as \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) m \underline{\eta} \f$
-         RR0mEta(:) = MATMUL(RR0, p%qp%mEta(:,idx_qp,nelem))
+         RR0mEta(:) = MATMUL(RR0, mEta)
 
          !> Calculate \f$ \rho = \left(\underline{\underline{R}}\underline{\underline{R}}_0\right)
          !!                      \underline{\underline{M}}_{2,2}
