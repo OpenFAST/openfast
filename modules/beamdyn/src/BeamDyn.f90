@@ -2676,7 +2676,7 @@ contains
 
          !> Calculate the new center of mass times mass at the deflected location
          !! as \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) m \underline{\eta} \f$
-         RR0mEta(:,idx_qp,nelem) = MATMUL(RR0, p%qp%mEta(:,idx_qp,nelem))
+         RR0mEta(:) = MATMUL(RR0, p%qp%mEta(:,idx_qp,nelem))
 
          !> Calculate \f$ \rho = \left(\underline{\underline{R}}\underline{\underline{R}}_0\right)
          !!                      \underline{\underline{M}}_{2,2}
