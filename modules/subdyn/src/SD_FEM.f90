@@ -909,7 +909,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    REAL(ReKi)               :: D1, D2, Sa1, Sa2, Sb1, Sb2, t1, t2, E, G, rho ! properties of a section
    REAL(FEKi)               :: DirCos(3, 3)              ! direction cosine matrices
    REAL(ReKi)               :: L                         ! length of the element
-   REAL(ReKi)               :: r1, r2, t, Ixx, Iyy, Jzz, Jt, A, kappa, kappa_x, kappa_y, nu, ratioSq, D_inner, D_outer
+   REAL(ReKi)               :: r1, r2, t, Ixx, Iyy, Jzz, Jt, A, kappa, kappa_x, kappa_y, nu, ratio, ratioSq, D_inner, D_outer
    REAL(ReKi)               :: k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k33, k34, k35, k36, k44, k45, k46, k55, k56, k66
    LOGICAL                  :: shear
    INTEGER(IntKi)           :: eType !< Member type
@@ -1069,17 +1069,48 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          Ixx = (Sa1*Sb1**3 - Sa2*Sb2**3)/12.0
          Iyy = (Sa1**3*Sb1 - Sa2**3*Sb2)/12.0
          Jzz = (Sa1*Sb1*(Sa1*Sa1+Sb1*Sb1) - Sa2*Sb2*(Sa2*Sa2+Sb2*Sb2))/12.0
-         Jt  = 2.0*t*(Sa1-t)**2*(Sb1-t)**2/(Sa1+Sb1-2.0*t)
 
+         ! Torsion constant
+         if ( Sa2==0.0 .or. Sb2==0.0 ) then  ! Solid rectangular section
+            if (Sa1 >= Sb1) then
+               Jt = Sa1*Sb1**3/16.0*(16.0/3.0-3.36*Sb1/Sa1*(1-Sb1**4/12.0/Sa1**4))
+            else
+               Jt = Sb1*Sa1**3/16.0*(16.0/3.0-3.36*Sa1/Sb1*(1-Sa1**4/12.0/Sb1**4))
+            end if
+         else                                 ! Thin-walled approximation
+            Jt  = 2.0*t*(Sa1-t)**2*(Sb1-t)**2/(Sa1+Sb1-2.0*t)
+            if ( t > 0.05*min(Sa1,Sb1) ) then
+               CALL WrScr('[WARNING] The torsion constants and shear coefficients for rectangular members are only valid for thin-walled sections or solid sections.')
+            end if
+         end if
+
+         ! Shear coefficients
          if( Init%FEMMod == 1 ) then ! uniform Euler-Bernoulli
             Shear = .false.
-            kappa = 0
+            kappa_x = 0.
+            kappa_y = 0.
          elseif( Init%FEMMod == 3 ) then ! uniform Timoshenko
             Shear = .true.
-            ! Simple thin-wall approximation
-            kappa_x = 1.0/(1.0+Sb1/Sa1)
-            kappa_y = 1.0/(1.0+Sa1/Sb1)
+            nu = E / (2.0_ReKi*G) - 1.0_ReKi
+            if ( Sa2==0.0 .or. Sb2==0.0 ) then  ! Solid rectangular section
+               kappa_x = 10.0*(1.0+nu)/(12.0+11.0*nu)
+               kappa_y = kappa_x
+            else                                 ! Thin-walled approximation
+               ! kappa_x = 1.0/(1.0+Sb1/Sa1)
+               ! kappa_y = 1.0/(1.0+Sa1/Sb1)
+               ratio = Sb2/Sa1
+               kappa_x = 10.0*(1.0+nu)*(1.0+3.0*ratio)**2 / ( &
+                         (12.0+72.0*ratio+150.0*ratio**2+90.0*ratio**3) + &
+                         nu*(11.0+66.0*ratio+135.0*ratio**2+90.0*ratio**3) + &
+                         10.0*ratio**2*((3.0+nu)*ratio+3.0*ratio**2) )
+               ratio = Sa2/Sb1
+               kappa_y = 10.0*(1.0+nu)*(1.0+3.0*ratio)**2 / ( &
+                         (12.0+72.0*ratio+150.0*ratio**2+90.0*ratio**3) + &
+                         nu*(11.0+66.0*ratio+135.0*ratio**2+90.0*ratio**3) + &
+                         10.0*ratio**2*((3.0+nu)*ratio+3.0*ratio**2) )
+            endif
          endif
+
          ! Storing Beam specific properties
          p%ElemProps(i)%Ixx    = Ixx
          p%ElemProps(i)%Iyy    = Iyy
