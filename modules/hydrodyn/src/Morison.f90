@@ -1875,6 +1875,9 @@ subroutine FlipMemberNodeData( member, nodes, doSwap)
          member%NodeIndx(1+i) = member%NodeIndx(numMemNodes-i)
          member%NodeIndx(numMemNodes-i) = indx
       end do
+
+      ! Flip the sign of the spin angle
+      member%MSpinOrient = -member%MSpinOrient
       
    end if    
    
