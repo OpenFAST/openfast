@@ -1294,7 +1294,7 @@ DO I = 1, Init%NPropSetsBC
    CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBCCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
    Init%PropSetsBC(I,:) = Dummy_ReAry(1:PropSetsBCCol)
 ENDDO   
-IF (Check( Init%NPropSetsBC < 1 , 'NPropSets must be >0')) return
+IF (Check( Init%NPropSetsBC < 0, 'NPropSetsBC must be >=0')) return
 
 !------------------ MEMBER CROSS-SECTION PROPERTY data 2/3 [isotropic material for now: use this table if rectangular-tubular elements ---------------------
 CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 2/3 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1306,7 +1306,7 @@ DO I = 1, Init%NPropSetsBR
    CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBRCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
    Init%PropSetsBR(I,:) = Dummy_ReAry(1:PropSetsBRCol)
 ENDDO
-IF (Check( Init%NPropSetsBR < 1 , 'NPropSets must be >0')) return
+IF (Check( Init%NPropSetsBR < 0, 'NPropSetsBR must be >=0')) return
 
 !------------------ MEMBER CROSS-SECTION PROPERTY data 2/3 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
 CALL ReadCom  ( UnIn, SDInputFile,                  'Member CROSS-Section Property Data 3/3 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1317,7 +1317,7 @@ CALL AllocAry(Init%PropSetsX, Init%NPropSetsX, PropSetsXCol, 'XPropSets', ErrSta
 DO I = 1, Init%NPropSetsX
    CALL ReadAry( UnIn, SDInputFile, Init%PropSetsX(I,:), PropSetsXCol, 'XPropSets', 'XPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 ENDDO   
-IF (Check( Init%NPropSetsX < 0, 'NXPropSets must be >=0')) return
+IF (Check( Init%NPropSetsX < 0,  'NPropSetsX must be >=0')) return
 
 if (.not. LegacyFormat) then
    !-------------------------- CABLE PROPERTIES  -------------------------------------
