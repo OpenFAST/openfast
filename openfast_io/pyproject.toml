@@ -7,7 +7,7 @@ name = "openfast_io"
 # dynamic = ["version"]
 version = "4.0.2"
 description = "Readers and writers for OpenFAST files."
-license = {file = "LICENSE"}
+license = {file = "../LICENSE"}
 authors = [
     {name = "Mayank Chetan", email = "mayank.chetan@nrel.gov"      },
     {name = "Andy Platt", email = "andy.platt@nrel.gov"            },
