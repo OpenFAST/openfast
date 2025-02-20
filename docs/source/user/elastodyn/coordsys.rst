@@ -6,6 +6,9 @@ Coordinate systems
 
 For the coordinates system not detailed in subsections below, please refer to the following references:
 
+- :download:`OpenFAST_coords.pdf <../../../OtherSupporting/OpenFAST_coords.pdf>`:
+  Presentation from 2024 overviewing some coordinate systems in OpenFAST.
+
 - `FAST 7 Manual <https://www.nrel.gov/docs/fy06osti/38230.pdf>`_
 
 - `Technical report <https://www.nrel.gov/docs/fy04osti/34755.pdf>`_ on FAST_AD and modeling of the UAE wind turbine (in section 3)

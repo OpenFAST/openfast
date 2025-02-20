@@ -177,8 +177,9 @@ typedef ^ ^                     IntKi           IterTotal               -  0  - 
 typedef ^ ^                     IntKi           UJacIterRemain          -  0  -     "Number of convergence iterations until Jacobian update" -
 typedef ^ ^                     IntKi           UJacStepsRemain         -  0  -     "Number of time steps until Jacobian update" -
 typedef ^ ^                     logical         ConvWarn                -  -  -     "Flag to warn about convergence failure" -
-typedef ^ ^                     R8Ki            XB_IO                   :: -  -     "" -
-typedef ^ ^                     R8Ki            Jac_IO                  :: -  -     "" -
+typedef ^ ^                     R8Ki            IO_R                    :  -  -     "Input Solve residual (RHS)" -
+typedef ^ ^                     R8Ki            IO_X                    :: -  -     "Input Solve delta input" -
+typedef ^ ^                     R8Ki            IO_Jac                  :: -  -     "Input Solve jacobian" -
 typedef ^ ^                     R8Ki            J11                     :: -  -     "Jacobian upper left quadrant" -
 typedef ^ ^                     R8Ki            J12                     :: -  -     "Jacobian upper right quadrant" -
 typedef ^ ^                     R8Ki            J21                     :: -  -     "Jacobian lower left quadrant" -
