@@ -2176,6 +2176,7 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
       y_FAST%numOuts(Module_Glue) = 1 + size(y_FAST%DriverWriteOutput)
    else
       y_FAST%numOuts(Module_Glue) = 4 ! time, ConvIter, ConvError, NumUJac
+      if (p_FAST%CalcSteady) y_FAST%numOuts(Module_Glue) = y_FAST%numOuts(Module_Glue) + 1
    end if
 
 
@@ -2220,6 +2221,11 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
 
       y_FAST%ChannelNames(4) = 'NumUJac'
       y_FAST%ChannelUnits(4) = '(-)'
+
+      if (p_FAST%CalcSteady) then
+         y_FAST%ChannelNames(5) = 'CSError'
+         y_FAST%ChannelUnits(5) = '(-)'
+      end if
    end if
 
    indxNext = y_FAST%numOuts(Module_Glue) + 1

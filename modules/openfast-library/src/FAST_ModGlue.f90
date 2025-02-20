@@ -765,6 +765,9 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
          ! azimuth from the previous rotation
          error = CalcOutputErrorAtAzimuth()
 
+         ! Sae error for output
+         T%y_FAST%DriverWriteOutput(4) = real(error, ReKi)
+
          ! Update converged flag based on error and tolerance
          m%CS%IsConverged = (error < p_FAST%TrimTol)
 
