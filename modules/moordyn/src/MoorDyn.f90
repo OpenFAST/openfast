@@ -36,7 +36,7 @@ MODULE MoorDyn
 
    TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.3.8', '2025-02-27' )
 
-   INTEGER(IntKi), PARAMETER            :: wordy = 1   ! verbosity level. >1 = more console output
+   INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
    PUBLIC :: MD_Init
    PUBLIC :: MD_UpdateStates
@@ -1490,8 +1490,9 @@ CONTAINS
                      Nx = Nx + m%LineList(l)%N      ! if using viscoelastic model, need one more state per segment    
                   end if
                   
-                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%Cl > 1) then 
+                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%Cl > 0) then 
                      Nx = Nx + m%LineList(l)%N+1      ! if using VIV model, need one more state per node (note here N is the num sgemnts, so N+1 is number of nodes). TODO: when we change to only internal nodes need to make N - 1. 
+                     print *, "Added state for VIV. Nx is now", Nx
                   endif
 
                   m%LineStateIsN(l) = Nx      
