@@ -29,7 +29,7 @@ MODULE MoorDyn_Line
 
    PRIVATE
 
-   INTEGER(IntKi), PARAMETER            :: wordy = 3   ! verbosity level. >1 = more console output
+   INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
    PUBLIC :: SetupLine
    PUBLIC :: Line_Initialize
@@ -178,7 +178,7 @@ CONTAINS
          Line%dl_1 = 0.0_DbKi
       end if
 
-      ! if using viscoelastic model, allocate additional state quantities
+      ! if using VIV model, allocate additional state quantities. TODO: interal nodes only
       if (Line%Cl > 0) then
          if (wordy > 1) print *, "Using the VIV model"
          ! allocate old acclerations [for VIV] 
@@ -189,8 +189,8 @@ CONTAINS
             RETURN
          END IF
          ! initialize to unique values on the range 0-2pi
-         do I=0, Line%N
-            Line%phi(I) = (I/Line%N)*2*Pi
+         do I=0, Line%N ! TODO: internal ndoes only
+            Line%phi(I) = (REAL(I)/Line%N)*2*Pi
          enddo
       end if
       
@@ -1042,12 +1042,13 @@ CONTAINS
       end if
 
       ! if using the viv mdodel, also set the lift force phase
-      if (Line%Cl > 0) then
+      if (Line%Cl > 0 .AND. (.NOT. Line%IC_gen) .AND. t > 0) then ! not needed in IC_gen, and t=0 should be skipped to avoid setting these all to zero. Initialize as distribution on 0-2pi
+         ! if (t < 0.0002) print *, "Line State" , X
          do I=0, Line%N ! TODO: after checking change to internal
-            if (Line%ElasticMod > 1) then ! if both additional states are included then N+1 entries after internal node states and visco segment states
-                  Line%phi(I) = X( 7*Line%N-6 + I + 1) - (2 * Pi * floor(X( 7*Line%N-6 + I + 1) / (2*Pi))) ! Map integrated phase to 0-2Pi range. Is this necessary? sin (a-b) is the same if b is 100 pi or 2pi
+            if (Line%ElasticMod > 1) then ! if both additional states are included then N-1 entries after internal node states and visco segment states
+                  Line%phi(I) = X( 7*Line%N-6 + I+1) - (2 * Pi * floor(X( 7*Line%N-6 + I+1) / (2*Pi))) ! Map integrated phase to 0-2Pi range. Is this necessary? sin (a-b) is the same if b is 100 pi or 2pi
             else ! if only VIV state, then N+1 entries after internal node states
-                  Line%phi(I) = X( 6*Line%N-6 + I + 1) - (2 * Pi * floor(X( 6*Line%N-6 + I + 1) / (2*Pi))) ! Map integrated phase to 0-2Pi range. Is this necessary? sin (a-b) is the same if b is 100 pi or 2pi
+                  Line%phi(I) = X( 6*Line%N-6 + I+1) - (2 * Pi * floor(X( 6*Line%N-6 + I+1) / (2*Pi))) ! Map integrated phase to 0-2Pi range. Is this necessary? sin (a-b) is the same if b is 100 pi or 2pi
             endif
          enddo
       endif
@@ -1535,13 +1536,13 @@ CONTAINS
 
          ! print *, "Made it to VIV model"
          ! Vortex Induced Vibration (VIV) cross-flow lift force
-         IF ((Line%Cl > 0.0) .AND. (.NOT. Line%IC_gen)) THEN ! If non-zero lift coefficient and not during IC_gen then VIV to be calculated
+         IF ((Line%Cl > 0.0) .AND. (.NOT. Line%IC_gen)) THEN ! If non-zero lift coefficient and not during IC_gen ! Ignore the following: and internal node then VIV to be calculated .AND. (I /= 0) .AND. (I /= N)
    
             ! ----- The Synchronization Model ------
             ! Crossflow velocity and acceleration. rd component in the crossflow direction
       
             yd = dot_product(Line%rd(:,I), cross_product(Line%q(:,I), normalize(Vp) ) )
-            ydd = dot_product(Line%rdd_old(0:2,I), cross_product(Line%q(:,I), normalize(Vp) ) )
+            ydd = dot_product(Line%rdd_old(:,I), cross_product(Line%q(:,I), normalize(Vp) ) )
             
             ! ! for checking rdd_old fix
             ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen .and. (I > 95 .or. I <5)) then 
@@ -1602,35 +1603,15 @@ CONTAINS
    
             ! The Lift force
             IF (I==0) THEN ! TODO: drop for only internal nodes
-               Line%Lf(:,I) = 0.5 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(1)*Line%l(1)
+               Line%Lf(:,I) = 0.25 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(1)*Line%l(1)
             ELSE IF (I==N)  THEN ! TODO: drop for only internal nodes
-               Line%Lf(:,I) = 0.5 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(N)*Line%l(N)
+               Line%Lf(:,I) = 0.25 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(N)*Line%l(N)
             ELSE
-               Line%Lf(:,I) = 0.5 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * (Line%F(I)*Line%l(I) + Line%F(I+1)*Line%l(I+1))
+               Line%Lf(:,I) = 0.25 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * (Line%F(I)*Line%l(I) + Line%F(I+1)*Line%l(I+1))
             END IF
 
             if (wordy > 0) then
                if (Is_NaN(norm2(Line%Lf(:,I)))) print*, "Lf nan at node", I, "for line", Line%IdNum
-            endif
-
-            ! finding nans
-            if (Line%time == 2*p%dtM0 .and. I==N-2) then
-               print *, "-------"
-               print *, "Line%time", Line%time
-               print *, "I", I 
-               print *, "Line%Lf(:,I)", Line%Lf(:,I)
-               print *, "MagVp", MagVp
-               print *, "Line%U(:,I)", Line%U(:,I) 
-               print *, "Line%phi(I)", Line%phi(I)
-               print *, "phi_dot", phi_dot
-               print *, "f_hat", f_hat
-               print *, "Line%phi_yd", Line%phi_yd
-               print *, "yd", yd
-               print *, "ydd", ydd
-               print *, "Line%rd(:,I)", Line%rd(:,I)
-               print *, "Line%rdd_old(0:2,I)", Line%rdd_old(0:2,I)
-               print *, "Line%q(:,I)", Line%q(:,I)
-               print *, "Vp", Vp
             endif
 
 
@@ -1642,6 +1623,27 @@ CONTAINS
             else ! if only VIV state, then N+1 entries after internal node states
                Xd( 6*Line%N-6 + I + 1) = phi_dot
             endif
+
+            ! ! debugging
+            ! if (Line%time < 2*p%dtM0 .AND. I == N/2) then
+            !    print *, "Line%time", Line%time
+            !    print *, "I", I 
+            !    print *, "Line%Lf(:,I)", Line%Lf(:,I)
+            !    print *, "MagVp", MagVp
+            !    print *, "Line%U(:,I)", Line%U(:,I) 
+            !    print *, "Line%phi(I)", Line%phi(I)
+            !    print *, "phi_dot", phi_dot
+            !    print *, "f_hat", f_hat
+            !    ! print *, "Line%phi_yd", Line%phi_yd
+            !    ! print *, "yd", yd
+            !    ! print *, "ydd", ydd
+            !    ! print *, "Line%rd(:,I)", Line%rd(:,I)
+            !    ! print *, "Line%rdd_old(0:2,I)", Line%rdd_old(:,I)
+            !    print *, "Line%q(:,I)", Line%q(:,I)
+            !    print *, "Vp", Vp
+            !    print*, "State Deriv", Xd
+            !    print *, "-------"
+            ! endif
 
             ! print*, "end update state deriv"
             ! Miscd(I)[2] = As_dot; ! unused state that could be used for future amplitude calculations
@@ -1771,11 +1773,11 @@ CONTAINS
             
             IF (Line%Cl > 0) THEN 
                ! ! for checking rdd_old fix
-               ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen .and. I > 95) then 
+               ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen .and. I > N-5) then 
                !    print*, "I in the rdd_old loop", I
                !    print*, "Sum1 for above I at J =", J, "is", Sum1
                ! endif
-               Line%rdd_old(J-1,I-1) = Sum1 ! saving the acceleration for VIV RMS calculation. WARNING: I-1 is intential to match the incorrect approach in MD-C (map internal node accel to the first N-2 elements of rdd_old.) After testing REMOVE the I-1 and make the VIV model only apply to internal nodes. J-1 here to shift things correctly. Not sure why we need this but it doesnt work otherwise ...
+               Line%rdd_old(J,I-1) = Sum1 ! saving the acceleration for VIV RMS calculation. WARNING: I-1 is intential to match the incorrect approach in MD-C (map internal node accel to the first N-2 elements of rdd_old.) After testing REMOVE the I-1 and make the VIV model only apply to internal nodes. J-1 here to shift things correctly. Not sure why we need this but it doesnt work otherwise ...
             ENDIF
 
          END DO ! J
@@ -1789,11 +1791,11 @@ CONTAINS
       ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen) then
       !    print*, "rdd_old at t = ", Line%time
       !    DO I = 0, 4
-      !       print*, "I =", I, "rdd_old =", Line%rdd_old(0,I), Line%rdd_old(1,I), Line%rdd_old(2,I)
+      !       print*, "I =", I, "rdd_old =", Line%rdd_old(:,I)
       !    enddo
       !    print*, "..."
       !    DO I = N-4, N 
-      !       print*, "I =", I, "rdd_old =", Line%rdd_old(0,I), Line%rdd_old(1,I), Line%rdd_old(2,I)
+      !       print*, "I =", I, "rdd_old =", Line%rdd_old(:,I)
       !    enddo
 	   ! endif
 
