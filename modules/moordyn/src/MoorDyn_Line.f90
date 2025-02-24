@@ -29,7 +29,7 @@ MODULE MoorDyn_Line
 
    PRIVATE
 
-   INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
+   INTEGER(IntKi), PARAMETER            :: wordy = 3   ! verbosity level. >1 = more console output
 
    PUBLIC :: SetupLine
    PUBLIC :: Line_Initialize
@@ -80,7 +80,12 @@ CONTAINS
       Line%Can   = LineProp%Can
       Line%Cat   = LineProp%Cat
       Line%Cdn   = LineProp%Cdn
-      Line%Cdt   = LineProp%Cdt      
+      Line%Cdt   = LineProp%Cdt    
+      Line%Cl    = LineProp%Cl
+      Line%dF    = LineProp%dF
+      Line%cF    = LineProp%cF
+      
+      Line%n_m = 500 ! hardcode n_m to 500 (for VIV)
       
       ! copy over elasticity data
       Line%ElasticMod = LineProp%ElasticMod
@@ -120,7 +125,7 @@ CONTAINS
          ! - highest axial vibration mode of a segment is wn = sqrt(k/m) = 2N/UnstrLen*sqrt(EA/w)
          Line%BA = -LineProp%BA * Line%UnstrLen / Line%N * SQRT(LineProp%EA * LineProp%w)
          if (p%writeLog > 0) then
-            write(p%UnLog,'(A)') "Based on -zeta of "//trim(Num2LStr(LineProp%BA))//", BA set to "//trim(Num2LStr(Line%BA))
+            write(p%UnLog,'(A)') "      "//"Based on -zeta of "//trim(Num2LStr(LineProp%BA))//", BA set to "//trim(Num2LStr(Line%BA)) ! extra space at front to make nice formatting in log file
          end if
          
          IF (wordy > 1) print *, 'Based on zeta, BA set to ', Line%BA
@@ -162,6 +167,7 @@ CONTAINS
       
       ! if using viscoelastic model, allocate additional state quantities
       if (Line%ElasticMod > 1) then
+         if (wordy > 1) print *, "Using the viscoelastic model"
          ALLOCATE ( Line%dl_1(N), STAT = ErrStat )
          IF ( ErrStat /= ErrID_None ) THEN
             ErrMsg  = ' Error allocating dl_1 array.'
@@ -170,6 +176,22 @@ CONTAINS
          END IF
          ! initialize to zero
          Line%dl_1 = 0.0_DbKi
+      end if
+
+      ! if using viscoelastic model, allocate additional state quantities
+      if (Line%Cl > 0) then
+         if (wordy > 1) print *, "Using the VIV model"
+         ! allocate old acclerations [for VIV] 
+         ALLOCATE ( Line%phi(0:N), Line%rdd_old(3,0:N), Line%yd_rms_old(0:N), Line%ydd_rms_old(0:N), STAT = ErrStat )
+         IF ( ErrStat /= ErrID_None ) THEN
+            ErrMsg  = ' Error allocating VIV arrays.'
+            !CALL CleanUp()
+            RETURN
+         END IF
+         ! initialize to unique values on the range 0-2pi
+         do I=0, Line%N
+            Line%phi(I) = (I/Line%N)*2*Pi
+         enddo
       end if
       
       ! allocate node and segment tangent vectors
@@ -213,8 +235,9 @@ CONTAINS
       END IF
 
       ! allocate node force vectors
-      ALLOCATE ( Line%W(3, 0:N), Line%Dp(3, 0:N), Line%Dq(3, 0:N), Line%Ap(3, 0:N), &
-         Line%Aq(3, 0:N), Line%B(3, 0:N), Line%Bs(3, 0:N), Line%Fnet(3, 0:N), STAT = ErrStat )
+      ALLOCATE ( Line%W(3, 0:N), Line%Dp(3, 0:N), Line%Dq(3, 0:N), &
+         Line%Ap(3, 0:N), Line%Aq(3, 0:N), Line%B(3, 0:N), Line%Bs(3, 0:N), &
+         Line%Lf(3, 0:N), Line%Fnet(3, 0:N), STAT = ErrStat ) ! TODO: LF only to internal nodes after testing
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating node force arrays.'
          !CALL CleanUp()
@@ -996,6 +1019,7 @@ CONTAINS
       INTEGER(IntKi)                   :: i              ! index of segments or nodes along line
       INTEGER(IntKi)                   :: J              ! index
    
+      ! print*, "begining set state"
 
       ! store current time
       Line%time = t
@@ -1013,9 +1037,20 @@ CONTAINS
       ! if using viscoelastic model, also set the static stiffness stretch
       if (Line%ElasticMod > 1) then
          do I=1,Line%N
-            Line%dl_1(I) = X( 6*Line%N-6 + I)   ! these will be the last N entries in the state vector
+            Line%dl_1(I) = X( 6*Line%N-6 + I)   ! these will be the N entries in the state vector passed the internal node states
          end do
       end if
+
+      ! if using the viv mdodel, also set the lift force phase
+      if (Line%Cl > 0) then
+         do I=0, Line%N ! TODO: after checking change to internal
+            if (Line%ElasticMod > 1) then ! if both additional states are included then N+1 entries after internal node states and visco segment states
+                  Line%phi(I) = X( 7*Line%N-6 + I + 1) - (2 * Pi * floor(X( 7*Line%N-6 + I + 1) / (2*Pi))) ! Map integrated phase to 0-2Pi range. Is this necessary? sin (a-b) is the same if b is 100 pi or 2pi
+            else ! if only VIV state, then N+1 entries after internal node states
+                  Line%phi(I) = X( 6*Line%N-6 + I + 1) - (2 * Pi * floor(X( 6*Line%N-6 + I + 1) / (2*Pi))) ! Map integrated phase to 0-2Pi range. Is this necessary? sin (a-b) is the same if b is 100 pi or 2pi
+            endif
+         enddo
+      endif
          
    END SUBROUTINE Line_SetState
    !--------------------------------------------------------------
@@ -1103,6 +1138,13 @@ CONTAINS
       Real(DbKi)                       :: FfT(3)         ! total friction force in the transverse direction
       Real(DbKi)                       :: FfA(3)         ! total friction force in the axial direction
       Real(DbKi)                       :: Ff(3)          ! total friction force on the line node
+      ! VIV stuff
+      Real(DbKi)                       :: yd            ! Crossflow velocity
+      Real(DbKi)                       :: ydd           ! Crossflow acceleration
+      Real(DbKi)                       :: yd_rms        ! Rolling rms of crossflow velocity
+      Real(DbKi)                       :: ydd_rms       ! Rolling rms of crossflow acceleration
+      Real(DbKi)                       :: phi_dot       ! frequency of lift force (rad/s)
+      Real(DbKi)                       :: f_hat         ! non-dimensional frequency 
 
 
       N = Line%N                      ! for convenience
@@ -1119,7 +1161,7 @@ CONTAINS
       !      Line%rd(J,0) = m%PointList(Line%AnchPoint)%rd(J)
       !   END DO
 
-
+      ! print*, "begining get state deriv"
 
       ! -------------------- calculate various kinematic quantities ---------------------------
       DO I = 1, N
@@ -1300,9 +1342,24 @@ CONTAINS
          else if (Line%ElasticMod > 1) then
 
             if (Line%ElasticMod == 3) then
-               if (Line%dl_1(I) >= 0.0) then
+               if (Line%dl_1(I) > 0.0) then
                   ! Mean load dependent dynamic stiffness: from combining eqn. 2 and eqn. 10 from original MD viscoelastic paper, taking mean load = k1 delta_L1 / MBL, and solving for k_D using WolframAlpha with following conditions: k_D > k_s, (MBL,alpha,beta,unstrLen,delta_L1) > 0
                   EA_D = 0.5 * ((Line%alphaMBL) + (Line%vbeta*Line%dl_1(I)*(Line%EA / Line%l(I))) + Line%EA + sqrt((Line%alphaMBL * Line%alphaMBL) + (2*Line%alphaMBL*(Line%EA / Line%l(I)) * (Line%vbeta*Line%dl_1(I) - Line%l(I))) + ((Line%EA / Line%l(I))*(Line%EA / Line%l(I)) * (Line%vbeta*Line%dl_1(I) + Line%l(I))*(Line%vbeta*Line%dl_1(I) + Line%l(I)))))
+                  
+                  ! Double check none of the assumptions were violated (this should never happen)
+                  IF (Line%alphaMBL <= 0 .OR. Line%vbeta <= 0 .OR. Line%l(I) <= 0 .OR. Line%dl_1(I) <= 0 .OR. EA_D < Line%EA) THEN
+                     ErrStat = ErrID_Warn
+                     ErrMsg = "Viscoelastic model: Assumption for mean laod dependent dynamic stiffness violated"
+                     if (wordy > 2) then
+                        print *, "Line%alphaMBL", Line%alphaMBL
+                        print *, "Line%vbeta", Line%vbeta
+                        print *, "Line%l(I)", Line%l(I)
+                        print *, "Line%dl_1(I)", Line%dl_1(I)
+                        print *, "EA_D", EA_D
+                        print *, "Line%EA", Line%EA
+                     endif
+                  ENDIF
+
                else
                   EA_D = Line%alphaMBL ! mean load is considered to be 0 in this case. The second term in the above equation is not valid for delta_L1 < 0.
                endif
@@ -1336,7 +1393,7 @@ CONTAINS
 
             MagTd = Line%BA*ld_1 / Line%l(I) ! compute tension based on static portion (dynamic portion would give same). See eqn. 14 in paper
             
-            ! update state derivative for static stiffness stretch (last N entries in the state vector)
+            ! update state derivative for static stiffness stretch (last N entries in the line state vector if no VIV model, otherwise N entries past the 6*N-6 entries in this vector)
             Xd( 6*N-6 + I) = ld_1
          
          end if
@@ -1449,14 +1506,14 @@ CONTAINS
 
          ! relative flow velocities
          DO J = 1, 3
-            Vi(J) = Line%U(J,I) - Line%rd(J,I)                               ! relative flow velocity over node -- this is where wave velicites would be added
+            Vi(J) = Line%U(J,I) - Line%rd(J,I)                               ! relative flow velocity over node -- this is where wave velocities would be added
          END DO
 
          ! decomponse relative flow into components
          SumSqVp = 0.0_DbKi                                         ! start sums of squares at zero
          SumSqVq = 0.0_DbKi
          DO J = 1, 3
-            Vq(J) = DOT_PRODUCT( Vi , Line%q(:,I) ) * Line%q(J,I);   ! tangential relative flow component
+            Vq(J) = DOT_PRODUCT( Vi , Line%q(:,I) ) * Line%q(J,I)   ! tangential relative flow component
             Vp(J) = Vi(J) - Vq(J)                                    ! transverse relative flow component
             SumSqVq = SumSqVq + Vq(J)*Vq(J)
             SumSqVp = SumSqVp + Vp(J)*Vp(J)
@@ -1476,9 +1533,126 @@ CONTAINS
             Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*(Line%F(I)*Line%l(I) + Line%F(I+1)*Line%l(I+1)) * MagVq * Vq
          END IF
 
+         ! print *, "Made it to VIV model"
+         ! Vortex Induced Vibration (VIV) cross-flow lift force
+         IF ((Line%Cl > 0.0) .AND. (.NOT. Line%IC_gen)) THEN ! If non-zero lift coefficient and not during IC_gen then VIV to be calculated
+   
+            ! ----- The Synchronization Model ------
+            ! Crossflow velocity and acceleration. rd component in the crossflow direction
+      
+            yd = dot_product(Line%rd(:,I), cross_product(Line%q(:,I), normalize(Vp) ) )
+            ydd = dot_product(Line%rdd_old(0:2,I), cross_product(Line%q(:,I), normalize(Vp) ) )
+            
+            ! ! for checking rdd_old fix
+            ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen .and. (I > 95 .or. I <5)) then 
+            !    print*, "rdd_old at t = ", Line%time
+            !    print*, "I =", I, "rdd_old(0:2,I) =", Line%rdd_old(0:2,I)
+            ! endif
+
+            ! print*, "crossflow stuff done"
+
+            ! Rolling RMS calculation
+            yd_rms = sqrt((((Line%n_m-1) * Line%yd_rms_old(I) * Line%yd_rms_old(I)) + (yd * yd)) / Line%n_m) ! RMS approximation from Thorsen
+            ydd_rms = sqrt((((Line%n_m-1) * Line%ydd_rms_old(I) * Line%ydd_rms_old(I)) + (ydd * ydd)) / Line%n_m) 
+   
+            ! print*, "end RMS calc"
+
+            IF ((Line%time >= Line%t_old + p%dtM0) .OR. (Line%time == 0.0)) THEN ! Update the stormed RMS vaues
+               ! update back indexing one moordyn time step (regardless of time integration scheme or coupling step size). T_old is handled at end of getStateDeriv when rdd_old is updated.
+               Line%yd_rms_old(I) = yd_rms ! for rms back indexing (one moordyn timestep back)
+               Line%ydd_rms_old(I) = ydd_rms ! for rms back indexing (one moordyn timestep back)
+            ENDIF
+   
+            IF ((yd_rms==0.0) .OR. (ydd_rms == 0.0)) THEN 
+               Line%phi_yd = atan2(-ydd, yd) ! To avoid divide by zero
+            ELSE 
+               Line%phi_yd = atan2(-ydd/ydd_rms, yd/yd_rms) 
+            ENDIF
+            
+            IF (Line%phi_yd < 0) THEN
+               Line%phi_yd = 2*Pi + Line%phi_yd ! atan2 to 0-2Pi range
+            ENDIF
+
+            ! print*, "end phase stuff"
+
+            ! Note: amplitude calculations and states commented out. Would be needed if a Cl vs A lookup table was ever implemented
+   
+            ! const real A_int = Misc(I)[1];
+            ! const real As = Misc(I)[2];
+
+            ! non-dimensional frequency
+            f_hat = Line%cF + Line%dF *sin(Line%phi_yd - Line%phi(I)) ! phi is integrated from state deriv phi_dot
+            ! frequency of lift force (rad/s)
+            phi_dot = 2*Pi*f_hat*MagVp / d ! to be added to state
+   
+            ! ----- The rest of the model -----
+   
+            ! ! Oscillation amplitude 
+            ! const real A_int_dot = abs(yd);
+            ! ! Note: Check if this actually measures zero crossings
+            ! if ((yd * yd_old[i]) < 0) { ! if sign changed, i.e. a zero crossing
+            ! 	Amp[i] = A_int-A_int_old[i]; ! amplitude calculation since last zero crossing
+            ! 	A_int_old[i] = A_int; ! stores amplitude of previous zero crossing for finding Amp
+            ! }
+            ! ! Careful with integrating smoothed amplitude, as 0.1 was a calibarated value based on a very simple integration method
+            ! const real As_dot = (0.1/dtm)*(Amp[i]-As); ! As to be variable integrated from the state. stands for amplitude smoothed
+   
+            ! ! Lift coefficient from lookup table
+            ! const real C_l = cl_lookup(x = As/d); ! create function in Line.hpp that uses lookup table 
+   
+            ! The Lift force
+            IF (I==0) THEN ! TODO: drop for only internal nodes
+               Line%Lf(:,I) = 0.5 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(1)*Line%l(1)
+            ELSE IF (I==N)  THEN ! TODO: drop for only internal nodes
+               Line%Lf(:,I) = 0.5 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(N)*Line%l(N)
+            ELSE
+               Line%Lf(:,I) = 0.5 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * (Line%F(I)*Line%l(I) + Line%F(I+1)*Line%l(I+1))
+            END IF
+
+            if (wordy > 0) then
+               if (Is_NaN(norm2(Line%Lf(:,I)))) print*, "Lf nan at node", I, "for line", Line%IdNum
+            endif
+
+            ! finding nans
+            if (Line%time == 2*p%dtM0 .and. I==N-2) then
+               print *, "-------"
+               print *, "Line%time", Line%time
+               print *, "I", I 
+               print *, "Line%Lf(:,I)", Line%Lf(:,I)
+               print *, "MagVp", MagVp
+               print *, "Line%U(:,I)", Line%U(:,I) 
+               print *, "Line%phi(I)", Line%phi(I)
+               print *, "phi_dot", phi_dot
+               print *, "f_hat", f_hat
+               print *, "Line%phi_yd", Line%phi_yd
+               print *, "yd", yd
+               print *, "ydd", ydd
+               print *, "Line%rd(:,I)", Line%rd(:,I)
+               print *, "Line%rdd_old(0:2,I)", Line%rdd_old(0:2,I)
+               print *, "Line%q(:,I)", Line%q(:,I)
+               print *, "Vp", Vp
+            endif
+
+
+            ! print*, "end force"
+            ! update state derivative with lift force frequency
+
+            if (Line%ElasticMod > 1) then ! if both additional states are included then N+1 entries after internal node states and visco segment states
+               Xd( 7*Line%N-6 + I + 1) = phi_dot
+            else ! if only VIV state, then N+1 entries after internal node states
+               Xd( 6*Line%N-6 + I + 1) = phi_dot
+            endif
+
+            ! print*, "end update state deriv"
+            ! Miscd(I)[2] = As_dot; ! unused state that could be used for future amplitude calculations
+   
+         ENDIF
+
+         ! print*, "made it past VIV model"
+
          ! ------ fluid acceleration components for current node (from MD-C) ------
          DO J = 1, 3
-            aq(J) = DOT_PRODUCT( Line%Ud(:,I) , Line%q(:,I) ) * Line%q(J,I);   ! tangential fluid acceleration component
+            aq(J) = DOT_PRODUCT( Line%Ud(:,I) , Line%q(:,I) ) * Line%q(J,I)   ! tangential fluid acceleration component
             ap(J) = Line%Ud(J,I) - aq(J)                                    ! transverse fluid acceleration component
          ENDDO
          
@@ -1570,14 +1744,16 @@ CONTAINS
 
          ! total forces
          IF (I==0)  THEN
-            Line%Fnet(:,I) = Line%T(:,1)                 + Line%Td(:,1)                  + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I)
+            Line%Fnet(:,I) = Line%T(:,1)                 + Line%Td(:,1)                  + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I) + Line%Lf(:,I) ! TODO: remove LF here
          ELSE IF (I==N)  THEN
-            Line%Fnet(:,I) =                -Line%T(:,N)                  - Line%Td(:,N) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I)
+            Line%Fnet(:,I) =                -Line%T(:,N)                  - Line%Td(:,N) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I) + Line%Lf(:,I) ! TODO: remove LF here
          ELSE
-            Line%Fnet(:,I) = Line%T(:,I+1) - Line%T(:,I) + Line%Td(:,I+1) - Line%Td(:,I) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I)
+            Line%Fnet(:,I) = Line%T(:,I+1) - Line%T(:,I) + Line%Td(:,I+1) - Line%Td(:,I) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I) + Line%Lf(:,I)
          END IF
 
       END DO  ! I  - done looping through nodes
+      
+      ! print *, "Done looping through nodes. Time to find acceleration"
 
       ! loop through internal nodes and update their states  <<< should/could convert to matrix operations instead of all these loops
       DO I=1, N-1
@@ -1593,9 +1769,33 @@ CONTAINS
             Xd(3*N-3 + 3*I-3 + J) = Line%rd(J,I);       ! dxdt = V  (velocities)
             Xd(        3*I-3 + J) = Sum1                ! dVdt = RHS * A  (accelerations)
             
+            IF (Line%Cl > 0) THEN 
+               ! ! for checking rdd_old fix
+               ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen .and. I > 95) then 
+               !    print*, "I in the rdd_old loop", I
+               !    print*, "Sum1 for above I at J =", J, "is", Sum1
+               ! endif
+               Line%rdd_old(J-1,I-1) = Sum1 ! saving the acceleration for VIV RMS calculation. WARNING: I-1 is intential to match the incorrect approach in MD-C (map internal node accel to the first N-2 elements of rdd_old.) After testing REMOVE the I-1 and make the VIV model only apply to internal nodes. J-1 here to shift things correctly. Not sure why we need this but it doesnt work otherwise ...
+            ENDIF
+
          END DO ! J
       END DO  ! I
 
+      if ((Line%time >= Line%t_old + p%dtM0) .OR. (Line%time == 0.0)) then ! update back indexing one moordyn time step (regardless of time integration scheme)
+         Line%t_old = Line%time ! for updating back indexing if statements 
+      endif
+
+      ! ! for checking rdd_old fix
+      ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen) then
+      !    print*, "rdd_old at t = ", Line%time
+      !    DO I = 0, 4
+      !       print*, "I =", I, "rdd_old =", Line%rdd_old(0,I), Line%rdd_old(1,I), Line%rdd_old(2,I)
+      !    enddo
+      !    print*, "..."
+      !    DO I = N-4, N 
+      !       print*, "I =", I, "rdd_old =", Line%rdd_old(0,I), Line%rdd_old(1,I), Line%rdd_old(2,I)
+      !    enddo
+	   ! endif
 
       ! check for NaNs
       DO J = 1, 6*(N-1)
@@ -1645,6 +1845,27 @@ CONTAINS
       !         AnchMtot(K,J) = AnchMtot(K,J) + Line%M(K,J,0)
       !      END DO
       !   END DO
+
+      CONTAINS
+
+         FUNCTION normalize(vector) RESULT(normalized)
+         ! function to normalize a vector. Returns the input vector if the magnitude is sufficiently small
+
+            REAL(DbKi), DIMENSION(3), INTENT(IN   ) :: vector     ! The input array
+            REAL(DbKi), DIMENSION(3)                :: normalized ! The normalized array
+            REAL(DbKi)                              :: mag        ! the magnitude
+
+            mag = norm2(vector)
+            
+            if (mag > 0.0_DbKi) then
+               DO J=1,3
+                  normalized(J) = vector(J) / mag
+               ENDDO
+            else
+               normalized = vector
+            endif
+            
+         END FUNCTION normalize
 
    END SUBROUTINE Line_GetStateDeriv
    !=====================================================================

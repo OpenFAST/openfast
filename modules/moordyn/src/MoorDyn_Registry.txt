@@ -64,6 +64,9 @@ typedef  ^            ^                DbKi               Can            -      
 typedef  ^            ^                DbKi               Cat            -       -  -   "tangential added mass coefficient"
 typedef  ^            ^                DbKi               Cdn            -       -  -   "transverse drag coefficient"
 typedef  ^            ^                DbKi               Cdt            -       -  -   "tangential drag coefficient"
+typedef  ^            ^                DbKi               Cl             -       -  -   "VIV lift coefficient. If 0, VIV turned off"
+typedef  ^            ^                DbKi               dF             -       -  -   "+- range of VIV synchronization in non-dimensional frequency"
+typedef  ^            ^                DbKi               cF             -       -  -   "Center VIV synchronization in non-dimensional frequency"
 typedef  ^            ^                IntKi              ElasticMod     -       -  -   "Which elasticity model to use: {1 basic, 2 viscoelastic, 3 viscoelastic+meanload} "     -
 typedef  ^            ^                IntKi              nEApoints      -       -  -   "number of values in stress-strain lookup table (0 means using constant E)"
 typedef  ^            ^                DbKi               stiffXs        {30}    -  -   "x array for stress-strain lookup table (up to nCoef)"
@@ -219,9 +222,9 @@ typedef  ^            ^                DbKi               Bquad        {2}      
 
 # this is the Line type, which holds data for each line object
 typedef  ^            MD_Line          IntKi              IdNum         -        -  -   "integer identifier of this Line"
-#typedef  ^            ^                CHARACTER(10)      type          -       -  -   "type of line.  should match one of LineProp names"
+#typedef  ^            ^               CHARACTER(10)      type          -        -  -   "type of line.  should match one of LineProp names"
 typedef  ^            ^                IntKi              PropsIdNum    -        -  -   "the IdNum of the associated line properties"     -
-typedef  ^            ^                IntKi              ElasticMod    -        -  -   "Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM} "     -
+typedef  ^            ^                IntKi              ElasticMod    -        -  -   "Which elasticity model to use: {1 basic, 2 viscoelastic, 3 viscoelastic+meanload} "     -
 typedef  ^            ^                IntKi              OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
 typedef  ^            ^                IntKi              CtrlChan      -        -  -   "index of control channel that will drive line active tensioning (0 for none)"   -
 typedef  ^            ^                IntKi              FairPoint     -        -  -   "IdNum of Point at fairlead"
@@ -243,6 +246,9 @@ typedef  ^            ^                DbKi               Can           -       
 typedef  ^            ^                DbKi               Cat           -        -  -   ""  "[-]"
 typedef  ^            ^                DbKi               Cdn           -        -  -   ""  "[-]"
 typedef  ^            ^                DbKi               Cdt           -        -  -   ""  "[-]"
+typedef  ^            ^                DbKi               Cl             -       -  -   "VIV lift coefficient. If 0, VIV turned off"
+typedef  ^            ^                DbKi               dF             -       -  -   "+- range of VIV synchronization in non-dimensional frequency"
+typedef  ^            ^                DbKi               cF             -       -  -   "Center VIV synchronization in non-dimensional frequency"
 typedef  ^            ^                IntKi              nEApoints     -        -  -   "number of values in stress-strain lookup table (0 means using constant E)"
 typedef  ^            ^                DbKi               stiffXs       {30}     -  -   "x array for stress-strain lookup table (up to nCoef)"
 typedef  ^            ^                DbKi               stiffYs       {30}     -  -   "y array for stress-strain lookup table"
@@ -278,6 +284,7 @@ typedef  ^            ^                DbKi               Ap           {:}{:}   
 typedef  ^            ^                DbKi               Aq           {:}{:}    -  -   "node added mass forcing (axial)"  "[N]"
 typedef  ^            ^                DbKi               B            {:}{:}    -  -   "node bottom contact force"  "[N]"
 typedef  ^            ^                DbKi               Bs           {:}{:}    -  -   "node force due to bending moments"  "[N]"
+typedef  ^            ^                DbKi               Lf           {:}{:}    -  -   "node crossflow viv lift force. TODO this will have to be allocated for only internal after fix"  "[N]"
 typedef  ^            ^                DbKi               Fnet         {:}{:}    -  -   "total force on node"  "[N]"
 typedef  ^            ^                DbKi               S            {:}{:}{:} -  -   "node inverse mass matrix"  "[kg]"
 typedef  ^            ^                DbKi               M            {:}{:}{:} -  -   "node mass matrix"  "[kg]"
@@ -285,6 +292,16 @@ typedef  ^            ^                DbKi               EndMomentA   {3}      
 typedef  ^            ^                DbKi               EndMomentB   {3}       -  -   "vector of end moments due to bending at line end B"  "[N-m]"
 typedef  ^            ^                IntKi              LineUnOut     -        -  -   "unit number of line output file"
 typedef  ^            ^                DbKi               LineWrOutput {:}       -  -   "one row of output data for this line"
+# NOTE: Below are vars used in the line VIV model
+typedef  ^            ^                DbKi               phi          {:}       -  -   "phase of lift force" 
+typedef  ^            ^                LOGICAL            IC_gen        -   .FALSE. -   "boolean to indicate dynamic relaxation occuring"  "-"
+typedef  ^            ^                DbKi               n_m           -       500 -   "Num timesteps for rolling RMS of crossflow velocity phase"  "-"
+typedef  ^            ^                DbKi               phi_yd        -        -  -   "The crossflow motion phase"  "-"
+typedef  ^            ^                DbKi               t_old         -        -  -   "old t"  "s"
+typedef  ^            ^                DbKi               yd_rms_old   {:}       -  -   "node old cf vel rms"  "m/s"
+typedef  ^            ^                DbKi               ydd_rms_old  {:}       -  -   "node old cf accel rms"  "m/s^2"
+typedef  ^            ^                DbKi               rdd_old      {:}{:}    -  -   "node accelerations previous iteration"  "m/s^2"
+
 
 # this is the ExtLd type, which holds data for each external load specification
 typedef  ^            MD_ExtLd         IntKi              IdNum          -       -  -   "integer identifier of this external load entry"
