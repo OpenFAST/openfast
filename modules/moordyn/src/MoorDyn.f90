@@ -1492,7 +1492,6 @@ CONTAINS
                   
                   if (m%LineTypeList(m%LineList(l)%PropsIdNum)%Cl > 0) then 
                      Nx = Nx + m%LineList(l)%N+1      ! if using VIV model, need one more state per node (note here N is the num sgemnts, so N+1 is number of nodes).
-                     print *, "Added state for VIV. Nx is now", Nx
                   endif
 
                   m%LineStateIsN(l) = Nx      
@@ -2928,7 +2927,7 @@ CONTAINS
 
 
       SUBROUTINE CheckError(ErrID,Msg)
-         ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLe
+         ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
 
             ! Passed arguments
          INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)

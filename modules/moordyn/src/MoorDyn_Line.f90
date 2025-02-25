@@ -1712,8 +1712,6 @@ CONTAINS
 
       END DO  ! I  - done looping through nodes
       
-      ! print *, "Done looping through nodes. Time to find acceleration"
-
       ! loop through internal nodes and update their states  <<< should/could convert to matrix operations instead of all these loops
       DO I=1, N-1
          DO J=1,3
