@@ -925,6 +925,8 @@ REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) , DummyFloat
 INTEGER(IntKi)               :: Dummy_IntAry(SDMaxInpCols)
 LOGICAL                      :: Dummy_Bool
 INTEGER(IntKi)               :: Dummy_Int
+REAL(R8Ki)                   :: tmpMat(3,3)
+
 INTEGER(IntKi)       :: ErrStat2
 CHARACTER(ErrMsgLen) :: ErrMsg2
 ! Initialize ErrStat
@@ -1395,6 +1397,25 @@ CALL ReadCom  ( UnIn, SDInputFile,              'Cosine Matrices Units  '       
 CALL AllocAry(Init%COSMs, Init%NCOSMs, COSMsCol, 'COSMs', ErrStat2, ErrMsg2); if(Failed()) return
 DO I = 1, Init%NCOSMs
    CALL ReadAry( UnIn, SDInputFile, Init%COSMs(I,:), COSMsCol, 'CosM', 'Cosine Matrix IDs  and Values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   tmpMat = reshape(Init%COSMs(I,2:COSMsCol),shape(tmpMat))
+   tmpMat = matmul(tmpMat,transpose(tmpMat))
+   tmpMat(1,1) = tmpMat(1,1)-1.0_R8Ki
+   tmpMat(2,2) = tmpMat(2,2)-1.0_R8Ki
+   tmpMat(3,3) = tmpMat(3,3)-1.0_R8Ki
+   tmpMat = ABS(tmpMat)
+   do j = 1,3
+      do k = 1,3
+         if (tmpMat(j,k) > 0.0001_R8Ki) then
+            CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Member cosine matrix on line '//trim(Num2LStr(I))//' with COSMID '//trim(Num2LStr(Init%COSMs(I,1)))//' is not orthogonal to the required precision and is therefore not a valid rotation matrix. ')
+            return
+         end if
+      end do
+   end do
+   tmpMat = reshape(Init%COSMs(I,2:COSMsCol),shape(tmpMat))
+   if ( Determinant(tmpMat, ErrStat2, ErrMsg2) < 0.0_R8Ki) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Member cosine matrix on line '//trim(Num2LStr(I))//' with COSMID '//trim(Num2LStr(Init%COSMs(I,1)))//' has a negative determinant and is therefore not a valid rotation matrix. ')
+      return
+   end if
 ENDDO   
 IF (Check( Init%NCOSMs < 0     ,'NCOSMs must be >=0')) return
 
