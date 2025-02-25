@@ -426,8 +426,14 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
       ! Column 6: member type
       p%Elems(iMem, iMType) = Init%Members(iMem, iMType) ! 
       ! Column 7: User DirCos matrix ID
-      if (p%Elems(iMem,  iMDirCosID)/=-1) then
+      if (Init%Members(iMem,  iMDirCosID)/=-1) then
          p%Elems(iMem,  iMDirCosID) = FINDLOCI(Init%COSMs(:,1), Init%Members(iMem,  iMDirCosID) )
+         if (p%Elems(iMem,  iMDirCosID) < 0) then
+            CALL Fatal('Members table: line '//TRIM(Num2LStr(iMem))//' refers to COSMID '//trim(Num2LStr(Init%Members(iMem,  iMDirCosID)))//' which is not in the MEMBER COSINE MATRICES list!')
+            return
+         end if
+      else
+         p%Elems(iMem,  iMDirCosID) = -1
       endif
       ! Member spin angle
       if (mType==idMemberBeamCirc .or. mType==idMemberBeamRect .or. mType==idMemberBeamArb) then
