@@ -178,7 +178,7 @@ CONTAINS
          Line%dl_1 = 0.0_DbKi
       end if
 
-      ! if using VIV model, allocate additional state quantities. TODO: interal nodes only
+      ! if using VIV model, allocate additional state quantities.
       if (Line%Cl > 0) then
          if (wordy > 1) print *, "Using the VIV model"
          ! allocate old acclerations [for VIV] 
@@ -189,7 +189,7 @@ CONTAINS
             RETURN
          END IF
          ! initialize to unique values on the range 0-2pi
-         do I=0, Line%N ! TODO: internal ndoes only
+         do I=0, Line%N 
             Line%phi(I) = (REAL(I)/Line%N)*2*Pi
          enddo
       end if
@@ -237,7 +237,7 @@ CONTAINS
       ! allocate node force vectors
       ALLOCATE ( Line%W(3, 0:N), Line%Dp(3, 0:N), Line%Dq(3, 0:N), &
          Line%Ap(3, 0:N), Line%Aq(3, 0:N), Line%B(3, 0:N), Line%Bs(3, 0:N), &
-         Line%Lf(3, 0:N), Line%Fnet(3, 0:N), STAT = ErrStat ) ! TODO: LF only to internal nodes after testing
+         Line%Lf(3, 0:N), Line%Fnet(3, 0:N), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating node force arrays.'
          !CALL CleanUp()
@@ -393,7 +393,6 @@ CONTAINS
             IF (wordy == 1) THEN 
                CALL WrScr('   Message from catenary solver: '//ErrMsg2)
             ENDIF
-            ! print *, "Node positions: "
 
             DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
                Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, DbKi)/REAL(N, DbKi)
@@ -1018,8 +1017,6 @@ CONTAINS
 
       INTEGER(IntKi)                   :: i              ! index of segments or nodes along line
       INTEGER(IntKi)                   :: J              ! index
-   
-      ! print*, "begining set state"
 
       ! store current time
       Line%time = t
@@ -1043,8 +1040,7 @@ CONTAINS
 
       ! if using the viv mdodel, also set the lift force phase
       if (Line%Cl > 0 .AND. (.NOT. Line%IC_gen) .AND. t > 0) then ! not needed in IC_gen, and t=0 should be skipped to avoid setting these all to zero. Initialize as distribution on 0-2pi
-         ! if (t < 0.0002) print *, "Line State" , X
-         do I=0, Line%N ! TODO: after checking change to internal
+         do I=0, Line%N
             if (Line%ElasticMod > 1) then ! if both additional states are included then N-1 entries after internal node states and visco segment states
                   Line%phi(I) = X( 7*Line%N-6 + I+1) - (2 * Pi * floor(X( 7*Line%N-6 + I+1) / (2*Pi))) ! Map integrated phase to 0-2Pi range. Is this necessary? sin (a-b) is the same if b is 100 pi or 2pi
             else ! if only VIV state, then N+1 entries after internal node states
@@ -1161,8 +1157,6 @@ CONTAINS
       !      Line%rd(J,N) = m%PointList(Line%FairPoint)%rd(J)
       !      Line%rd(J,0) = m%PointList(Line%AnchPoint)%rd(J)
       !   END DO
-
-      ! print*, "begining get state deriv"
 
       ! -------------------- calculate various kinematic quantities ---------------------------
       DO I = 1, N
@@ -1534,7 +1528,6 @@ CONTAINS
             Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*(Line%F(I)*Line%l(I) + Line%F(I+1)*Line%l(I+1)) * MagVq * Vq
          END IF
 
-         ! print *, "Made it to VIV model"
          ! Vortex Induced Vibration (VIV) cross-flow lift force
          IF ((Line%Cl > 0.0) .AND. (.NOT. Line%IC_gen)) THEN ! If non-zero lift coefficient and not during IC_gen ! Ignore the following: and internal node then VIV to be calculated .AND. (I /= 0) .AND. (I /= N)
    
@@ -1542,22 +1535,12 @@ CONTAINS
             ! Crossflow velocity and acceleration. rd component in the crossflow direction
       
             yd = dot_product(Line%rd(:,I), cross_product(Line%q(:,I), normalize(Vp) ) )
-            ydd = dot_product(Line%rdd_old(:,I), cross_product(Line%q(:,I), normalize(Vp) ) )
+            ydd = dot_product(Line%rdd_old(:,I), cross_product(Line%q(:,I), normalize(Vp) ) ) ! note: rdd_old initializes as 0's. End nodes don't ever get updated, thus stay at zero 
             
-            ! ! for checking rdd_old fix
-            ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen .and. (I > 95 .or. I <5)) then 
-            !    print*, "rdd_old at t = ", Line%time
-            !    print*, "I =", I, "rdd_old(0:2,I) =", Line%rdd_old(0:2,I)
-            ! endif
-
-            ! print*, "crossflow stuff done"
-
             ! Rolling RMS calculation
             yd_rms = sqrt((((Line%n_m-1) * Line%yd_rms_old(I) * Line%yd_rms_old(I)) + (yd * yd)) / Line%n_m) ! RMS approximation from Thorsen
             ydd_rms = sqrt((((Line%n_m-1) * Line%ydd_rms_old(I) * Line%ydd_rms_old(I)) + (ydd * ydd)) / Line%n_m) 
    
-            ! print*, "end RMS calc"
-
             IF ((Line%time >= Line%t_old + p%dtM0) .OR. (Line%time == 0.0)) THEN ! Update the stormed RMS vaues
                ! update back indexing one moordyn time step (regardless of time integration scheme or coupling step size). T_old is handled at end of getStateDeriv when rdd_old is updated.
                Line%yd_rms_old(I) = yd_rms ! for rms back indexing (one moordyn timestep back)
@@ -1573,8 +1556,6 @@ CONTAINS
             IF (Line%phi_yd < 0) THEN
                Line%phi_yd = 2*Pi + Line%phi_yd ! atan2 to 0-2Pi range
             ENDIF
-
-            ! print*, "end phase stuff"
 
             ! Note: amplitude calculations and states commented out. Would be needed if a Cl vs A lookup table was ever implemented
    
@@ -1602,10 +1583,12 @@ CONTAINS
             ! const real C_l = cl_lookup(x = As/d); ! create function in Line.hpp that uses lookup table 
    
             ! The Lift force
-            IF (I==0) THEN ! TODO: drop for only internal nodes
-               Line%Lf(:,I) = 0.25 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(1)*Line%l(1)
-            ELSE IF (I==N)  THEN ! TODO: drop for only internal nodes
-               Line%Lf(:,I) = 0.25 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(N)*Line%l(N)
+            IF (I==0) THEN ! Disable for end nodes for now, node acceleration needed for synch model
+               Line%Lf(:,0) = 0.0_DbKi
+               ! Line%Lf(:,I) = 0.25 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(1)*Line%l(1)
+            ELSE IF (I==N)  THEN ! Disable for end nodes for now, node acceleration needed for synch model
+               Line%Lf(:,I) = 0.0_DbKi
+               ! Line%Lf(:,N) = 0.25 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * Line%F(N)*Line%l(N)
             ELSE
                Line%Lf(:,I) = 0.25 * p%rhoW * d * MagVp * Line%Cl * cos(Line%phi(I)) * cross_product(Line%q(:,I), Vp) * (Line%F(I)*Line%l(I) + Line%F(I+1)*Line%l(I+1))
             END IF
@@ -1614,8 +1597,6 @@ CONTAINS
                if (Is_NaN(norm2(Line%Lf(:,I)))) print*, "Lf nan at node", I, "for line", Line%IdNum
             endif
 
-
-            ! print*, "end force"
             ! update state derivative with lift force frequency
 
             if (Line%ElasticMod > 1) then ! if both additional states are included then N+1 entries after internal node states and visco segment states
@@ -1624,33 +1605,9 @@ CONTAINS
                Xd( 6*Line%N-6 + I + 1) = phi_dot
             endif
 
-            ! ! debugging
-            ! if (Line%time < 2*p%dtM0 .AND. I == N/2) then
-            !    print *, "Line%time", Line%time
-            !    print *, "I", I 
-            !    print *, "Line%Lf(:,I)", Line%Lf(:,I)
-            !    print *, "MagVp", MagVp
-            !    print *, "Line%U(:,I)", Line%U(:,I) 
-            !    print *, "Line%phi(I)", Line%phi(I)
-            !    print *, "phi_dot", phi_dot
-            !    print *, "f_hat", f_hat
-            !    ! print *, "Line%phi_yd", Line%phi_yd
-            !    ! print *, "yd", yd
-            !    ! print *, "ydd", ydd
-            !    ! print *, "Line%rd(:,I)", Line%rd(:,I)
-            !    ! print *, "Line%rdd_old(0:2,I)", Line%rdd_old(:,I)
-            !    print *, "Line%q(:,I)", Line%q(:,I)
-            !    print *, "Vp", Vp
-            !    print*, "State Deriv", Xd
-            !    print *, "-------"
-            ! endif
-
-            ! print*, "end update state deriv"
             ! Miscd(I)[2] = As_dot; ! unused state that could be used for future amplitude calculations
    
          ENDIF
-
-         ! print*, "made it past VIV model"
 
          ! ------ fluid acceleration components for current node (from MD-C) ------
          DO J = 1, 3
@@ -1746,9 +1703,9 @@ CONTAINS
 
          ! total forces
          IF (I==0)  THEN
-            Line%Fnet(:,I) = Line%T(:,1)                 + Line%Td(:,1)                  + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I) + Line%Lf(:,I) ! TODO: remove LF here
+            Line%Fnet(:,I) = Line%T(:,1)                 + Line%Td(:,1)                  + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I) + Line%Lf(:,I) 
          ELSE IF (I==N)  THEN
-            Line%Fnet(:,I) =                -Line%T(:,N)                  - Line%Td(:,N) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I) + Line%Lf(:,I) ! TODO: remove LF here
+            Line%Fnet(:,I) =                -Line%T(:,N)                  - Line%Td(:,N) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I) + Line%Lf(:,I) 
          ELSE
             Line%Fnet(:,I) = Line%T(:,I+1) - Line%T(:,I) + Line%Td(:,I+1) - Line%Td(:,I) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%Ap(:,I) + Line%Aq(:,I) + Line%B(:,I) + Line%Bs(:,I) + Line%Lf(:,I)
          END IF
@@ -1772,12 +1729,7 @@ CONTAINS
             Xd(        3*I-3 + J) = Sum1                ! dVdt = RHS * A  (accelerations)
             
             IF (Line%Cl > 0) THEN 
-               ! ! for checking rdd_old fix
-               ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen .and. I > N-5) then 
-               !    print*, "I in the rdd_old loop", I
-               !    print*, "Sum1 for above I at J =", J, "is", Sum1
-               ! endif
-               Line%rdd_old(J,I-1) = Sum1 ! saving the acceleration for VIV RMS calculation. WARNING: I-1 is intential to match the incorrect approach in MD-C (map internal node accel to the first N-2 elements of rdd_old.) After testing REMOVE the I-1 and make the VIV model only apply to internal nodes. J-1 here to shift things correctly. Not sure why we need this but it doesnt work otherwise ...
+               Line%rdd_old(J,I) = Sum1 ! saving the acceleration for VIV RMS calculation. End nodes are left at zero, VIV disabled for end nodes
             ENDIF
 
          END DO ! J
@@ -1787,7 +1739,7 @@ CONTAINS
          Line%t_old = Line%time ! for updating back indexing if statements 
       endif
 
-      ! ! for checking rdd_old fix
+      ! ! for checking rdd_old
       ! if (Line%time <0.5+p%dtM0 .and. Line%time >0.5-p%dtM0 .and. .not. Line%IC_gen) then
       !    print*, "rdd_old at t = ", Line%time
       !    DO I = 0, 4
