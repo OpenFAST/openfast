@@ -2924,11 +2924,8 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['MoorDyn']['Ca']      = []
                 self.fst_vt['MoorDyn']['CdAx']      = []
                 self.fst_vt['MoorDyn']['CaAx']      = []
-                self.fst_vt['MoorDyn']['Cl']      = []
-                self.fst_vt['MoorDyn']['dF']      = []
-                self.fst_vt['MoorDyn']['cF']      = []
-                data_line = readline_filterComments(f).split()
-                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same.
+                data_line = f.readline().strip().split()
+                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
                     self.fst_vt['MoorDyn']['Name'].append(str(data_line[0]))
                     self.fst_vt['MoorDyn']['Diam'].append(float(data_line[1]))
                     self.fst_vt['MoorDyn']['MassDen'].append(float(data_line[2]))
@@ -2939,26 +2936,7 @@ class InputReader_OpenFAST(object):
                     self.fst_vt['MoorDyn']['Ca'].append(float(data_line[7]))
                     self.fst_vt['MoorDyn']['CdAx'].append(float(data_line[8]))
                     self.fst_vt['MoorDyn']['CaAx'].append(float(data_line[9]))
-                    if len(data_line) == 10:
-                        self.fst_vt['MoorDyn']['Cl'].append(None)
-                        self.fst_vt['MoorDyn']['dF'].append(None)
-                        self.fst_vt['MoorDyn']['cF'].append(None)
-                    elif (len(data_line) == 11):
-                        self.fst_vt['MoorDyn']['Cl'].append(float(data_line[10]))
-                        self.fst_vt['MoorDyn']['dF'].append(None)
-                        self.fst_vt['MoorDyn']['cF'].append(None)
-                    elif (len(data_line) == 13):
-                        self.fst_vt['MoorDyn']['Cl'].append(float(data_line[10]))
-                        self.fst_vt['MoorDyn']['dF'].append(float(data_line[11]))
-                        self.fst_vt['MoorDyn']['cF'].append(float(data_line[12]))
-
-                    if type(self.fst_vt['MoorDyn']['EA'][0]) is str:
-                        EA_file = os.path.normpath(os.path.join(os.path.dirname(moordyn_file), self.fst_vt['MoorDyn']['EA'][0]))
-                        self.fst_vt['MoorDyn']['NonLinearEA'].append(self.read_NonLinearEA(EA_file))
-                    else:
-                        self.fst_vt['MoorDyn']['NonLinearEA'].append(None) # Empty to keep track of which non-linear EA files go with what line
-
-                    data_line = readline_filterComments(f).split()
+                    data_line = f.readline().strip().split()
                 data_line = ''.join(data_line)  # re-join
 
             elif 'rodtypes' in data_line or 'roddictionary' in data_line: 
@@ -3105,29 +3083,10 @@ class InputReader_OpenFAST(object):
                     self.fst_vt['MoorDyn']['UnstrLen'].append(float(data_line[4]))
                     self.fst_vt['MoorDyn']['NumSegs'].append(int(data_line[5]))
                     self.fst_vt['MoorDyn']['Outputs'].append(str(data_line[6]))
-                    data_line = readline_filterComments(f).split()
-                data_line = ''.join(data_line)  # re-join for reading next section uniformly
+                    data_line = f.readline().strip().split()
+                data_line = ''.join(data_line)  # re-join for reading next section uniformly     
 
-            elif 'failure' in data_line.lower(): 
-                f.readline()
-                f.readline()
-
-                self.fst_vt['MoorDyn']['Failure_ID'] = []
-                self.fst_vt['MoorDyn']['Failure_Point'] = []
-                self.fst_vt['MoorDyn']['Failure_Line(s)'] = []
-                self.fst_vt['MoorDyn']['FailTime'] = []
-                self.fst_vt['MoorDyn']['FailTen'] = []
-                data_line = readline_filterComments(f).split()
-                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
-                    self.fst_vt['MoorDyn']['Failure_ID'].append(int(data_line[0]))
-                    self.fst_vt['MoorDyn']['Failure_Point'].append(data_line[1])
-                    self.fst_vt['MoorDyn']['Failure_Line(s)'].append([int(dl) for dl in data_line[2].split(',')])
-                    self.fst_vt['MoorDyn']['FailTime'].append(float(data_line[3]))
-                    self.fst_vt['MoorDyn']['FailTen'].append(float(data_line[4]))
-                    data_line = readline_filterComments(f).split()
-                data_line = ''.join(data_line)  # re-join for reading next section uniformly 
-
-            elif 'control' in data_line.lower():
+            elif 'control' in data_line.lower(): # TODO: add in failures section, add in user specified loads and damping section
                 f.readline()
                 f.readline()
         

@@ -2341,7 +2341,7 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_MoorDyn(self):
+    def write_MoorDyn(self): # TODO: see TODO's in FAST_reader/read_MoorDyn.py and make corresponding changes here
 
         self.fst_vt['Fst']['MooringFile'] = self.FAST_namingOut + '_MoorDyn.dat'
         moordyn_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['MooringFile'])
@@ -2366,10 +2366,13 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Ca'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CdAx'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CaAx'][i]))
+            if self.fst_vt['MoorDyn']['Cl'][i] != None: 
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Cl'][i]))
+            if self.fst_vt['MoorDyn']['dF'][i] != None: 
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['dF'][i]))
+            if self.fst_vt['MoorDyn']['cF'][i] != None: 
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['cF'][i]))
             f.write(" ".join(ln) + '\n')
-
-            if self.fst_vt['MoorDyn']['NonLinearEA'][i] != None:
-                self.write_NonLinearEA(self.fst_vt['MoorDyn']['EA'][i][0], self.fst_vt['MoorDyn']['Name'][i], self.fst_vt['MoorDyn']['NonLinearEA'][i])
 
         if 'Rod_Name' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Rod_Name']:
             f.write('----------------------- ROD TYPES ------------------------------------------\n')
