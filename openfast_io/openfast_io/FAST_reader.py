@@ -2909,8 +2909,11 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['MoorDyn']['Ca']      = []
                 self.fst_vt['MoorDyn']['CdAx']      = []
                 self.fst_vt['MoorDyn']['CaAx']      = []
+                self.fst_vt['MoorDyn']['Cl']      = []
+                self.fst_vt['MoorDyn']['dF']      = []
+                self.fst_vt['MoorDyn']['cF']      = []
                 data_line = f.readline().strip().split()
-                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same. TODO: make compatible with MD viscoelastic model
                     self.fst_vt['MoorDyn']['Name'].append(str(data_line[0]))
                     self.fst_vt['MoorDyn']['Diam'].append(float(data_line[1]))
                     self.fst_vt['MoorDyn']['MassDen'].append(float(data_line[2]))
@@ -2921,6 +2924,18 @@ class InputReader_OpenFAST(object):
                     self.fst_vt['MoorDyn']['Ca'].append(float(data_line[7]))
                     self.fst_vt['MoorDyn']['CdAx'].append(float(data_line[8]))
                     self.fst_vt['MoorDyn']['CaAx'].append(float(data_line[9]))
+                    if len(data_line) == 10:
+                        self.fst_vt['MoorDyn']['Cl'].append(None)
+                        self.fst_vt['MoorDyn']['dF'].append(None)
+                        self.fst_vt['MoorDyn']['cF'].append(None)
+                    elif (len(data_line) == 11):
+                        self.fst_vt['MoorDyn']['Cl'].append(float(data_line[10]))
+                        self.fst_vt['MoorDyn']['dF'].append(None)
+                        self.fst_vt['MoorDyn']['cF'].append(None)
+                    elif (len(data_line) == 13):
+                        self.fst_vt['MoorDyn']['Cl'].append(float(data_line[10]))
+                        self.fst_vt['MoorDyn']['dF'].append(float(data_line[11]))
+                        self.fst_vt['MoorDyn']['cF'].append(float(data_line[12]))
                     data_line = f.readline().strip().split()
                 data_line = ''.join(data_line)  # re-join
 
@@ -3071,7 +3086,7 @@ class InputReader_OpenFAST(object):
                     data_line = f.readline().strip().split()
                 data_line = ''.join(data_line)  # re-join for reading next section uniformly     
 
-            elif 'control' in data_line.lower():
+            elif 'control' in data_line.lower(): # TODO: add in failures section, add in user specified loads and damping section
                 f.readline()
                 f.readline()
         

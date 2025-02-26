@@ -2327,7 +2327,7 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_MoorDyn(self):
+    def write_MoorDyn(self): # TODO: see TODO's in FAST_reader/read_MoorDyn.py and make corresponding changes here
 
         self.fst_vt['Fst']['MooringFile'] = self.FAST_namingOut + '_MoorDyn.dat'
         moordyn_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['MooringFile'])
@@ -2337,8 +2337,8 @@ class InputWriter_OpenFAST(object):
         f.write('Generated with OpenFAST_IO\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['Echo'], 'Echo', '- echo the input file data (flag)\n'))
         f.write('----------------------- LINE TYPES ------------------------------------------\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['Name', 'Diam', 'MassDen', 'EA', 'BA/-zeta', 'EI', 'Cd', 'Ca', 'CdAx', 'CaAx']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(m)', '(kg/m)', '(N)', '(N-s/-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['Name', 'Diam', 'MassDen', 'EA', 'BA/-zeta', 'EI', 'Cd', 'Ca', 'CdAx', 'CaAx', 'Cl (optional)', 'dF (optional)', 'cF (optional)']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(m)', '(kg/m)', '(N)', '(N-s/-)', '(N-m^2)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
         for i in range(len(self.fst_vt['MoorDyn']['Name'])):
             ln = []
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Name'][i]))
@@ -2351,7 +2351,14 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Ca'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CdAx'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CaAx'][i]))
+            if self.fst_vt['MoorDyn']['Cl'][i] != None: 
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Cl'][i]))
+            if self.fst_vt['MoorDyn']['dF'][i] != None: 
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['dF'][i]))
+            if self.fst_vt['MoorDyn']['cF'][i] != None: 
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['cF'][i]))
             f.write(" ".join(ln) + '\n')
+
         if 'Rod_Name' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Rod_Name']:
             f.write('----------------------- ROD TYPES ------------------------------------------\n')
             f.write(" ".join(['{:^11s}'.format(i) for i in ['TypeName', 'Diam', 'Mass/m', 'Cd', 'Ca', 'CdEnd', 'CaEnd']])+'\n')
