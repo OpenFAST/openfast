@@ -11,11 +11,20 @@ on:
     types:
       - released
 
+  push:
+    paths-ignore:
+      - 'LICENSE'
+      - 'README.rst'
+      - 'docs/**'
+      - 'share/**'
 
 jobs:
+
+  # Disabled as publish-to-pypi is working correctly
   publish-to-pypi-test:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' 
+    if: false
+    # if: github.event_name == 'workflow_dispatch' 
     steps:
       - uses: actions/checkout@v3
 
@@ -44,7 +53,7 @@ jobs:
 
   publish-to-pypi:
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' 
+    if: github.event_name == 'release'
     steps:
       - uses: actions/checkout@v3
 
@@ -71,9 +80,11 @@ jobs:
         run: hatch publish 
         working-directory: openfast_io
 
+  # Disabled as it fails due to huge memory requirements
   docker-build-and-push:
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: false
+    # if: github.event_name == 'release'
     timeout-minutes: 500
     env:
       DOCKERFILE_PATH: share/docker/Dockerfile
@@ -123,3 +134,87 @@ jobs:
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  build-windows-executables:
+    runs-on: windows-2022
+    if: github.event_name == 'workflow_dispatch' ||  github.event_name == 'release'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install Intel oneAPI BaseKit (Windows)
+        shell: cmd
+        env:
+          URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7dff44ba-e3af-4448-841c-0d616c8da6e7/w_BaseKit_p_2024.1.0.595_offline.exe
+          COMPONENTS: intel.oneapi.win.mkl.devel
+        run: |
+          curl.exe --output %TEMP%\webimage.exe --url %URL% --retry 5 --retry-delay 5
+          start /b /wait %TEMP%\webimage.exe -s -x -f webimage_extracted --log extract.log
+          del %TEMP%\webimage.exe
+          webimage_extracted\bootstrapper.exe -s --action install --components=%COMPONENTS% --eula=accept -p=NEED_VS2017_INTEGRATION=0 -p=NEED_VS2019_INTEGRATION=0 -p=NEED_VS2022_INTEGRATION=1 --log-dir=.
+          set installer_exit_code=%ERRORLEVEL%
+          rd /s/q "webimage_extracted"
+          exit /b %installer_exit_code%
+
+      - name: Install Intel oneAPI HPCKit (Windows)
+        shell: cmd
+        env:
+          URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe
+          COMPONENTS: intel.oneapi.win.ifort-compiler
+        run: |
+          curl.exe --output %TEMP%\webimage.exe --url %URL% --retry 5 --retry-delay 5
+          start /b /wait %TEMP%\webimage.exe -s -x -f webimage_extracted --log extract.log
+          del %TEMP%\webimage.exe
+          webimage_extracted\bootstrapper.exe -s --action install --components=%COMPONENTS% --eula=accept -p=NEED_VS2017_INTEGRATION=0 -p=NEED_VS2019_INTEGRATION=0 -p=NEED_VS2022_INTEGRATION=1 --log-dir=.
+          set installer_exit_code=%ERRORLEVEL%
+          rd /s/q "webimage_extracted"
+          exit /b %installer_exit_code%
+
+      - name: Set up MATLAB
+        id: setup-matlab
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
+
+      - name: Build Executables
+        env:
+          MATLAB_ROOT: ${{ steps.setup-matlab.outputs.matlabroot }}
+        run: .github/scripts/build_windows_executables.bat
+
+      - name: Test version output
+        run: |
+          build/bin/openfast_x64.exe -h
+          build/bin/TurbSim_x64.exe -h
+          build/bin/FAST.Farm_x64.exe -h
+
+      - name: Build MATLAB Mex File
+        uses: matlab-actions/run-command@v2
+        with:
+          command: |
+            mexname = 'FAST_SFunc';
+            mex('-largeArrayDims', ...
+                '-v', ...
+                ['-L' fullfile('build','bin')], ...
+                ['-I' fullfile('modules','openfast-library','src')], ... % "FAST_Library.h"
+                ['-I' fullfile('modules','supercontroller','src')], ...  % "SuperController_Types.h"
+                ['-I' fullfile('modules','externalinflow','src')],  ...  % "ExternalInflow_Types.h"
+                ['-I' fullfile('modules','extloads','src')], ...         % "ExtLoadsDX_Types.h"
+                ['-I' fullfile(matlabroot,'simulink','include')], ...
+                ['-I' fullfile(matlabroot,'extern','include')], ...
+                ['COMPFLAGS=$COMPFLAGS -MT -DS_FUNCTION_NAME=' mexname], ...
+                '-lOpenFAST-Simulink_x64', ...
+                '-outdir', fullfile('build','bin'), ...
+                '-output', mexname, ...
+                fullfile('glue-codes','simulink','src','FAST_SFunc.c'));
+
+      - name: Upload executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: openfast-binaries
+          path: |
+            build/bin/*.exe
+            build/bin/*.dll
+            build/bin/*.mexw64
