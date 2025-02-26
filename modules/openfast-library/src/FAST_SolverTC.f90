@@ -25,6 +25,7 @@ integer(IntKi)             :: DebugUn = -1
 character(*), parameter    :: DebugFile = 'solver.dbg'
 logical, parameter         :: DebugJacobian = .false.
 integer(IntKi)             :: MatrixUn = -1
+logical, parameter         :: FiniteDifferenceJacobian = .false.
 
 contains
 
@@ -111,10 +112,10 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
 
    ! Indices of Option 1 modules
    p%iModOpt1 = [pack(modInds, ModIDs == Module_SED), &
-                 pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK /= MHK_None), &
+                 pack(modInds, ModIDs == Module_AD .and. &
+                      p_FAST%MHK /= MHK_None), &
                  pack(modInds, ModIDs == Module_ExtPtfm), &
                  pack(modInds, ModIDs == Module_HD), &
-                 pack(modInds, ModIDs == Module_MD), &
                  pack(modInds, ModIDs == Module_Orca)]
 
    ! Indices of Option 2 modules
@@ -125,13 +126,15 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                  pack(modInds, ModIDs == Module_SD), &
                  pack(modInds, ModIDs == Module_IfW), &
                  pack(modInds, ModIDs == Module_SeaSt), &
-                 pack(modInds, ModIDs == Module_AD .and. p_FAST%MHK == MHK_None), &
+                 pack(modInds, ModIDs == Module_AD .and. &
+                      p_FAST%MHK == MHK_None), &
                  pack(modInds, ModIDs == Module_ADsk), &
                  pack(modInds, ModIDs == Module_ExtLd), &
                  pack(modInds, ModIDs == Module_FEAM), &
                  pack(modInds, ModIDs == Module_IceD), &
                  pack(modInds, ModIDs == Module_IceF), &
-                 pack(modInds, ModIDs == Module_MAP)]
+                 pack(modInds, ModIDs == Module_MAP), &
+                 pack(modInds, ModIDs == Module_MD)]
 
    ! Indices of modules to perform InputSolves after the Option 1 solve
    p%iModPost = [pack(modInds, ModIDs == Module_SrvD), &
@@ -151,6 +154,27 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    call Glue_CombineModules(m%Mod, GlueModData, GlueModMaps, iMod, &
                             VF_Solve, .true., ErrStat2, ErrMsg2, Name='Solver')
    if (Failed()) return
+
+   write (*, *) "Solver Jacobian States:"
+   do i = 1, size(m%Mod%Vars%x)
+      do j = 1, m%Mod%Vars%x(i)%Num
+         write (*, *) m%Mod%Vars%x(i)%LinNames(j)
+      end do
+   end do
+
+   write (*, *) "Solver Jacobian Inputs:"
+   do i = 1, size(m%Mod%Vars%u)
+      do j = 1, m%Mod%Vars%u(i)%Num
+         write (*, *) m%Mod%Vars%u(i)%LinNames(j)
+      end do
+   end do
+
+   write (*, *) "Solver Jacobian Outputs:"
+   do i = 1, size(m%Mod%Vars%y)
+      do j = 1, m%Mod%Vars%y(i)%Num
+         write (*, *) m%Mod%Vars%y(i)%LinNames(j)
+      end do
+   end do
 
    !----------------------------------------------------------------------------
    ! Recalculate glue variable locations to simplify Jacobian construction
@@ -267,11 +291,15 @@ contains
             DstModTC = any(DstMod%iMod == p%iModTC)
             DstModO1 = any(DstMod%iMod == p%iModOpt1)
 
+            ! If source or destination module is not in TC or Option 1, continue
+            if (.not. (SrcModTC .or. SrcModO1)) cycle
+            if (.not. (DstModTC .or. DstModO1)) cycle
+
             ! Select based on mapping type
             select case (Mapping%MapType)
             case (Map_MotionMesh)
 
-               ! Add flag based on module locations
+               ! If source and destination modules are tightly coupled
                if (SrcModTC .and. DstModTC) then
 
                   ! Add flag for source displacement, velocity, and acceleration
@@ -292,25 +320,26 @@ contains
                      end associate
                   end do
 
-               else if ((SrcModTC .and. DstModO1) .or. &
-                        (SrcModO1 .and. DstModTC) .or. &
-                        (SrcModO1 .and. DstModO1)) then
+               else
 
-                  ! Add flag for source displacement, velocity, acceleration for dUdy
-                  do i = 1, size(SrcMod%Vars%y)
-                     associate (Var => SrcMod%Vars%y(i))
-                        if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
-                           call MV_SetFlags(Var, VF_Solve)
-                        end if
-                     end associate
-                  end do
-
-                  ! Add flag for destination accelerations
+                  ! Add flag for destination acceleration and translation disp for dUdu
                   do i = 1, size(DstMod%Vars%u)
                      associate (Var => DstMod%Vars%u(i))
                         if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
                            select case (Var%Field)
-                           case (FieldTransAcc, FieldAngularAcc)
+                           case (FieldTransDisp, FieldTransAcc, FieldAngularAcc)
+                              call MV_SetFlags(Var, VF_Solve)
+                           end select
+                        end if
+                     end associate
+                  end do
+
+                  ! Add flag to source for dUdy terms
+                  do i = 1, size(SrcMod%Vars%y)
+                     associate (Var => SrcMod%Vars%y(i))
+                        if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
+                           select case (Var%Field)
+                           case (FieldTransDisp, FieldAngularVel, FieldTransAcc, FieldAngularAcc)
                               call MV_SetFlags(Var, VF_Solve)
                            end select
                         end if
@@ -320,55 +349,53 @@ contains
 
             case (Map_LoadMesh)
 
-               if (DstModTC .or. DstModO1) then
-
-                  ! Add flag to destination loads
-                  do i = 1, size(DstMod%Vars%u)
-                     associate (Var => DstMod%Vars%u(i))
-                        if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
+               ! Add flag to destination loads
+               do i = 1, size(DstMod%Vars%u)
+                  associate (Var => DstMod%Vars%u(i))
+                     if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
+                        select case (Var%Field)
+                        case (FieldForce, FieldMoment)
                            call MV_SetFlags(Var, VF_Solve)
-                        end if
-                     end associate
-                  end do
+                        end select
+                     end if
+                  end associate
+               end do
 
-                  ! Add flag to destination displacements and orientations for dUdy
-                  do i = 1, size(DstMod%Vars%y)
-                     associate (Var => DstMod%Vars%y(i))
-                        if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) then
-                           select case (Var%Field)
-                           case (FieldTransDisp, FieldOrientation)
-                              call MV_SetFlags(Var, VF_Solve)
-                           end select
-                        end if
-                     end associate
-                  end do
+               ! Add flag to source loads
+               do i = 1, size(SrcMod%Vars%y)
+                  associate (Var => SrcMod%Vars%y(i))
+                     if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
+                        select case (Var%Field)
+                        case (FieldForce, FieldMoment)
+                           call MV_SetFlags(Var, VF_Solve)
+                        end select
+                     end if
+                  end associate
+               end do
 
-                  if ((SrcModTC .or. SrcModO1)) then
+               ! Add flag to destination displacements and orientations for dUdy
+               do i = 1, size(DstMod%Vars%y)
+                  associate (Var => DstMod%Vars%y(i))
+                     if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) then
+                        select case (Var%Field)
+                        case (FieldTransDisp, FieldOrientation)
+                           call MV_SetFlags(Var, VF_Solve)
+                        end select
+                     end if
+                  end associate
+               end do
 
-                     ! Add flag to source loads
-                     do i = 1, size(SrcMod%Vars%y)
-                        associate (Var => SrcMod%Vars%y(i))
-                           if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
-                              call MV_SetFlags(Var, VF_Solve)
-                           end if
-                        end associate
-                     end do
-
-                     ! Add flag to source translation displacement for dUdu
-                     do i = 1, size(SrcMod%Vars%u)
-                        associate (Var => SrcMod%Vars%u(i))
-                           if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) then
-                              select case (Var%Field)
-                              case (FieldTransDisp)
-                                 call MV_SetFlags(Var, VF_Solve)
-                              end select
-                           end if
-                        end associate
-                     end do
-
-                  end if
-
-               end if
+               ! Add flag to source translation displacement for dUdu
+               do i = 1, size(SrcMod%Vars%u)
+                  associate (Var => SrcMod%Vars%u(i))
+                     if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) then
+                        select case (Var%Field)
+                        case (FieldTransDisp)
+                           call MV_SetFlags(Var, VF_Solve)
+                        end select
+                     end if
+                  end associate
+               end do
 
             end select
 
@@ -797,7 +824,7 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
 
    ! Loop through initial module index list
    do i = 1, size(p%iModInit)
-      
+
       ! Solve for inputs
       call FAST_InputSolve(p%iModInit(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -836,11 +863,162 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
    Turbine%y_FAST%DriverWriteOutput(2) = real(ConvError, ReKi) ! ConvError
    Turbine%y_FAST%DriverWriteOutput(3) = real(1, ReKi) ! NumUJac
 
+   !----------------------------------------------------------------------------
+   ! Finite Difference of Jacobian
+   !----------------------------------------------------------------------------
+
+   if (FiniteDifferenceJacobian) call CalcFiniteDifferenceJacobian()
+
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
    end function
+   subroutine CalcFiniteDifferenceJacobian()
+      real(R8Ki), allocatable    :: JacRef(:, :), JacFD(:, :)
+      real(R8Ki), allocatable    :: Rp(:), Rn(:), uSave(:)
+      integer(IntKi)             :: ii, jj, col
+
+      if (MatrixUn == -1) then
+         call GetNewUnit(MatrixUn, ErrStat2, ErrMsg2); if (Failed()) return
+      end if
+
+      ! Write input names
+      call OpenFOutFile(MatrixUn, "InpNames.txt", ErrStat2, ErrMsg2); if (Failed()) return
+      do ii = 1, size(m%Mod%Vars%u)
+         do jj = 1, m%Mod%Vars%u(ii)%Num
+            write (MatrixUn, *) m%Mod%Vars%u(ii)%LinNames(jj)
+         end do
+      end do
+
+      ! Build and save current Jacobian
+      call BuildJacobianIO(p, m, GlueModMaps, t_initial, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+
+      call DumpMatrix(MatrixUn, "JacRef.bin", m%IO_Jac, ErrStat2, ErrMsg2); if (Failed()) return
+
+      do i = 1, size(m%Mod%ModData)
+         associate (ModData => m%Mod%ModData(i))
+            call CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, Turbine%p_FAST, Turbine%y_FAST, t_initial, MatrixUn, &
+                                         'lin', VF_None, ErrStat2, ErrMsg2, ModSuffix=ModData%Abbr, FullOutput=.true.)
+            if (Failed()) return
+         end associate
+      end do
+
+      call CalcWriteLinearMatrices(m%Mod%Vars, m%Mod%Lin, Turbine%p_FAST, Turbine%y_FAST, t_initial, MatrixUn, 'lin', VF_None, ErrStat2, ErrMsg2, FullOutput=.true.)
+      if (Failed()) return
+
+      ! Save array of current inputs
+      uSave = m%Mod%Lin%u
+
+      ! Allocate finite difference Jacobian
+      call AllocAry(JacFD, m%Mod%Vars%Nu, m%Mod%Vars%Nu, 'JacFD', ErrStat2, ErrMsg2); if (Failed()) return
+
+      ! Allocate storage for residual
+      call AllocAry(Rp, m%Mod%Vars%Nu, 'Rp', ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(Rn, m%Mod%Vars%Nu, 'Rn', ErrStat2, ErrMsg2); if (Failed()) return
+
+      ! Loop through input variables
+      do ii = 1, size(m%Mod%Vars%u)
+
+         ! Loop through number of values in variable
+         do jj = 1, m%Mod%Vars%u(ii)%Num
+
+            ! Positive perturbation of input
+            call MV_Perturb(m%Mod%Vars%u(ii), jj, 1, uSave, m%Mod%Lin%u)
+            call CalcResidual(Rp)
+
+            ! Negative perturbation of input
+            call MV_Perturb(m%Mod%Vars%u(ii), jj, -1, uSave, m%Mod%Lin%u)
+            call CalcResidual(Rn)
+
+            ! Calculate column index
+            col = m%Mod%Vars%u(ii)%iLoc(1) + jj - 1
+
+            ! Calculate Jacobian column
+            JacFD(:, col) = (Rn - Rp)/(2.0_R8Ki*m%Mod%Vars%u(ii)%Perturb)
+
+         end do
+      end do
+
+      ! Write Jacobian matrices
+      call DumpMatrix(MatrixUn, "JacFD.bin", JacFD, ErrStat2, ErrMsg2); if (Failed()) return
+
+      ! Restore module inputs
+      m%Mod%Lin%u = uSave
+      do i = 1, size(m%Mod%ModData)
+         associate (ModData => m%Mod%ModData(i))
+            call FAST_SetOP(ModData, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                            u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
+            if (Failed()) return
+         end associate
+      end do
+
+   end subroutine
+
+   subroutine CalcResidual(Resid)
+      real(R8Ki), intent(inout) :: Resid(:)
+
+      ! Transfer perturbed inputs to modules
+      do i = 1, size(m%Mod%ModData)
+         associate (ModData => m%Mod%ModData(i))
+            call FAST_SetOP(ModData, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                            u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
+            if (Failed()) return
+         end associate
+      end do
+
+      ! ! Get inputs for Option 1 modules
+      ! do i = 1, size(p%iModOpt1)
+      !    call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+      !    if (Failed()) return
+      ! end do
+
+      ! ! Pack TC and Option 1 inputs into u array
+      ! do i = 1, size(m%Mod%ModData)
+      !    associate (ModData => m%Mod%ModData(i))
+      !       call FAST_GetOP(ModData, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+      !                       u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
+      !       if (Failed()) return
+      !    end associate
+      ! end do
+
+      !-------------------------------------------------------------------------
+      ! Calculate outputs for TC & Opt1 modules
+      !-------------------------------------------------------------------------
+
+      do i = 1, size(m%Mod%ModData)
+         call FAST_CalcOutput(m%Mod%ModData(i), GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, &
+                              Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+      !-------------------------------------------------------------------------
+      ! Formulate right hand side (U^tight, U^Option1)
+      !-------------------------------------------------------------------------
+
+      ! Input solve for tight coupling modules
+      do i = 1, size(p%iModTC)
+         call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+      ! Input solve for Option 1 modules
+      do i = 1, size(p%iModOpt1)
+         call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+      ! Collect TC and Option 1 inputs into uCalc
+      do i = 1, size(m%Mod%ModData)
+         call FAST_GetOP(m%Mod%ModData(i), t_initial, INPUT_TEMP, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                         u_op=m%Mod%ModData(i)%Lin%u, u_glue=m%uCalc)
+         if (Failed()) return
+      end do
+
+      ! Calculate difference in U for all Option 1 and TC modules (un - u_tmp)
+      call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, Resid)
+   end subroutine
 end subroutine
 
 subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps, Turbine, ErrStat, ErrMsg)
@@ -973,7 +1151,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
       end do
 
       !-------------------------------------------------------------------------
-      ! Option 2 Solve
+      ! Option 2: Input Solve, Update States, Calc Output
       !-------------------------------------------------------------------------
 
       ! Loop through Option 2 modules
@@ -995,19 +1173,29 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
       end do
 
       !-------------------------------------------------------------------------
-      ! Option 1 Solve
+      ! Option 1: Input Solve, Update States
       !-------------------------------------------------------------------------
 
-      ! Get inputs and update states for Option 1 modules
       do i = 1, size(p%iModOpt1)
+
          call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
          if (Failed()) return
+
          call FAST_UpdateStates(GlueModData(p%iModOpt1(i)), t_initial, n_t_global, Turbine, ErrStat2, ErrMsg2)
          if (Failed()) return
       end do
 
       !-------------------------------------------------------------------------
-      ! Pack inputs and modify states
+      ! TC: Input Solve
+      !-------------------------------------------------------------------------
+
+      do i = 1, size(p%iModTC)
+         call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      end do
+
+      !-------------------------------------------------------------------------
+      ! TC and Option 1: Save Inputs (u)
       !-------------------------------------------------------------------------
 
       ! Pack TC and Option 1 inputs into u array
@@ -1033,7 +1221,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
          m%UJacIterRemain = m%UJacIterRemain - 1
 
          !----------------------------------------------------------------------
-         ! Calculate outputs for TC & Opt1 modules
+         ! TC and Option 1: Calculate Outputs (Y)
          !----------------------------------------------------------------------
 
          do i = 1, size(m%Mod%ModData)
@@ -1047,6 +1235,9 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
          !----------------------------------------------------------------------
          ! Convergence iteration check
          !----------------------------------------------------------------------
+
+         ! If Jacobian has zero size (no states or inputs), exit loop
+         if (p%NumJ == 0) exit
 
          ! If convergence iteration has reached or exceeded limit
          if (ConvIter >= p%MaxConvIter) then
@@ -1081,7 +1272,37 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
          end if
 
          !----------------------------------------------------------------------
-         ! Update Jacobian
+         ! Formulate right hand side (X_2, U)
+         !----------------------------------------------------------------------
+
+         ! Calculate continuous state derivatives for tight coupling modules
+         do i = 1, size(p%iModTC)
+            call FAST_GetOP(m%Mod%ModData(i), t_global_next, INPUT_CURR, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
+                            dx_op=m%Mod%ModData(i)%Lin%dx, dx_glue=m%Mod%Lin%dx)
+            if (Failed()) return
+         end do
+
+         ! Input solve for tight coupling modules
+         do i = 1, size(p%iModTC)
+            call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end do
+
+         ! Input solve for Option 1 modules
+         do i = 1, size(p%iModOpt1)
+            call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end do
+
+         ! Transfer inputs into uCalc
+         do i = 1, size(m%Mod%ModData)
+            call FAST_GetOP(m%Mod%ModData(i), t_global_next, INPUT_TEMP, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
+                            u_op=m%Mod%ModData(i)%Lin%u, u_glue=m%uCalc)
+            if (Failed()) return
+         end do
+
+         !----------------------------------------------------------------------
+         ! Formulate Jacobian
          !----------------------------------------------------------------------
 
          ! If number of iterations or steps until Jacobian is to be updated
@@ -1092,40 +1313,6 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
             call BuildJacobianTC(p, m, GlueModMaps, t_global_next, STATE_PRED, Turbine, ErrStat2, ErrMsg2)
             if (Failed()) return
          end if
-
-         !----------------------------------------------------------------------
-         ! Formulate right hand side (X_2^tight, U^tight, U^Option1)
-         !----------------------------------------------------------------------
-
-         ! Calculate continuous state derivatives for tight coupling modules
-         do i = 1, size(m%Mod%ModData)
-            call FAST_GetOP(m%Mod%ModData(i), t_global_next, INPUT_CURR, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
-                            dx_op=m%Mod%ModData(i)%Lin%dx, dx_glue=m%Mod%Lin%dx)
-            if (Failed()) return
-         end do
-
-         ! Input solve for tight coupling modules
-         do i = 1, size(p%iModTC)
-            associate (ModData => GlueModData(p%iModTC(i)))
-               call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
-               if (Failed()) return
-            end associate
-         end do
-
-         ! Input solve for Option 1 modules
-         do i = 1, size(p%iModOpt1)
-            associate (ModData => GlueModData(p%iModOpt1(i)))
-               call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_TEMP, Turbine, ErrStat2, ErrMsg2)
-               if (Failed()) return
-            end associate
-         end do
-
-         ! Transfer collect inputs into uCalc
-         do i = 1, size(m%Mod%ModData)
-            call FAST_GetOP(m%Mod%ModData(i), t_global_next, INPUT_TEMP, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
-                            u_op=m%Mod%ModData(i)%Lin%u, u_glue=m%uCalc)
-            if (Failed()) return
-         end do
 
          !----------------------------------------------------------------------
          ! Populate residual vector and apply conditioning to loads
@@ -1167,20 +1354,20 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
          if (p%iJL(1) > 0) m%XB(p%iJL(1):p%iJL(2), 1) = m%XB(p%iJL(1):p%iJL(2), 1)*p%Scale_UJac
 
          !----------------------------------------------------------------------
-         ! Update State for Tight Coupling modules
+         ! TC: Modify States
          !----------------------------------------------------------------------
 
          if (p%iJX(1) > 0) call UpdateStatePrediction(p, m%Mod%Vars, m%XB(p%iJX(1):p%iJX(2), 1), m%StatePred)
 
          !----------------------------------------------------------------------
-         ! Update inputs for Tight Coupling and Option 1 modules
+         ! TC and Option 1: Modify Inputs
          !----------------------------------------------------------------------
 
          ! Add change in inputs
          if (p%iJU(1) > 0) call MV_AddDelta(m%Mod%Vars%u, m%XB(p%iJU(1):p%iJU(2), 1), m%Mod%Lin%u)
 
          !----------------------------------------------------------------------
-         ! Transfer updated TC and Option 1 states and inputs to modules
+         ! TC and Option 1: Transfer updated states and inputs to modules
          !----------------------------------------------------------------------
 
          do i = 1, size(m%Mod%ModData)
@@ -1266,7 +1453,7 @@ subroutine CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, 
    ConvError = 0.0_R8Ki
 
    !----------------------------------------------------------------------------
-   ! InputSolve and CalcOutput for Option 2 modules
+   ! Option 2: InputSolve and CalcOutput
    !----------------------------------------------------------------------------
 
    ! Do input solve and calculate outputs for Option 2 modules (except ServoDyn)
@@ -1283,7 +1470,7 @@ subroutine CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, 
    end do
 
    !----------------------------------------------------------------------------
-   ! InputSolve and CalcOutput for TC and Option 1 modules
+   ! Option 1: InputSolve
    !----------------------------------------------------------------------------
 
    ! Get inputs for Option 1 modules
@@ -1292,8 +1479,17 @@ subroutine CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, 
       if (Failed()) return
    end do
 
+   !-------------------------------------------------------------------------
+   ! TC: Input Solve
+   !-------------------------------------------------------------------------
+
+   do i = 1, size(p%iModTC)
+      call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end do
+
    !----------------------------------------------------------------------------
-   ! Pack inputs for TC and Option 1 modules
+   ! TC and Option 1: Save Inputs (u)
    !----------------------------------------------------------------------------
 
    ! Pack TC and Option 1 inputs into u array
@@ -1306,14 +1502,14 @@ subroutine CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, 
    end do
 
    !----------------------------------------------------------------------------
-   ! Option 1 Convergence Iterations
+   ! Convergence Iterations
    !----------------------------------------------------------------------------
 
    ! Loop through convergence iterations
    do ConvIter = 0, p%MaxConvIter
 
       !-------------------------------------------------------------------------
-      ! Calculate outputs for TC & Opt1 modules
+      ! TC and Option 1: Calculate Outputs (Y)
       !-------------------------------------------------------------------------
 
       do i = 1, size(m%Mod%ModData)
@@ -1355,12 +1551,22 @@ subroutine CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, 
             call BuildJacobianIO(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat2, ErrMsg2)
             if (Failed()) return
 
+            ! Condition Jacobian matrix before factoring
+            if (p%iUL(1) > 0) then
+               m%IO_Jac(p%iUL(1):p%iUL(2), :) = m%IO_Jac(p%iUL(1):p%iUL(2), :)/p%Scale_UJac
+               m%IO_Jac(:, p%iUL(1):p%iUL(2)) = m%IO_Jac(:, p%iUL(1):p%iUL(2))*p%Scale_UJac
+            end if
+
+            ! Factor Jacobian matrix
+            call LAPACK_getrf(size(m%IO_Jac, 1), size(m%IO_Jac, 2), m%IO_Jac, m%IPIV, ErrStat2, ErrMsg2)
+            if (Failed()) return
+
          end if
       end if
 
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
       ! Formulate right hand side (U^tight, U^Option1)
-      !----------------------------------------------------------------------
+      !-------------------------------------------------------------------------
 
       ! Input solve for tight coupling modules
       do i = 1, size(p%iModTC)
@@ -1390,7 +1596,7 @@ subroutine CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, 
       call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, m%IO_R)
 
       ! Copy residual to RHS array for solve
-      m%IO_X(:,1) = m%IO_R
+      m%IO_X(:, 1) = m%IO_R
 
       ! Apply conditioning factor to loads in RHS
       if (p%iUL(1) > 0) m%IO_X(p%iUL(1):p%iUL(2), 1) = m%IO_X(p%iUL(1):p%iUL(2), 1)/p%Scale_UJac
@@ -1558,7 +1764,7 @@ subroutine BuildJacobianTC(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat
                     dYTdx2 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX2(1):p%iX2(2)), &
                     dYTdx1 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX1(1):p%iX1(2)))
             m%Mod%Lin%J(p%iJUT(1):p%iJUT(2), p%iJX(1):p%iJX(2)) = &
-                p%GammaPrime*matmul(dUTdyT, dYTdx2) + p%BetaPrime*matmul(dUTdyT, dYTdx1)
+               p%GammaPrime*matmul(dUTdyT, dYTdx2) + p%BetaPrime*matmul(dUTdyT, dYTdx1)
          end associate
       end if
 
@@ -1667,16 +1873,6 @@ subroutine BuildJacobianIO(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat
    ! Jac = m%Mod%Lin%dUdu + matmul(m%Mod%Lin%dUdy, m%Mod%Lin%dYdu)
    m%IO_Jac = m%Mod%Lin%dUdu
    call LAPACK_GEMM('N', 'N', 1.0_R8Ki, m%Mod%Lin%dUdy, m%Mod%Lin%dYdu, 1.0_R8Ki, m%IO_Jac, ErrStat2, ErrMsg2)
-   if (Failed()) return
-
-   ! Condition Jacobian matrix before factoring
-   if (p%iUL(1) > 0) then
-      m%IO_Jac(p%iUL(1):p%iUL(2), :) = m%IO_Jac(p%iUL(1):p%iUL(2), :)/p%Scale_UJac
-      m%IO_Jac(:, p%iUL(1):p%iUL(2)) = m%IO_Jac(:, p%iUL(1):p%iUL(2))*p%Scale_UJac
-   end if
-
-   ! Factor Jacobian matrix
-   call LAPACK_getrf(size(m%IO_Jac, 1), size(m%IO_Jac, 2), m%IO_Jac, m%IPIV, ErrStat2, ErrMsg2)
    if (Failed()) return
 
 contains

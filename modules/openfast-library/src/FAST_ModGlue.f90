@@ -843,6 +843,10 @@ contains
 
    function CalcOutputErrorAtAzimuth() result(eps_squared)
       real(R8Ki)  :: eps_squared_sum, eps_squared
+      integer(IntKi) :: un, k
+
+      call OpenFOutFile(un, "CSDiff-"//trim(Num2LStr(m%CS%NumRotations))//"-"//trim(Num2LStr(m%Lin%AzimuthIndex))//".csv", ErrStat2, ErrMsg2)
+      write (un, *) "name;interp;azimuth;diff;ref;err"
 
       ! Calculate difference between interpolated outputs for this rotation and
       ! interpolated outputs from previous rotation
@@ -858,8 +862,14 @@ contains
             ! Skip write outputs
             if (MV_HasFlagsAll(Var, VF_WriteOut)) cycle
 
+            k = 1
+
             ! Loop through values in variable
             do j = Var%iLoc(1), Var%iLoc(2)
+
+               write (un, *) trim(Var%LinNames(k)), ";", m%CS%y_interp(j), ";", m%CS%y_azimuth(j, m%Lin%AzimuthIndex), ";", &
+                  m%CS%y_diff(j), ";", m%CS%y_ref(j), ";", (m%CS%y_diff(j)/m%CS%y_ref(j))**2
+               k = k + 1
 
                ! If difference is not essentially zero, sum difference
                if (.not. EqualRealNos(m%CS%y_diff(j), 0.0_R8Ki)) then
@@ -868,6 +878,8 @@ contains
             end do
          end associate
       end do
+
+      close (un)
 
       ! Normalize error by number of outputs
       eps_squared = eps_squared_sum/m%CS%NumOutputs
