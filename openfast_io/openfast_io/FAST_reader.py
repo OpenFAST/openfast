@@ -2895,8 +2895,6 @@ class InputReader_OpenFAST(object):
         self.fst_vt['MoorDyn']['Rod_Name'] = []
         self.fst_vt['MoorDyn']['Body_ID'] = []
         self.fst_vt['MoorDyn']['Rod_ID'] = []
-        self.fst_vt['MoorDyn']['ChannelID'] = []
-
 
         # MoorDyn
         f.readline()
@@ -3186,19 +3184,19 @@ class InputReader_OpenFAST(object):
                 data_line = readline_filterComments(f).split()
                 while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
 
-                    option_value = data_line[0]
-                    option_name = data_line[1]
+                    option_value = data_line[0].upper() # MD is case insensitive
+                    option_name = data_line[1].upper() # MD is case insensitive
                     if len(data_line) > 2:
                         option_description = ' '.join(data_line[2:])
                     else:
-                        option_description = ''
+                        option_description = '-'
 
                     if option_name.upper() == 'WATERKIN':
                         self.fst_vt['MoorDyn']['WaterKin'] = option_value.strip('"')
                         WaterKin_file = os.path.normpath(os.path.join(os.path.dirname(moordyn_file), self.fst_vt['MoorDyn']['WaterKin']))
                         self.read_WaterKin(WaterKin_file)
 
-                    self.fst_vt['MoorDyn']['option_values'] = float_read(option_value.strip('"')) # some options values can be strings or floats
+                    self.fst_vt['MoorDyn']['option_values'].append(float_read(option_value.strip('"'))) # some options values can be strings or floats
                     self.fst_vt['MoorDyn']['option_names'].append(option_name)
                     self.fst_vt['MoorDyn']['option_descriptions'].append(option_description)
 
@@ -3216,7 +3214,7 @@ class InputReader_OpenFAST(object):
 
         self.fst_vt['WaterKin']['z-depth'] = []
         self.fst_vt['WaterKin']['x-current'] = []
-        self.fst_vt['WaterKin']['x-current'] = []
+        self.fst_vt['WaterKin']['y-current'] = []
 
         f = open(WaterKin_file)
         f.readline()
@@ -3239,10 +3237,11 @@ class InputReader_OpenFAST(object):
         f.readline()
         f.readline()
         data_line = readline_filterComments(f).split()
-        while data_line:
+        while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
             self.fst_vt['WaterKin']['z-depth'].append(float(data_line[0]))     
             self.fst_vt['WaterKin']['x-current'].append(float(data_line[1]))      
-            self.fst_vt['WaterKin']['y-current'].append(float(data_line[2]))   
+            self.fst_vt['WaterKin']['y-current'].append(float(data_line[2]))
+            data_line = readline_filterComments(f).split()   
         f.close()
 
     def read_NonLinearEA(self,Stiffness_file): # read and return the nonlinear line stiffness lookup table for a given line
