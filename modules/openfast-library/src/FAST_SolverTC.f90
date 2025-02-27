@@ -116,7 +116,8 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                       p_FAST%MHK /= MHK_None), &
                  pack(modInds, ModIDs == Module_ExtPtfm), &
                  pack(modInds, ModIDs == Module_HD), &
-                 pack(modInds, ModIDs == Module_Orca)]
+                 pack(modInds, ModIDs == Module_Orca), &
+                 pack(modInds, ModIDs == Module_MD)]
 
    ! Indices of Option 2 modules
    p%iModOpt2 = [pack(modInds, ModIDs == Module_SrvD), &
@@ -133,8 +134,7 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                  pack(modInds, ModIDs == Module_FEAM), &
                  pack(modInds, ModIDs == Module_IceD), &
                  pack(modInds, ModIDs == Module_IceF), &
-                 pack(modInds, ModIDs == Module_MAP), &
-                 pack(modInds, ModIDs == Module_MD)]
+                 pack(modInds, ModIDs == Module_MAP)]
 
    ! Indices of modules to perform InputSolves after the Option 1 solve
    p%iModPost = [pack(modInds, ModIDs == Module_SrvD), &
@@ -241,7 +241,7 @@ contains
    subroutine SetVarSolveFlags()
       logical :: SrcModTC, SrcModO1
       logical :: DstModTC, DstModO1
-      logical :: HasSolveFlag
+      logical :: DstForce, DstMoment
 
       ! Loop through tight coupling modules and add VF_Solve flag to continuous state variables
       do i = 1, size(p%iModTC)
@@ -252,9 +252,11 @@ contains
          end associate
       end do
 
-      ! dUdu
+      ! dUdu Motions
       ! VarsDst%u, VarDst(FieldTransDisp),         VarsDst%u, VarDst(FieldTransVel)
       ! VarsDst%u, VarDst(FieldTransDisp),         VarsDst%u, VarDst(FieldTransAcc)
+
+      ! dUdu Loads
       ! VarsSrc%u, VarSrcDisp(FieldTransDisp),     VarsDst%u, VarDst(FieldMoment)
 
       ! dUdy Loads
@@ -262,22 +264,21 @@ contains
       ! VarsSrc%y, VarSrc(FieldMoment),            VarsDst%u, VarDst(FieldMoment)
       ! VarsSrc%y, VarSrc(FieldForce),             VarsDst%u, VarDst(FieldMoment)
       ! VarsDst%y, VarDstDisp(FieldTransDisp),     VarsDst%u, VarDst(FieldMoment)
-      ! VarsDst%y, VarDstDisp(FieldTransDisp),     VarsDst%u, VarDst(FieldMoment)
       ! VarsDst%y, VarDstDisp(FieldOrientation),   VarsDst%u, VarDst(FieldMoment)
 
       ! dUdy Motions
       ! VarsSrc%y, VarSrc(FieldTransDisp),         VarsDst%u, VarDst(FieldTransDisp)
+      ! VarsSrc%y, VarSrc(FieldOrientation),       VarsDst%u, VarDst(FieldTransDisp)
       ! VarsSrc%y, VarSrc(FieldOrientation),       VarsDst%u, VarDst(FieldOrientation)
       ! VarsSrc%y, VarSrc(FieldTransVel),          VarsDst%u, VarDst(FieldTransVel)
-      ! VarsSrc%y, VarSrc(FieldAngularVel),        VarsDst%u, VarDst(FieldAngularVel)
-      ! VarsSrc%y, VarSrc(FieldTransAcc),          VarsDst%u, VarDst(FieldTransAcc)
-      ! VarsSrc%y, VarSrc(FieldAngularAcc),        VarsDst%u, VarDst(FieldAngularAcc)
-      ! VarsSrc%y, VarSrc(FieldOrientation),       VarsDst%u, VarDst(FieldTransDisp)
       ! VarsSrc%y, VarSrc(FieldAngularVel),        VarsDst%u, VarDst(FieldTransVel)
-      ! VarsSrc%y, VarSrc(FieldAngularAcc),        VarsDst%u, VarDst(FieldTransAcc)
       ! VarsSrc%y, VarSrc(FieldTransDisp),         VarsDst%u, VarDst(FieldTransVel)
+      ! VarsSrc%y, VarSrc(FieldAngularVel),        VarsDst%u, VarDst(FieldAngularVel)
       ! VarsSrc%y, VarSrc(FieldTransDisp),         VarsDst%u, VarDst(FieldTransAcc)
+      ! VarsSrc%y, VarSrc(FieldTransAcc),          VarsDst%u, VarDst(FieldTransAcc)
       ! VarsSrc%y, VarSrc(FieldAngularVel),        VarsDst%u, VarDst(FieldTransAcc)
+      ! VarsSrc%y, VarSrc(FieldAngularAcc),        VarsDst%u, VarDst(FieldTransAcc)
+      ! VarsSrc%y, VarSrc(FieldAngularAcc),        VarsDst%u, VarDst(FieldAngularAcc)
 
       ! Loop through module mappings
       do j = 1, size(GlueModMaps)
@@ -349,13 +350,20 @@ contains
 
             case (Map_LoadMesh)
 
+               DstForce = .false.
+               DstMoment = .false.
+
                ! Add flag to destination loads
                do i = 1, size(DstMod%Vars%u)
                   associate (Var => DstMod%Vars%u(i))
                      if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
                         select case (Var%Field)
-                        case (FieldForce, FieldMoment)
+                        case (FieldForce)
                            call MV_SetFlags(Var, VF_Solve)
+                           DstForce = .true.
+                        case (FieldMoment)
+                           call MV_SetFlags(Var, VF_Solve)
+                           DstMoment = .true.
                         end select
                      end if
                   end associate
@@ -374,28 +382,34 @@ contains
                end do
 
                ! Add flag to destination displacements and orientations for dUdy
-               do i = 1, size(DstMod%Vars%y)
-                  associate (Var => DstMod%Vars%y(i))
-                     if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) then
-                        select case (Var%Field)
-                        case (FieldTransDisp, FieldOrientation)
-                           call MV_SetFlags(Var, VF_Solve)
-                        end select
-                     end if
-                  end associate
-               end do
+               ! if destination mesh has moments
+               if (DstMoment) then
+                  do i = 1, size(DstMod%Vars%y)
+                     associate (Var => DstMod%Vars%y(i))
+                        if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) then
+                           select case (Var%Field)
+                           case (FieldTransDisp, FieldOrientation)
+                              call MV_SetFlags(Var, VF_Solve)
+                           end select
+                        end if
+                     end associate
+                  end do
+               end if
 
                ! Add flag to source translation displacement for dUdu
-               do i = 1, size(SrcMod%Vars%u)
-                  associate (Var => SrcMod%Vars%u(i))
-                     if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) then
-                        select case (Var%Field)
-                        case (FieldTransDisp)
-                           call MV_SetFlags(Var, VF_Solve)
-                        end select
-                     end if
-                  end associate
-               end do
+               ! if destination mesh has moments
+               if (DstMoment) then
+                  do i = 1, size(SrcMod%Vars%u)
+                     associate (Var => SrcMod%Vars%u(i))
+                        if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) then
+                           select case (Var%Field)
+                           case (FieldTransDisp)
+                              call MV_SetFlags(Var, VF_Solve)
+                           end select
+                        end if
+                     end associate
+                  end do
+               end if
 
             end select
 

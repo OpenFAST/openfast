@@ -31,6 +31,9 @@ use FAST_Mapping
 implicit none
 
 private
+
+logical :: CalcSteadyDebug = .false.
+
 public :: ModGlue_Init
 public :: ModGlue_Linearize_OP, ModGlue_CalcSteady
 public :: ModGlue_SaveOperatingPoint, ModGlue_RestoreOperatingPoint
@@ -845,15 +848,14 @@ contains
       real(R8Ki)  :: eps_squared_sum, eps_squared
       integer(IntKi) :: un, k
 
-      call OpenFOutFile(un, "CSDiff-"//trim(Num2LStr(m%CS%NumRotations))//"-"//trim(Num2LStr(m%Lin%AzimuthIndex))//".csv", ErrStat2, ErrMsg2)
-      write (un, *) "name;interp;azimuth;diff;ref;err"
+
 
       ! Calculate difference between interpolated outputs for this rotation and
       ! interpolated outputs from previous rotation
       call MV_ComputeDiff(m%ModGlue%Vars%y, m%CS%y_interp, m%CS%y_azimuth(:, m%Lin%AzimuthIndex), m%CS%y_diff)
 
       ! Initialize epsilon squared sum
-      eps_squared_sum = 0
+      eps_squared_sum = 0.0_R8Ki
 
       ! Loop through glue output variables
       do i = 1, size(m%ModGlue%Vars%y)
@@ -862,14 +864,8 @@ contains
             ! Skip write outputs
             if (MV_HasFlagsAll(Var, VF_WriteOut)) cycle
 
-            k = 1
-
             ! Loop through values in variable
             do j = Var%iLoc(1), Var%iLoc(2)
-
-               write (un, *) trim(Var%LinNames(k)), ";", m%CS%y_interp(j), ";", m%CS%y_azimuth(j, m%Lin%AzimuthIndex), ";", &
-                  m%CS%y_diff(j), ";", m%CS%y_ref(j), ";", (m%CS%y_diff(j)/m%CS%y_ref(j))**2
-               k = k + 1
 
                ! If difference is not essentially zero, sum difference
                if (.not. EqualRealNos(m%CS%y_diff(j), 0.0_R8Ki)) then
@@ -879,10 +875,34 @@ contains
          end associate
       end do
 
-      close (un)
-
       ! Normalize error by number of outputs
       eps_squared = eps_squared_sum/m%CS%NumOutputs
+
+      ! If debug output requested
+      if (CalcSteadyDebug) then
+
+         call OpenFOutFile(un, "CSDiff-"//trim(Num2LStr(m%CS%NumRotations))//"-"//trim(Num2LStr(m%Lin%AzimuthIndex))//".csv", ErrStat2, ErrMsg2)
+         write (un, *) "name;interp;azimuth;diff;ref;err"
+
+         ! Loop through glue output variables
+         do i = 1, size(m%ModGlue%Vars%y)
+            associate (Var => m%ModGlue%Vars%y(i))
+
+               ! Skip write outputs
+               if (MV_HasFlagsAll(Var, VF_WriteOut)) cycle
+
+               ! Loop through values in variable
+               k = 1
+               do j = Var%iLoc(1), Var%iLoc(2)
+                  write (un, *) trim(Var%LinNames(k)), ";", m%CS%y_interp(j), ";", m%CS%y_azimuth(j, m%Lin%AzimuthIndex), ";", &
+                     m%CS%y_diff(j), ";", m%CS%y_ref(j), ";", (m%CS%y_diff(j)/m%CS%y_ref(j))**2
+                  k = k + 1
+               end do
+            end associate
+         end do
+
+         close (un)
+      end if
    end function
 
    logical function Failed()
