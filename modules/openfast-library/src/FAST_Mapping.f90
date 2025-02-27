@@ -2523,11 +2523,11 @@ subroutine FAST_LinearizeMappings(ModGlue, Mappings, Turbine, ErrStat, ErrMsg)
             call Assemble_dUdy_Motions(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdy)
 
             ! Copy linearization matrices to global dUdu matrix
-            call Assemble_dUdu(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdu)
+            call Assemble_dUdu_Motions(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdu)
 
          case (Map_LoadMesh)
 
-            ! Get source and destination meshes
+            ! Get source and destination load meshes
             call FAST_OutputMeshPointer(ModSrc, Turbine, Mapping%SrcDL, SrcMesh, ErrStat2, ErrMsg2); if (Failed()) return
             call FAST_InputMeshPointer(ModDst, Turbine, Mapping%DstDL, DstMesh, INPUT_CURR, ErrStat2, ErrMsg2); if (Failed()) return
 
@@ -2558,7 +2558,7 @@ subroutine FAST_LinearizeMappings(ModGlue, Mappings, Turbine, ErrStat, ErrMsg)
             call Assemble_dUdy_Loads(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdy)
 
             ! Copy linearization matrices to global dUdu matrix
-            call Assemble_dUdu(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdu)
+            call Assemble_dUdu_Loads(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdu)
 
          end select
 
@@ -2590,7 +2590,7 @@ contains
       end select
    end subroutine
 
-   subroutine Assemble_dUdu(Mapping, ModMap, VarsSrc, VarsDst, dUdu)
+   subroutine Assemble_dUdu_Motions(Mapping, ModMap, VarsSrc, VarsDst, dUdu)
       type(MappingType), intent(in) :: Mapping
       type(VarMapType), intent(in)  :: ModMap
       type(ModVarsType), intent(in) :: VarsSrc, VarsDst
@@ -2605,6 +2605,14 @@ contains
       if (allocated(Mapping%MeshMap%dM%ta_uD)) then
          call SumBlock(VarsDst%u, ModMap%iVarDst(FieldTransDisp), VarsDst%u, ModMap%iVarDst(FieldTransAcc), Mapping%MeshMap%dM%ta_uD, dUdu)
       end if
+
+   end subroutine
+
+   subroutine Assemble_dUdu_Loads(Mapping, ModMap, VarsSrc, VarsDst, dUdu)
+      type(MappingType), intent(in) :: Mapping
+      type(VarMapType), intent(in)  :: ModMap
+      type(ModVarsType), intent(in) :: VarsSrc, VarsDst
+      real(R8Ki), intent(inout)     :: dUdu(:, :)
 
       ! Effect of input Translation Displacement on input Moments
       if (allocated(Mapping%MeshMap%dM%M_uS)) then

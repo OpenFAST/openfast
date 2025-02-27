@@ -155,27 +155,6 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                             VF_Solve, .true., ErrStat2, ErrMsg2, Name='Solver')
    if (Failed()) return
 
-   write (*, *) "Solver Jacobian States:"
-   do i = 1, size(m%Mod%Vars%x)
-      do j = 1, m%Mod%Vars%x(i)%Num
-         write (*, *) m%Mod%Vars%x(i)%LinNames(j)
-      end do
-   end do
-
-   write (*, *) "Solver Jacobian Inputs:"
-   do i = 1, size(m%Mod%Vars%u)
-      do j = 1, m%Mod%Vars%u(i)%Num
-         write (*, *) m%Mod%Vars%u(i)%LinNames(j)
-      end do
-   end do
-
-   write (*, *) "Solver Jacobian Outputs:"
-   do i = 1, size(m%Mod%Vars%y)
-      do j = 1, m%Mod%Vars%y(i)%Num
-         write (*, *) m%Mod%Vars%y(i)%LinNames(j)
-      end do
-   end do
-
    !----------------------------------------------------------------------------
    ! Recalculate glue variable locations to simplify Jacobian construction
    !----------------------------------------------------------------------------
@@ -184,6 +163,27 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    if (Failed()) return
    p%NumU = p%iJU(2) - p%iJU(2) + 1
    p%NumUT = p%iUT(2) - p%iUT(1) + 1
+
+   write (*, *) "Solver Jacobian States:"
+   do j = 1, size(m%Mod%Vars%x)
+      do k = 1, m%Mod%Vars%x(j)%Num
+         write (*, *) m%Mod%Vars%x(j)%iLoc(1) + k - 1, trim(m%Mod%Vars%x(j)%LinNames(k))
+      end do
+   end do
+
+   write (*, *) "Solver Jacobian Inputs:"
+   do j = 1, size(m%Mod%Vars%u)
+      do k = 1, m%Mod%Vars%u(j)%Num
+         write (*, *) m%Mod%Vars%u(j)%iLoc(1) + k - 1, trim(m%Mod%Vars%u(j)%LinNames(k))
+      end do
+   end do
+
+   write (*, *) "Solver Jacobian Outputs:"
+   do j = 1, size(m%Mod%Vars%y)
+      do k = 1, m%Mod%Vars%y(j)%Num
+         write (*, *) m%Mod%Vars%y(j)%iLoc(1) + k - 1, trim(m%Mod%Vars%y(j)%LinNames(k))
+      end do
+   end do
 
    !----------------------------------------------------------------------------
    ! Initialize MiscVars
@@ -487,151 +487,6 @@ subroutine CalcVarGlobalIndices(p, ModTC, NumQ, NumJ, ErrStat, ErrMsg)
    end do
 
    !----------------------------------------------------------------------------
-   ! Calculate TC state glue locations (displacements then velocities)
-   !----------------------------------------------------------------------------
-
-   ! Initialize glue index
-   iGlu = 0
-
-   ! Set indices for displacement variables
-   do i = 1, size(ModTC%ModData)
-      associate (Vars => ModTC%ModData(i)%Vars)
-         if (.not. allocated(Vars%x)) cycle
-         do j = 1, size(Vars%x)
-            if (Vars%x(j)%DerivOrder == 0) then
-               Vars%x(j)%iGlu = [iGlu + 1, iGlu + Vars%x(j)%Num]
-               iGlu = Vars%x(j)%iGlu(2)
-            end if
-         end do
-      end associate
-   end do
-
-   ! Start and end indices of displacement variables
-   if (iGlu > 0) p%iX1 = [1, iGlu]
-
-   ! Set indices for velocity variables
-   do i = 1, size(ModTC%ModData)
-      associate (Vars => ModTC%ModData(i)%Vars)
-         if (.not. allocated(Vars%x)) cycle
-         do j = 1, size(Vars%x)
-            if (Vars%x(j)%DerivOrder == 1) then
-               Vars%x(j)%iGlu = [iGlu + 1, iGlu + Vars%x(j)%Num]
-               iGlu = Vars%x(j)%iGlu(2)
-            end if
-         end do
-      end associate
-   end do
-
-   ! Start and end indices of velocity variables
-   if (iGlu > p%iX1(2)) p%iX2 = [p%iX1(2) + 1, iGlu]
-
-   !----------------------------------------------------------------------------
-   ! Calculate input variable glue locations (group load and non-load)
-   !----------------------------------------------------------------------------
-
-   ! Initialize glue index
-   iGlu = 0
-
-   ! Set indices of Tight Coupling input variables (non-load)
-   do i = 1, size(p%iModTC)
-      associate (Vars => ModTC%ModData(i)%Vars)
-         if (.not. allocated(Vars%u)) cycle
-         do j = 1, size(Vars%u)
-            if (.not. MV_IsLoad(Vars%u(j))) then
-               Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
-               iGlu = Vars%u(j)%iGlu(2)
-            end if
-         end do
-      end associate
-   end do
-
-   ! Set start index of load values
-   p%iUL(1) = iGlu + 1
-
-   ! Set indices of Tight Coupling input variables (load)
-   do i = 1, size(p%iModTC)
-      associate (Vars => ModTC%ModData(i)%Vars)
-         if (.not. allocated(Vars%u)) cycle
-         do j = 1, size(Vars%u)
-            if (MV_IsLoad(Vars%u(j))) then
-               Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
-               iGlu = Vars%u(j)%iGlu(2)
-            end if
-         end do
-      end associate
-   end do
-
-   ! Set start/end indices for tight coupling inputs
-   if (iGlu > 0) p%iUT = [1, iGlu]
-
-   ! Set indices of Option 1 input variables (load)
-   do i = size(p%iModTC) + 1, size(ModTC%ModData)
-      associate (Vars => ModTC%ModData(i)%Vars)
-         if (.not. allocated(Vars%u)) cycle
-         do j = 1, size(Vars%u)
-            if (MV_IsLoad(Vars%u(j))) then
-               Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
-               iGlu = Vars%u(j)%iGlu(2)
-            end if
-         end do
-      end associate
-   end do
-
-   ! Set end index of load values
-   if (iGlu >= p%iUL(1)) p%iUL(2) = iGlu
-
-   ! Set indices of Option 1 input variables (non-load)
-   do i = size(p%iModTC) + 1, size(ModTC%ModData)
-      associate (Vars => ModTC%ModData(i)%Vars)
-         if (.not. allocated(Vars%u)) cycle
-         do j = 1, size(Vars%u)
-            if (.not. MV_IsLoad(Vars%u(j))) then
-               Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
-               iGlu = Vars%u(j)%iGlu(2)
-            end if
-         end do
-      end associate
-   end do
-
-   ! Set start/end indices for Option 1 inputs
-   if (iGlu > p%iUT(2)) p%iU1 = [p%iUT(2) + 1, iGlu]
-
-   !----------------------------------------------------------------------------
-   ! Calculate output variable categories and indices
-   !----------------------------------------------------------------------------
-
-   ! Initialize glue index
-   iGlu = 0
-
-   ! Set indices of Tight Coupling output variables
-   do i = 1, size(p%iModTC)
-      associate (Vars => ModTC%ModData(i)%Vars)
-         if (.not. allocated(Vars%y)) cycle
-         do j = 1, size(Vars%y)
-            Vars%y(j)%iGlu = [iGlu + 1, iGlu + Vars%y(j)%Num]
-            iGlu = Vars%y(j)%iGlu(2)
-         end do
-      end associate
-   end do
-
-   ! Save number of tight coupling inputs
-   if (iGlu > 0) p%iyT = [1, iGlu]
-
-   ! Set indices of Option 1 output variables
-   do i = size(p%iModTC) + 1, size(ModTC%ModData)
-      associate (Vars => ModTC%ModData(i)%Vars)
-         if (.not. allocated(Vars%y)) cycle
-         do j = 1, size(Vars%y)
-            Vars%y(j)%iGlu = [iGlu + 1, iGlu + Vars%y(j)%Num]
-            iGlu = Vars%y(j)%iGlu(2)
-         end do
-      end associate
-   end do
-
-   ! Calculate number of option 1 outputs
-   if (iGlu > p%iyT(2)) p%iy1 = [p%iyT(2) + 1, iGlu]
-
-   !----------------------------------------------------------------------------
    ! Allocate q storage for generalized alpha algorithm
    ! This matrix stores equation state in an (N,4) array where:
    !  - N is the number of equations (rows)
@@ -684,37 +539,200 @@ subroutine CalcVarGlobalIndices(p, ModTC, NumQ, NumJ, ErrStat, ErrMsg)
    end do
 
    !----------------------------------------------------------------------------
-   ! Populate combined variable arrays
+   ! Calculate TC state glue locations (displacements then velocities)
    !----------------------------------------------------------------------------
 
-   ix = 0; iu = 0; iy = 0
+   ! Initialize glue index
+   iGlu = 0
+   ix = 0
+
+   ! Set indices for displacement variables
    do i = 1, size(ModTC%ModData)
-      associate (ModData => ModTC%ModData(i))
-
-         if (allocated(ModData%Vars%x)) then
-            do j = 1, size(ModData%Vars%x)
+      associate (Vars => ModTC%ModData(i)%Vars)
+         if (.not. allocated(Vars%x)) cycle
+         do j = 1, size(Vars%x)
+            if (Vars%x(j)%DerivOrder == 0) then
+               Vars%x(j)%iGlu = [iGlu + 1, iGlu + Vars%x(j)%Num]
+               iGlu = Vars%x(j)%iGlu(2)
                ix = ix + 1
-               ModTC%Vars%x(ix)%iLoc = ModData%Vars%x(j)%iGlu
-               ModTC%Vars%x(ix)%iq = ModData%Vars%x(j)%iq
-            end do
-         end if
-
-         if (allocated(ModData%Vars%u)) then
-            do j = 1, size(ModData%Vars%u)
-               iu = iu + 1
-               ModTC%Vars%u(iu)%iLoc = ModData%Vars%u(j)%iGlu
-            end do
-         end if
-
-         if (allocated(ModData%Vars%y)) then
-            do j = 1, size(ModData%Vars%y)
-               iy = iy + 1
-               ModTC%Vars%y(iy)%iLoc = ModData%Vars%y(j)%iGlu
-            end do
-         end if
-
+               call NWTC_Library_CopyModVarType(Vars%x(j), ModTC%Vars%x(ix), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+               ModTC%Vars%x(ix)%iLoc = ModTC%Vars%x(ix)%iGlu
+               do k = 1, ModTC%Vars%x(ix)%Num
+                  ModTC%Vars%x(ix)%LinNames(k) = trim(ModTC%ModData(i)%Abbr)//" "//ModTC%Vars%x(ix)%LinNames(k)
+               end do
+            end if
+         end do
       end associate
    end do
+
+   ! Start and end indices of displacement variables
+   if (iGlu > 0) p%iX1 = [1, iGlu]
+
+   ! Set indices for velocity variables
+   do i = 1, size(ModTC%ModData)
+      associate (Vars => ModTC%ModData(i)%Vars)
+         if (.not. allocated(Vars%x)) cycle
+         do j = 1, size(Vars%x)
+            if (Vars%x(j)%DerivOrder == 1) then
+               Vars%x(j)%iGlu = [iGlu + 1, iGlu + Vars%x(j)%Num]
+               iGlu = Vars%x(j)%iGlu(2)
+               ix = ix + 1
+               call NWTC_Library_CopyModVarType(Vars%x(j), ModTC%Vars%x(ix), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+               ModTC%Vars%x(ix)%iLoc = ModTC%Vars%x(ix)%iGlu
+               do k = 1, ModTC%Vars%x(ix)%Num
+                  ModTC%Vars%x(ix)%LinNames(k) = trim(ModTC%ModData(i)%Abbr)//" "//ModTC%Vars%x(ix)%LinNames(k)
+               end do
+            end if
+         end do
+      end associate
+   end do
+
+   ! Start and end indices of velocity variables
+   if (iGlu > p%iX1(2)) p%iX2 = [p%iX1(2) + 1, iGlu]
+
+   !----------------------------------------------------------------------------
+   ! Calculate input variable glue locations (group load and non-load)
+   !----------------------------------------------------------------------------
+
+   ! Initialize glue index
+   iGlu = 0
+   iu = 0
+
+   ! Set indices of Tight Coupling input variables (non-load)
+   do i = 1, size(p%iModTC)
+      associate (Vars => ModTC%ModData(i)%Vars)
+         if (.not. allocated(Vars%u)) cycle
+         do j = 1, size(Vars%u)
+            if (.not. MV_IsLoad(Vars%u(j))) then
+               Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
+               iGlu = Vars%u(j)%iGlu(2)
+               iu = iu + 1
+               call NWTC_Library_CopyModVarType(Vars%u(j), ModTC%Vars%u(iu), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+               ModTC%Vars%u(iu)%iLoc = ModTC%Vars%u(iu)%iGlu
+               do k = 1, ModTC%Vars%u(iu)%Num
+                  ModTC%Vars%u(iu)%LinNames(k) = trim(ModTC%ModData(i)%Abbr)//" "//ModTC%Vars%u(iu)%LinNames(k)
+               end do
+            end if
+         end do
+      end associate
+   end do
+
+   ! Set start index of load values
+   p%iUL(1) = iGlu + 1
+
+   ! Set indices of Tight Coupling input variables (load)
+   do i = 1, size(p%iModTC)
+      associate (Vars => ModTC%ModData(i)%Vars)
+         if (.not. allocated(Vars%u)) cycle
+         do j = 1, size(Vars%u)
+            if (MV_IsLoad(Vars%u(j))) then
+               Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
+               iGlu = Vars%u(j)%iGlu(2)
+               iu = iu + 1
+               call NWTC_Library_CopyModVarType(Vars%u(j), ModTC%Vars%u(iu), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+               ModTC%Vars%u(iu)%iLoc = ModTC%Vars%u(iu)%iGlu
+               do k = 1, ModTC%Vars%u(iu)%Num
+                  ModTC%Vars%u(iu)%LinNames(k) = trim(ModTC%ModData(i)%Abbr)//" "//ModTC%Vars%u(iu)%LinNames(k)
+               end do
+            end if
+         end do
+      end associate
+   end do
+
+   ! Set start/end indices for tight coupling inputs
+   if (iGlu > 0) p%iUT = [1, iGlu]
+
+   ! Set indices of Option 1 input variables (load)
+   do i = size(p%iModTC) + 1, size(ModTC%ModData)
+      associate (Vars => ModTC%ModData(i)%Vars)
+         if (.not. allocated(Vars%u)) cycle
+         do j = 1, size(Vars%u)
+            if (MV_IsLoad(Vars%u(j))) then
+               Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
+               iGlu = Vars%u(j)%iGlu(2)
+               iu = iu + 1
+               call NWTC_Library_CopyModVarType(Vars%u(j), ModTC%Vars%u(iu), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+               ModTC%Vars%u(iu)%iLoc = ModTC%Vars%u(iu)%iGlu
+               do k = 1, ModTC%Vars%u(iu)%Num
+                  ModTC%Vars%u(iu)%LinNames(k) = trim(ModTC%ModData(i)%Abbr)//" "//ModTC%Vars%u(iu)%LinNames(k)
+               end do
+            end if
+         end do
+      end associate
+   end do
+
+   ! Set end index of load values
+   if (iGlu >= p%iUL(1)) p%iUL(2) = iGlu
+
+   ! Set indices of Option 1 input variables (non-load)
+   do i = size(p%iModTC) + 1, size(ModTC%ModData)
+      associate (Vars => ModTC%ModData(i)%Vars)
+         if (.not. allocated(Vars%u)) cycle
+         do j = 1, size(Vars%u)
+            if (.not. MV_IsLoad(Vars%u(j))) then
+               Vars%u(j)%iGlu = [iGlu + 1, iGlu + Vars%u(j)%Num]
+               iGlu = Vars%u(j)%iGlu(2)
+               iu = iu + 1
+               call NWTC_Library_CopyModVarType(Vars%u(j), ModTC%Vars%u(iu), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+               ModTC%Vars%u(iu)%iLoc = ModTC%Vars%u(iu)%iGlu
+               do k = 1, ModTC%Vars%u(iu)%Num
+                  ModTC%Vars%u(iu)%LinNames(k) = trim(ModTC%ModData(i)%Abbr)//" "//ModTC%Vars%u(iu)%LinNames(k)
+               end do
+            end if
+         end do
+      end associate
+   end do
+
+   ! Set start/end indices for Option 1 inputs
+   if (iGlu > p%iUT(2)) p%iU1 = [p%iUT(2) + 1, iGlu]
+
+   !----------------------------------------------------------------------------
+   ! Calculate output variable categories and indices
+   !----------------------------------------------------------------------------
+
+   ! Initialize glue index
+   iGlu = 0
+   iy = 0
+
+   ! Set indices of Tight Coupling output variables
+   do i = 1, size(p%iModTC)
+      associate (Vars => ModTC%ModData(i)%Vars)
+         if (.not. allocated(Vars%y)) cycle
+         do j = 1, size(Vars%y)
+            Vars%y(j)%iGlu = [iGlu + 1, iGlu + Vars%y(j)%Num]
+            iGlu = Vars%y(j)%iGlu(2)
+            iy = iy + 1
+            call NWTC_Library_CopyModVarType(Vars%y(j), ModTC%Vars%y(iy), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            ModTC%Vars%y(iy)%iLoc = ModTC%Vars%y(iy)%iGlu
+            do k = 1, ModTC%Vars%y(iy)%Num
+               ModTC%Vars%y(iy)%LinNames(k) = trim(ModTC%ModData(i)%Abbr)//" "//ModTC%Vars%y(iy)%LinNames(k)
+            end do
+         end do
+      end associate
+   end do
+
+   ! Save number of tight coupling inputs
+   if (iGlu > 0) p%iyT = [1, iGlu]
+
+   ! Set indices of Option 1 output variables
+   do i = size(p%iModTC) + 1, size(ModTC%ModData)
+      associate (Vars => ModTC%ModData(i)%Vars)
+         if (.not. allocated(Vars%y)) cycle
+         do j = 1, size(Vars%y)
+            Vars%y(j)%iGlu = [iGlu + 1, iGlu + Vars%y(j)%Num]
+            iGlu = Vars%y(j)%iGlu(2)
+            iy = iy + 1
+            call NWTC_Library_CopyModVarType(Vars%y(j), ModTC%Vars%y(iy), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            ModTC%Vars%y(iy)%iLoc = ModTC%Vars%y(iy)%iGlu
+            do k = 1, ModTC%Vars%y(iy)%Num
+               ModTC%Vars%y(iy)%LinNames(k) = trim(ModTC%ModData(i)%Abbr)//" "//ModTC%Vars%y(iy)%LinNames(k)
+            end do
+         end do
+      end associate
+   end do
+
+   ! Calculate number of option 1 outputs
+   if (iGlu > p%iyT(2)) p%iy1 = [p%iyT(2) + 1, iGlu]
 
    !----------------------------------------------------------------------------
    ! Jacobian indices and ranges
@@ -783,9 +801,6 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
       if (Failed()) return
    end do
 
-   ! Reset mapping ready for transfer flag
-   call FAST_ResetMappingReady(GlueModMaps)
-
    !----------------------------------------------------------------------------
    ! Collect initial states from modules
    !----------------------------------------------------------------------------
@@ -821,6 +836,9 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
    !----------------------------------------------------------------------------
    ! Input solve and calc output for initial modules
    !----------------------------------------------------------------------------
+
+   ! Reset mapping ready for transfer flag
+   call FAST_ResetMappingReady(GlueModMaps)
 
    ! Loop through initial module index list
    do i = 1, size(p%iModInit)
@@ -879,6 +897,18 @@ contains
       real(R8Ki), allocatable    :: Rp(:), Rn(:), uSave(:)
       integer(IntKi)             :: ii, jj, col
 
+      call AllocAry(uSave, m%Mod%Vars%Nu, "uSave", ErrStat2, ErrMsg2); if (Failed()) return
+      uSave = 0.0_R8Ki
+
+      ! Pack TC and Option 1 inputs into u array
+      do i = 1, size(m%Mod%ModData)
+         associate (ModData => m%Mod%ModData(i))
+            call FAST_GetOP(ModData, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
+                            u_op=ModData%Lin%u, u_glue=uSave)
+            if (Failed()) return
+         end associate
+      end do
+
       if (MatrixUn == -1) then
          call GetNewUnit(MatrixUn, ErrStat2, ErrMsg2); if (Failed()) return
       end if
@@ -887,7 +917,7 @@ contains
       call OpenFOutFile(MatrixUn, "InpNames.txt", ErrStat2, ErrMsg2); if (Failed()) return
       do ii = 1, size(m%Mod%Vars%u)
          do jj = 1, m%Mod%Vars%u(ii)%Num
-            write (MatrixUn, *) m%Mod%Vars%u(ii)%LinNames(jj)
+            write (MatrixUn, *) m%Mod%Vars%u(ii)%iLoc(1) + jj - 1, trim(m%Mod%Vars%u(ii)%LinNames(jj))
          end do
       end do
 
@@ -897,19 +927,8 @@ contains
 
       call DumpMatrix(MatrixUn, "JacRef.bin", m%IO_Jac, ErrStat2, ErrMsg2); if (Failed()) return
 
-      do i = 1, size(m%Mod%ModData)
-         associate (ModData => m%Mod%ModData(i))
-            call CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, Turbine%p_FAST, Turbine%y_FAST, t_initial, MatrixUn, &
-                                         'lin', VF_None, ErrStat2, ErrMsg2, ModSuffix=ModData%Abbr, FullOutput=.true.)
-            if (Failed()) return
-         end associate
-      end do
-
-      call CalcWriteLinearMatrices(m%Mod%Vars, m%Mod%Lin, Turbine%p_FAST, Turbine%y_FAST, t_initial, MatrixUn, 'lin', VF_None, ErrStat2, ErrMsg2, FullOutput=.true.)
+      call CalcWriteLinearMatrices(m%Mod%Vars, m%Mod%Lin, Turbine%p_FAST, Turbine%y_FAST, t_initial, MatrixUn, 'lin', VF_None, ErrStat2, ErrMsg2, CalcGlue=.false., FullOutput=.true.)
       if (Failed()) return
-
-      ! Save array of current inputs
-      uSave = m%Mod%Lin%u
 
       ! Allocate finite difference Jacobian
       call AllocAry(JacFD, m%Mod%Vars%Nu, m%Mod%Vars%Nu, 'JacFD', ErrStat2, ErrMsg2); if (Failed()) return
@@ -945,11 +964,10 @@ contains
       call DumpMatrix(MatrixUn, "JacFD.bin", JacFD, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! Restore module inputs
-      m%Mod%Lin%u = uSave
       do i = 1, size(m%Mod%ModData)
          associate (ModData => m%Mod%ModData(i))
             call FAST_SetOP(ModData, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-                            u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
+                            u_op=ModData%Lin%u, u_glue=uSave)
             if (Failed()) return
          end associate
       end do
@@ -957,7 +975,7 @@ contains
    end subroutine
 
    subroutine CalcResidual(Resid)
-      real(R8Ki), intent(inout) :: Resid(:)
+      real(R8Ki), intent(out) :: Resid(:)
 
       ! Transfer perturbed inputs to modules
       do i = 1, size(m%Mod%ModData)
@@ -968,23 +986,8 @@ contains
          end associate
       end do
 
-      ! ! Get inputs for Option 1 modules
-      ! do i = 1, size(p%iModOpt1)
-      !    call FAST_InputSolve(p%iModOpt1(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
-      !    if (Failed()) return
-      ! end do
-
-      ! ! Pack TC and Option 1 inputs into u array
-      ! do i = 1, size(m%Mod%ModData)
-      !    associate (ModData => m%Mod%ModData(i))
-      !       call FAST_GetOP(ModData, t_initial, INPUT_CURR, STATE_CURR, Turbine, ErrStat2, ErrMsg2, &
-      !                       u_op=ModData%Lin%u, u_glue=m%Mod%Lin%u)
-      !       if (Failed()) return
-      !    end associate
-      ! end do
-
       !-------------------------------------------------------------------------
-      ! Calculate outputs for TC & Opt1 modules
+      ! TC and Option 1: Calculate Outputs (Y)
       !-------------------------------------------------------------------------
 
       do i = 1, size(m%Mod%ModData)
@@ -1015,6 +1018,10 @@ contains
                          u_op=m%Mod%ModData(i)%Lin%u, u_glue=m%uCalc)
          if (Failed()) return
       end do
+
+      !-------------------------------------------------------------------------
+      ! Populate residual vector and apply conditioning to loads
+      !-------------------------------------------------------------------------
 
       ! Calculate difference in U for all Option 1 and TC modules (un - u_tmp)
       call MV_ComputeDiff(m%Mod%Vars%u, m%uCalc, m%Mod%Lin%u, Resid)
@@ -1484,7 +1491,7 @@ subroutine CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, 
    !-------------------------------------------------------------------------
 
    do i = 1, size(p%iModTC)
-      call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
+      call FAST_InputSolve(p%iModTC(i), GlueModData, GlueModMaps, iInput, Turbine, ErrStat2, ErrMsg2)
       if (Failed()) return
    end do
 
