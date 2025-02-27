@@ -10,6 +10,11 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
+OpenFAST v4.0.1 to OpenFAST v4.0.2
+----------------------------------
+
+No input file changes were made.
+
 
 OpenFAST v4.0.0 to OpenFAST v4.0.1
 ----------------------------------

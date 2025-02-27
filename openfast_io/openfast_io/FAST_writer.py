@@ -579,7 +579,7 @@ class InputWriter_OpenFAST(object):
             blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile1'])
         else:
             EDbld_dict = self.fst_vt['ElastoDynBlade'][bldInd]
-            blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile'+bldInd])
+            blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile'+(bldInd+1)])
 
         f = open(blade_file, 'w')
 
@@ -695,9 +695,9 @@ class InputWriter_OpenFAST(object):
             bd_dict = self.fst_vt['BeamDyn']
             beamdyn_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['BDBldFile(1)'])
         else:
-            self.fst_vt['BeamDyn'][bldInd]['BldFile'] = self.FAST_namingOut + '_BeamDyn_Blade_%d.dat'%bldInd
+            self.fst_vt['BeamDyn'][bldInd]['BldFile'] = self.FAST_namingOut + '_BeamDyn_Blade_%d.dat'%(bldInd+1)
             bd_dict = self.fst_vt['BeamDyn'][bldInd]
-            beamdyn_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['BDBldFile(%s)'%bldInd])
+            beamdyn_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['BDBldFile(%s)'%(bldInd+1)])
 
 
         self.write_BeamDynBlade(bldInd = bldInd)
