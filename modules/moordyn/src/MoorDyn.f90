@@ -98,6 +98,8 @@ CONTAINS
       REAL(DbKi)                                      :: dtM         ! actual mooring dynamics time step
       INTEGER(IntKi)                                  :: NdtM        ! number of time steps to integrate through with RK2
 !      INTEGER(IntKi)                                  :: ntWave      ! number of time steps of wave data
+      LOGICAL                                       :: compVIV = .FALSE.     ! flag to check if simulating VIV
+      LOGICAL                                       :: compVisco = .FALSE.   ! flag to check if simulating viscoelastic line
       
       TYPE(MD_InputType)    :: u_array(1)    ! a size-one array for u to make call to TimeStep happy
       REAL(DbKi)            :: t_array(1)    ! a size-one array saying time is 0 to make call to TimeStep happy  
@@ -1488,10 +1490,12 @@ CONTAINS
 
                   if (m%LineTypeList(m%LineList(l)%PropsIdNum)%ElasticMod > 1) then ! todo add an error check here? or change to 2 or 3?
                      Nx = Nx + m%LineList(l)%N      ! if using viscoelastic model, need one more state per segment    
+                     compVisco = .TRUE. ! turn of flag for linearization error checking
                   end if
                   
                   if (m%LineTypeList(m%LineList(l)%PropsIdNum)%Cl > 0) then 
                      Nx = Nx + m%LineList(l)%N+1      ! if using VIV model, need one more state per node (note here N is the num sgemnts, so N+1 is number of nodes).
+                     compVIV = .TRUE. ! turn of flag for linearization error checking
                   endif
 
                   m%LineStateIsN(l) = Nx      
@@ -2875,7 +2879,14 @@ CONTAINS
       z%dummy     = 0      
       
       if (InitInp%Linearize) then
-         call MD_Init_Jacobian(InitInp, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+         IF ((compVIV) .OR. (compVisco)) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2 = "Linearization cannot be used with the VIV or Viscoelastic model in MoorDyn"
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            RETURN
+         ELSE
+            call MD_Init_Jacobian(InitInp, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+         ENDIF
       endif
       
       CALL WrScr('   MoorDyn initialization completed.')
