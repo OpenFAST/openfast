@@ -192,6 +192,11 @@ CONTAINS
          do I=0, Line%N 
             Line%phi(I) = (REAL(I)/Line%N)*2*Pi
          enddo
+
+         ! initialize other things to 0
+         Line%rdd_old = 0.0_DbKi
+         Line%yd_rms_old = 0.0_DbKi
+         Line%yd_rms_old = 0.0_DbKi
       end if
       
       ! allocate node and segment tangent vectors
@@ -1529,6 +1534,7 @@ CONTAINS
          END IF
 
          ! Vortex Induced Vibration (VIV) cross-flow lift force
+         Line%Lf(:,I) = 0.0_DbKi ! Zero lift force
          IF ((Line%Cl > 0.0) .AND. (.NOT. Line%IC_gen)) THEN ! If non-zero lift coefficient and not during IC_gen ! Ignore the following: and internal node then VIV to be calculated .AND. (I /= 0) .AND. (I /= N)
    
             ! ----- The Synchronization Model ------
