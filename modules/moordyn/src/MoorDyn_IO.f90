@@ -1583,7 +1583,7 @@ CONTAINS
       if ( p%NumOuts > 0_IntKi .and. p%MDUnOut > 0 ) then  
       
          ! Write the output parameters to the file
-         Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,ES25.7E2))'   ! should evenutally use user specified format?
+         Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,ES15.7))'   ! should evenutally use user specified format?
          
          WRITE(p%MDUnOut,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
       END IF
@@ -1605,9 +1605,9 @@ CONTAINS
                                + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
            
            if (m%LineList(I)%OutFlagList(2) == 1) THEN   ! if node positions are included, make them using a float format for higher precision
-            Frmt = '(F10.4,'//TRIM(Int2LStr(3*(m%LineList(I)%N + 1)))//'(A1,ES25.7E2),'//TRIM(Int2LStr(LineNumOuts - 3*(m%LineList(I)%N - 1)))//'(A1,ES25.7E2))'  
+            Frmt = '(F10.4,'//TRIM(Int2LStr(3*(m%LineList(I)%N + 1)))//'(A1,ES15.7),'//TRIM(Int2LStr(LineNumOuts - 3*(m%LineList(I)%N - 1)))//'(A1,ES15.7))'  
            else
-            Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,ES25.7E2))'   ! should evenutally use user specified format?
+            Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,ES15.7))'   ! should evenutally use user specified format?
            end if
            
            L = 1 ! start of index of line output file at first entry   12345.7890
@@ -1755,7 +1755,7 @@ CONTAINS
                                + m%RodList(I)%N*SUM(m%RodList(I)%OutFlagList(12:18))
            
            
-           Frmt = '(F10.4,'//TRIM(Int2LStr(RodNumOuts))//'(A1,ES25.7E2))'   ! should evenutally use user specified format?
+           Frmt = '(F10.4,'//TRIM(Int2LStr(RodNumOuts))//'(A1,ES15.7))'   ! should evenutally use user specified format?
 
            L = 1 ! start of index of line output file at first entry
            
