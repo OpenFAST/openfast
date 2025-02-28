@@ -328,7 +328,8 @@ contains
                      associate (Var => DstMod%Vars%u(i))
                         if (MV_EqualDL(Mapping%DstDL, Var%DL)) then
                            select case (Var%Field)
-                           case (FieldTransDisp, FieldTransAcc, FieldAngularAcc)
+                           ! case (FieldTransDisp, FieldTransAcc, FieldAngularAcc)
+                           case (FieldTransAcc, FieldAngularAcc)
                               call MV_SetFlags(Var, VF_Solve)
                            end select
                         end if
@@ -340,7 +341,8 @@ contains
                      associate (Var => SrcMod%Vars%y(i))
                         if (MV_EqualDL(Mapping%SrcDL, Var%DL)) then
                            select case (Var%Field)
-                           case (FieldTransDisp, FieldAngularVel, FieldTransAcc, FieldAngularAcc)
+                           ! case (FieldTransDisp, FieldAngularVel, FieldTransAcc, FieldAngularAcc)
+                           case (FieldTransAcc, FieldAngularAcc)
                               call MV_SetFlags(Var, VF_Solve)
                            end select
                         end if
@@ -381,34 +383,38 @@ contains
                   end associate
                end do
 
-               ! Add flag to destination displacements and orientations for dUdy
-               ! if destination mesh has moments
-               if (DstMoment) then
-                  do i = 1, size(DstMod%Vars%y)
-                     associate (Var => DstMod%Vars%y(i))
-                        if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) then
-                           select case (Var%Field)
-                           case (FieldTransDisp, FieldOrientation)
-                              call MV_SetFlags(Var, VF_Solve)
-                           end select
-                        end if
-                     end associate
-                  end do
-               end if
+               if (SrcModTC .and. DstModTC) then
 
-               ! Add flag to source translation displacement for dUdu
-               ! if destination mesh has moments
-               if (DstMoment) then
-                  do i = 1, size(SrcMod%Vars%u)
-                     associate (Var => SrcMod%Vars%u(i))
-                        if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) then
-                           select case (Var%Field)
-                           case (FieldTransDisp)
-                              call MV_SetFlags(Var, VF_Solve)
-                           end select
-                        end if
-                     end associate
-                  end do
+                  ! Add flag to destination displacements and orientations for dUdy
+                  ! if destination mesh has moments
+                  if (DstMoment) then
+                     do i = 1, size(DstMod%Vars%y)
+                        associate (Var => DstMod%Vars%y(i))
+                           if (MV_EqualDL(Mapping%DstDispDL, Var%DL)) then
+                              select case (Var%Field)
+                              case (FieldTransDisp, FieldOrientation)
+                                 call MV_SetFlags(Var, VF_Solve)
+                              end select
+                           end if
+                        end associate
+                     end do
+                  end if
+
+                  ! Add flag to source translation displacement for dUdu
+                  ! if destination mesh has moments
+                  if (DstMoment) then
+                     do i = 1, size(SrcMod%Vars%u)
+                        associate (Var => SrcMod%Vars%u(i))
+                           if (MV_EqualDL(Mapping%SrcDispDL, Var%DL)) then
+                              select case (Var%Field)
+                              case (FieldTransDisp)
+                                 call MV_SetFlags(Var, VF_Solve)
+                              end select
+                           end if
+                        end associate
+                     end do
+                  end if
+
                end if
 
             end select
@@ -914,6 +920,8 @@ contains
       call AllocAry(uSave, m%Mod%Vars%Nu, "uSave", ErrStat2, ErrMsg2); if (Failed()) return
       uSave = 0.0_R8Ki
 
+      write(*,*) "CalcFiniteDifferenceJacobian1"
+
       ! Pack TC and Option 1 inputs into u array
       do i = 1, size(m%Mod%ModData)
          associate (ModData => m%Mod%ModData(i))
@@ -923,9 +931,13 @@ contains
          end associate
       end do
 
+      write(*,*) "CalcFiniteDifferenceJacobian2"
+
       if (MatrixUn == -1) then
          call GetNewUnit(MatrixUn, ErrStat2, ErrMsg2); if (Failed()) return
       end if
+
+      write(*,*) "CalcFiniteDifferenceJacobian3"
 
       ! Write input names
       call OpenFOutFile(MatrixUn, "InpNames.txt", ErrStat2, ErrMsg2); if (Failed()) return
@@ -935,14 +947,22 @@ contains
          end do
       end do
 
+      write(*,*) "CalcFiniteDifferenceJacobian4"
+
       ! Build and save current Jacobian
       call BuildJacobianIO(p, m, GlueModMaps, t_initial, INPUT_CURR, Turbine, ErrStat2, ErrMsg2)
       if (Failed()) return
 
+      write(*,*) "CalcFiniteDifferenceJacobian5"
+
       call DumpMatrix(MatrixUn, "JacRef.bin", m%IO_Jac, ErrStat2, ErrMsg2); if (Failed()) return
+
+      write(*,*) "CalcFiniteDifferenceJacobian6"
 
       call CalcWriteLinearMatrices(m%Mod%Vars, m%Mod%Lin, Turbine%p_FAST, Turbine%y_FAST, t_initial, MatrixUn, 'lin', VF_None, ErrStat2, ErrMsg2, CalcGlue=.false., FullOutput=.true.)
       if (Failed()) return
+
+      write(*,*) "CalcFiniteDifferenceJacobian7"
 
       ! Allocate finite difference Jacobian
       call AllocAry(JacFD, m%Mod%Vars%Nu, m%Mod%Vars%Nu, 'JacFD', ErrStat2, ErrMsg2); if (Failed()) return
@@ -973,6 +993,8 @@ contains
 
          end do
       end do
+
+      write(*,*) "CalcFiniteDifferenceJacobian"
 
       ! Write Jacobian matrices
       call DumpMatrix(MatrixUn, "JacFD.bin", JacFD, ErrStat2, ErrMsg2); if (Failed()) return
@@ -1948,6 +1970,7 @@ pure subroutine CalculateStateQ(State, Vars, h)
    real(R8Ki), intent(in)        :: h
    integer(IntKi)                :: i, j, iq
    real(R8Ki)                    :: quat_prev(3), quat_delta(3), quat_new(3)
+   real(R8Ki)                    :: T(3,3), psi(3), psi_norm, psi_tilde(3,3)
 
    ! Calculate new displacement (valid for all states except orientation)
    State%q = State%q_prev + State%x
