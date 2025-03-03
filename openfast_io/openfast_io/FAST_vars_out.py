@@ -9580,7 +9580,8 @@ ElastoDyn_Nodes['FyL']        = False     # (kN); Edgewise shear force in local 
 # https://moordyn.readthedocs.io/en/latest/inputs.html#id5
 
 # also assuming that like other OpenFAST variables, it is limited to 9 output locations per veriable, i.e. FairTen1-FairTen9
-# TODO: Handle the flexible outputs for moordyn. This will require a different approach than the current dictionary structure. 
+# TODO: Handle the flexible outputs for moordyn. This will require a different approach than the current dictionary structure.
+# Right now a hackish way is used in the reader 
 # Update the message in FAST_writer.write_MoorDyn() when this is finished
 
 MoorDyn = {}
