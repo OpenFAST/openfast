@@ -2897,9 +2897,6 @@ class InputReader_OpenFAST(object):
         self.fst_vt['MoorDyn']['Rod_ID'] = []
 
         # MoorDyn
-        f.readline()
-        f.readline()
-        self.fst_vt['MoorDyn']['Echo']     = bool_read(f.readline().split()[0])
         data_line = f.readline()
         while data_line:
 
@@ -3205,10 +3202,25 @@ class InputReader_OpenFAST(object):
 
             elif 'outputs' in data_line:
 
-                self.read_outlist_freeForm(f,'MoorDyn')
+                data_line = readline_filterComments(f)
+
+                while (data_line[0] and data_line[0][:3] != '---') and not ('END' in data_line): # OpenFAST searches for --- and END, so we'll do the same
+
+                    if '"' in data_line:
+                        pattern = r'"?(.*?)"?'    # grab only the text between quotes
+                        data_line = re.findall(pattern, data_line)[0]
+
+                    channels = data_line.split(',')  # split on commas
+                    channels = [c.strip() for c in channels]  # strip whitespace
+                    for c in channels:
+                        self.fst_vt['outlist']['MoorDyn'][c] = True
+                    data_line = readline_filterComments(f)
 
                 f.close()
                 break
+
+            else: # we must be in the header section, unlimited lines of text allowed here so skip until we hit the first line w/ keywords 'Line Types' or 'Line Dictionary'
+                data_line = f.readline()
 
     def read_WaterKin(self,WaterKin_file):
 

@@ -2349,8 +2349,8 @@ class InputWriter_OpenFAST(object):
 
         f.write('--------------------- MoorDyn Input File ------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
-        f.write('comments from seed file have been dropped. Output Channels are not yet fully supported\n')
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['Echo'], 'Echo', '- echo the input file data (flag)\n'))
+        f.write('Comments from seed file have been dropped. Output Channels are not yet fully supported\n')
+        f.write('NOTE: MoorDyn does not use ECHO, instead use WriteLog of 0, 1, 2, or 3 in the options list \n')
         f.write('----------------------- LINE TYPES ------------------------------------------\n')
         f.write(" ".join(['{:<11s}'.format(i) for i in ['Name', 'Diam', 'MassDen', 'EA', 'BA/-zeta', 'EI', 'Cd', 'Ca', 'CdAx', 'CaAx', 'Cl (optional)', 'dF (optional)', 'cF (optional)']])+'\n')
         f.write(" ".join(['{:<11s}'.format(i) for i in ['(-)', '(m)', '(kg/m)', '(N)', '(N-s/-)', '(N-m^2)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
