@@ -259,7 +259,7 @@ class HydroDynLib(CDLL):
             raise Exception("\nHydroDyn terminated prematurely.")
 
         #   Make a flat 1D array of position info:
-        #       [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
+        #       [x1,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
         nodeInitLoc_flat = [pp for p in self.initNodePos for pp in p]
         nodeInitLoc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
         for i, p in enumerate(nodeInitLoc_flat):
@@ -305,13 +305,13 @@ class HydroDynLib(CDLL):
         self.check_input_motions(nodePos,nodeVel,nodeAcc)
 
         # set flat arrays for inputs of motion
-        #   Position -- [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
+        #   Position -- [x1,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
         nodePos_flat = [pp for p in nodePos for pp in p]
         nodePos_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
         for i, p in enumerate(nodePos_flat):
             nodePos_flat_c[i] = c_float(p)
 
-        #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
+        #   Velocity -- [Vx1,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
         nodeVel_flat = [pp for p in nodeVel for pp in p]
         nodeVel_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
         for i, p in enumerate(nodeVel_flat):
@@ -331,7 +331,7 @@ class HydroDynLib(CDLL):
 
         # Run HydroDyn_C_CalcOutput
         self.HydroDyn_C_CalcOutput(
-            byref(c_double(time)),                  # IN: time at which to calculate output forces 
+            byref(c_double(time)),                  # IN: time at which to calculate output forces
             byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
             nodePos_flat_c,                         # IN: positions - specified by user
             nodeVel_flat_c,                         # IN: velocities at desired positions
@@ -355,6 +355,71 @@ class HydroDynLib(CDLL):
             nodeFrcMom[j,5] = nodeFrc_flat_c[count+5]
             count = count + 6
         
+        # Convert output channel values back into python
+        for k in range(0,self.numChannels):
+            outputChannelValues[k] = float(outputChannelValues_c[k])
+
+    # hydrodyn_calcOutput_and_addedMass ------------------------------------------------------------------------------------------------------
+    def hydrodyn_calcOutput_and_addedMass(self, time, nodePos, nodeVel, nodeFrcMom, nodeAdm, outputChannelValues):
+
+        # Check input motion info
+        self.check_input_motions_noAcc(nodePos,nodeVel)
+
+        # set flat arrays for inputs of motion
+        #   Position -- [x1,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
+        nodePos_flat = [pp for p in nodePos for pp in p]
+        nodePos_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodePos_flat):
+            nodePos_flat_c[i] = c_float(p)
+
+        #   Velocity -- [Vx1,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
+        nodeVel_flat = [pp for p in nodeVel for pp in p]
+        nodeVel_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+        for i, p in enumerate(nodeVel_flat):
+            nodeVel_flat_c[i] = c_float(p)
+
+        # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
+        nodeFrc_flat_c = (c_float * (6 * self.numNodePts))(0.0,)
+
+        # Resulting Added-mass matrix
+        nodeAdm_flat_c = (c_float * (6 * self.numNodePts * 6 * self.numNodePts))(0.0,)
+
+        # Set up output channels
+        outputChannelValues_c = (c_float * self.numChannels)(0.0,)
+
+        # Run HydroDyn_C_CalcOutput_and_AddedMass
+        self.HydroDyn_C_CalcOutput_and_AddedMass(
+            byref(c_double(time)),                  # IN: time at which to calculate output forces
+            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
+            nodePos_flat_c,                         # IN: positions - specified by user
+            nodeVel_flat_c,                         # IN: velocities at desired positions
+            nodeFrc_flat_c,                         # OUT: resulting forces/moments array
+            nodeAdm_flat_c,                         # OUT: resulting forces/moments array
+            outputChannelValues_c,                  # OUT: output channel values as described in input file
+            byref(self.error_status_c),             # OUT: ErrStat_C
+            self.error_message_c                    # OUT: ErrMsg_C
+        )
+
+        self.check_error()
+
+        ## Reshape Force/Moment into [N,6]
+        count = 0
+        for j in range(0,self.numNodePts):
+            nodeFrcMom[j,0] = nodeFrc_flat_c[count]
+            nodeFrcMom[j,1] = nodeFrc_flat_c[count+1]
+            nodeFrcMom[j,2] = nodeFrc_flat_c[count+2]
+            nodeFrcMom[j,3] = nodeFrc_flat_c[count+3]
+            nodeFrcMom[j,4] = nodeFrc_flat_c[count+4]
+            nodeFrcMom[j,5] = nodeFrc_flat_c[count+5]
+            count = count + 6
+
+        ## Reshape added-mass matrix into [6N,6N]
+        count = 0
+        for j in range(0,6*self.numNodePts):
+            for k in range(0,6*self.numNodePts):
+                nodeAdm[k,j] = nodeAdm_flat_c[count]
+                count = count + 1
+
         # Convert output channel values back into python
         for k in range(0,self.numChannels):
             outputChannelValues[k] = float(outputChannelValues_c[k])
@@ -389,7 +454,7 @@ class HydroDynLib(CDLL):
 
         # Run HydroDyn_UpdateStates_c
         self.HydroDyn_C_UpdateStates(
-            byref(c_double(time)),                  # IN: time at which to calculate output forces 
+            byref(c_double(time)),                  # IN: time at which to calculate output forces
             byref(c_double(timeNext)),              # IN: time T+dt we are stepping to 
             byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
             nodePos_flat_c,                         # IN: positions - specified by user
@@ -465,6 +530,34 @@ class HydroDynLib(CDLL):
             self.hydrodyn_end()
             raise Exception("\nHydroDyn terminated prematurely.")
 
+
+    def check_input_motions_noAcc(self,nodePos,nodeVel):
+        # make sure number of nodes didn't change for some reason
+        if self._initNumNodePts != self.numNodePts:
+            # @ANDY TODO: `time` is not available here so this would be a runtime error
+            print(f"At time {time}, the number of node points changed from initial value of {self._initNumNodePts}.  This is not permitted during the simulation.")
+            self.hydrodyn_end()
+            raise Exception("\nError in calling HydroDyn library.")
+
+        #   Verify that the shape of positions array is correct
+        if nodePos.shape[1] != 6:
+            print("Expecting a Nx6 array of node positions (nodePos) with second index for [x,y,z,Rx,Ry,Rz]")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
+        if nodePos.shape[0] != self.numNodePts:
+            print("Expecting a Nx6 array of node positions (nodePos) with first index for node number.")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
+
+        #   Verify that the shape of velocities array is correct
+        if nodeVel.shape[1] != 6:
+            print("Expecting a Nx6 array of node velocities (nodeVel) with second index for [x,y,z,Rx,Ry,Rz]")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
+        if nodeVel.shape[0] != self.numNodePts:
+            print("Expecting a Nx6 array of node velocities (nodeVel) with first index for node number.")
+            self.hydrodyn_end()
+            raise Exception("\nHydroDyn terminated prematurely.")
 
 
     @property
