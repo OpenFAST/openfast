@@ -199,6 +199,19 @@ class HydroDynLib(CDLL):
         ]
         self.HydroDyn_C_CalcOutput.restype = c_int
 
+        self.HydroDyn_C_CalcOutput_and_AddedMass.argtypes = [
+            POINTER(c_double),                  # Time_C
+            POINTER(c_int),                     # numNodePts -- number of points expecting motions/loads
+            POINTER(c_float),                   # nodePos -- node positions      in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeVel -- node velocities     in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeFrc -- node forces/moments in flat array of 6*numNodePts
+            POINTER(c_float),                   # nodeAdm -- node added mass matrix in flat array of 6*numNodePts*6*numNodePts
+            POINTER(c_float),                   # Output Channel Values
+            POINTER(c_int),                     # ErrStat_C
+            POINTER(c_char)                     # ErrMsg_C
+        ]
+        self.HydroDyn_C_CalcOutput_and_AddedMass.restype = c_int
+
         self.HydroDyn_C_UpdateStates.argtypes = [
             POINTER(c_double),                  # Time_C
             POINTER(c_double),                  # TimeNext_C
