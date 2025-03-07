@@ -951,14 +951,16 @@ END SUBROUTINE GetRigidTransformation
 !!
 !! bjj: note that this is the transpose of what is normally considered the Direction Cosine Matrix  
 !!      in the FAST framework.
-SUBROUTINE GetDirCos(P1, P2, eType, DirCos, L_out, ErrStat, ErrMsg)
+SUBROUTINE GetDirCos(P1, P2, spin, eType, DirCos, L_out, ErrStat, ErrMsg)
    REAL(ReKi) ,      INTENT(IN   )  :: P1(3), P2(3)      ! (x,y,z) global positions of two nodes making up an element
+   REAL(ReKi) ,      INTENT(IN   )  :: spin              ! Spin angle about member axis
    INTEGER(IntKi),   INTENT(IN   )  :: eType             ! element type (1:beam circ., 2:cable, 3:rigid, 4:beam arb., 5:spring)
    REAL(FEKi) ,      INTENT(  OUT)  :: DirCos(3, 3)      ! calculated direction cosine matrix
    REAL(ReKi) ,      INTENT(  OUT)  :: L_out             ! length of element
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat           ! Error status of the operation
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
    REAL(FEKi)                       :: Dx, Dy, Dz, Dxy,L! distances between nodes
+   REAL(FEKi)                       :: RSpin(3, 3)       ! Spin rotation matrix about member axis (for rectangular members)
    ErrMsg  = ""
    ErrStat = ErrID_None
    
@@ -1005,6 +1007,13 @@ SUBROUTINE GetDirCos(P1, P2, eType, DirCos, L_out, ErrStat, ErrMsg)
       DirCos(3, 2) = -Dxy/L
       DirCos(3, 3) = +Dz/L
    ENDIF
+   IF ( eType==-1 .or. eType==1 .or. eType==4 ) THEN ! All beam types
+      ! Right multiply the spin matrix
+      RSpin(1,:) = (/COS(spin),-SIN(spin), 0.0/)
+      RSpin(2,:) = (/SIN(spin), COS(spin), 0.0/)
+      RSpin(3,:) = (/      0.0,       0.0, 1.0/)
+      DirCos     = MATMUL(DirCos,RSpin)
+   END IF
    L_out= real(L, ReKi)
 
 END SUBROUTINE GetDirCos
