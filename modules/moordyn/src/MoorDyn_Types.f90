@@ -540,16 +540,15 @@ IMPLICIT NONE
   END TYPE MD_MiscVarType
 ! =======================
    integer(IntKi), public, parameter :: MD_x_states                      =   1 ! MD%states
-   integer(IntKi), public, parameter :: MD_z_dummy                       =   2 ! MD%dummy
-   integer(IntKi), public, parameter :: MD_u_CoupledKinematics           =   3 ! MD%CoupledKinematics(DL%i1)
-   integer(IntKi), public, parameter :: MD_u_DeltaL                      =   4 ! MD%DeltaL
-   integer(IntKi), public, parameter :: MD_u_DeltaLdot                   =   5 ! MD%DeltaLdot
-   integer(IntKi), public, parameter :: MD_y_CoupledLoads                =   6 ! MD%CoupledLoads(DL%i1)
-   integer(IntKi), public, parameter :: MD_y_WriteOutput                 =   7 ! MD%WriteOutput
-   integer(IntKi), public, parameter :: MD_y_VisLinesMesh                =   8 ! MD%VisLinesMesh(DL%i1)
-   integer(IntKi), public, parameter :: MD_y_VisRodsMesh                 =   9 ! MD%VisRodsMesh(DL%i1)
-   integer(IntKi), public, parameter :: MD_y_VisBodiesMesh               =  10 ! MD%VisBodiesMesh(DL%i1)
-   integer(IntKi), public, parameter :: MD_y_VisAnchsMesh                =  11 ! MD%VisAnchsMesh(DL%i1)
+   integer(IntKi), public, parameter :: MD_u_CoupledKinematics           =   2 ! MD%CoupledKinematics(DL%i1)
+   integer(IntKi), public, parameter :: MD_u_DeltaL                      =   3 ! MD%DeltaL
+   integer(IntKi), public, parameter :: MD_u_DeltaLdot                   =   4 ! MD%DeltaLdot
+   integer(IntKi), public, parameter :: MD_y_CoupledLoads                =   5 ! MD%CoupledLoads(DL%i1)
+   integer(IntKi), public, parameter :: MD_y_WriteOutput                 =   6 ! MD%WriteOutput
+   integer(IntKi), public, parameter :: MD_y_VisLinesMesh                =   7 ! MD%VisLinesMesh(DL%i1)
+   integer(IntKi), public, parameter :: MD_y_VisRodsMesh                 =   8 ! MD%VisRodsMesh(DL%i1)
+   integer(IntKi), public, parameter :: MD_y_VisBodiesMesh               =   9 ! MD%VisBodiesMesh(DL%i1)
+   integer(IntKi), public, parameter :: MD_y_VisAnchsMesh                =  10 ! MD%VisAnchsMesh(DL%i1)
 
 contains
 
@@ -5539,63 +5538,6 @@ subroutine MD_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine MD_VarsPackConstrState(Vars, z, ValAry)
-   type(MD_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call MD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine MD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(MD_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (MD_z_dummy)
-         VarVals(1) = z%dummy                                                 ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine MD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(MD_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call MD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine MD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(MD_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (MD_z_dummy)
-         z%dummy = VarVals(1)                                                 ! Scalar
-      end select
-   end associate
-end subroutine
-
-function MD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (MD_z_dummy)
-       Name = "z%dummy"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine MD_VarsPackInput(Vars, u, ValAry)
    type(MD_InputType), intent(in)          :: u

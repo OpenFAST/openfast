@@ -335,16 +335,15 @@ IMPLICIT NONE
 ! =======================
    integer(IntKi), public, parameter :: BD_x_q                           =   1 ! BD%q
    integer(IntKi), public, parameter :: BD_x_dqdt                        =   2 ! BD%dqdt
-   integer(IntKi), public, parameter :: BD_z_DummyConstrState            =   3 ! BD%DummyConstrState
-   integer(IntKi), public, parameter :: BD_u_RootMotion                  =   4 ! BD%RootMotion
-   integer(IntKi), public, parameter :: BD_u_PointLoad                   =   5 ! BD%PointLoad
-   integer(IntKi), public, parameter :: BD_u_DistrLoad                   =   6 ! BD%DistrLoad
-   integer(IntKi), public, parameter :: BD_u_HubMotion                   =   7 ! BD%HubMotion
-   integer(IntKi), public, parameter :: BD_y_ReactionForce               =   8 ! BD%ReactionForce
-   integer(IntKi), public, parameter :: BD_y_BldMotion                   =   9 ! BD%BldMotion
-   integer(IntKi), public, parameter :: BD_y_RootMxr                     =  10 ! BD%RootMxr
-   integer(IntKi), public, parameter :: BD_y_RootMyr                     =  11 ! BD%RootMyr
-   integer(IntKi), public, parameter :: BD_y_WriteOutput                 =  12 ! BD%WriteOutput
+   integer(IntKi), public, parameter :: BD_u_RootMotion                  =   3 ! BD%RootMotion
+   integer(IntKi), public, parameter :: BD_u_PointLoad                   =   4 ! BD%PointLoad
+   integer(IntKi), public, parameter :: BD_u_DistrLoad                   =   5 ! BD%DistrLoad
+   integer(IntKi), public, parameter :: BD_u_HubMotion                   =   6 ! BD%HubMotion
+   integer(IntKi), public, parameter :: BD_y_ReactionForce               =   7 ! BD%ReactionForce
+   integer(IntKi), public, parameter :: BD_y_BldMotion                   =   8 ! BD%BldMotion
+   integer(IntKi), public, parameter :: BD_y_RootMxr                     =   9 ! BD%RootMxr
+   integer(IntKi), public, parameter :: BD_y_RootMyr                     =  10 ! BD%RootMyr
+   integer(IntKi), public, parameter :: BD_y_WriteOutput                 =  11 ! BD%WriteOutput
 
 contains
 
@@ -3877,63 +3876,6 @@ subroutine BD_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine BD_VarsPackConstrState(Vars, z, ValAry)
-   type(BD_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call BD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine BD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(BD_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (BD_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine BD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(BD_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call BD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine BD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(BD_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (BD_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function BD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (BD_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine BD_VarsPackInput(Vars, u, ValAry)
    type(BD_InputType), intent(in)          :: u

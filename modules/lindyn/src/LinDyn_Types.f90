@@ -124,10 +124,9 @@ IMPLICIT NONE
   END TYPE LD_OutputType
 ! =======================
    integer(IntKi), public, parameter :: LD_x_q                           =   1 ! LD%q
-   integer(IntKi), public, parameter :: LD_z_Dummy                       =   2 ! LD%Dummy
-   integer(IntKi), public, parameter :: LD_u_Fext                        =   3 ! LD%Fext
-   integer(IntKi), public, parameter :: LD_y_xdd                         =   4 ! LD%xdd
-   integer(IntKi), public, parameter :: LD_y_WriteOutput                 =   5 ! LD%WriteOutput
+   integer(IntKi), public, parameter :: LD_u_Fext                        =   2 ! LD%Fext
+   integer(IntKi), public, parameter :: LD_y_xdd                         =   3 ! LD%xdd
+   integer(IntKi), public, parameter :: LD_y_WriteOutput                 =   4 ! LD%WriteOutput
 
 contains
 
@@ -1660,63 +1659,6 @@ subroutine LD_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine LD_VarsPackConstrState(Vars, z, ValAry)
-   type(LD_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call LD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine LD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(LD_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (LD_z_Dummy)
-         VarVals(1) = z%Dummy                                                 ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine LD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(LD_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call LD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine LD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(LD_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (LD_z_Dummy)
-         z%Dummy = VarVals(1)                                                 ! Scalar
-      end select
-   end associate
-end subroutine
-
-function LD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (LD_z_Dummy)
-       Name = "z%Dummy"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine LD_VarsPackInput(Vars, u, ValAry)
    type(LD_InputType), intent(in)          :: u

@@ -249,15 +249,14 @@ IMPLICIT NONE
   END TYPE StC_OutputType
 ! =======================
    integer(IntKi), public, parameter :: StC_x_StC_x                      =   1 ! StC%StC_x
-   integer(IntKi), public, parameter :: StC_z_DummyConstrState           =   2 ! StC%DummyConstrState
-   integer(IntKi), public, parameter :: StC_u_Mesh                       =   3 ! StC%Mesh(DL%i1)
-   integer(IntKi), public, parameter :: StC_u_CmdStiff                   =   4 ! StC%CmdStiff
-   integer(IntKi), public, parameter :: StC_u_CmdDamp                    =   5 ! StC%CmdDamp
-   integer(IntKi), public, parameter :: StC_u_CmdBrake                   =   6 ! StC%CmdBrake
-   integer(IntKi), public, parameter :: StC_u_CmdForce                   =   7 ! StC%CmdForce
-   integer(IntKi), public, parameter :: StC_y_Mesh                       =   8 ! StC%Mesh(DL%i1)
-   integer(IntKi), public, parameter :: StC_y_MeasDisp                   =   9 ! StC%MeasDisp
-   integer(IntKi), public, parameter :: StC_y_MeasVel                    =  10 ! StC%MeasVel
+   integer(IntKi), public, parameter :: StC_u_Mesh                       =   2 ! StC%Mesh(DL%i1)
+   integer(IntKi), public, parameter :: StC_u_CmdStiff                   =   3 ! StC%CmdStiff
+   integer(IntKi), public, parameter :: StC_u_CmdDamp                    =   4 ! StC%CmdDamp
+   integer(IntKi), public, parameter :: StC_u_CmdBrake                   =   5 ! StC%CmdBrake
+   integer(IntKi), public, parameter :: StC_u_CmdForce                   =   6 ! StC%CmdForce
+   integer(IntKi), public, parameter :: StC_y_Mesh                       =   7 ! StC%Mesh(DL%i1)
+   integer(IntKi), public, parameter :: StC_y_MeasDisp                   =   8 ! StC%MeasDisp
+   integer(IntKi), public, parameter :: StC_y_MeasVel                    =   9 ! StC%MeasVel
 
 contains
 
@@ -2414,63 +2413,6 @@ subroutine StC_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine StC_VarsPackConstrState(Vars, z, ValAry)
-   type(StC_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call StC_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine StC_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(StC_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (StC_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine StC_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(StC_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call StC_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine StC_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(StC_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (StC_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function StC_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (StC_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine StC_VarsPackInput(Vars, u, ValAry)
    type(StC_InputType), intent(in)         :: u

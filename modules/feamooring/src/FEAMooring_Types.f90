@@ -228,13 +228,11 @@ IMPLICIT NONE
 ! =======================
    integer(IntKi), public, parameter :: FEAM_x_GLU                       =   1 ! FEAM%GLU
    integer(IntKi), public, parameter :: FEAM_x_GLDU                      =   2 ! FEAM%GLDU
-   integer(IntKi), public, parameter :: FEAM_z_TSN                       =   3 ! FEAM%TSN
-   integer(IntKi), public, parameter :: FEAM_z_TZER                      =   4 ! FEAM%TZER
-   integer(IntKi), public, parameter :: FEAM_u_HydroForceLineMesh        =   5 ! FEAM%HydroForceLineMesh
-   integer(IntKi), public, parameter :: FEAM_u_PtFairleadDisplacement    =   6 ! FEAM%PtFairleadDisplacement
-   integer(IntKi), public, parameter :: FEAM_y_WriteOutput               =   7 ! FEAM%WriteOutput
-   integer(IntKi), public, parameter :: FEAM_y_PtFairleadLoad            =   8 ! FEAM%PtFairleadLoad
-   integer(IntKi), public, parameter :: FEAM_y_LineMeshPosition          =   9 ! FEAM%LineMeshPosition
+   integer(IntKi), public, parameter :: FEAM_u_HydroForceLineMesh        =   3 ! FEAM%HydroForceLineMesh
+   integer(IntKi), public, parameter :: FEAM_u_PtFairleadDisplacement    =   4 ! FEAM%PtFairleadDisplacement
+   integer(IntKi), public, parameter :: FEAM_y_WriteOutput               =   5 ! FEAM%WriteOutput
+   integer(IntKi), public, parameter :: FEAM_y_PtFairleadLoad            =   6 ! FEAM%PtFairleadLoad
+   integer(IntKi), public, parameter :: FEAM_y_LineMeshPosition          =   7 ! FEAM%LineMeshPosition
 
 contains
 
@@ -2624,69 +2622,6 @@ subroutine FEAM_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine FEAM_VarsPackConstrState(Vars, z, ValAry)
-   type(FEAM_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call FEAM_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine FEAM_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(FEAM_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (FEAM_z_TSN)
-         VarVals = z%TSN(V%iLB:V%iUB)                                         ! Rank 1 Array
-      case (FEAM_z_TZER)
-         VarVals = z%TZER(V%iLB:V%iUB)                                        ! Rank 1 Array
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine FEAM_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(FEAM_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call FEAM_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine FEAM_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(FEAM_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (FEAM_z_TSN)
-         z%TSN(V%iLB:V%iUB) = VarVals                                         ! Rank 1 Array
-      case (FEAM_z_TZER)
-         z%TZER(V%iLB:V%iUB) = VarVals                                        ! Rank 1 Array
-      end select
-   end associate
-end subroutine
-
-function FEAM_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (FEAM_z_TSN)
-       Name = "z%TSN"
-   case (FEAM_z_TZER)
-       Name = "z%TZER"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine FEAM_VarsPackInput(Vars, u, ValAry)
    type(FEAM_InputType), intent(in)        :: u

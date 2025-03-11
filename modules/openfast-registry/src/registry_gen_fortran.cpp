@@ -298,7 +298,6 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
     int field_num = 0;
     std::vector<std::array<std::string, 2>> field_params({
         {"ContinuousState", "x"},
-        {"ConstraintState", "z"},
         {"Input", "u"},
         {"Output", "y"},
     });
@@ -1737,7 +1736,6 @@ void gen_var_routines(std::ostream &w, const Module &mod)
     for (const auto &tmp : std::vector<std::array<std::string, 3>>{
              {"ContinuousState", "x", "ContState"},
              {"ContinuousState", "x", "ContStateDeriv"},
-             {"ConstraintState", "z", "ConstrState"},
              {"Input", "u", "Input"},
              {"Output", "y", "Output"},
          })

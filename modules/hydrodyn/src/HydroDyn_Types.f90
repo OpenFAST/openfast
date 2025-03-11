@@ -225,21 +225,17 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: HydroDyn_x_WAMIT_SS_Exctn_x      =   2 ! HydroDyn%WAMIT(DL%i1)%SS_Exctn%x
    integer(IntKi), public, parameter :: HydroDyn_x_WAMIT_Conv_Rdtn_DummyContState =   3 ! HydroDyn%WAMIT(DL%i1)%Conv_Rdtn%DummyContState
    integer(IntKi), public, parameter :: HydroDyn_x_Morison_DummyContState =   4 ! HydroDyn%Morison%DummyContState
-   integer(IntKi), public, parameter :: HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState =   5 ! HydroDyn%WAMIT%Conv_Rdtn%DummyConstrState
-   integer(IntKi), public, parameter :: HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState =   6 ! HydroDyn%WAMIT%SS_Rdtn%DummyConstrState
-   integer(IntKi), public, parameter :: HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState =   7 ! HydroDyn%WAMIT%SS_Exctn%DummyConstrState
-   integer(IntKi), public, parameter :: HydroDyn_z_Morison_DummyConstrState =   8 ! HydroDyn%Morison%DummyConstrState
-   integer(IntKi), public, parameter :: HydroDyn_u_Morison_Mesh          =   9 ! HydroDyn%Morison%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_u_Morison_PtfmRefY      =  10 ! HydroDyn%Morison%PtfmRefY
-   integer(IntKi), public, parameter :: HydroDyn_u_WAMITMesh             =  11 ! HydroDyn%WAMITMesh
-   integer(IntKi), public, parameter :: HydroDyn_u_PRPMesh               =  12 ! HydroDyn%PRPMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_Mesh            =  13 ! HydroDyn%WAMIT(DL%i1)%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT2_Mesh           =  14 ! HydroDyn%WAMIT2(DL%i1)%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_Mesh          =  15 ! HydroDyn%Morison%Mesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_VisMesh       =  16 ! HydroDyn%Morison%VisMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_Morison_WriteOutput   =  17 ! HydroDyn%Morison%WriteOutput
-   integer(IntKi), public, parameter :: HydroDyn_y_WAMITMesh             =  18 ! HydroDyn%WAMITMesh
-   integer(IntKi), public, parameter :: HydroDyn_y_WriteOutput           =  19 ! HydroDyn%WriteOutput
+   integer(IntKi), public, parameter :: HydroDyn_u_Morison_Mesh          =   5 ! HydroDyn%Morison%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_u_Morison_PtfmRefY      =   6 ! HydroDyn%Morison%PtfmRefY
+   integer(IntKi), public, parameter :: HydroDyn_u_WAMITMesh             =   7 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_u_PRPMesh               =   8 ! HydroDyn%PRPMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT_Mesh            =   9 ! HydroDyn%WAMIT(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMIT2_Mesh           =  10 ! HydroDyn%WAMIT2(DL%i1)%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_Mesh          =  11 ! HydroDyn%Morison%Mesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_VisMesh       =  12 ! HydroDyn%Morison%VisMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_Morison_WriteOutput   =  13 ! HydroDyn%Morison%WriteOutput
+   integer(IntKi), public, parameter :: HydroDyn_y_WAMITMesh             =  14 ! HydroDyn%WAMITMesh
+   integer(IntKi), public, parameter :: HydroDyn_y_WriteOutput           =  15 ! HydroDyn%WriteOutput
 
 contains
 
@@ -2779,81 +2775,6 @@ subroutine HydroDyn_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine HydroDyn_VarsPackConstrState(Vars, z, ValAry)
-   type(HydroDyn_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call HydroDyn_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine HydroDyn_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(HydroDyn_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
-         VarVals(1) = z%WAMIT%Conv_Rdtn%DummyConstrState                      ! Scalar
-      case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
-         VarVals(1) = z%WAMIT%SS_Rdtn%DummyConstrState                        ! Scalar
-      case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
-         VarVals(1) = z%WAMIT%SS_Exctn%DummyConstrState                       ! Scalar
-      case (HydroDyn_z_Morison_DummyConstrState)
-         VarVals(1) = z%Morison%DummyConstrState                              ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine HydroDyn_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(HydroDyn_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call HydroDyn_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine HydroDyn_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(HydroDyn_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
-         z%WAMIT%Conv_Rdtn%DummyConstrState = VarVals(1)                      ! Scalar
-      case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
-         z%WAMIT%SS_Rdtn%DummyConstrState = VarVals(1)                        ! Scalar
-      case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
-         z%WAMIT%SS_Exctn%DummyConstrState = VarVals(1)                       ! Scalar
-      case (HydroDyn_z_Morison_DummyConstrState)
-         z%Morison%DummyConstrState = VarVals(1)                              ! Scalar
-      end select
-   end associate
-end subroutine
-
-function HydroDyn_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (HydroDyn_z_WAMIT_Conv_Rdtn_DummyConstrState)
-       Name = "z%WAMIT%Conv_Rdtn%DummyConstrState"
-   case (HydroDyn_z_WAMIT_SS_Rdtn_DummyConstrState)
-       Name = "z%WAMIT%SS_Rdtn%DummyConstrState"
-   case (HydroDyn_z_WAMIT_SS_Exctn_DummyConstrState)
-       Name = "z%WAMIT%SS_Exctn%DummyConstrState"
-   case (HydroDyn_z_Morison_DummyConstrState)
-       Name = "z%Morison%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine HydroDyn_VarsPackInput(Vars, u, ValAry)
    type(HydroDyn_InputType), intent(in)    :: u

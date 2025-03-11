@@ -102,10 +102,9 @@ IMPLICIT NONE
   END TYPE SS_Exc_OutputType
 ! =======================
    integer(IntKi), public, parameter :: SS_Exc_x_x                       =   1 ! SS_Exc%x
-   integer(IntKi), public, parameter :: SS_Exc_z_DummyConstrState        =   2 ! SS_Exc%DummyConstrState
-   integer(IntKi), public, parameter :: SS_Exc_u_PtfmPos                 =   3 ! SS_Exc%PtfmPos
-   integer(IntKi), public, parameter :: SS_Exc_y_y                       =   4 ! SS_Exc%y
-   integer(IntKi), public, parameter :: SS_Exc_y_WriteOutput             =   5 ! SS_Exc%WriteOutput
+   integer(IntKi), public, parameter :: SS_Exc_u_PtfmPos                 =   2 ! SS_Exc%PtfmPos
+   integer(IntKi), public, parameter :: SS_Exc_y_y                       =   3 ! SS_Exc%y
+   integer(IntKi), public, parameter :: SS_Exc_y_WriteOutput             =   4 ! SS_Exc%WriteOutput
 
 contains
 
@@ -1256,63 +1255,6 @@ subroutine SS_Exc_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine SS_Exc_VarsPackConstrState(Vars, z, ValAry)
-   type(SS_Exc_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SS_Exc_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine SS_Exc_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(SS_Exc_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SS_Exc_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine SS_Exc_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SS_Exc_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SS_Exc_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine SS_Exc_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(SS_Exc_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SS_Exc_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function SS_Exc_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (SS_Exc_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine SS_Exc_VarsPackInput(Vars, u, ValAry)
    type(SS_Exc_InputType), intent(in)      :: u

@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2023  National Renewable Energy Laboratory
+! Copyright (C) 2025  National Renewable Energy Laboratory
 !
 !    This file is part of the NWTC Subroutine Library.
 !
@@ -166,7 +166,6 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
 
    ! Initialize number of variables in each group
    Vars%Nx = 0
-   Vars%Nz = 0
    Vars%Nu = 0
    Vars%Ny = 0
 
@@ -179,16 +178,6 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
    end do
    Vars%Nx = sum(Vars%x%Num)
    Jac%Nx = Vars%Nx
-
-   ! Initialize constraint state variables
-   if (.not. allocated(Vars%z)) allocate (Vars%z(0))
-   StartIndex = 1
-   do i = 1, size(Vars%z)
-      call ModVarType_Init(Vars%z(i), StartIndex, Linearize, ErrStat2, ErrMsg2)
-      if (Failed()) return
-   end do
-   Vars%Nz = sum(Vars%z%Num)
-   Jac%Nz = Vars%Nz
 
    ! Initialize input variables
    if (.not. allocated(Vars%u)) allocate (Vars%u(0))
@@ -217,9 +206,6 @@ subroutine MV_InitVarsJac(Vars, Jac, Linearize, ErrStat, ErrMsg)
       call AllocAry(Jac%x_perturb, Jac%Nx, "Lin%x_perturb", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(Jac%x_pos, Jac%Nx, "Lin%x_pos", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(Jac%x_neg, Jac%Nx, "Lin%x_neg", ErrStat2, ErrMsg2); if (Failed()) return
-   end if
-   if (Jac%Nz > 0) then
-      call AllocAry(Jac%z, Jac%Nz, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
    end if
    if (Jac%Nu > 0) then
       call AllocAry(Jac%u, Jac%Nu, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return

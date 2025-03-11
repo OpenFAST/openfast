@@ -230,48 +230,47 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: BEMT_x_DBEMT_element_vind        =   2 ! BEMT%DBEMT%element(DL%i1, DL%i2)%vind
    integer(IntKi), public, parameter :: BEMT_x_DBEMT_element_vind_1      =   3 ! BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1
    integer(IntKi), public, parameter :: BEMT_x_V_w                       =   4 ! BEMT%V_w
-   integer(IntKi), public, parameter :: BEMT_z_phi                       =   5 ! BEMT%phi
-   integer(IntKi), public, parameter :: BEMT_u_theta                     =   6 ! BEMT%theta
-   integer(IntKi), public, parameter :: BEMT_u_chi0                      =   7 ! BEMT%chi0
-   integer(IntKi), public, parameter :: BEMT_u_psiSkewOffset             =   8 ! BEMT%psiSkewOffset
-   integer(IntKi), public, parameter :: BEMT_u_psi_s                     =   9 ! BEMT%psi_s
-   integer(IntKi), public, parameter :: BEMT_u_omega                     =  10 ! BEMT%omega
-   integer(IntKi), public, parameter :: BEMT_u_TSR                       =  11 ! BEMT%TSR
-   integer(IntKi), public, parameter :: BEMT_u_Vx                        =  12 ! BEMT%Vx
-   integer(IntKi), public, parameter :: BEMT_u_Vy                        =  13 ! BEMT%Vy
-   integer(IntKi), public, parameter :: BEMT_u_Vz                        =  14 ! BEMT%Vz
-   integer(IntKi), public, parameter :: BEMT_u_omega_z                   =  15 ! BEMT%omega_z
-   integer(IntKi), public, parameter :: BEMT_u_xVelCorr                  =  16 ! BEMT%xVelCorr
-   integer(IntKi), public, parameter :: BEMT_u_rLocal                    =  17 ! BEMT%rLocal
-   integer(IntKi), public, parameter :: BEMT_u_Un_disk                   =  18 ! BEMT%Un_disk
-   integer(IntKi), public, parameter :: BEMT_u_V0                        =  19 ! BEMT%V0
-   integer(IntKi), public, parameter :: BEMT_u_x_hat_disk                =  20 ! BEMT%x_hat_disk
-   integer(IntKi), public, parameter :: BEMT_u_UserProp                  =  21 ! BEMT%UserProp
-   integer(IntKi), public, parameter :: BEMT_u_CantAngle                 =  22 ! BEMT%CantAngle
-   integer(IntKi), public, parameter :: BEMT_u_drdz                      =  23 ! BEMT%drdz
-   integer(IntKi), public, parameter :: BEMT_u_toeAngle                  =  24 ! BEMT%toeAngle
-   integer(IntKi), public, parameter :: BEMT_y_Vrel                      =  25 ! BEMT%Vrel
-   integer(IntKi), public, parameter :: BEMT_y_phi                       =  26 ! BEMT%phi
-   integer(IntKi), public, parameter :: BEMT_y_axInduction               =  27 ! BEMT%axInduction
-   integer(IntKi), public, parameter :: BEMT_y_tanInduction              =  28 ! BEMT%tanInduction
-   integer(IntKi), public, parameter :: BEMT_y_axInduction_qs            =  29 ! BEMT%axInduction_qs
-   integer(IntKi), public, parameter :: BEMT_y_tanInduction_qs           =  30 ! BEMT%tanInduction_qs
-   integer(IntKi), public, parameter :: BEMT_y_k                         =  31 ! BEMT%k
-   integer(IntKi), public, parameter :: BEMT_y_k_p                       =  32 ! BEMT%k_p
-   integer(IntKi), public, parameter :: BEMT_y_F                         =  33 ! BEMT%F
-   integer(IntKi), public, parameter :: BEMT_y_Re                        =  34 ! BEMT%Re
-   integer(IntKi), public, parameter :: BEMT_y_AOA                       =  35 ! BEMT%AOA
-   integer(IntKi), public, parameter :: BEMT_y_Cx                        =  36 ! BEMT%Cx
-   integer(IntKi), public, parameter :: BEMT_y_Cy                        =  37 ! BEMT%Cy
-   integer(IntKi), public, parameter :: BEMT_y_Cz                        =  38 ! BEMT%Cz
-   integer(IntKi), public, parameter :: BEMT_y_Cmx                       =  39 ! BEMT%Cmx
-   integer(IntKi), public, parameter :: BEMT_y_Cmy                       =  40 ! BEMT%Cmy
-   integer(IntKi), public, parameter :: BEMT_y_Cmz                       =  41 ! BEMT%Cmz
-   integer(IntKi), public, parameter :: BEMT_y_Cm                        =  42 ! BEMT%Cm
-   integer(IntKi), public, parameter :: BEMT_y_Cl                        =  43 ! BEMT%Cl
-   integer(IntKi), public, parameter :: BEMT_y_Cd                        =  44 ! BEMT%Cd
-   integer(IntKi), public, parameter :: BEMT_y_chi                       =  45 ! BEMT%chi
-   integer(IntKi), public, parameter :: BEMT_y_Cpmin                     =  46 ! BEMT%Cpmin
+   integer(IntKi), public, parameter :: BEMT_u_theta                     =   5 ! BEMT%theta
+   integer(IntKi), public, parameter :: BEMT_u_chi0                      =   6 ! BEMT%chi0
+   integer(IntKi), public, parameter :: BEMT_u_psiSkewOffset             =   7 ! BEMT%psiSkewOffset
+   integer(IntKi), public, parameter :: BEMT_u_psi_s                     =   8 ! BEMT%psi_s
+   integer(IntKi), public, parameter :: BEMT_u_omega                     =   9 ! BEMT%omega
+   integer(IntKi), public, parameter :: BEMT_u_TSR                       =  10 ! BEMT%TSR
+   integer(IntKi), public, parameter :: BEMT_u_Vx                        =  11 ! BEMT%Vx
+   integer(IntKi), public, parameter :: BEMT_u_Vy                        =  12 ! BEMT%Vy
+   integer(IntKi), public, parameter :: BEMT_u_Vz                        =  13 ! BEMT%Vz
+   integer(IntKi), public, parameter :: BEMT_u_omega_z                   =  14 ! BEMT%omega_z
+   integer(IntKi), public, parameter :: BEMT_u_xVelCorr                  =  15 ! BEMT%xVelCorr
+   integer(IntKi), public, parameter :: BEMT_u_rLocal                    =  16 ! BEMT%rLocal
+   integer(IntKi), public, parameter :: BEMT_u_Un_disk                   =  17 ! BEMT%Un_disk
+   integer(IntKi), public, parameter :: BEMT_u_V0                        =  18 ! BEMT%V0
+   integer(IntKi), public, parameter :: BEMT_u_x_hat_disk                =  19 ! BEMT%x_hat_disk
+   integer(IntKi), public, parameter :: BEMT_u_UserProp                  =  20 ! BEMT%UserProp
+   integer(IntKi), public, parameter :: BEMT_u_CantAngle                 =  21 ! BEMT%CantAngle
+   integer(IntKi), public, parameter :: BEMT_u_drdz                      =  22 ! BEMT%drdz
+   integer(IntKi), public, parameter :: BEMT_u_toeAngle                  =  23 ! BEMT%toeAngle
+   integer(IntKi), public, parameter :: BEMT_y_Vrel                      =  24 ! BEMT%Vrel
+   integer(IntKi), public, parameter :: BEMT_y_phi                       =  25 ! BEMT%phi
+   integer(IntKi), public, parameter :: BEMT_y_axInduction               =  26 ! BEMT%axInduction
+   integer(IntKi), public, parameter :: BEMT_y_tanInduction              =  27 ! BEMT%tanInduction
+   integer(IntKi), public, parameter :: BEMT_y_axInduction_qs            =  28 ! BEMT%axInduction_qs
+   integer(IntKi), public, parameter :: BEMT_y_tanInduction_qs           =  29 ! BEMT%tanInduction_qs
+   integer(IntKi), public, parameter :: BEMT_y_k                         =  30 ! BEMT%k
+   integer(IntKi), public, parameter :: BEMT_y_k_p                       =  31 ! BEMT%k_p
+   integer(IntKi), public, parameter :: BEMT_y_F                         =  32 ! BEMT%F
+   integer(IntKi), public, parameter :: BEMT_y_Re                        =  33 ! BEMT%Re
+   integer(IntKi), public, parameter :: BEMT_y_AOA                       =  34 ! BEMT%AOA
+   integer(IntKi), public, parameter :: BEMT_y_Cx                        =  35 ! BEMT%Cx
+   integer(IntKi), public, parameter :: BEMT_y_Cy                        =  36 ! BEMT%Cy
+   integer(IntKi), public, parameter :: BEMT_y_Cz                        =  37 ! BEMT%Cz
+   integer(IntKi), public, parameter :: BEMT_y_Cmx                       =  38 ! BEMT%Cmx
+   integer(IntKi), public, parameter :: BEMT_y_Cmy                       =  39 ! BEMT%Cmy
+   integer(IntKi), public, parameter :: BEMT_y_Cmz                       =  40 ! BEMT%Cmz
+   integer(IntKi), public, parameter :: BEMT_y_Cm                        =  41 ! BEMT%Cm
+   integer(IntKi), public, parameter :: BEMT_y_Cl                        =  42 ! BEMT%Cl
+   integer(IntKi), public, parameter :: BEMT_y_Cd                        =  43 ! BEMT%Cd
+   integer(IntKi), public, parameter :: BEMT_y_chi                       =  44 ! BEMT%chi
+   integer(IntKi), public, parameter :: BEMT_y_Cpmin                     =  45 ! BEMT%Cpmin
 
 contains
 
@@ -2785,63 +2784,6 @@ subroutine BEMT_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine BEMT_VarsPackConstrState(Vars, z, ValAry)
-   type(BEMT_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call BEMT_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine BEMT_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(BEMT_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (BEMT_z_phi)
-         VarVals = z%phi(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine BEMT_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(BEMT_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call BEMT_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine BEMT_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(BEMT_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (BEMT_z_phi)
-         z%phi(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
-      end select
-   end associate
-end subroutine
-
-function BEMT_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (BEMT_z_phi)
-       Name = "z%phi"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine BEMT_VarsPackInput(Vars, u, ValAry)
    type(BEMT_InputType), intent(in)        :: u

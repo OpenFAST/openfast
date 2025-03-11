@@ -253,18 +253,17 @@ IMPLICIT NONE
   END TYPE AWAE_InputType
 ! =======================
    integer(IntKi), public, parameter :: AWAE_x_IfW_DummyContState        =   1 ! AWAE%IfW(DL%i1)%DummyContState
-   integer(IntKi), public, parameter :: AWAE_z_IfW_DummyConstrState      =   2 ! AWAE%IfW(DL%i1)%DummyConstrState
-   integer(IntKi), public, parameter :: AWAE_u_xhat_plane                =   3 ! AWAE%xhat_plane
-   integer(IntKi), public, parameter :: AWAE_u_p_plane                   =   4 ! AWAE%p_plane
-   integer(IntKi), public, parameter :: AWAE_u_Vx_wake                   =   5 ! AWAE%Vx_wake
-   integer(IntKi), public, parameter :: AWAE_u_Vy_wake                   =   6 ! AWAE%Vy_wake
-   integer(IntKi), public, parameter :: AWAE_u_Vz_wake                   =   7 ! AWAE%Vz_wake
-   integer(IntKi), public, parameter :: AWAE_u_D_wake                    =   8 ! AWAE%D_wake
-   integer(IntKi), public, parameter :: AWAE_u_WAT_k                     =   9 ! AWAE%WAT_k
-   integer(IntKi), public, parameter :: AWAE_y_Vdist_High_data           =  10 ! AWAE%Vdist_High(DL%i1)%data
-   integer(IntKi), public, parameter :: AWAE_y_V_plane                   =  11 ! AWAE%V_plane
-   integer(IntKi), public, parameter :: AWAE_y_TI_amb                    =  12 ! AWAE%TI_amb
-   integer(IntKi), public, parameter :: AWAE_y_Vx_wind_disk              =  13 ! AWAE%Vx_wind_disk
+   integer(IntKi), public, parameter :: AWAE_u_xhat_plane                =   2 ! AWAE%xhat_plane
+   integer(IntKi), public, parameter :: AWAE_u_p_plane                   =   3 ! AWAE%p_plane
+   integer(IntKi), public, parameter :: AWAE_u_Vx_wake                   =   4 ! AWAE%Vx_wake
+   integer(IntKi), public, parameter :: AWAE_u_Vy_wake                   =   5 ! AWAE%Vy_wake
+   integer(IntKi), public, parameter :: AWAE_u_Vz_wake                   =   6 ! AWAE%Vz_wake
+   integer(IntKi), public, parameter :: AWAE_u_D_wake                    =   7 ! AWAE%D_wake
+   integer(IntKi), public, parameter :: AWAE_u_WAT_k                     =   8 ! AWAE%WAT_k
+   integer(IntKi), public, parameter :: AWAE_y_Vdist_High_data           =   9 ! AWAE%Vdist_High(DL%i1)%data
+   integer(IntKi), public, parameter :: AWAE_y_V_plane                   =  10 ! AWAE%V_plane
+   integer(IntKi), public, parameter :: AWAE_y_TI_amb                    =  11 ! AWAE%TI_amb
+   integer(IntKi), public, parameter :: AWAE_y_Vx_wind_disk              =  12 ! AWAE%Vx_wind_disk
 
 contains
 
@@ -2707,63 +2706,6 @@ subroutine AWAE_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine AWAE_VarsPackConstrState(Vars, z, ValAry)
-   type(AWAE_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call AWAE_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine AWAE_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(AWAE_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (AWAE_z_IfW_DummyConstrState)
-         VarVals(1) = z%IfW(DL%i1)%DummyConstrState                           ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine AWAE_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(AWAE_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call AWAE_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine AWAE_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(AWAE_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (AWAE_z_IfW_DummyConstrState)
-         z%IfW(DL%i1)%DummyConstrState = VarVals(1)                           ! Scalar
-      end select
-   end associate
-end subroutine
-
-function AWAE_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (AWAE_z_IfW_DummyConstrState)
-       Name = "z%IfW("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine AWAE_VarsPackInput(Vars, u, ValAry)
    type(AWAE_InputType), intent(in)        :: u

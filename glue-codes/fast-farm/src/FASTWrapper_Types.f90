@@ -126,19 +126,18 @@ IMPLICIT NONE
   END TYPE FWrap_OutputType
 ! =======================
    integer(IntKi), public, parameter :: FWrap_x_dummy                    =   1 ! FWrap%dummy
-   integer(IntKi), public, parameter :: FWrap_z_dummy                    =   2 ! FWrap%dummy
-   integer(IntKi), public, parameter :: FWrap_u_fromSCglob               =   3 ! FWrap%fromSCglob
-   integer(IntKi), public, parameter :: FWrap_u_fromSC                   =   4 ! FWrap%fromSC
-   integer(IntKi), public, parameter :: FWrap_y_toSC                     =   5 ! FWrap%toSC
-   integer(IntKi), public, parameter :: FWrap_y_xHat_Disk                =   6 ! FWrap%xHat_Disk
-   integer(IntKi), public, parameter :: FWrap_y_YawErr                   =   7 ! FWrap%YawErr
-   integer(IntKi), public, parameter :: FWrap_y_psi_skew                 =   8 ! FWrap%psi_skew
-   integer(IntKi), public, parameter :: FWrap_y_chi_skew                 =   9 ! FWrap%chi_skew
-   integer(IntKi), public, parameter :: FWrap_y_p_hub                    =  10 ! FWrap%p_hub
-   integer(IntKi), public, parameter :: FWrap_y_D_rotor                  =  11 ! FWrap%D_rotor
-   integer(IntKi), public, parameter :: FWrap_y_DiskAvg_Vx_Rel           =  12 ! FWrap%DiskAvg_Vx_Rel
-   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Ct               =  13 ! FWrap%AzimAvg_Ct
-   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Cq               =  14 ! FWrap%AzimAvg_Cq
+   integer(IntKi), public, parameter :: FWrap_u_fromSCglob               =   2 ! FWrap%fromSCglob
+   integer(IntKi), public, parameter :: FWrap_u_fromSC                   =   3 ! FWrap%fromSC
+   integer(IntKi), public, parameter :: FWrap_y_toSC                     =   4 ! FWrap%toSC
+   integer(IntKi), public, parameter :: FWrap_y_xHat_Disk                =   5 ! FWrap%xHat_Disk
+   integer(IntKi), public, parameter :: FWrap_y_YawErr                   =   6 ! FWrap%YawErr
+   integer(IntKi), public, parameter :: FWrap_y_psi_skew                 =   7 ! FWrap%psi_skew
+   integer(IntKi), public, parameter :: FWrap_y_chi_skew                 =   8 ! FWrap%chi_skew
+   integer(IntKi), public, parameter :: FWrap_y_p_hub                    =   9 ! FWrap%p_hub
+   integer(IntKi), public, parameter :: FWrap_y_D_rotor                  =  10 ! FWrap%D_rotor
+   integer(IntKi), public, parameter :: FWrap_y_DiskAvg_Vx_Rel           =  11 ! FWrap%DiskAvg_Vx_Rel
+   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Ct               =  12 ! FWrap%AzimAvg_Ct
+   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Cq               =  13 ! FWrap%AzimAvg_Cq
 
 contains
 
@@ -1081,63 +1080,6 @@ subroutine FWrap_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine FWrap_VarsPackConstrState(Vars, z, ValAry)
-   type(FWrap_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call FWrap_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine FWrap_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(FWrap_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (FWrap_z_dummy)
-         VarVals(1) = z%dummy                                                 ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine FWrap_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(FWrap_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call FWrap_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine FWrap_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(FWrap_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (FWrap_z_dummy)
-         z%dummy = VarVals(1)                                                 ! Scalar
-      end select
-   end associate
-end subroutine
-
-function FWrap_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (FWrap_z_dummy)
-       Name = "z%dummy"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine FWrap_VarsPackInput(Vars, u, ValAry)
    type(FWrap_InputType), intent(in)       :: u

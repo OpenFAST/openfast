@@ -129,25 +129,24 @@ IMPLICIT NONE
   END TYPE ExtLd_OutputType
 ! =======================
    integer(IntKi), public, parameter :: ExtLd_x_blah                     =   1 ! ExtLd%blah
-   integer(IntKi), public, parameter :: ExtLd_z_blah                     =   2 ! ExtLd%blah
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_twrDef              =   3 ! ExtLd%DX_u%twrDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldDef              =   4 ! ExtLd%DX_u%bldDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_hubDef              =   5 ! ExtLd%DX_u%hubDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_nacDef              =   6 ! ExtLd%DX_u%nacDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldRootDef          =   7 ! ExtLd%DX_u%bldRootDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldPitch            =   8 ! ExtLd%DX_u%bldPitch
-   integer(IntKi), public, parameter :: ExtLd_u_az                       =   9 ! ExtLd%az
-   integer(IntKi), public, parameter :: ExtLd_u_TowerMotion              =  10 ! ExtLd%TowerMotion
-   integer(IntKi), public, parameter :: ExtLd_u_HubMotion                =  11 ! ExtLd%HubMotion
-   integer(IntKi), public, parameter :: ExtLd_u_NacelleMotion            =  12 ! ExtLd%NacelleMotion
-   integer(IntKi), public, parameter :: ExtLd_u_BladeRootMotion          =  13 ! ExtLd%BladeRootMotion(DL%i1)
-   integer(IntKi), public, parameter :: ExtLd_u_BladeMotion              =  14 ! ExtLd%BladeMotion(DL%i1)
-   integer(IntKi), public, parameter :: ExtLd_u_TowerLoadAD              =  15 ! ExtLd%TowerLoadAD
-   integer(IntKi), public, parameter :: ExtLd_u_BladeLoadAD              =  16 ! ExtLd%BladeLoadAD(DL%i1)
-   integer(IntKi), public, parameter :: ExtLd_y_DX_y_twrLd               =  17 ! ExtLd%DX_y%twrLd
-   integer(IntKi), public, parameter :: ExtLd_y_DX_y_bldLd               =  18 ! ExtLd%DX_y%bldLd
-   integer(IntKi), public, parameter :: ExtLd_y_TowerLoad                =  19 ! ExtLd%TowerLoad
-   integer(IntKi), public, parameter :: ExtLd_y_BladeLoad                =  20 ! ExtLd%BladeLoad(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_twrDef              =   2 ! ExtLd%DX_u%twrDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldDef              =   3 ! ExtLd%DX_u%bldDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_hubDef              =   4 ! ExtLd%DX_u%hubDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_nacDef              =   5 ! ExtLd%DX_u%nacDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldRootDef          =   6 ! ExtLd%DX_u%bldRootDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldPitch            =   7 ! ExtLd%DX_u%bldPitch
+   integer(IntKi), public, parameter :: ExtLd_u_az                       =   8 ! ExtLd%az
+   integer(IntKi), public, parameter :: ExtLd_u_TowerMotion              =   9 ! ExtLd%TowerMotion
+   integer(IntKi), public, parameter :: ExtLd_u_HubMotion                =  10 ! ExtLd%HubMotion
+   integer(IntKi), public, parameter :: ExtLd_u_NacelleMotion            =  11 ! ExtLd%NacelleMotion
+   integer(IntKi), public, parameter :: ExtLd_u_BladeRootMotion          =  12 ! ExtLd%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_u_BladeMotion              =  13 ! ExtLd%BladeMotion(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_u_TowerLoadAD              =  14 ! ExtLd%TowerLoadAD
+   integer(IntKi), public, parameter :: ExtLd_u_BladeLoadAD              =  15 ! ExtLd%BladeLoadAD(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_y_DX_y_twrLd               =  16 ! ExtLd%DX_y%twrLd
+   integer(IntKi), public, parameter :: ExtLd_y_DX_y_bldLd               =  17 ! ExtLd%DX_y%bldLd
+   integer(IntKi), public, parameter :: ExtLd_y_TowerLoad                =  18 ! ExtLd%TowerLoad
+   integer(IntKi), public, parameter :: ExtLd_y_BladeLoad                =  19 ! ExtLd%BladeLoad(DL%i1)
 
 contains
 
@@ -1704,63 +1703,6 @@ subroutine ExtLd_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine ExtLd_VarsPackConstrState(Vars, z, ValAry)
-   type(ExtLd_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ExtLd_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine ExtLd_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(ExtLd_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ExtLd_z_blah)
-         VarVals(1) = z%blah                                                  ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine ExtLd_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(ExtLd_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ExtLd_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine ExtLd_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(ExtLd_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ExtLd_z_blah)
-         z%blah = VarVals(1)                                                  ! Scalar
-      end select
-   end associate
-end subroutine
-
-function ExtLd_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (ExtLd_z_blah)
-       Name = "z%blah"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine ExtLd_VarsPackInput(Vars, u, ValAry)
    type(ExtLd_InputType), intent(in)       :: u

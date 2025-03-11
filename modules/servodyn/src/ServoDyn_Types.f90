@@ -590,78 +590,73 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: SrvD_x_NStC_StC_x                =   3 ! SrvD%NStC(DL%i1)%StC_x
    integer(IntKi), public, parameter :: SrvD_x_TStC_StC_x                =   4 ! SrvD%TStC(DL%i1)%StC_x
    integer(IntKi), public, parameter :: SrvD_x_SStC_StC_x                =   5 ! SrvD%SStC(DL%i1)%StC_x
-   integer(IntKi), public, parameter :: SrvD_z_DummyConstrState          =   6 ! SrvD%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_z_BStC_DummyConstrState     =   7 ! SrvD%BStC(DL%i1)%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_z_NStC_DummyConstrState     =   8 ! SrvD%NStC(DL%i1)%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_z_TStC_DummyConstrState     =   9 ! SrvD%TStC(DL%i1)%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_z_SStC_DummyConstrState     =  10 ! SrvD%SStC(DL%i1)%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_u_BlPitch                   =  11 ! SrvD%BlPitch
-   integer(IntKi), public, parameter :: SrvD_u_Yaw                       =  12 ! SrvD%Yaw
-   integer(IntKi), public, parameter :: SrvD_u_YawRate                   =  13 ! SrvD%YawRate
-   integer(IntKi), public, parameter :: SrvD_u_LSS_Spd                   =  14 ! SrvD%LSS_Spd
-   integer(IntKi), public, parameter :: SrvD_u_HSS_Spd                   =  15 ! SrvD%HSS_Spd
-   integer(IntKi), public, parameter :: SrvD_u_RotSpeed                  =  16 ! SrvD%RotSpeed
-   integer(IntKi), public, parameter :: SrvD_u_ExternalYawPosCom         =  17 ! SrvD%ExternalYawPosCom
-   integer(IntKi), public, parameter :: SrvD_u_ExternalYawRateCom        =  18 ! SrvD%ExternalYawRateCom
-   integer(IntKi), public, parameter :: SrvD_u_ExternalBlPitchCom        =  19 ! SrvD%ExternalBlPitchCom
-   integer(IntKi), public, parameter :: SrvD_u_ExternalGenTrq            =  20 ! SrvD%ExternalGenTrq
-   integer(IntKi), public, parameter :: SrvD_u_ExternalElecPwr           =  21 ! SrvD%ExternalElecPwr
-   integer(IntKi), public, parameter :: SrvD_u_ExternalHSSBrFrac         =  22 ! SrvD%ExternalHSSBrFrac
-   integer(IntKi), public, parameter :: SrvD_u_ExternalBlAirfoilCom      =  23 ! SrvD%ExternalBlAirfoilCom
-   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaL       =  24 ! SrvD%ExternalCableDeltaL
-   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaLdot    =  25 ! SrvD%ExternalCableDeltaLdot
-   integer(IntKi), public, parameter :: SrvD_u_TwrAccel                  =  26 ! SrvD%TwrAccel
-   integer(IntKi), public, parameter :: SrvD_u_YawErr                    =  27 ! SrvD%YawErr
-   integer(IntKi), public, parameter :: SrvD_u_WindDir                   =  28 ! SrvD%WindDir
-   integer(IntKi), public, parameter :: SrvD_u_RootMyc                   =  29 ! SrvD%RootMyc
-   integer(IntKi), public, parameter :: SrvD_u_YawBrTAxp                 =  30 ! SrvD%YawBrTAxp
-   integer(IntKi), public, parameter :: SrvD_u_YawBrTAyp                 =  31 ! SrvD%YawBrTAyp
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipPxa                 =  32 ! SrvD%LSSTipPxa
-   integer(IntKi), public, parameter :: SrvD_u_RootMxc                   =  33 ! SrvD%RootMxc
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMxa                 =  34 ! SrvD%LSSTipMxa
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMya                 =  35 ! SrvD%LSSTipMya
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMza                 =  36 ! SrvD%LSSTipMza
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMys                 =  37 ! SrvD%LSSTipMys
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMzs                 =  38 ! SrvD%LSSTipMzs
-   integer(IntKi), public, parameter :: SrvD_u_YawBrMyn                  =  39 ! SrvD%YawBrMyn
-   integer(IntKi), public, parameter :: SrvD_u_YawBrMzn                  =  40 ! SrvD%YawBrMzn
-   integer(IntKi), public, parameter :: SrvD_u_NcIMURAxs                 =  41 ! SrvD%NcIMURAxs
-   integer(IntKi), public, parameter :: SrvD_u_NcIMURAys                 =  42 ! SrvD%NcIMURAys
-   integer(IntKi), public, parameter :: SrvD_u_NcIMURAzs                 =  43 ! SrvD%NcIMURAzs
-   integer(IntKi), public, parameter :: SrvD_u_RotPwr                    =  44 ! SrvD%RotPwr
-   integer(IntKi), public, parameter :: SrvD_u_HorWindV                  =  45 ! SrvD%HorWindV
-   integer(IntKi), public, parameter :: SrvD_u_YawAngle                  =  46 ! SrvD%YawAngle
-   integer(IntKi), public, parameter :: SrvD_u_LSShftFxa                 =  47 ! SrvD%LSShftFxa
-   integer(IntKi), public, parameter :: SrvD_u_LSShftFys                 =  48 ! SrvD%LSShftFys
-   integer(IntKi), public, parameter :: SrvD_u_LSShftFzs                 =  49 ! SrvD%LSShftFzs
-   integer(IntKi), public, parameter :: SrvD_u_fromSC                    =  50 ! SrvD%fromSC
-   integer(IntKi), public, parameter :: SrvD_u_fromSCglob                =  51 ! SrvD%fromSCglob
-   integer(IntKi), public, parameter :: SrvD_u_PtfmMotionMesh            =  52 ! SrvD%PtfmMotionMesh
-   integer(IntKi), public, parameter :: SrvD_u_BStCMotionMesh            =  53 ! SrvD%BStCMotionMesh(DL%i1, DL%i2)
-   integer(IntKi), public, parameter :: SrvD_u_NStCMotionMesh            =  54 ! SrvD%NStCMotionMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_u_TStCMotionMesh            =  55 ! SrvD%TStCMotionMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_u_SStCMotionMesh            =  56 ! SrvD%SStCMotionMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_u_LidSpeed                  =  57 ! SrvD%LidSpeed
-   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsX             =  58 ! SrvD%MsrPositionsX
-   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsY             =  59 ! SrvD%MsrPositionsY
-   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsZ             =  60 ! SrvD%MsrPositionsZ
-   integer(IntKi), public, parameter :: SrvD_y_WriteOutput               =  61 ! SrvD%WriteOutput
-   integer(IntKi), public, parameter :: SrvD_y_BlPitchCom                =  62 ! SrvD%BlPitchCom
-   integer(IntKi), public, parameter :: SrvD_y_BlAirfoilCom              =  63 ! SrvD%BlAirfoilCom
-   integer(IntKi), public, parameter :: SrvD_y_YawMom                    =  64 ! SrvD%YawMom
-   integer(IntKi), public, parameter :: SrvD_y_YawPosCom                 =  65 ! SrvD%YawPosCom
-   integer(IntKi), public, parameter :: SrvD_y_YawRateCom                =  66 ! SrvD%YawRateCom
-   integer(IntKi), public, parameter :: SrvD_y_GenTrq                    =  67 ! SrvD%GenTrq
-   integer(IntKi), public, parameter :: SrvD_y_HSSBrTrqC                 =  68 ! SrvD%HSSBrTrqC
-   integer(IntKi), public, parameter :: SrvD_y_ElecPwr                   =  69 ! SrvD%ElecPwr
-   integer(IntKi), public, parameter :: SrvD_y_TBDrCon                   =  70 ! SrvD%TBDrCon
-   integer(IntKi), public, parameter :: SrvD_y_CableDeltaL               =  71 ! SrvD%CableDeltaL
-   integer(IntKi), public, parameter :: SrvD_y_CableDeltaLdot            =  72 ! SrvD%CableDeltaLdot
-   integer(IntKi), public, parameter :: SrvD_y_BStCLoadMesh              =  73 ! SrvD%BStCLoadMesh(DL%i1, DL%i2)
-   integer(IntKi), public, parameter :: SrvD_y_NStCLoadMesh              =  74 ! SrvD%NStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_TStCLoadMesh              =  75 ! SrvD%TStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_SStCLoadMesh              =  76 ! SrvD%SStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_toSC                      =  77 ! SrvD%toSC
+   integer(IntKi), public, parameter :: SrvD_u_BlPitch                   =   6 ! SrvD%BlPitch
+   integer(IntKi), public, parameter :: SrvD_u_Yaw                       =   7 ! SrvD%Yaw
+   integer(IntKi), public, parameter :: SrvD_u_YawRate                   =   8 ! SrvD%YawRate
+   integer(IntKi), public, parameter :: SrvD_u_LSS_Spd                   =   9 ! SrvD%LSS_Spd
+   integer(IntKi), public, parameter :: SrvD_u_HSS_Spd                   =  10 ! SrvD%HSS_Spd
+   integer(IntKi), public, parameter :: SrvD_u_RotSpeed                  =  11 ! SrvD%RotSpeed
+   integer(IntKi), public, parameter :: SrvD_u_ExternalYawPosCom         =  12 ! SrvD%ExternalYawPosCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalYawRateCom        =  13 ! SrvD%ExternalYawRateCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalBlPitchCom        =  14 ! SrvD%ExternalBlPitchCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalGenTrq            =  15 ! SrvD%ExternalGenTrq
+   integer(IntKi), public, parameter :: SrvD_u_ExternalElecPwr           =  16 ! SrvD%ExternalElecPwr
+   integer(IntKi), public, parameter :: SrvD_u_ExternalHSSBrFrac         =  17 ! SrvD%ExternalHSSBrFrac
+   integer(IntKi), public, parameter :: SrvD_u_ExternalBlAirfoilCom      =  18 ! SrvD%ExternalBlAirfoilCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaL       =  19 ! SrvD%ExternalCableDeltaL
+   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaLdot    =  20 ! SrvD%ExternalCableDeltaLdot
+   integer(IntKi), public, parameter :: SrvD_u_TwrAccel                  =  21 ! SrvD%TwrAccel
+   integer(IntKi), public, parameter :: SrvD_u_YawErr                    =  22 ! SrvD%YawErr
+   integer(IntKi), public, parameter :: SrvD_u_WindDir                   =  23 ! SrvD%WindDir
+   integer(IntKi), public, parameter :: SrvD_u_RootMyc                   =  24 ! SrvD%RootMyc
+   integer(IntKi), public, parameter :: SrvD_u_YawBrTAxp                 =  25 ! SrvD%YawBrTAxp
+   integer(IntKi), public, parameter :: SrvD_u_YawBrTAyp                 =  26 ! SrvD%YawBrTAyp
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipPxa                 =  27 ! SrvD%LSSTipPxa
+   integer(IntKi), public, parameter :: SrvD_u_RootMxc                   =  28 ! SrvD%RootMxc
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMxa                 =  29 ! SrvD%LSSTipMxa
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMya                 =  30 ! SrvD%LSSTipMya
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMza                 =  31 ! SrvD%LSSTipMza
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMys                 =  32 ! SrvD%LSSTipMys
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMzs                 =  33 ! SrvD%LSSTipMzs
+   integer(IntKi), public, parameter :: SrvD_u_YawBrMyn                  =  34 ! SrvD%YawBrMyn
+   integer(IntKi), public, parameter :: SrvD_u_YawBrMzn                  =  35 ! SrvD%YawBrMzn
+   integer(IntKi), public, parameter :: SrvD_u_NcIMURAxs                 =  36 ! SrvD%NcIMURAxs
+   integer(IntKi), public, parameter :: SrvD_u_NcIMURAys                 =  37 ! SrvD%NcIMURAys
+   integer(IntKi), public, parameter :: SrvD_u_NcIMURAzs                 =  38 ! SrvD%NcIMURAzs
+   integer(IntKi), public, parameter :: SrvD_u_RotPwr                    =  39 ! SrvD%RotPwr
+   integer(IntKi), public, parameter :: SrvD_u_HorWindV                  =  40 ! SrvD%HorWindV
+   integer(IntKi), public, parameter :: SrvD_u_YawAngle                  =  41 ! SrvD%YawAngle
+   integer(IntKi), public, parameter :: SrvD_u_LSShftFxa                 =  42 ! SrvD%LSShftFxa
+   integer(IntKi), public, parameter :: SrvD_u_LSShftFys                 =  43 ! SrvD%LSShftFys
+   integer(IntKi), public, parameter :: SrvD_u_LSShftFzs                 =  44 ! SrvD%LSShftFzs
+   integer(IntKi), public, parameter :: SrvD_u_fromSC                    =  45 ! SrvD%fromSC
+   integer(IntKi), public, parameter :: SrvD_u_fromSCglob                =  46 ! SrvD%fromSCglob
+   integer(IntKi), public, parameter :: SrvD_u_PtfmMotionMesh            =  47 ! SrvD%PtfmMotionMesh
+   integer(IntKi), public, parameter :: SrvD_u_BStCMotionMesh            =  48 ! SrvD%BStCMotionMesh(DL%i1, DL%i2)
+   integer(IntKi), public, parameter :: SrvD_u_NStCMotionMesh            =  49 ! SrvD%NStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_TStCMotionMesh            =  50 ! SrvD%TStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_SStCMotionMesh            =  51 ! SrvD%SStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_LidSpeed                  =  52 ! SrvD%LidSpeed
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsX             =  53 ! SrvD%MsrPositionsX
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsY             =  54 ! SrvD%MsrPositionsY
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsZ             =  55 ! SrvD%MsrPositionsZ
+   integer(IntKi), public, parameter :: SrvD_y_WriteOutput               =  56 ! SrvD%WriteOutput
+   integer(IntKi), public, parameter :: SrvD_y_BlPitchCom                =  57 ! SrvD%BlPitchCom
+   integer(IntKi), public, parameter :: SrvD_y_BlAirfoilCom              =  58 ! SrvD%BlAirfoilCom
+   integer(IntKi), public, parameter :: SrvD_y_YawMom                    =  59 ! SrvD%YawMom
+   integer(IntKi), public, parameter :: SrvD_y_YawPosCom                 =  60 ! SrvD%YawPosCom
+   integer(IntKi), public, parameter :: SrvD_y_YawRateCom                =  61 ! SrvD%YawRateCom
+   integer(IntKi), public, parameter :: SrvD_y_GenTrq                    =  62 ! SrvD%GenTrq
+   integer(IntKi), public, parameter :: SrvD_y_HSSBrTrqC                 =  63 ! SrvD%HSSBrTrqC
+   integer(IntKi), public, parameter :: SrvD_y_ElecPwr                   =  64 ! SrvD%ElecPwr
+   integer(IntKi), public, parameter :: SrvD_y_TBDrCon                   =  65 ! SrvD%TBDrCon
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaL               =  66 ! SrvD%CableDeltaL
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaLdot            =  67 ! SrvD%CableDeltaLdot
+   integer(IntKi), public, parameter :: SrvD_y_BStCLoadMesh              =  68 ! SrvD%BStCLoadMesh(DL%i1, DL%i2)
+   integer(IntKi), public, parameter :: SrvD_y_NStCLoadMesh              =  69 ! SrvD%NStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_TStCLoadMesh              =  70 ! SrvD%TStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_SStCLoadMesh              =  71 ! SrvD%SStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_toSC                      =  72 ! SrvD%toSC
 
 contains
 
@@ -7330,87 +7325,6 @@ subroutine SrvD_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine SrvD_VarsPackConstrState(Vars, z, ValAry)
-   type(SrvD_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SrvD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine SrvD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(SrvD_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SrvD_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case (SrvD_z_BStC_DummyConstrState)
-         VarVals(1) = z%BStC(DL%i1)%DummyConstrState                          ! Scalar
-      case (SrvD_z_NStC_DummyConstrState)
-         VarVals(1) = z%NStC(DL%i1)%DummyConstrState                          ! Scalar
-      case (SrvD_z_TStC_DummyConstrState)
-         VarVals(1) = z%TStC(DL%i1)%DummyConstrState                          ! Scalar
-      case (SrvD_z_SStC_DummyConstrState)
-         VarVals(1) = z%SStC(DL%i1)%DummyConstrState                          ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine SrvD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SrvD_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SrvD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine SrvD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(SrvD_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SrvD_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      case (SrvD_z_BStC_DummyConstrState)
-         z%BStC(DL%i1)%DummyConstrState = VarVals(1)                          ! Scalar
-      case (SrvD_z_NStC_DummyConstrState)
-         z%NStC(DL%i1)%DummyConstrState = VarVals(1)                          ! Scalar
-      case (SrvD_z_TStC_DummyConstrState)
-         z%TStC(DL%i1)%DummyConstrState = VarVals(1)                          ! Scalar
-      case (SrvD_z_SStC_DummyConstrState)
-         z%SStC(DL%i1)%DummyConstrState = VarVals(1)                          ! Scalar
-      end select
-   end associate
-end subroutine
-
-function SrvD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (SrvD_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case (SrvD_z_BStC_DummyConstrState)
-       Name = "z%BStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
-   case (SrvD_z_NStC_DummyConstrState)
-       Name = "z%NStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
-   case (SrvD_z_TStC_DummyConstrState)
-       Name = "z%TStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
-   case (SrvD_z_SStC_DummyConstrState)
-       Name = "z%SStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine SrvD_VarsPackInput(Vars, u, ValAry)
    type(SrvD_InputType), intent(in)        :: u

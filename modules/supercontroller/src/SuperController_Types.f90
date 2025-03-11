@@ -180,11 +180,10 @@ IMPLICIT NONE
   END TYPE SC_OutputType
 ! =======================
    integer(IntKi), public, parameter :: SC_x_Dummy                       =   1 ! SC%Dummy
-   integer(IntKi), public, parameter :: SC_z_Dummy                       =   2 ! SC%Dummy
-   integer(IntKi), public, parameter :: SC_u_toSCglob                    =   3 ! SC%toSCglob
-   integer(IntKi), public, parameter :: SC_u_toSC                        =   4 ! SC%toSC
-   integer(IntKi), public, parameter :: SC_y_fromSCglob                  =   5 ! SC%fromSCglob
-   integer(IntKi), public, parameter :: SC_y_fromSC                      =   6 ! SC%fromSC
+   integer(IntKi), public, parameter :: SC_u_toSCglob                    =   2 ! SC%toSCglob
+   integer(IntKi), public, parameter :: SC_u_toSC                        =   3 ! SC%toSC
+   integer(IntKi), public, parameter :: SC_y_fromSCglob                  =   4 ! SC%fromSCglob
+   integer(IntKi), public, parameter :: SC_y_fromSC                      =   5 ! SC%fromSC
 
 contains
 
@@ -1927,63 +1926,6 @@ subroutine SC_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine SC_VarsPackConstrState(Vars, z, ValAry)
-   type(SC_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SC_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine SC_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(SC_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SC_z_Dummy)
-         VarVals(1) = z%Dummy                                                 ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine SC_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SC_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SC_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine SC_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(SC_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SC_z_Dummy)
-         z%Dummy = VarVals(1)                                                 ! Scalar
-      end select
-   end associate
-end subroutine
-
-function SC_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (SC_z_Dummy)
-       Name = "z%Dummy"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine SC_VarsPackInput(Vars, u, ValAry)
    type(SC_InputType), intent(in)          :: u

@@ -1031,61 +1031,6 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
       if (present(dx_glue)) call XfrLocToGluAry(ModData%Vars%x, dx_op, dx_glue)
    end if
 
-   ! If constraint states are requested
-   if (present(z_op)) then
-
-      if (.not. allocated(z_op)) then
-         call AllocAry(z_op, ModData%Vars%Nz, "z_op", ErrStat2, ErrMsg2)
-         if (Failed()) return
-      end if
-
-      ! Select based on module ID
-      select case (ModData%ID)
-      case (Module_AD)
-         call AD_VarsPackConstrState(ModData%Vars, T%AD%z(iState)%rotors(ModData%Ins), z_op)
-      case (Module_ADsk)
-         call ADsk_VarsPackConstrState(ModData%Vars, T%ADsk%z(iState), z_op)
-      case (Module_BD)
-         call BD_VarsPackConstrState(ModData%Vars, T%BD%z(ModData%Ins, iState), z_op)
-      case (Module_ED)
-         call ED_VarsPackConstrState(ModData%Vars, T%ED%z(ModData%Ins, iState), z_op)
-      case (Module_SED)
-         call SED_VarsPackConstrState(ModData%Vars, T%SED%z(iState), z_op)
-      case (Module_ExtPtfm)
-         call ExtPtfm_VarsPackConstrState(ModData%Vars, T%ExtPtfm%z(iState), z_op)
-      case (Module_FEAM)
-         call FEAM_VarsPackConstrState(ModData%Vars, T%FEAM%z(iState), z_op)
-      case (Module_HD)
-         call HydroDyn_VarsPackConstrState(ModData%Vars, T%HD%z(iState), z_op)
-      case (Module_IceD)
-         call IceD_VarsPackConstrState(ModData%Vars, T%IceD%z(ModData%Ins, iState), z_op)
-      case (Module_IceF)
-         call IceFloe_VarsPackConstrState(ModData%Vars, T%IceF%z(iState), z_op)
-      case (Module_IfW)
-         call InflowWind_VarsPackConstrState(ModData%Vars, T%IfW%z(iState), z_op)
-      case (Module_MAP)
-         call MAP_VarsPackConstrState(ModData%Vars, T%MAP%z(iState), z_op)
-      case (Module_MD)
-         call MD_VarsPackConstrState(ModData%Vars, T%MD%z(iState), z_op)
-      case (Module_ExtInfw)
-         ! call ExtInfw_VarsPackConstrState(ModData%Vars, T%ExtInfw%z(StateIndex), z_op)
-      case (Module_Orca)
-         call Orca_VarsPackConstrState(ModData%Vars, T%Orca%z(iState), z_op)
-      case (Module_SD)
-         call SD_VarsPackConstrState(ModData%Vars, T%SD%z(iState), z_op)
-      case (Module_SeaSt)
-         call SeaSt_VarsPackConstrState(ModData%Vars, T%SeaSt%z(iState), z_op)
-      case (Module_SrvD)
-         call SrvD_VarsPackConstrState(ModData%Vars, T%SrvD%z(iState), z_op)
-      case default
-         call SetErrStat(ErrID_Fatal, "Constraint State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
-         return
-      end select
-
-      ! If glue array is present, transfer from module to glue
-      if (present(z_glue)) call XfrLocToGluAry(ModData%Vars%z, z_op, z_glue)
-   end if
-
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1210,57 +1155,6 @@ subroutine FAST_SetOP(ModData, iInput, iState, T, ErrStat, ErrMsg, &
          call SrvD_VarsUnpackContState(ModData%Vars, x_op, T%SrvD%x(iState))
       case default
          call SetErrStat(ErrID_Fatal, "Continuous State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
-         return
-      end select
-
-   end if
-
-   ! If constraint states are requested
-   if (present(z_op)) then
-
-      ! If glue array is present, transfer from module to glue
-      if (present(z_glue)) call XfrGluToModAry(ModData%Vars%z, z_glue, z_op)
-
-      ! Select based on module ID
-      select case (ModData%ID)
-      case (Module_AD)
-         call AD_VarsUnpackConstrState(ModData%Vars, z_op, T%AD%z(iState)%rotors(ModData%Ins))
-      case (Module_ADsk)
-         call ADsk_VarsUnpackConstrState(ModData%Vars, z_op, T%ADsk%z(iState))
-      case (Module_BD)
-         call BD_VarsUnpackConstrState(ModData%Vars, z_op, T%BD%z(ModData%Ins, iState))
-      case (Module_ED)
-         call ED_VarsUnpackConstrState(ModData%Vars, z_op, T%ED%z(ModData%Ins, iState))
-      case (Module_SED)
-         call SED_VarsUnpackConstrState(ModData%Vars, z_op, T%SED%z(iState))
-      case (Module_ExtPtfm)
-         call ExtPtfm_VarsUnpackConstrState(ModData%Vars, z_op, T%ExtPtfm%z(iState))
-      case (Module_FEAM)
-         call FEAM_VarsUnpackConstrState(ModData%Vars, z_op, T%FEAM%z(iState))
-      case (Module_HD)
-         call HydroDyn_VarsUnpackConstrState(ModData%Vars, z_op, T%HD%z(iState))
-      case (Module_IceD)
-         call IceD_VarsUnpackConstrState(ModData%Vars, z_op, T%IceD%z(ModData%Ins, iState))
-      case (Module_IceF)
-         call IceFloe_VarsUnpackConstrState(ModData%Vars, z_op, T%IceF%z(iState))
-      case (Module_IfW)
-         call InflowWind_VarsUnpackConstrState(ModData%Vars, z_op, T%IfW%z(iState))
-      case (Module_MAP)
-         call MAP_VarsUnpackConstrState(ModData%Vars, z_op, T%MAP%z(iState))
-      case (Module_MD)
-         call MD_VarsUnpackConstrState(ModData%Vars, z_op, T%MD%z(iState))
-      case (Module_ExtInfw)
-         ! call ExtInfw_VarsUnpackConstrState(ModData%z_op,Vars, T%ExtInfw%z(StateIndex))
-      case (Module_Orca)
-         call Orca_VarsUnpackConstrState(ModData%Vars, z_op, T%Orca%z(iState))
-      case (Module_SD)
-         call SD_VarsUnpackConstrState(ModData%Vars, z_op, T%SD%z(iState))
-      case (Module_SeaSt)
-         call SeaSt_VarsUnpackConstrState(ModData%Vars, z_op, T%SeaSt%z(iState))
-      case (Module_SrvD)
-         call SrvD_VarsUnpackConstrState(ModData%Vars, z_op, T%SrvD%z(iState))
-      case default
-         call SetErrStat(ErrID_Fatal, "Constraint State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
       end select
 

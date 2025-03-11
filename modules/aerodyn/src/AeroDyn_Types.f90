@@ -563,21 +563,19 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: AD_x_BEMT_DBEMT_element_vind_1   =   3 ! AD%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1
    integer(IntKi), public, parameter :: AD_x_BEMT_V_w                    =   4 ! AD%BEMT%V_w
    integer(IntKi), public, parameter :: AD_x_AA_DummyContState           =   5 ! AD%AA%DummyContState
-   integer(IntKi), public, parameter :: AD_z_BEMT_phi                    =   6 ! AD%BEMT%phi
-   integer(IntKi), public, parameter :: AD_z_AA_DummyConstrState         =   7 ! AD%AA%DummyConstrState
-   integer(IntKi), public, parameter :: AD_u_NacelleMotion               =   8 ! AD%NacelleMotion
-   integer(IntKi), public, parameter :: AD_u_TowerMotion                 =   9 ! AD%TowerMotion
-   integer(IntKi), public, parameter :: AD_u_HubMotion                   =  10 ! AD%HubMotion
-   integer(IntKi), public, parameter :: AD_u_BladeRootMotion             =  11 ! AD%BladeRootMotion(DL%i1)
-   integer(IntKi), public, parameter :: AD_u_BladeMotion                 =  12 ! AD%BladeMotion(DL%i1)
-   integer(IntKi), public, parameter :: AD_u_TFinMotion                  =  13 ! AD%TFinMotion
-   integer(IntKi), public, parameter :: AD_u_UserProp                    =  14 ! AD%UserProp
-   integer(IntKi), public, parameter :: AD_y_NacelleLoad                 =  15 ! AD%NacelleLoad
-   integer(IntKi), public, parameter :: AD_y_HubLoad                     =  16 ! AD%HubLoad
-   integer(IntKi), public, parameter :: AD_y_TowerLoad                   =  17 ! AD%TowerLoad
-   integer(IntKi), public, parameter :: AD_y_BladeLoad                   =  18 ! AD%BladeLoad(DL%i1)
-   integer(IntKi), public, parameter :: AD_y_TFinLoad                    =  19 ! AD%TFinLoad
-   integer(IntKi), public, parameter :: AD_y_WriteOutput                 =  20 ! AD%WriteOutput
+   integer(IntKi), public, parameter :: AD_u_NacelleMotion               =   6 ! AD%NacelleMotion
+   integer(IntKi), public, parameter :: AD_u_TowerMotion                 =   7 ! AD%TowerMotion
+   integer(IntKi), public, parameter :: AD_u_HubMotion                   =   8 ! AD%HubMotion
+   integer(IntKi), public, parameter :: AD_u_BladeRootMotion             =   9 ! AD%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: AD_u_BladeMotion                 =  10 ! AD%BladeMotion(DL%i1)
+   integer(IntKi), public, parameter :: AD_u_TFinMotion                  =  11 ! AD%TFinMotion
+   integer(IntKi), public, parameter :: AD_u_UserProp                    =  12 ! AD%UserProp
+   integer(IntKi), public, parameter :: AD_y_NacelleLoad                 =  13 ! AD%NacelleLoad
+   integer(IntKi), public, parameter :: AD_y_HubLoad                     =  14 ! AD%HubLoad
+   integer(IntKi), public, parameter :: AD_y_TowerLoad                   =  15 ! AD%TowerLoad
+   integer(IntKi), public, parameter :: AD_y_BladeLoad                   =  16 ! AD%BladeLoad(DL%i1)
+   integer(IntKi), public, parameter :: AD_y_TFinLoad                    =  17 ! AD%TFinLoad
+   integer(IntKi), public, parameter :: AD_y_WriteOutput                 =  18 ! AD%WriteOutput
 
 contains
 
@@ -6995,69 +6993,6 @@ subroutine AD_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine AD_VarsPackConstrState(Vars, z, ValAry)
-   type(RotConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call AD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine AD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(RotConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (AD_z_BEMT_phi)
-         VarVals = z%BEMT%phi(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
-      case (AD_z_AA_DummyConstrState)
-         VarVals(1) = z%AA%DummyConstrState                                   ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine AD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(RotConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call AD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine AD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(RotConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (AD_z_BEMT_phi)
-         z%BEMT%phi(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
-      case (AD_z_AA_DummyConstrState)
-         z%AA%DummyConstrState = VarVals(1)                                   ! Scalar
-      end select
-   end associate
-end subroutine
-
-function AD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (AD_z_BEMT_phi)
-       Name = "z%BEMT%phi"
-   case (AD_z_AA_DummyConstrState)
-       Name = "z%AA%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine AD_VarsPackInput(Vars, u, ValAry)
    type(RotInputType), intent(in)          :: u

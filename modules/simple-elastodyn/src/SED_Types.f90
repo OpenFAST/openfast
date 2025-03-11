@@ -188,27 +188,26 @@ IMPLICIT NONE
 ! =======================
    integer(IntKi), public, parameter :: SED_x_QT                         =   1 ! SED%QT
    integer(IntKi), public, parameter :: SED_x_QDT                        =   2 ! SED%QDT
-   integer(IntKi), public, parameter :: SED_z_DummyConstrState           =   3 ! SED%DummyConstrState
-   integer(IntKi), public, parameter :: SED_u_HubPtLoad                  =   4 ! SED%HubPtLoad
-   integer(IntKi), public, parameter :: SED_u_HSSBrTrqC                  =   5 ! SED%HSSBrTrqC
-   integer(IntKi), public, parameter :: SED_u_GenTrq                     =   6 ! SED%GenTrq
-   integer(IntKi), public, parameter :: SED_u_BlPitchCom                 =   7 ! SED%BlPitchCom
-   integer(IntKi), public, parameter :: SED_u_YawPosCom                  =   8 ! SED%YawPosCom
-   integer(IntKi), public, parameter :: SED_u_YawRateCom                 =   9 ! SED%YawRateCom
-   integer(IntKi), public, parameter :: SED_y_BladeRootMotion            =  10 ! SED%BladeRootMotion(DL%i1)
-   integer(IntKi), public, parameter :: SED_y_HubPtMotion                =  11 ! SED%HubPtMotion
-   integer(IntKi), public, parameter :: SED_y_NacelleMotion              =  12 ! SED%NacelleMotion
-   integer(IntKi), public, parameter :: SED_y_TowerLn2Mesh               =  13 ! SED%TowerLn2Mesh
-   integer(IntKi), public, parameter :: SED_y_PlatformPtMesh             =  14 ! SED%PlatformPtMesh
-   integer(IntKi), public, parameter :: SED_y_LSSTipPxa                  =  15 ! SED%LSSTipPxa
-   integer(IntKi), public, parameter :: SED_y_RotSpeed                   =  16 ! SED%RotSpeed
-   integer(IntKi), public, parameter :: SED_y_RotPwr                     =  17 ! SED%RotPwr
-   integer(IntKi), public, parameter :: SED_y_RotTrq                     =  18 ! SED%RotTrq
-   integer(IntKi), public, parameter :: SED_y_HSS_Spd                    =  19 ! SED%HSS_Spd
-   integer(IntKi), public, parameter :: SED_y_Yaw                        =  20 ! SED%Yaw
-   integer(IntKi), public, parameter :: SED_y_YawRate                    =  21 ! SED%YawRate
-   integer(IntKi), public, parameter :: SED_y_BlPitch                    =  22 ! SED%BlPitch
-   integer(IntKi), public, parameter :: SED_y_WriteOutput                =  23 ! SED%WriteOutput
+   integer(IntKi), public, parameter :: SED_u_HubPtLoad                  =   3 ! SED%HubPtLoad
+   integer(IntKi), public, parameter :: SED_u_HSSBrTrqC                  =   4 ! SED%HSSBrTrqC
+   integer(IntKi), public, parameter :: SED_u_GenTrq                     =   5 ! SED%GenTrq
+   integer(IntKi), public, parameter :: SED_u_BlPitchCom                 =   6 ! SED%BlPitchCom
+   integer(IntKi), public, parameter :: SED_u_YawPosCom                  =   7 ! SED%YawPosCom
+   integer(IntKi), public, parameter :: SED_u_YawRateCom                 =   8 ! SED%YawRateCom
+   integer(IntKi), public, parameter :: SED_y_BladeRootMotion            =   9 ! SED%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: SED_y_HubPtMotion                =  10 ! SED%HubPtMotion
+   integer(IntKi), public, parameter :: SED_y_NacelleMotion              =  11 ! SED%NacelleMotion
+   integer(IntKi), public, parameter :: SED_y_TowerLn2Mesh               =  12 ! SED%TowerLn2Mesh
+   integer(IntKi), public, parameter :: SED_y_PlatformPtMesh             =  13 ! SED%PlatformPtMesh
+   integer(IntKi), public, parameter :: SED_y_LSSTipPxa                  =  14 ! SED%LSSTipPxa
+   integer(IntKi), public, parameter :: SED_y_RotSpeed                   =  15 ! SED%RotSpeed
+   integer(IntKi), public, parameter :: SED_y_RotPwr                     =  16 ! SED%RotPwr
+   integer(IntKi), public, parameter :: SED_y_RotTrq                     =  17 ! SED%RotTrq
+   integer(IntKi), public, parameter :: SED_y_HSS_Spd                    =  18 ! SED%HSS_Spd
+   integer(IntKi), public, parameter :: SED_y_Yaw                        =  19 ! SED%Yaw
+   integer(IntKi), public, parameter :: SED_y_YawRate                    =  20 ! SED%YawRate
+   integer(IntKi), public, parameter :: SED_y_BlPitch                    =  21 ! SED%BlPitch
+   integer(IntKi), public, parameter :: SED_y_WriteOutput                =  22 ! SED%WriteOutput
 
 contains
 
@@ -1877,63 +1876,6 @@ subroutine SED_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine SED_VarsPackConstrState(Vars, z, ValAry)
-   type(SED_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SED_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine SED_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(SED_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SED_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine SED_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SED_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SED_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine SED_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(SED_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SED_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function SED_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (SED_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine SED_VarsPackInput(Vars, u, ValAry)
    type(SED_InputType), intent(in)         :: u

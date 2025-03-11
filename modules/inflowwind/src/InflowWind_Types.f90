@@ -209,25 +209,24 @@ IMPLICIT NONE
   END TYPE InflowWind_MiscVarType
 ! =======================
    integer(IntKi), public, parameter :: InflowWind_x_DummyContState      =   1 ! InflowWind%DummyContState
-   integer(IntKi), public, parameter :: InflowWind_z_DummyConstrState    =   2 ! InflowWind%DummyConstrState
-   integer(IntKi), public, parameter :: InflowWind_u_PositionXYZ         =   3 ! InflowWind%PositionXYZ
-   integer(IntKi), public, parameter :: InflowWind_u_lidar_PulseLidEl    =   4 ! InflowWind%lidar%PulseLidEl
-   integer(IntKi), public, parameter :: InflowWind_u_lidar_PulseLidAz    =   5 ! InflowWind%lidar%PulseLidAz
-   integer(IntKi), public, parameter :: InflowWind_u_lidar_HubDisplacementX =   6 ! InflowWind%lidar%HubDisplacementX
-   integer(IntKi), public, parameter :: InflowWind_u_lidar_HubDisplacementY =   7 ! InflowWind%lidar%HubDisplacementY
-   integer(IntKi), public, parameter :: InflowWind_u_lidar_HubDisplacementZ =   8 ! InflowWind%lidar%HubDisplacementZ
-   integer(IntKi), public, parameter :: InflowWind_u_HubPosition         =   9 ! InflowWind%HubPosition
-   integer(IntKi), public, parameter :: InflowWind_u_HubOrientation      =  10 ! InflowWind%HubOrientation
-   integer(IntKi), public, parameter :: InflowWind_y_VelocityUVW         =  11 ! InflowWind%VelocityUVW
-   integer(IntKi), public, parameter :: InflowWind_y_AccelUVW            =  12 ! InflowWind%AccelUVW
-   integer(IntKi), public, parameter :: InflowWind_y_WriteOutput         =  13 ! InflowWind%WriteOutput
-   integer(IntKi), public, parameter :: InflowWind_y_DiskVel             =  14 ! InflowWind%DiskVel
-   integer(IntKi), public, parameter :: InflowWind_y_HubVel              =  15 ! InflowWind%HubVel
-   integer(IntKi), public, parameter :: InflowWind_y_lidar_LidSpeed      =  16 ! InflowWind%lidar%LidSpeed
-   integer(IntKi), public, parameter :: InflowWind_y_lidar_WtTrunc       =  17 ! InflowWind%lidar%WtTrunc
-   integer(IntKi), public, parameter :: InflowWind_y_lidar_MsrPositionsX =  18 ! InflowWind%lidar%MsrPositionsX
-   integer(IntKi), public, parameter :: InflowWind_y_lidar_MsrPositionsY =  19 ! InflowWind%lidar%MsrPositionsY
-   integer(IntKi), public, parameter :: InflowWind_y_lidar_MsrPositionsZ =  20 ! InflowWind%lidar%MsrPositionsZ
+   integer(IntKi), public, parameter :: InflowWind_u_PositionXYZ         =   2 ! InflowWind%PositionXYZ
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_PulseLidEl    =   3 ! InflowWind%lidar%PulseLidEl
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_PulseLidAz    =   4 ! InflowWind%lidar%PulseLidAz
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_HubDisplacementX =   5 ! InflowWind%lidar%HubDisplacementX
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_HubDisplacementY =   6 ! InflowWind%lidar%HubDisplacementY
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_HubDisplacementZ =   7 ! InflowWind%lidar%HubDisplacementZ
+   integer(IntKi), public, parameter :: InflowWind_u_HubPosition         =   8 ! InflowWind%HubPosition
+   integer(IntKi), public, parameter :: InflowWind_u_HubOrientation      =   9 ! InflowWind%HubOrientation
+   integer(IntKi), public, parameter :: InflowWind_y_VelocityUVW         =  10 ! InflowWind%VelocityUVW
+   integer(IntKi), public, parameter :: InflowWind_y_AccelUVW            =  11 ! InflowWind%AccelUVW
+   integer(IntKi), public, parameter :: InflowWind_y_WriteOutput         =  12 ! InflowWind%WriteOutput
+   integer(IntKi), public, parameter :: InflowWind_y_DiskVel             =  13 ! InflowWind%DiskVel
+   integer(IntKi), public, parameter :: InflowWind_y_HubVel              =  14 ! InflowWind%HubVel
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_LidSpeed      =  15 ! InflowWind%lidar%LidSpeed
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_WtTrunc       =  16 ! InflowWind%lidar%WtTrunc
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_MsrPositionsX =  17 ! InflowWind%lidar%MsrPositionsX
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_MsrPositionsY =  18 ! InflowWind%lidar%MsrPositionsY
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_MsrPositionsZ =  19 ! InflowWind%lidar%MsrPositionsZ
 
 contains
 
@@ -1990,63 +1989,6 @@ subroutine InflowWind_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine InflowWind_VarsPackConstrState(Vars, z, ValAry)
-   type(InflowWind_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call InflowWind_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine InflowWind_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(InflowWind_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (InflowWind_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine InflowWind_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(InflowWind_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call InflowWind_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine InflowWind_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(InflowWind_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (InflowWind_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function InflowWind_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (InflowWind_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine InflowWind_VarsPackInput(Vars, u, ValAry)
    type(InflowWind_InputType), intent(in)  :: u

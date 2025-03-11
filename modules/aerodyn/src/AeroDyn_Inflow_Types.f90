@@ -187,27 +187,23 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: ADI_x_AD_FVW_W_r_NW              =  10 ! ADI%AD%FVW%W(DL%i1)%r_NW
    integer(IntKi), public, parameter :: ADI_x_AD_FVW_W_r_FW              =  11 ! ADI%AD%FVW%W(DL%i1)%r_FW
    integer(IntKi), public, parameter :: ADI_x_AD_FVW_UA_element_x        =  12 ! ADI%AD%FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x
-   integer(IntKi), public, parameter :: ADI_z_AD_rotors_BEMT_phi         =  13 ! ADI%AD%rotors(DL%i1)%BEMT%phi
-   integer(IntKi), public, parameter :: ADI_z_AD_rotors_AA_DummyConstrState =  14 ! ADI%AD%rotors(DL%i1)%AA%DummyConstrState
-   integer(IntKi), public, parameter :: ADI_z_AD_FVW_W_Gamma_LL          =  15 ! ADI%AD%FVW%W(DL%i1)%Gamma_LL
-   integer(IntKi), public, parameter :: ADI_z_AD_FVW_residual            =  16 ! ADI%AD%FVW%residual
-   integer(IntKi), public, parameter :: ADI_u_AD_rotors_NacelleMotion    =  17 ! ADI%AD%rotors(DL%i1)%NacelleMotion
-   integer(IntKi), public, parameter :: ADI_u_AD_rotors_TowerMotion      =  18 ! ADI%AD%rotors(DL%i1)%TowerMotion
-   integer(IntKi), public, parameter :: ADI_u_AD_rotors_HubMotion        =  19 ! ADI%AD%rotors(DL%i1)%HubMotion
-   integer(IntKi), public, parameter :: ADI_u_AD_rotors_BladeRootMotion  =  20 ! ADI%AD%rotors(DL%i1)%BladeRootMotion(DL%i2)
-   integer(IntKi), public, parameter :: ADI_u_AD_rotors_BladeMotion      =  21 ! ADI%AD%rotors(DL%i1)%BladeMotion(DL%i2)
-   integer(IntKi), public, parameter :: ADI_u_AD_rotors_TFinMotion       =  22 ! ADI%AD%rotors(DL%i1)%TFinMotion
-   integer(IntKi), public, parameter :: ADI_u_AD_rotors_UserProp         =  23 ! ADI%AD%rotors(DL%i1)%UserProp
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_NacelleLoad      =  24 ! ADI%AD%rotors(DL%i1)%NacelleLoad
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_HubLoad          =  25 ! ADI%AD%rotors(DL%i1)%HubLoad
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_TowerLoad        =  26 ! ADI%AD%rotors(DL%i1)%TowerLoad
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_BladeLoad        =  27 ! ADI%AD%rotors(DL%i1)%BladeLoad(DL%i2)
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_TFinLoad         =  28 ! ADI%AD%rotors(DL%i1)%TFinLoad
-   integer(IntKi), public, parameter :: ADI_y_AD_rotors_WriteOutput      =  29 ! ADI%AD%rotors(DL%i1)%WriteOutput
-   integer(IntKi), public, parameter :: ADI_y_HHVel                      =  30 ! ADI%HHVel
-   integer(IntKi), public, parameter :: ADI_y_PLExp                      =  31 ! ADI%PLExp
-   integer(IntKi), public, parameter :: ADI_y_IW_WriteOutput             =  32 ! ADI%IW_WriteOutput
-   integer(IntKi), public, parameter :: ADI_y_WriteOutput                =  33 ! ADI%WriteOutput
+   integer(IntKi), public, parameter :: ADI_u_AD_rotors_NacelleMotion    =  13 ! ADI%AD%rotors(DL%i1)%NacelleMotion
+   integer(IntKi), public, parameter :: ADI_u_AD_rotors_TowerMotion      =  14 ! ADI%AD%rotors(DL%i1)%TowerMotion
+   integer(IntKi), public, parameter :: ADI_u_AD_rotors_HubMotion        =  15 ! ADI%AD%rotors(DL%i1)%HubMotion
+   integer(IntKi), public, parameter :: ADI_u_AD_rotors_BladeRootMotion  =  16 ! ADI%AD%rotors(DL%i1)%BladeRootMotion(DL%i2)
+   integer(IntKi), public, parameter :: ADI_u_AD_rotors_BladeMotion      =  17 ! ADI%AD%rotors(DL%i1)%BladeMotion(DL%i2)
+   integer(IntKi), public, parameter :: ADI_u_AD_rotors_TFinMotion       =  18 ! ADI%AD%rotors(DL%i1)%TFinMotion
+   integer(IntKi), public, parameter :: ADI_u_AD_rotors_UserProp         =  19 ! ADI%AD%rotors(DL%i1)%UserProp
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_NacelleLoad      =  20 ! ADI%AD%rotors(DL%i1)%NacelleLoad
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_HubLoad          =  21 ! ADI%AD%rotors(DL%i1)%HubLoad
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_TowerLoad        =  22 ! ADI%AD%rotors(DL%i1)%TowerLoad
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_BladeLoad        =  23 ! ADI%AD%rotors(DL%i1)%BladeLoad(DL%i2)
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_TFinLoad         =  24 ! ADI%AD%rotors(DL%i1)%TFinLoad
+   integer(IntKi), public, parameter :: ADI_y_AD_rotors_WriteOutput      =  25 ! ADI%AD%rotors(DL%i1)%WriteOutput
+   integer(IntKi), public, parameter :: ADI_y_HHVel                      =  26 ! ADI%HHVel
+   integer(IntKi), public, parameter :: ADI_y_PLExp                      =  27 ! ADI%PLExp
+   integer(IntKi), public, parameter :: ADI_y_IW_WriteOutput             =  28 ! ADI%IW_WriteOutput
+   integer(IntKi), public, parameter :: ADI_y_WriteOutput                =  29 ! ADI%WriteOutput
 
 contains
 
@@ -2000,81 +1996,6 @@ subroutine ADI_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine ADI_VarsPackConstrState(Vars, z, ValAry)
-   type(ADI_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ADI_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine ADI_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(ADI_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ADI_z_AD_rotors_BEMT_phi)
-         VarVals = z%AD%rotors(DL%i1)%BEMT%phi(V%iLB:V%iUB,V%j)               ! Rank 2 Array
-      case (ADI_z_AD_rotors_AA_DummyConstrState)
-         VarVals(1) = z%AD%rotors(DL%i1)%AA%DummyConstrState                  ! Scalar
-      case (ADI_z_AD_FVW_W_Gamma_LL)
-         VarVals = z%AD%FVW%W(DL%i1)%Gamma_LL(V%iLB:V%iUB)                    ! Rank 1 Array
-      case (ADI_z_AD_FVW_residual)
-         VarVals(1) = z%AD%FVW%residual                                       ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine ADI_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(ADI_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ADI_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine ADI_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(ADI_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ADI_z_AD_rotors_BEMT_phi)
-         z%AD%rotors(DL%i1)%BEMT%phi(V%iLB:V%iUB, V%j) = VarVals              ! Rank 2 Array
-      case (ADI_z_AD_rotors_AA_DummyConstrState)
-         z%AD%rotors(DL%i1)%AA%DummyConstrState = VarVals(1)                  ! Scalar
-      case (ADI_z_AD_FVW_W_Gamma_LL)
-         z%AD%FVW%W(DL%i1)%Gamma_LL(V%iLB:V%iUB) = VarVals                    ! Rank 1 Array
-      case (ADI_z_AD_FVW_residual)
-         z%AD%FVW%residual = VarVals(1)                                       ! Scalar
-      end select
-   end associate
-end subroutine
-
-function ADI_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (ADI_z_AD_rotors_BEMT_phi)
-       Name = "z%AD%rotors("//trim(Num2LStr(DL%i1))//")%BEMT%phi"
-   case (ADI_z_AD_rotors_AA_DummyConstrState)
-       Name = "z%AD%rotors("//trim(Num2LStr(DL%i1))//")%AA%DummyConstrState"
-   case (ADI_z_AD_FVW_W_Gamma_LL)
-       Name = "z%AD%FVW%W("//trim(Num2LStr(DL%i1))//")%Gamma_LL"
-   case (ADI_z_AD_FVW_residual)
-       Name = "z%AD%FVW%residual"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine ADI_VarsPackInput(Vars, u, ValAry)
    type(ADI_InputType), intent(in)         :: u

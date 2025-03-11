@@ -58,8 +58,8 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
    integer(IntKi)                      :: iGbl(2)
    integer(IntKi)                      :: i, j, k
    integer(IntKi)                      :: iMod, iVarGlue
-   integer(IntKi)                      :: xNumVals, zNumVals, uNumVals, yNumVals
-   integer(IntKi)                      :: xNumVars, zNumVars, uNumVars, yNumVars
+   integer(IntKi)                      :: xNumVals, uNumVals, yNumVals
+   integer(IntKi)                      :: xNumVars, uNumVars, yNumVars
    integer(IntKi)                      :: ix, iz, iu, iy
    character(20)                       :: NamePrefix
    type(VarMapType)                    :: ModMap
@@ -94,8 +94,8 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
    !----------------------------------------------------------------------------
 
    ! Initialize number of variables and values in each group
-   xNumVars = 0; zNumVars = 0; uNumVars = 0; yNumVars = 0
-   xNumVals = 0; zNumVals = 0; uNumVals = 0; yNumVals = 0
+   xNumVars = 0; uNumVars = 0; yNumVars = 0
+   xNumVals = 0; uNumVals = 0; yNumVals = 0
 
    ! Loop through each module and sum the number of variables that will be in
    ! the combined module
@@ -115,11 +115,6 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
          GlueModData%Vars%Nx = ModData%Vars%Nx ! Same as original module
          xNumVars = xNumVars + size(GlueModData%Vars%x)
 
-         ! Constraint state
-         call CopyVariables(ModData%Vars%z, GlueModData%Vars%z, zNumVals); if (Failed()) return
-         GlueModData%Vars%Nz = ModData%Vars%Nz ! Same as original module
-         zNumVars = zNumVars + size(GlueModData%Vars%z)
-
          ! Input
          call CopyVariables(ModData%Vars%u, GlueModData%Vars%u, uNumVals); if (Failed()) return
          GlueModData%Vars%Nu = ModData%Vars%Nu ! Same as original module
@@ -135,13 +130,11 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
 
    ! Set total number of values in glue module
    ModGlue%Vars%Nx = xNumVals
-   ModGlue%Vars%Nz = zNumVals
    ModGlue%Vars%Nu = uNumVals
    ModGlue%Vars%Ny = yNumVals
 
    ! Allocate arrays for to hold combined variables
    allocate (ModGlue%Vars%x(xNumVars), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%x")) return
-   allocate (ModGlue%Vars%z(zNumVars), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%z")) return
    allocate (ModGlue%Vars%u(uNumVars), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%u")) return
    allocate (ModGlue%Vars%y(yNumVars), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%y")) return
 
@@ -167,15 +160,6 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
             ModGlue%Vars%x(ix)%iLoc = ModGlue%Vars%x(ix)%iGlu  ! Set local indices to glue indices
             ModGlue%Vars%x(ix)%iGlu = 0                        ! Set glue indices to 0
             call AddLinNamePrefix(ModGlue%Vars%x(ix), NamePrefix)
-         end do
-
-         ! Constraint state
-         do j = 1, size(GlueModData%Vars%z)
-            iz = iz + 1
-            ModGlue%Vars%z(iz) = GlueModData%Vars%z(j)
-            ModGlue%Vars%z(iz)%iLoc = ModGlue%Vars%z(iz)%iGlu  ! Set local indices to glue indices
-            ModGlue%Vars%z(iz)%iGlu = 0                        ! Set glue indices to 0
-            call AddLinNamePrefix(ModGlue%Vars%z(iz), NamePrefix)
          end do
 
          ! Input
@@ -311,10 +295,6 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
    end if
    if (ModGlue%Vars%Nx > 0) then
       call AllocAry(ModGlue%Lin%dx, ModGlue%Vars%Nx, "dx", ErrStat2, ErrMsg2)
-      if (Failed()) return
-   end if
-   if (ModGlue%Vars%Nz > 0) then
-      call AllocAry(ModGlue%Lin%z, ModGlue%Vars%Nz, "z", ErrStat2, ErrMsg2)
       if (Failed()) return
    end if
    if (ModGlue%Vars%Nu > 0) then
@@ -580,7 +560,6 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
 
       ! Initialize arrays to store operating point states and input
       call AllocAry(y%Lin%x, m%ModGlue%Vars%Nx, p%Lin%NumTimes, "Lin%x", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(y%Lin%z, m%ModGlue%Vars%Nz, p%Lin%NumTimes, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(y%Lin%u, m%ModGlue%Vars%Nu, p%Lin%NumTimes, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return
 
    end if
@@ -1021,7 +1000,6 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
 
    ! Copy arrays into linearization operating points
    if (allocated(m%ModGlue%Lin%x)) y%Lin%x(:, m%Lin%TimeIndex) = m%ModGlue%Lin%x
-   if (allocated(m%ModGlue%Lin%z)) y%Lin%z(:, m%Lin%TimeIndex) = m%ModGlue%Lin%z
    if (allocated(m%ModGlue%Lin%u)) y%Lin%u(:, m%Lin%TimeIndex) = m%ModGlue%Lin%u
 
    ! Linearize mesh mappings to populate dUdy and dUdu
@@ -1361,7 +1339,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    character(32)                    :: Desc
    character(1024)                  :: OutFileName
    integer(IntKi)                   :: i
-   integer(IntKi)                   :: Nx, Nxd, Nz, Nu, Ny
+   integer(IntKi)                   :: Nx, Nu, Ny
    character(50)                    :: Fmt
    logical, allocatable             :: uUse(:), yUse(:), xUse(:)
    logical                          :: CalcGlueLoc, FullOutputLoc
@@ -1392,8 +1370,6 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
 
    ! Calculate number of values in variable after applying filter
    Nx = MV_NumVals(Vars%x, FilterFlag)
-   Nxd = 0
-   Nz = MV_NumVals(Vars%z, FilterFlag)
    Nu = MV_NumVals(Vars%u, FilterFlag)
    Ny = MV_NumVals(Vars%y, FilterFlag)
 
@@ -1415,8 +1391,8 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
 
    fmt = '(3x,A,1x,I5)'
    Desc = 'Number of continuous states: '; write (Un, fmt) Desc, Nx
-   Desc = 'Number of discrete states:   '; write (Un, fmt) Desc, Nxd
-   Desc = 'Number of constraint states: '; write (Un, fmt) Desc, Nz
+   Desc = 'Number of discrete states:   '; write (Un, fmt) Desc, 0
+   Desc = 'Number of constraint states: '; write (Un, fmt) Desc, 0
    Desc = 'Number of inputs:            '; write (Un, fmt) Desc, Nu
    Desc = 'Number of outputs:           '; write (Un, fmt) Desc, Ny
 
@@ -1438,11 +1414,6 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    if (Nx > 0 .and. allocated(Lin%dx)) then
       write (Un, '(A)') 'Order of continuous state derivatives:'
       call WrLinFile_txt_Table(Vars%x, FilterFlag, p_FAST, Un, "Row/Column", Lin%dx, IsDeriv=.true.)
-   end if
-
-   if (Nz > 0 .and. allocated(Lin%z)) then
-      write (Un, '(A)') 'Order of constraint states:'
-      call WrLinFile_txt_Table(Vars%z, FilterFlag, p_FAST, Un, "Row/Column", Lin%z)
    end if
 
    if (Nu > 0 .and. allocated(Lin%u)) then

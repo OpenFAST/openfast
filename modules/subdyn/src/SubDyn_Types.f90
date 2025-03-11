@@ -382,14 +382,13 @@ IMPLICIT NONE
 ! =======================
    integer(IntKi), public, parameter :: SD_x_qm                          =   1 ! SD%qm
    integer(IntKi), public, parameter :: SD_x_qmdot                       =   2 ! SD%qmdot
-   integer(IntKi), public, parameter :: SD_z_DummyConstrState            =   3 ! SD%DummyConstrState
-   integer(IntKi), public, parameter :: SD_u_TPMesh                      =   4 ! SD%TPMesh
-   integer(IntKi), public, parameter :: SD_u_LMesh                       =   5 ! SD%LMesh
-   integer(IntKi), public, parameter :: SD_u_CableDeltaL                 =   6 ! SD%CableDeltaL
-   integer(IntKi), public, parameter :: SD_y_Y1Mesh                      =   7 ! SD%Y1Mesh
-   integer(IntKi), public, parameter :: SD_y_Y2Mesh                      =   8 ! SD%Y2Mesh
-   integer(IntKi), public, parameter :: SD_y_Y3Mesh                      =   9 ! SD%Y3Mesh
-   integer(IntKi), public, parameter :: SD_y_WriteOutput                 =  10 ! SD%WriteOutput
+   integer(IntKi), public, parameter :: SD_u_TPMesh                      =   3 ! SD%TPMesh
+   integer(IntKi), public, parameter :: SD_u_LMesh                       =   4 ! SD%LMesh
+   integer(IntKi), public, parameter :: SD_u_CableDeltaL                 =   5 ! SD%CableDeltaL
+   integer(IntKi), public, parameter :: SD_y_Y1Mesh                      =   6 ! SD%Y1Mesh
+   integer(IntKi), public, parameter :: SD_y_Y2Mesh                      =   7 ! SD%Y2Mesh
+   integer(IntKi), public, parameter :: SD_y_Y3Mesh                      =   8 ! SD%Y3Mesh
+   integer(IntKi), public, parameter :: SD_y_WriteOutput                 =   9 ! SD%WriteOutput
 
 contains
 
@@ -4682,63 +4681,6 @@ subroutine SD_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine SD_VarsPackConstrState(Vars, z, ValAry)
-   type(SD_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine SD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(SD_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SD_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine SD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SD_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine SD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(SD_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SD_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function SD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (SD_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine SD_VarsPackInput(Vars, u, ValAry)
    type(SD_InputType), intent(in)          :: u
