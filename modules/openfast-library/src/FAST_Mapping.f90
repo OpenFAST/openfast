@@ -23,6 +23,7 @@ module FAST_Mapping
 use FAST_Types
 use FAST_ModTypes
 use ExtLoads
+use ExternalInflow
 
 implicit none
 
@@ -50,12 +51,14 @@ character(24), parameter   :: Custom_ED_to_ExtLd = 'ED -> ExtLd', &
                               Custom_BD_to_SrvD = 'BD -> SrvD', &
                               Custom_ED_to_SrvD = 'ED -> SrvD', &
                               Custom_SED_to_SrvD = 'SED -> SrvD', &
+                              Custom_ExtInfw_to_AD = 'ExtInfw -> AD', &
                               Custom_ExtInfw_to_SrvD = 'ExtInfw -> SrvD', &
                               Custom_IfW_to_SrvD = 'IfW -> SrvD', &
                               Custom_SrvD_to_ED = 'SrvD -> ED', &
                               Custom_SrvD_to_SED = 'SrvD -> SED', &
                               Custom_SrvD_to_SD = 'SrvD -> SD', &
                               Custom_SrvD_to_MD = 'SrvD -> MD', &
+                              Custom_AD_to_ExtInfw = 'AD -> ExtInfw', &
                               Custom_ED_Tower_Damping = 'ED Tower Damping', &
                               Custom_ED_Blade_Damping = 'ED Blade Damping', &
                               Custom_BD_Blade_Damping = 'BD Blade Damping', &
@@ -741,6 +744,11 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
+   case (Module_ExtInfw)
+
+      call MapCustom(Mappings, Custom_ExtInfw_to_AD, SrcMod, DstMod, &
+                     Active=DstMod%Ins == 1)
+
    case (Module_IfW)
 
       call MapVariable(Mappings, &
@@ -1306,6 +1314,11 @@ subroutine InitMappings_ExtInfw(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
    ErrMsg = ''
 
    select case (SrcMod%ID)
+
+   case (Module_AD)
+      call MapCustom(Mappings, Custom_AD_to_ExtInfw, SrcMod, DstMod, &
+                     Active=SrcMod%Ins == 1)
+
    end select
 
 contains
@@ -3041,7 +3054,9 @@ subroutine FAST_ResetMappingReady(MapAry)
    integer(IntKi)                   :: i
    do i = 1, size(MapAry)
       select case (MapAry(i)%SrcModID)
-      case default         ! Default to transfer is not ready
+      case (Module_ExtInfw)   ! Modules always ready to transfer
+         MapAry(i)%Ready = .true.
+      case default            ! Default to transfer is not ready
          MapAry(i)%Ready = .false.
       end select
    end do
@@ -3098,6 +3113,13 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 !-------------------------------------------------------------------------------
 ! AeroDyn Inputs
 !-------------------------------------------------------------------------------
+
+   case (Custom_ExtInfw_to_AD)
+
+      ! ExtInfw updates the flow field used by InflowWind and AeroDyn so consider that an
+      ! input to InflowWind and perform the update during InflowWind's input solve
+      call ExtInfw_UpdateFlowField(T%p_FAST, T%ExtInfw, ErrStat2, ErrMsg2)
+      if (ErrStat >= AbortErrLev) return
 
    case (Custom_SrvD_to_AD)
 
@@ -3208,6 +3230,16 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       T%SED%Input(iInput)%BlPitchCom = T%SrvD%y%BlPitchCom
       T%SED%Input(iInput)%YawPosCom = T%SrvD%y%YawPosCom
       T%SED%Input(iInput)%YawRateCom = T%SrvD%y%YawRateCom
+
+!-------------------------------------------------------------------------------
+! ExtInfw Inputs
+!-------------------------------------------------------------------------------
+
+   case (Custom_AD_to_ExtInfw)
+
+      call ExtInfw_SetInputs(T%p_FAST, T%AD%Input(iInput), T%AD%y, T%SrvD%y, T%ExtInfw, ErrStat2, ErrMsg2)
+      if (ErrStat >= AbortErrLev) return
+      call ExtInfw_SetWriteOutput(T%ExtInfw)
 
 !-------------------------------------------------------------------------------
 ! ExtLoads Inputs

@@ -319,7 +319,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_ED%WtrDpth       = p_FAST%WtrDpth
    
       ! Call module initialization routine
-      CALL ED_Init(Init%InData_ED, ED%Input(1, iED), ED%p(iED), ED%x(iED, STATE_CURR), &
+      CALL ED_Init(Init%InData_ED, ED%Input(INPUT_CURR, iED), ED%p(iED), ED%x(iED, STATE_CURR), &
                    ED%xd(iED, STATE_CURR), ED%z(iED, STATE_CURR), ED%OtherSt(iED, STATE_CURR), &
                    ED%y(iED), ED%m(iED), p_FAST%dt_module(MODULE_ED), Init%OutData_ED(iED), ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -402,7 +402,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          Init%InData_BD%RootVel(4:6) = ED%y(iED)%BladeRootMotion(k)%RotationVel(:,1)       ! {:}    - - "Initial root velocities and angular velocities"
 
          ! Call module initialization routine
-         CALL BD_Init(Init%InData_BD, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), &
+         CALL BD_Init(Init%InData_BD, BD%Input(INPUT_CURR,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), &
                       BD%OtherSt(k,STATE_CURR), BD%y(k), BD%m(k), dt_BD, Init%OutData_BD(k), ErrStat2, ErrMsg2)
          if (Failed()) return
 
@@ -776,22 +776,25 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          RETURN
       END IF
 
-      !Set node clustering type
+      ! Set node clustering type
       Init%InData_ExtInfw%NodeClusterType = ExternInitData%NodeClusterType
-         ! set up the data structures for integration with ExternalInflow
-      CALL Init_ExtInfw( Init%InData_ExtInfw, p_FAST, AirDens, AD%Input(1), Init%OutData_AD, AD%y, ExtInfw, Init%OutData_ExtInfw, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+      ! Set up the data structures for integration with ExternalInflow
+      CALL Init_ExtInfw(Init%InData_ExtInfw, p_FAST, AirDens, AD%Input(1), Init%OutData_AD, AD%y, ExtInfw, Init%OutData_ExtInfw, ErrStat2, ErrMsg2)
+      if (Failed()) return
 
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+      ! Add module to list of modules, return on error
+      CALL MV_AddModule(m_Glue%ModData, Module_ExtInfw, 'ExtInfw', 1, p_FAST%dt_module(Module_ExtInfw), p_FAST%DT, &
+                        Init%OutData_ExtInfw%Vars, .false., ErrStat2, ErrMsg2)
+      if (Failed()) return
 
       !bjj: fix me!!! to do
       Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi
 
       ! Set pointer to flowfield -- I would prefer that we did this through the AD_Init, but AD_InitOut results are required for ExtInfw_Init
       IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtInfw%FlowField
+
+      write(*,*) "flowfield pointers", c_loc(AD%p%FlowField) , c_loc(Init%OutData_ExtInfw%FlowField)
    endif
 
 

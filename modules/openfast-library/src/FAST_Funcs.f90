@@ -382,6 +382,9 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
    case (Module_ExtLd)
       ! Not used
 
+   case (Module_ExtInfw)
+      ! Not used
+
    case (Module_ExtPtfm)
       call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -601,9 +604,6 @@ subroutine FAST_CalcOutput(ModData, Mappings, ThisTime, iInput, iState, T, ErrSt
       call SED_CalcOutput(ThisTime, T%SED%Input(iInput), T%SED%p, &
                           T%SED%x(iState), T%SED%xd(iState), T%SED%z(iState), T%SED%OtherSt(iState), &
                           T%SED%y, T%SED%m, ErrStat2, ErrMsg2)
-
-   case (Module_ExtInfw)
-      ! Not used
 
    case (Module_ExtLd)
       call ExtLd_CalcOutput(ThisTime, T%ExtLd%u, T%ExtLd%p, &
@@ -1712,6 +1712,11 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
 
    case (Module_SED)
       call SED_CopyInput(T%SED%Input(iSrc), T%SED%Input(iDst), CtrlCode, Errstat2, ErrMsg2)
+
+   case (Module_ExtInfw)
+      ! ExtInfw only has u
+      Errstat2 = ErrID_None
+      ErrMsg2 = ''
 
    case (Module_ExtLd)
       ! ExtLd only has u

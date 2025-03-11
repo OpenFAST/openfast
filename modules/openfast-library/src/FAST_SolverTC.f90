@@ -102,7 +102,6 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
                  pack(modInds, ModIDs == Module_BD), &
                  pack(modInds, ModIDs == Module_SD), &
                  pack(modInds, ModIDs == Module_IfW), &
-                 pack(modInds, ModIDs == Module_ExtInfw), &
                  pack(modInds, ModIDs == Module_ExtLd)]
 
    ! Indices of tight coupling modules
@@ -164,26 +163,28 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    p%NumU = p%iJU(2) - p%iJU(2) + 1
    p%NumUT = p%iUT(2) - p%iUT(1) + 1
 
-   write (*, *) "Solver Jacobian States:"
-   do j = 1, size(m%Mod%Vars%x)
-      do k = 1, m%Mod%Vars%x(j)%Num
-         write (*, *) m%Mod%Vars%x(j)%iLoc(1) + k - 1, trim(m%Mod%Vars%x(j)%LinNames(k))
+   if (DebugJacobian) then
+      write (*, *) "Solver Jacobian States:"
+      do j = 1, size(m%Mod%Vars%x)
+         do k = 1, m%Mod%Vars%x(j)%Num
+            write (*, *) m%Mod%Vars%x(j)%iLoc(1) + k - 1, trim(m%Mod%Vars%x(j)%LinNames(k))
+         end do
       end do
-   end do
 
-   write (*, *) "Solver Jacobian Inputs:"
-   do j = 1, size(m%Mod%Vars%u)
-      do k = 1, m%Mod%Vars%u(j)%Num
-         write (*, *) m%Mod%Vars%u(j)%iLoc(1) + k - 1, trim(m%Mod%Vars%u(j)%LinNames(k))
+      write (*, *) "Solver Jacobian Inputs:"
+      do j = 1, size(m%Mod%Vars%u)
+         do k = 1, m%Mod%Vars%u(j)%Num
+            write (*, *) m%Mod%Vars%u(j)%iLoc(1) + k - 1, trim(m%Mod%Vars%u(j)%LinNames(k))
+         end do
       end do
-   end do
 
-   write (*, *) "Solver Jacobian Outputs:"
-   do j = 1, size(m%Mod%Vars%y)
-      do k = 1, m%Mod%Vars%y(j)%Num
-         write (*, *) m%Mod%Vars%y(j)%iLoc(1) + k - 1, trim(m%Mod%Vars%y(j)%LinNames(k))
+      write (*, *) "Solver Jacobian Outputs:"
+      do j = 1, size(m%Mod%Vars%y)
+         do k = 1, m%Mod%Vars%y(j)%Num
+            write (*, *) m%Mod%Vars%y(j)%iLoc(1) + k - 1, trim(m%Mod%Vars%y(j)%LinNames(k))
+         end do
       end do
-   end do
+   end if
 
    !----------------------------------------------------------------------------
    ! Initialize MiscVars
