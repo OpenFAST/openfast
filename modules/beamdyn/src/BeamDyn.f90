@@ -5879,17 +5879,6 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Allocate space for variables (deallocate if already allocated)
-   if (associated(p%Vars)) deallocate(p%Vars)
-   allocate(p%Vars, stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   ! Add pointers to vars to initialization output
-   InitOut%Vars => p%Vars
-
    !----------------------------------------------------------------------------
    ! Continuous State Variables
    !----------------------------------------------------------------------------
@@ -5904,7 +5893,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
       label = 'finite element node '//trim(num2lstr(i))//' (number of elements = '//&
                   trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
 
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransDisp, &
+      call MV_AddVar(InitOut%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransDisp, &
                      DatLoc(BD_x_q), iAry=1, jAry=i, Num=3, &
                      Flags=Flags, &
                      Perturb=0.2_BDKi*D2R_D * p%blade_length, &
@@ -5912,7 +5901,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                                trim(label)//' translational displacement in Y, m', &
                                trim(label)//' translational displacement in Z, m'])
 
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldOrientation, &
+      call MV_AddVar(InitOut%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldOrientation, &
                      DatLoc(BD_x_q), iAry=4, jAry=i, Num=3, &
                      Flags=ior(Flags, VF_WM_Rot), &
                      Perturb=0.2_BDKi*D2R_D, &
@@ -5926,7 +5915,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
       label = 'First time derivative of finite element node '//trim(num2lstr(i))//' (number of elements = '//&
                   trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
 
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransVel, &
+      call MV_AddVar(InitOut%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransVel, &
                      DatLoc(BD_x_dqdt), iAry=1, jAry=i, Num=3, &
                      Flags=Flags, &
                      Perturb=0.2_BDKi*D2R_D * p%blade_length, &
@@ -5934,7 +5923,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                                trim(label)//' translational displacement in Y, m/s', &
                                trim(label)//' translational displacement in Z, m/s'])
 
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldAngularVel, &
+      call MV_AddVar(InitOut%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldAngularVel, &
                      DatLoc(BD_x_dqdt), iAry=4, jAry=i, Num=3, &
                      Flags=Flags, &
                      Perturb=0.2_BDKi*D2R_D, &
@@ -5950,7 +5939,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    MaxThrust = 170.0_R8Ki*p%blade_length**2
    MaxTorque =  14.0_R8Ki*p%blade_length**3
 
-   call MV_AddMeshVar(p%Vars%u, "RootMotion", MotionFields, &
+   call MV_AddMeshVar(InitOut%Vars%u, "RootMotion", MotionFields, &
                       DatLoc(BD_u_RootMotion), &
                       Mesh=u%RootMotion, &
                       Perturbs=[0.2_R8Ki*D2R_D * p%blade_length, &    ! FieldTransDisp
@@ -5960,13 +5949,13 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                                 0.2_R8Ki*D2R_D * p%blade_length, &    ! FieldTransAcc
                                 0.2_R8Ki*D2R_D])                      ! FieldAngularAcc
 
-   call MV_AddMeshVar(p%Vars%u, "PointLoad", LoadFields, &
+   call MV_AddMeshVar(InitOut%Vars%u, "PointLoad", LoadFields, &
                       DatLoc(BD_u_PointLoad), &
                       Mesh=u%PointLoad, &
                       Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! FieldForce
                                 MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! FieldMoment
 
-   call MV_AddMeshVar(p%Vars%u, "DistrLoad", LoadFields, &
+   call MV_AddMeshVar(InitOut%Vars%u, "DistrLoad", LoadFields, &
                       DatLoc(BD_u_DistrLoad), &
                       Flags=ior(VF_Line, VF_AeroMap), &
                       Mesh=u%DistrLoad, &
@@ -5977,17 +5966,17 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Output variables
    !----------------------------------------------------------------------------
 
-   call MV_AddMeshVar(p%Vars%y, 'Reaction force', LoadFields, DatLoc(BD_y_ReactionForce), Mesh=y%ReactionForce)
+   call MV_AddMeshVar(InitOut%Vars%y, 'Reaction force', LoadFields, DatLoc(BD_y_ReactionForce), Mesh=y%ReactionForce)
 
-   call MV_AddMeshVar(p%Vars%y, 'Blade motion', [FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel], &
+   call MV_AddMeshVar(InitOut%Vars%y, 'Blade motion', [FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel], &
                       DatLoc(BD_y_BldMotion), &
                       Flags=VF_AeroMap, &
                       Mesh=y%BldMotion)
-   call MV_AddMeshVar(p%Vars%y, 'Blade motion', [FieldTransAcc, FieldAngularAcc], DatLoc(BD_y_BldMotion), &
+   call MV_AddMeshVar(InitOut%Vars%y, 'Blade motion', [FieldTransAcc, FieldAngularAcc], DatLoc(BD_y_BldMotion), &
                       Mesh=y%BldMotion)
 
    do i = 1, p%NumOuts
-      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, FieldScalar, &
+      call MV_AddVar(InitOut%Vars%y, p%OutParam(i)%Name, FieldScalar, &
                      DatLoc(BD_y_WriteOutput), iAry=i, &
                      Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
                      LinNames=[trim(p%OutParam(i)%Name)//', '//trim(p%OutParam(i)%Units)], &
@@ -5996,7 +5985,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
 
    idx = p%NumOuts + 1
    do i = 1, p%BldNd_NumOuts
-      call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, FieldScalar, &
+      call MV_AddVar(InitOut%Vars%y, p%BldNd_OutParam(i)%Name, FieldScalar, &
                      DatLoc(BD_y_WriteOutput), iAry=idx, &
                      Num=size(p%BldNd_BlOutNd), &
                      Flags=VF_WriteOut + BldNd_OutParamFlags(p%BldNd_OutParam(i)%Name), &
@@ -6009,7 +5998,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Initialize Variables and Values
    !----------------------------------------------------------------------------
 
-   CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize .or. p%CompAeroMaps, ErrStat2, ErrMsg2); if (Failed()) return
+   CALL MV_InitVarsJac(InitOut%Vars, m%Jac, Linearize .or. p%CompAeroMaps, ErrStat2, ErrMsg2); if (Failed()) return
 
    call BD_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call BD_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return

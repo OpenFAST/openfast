@@ -74,7 +74,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of flow field data type [-]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE ExtInfw_InitOutputType
 ! =======================
 ! =========  ExtInfw_MiscVarType_C  =======
@@ -112,7 +112,6 @@ IMPLICIT NONE
   END TYPE ExtInfw_ParameterType_C
   TYPE, PUBLIC :: ExtInfw_ParameterType
     TYPE( ExtInfw_ParameterType_C ) :: C_obj
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density for normalization of loads sent to ExternalInflow [kg/m^3]
     INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of blades [-]
     INTEGER(IntKi)  :: NMappings = 0_IntKi      !< Number of mappings [-]
@@ -490,7 +489,9 @@ subroutine ExtInfw_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%FlowField => SrcInitOutputData%FlowField
-   DstInitOutputData%Vars => SrcInitOutputData%Vars
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine ExtInfw_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -511,7 +512,8 @@ subroutine ExtInfw_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(InitOutputData%FlowField)
-   nullify(InitOutputData%Vars)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ExtInfw_PackInitOutput(RF, Indata)
@@ -534,13 +536,7 @@ subroutine ExtInfw_PackInitOutput(RF, Indata)
          call IfW_FlowField_PackFlowFieldType(RF, InData%FlowField) 
       end if
    end if
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -575,24 +571,7 @@ subroutine ExtInfw_UnPackInitOutput(RF, OutData)
    else
       OutData%FlowField => null()
    end if
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 SUBROUTINE ExtInfw_C2Fary_CopyInitOutput(InitOutputData, ErrStat, ErrMsg, SkipPointers)
@@ -965,22 +944,9 @@ subroutine ExtInfw_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    character(*),    intent(  out) :: ErrMsg
    integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtInfw_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(SrcParamData%Vars)) then
-      if (.not. associated(DstParamData%Vars)) then
-         allocate(DstParamData%Vars, stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end if
    DstParamData%AirDens = SrcParamData%AirDens
    DstParamData%C_obj%AirDens = SrcParamData%C_obj%AirDens
    DstParamData%NumBl = SrcParamData%NumBl
@@ -1039,17 +1005,9 @@ subroutine ExtInfw_DestroyParam(ParamData, ErrStat, ErrMsg)
    type(ExtInfw_ParameterType), intent(inout) :: ParamData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'ExtInfw_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(ParamData%Vars)) then
-      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      deallocate(ParamData%Vars)
-      ParamData%Vars => null()
-   end if
    if (associated(ParamData%forceBldRnodes)) then
       deallocate(ParamData%forceBldRnodes)
       ParamData%forceBldRnodes => null()
@@ -1073,13 +1031,6 @@ subroutine ExtInfw_PackParam(RF, Indata)
    if (c_associated(InData%C_obj%object)) then
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', RF%ErrStat, RF%ErrMsg, RoutineName)
       return
-   end if
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
    end if
    call RegPack(RF, InData%AirDens)
    call RegPack(RF, InData%NumBl)
@@ -1107,24 +1058,6 @@ subroutine ExtInfw_UnPackParam(RF, OutData)
    integer(B8Ki)   :: PtrIdx
    type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
    call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
    OutData%C_obj%AirDens = OutData%AirDens
    call RegUnpack(RF, OutData%NumBl); if (RegCheckErr(RF, RoutineName)) return

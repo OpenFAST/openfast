@@ -61,15 +61,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_x      !< Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue) [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE BD_InitOutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -159,7 +151,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_ParameterType  =======
   TYPE, PUBLIC :: BD_ParameterType
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< module dt [s]
     REAL(DbKi) , DIMENSION(1:9)  :: coef = 0.0_R8Ki      !< GA2 Coefficient [-]
     REAL(DbKi)  :: rhoinf = 0.0_R8Ki      !< Numerical Damping Coefficient for GA2 [-]
@@ -460,103 +451,9 @@ subroutine BD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstInitOutputData%Vars => SrcInitOutputData%Vars
-   if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
-      if (.not. allocated(DstInitOutputData%LinNames_y)) then
-         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   end if
-   if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
-      if (.not. allocated(DstInitOutputData%LinNames_x)) then
-         allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   end if
-   if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
-      if (.not. allocated(DstInitOutputData%LinNames_u)) then
-         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
-      if (.not. allocated(DstInitOutputData%RotFrame_y)) then
-         allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x)
-      if (.not. allocated(DstInitOutputData%RotFrame_x)) then
-         allocate(DstInitOutputData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
-      if (.not. allocated(DstInitOutputData%RotFrame_u)) then
-         allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   end if
-   if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
-      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
-         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   end if
-   if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
-      if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
-         allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   end if
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine BD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -576,57 +473,19 @@ subroutine BD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   nullify(InitOutputData%Vars)
-   if (allocated(InitOutputData%LinNames_y)) then
-      deallocate(InitOutputData%LinNames_y)
-   end if
-   if (allocated(InitOutputData%LinNames_x)) then
-      deallocate(InitOutputData%LinNames_x)
-   end if
-   if (allocated(InitOutputData%LinNames_u)) then
-      deallocate(InitOutputData%LinNames_u)
-   end if
-   if (allocated(InitOutputData%RotFrame_y)) then
-      deallocate(InitOutputData%RotFrame_y)
-   end if
-   if (allocated(InitOutputData%RotFrame_x)) then
-      deallocate(InitOutputData%RotFrame_x)
-   end if
-   if (allocated(InitOutputData%RotFrame_u)) then
-      deallocate(InitOutputData%RotFrame_u)
-   end if
-   if (allocated(InitOutputData%IsLoad_u)) then
-      deallocate(InitOutputData%IsLoad_u)
-   end if
-   if (allocated(InitOutputData%DerivOrder_x)) then
-      deallocate(InitOutputData%DerivOrder_x)
-   end if
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BD_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(BD_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'BD_PackInitOutput'
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_x)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%RotFrame_x)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%IsLoad_u)
-   call RegPackAlloc(RF, InData%DerivOrder_x)
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -637,38 +496,11 @@ subroutine BD_UnPackInitOutput(RF, OutData)
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine BD_CopyBladeInputData(SrcBladeInputDataData, DstBladeInputDataData, CtrlCode, ErrStat, ErrMsg)
@@ -1328,18 +1160,6 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BD_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(SrcParamData%Vars)) then
-      if (.not. associated(DstParamData%Vars)) then
-         allocate(DstParamData%Vars, stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end if
    DstParamData%dt = SrcParamData%dt
    DstParamData%coef = SrcParamData%coef
    DstParamData%rhoinf = SrcParamData%rhoinf
@@ -1721,12 +1541,6 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BD_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(ParamData%Vars)) then
-      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      deallocate(ParamData%Vars)
-      ParamData%Vars => null()
-   end if
    if (allocated(ParamData%uuN0)) then
       deallocate(ParamData%uuN0)
    end if
@@ -1827,15 +1641,7 @@ subroutine BD_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'BD_PackParam'
    integer(B4Ki)   :: i1, i2, i3, i4
    integer(B4Ki)   :: LB(4), UB(4)
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
    call RegPack(RF, InData%dt)
    call RegPack(RF, InData%coef)
    call RegPack(RF, InData%rhoinf)
@@ -1935,27 +1741,7 @@ subroutine BD_UnPackParam(RF, OutData)
    integer(B4Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
    call RegUnpack(RF, OutData%dt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%coef); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rhoinf); if (RegCheckErr(RF, RoutineName)) return

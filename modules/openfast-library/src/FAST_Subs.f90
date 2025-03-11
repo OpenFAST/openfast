@@ -62,11 +62,17 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
    ! Initialize mappings between modules
    call FAST_InitMappings(Turbine%m_Glue%Mappings, Turbine%m_Glue%ModData, Turbine, ErrStat, ErrMsg)
    if(ErrStat >= AbortErrLev) return
-
+   
    ! Initialize solver
    call FAST_SolverInit(Turbine%p_FAST, Turbine%p_Glue%TC, Turbine%m_Glue%TC, &
-                    Turbine%m_Glue%ModData, Turbine%m_Glue%Mappings, Turbine, ErrStat, ErrMsg)
+                        Turbine%m_Glue%ModData, Turbine%m_Glue%Mappings, Turbine, ErrStat, ErrMsg)
    if(ErrStat >= AbortErrLev) return
+
+   ! Write initialization data to FAST summary file:
+   if (Turbine%p_FAST%SumPrint)  then
+      CALL FAST_WrSum(Turbine%p_FAST, Turbine%y_FAST, Turbine%m_Glue, Turbine%MeshMapData, ErrStat, ErrMsg)
+      if(ErrStat >= AbortErrLev) return
+   endif
 
    ! Initialize overall glue module for linearization
    if (Turbine%p_FAST%Linearize) then
@@ -161,7 +167,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    y_FAST%VTK_LastWaveIndx = 1                                          ! Start looking for wave data at the first index
    y_FAST%VTK_count = 0                                                 ! first VTK file has 0 as output
    y_FAST%n_Out = 0                                                     ! set the number of ouptut channels to 0 to indicate there's nothing to write to the binary file
-   p_FAST%ModuleInitialized = .FALSE.                                   ! (array initialization) no modules are initialized
 
       ! Get the current time
    CALL DATE_AND_TIME ( Values=m_FAST%StrtTime )                        ! Let's time the whole simulation
@@ -288,8 +293,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       if (Failed()) return
         
       NumBl = Init%OutData_SED%NumBl
-
-      p_FAST%ModuleInitialized(Module_SED) = .TRUE.
       
    case default ! ElastoDyn
       
@@ -328,7 +331,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL MV_AddModule(m_Glue%ModData, Module_ED, 'ED', 1, p_FAST%dt_module(Module_ED), p_FAST%DT, &
                         Init%OutData_ED(iED)%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
-      p_FAST%ModuleInitialized(Module_ED) = .TRUE.
 
       NumBl = Init%OutData_ED(iED)%NumBl
       p_FAST%GearBox_index = Init%OutData_ED(iED)%GearBox_index
@@ -409,7 +411,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          !bjj: we're going to force this to have the same timestep because I don't want to have to deal with n BD modules with n timesteps.
          IF (k == 1) THEN
             p_FAST%dt_module(MODULE_BD) = dt_BD
-            p_FAST%ModuleInitialized(Module_BD) = .TRUE. ! this really should be once per BD instance, but BD doesn't care so I won't go through the effort to track this
             CALL SetModuleSubstepTime(Module_BD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          ELSEIF (.NOT. EqualRealNos(p_FAST%dt_module(MODULE_BD), dt_BD)) THEN
             ErrStat2 = ErrID_Fatal
@@ -504,7 +505,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL MV_AddModule(m_Glue%ModData, Module_IfW, 'IfW', 1, p_FAST%dt_module(Module_IfW), p_FAST%DT, &
                         Init%OutData_IfW%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
-      p_FAST%ModuleInitialized(Module_IfW) = .TRUE.
 
    case (Module_ExtInfw)
       ! ExtInfw requires initialization of AD first, so nothing executed here
@@ -550,7 +550,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL SeaSt_Init(Init%InData_SeaSt, SeaSt%Input(1), SeaSt%p,  SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), &
                       SeaSt%OtherSt(STATE_CURR), SeaSt%y, SeaSt%m, p_FAST%dt_module(MODULE_SeaSt), Init%OutData_SeaSt, ErrStat2, ErrMsg2)
       if (Failed()) return
-      p_FAST%ModuleInitialized(Module_SeaSt) = .TRUE.
 
       ! Add module to array, return on error
       call MV_AddModule(m_Glue%ModData, Module_SeaSt, 'SEA', 1, p_FAST%dt_module(Module_SeaSt), p_FAST%DT, &
@@ -656,8 +655,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                     AD%OtherSt(STATE_CURR), AD%y, AD%m, p_FAST%dt_module( MODULE_AD ), Init%OutData_AD, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
-      p_FAST%ModuleInitialized(Module_AD) = .TRUE.
-
       ! Loop through rotors and add module for each one
       do i = 1, size(Init%OutData_AD%rotors)
          CALL MV_AddModule(m_Glue%ModData, Module_AD, 'AD', i, p_FAST%dt_module(Module_AD), p_FAST%DT, &
@@ -701,8 +698,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                     ADsk%OtherSt(STATE_CURR), ADsk%y, ADsk%m, p_FAST%dt_module( MODULE_ADsk ), Init%OutData_ADsk, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
-      p_FAST%ModuleInitialized(Module_ADsk) = .TRUE.
-
       ! Add module to array, return on error
       call MV_AddModule(m_Glue%ModData, Module_ADsk, 'ADsk', 1, p_FAST%dt_module(Module_ADsk), p_FAST%DT, &
                         Init%OutData_ADsk%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
@@ -723,8 +718,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL ExtLd_SetInitInput(Init%InData_ExtLd, Init%OutData_ED(iED), ED%y(iED), Init%OutData_BD, BD%y(:), Init%OutData_AD, p_FAST, ExternInitData, ErrStat2, ErrMsg2)
       CALL ExtLd_Init( Init%InData_ExtLd, ExtLd%u, ExtLd%xd(1), ExtLd%p, ExtLd%y, ExtLd%m, p_FAST%dt_module( MODULE_ExtLd ), Init%OutData_ExtLd, ErrStat2, ErrMsg2 )
       if (Failed()) return
-
-      p_FAST%ModuleInitialized(Module_ExtLd) = .TRUE.
 
       ! Add module to list of modules, return on error
       CALL MV_AddModule(m_Glue%ModData, Module_ExtLd, 'ExtLd', 1, p_FAST%dt_module(Module_ExtLd), p_FAST%DT, &
@@ -849,8 +842,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                          HD%OtherSt(STATE_CURR), HD%y, HD%m, p_FAST%dt_module(MODULE_HD), Init%OutData_HD, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      p_FAST%ModuleInitialized(Module_HD) = .TRUE.
-
       CALL MV_AddModule(m_Glue%ModData, Module_HD, 'HD', 1, p_FAST%dt_module(Module_HD), p_FAST%DT, &
                         Init%OutData_HD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -897,8 +888,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                     SD%OtherSt(STATE_CURR), SD%y, SD%m, p_FAST%dt_module( MODULE_SD ), Init%OutData_SD, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
-      p_FAST%ModuleInitialized(Module_SD) = .TRUE.
-
       CALL MV_AddModule(m_Glue%ModData, Module_SD, 'SD', 1, p_FAST%dt_module(Module_SD), p_FAST%DT, &
                         Init%OutData_SD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -915,8 +904,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                         ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR),  ExtPtfm%OtherSt(STATE_CURR), &
                         ExtPtfm%y, ExtPtfm%m, p_FAST%dt_module(MODULE_ExtPtfm), Init%OutData_ExtPtfm, ErrStat2, ErrMsg2)
       if (Failed()) return
-
-      p_FAST%ModuleInitialized(MODULE_ExtPtfm) = .TRUE.
    
       CALL MV_AddModule(m_Glue%ModData, MODULE_ExtPtfm, 'ExtPtfm', 1, p_FAST%dt_module(MODULE_ExtPtfm), p_FAST%DT, &
                         Init%OutData_ExtPtfm%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
@@ -984,8 +971,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                     MAPp%y, MAPp%m, p_FAST%dt_module(MODULE_MAP), Init%OutData_MAP, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      p_FAST%ModuleInitialized(Module_MAP) = .TRUE.
-
       CALL MV_AddModule(m_Glue%ModData, Module_MAP, 'MAP', 1, p_FAST%dt_module(Module_MAP), p_FAST%DT, &
                         Init%OutData_MAP%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -1014,8 +999,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                     MD%OtherSt(STATE_CURR), MD%y, MD%m, p_FAST%dt_module( MODULE_MD ), Init%OutData_MD, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
-      p_FAST%ModuleInitialized(Module_MD) = .TRUE.
-
       CALL MV_AddModule(m_Glue%ModData, Module_MD, 'MD', 1, p_FAST%dt_module(Module_MD), p_FAST%DT, &
                         Init%OutData_MD%Vars, p_FAST%Linearize, ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -1037,8 +1020,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                      Init%OutData_FEAM, ErrStat2, ErrMsg2)
       if (Failed()) return
 
-      p_FAST%ModuleInitialized(Module_FEAM) = .TRUE.
-
       CALL MV_AddModule(m_Glue%ModData, Module_FEAM, 'FEAM', 1, p_FAST%dt_module(Module_FEAM), p_FAST%DT, &
                         Init%OutData_FEAM%Vars, .false., ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -1052,8 +1033,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL Orca_Init( Init%InData_Orca, Orca%Input(1), Orca%p,  Orca%x(STATE_CURR), Orca%xd(STATE_CURR), Orca%z(STATE_CURR), Orca%OtherSt(STATE_CURR), &
                       Orca%y, Orca%m, p_FAST%dt_module( MODULE_Orca ), Init%OutData_Orca, ErrStat2, ErrMsg2 )
       if (Failed()) return
-
-      p_FAST%ModuleInitialized(MODULE_Orca) = .TRUE.
 
       CALL MV_AddModule(m_Glue%ModData, Module_Orca, 'Orca', 1, p_FAST%dt_module(Module_Orca), p_FAST%DT, &
                         Init%OutData_Orca%Vars, .false., ErrStat2, ErrMsg2)
@@ -1088,8 +1067,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL IceFloe_Init( Init%InData_IceF, IceF%Input(1), IceF%p,  IceF%x(STATE_CURR), IceF%xd(STATE_CURR), IceF%z(STATE_CURR), &
                          IceF%OtherSt(STATE_CURR), IceF%y, IceF%m, p_FAST%dt_module( MODULE_IceF ), Init%OutData_IceF, ErrStat2, ErrMsg2 )
       if (Failed()) return
-      
-      p_FAST%ModuleInitialized(Module_IceF) = .TRUE.
 
       ! Add module to list of modules
       CALL MV_AddModule(m_Glue%ModData, Module_IceF, 'IceF', 1, p_FAST%dt_module(Module_IceF), p_FAST%DT, &
@@ -1131,8 +1108,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL IceD_Init( Init%InData_IceD, IceD%Input(1,1), IceD%p(1),  IceD%x(1,STATE_CURR), IceD%xd(1,STATE_CURR), IceD%z(1,STATE_CURR), &
                       IceD%OtherSt(1,STATE_CURR), IceD%y(1), IceD%m(1), p_FAST%dt_module( MODULE_IceD ), Init%OutData_IceD, ErrStat2, ErrMsg2 )
       if (Failed()) return
-
-      p_FAST%ModuleInitialized(Module_IceD) = .TRUE.
 
       ! Add module to list of modules
       CALL MV_AddModule(m_Glue%ModData, Module_IceD, 'IceD', 1, p_FAST%dt_module(Module_IceD), p_FAST%DT, &
@@ -1318,7 +1293,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       CALL SrvD_Init( Init%InData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
                       SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, p_FAST%dt_module( MODULE_SrvD ), Init%OutData_SrvD, ErrStat2, ErrMsg2 )
       if (Failed()) return
-      p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
 
       !IF ( Init%OutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
 
@@ -1367,15 +1341,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       call SetVTKParameters(p_FAST, Init%OutData_ED(iED), Init%OutData_SED, Init%OutData_AD, Init%OutData_SeaSt, Init%OutData_HD, ED, SED, BD, AD, HD, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
-
-   !----------------------------------------------------------------------------
-   ! Write initialization data to FAST summary file:
-   !----------------------------------------------------------------------------
-
-   if (p_FAST%SumPrint)  then
-       CALL FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat2, ErrMsg2 )
-          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   endif
 
    !----------------------------------------------------------------------------
    ! Other misc variables initialized
@@ -4537,10 +4502,11 @@ SUBROUTINE SetModuleSubstepTime(ModuleID, p_FAST, y_FAST, ErrStat, ErrMsg)
 END SUBROUTINE SetModuleSubstepTime
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This writes data to the FAST summary file.
-SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE FAST_WrSum( p_FAST, y_FAST, m_Glue, MeshMapData, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(IN)    :: p_FAST                             !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST                             !< Glue-code simulation outputs (changes value of UnSum)
+   TYPE(Glue_MiscVarType),   INTENT(IN)    :: m_Glue                             !< Glue-code misc vars
    TYPE(FAST_ModuleMapType), INTENT(IN)    :: MeshMapData                        !< Data for mapping between modules
    INTEGER(IntKi),           INTENT(OUT)   :: ErrStat                            !< Error status (level)
    CHARACTER(*),             INTENT(OUT)   :: ErrMsg                             !< Message describing error reported in ErrStat
@@ -4581,13 +4547,8 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    IF ((p_FAST%CompElast /= Module_ED) .or. (p_FAST%CompElast /= Module_BD)) DescStr = TRIM(DescStr)//NotUsedTxt
    WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
 
-   DO I = 2,NumModules
-      IF (p_FAST%ModuleInitialized(I)) THEN
-         WRITE (y_FAST%UnSum,Fmt)  TRIM( GetNVD( y_FAST%Module_Ver( I ) ) )
-      !ELSE
-      !   DescStr = GetNVD( y_FAST%Module_Ver( I ) )
-      !   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )//NotUsedTxt
-      END IF
+   do i = 1, size(m_Glue%ModData)
+      WRITE (y_FAST%UnSum,Fmt)  TRIM( GetNVD( y_FAST%Module_Ver( m_Glue%ModData(i)%ID ) ) )
    END DO
 
    DescStr = GetNVD( y_FAST%Module_Ver( Module_SED ) )
@@ -4679,6 +4640,21 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    WRITE(y_FAST%UnSum,'(/A,I1,A)'  ) 'Interpolation order for input/output time histories: ', p_FAST%InterpOrder, TRIM(DescStr)
    WRITE(y_FAST%UnSum,'( A,I2)'    ) 'Number of correction iterations: ', p_FAST%NumCrctn
 
+   !.......................... Data Mapping between Modules .................................................
+
+   write (y_FAST%UnSum, '(/A)') "Module mapping data for transfer and linearization:"
+
+   do i = 1, size(m_Glue%Mappings)
+      associate (SrcMod => m_Glue%ModData(m_Glue%Mappings(i)%iModSrc), &
+                 DstMod => m_Glue%ModData(m_Glue%Mappings(i)%iModDst))
+         if (m_Glue%Mappings(i)%MapType == Map_Custom) then
+            write (y_FAST%UnSum, *) trim(SrcMod%Abbr)//'_'//trim(Num2LStr(SrcMod%Ins))//" -> "// &
+                                    trim(DstMod%Abbr)//'_'//trim(Num2LStr(DstMod%Ins))
+         else
+            write (y_FAST%UnSum, *) trim(m_Glue%Mappings(i)%Desc)
+         end if
+      end associate
+   end do
 
    !.......................... Information About Coupling ...................................................
 
@@ -4703,10 +4679,10 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    WRITE (y_FAST%UnSum, Fmt ) "-----------------", "---------------", "-------------"
    Fmt = '(2X,A17,2X,'//TRIM(p_FAST%OutFmt)//',:,T37,2X,I8,:,A)'
    WRITE (y_FAST%UnSum, Fmt ) "FAST (glue code) ", p_FAST%DT
-   DO Module_Number=2,NumModules ! assumes glue-code is module number 1 (i.e., MODULE_Glue == 1)
-      IF (p_FAST%ModuleInitialized(Module_Number)) THEN
-         WRITE (y_FAST%UnSum, Fmt ) y_FAST%Module_Ver(Module_Number)%Name, p_FAST%DT_module(Module_Number), p_FAST%n_substeps(Module_Number)
-      END IF
+
+   do i = 1, size(m_Glue%ModData)
+      if (m_Glue%ModData(i)%Ins > 1) cycle
+      WRITE (y_FAST%UnSum, Fmt)  y_FAST%Module_Ver(m_Glue%ModData(i)%ID)%Name, m_Glue%ModData(i)%DT, m_Glue%ModData(i)%SubSteps
    END DO
    IF ( p_FAST%n_DT_Out  == 1_IntKi ) THEN
       WRITE (y_FAST%UnSum, Fmt ) "FAST output files", p_FAST%DT_out, 1_IntKi   ! we'll write "1" instead of "1^-1"

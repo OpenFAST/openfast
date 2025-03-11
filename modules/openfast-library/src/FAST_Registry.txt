@@ -123,7 +123,6 @@ typedef	^	FAST_ParameterType	IntKi	KMax	-	-	-	"Maximum number of input-output-so
 typedef	^	FAST_ParameterType	IntKi	numIceLegs	-	-	-	"number of suport-structure legs in contact with ice (IceDyn coupling)"	-
 typedef	^	FAST_ParameterType	IntKi	nBeams	-	-	-	"number of BeamDyn instances"	-
 typedef	^	FAST_ParameterType	LOGICAL	BD_OutputSibling	-	-	-	"flag to determine if BD input is sibling of output mesh"	-
-typedef	^	FAST_ParameterType	LOGICAL	ModuleInitialized	{NumModules}	-	-	"An array determining if the module has been initialized"	-
 # Data for TC Solver:
 typedef	^	FAST_ParameterType	DbKi	RhoInf	-	-	-	"Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]"	-
 typedef	^	FAST_ParameterType	DbKi	ConvTol	-	-	-	"Convergence iteration error tolerance for tight coupling generalized alpha integrator (-)"	-

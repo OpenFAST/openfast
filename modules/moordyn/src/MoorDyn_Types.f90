@@ -365,14 +365,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: writeOutputUnt      !< second line of output file contents: units [-]
     TYPE(ProgDesc)  :: Ver      !< this module's name, version, and date [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: CableCChanRqst      !< flag indicating control channel for drive line active tensioning is requested [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_x      !< Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue) [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
     TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE MD_InitOutputType
 ! =======================
@@ -2729,102 +2721,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       end if
       DstInitOutputData%CableCChanRqst = SrcInitOutputData%CableCChanRqst
    end if
-   if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
-      if (.not. allocated(DstInitOutputData%LinNames_y)) then
-         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   end if
-   if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
-      if (.not. allocated(DstInitOutputData%LinNames_x)) then
-         allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   end if
-   if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
-      if (.not. allocated(DstInitOutputData%LinNames_u)) then
-         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
-      if (.not. allocated(DstInitOutputData%RotFrame_y)) then
-         allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x)
-      if (.not. allocated(DstInitOutputData%RotFrame_x)) then
-         allocate(DstInitOutputData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
-      if (.not. allocated(DstInitOutputData%RotFrame_u)) then
-         allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   end if
-   if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
-      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
-         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   end if
-   if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
-      if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
-         allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   end if
    call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -2850,30 +2746,6 @@ subroutine MD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%CableCChanRqst)) then
       deallocate(InitOutputData%CableCChanRqst)
    end if
-   if (allocated(InitOutputData%LinNames_y)) then
-      deallocate(InitOutputData%LinNames_y)
-   end if
-   if (allocated(InitOutputData%LinNames_x)) then
-      deallocate(InitOutputData%LinNames_x)
-   end if
-   if (allocated(InitOutputData%LinNames_u)) then
-      deallocate(InitOutputData%LinNames_u)
-   end if
-   if (allocated(InitOutputData%RotFrame_y)) then
-      deallocate(InitOutputData%RotFrame_y)
-   end if
-   if (allocated(InitOutputData%RotFrame_x)) then
-      deallocate(InitOutputData%RotFrame_x)
-   end if
-   if (allocated(InitOutputData%RotFrame_u)) then
-      deallocate(InitOutputData%RotFrame_u)
-   end if
-   if (allocated(InitOutputData%IsLoad_u)) then
-      deallocate(InitOutputData%IsLoad_u)
-   end if
-   if (allocated(InitOutputData%DerivOrder_x)) then
-      deallocate(InitOutputData%DerivOrder_x)
-   end if
    call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
@@ -2887,14 +2759,6 @@ subroutine MD_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%writeOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call RegPackAlloc(RF, InData%CableCChanRqst)
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_x)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%RotFrame_x)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%IsLoad_u)
-   call RegPackAlloc(RF, InData%DerivOrder_x)
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -2911,14 +2775,6 @@ subroutine MD_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%writeOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call RegUnpackAlloc(RF, OutData%CableCChanRqst); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 

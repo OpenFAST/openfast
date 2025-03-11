@@ -46,7 +46,7 @@ typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
-typedef	^	InitOutputType	ModVarsType      *Vars      -   -   -   "Module Variables"
+typedef	^	InitOutputType	ModVarsType      Vars      -   -   -   "Module Variables"
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -71,7 +71,6 @@ typedef ^       OtherStateType	        ReKi	blah    -       -       -       "Som
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
-typedef  ^  ParameterType   ModVarsType &Vars          -       -      -     "Module Variables"
 typedef  ^  ParameterType   ExtLdDX_ParameterType  DX_p    -       -       -       "Data to send to external driver"
 typedef	^	ParameterType	IntKi	NumBlds      -       -       -       "Number of blades on the turbine" -
 typedef ^       ParameterType   IntKi   NumBldNds   {:}      -       -       "Number of blade nodes for each blade"  -

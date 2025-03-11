@@ -143,7 +143,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: numIceLegs = 0_IntKi      !< number of suport-structure legs in contact with ice (IceDyn coupling) [-]
     INTEGER(IntKi)  :: nBeams = 0_IntKi      !< number of BeamDyn instances [-]
     LOGICAL  :: BD_OutputSibling = .false.      !< flag to determine if BD input is sibling of output mesh [-]
-    LOGICAL , DIMENSION(1:NumModules)  :: ModuleInitialized = .false.      !< An array determining if the module has been initialized [-]
     REAL(DbKi)  :: RhoInf = 0.0_R8Ki      !< Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0] [-]
     REAL(DbKi)  :: ConvTol = 0.0_R8Ki      !< Convergence iteration error tolerance for tight coupling generalized alpha integrator (-) [-]
     INTEGER(IntKi)  :: MaxConvIter = 0_IntKi      !< Maximum number of convergence iterations for tight coupling generalized alpha integrator (-) [-]
@@ -1281,7 +1280,6 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%numIceLegs = SrcParamData%numIceLegs
    DstParamData%nBeams = SrcParamData%nBeams
    DstParamData%BD_OutputSibling = SrcParamData%BD_OutputSibling
-   DstParamData%ModuleInitialized = SrcParamData%ModuleInitialized
    DstParamData%RhoInf = SrcParamData%RhoInf
    DstParamData%ConvTol = SrcParamData%ConvTol
    DstParamData%MaxConvIter = SrcParamData%MaxConvIter
@@ -1456,7 +1454,6 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%numIceLegs)
    call RegPack(RF, InData%nBeams)
    call RegPack(RF, InData%BD_OutputSibling)
-   call RegPack(RF, InData%ModuleInitialized)
    call RegPack(RF, InData%RhoInf)
    call RegPack(RF, InData%ConvTol)
    call RegPack(RF, InData%MaxConvIter)
@@ -1574,7 +1571,6 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%numIceLegs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nBeams); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BD_OutputSibling); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%ModuleInitialized); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RhoInf); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvTol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MaxConvIter); if (RegCheckErr(RF, RoutineName)) return

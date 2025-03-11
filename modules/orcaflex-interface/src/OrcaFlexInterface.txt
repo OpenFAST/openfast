@@ -22,7 +22,7 @@ typedef  ^                       ^              ReKi            TMax            
 typedef   ^   InitOutputType ProgDesc   Ver   -   -   -   "This module's name, version, and date"   -
 typedef   ^   ^               CHARACTER(ChanLen)   WriteOutputHdr   {:} -  -     "Names of the output-to-file channels"   -
 typedef   ^   ^               CHARACTER(ChanLen)   WriteOutputUnt   {:} -  -     "Units of the output-to-file channels"   -
-typedef   ^   ^               ModVarsType          *Vars             -  -  -     "Module Variables"
+typedef   ^   ^               ModVarsType          Vars              -  -  -     "Module Variables"
 
 
 # Inputfile information
@@ -54,8 +54,7 @@ typedef  ^  ^                 DbKi              LastTimeStep         -  -  -    
 
 
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^  ParameterType     ModVarsType      &Vars                 -  -  -     "Module Variables"
-typedef  ^  ^                 IntKi             iVarPtfmMeshU        -  -  -     "Index of platform mesh input variable"
+typedef  ^  ParameterType     IntKi             iVarPtfmMeshU        -  -  -     "Index of platform mesh input variable"
 typedef  ^  ^                 IntKi             iVarPtfmMeshY        -  -  -     "Index of platform mesh output variable"
 typedef  ^  ^                 DbKi              DT                   -  -  -     "Time step for continuous state integration & discrete state update"       seconds
 typedef  ^  ^                 DLL_Type          DLL_Orca             -  -  -     "Info for the OrcaFlex DLL"                                                -

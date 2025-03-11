@@ -108,11 +108,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all HD-related output channel header strings (includes all sub-module channels) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all HD-related output channel unit strings (includes all sub-module channels) [-]
     TYPE(ProgDesc)  :: Ver      !< Version of HydroDyn [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
   END TYPE HydroDyn_InitOutputType
 ! =======================
 ! =========  HD_ModuleMapType  =======
@@ -767,66 +762,6 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
-      if (.not. allocated(DstInitOutputData%LinNames_y)) then
-         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   end if
-   if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
-      if (.not. allocated(DstInitOutputData%LinNames_x)) then
-         allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   end if
-   if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
-      if (.not. allocated(DstInitOutputData%LinNames_u)) then
-         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   end if
-   if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
-      if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
-         allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   end if
-   if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
-      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
-         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   end if
 end subroutine
 
 subroutine HydroDyn_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -850,21 +785,6 @@ subroutine HydroDyn_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InitOutputData%LinNames_y)) then
-      deallocate(InitOutputData%LinNames_y)
-   end if
-   if (allocated(InitOutputData%LinNames_x)) then
-      deallocate(InitOutputData%LinNames_x)
-   end if
-   if (allocated(InitOutputData%LinNames_u)) then
-      deallocate(InitOutputData%LinNames_u)
-   end if
-   if (allocated(InitOutputData%DerivOrder_x)) then
-      deallocate(InitOutputData%DerivOrder_x)
-   end if
-   if (allocated(InitOutputData%IsLoad_u)) then
-      deallocate(InitOutputData%IsLoad_u)
-   end if
 end subroutine
 
 subroutine HydroDyn_PackInitOutput(RF, Indata)
@@ -877,11 +797,6 @@ subroutine HydroDyn_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_x)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%DerivOrder_x)
-   call RegPackAlloc(RF, InData%IsLoad_u)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -898,11 +813,6 @@ subroutine HydroDyn_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine HydroDyn_CopyHD_ModuleMapType(SrcHD_ModuleMapTypeData, DstHD_ModuleMapTypeData, CtrlCode, ErrStat, ErrMsg)

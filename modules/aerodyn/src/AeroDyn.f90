@@ -5668,17 +5668,6 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    ! Combine linearization flags
    LinearizeLoc = Linearize .or. CompAeroMaps .or. (p%MHK /= MHK_None)
 
-   ! Allocate space for variables (deallocate if already allocated)
-   if (associated(p%Vars)) deallocate(p%Vars)
-   allocate(p%Vars, stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   ! Add pointers to vars to initialization output
-   InitOut%Vars => p%Vars
-
    ! Create rotor label
    RotorLabel = 'R'//trim(Num2LStr(iR))
 
@@ -5702,13 +5691,13 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    ! Continuous State Variables
    !----------------------------------------------------------------------------
 
-   allocate(p%Vars%x(0))
+   allocate(InitOut%Vars%x(0))
 
    ! DBEMT
    if (p%BEMT%DBEMT%lin_nx/2 > 0) then
       do j = 1, p%NumBlades
          do i = 1, p%NumBlNds
-            call MV_AddVar(p%Vars%x, "DBEMT%Element%vind", FieldScalar, &
+            call MV_AddVar(InitOut%Vars%x, "DBEMT%Element%vind", FieldScalar, &
                            DatLoc(AD_x_BEMT_DBEMT_element_vind, i, j), &
                            Num=2, &
                            Flags=ior(VF_DerivOrder2, VF_RotFrame), &
@@ -5719,7 +5708,7 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
       end do
       do j = 1, p%NumBlades
          do i = 1, p%NumBlNds
-            call MV_AddVar(p%Vars%x, "DBEMT%Element%vind_1", FieldScalar, &
+            call MV_AddVar(InitOut%Vars%x, "DBEMT%Element%vind_1", FieldScalar, &
                            DatLoc(AD_x_BEMT_DBEMT_element_vind_1, i, j), &
                            Num=2, &
                            Flags=ior(VF_DerivOrder2, VF_RotFrame), &
@@ -5744,7 +5733,7 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
          NodeLabel = 'x'//trim(Num2Lstr(state))//' blade '//trim(Num2Lstr(j))//', node '//trim(Num2Lstr(i))//', -'
       end select
    
-      call MV_AddVar(p%Vars%x, NodeLabel, FieldScalar, &
+      call MV_AddVar(InitOut%Vars%x, NodeLabel, FieldScalar, &
                      DatLoc(AD_x_BEMT_UA_element_x, i, j), iAry=state, &
                      Flags=ior(VF_DerivOrder1, VF_RotFrame), &
                      Perturb=p%BEMT%UA%dx(state), &
@@ -5762,25 +5751,25 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    !----------------------------------------------------------------------------
 
    ! Add Nacelle motion
-   call MV_AddMeshVar(p%Vars%u, "Nacelle", [FieldTransDisp, FieldOrientation], &
+   call MV_AddMeshVar(InitOut%Vars%u, "Nacelle", [FieldTransDisp, FieldOrientation], &
                       DatLoc(AD_u_NacelleMotion), &
                       Mesh=u%NacelleMotion, &
                       Perturbs=[PerturbBlade(1), Perturb])
 
    ! Add hub motion
-   call MV_AddMeshVar(p%Vars%u, "Hub", [FieldTransDisp, FieldOrientation, FieldAngularVel], &
+   call MV_AddMeshVar(InitOut%Vars%u, "Hub", [FieldTransDisp, FieldOrientation, FieldAngularVel], &
                       DatLoc(AD_u_HubMotion), &
                       Mesh=u%HubMotion, &
                       Perturbs=[PerturbBlade(1), Perturb, Perturb])
 
    ! Add tail fin motion
-   call MV_AddMeshVar(p%Vars%u, "TFin", [FieldTransDisp, FieldOrientation, FieldTransVel], &
+   call MV_AddMeshVar(InitOut%Vars%u, "TFin", [FieldTransDisp, FieldOrientation, FieldTransVel], &
                       DatLoc(AD_u_TFinMotion), &
                       Mesh=u%TFinMotion, &
                       Perturbs=[Perturb, Perturb, Perturb])
 
    ! Add tower motion
-   call MV_AddMeshVar(p%Vars%u, "Tower", [FieldTransDisp, FieldOrientation, FieldTransVel, FieldTransAcc], &
+   call MV_AddMeshVar(InitOut%Vars%u, "Tower", [FieldTransDisp, FieldOrientation, FieldTransVel, FieldTransAcc], &
                       DatLoc(AD_u_TowerMotion), &
                       Mesh=u%TowerMotion, &
                       Flags=VF_SmallAngle, &
@@ -5788,7 +5777,7 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
 
    ! Add blade root motion
    do j = 1, p%NumBlades
-      call MV_AddMeshVar(p%Vars%u, "Blade root "//Num2LStr(j), [FieldOrientation], &
+      call MV_AddMeshVar(InitOut%Vars%u, "Blade root "//Num2LStr(j), [FieldOrientation], &
                          DatLoc(AD_u_BladeRootMotion, j), &
                          Mesh=u%BladeRootMotion(j), &
                          Perturbs=[Perturb])
@@ -5798,12 +5787,12 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    do j = 1, p%NumBlades
       Flags = VF_None
       if (j == 1) Flags = VF_AeroMap
-      call MV_AddMeshVar(p%Vars%u, "Blade "//Num2LStr(j), [FieldTransDisp, FieldOrientation, FieldTransVel], &
+      call MV_AddMeshVar(InitOut%Vars%u, "Blade "//Num2LStr(j), [FieldTransDisp, FieldOrientation, FieldTransVel], &
                          DatLoc(AD_u_BladeMotion, j), &
                          Flags=Flags, &
                          Mesh=u%BladeMotion(j), &
                          Perturbs=[PerturbBlade(j), Perturb, PerturbBlade(j)]) 
-      call MV_AddMeshVar(p%Vars%u, "Blade "//Num2LStr(j), [FieldAngularVel, FieldTransAcc, FieldAngularAcc], &
+      call MV_AddMeshVar(InitOut%Vars%u, "Blade "//Num2LStr(j), [FieldAngularVel, FieldTransAcc, FieldAngularAcc], &
                          DatLoc(AD_u_BladeMotion, j), &
                          Mesh=u%BladeMotion(j), &
                          Perturbs=[Perturb, PerturbBlade(j), Perturb]) 
@@ -5811,7 +5800,7 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
 
    ! Add user props
    do j = 1, p%NumBlades
-      call MV_AddVar(p%Vars%u, "UserProp Blade"//IdxStr(j), FieldScalar, DatLoc(AD_u_UserProp), jAry=j, &
+      call MV_AddVar(InitOut%Vars%u, "UserProp Blade"//IdxStr(j), FieldScalar, DatLoc(AD_u_UserProp), jAry=j, &
                      Flags=VF_Linearize + VF_RotFrame, &
                      Num=p%NumBlNds, &
                      Perturb=Perturb, &
@@ -5819,17 +5808,17 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    end do
 
    ! Extended inputs
-   call MV_AddVar(p%Vars%u, "HWindSpeed", FieldScalar, DatLoc(AD_u_HWindSpeed), &
+   call MV_AddVar(InitOut%Vars%u, "HWindSpeed", FieldScalar, DatLoc(AD_u_HWindSpeed), &
                   Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=Perturb, &
                   LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'])
 
-   call MV_AddVar(p%Vars%u, "PLExp", FieldScalar, DatLoc(AD_u_PLexp), &
+   call MV_AddVar(InitOut%Vars%u, "PLExp", FieldScalar, DatLoc(AD_u_PLexp), &
                   Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=Perturb, &
                   LinNames=['Extended input: vertical power-law shear exponent, -'])
 
-   call MV_AddVar(p%Vars%u, "PropagationDir", FieldScalar, DatLoc(AD_u_PropagationDir), &
+   call MV_AddVar(InitOut%Vars%u, "PropagationDir", FieldScalar, DatLoc(AD_u_PropagationDir), &
                   Flags=VF_ExtLin + VF_Linearize, &
                   Perturb=Perturb, &
                   LinNames=['Extended input: propagation direction, rad'])
@@ -5839,33 +5828,33 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    !----------------------------------------------------------------------------
 
    ! Add nacelle load
-   call MV_AddMeshVar(p%Vars%y, "Nacelle", LoadFields, DatLoc(AD_y_NacelleLoad), &
+   call MV_AddMeshVar(InitOut%Vars%y, "Nacelle", LoadFields, DatLoc(AD_y_NacelleLoad), &
                       Mesh=y%NacelleLoad)
 
    ! Add hub load
-   call MV_AddMeshVar(p%Vars%y, "Hub", LoadFields, DatLoc(AD_y_HubLoad), &
+   call MV_AddMeshVar(InitOut%Vars%y, "Hub", LoadFields, DatLoc(AD_y_HubLoad), &
                       Mesh=y%HubLoad)
 
    ! Add tail fin load
-   call MV_AddMeshVar(p%Vars%y, "TFin", LoadFields, DatLoc(AD_y_TFinLoad), &
+   call MV_AddMeshVar(InitOut%Vars%y, "TFin", LoadFields, DatLoc(AD_y_TFinLoad), &
                       Mesh=y%TFinLoad)
 
    ! Add tower load
-   call MV_AddMeshVar(p%Vars%y, "Tower", LoadFields, DatLoc(AD_y_TowerLoad), &
+   call MV_AddMeshVar(InitOut%Vars%y, "Tower", LoadFields, DatLoc(AD_y_TowerLoad), &
                       Mesh=y%TowerLoad)
 
    ! Loop through blades, add blade loads
    do j = 1, p%NumBlades
       Flags = VF_Line
       if (j == 1) Flags = ior(Flags, VF_AeroMap)
-      call MV_AddMeshVar(p%Vars%y, "Blade "//Num2LStr(j), LoadFields, DatLoc(AD_y_BladeLoad, j), &
+      call MV_AddMeshVar(InitOut%Vars%y, "Blade "//Num2LStr(j), LoadFields, DatLoc(AD_y_BladeLoad, j), &
                          Flags=Flags, &
                          Mesh=y%BladeLoad(j))
    end do
 
    ! Rotor outputs
    do j = 1, p%NumOuts
-      call MV_AddVar(p%Vars%y, InitOut%WriteOutputHdr(j), FieldScalar, &
+      call MV_AddVar(InitOut%Vars%y, InitOut%WriteOutputHdr(j), FieldScalar, &
                      DatLoc(AD_y_WriteOutput), iAry=j, &
                      Flags=VF_WriteOut + OutParamFlags(p%OutParam(j)%Indx), &
                      LinNames=[trim(InitOut%WriteOutputHdr(j))//', '//trim(InitOut%WriteOutputUnt(j))])
@@ -5873,7 +5862,7 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    
    ! Blade node outputs
    do j = p%NumOuts + 1, p%NumOuts + p%BldNd_TotNumOuts
-      call MV_AddVar(p%Vars%y, InitOut%WriteOutputHdr(j), FieldScalar, &
+      call MV_AddVar(InitOut%Vars%y, InitOut%WriteOutputHdr(j), FieldScalar, &
                      DatLoc(AD_y_WriteOutput), iAry=j, &
                      Flags=VF_WriteOut + VF_RotFrame, &
                      LinNames=[trim(InitOut%WriteOutputHdr(j))//', '//trim(InitOut%WriteOutputUnt(j))])
@@ -5883,7 +5872,7 @@ subroutine AD_InitVars(iR, u, p, x, z, OtherState, y, m, InitOut, InputFileData,
    ! Initialize Variables and Linearization data
    !----------------------------------------------------------------------------
 
-   call MV_InitVarsJac(p%Vars, m%Jac, LinearizeLoc, ErrStat2, ErrMsg2); if (Failed()) return
+   call MV_InitVarsJac(InitOut%Vars, m%Jac, LinearizeLoc, ErrStat2, ErrMsg2); if (Failed()) return
 
    if (LinearizeLoc) then
       call AD_CopyRotContinuousStateType(x, m%x_init, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return

@@ -90,7 +90,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
     INTEGER(IntKi)  :: CouplingScheme = 0_IntKi      !< Switch that indicates if a particular coupling scheme is required [-]
     LOGICAL  :: UseHSSBrake = .false.      !< flag to determine if high-speed shaft brake is potentially used (true=yes) [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
@@ -479,7 +479,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< Number of pulse gates [-]
     REAL(ReKi)  :: PulseSpacing = 0.0_ReKi      !< Distance between range gates [m]
     REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -1055,7 +1054,9 @@ subroutine SrvD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstInitOutputData%Vars => SrcInitOutputData%Vars
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstInitOutputData%CouplingScheme = SrcInitOutputData%CouplingScheme
    DstInitOutputData%UseHSSBrake = SrcInitOutputData%UseHSSBrake
    if (allocated(SrcInitOutputData%LinNames_y)) then
@@ -1173,7 +1174,8 @@ subroutine SrvD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   nullify(InitOutputData%Vars)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -1204,18 +1206,11 @@ subroutine SrvD_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SrvD_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SrvD_PackInitOutput'
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    call RegPack(RF, InData%CouplingScheme)
    call RegPack(RF, InData%UseHSSBrake)
    call RegPackAlloc(RF, InData%LinNames_y)
@@ -1236,30 +1231,11 @@ subroutine SrvD_UnPackInitOutput(RF, OutData)
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call RegUnpack(RF, OutData%CouplingScheme); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UseHSSBrake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
@@ -4360,18 +4336,6 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumPulseGate = SrcParamData%NumPulseGate
    DstParamData%PulseSpacing = SrcParamData%PulseSpacing
    DstParamData%URefLid = SrcParamData%URefLid
-   if (associated(SrcParamData%Vars)) then
-      if (.not. associated(DstParamData%Vars)) then
-         allocate(DstParamData%Vars, stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end if
 end subroutine
 
 subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -4498,12 +4462,6 @@ subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%Jac_Idx_SStC_y)) then
       deallocate(ParamData%Jac_Idx_SStC_y)
    end if
-   if (associated(ParamData%Vars)) then
-      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      deallocate(ParamData%Vars)
-      ParamData%Vars => null()
-   end if
 end subroutine
 
 subroutine SrvD_PackParam(RF, Indata)
@@ -4512,7 +4470,6 @@ subroutine SrvD_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'SrvD_PackParam'
    integer(B4Ki)   :: i1, i2, i3
    integer(B4Ki)   :: LB(3), UB(3)
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%HSSBrDT)
@@ -4678,13 +4635,6 @@ subroutine SrvD_PackParam(RF, Indata)
    call RegPack(RF, InData%NumPulseGate)
    call RegPack(RF, InData%PulseSpacing)
    call RegPack(RF, InData%URefLid)
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4696,8 +4646,6 @@ subroutine SrvD_UnPackParam(RF, OutData)
    integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HSSBrDT); if (RegCheckErr(RF, RoutineName)) return
@@ -4883,24 +4831,6 @@ subroutine SrvD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumPulseGate); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PulseSpacing); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%URefLid); if (RegCheckErr(RF, RoutineName)) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
 end subroutine
 
 subroutine SrvD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

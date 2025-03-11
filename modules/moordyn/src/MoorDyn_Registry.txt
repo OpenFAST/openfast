@@ -338,14 +338,6 @@ typedef   ^            ^               CHARACTER(ChanLen)  writeOutputUnt  {:} "
 typedef   ^            ^               ProgDesc            Ver              -  ""  -   "this module's name, version, and date"
 typedef   ^            ^               LOGICAL             CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for drive line active tensioning is requested"   -
 # --- InitOutputs for linearization ---
-typedef   ^            ^               CHARACTER(LinChanLen)  LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
-typedef   ^            ^               CHARACTER(LinChanLen)  LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -
-typedef   ^            ^               CHARACTER(LinChanLen)  LinNames_u   {:}  -   -   "Names of the inputs used in linearization" -
-typedef   ^            ^               LOGICAL                RotFrame_y   {:}  -   -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
-typedef   ^            ^               LOGICAL                RotFrame_x   {:}  -   -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)" -
-typedef   ^            ^               LOGICAL                RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
-typedef   ^            ^               LOGICAL                IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
-typedef   ^            ^               IntKi                  DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
 typedef   ^            ^               ModVarsType            Vars          -   -   -   "Module Variables"  -
 
 

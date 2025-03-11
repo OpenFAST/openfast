@@ -133,11 +133,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< Version information of InflowWind module [-]
     TYPE(WindFileDat)  :: WindFileInfo      !< Meta data from the wind file [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Flow field data to represent all wind types [-]
     TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE InflowWind_InitOutputType
@@ -667,66 +662,6 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
    call InflowWind_IO_CopyWindFileDat(SrcInitOutputData%WindFileInfo, DstInitOutputData%WindFileInfo, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
-      if (.not. allocated(DstInitOutputData%LinNames_y)) then
-         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   end if
-   if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
-      if (.not. allocated(DstInitOutputData%LinNames_u)) then
-         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
-      if (.not. allocated(DstInitOutputData%RotFrame_y)) then
-         allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
-      if (.not. allocated(DstInitOutputData%RotFrame_u)) then
-         allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   end if
-   if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
-      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
-         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   end if
    DstInitOutputData%FlowField => SrcInitOutputData%FlowField
    call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -752,21 +687,6 @@ subroutine InflowWind_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call InflowWind_IO_DestroyWindFileDat(InitOutputData%WindFileInfo, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InitOutputData%LinNames_y)) then
-      deallocate(InitOutputData%LinNames_y)
-   end if
-   if (allocated(InitOutputData%LinNames_u)) then
-      deallocate(InitOutputData%LinNames_u)
-   end if
-   if (allocated(InitOutputData%RotFrame_y)) then
-      deallocate(InitOutputData%RotFrame_y)
-   end if
-   if (allocated(InitOutputData%RotFrame_u)) then
-      deallocate(InitOutputData%RotFrame_u)
-   end if
-   if (allocated(InitOutputData%IsLoad_u)) then
-      deallocate(InitOutputData%IsLoad_u)
-   end if
    nullify(InitOutputData%FlowField)
    call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -782,11 +702,6 @@ subroutine InflowWind_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call InflowWind_IO_PackWindFileDat(RF, InData%WindFileInfo) 
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%IsLoad_u)
    call RegPack(RF, associated(InData%FlowField))
    if (associated(InData%FlowField)) then
       call RegPackPointer(RF, c_loc(InData%FlowField), PtrInIndex)
@@ -812,11 +727,6 @@ subroutine InflowWind_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call InflowWind_IO_UnpackWindFileDat(RF, OutData%WindFileInfo) ! WindFileInfo 
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%FlowField)) deallocate(OutData%FlowField)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then

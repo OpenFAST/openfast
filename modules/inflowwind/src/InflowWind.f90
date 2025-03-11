@@ -480,36 +480,6 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
             return
          end if
       end if
-
-      ! also need to add InputGuess%HubOrientation to the u%Linear items
-      CALL AllocAry(InitOutData%LinNames_u, NumExtendedIO, 'LinNames_u', TmpErrStat, TmpErrMsg); if (Failed()) return
-      CALL AllocAry(InitOutData%RotFrame_u, NumExtendedIO, 'RotFrame_u', TmpErrStat, TmpErrMsg); if (Failed()) return
-      CALL AllocAry(InitOutData%IsLoad_u, NumExtendedIO, 'IsLoad_u', TmpErrStat, TmpErrMsg); if (Failed()) return
-      CALL AllocAry(InitOutData%LinNames_y, NumExtendedIO + p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg); if (Failed()) return
-      CALL AllocAry(InitOutData%RotFrame_y, NumExtendedIO + p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg); if (Failed()) return
-      
-      ! Extended Inputs
-      Lin_Indx = 0
-      InitOutData%LinNames_u(Lin_Indx + 1) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'
-      InitOutData%LinNames_u(Lin_Indx + 2) = 'Extended input: vertical power-law shear exponent, -'
-      InitOutData%LinNames_u(Lin_Indx + 3) = 'Extended input: propagation direction, rad'
-
-      ! Extended Outputs
-      Lin_Indx = 0
-      InitOutData%LinNames_y(Lin_Indx + 1) = 'Extended output: horizontal wind speed (steady/uniform wind), m/s'
-      InitOutData%LinNames_y(Lin_Indx + 2) = 'Extended output: vertical power-law shear exponent, -'
-      InitOutData%LinNames_y(Lin_Indx + 3) = 'Extended output: propagation direction, rad'
-
-      ! Outputs
-      do i=1,p%NumOuts
-         InitOutData%LinNames_y(i+NumExtendedIO) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-      end do
-
-      ! IfW inputs and outputs are in the global, not rotating frame
-      InitOutData%RotFrame_u = .false.
-      InitOutData%RotFrame_y = .false.
-      InitOutData%IsLoad_u   = .false. ! IfW inputs for linearization are not loads
-
    end if
 
    ! Set the version information in InitOutData

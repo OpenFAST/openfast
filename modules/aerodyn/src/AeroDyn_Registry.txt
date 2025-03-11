@@ -141,20 +141,12 @@ typedef ^   AD_BladePropsType   ReKi    BlCenBt {:} -   -   "Center of buoyancy 
 typedef	^	AD_BladeShape	SiKi	AirfoilCoords	{:}{:}{:}	-	-	"x-y coordinates for airfoils, relative to node"	m
 
 # Define outputs from the initialization routine here:
-typedef	^	RotInitOutputType	ModVarsType	*Vars	-	-	-	"Module Variables"
+typedef	^	RotInitOutputType	ModVarsType	Vars	-	-	-	"Module Variables"
 typedef	^	RotInitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	RotInitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
 typedef	^	RotInitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	RotInitOutputType	AD_BladeShape	BladeShape	{:}	-	-	"airfoil coordinates for each blade"	m
-typedef	^	RotInitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
-typedef	^	RotInitOutputType	CHARACTER(LinChanLen)	LinNames_x	{:}	-	-	"Names of the continuous states used in linearization"	-
-typedef	^	RotInitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
-typedef	^	RotInitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
-typedef	^	RotInitOutputType	LOGICAL	RotFrame_x	{:}	-	-	"Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)"	-
-typedef	^	RotInitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
-typedef	^	RotInitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)"	-
 typedef	^	RotInitOutputType	AD_BladePropsType	BladeProps	{:}	-	-	"blade property information from blade input files"	-
-typedef	^	RotInitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
 typedef	^	RotInitOutputType	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m
 typedef	^	RotInitOutputType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 
@@ -305,7 +297,6 @@ typedef	^	AD_InflowType	RotInflowType	RotInflow	{:}	-	-	"Inflow on rotor"	-
 
 
 # Parameters for each rotor
-typedef	^	RotParameterType	ModVarsType	&Vars	-	-	-	"Module Variables"
 typedef	^	RotParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	RotParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
 typedef	^	RotParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	-

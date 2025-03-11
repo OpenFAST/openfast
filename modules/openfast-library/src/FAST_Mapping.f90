@@ -517,16 +517,6 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
       if (Failed()) return
    end do
 
-   ! Loop through mappings
-   do iMap = 1, size(Mappings)
-      associate (SrcMod => Mods(Mappings(iMap)%iModSrc), &
-                 DstMod => Mods(Mappings(iMap)%iModDst))
-
-         write (*, *) "Mapping: ", Mappings(iMap)%Desc
-
-      end associate
-   end do
-
    !----------------------------------------------------------------------------
    ! Initialize mappings used to apply damping
    !----------------------------------------------------------------------------
@@ -2116,7 +2106,9 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    end if
 
    ! Create mapping description
-   Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+   Mapping%Desc = trim(SrcMod%Abbr)//'_'//trim(Num2LStr(SrcMod%Ins))//" "// &
+                  trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+                  trim(DstMod%Abbr)//'_'//trim(Num2LStr(DstMod%Ins))//" "// &
                   trim(FAST_InputFieldName(DstMod, DstDL))// &
                   " ["//trim(FAST_InputFieldName(SrcMod, SrcDispDL))// &
                   " @ "//trim(FAST_OutputFieldName(DstMod, DstDispDL))//"]"
@@ -2247,7 +2239,9 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrSta
    end if
 
    ! Create mapping description
-   Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+   Mapping%Desc = trim(SrcMod%Abbr)//'_'//trim(Num2LStr(SrcMod%Ins))//" "// &
+                  trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+                  trim(DstMod%Abbr)//'_'//trim(Num2LStr(DstMod%Ins))//" "// &
                   trim(FAST_InputFieldName(DstMod, DstDL))
 
    ! Initialize mapping structure

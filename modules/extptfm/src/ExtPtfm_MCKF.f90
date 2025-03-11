@@ -197,49 +197,6 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    InitOut%WriteOutputHdr(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Name
    InitOut%WriteOutputUnt(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Units     
    InitOut%Ver = ExtPtfm_Ver
-      
-   if (InitInp%Linearize) then
-      ! TODO The linearization features are in place but waiting for glue-code changes, and testing.
-      CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF linearization analysis is currently not supported by the glue code.', ErrStat, ErrMsg, 'ExtPtfm_Init');
-      if(Failed())return
-      !Appropriate Jacobian row/column names and rotating-frame flags here:   
-      CALL AllocAry(InitOut%LinNames_y, 6+p%NumOuts , 'LinNames_y', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_y, 6+p%NumOuts , 'RotFrame_y', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%LinNames_x, 2*p%nCB     , 'LinNames_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_x, 2*p%nCB     , 'RotFrame_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%DerivOrder_x, 2*p%nCB   , 'DerivOrd_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%LinNames_u, N_INPUTS    , 'LinNames_u', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_u, N_INPUTS    , 'RotFrame_u', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%IsLoad_u  , N_INPUTS    , 'IsLoad_u'  , ErrStat, ErrMsg); if(Failed()) return
-      InitOut%DerivOrder_x(:)=2
-      ! LinNames_y
-      do I=1,3; 
-          InitOut%LinNames_y(I)   = 'Interface node '//XYZ(I)//' force, N' 
-          InitOut%LinNames_y(I+3) = 'Interface node '//XYZ(I)//' moment, Nm' 
-      enddo
-      do i=1,p%NumOuts
-          InitOut%LinNames_y(N_OUTPUTS+i) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-      end do
-      ! LinNames_u
-      do I=1,3;
-          InitOut%LinNames_u(I+ 0) = 'Interface node '//XYZ(I)//' translation displacement, m'
-          InitOut%LinNames_u(I+ 3) = 'Interface node '//XYZ(I)//' rotation, rad'
-          InitOut%LinNames_u(I+ 6) = 'Interface node '//XYZ(I)//' translation velocity, m/s'
-          InitOut%LinNames_u(I+ 9) = 'Interface node '//XYZ(I)//' rotation velocity, rad/s'
-          InitOut%LinNames_u(I+12) = 'Interface node '//XYZ(I)//' translation acceleration, m/s^2'
-          InitOut%LinNames_u(I+15) = 'Interface node '//XYZ(I)//' rotation acceleration, rad/s^2'
-      enddo
-      ! LinNames_x
-      do I=1,p%nCB; 
-          InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' displacement, -';
-          InitOut%LinNames_x(I+p%nCB) = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' velocity, -';
-      enddo
-      ! 
-      InitOut%RotFrame_x = .false. ! note that meshes are in the global, not rotating frame
-      InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
-      InitOut%RotFrame_u = .false. ! note that meshes are in the global, not rotating frame
-      InitOut%IsLoad_u   = .false. ! the inputs are not loads but kinematics
-   end if
 
    ! --- Module variables
    call ExtPtfm_InitVars(u, p, x, y, m, InitOut%Vars, InputFileData, InitInp%Linearize, ErrStat, ErrMsg)
