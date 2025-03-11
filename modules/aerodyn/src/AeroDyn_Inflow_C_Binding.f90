@@ -48,7 +48,6 @@ MODULE AeroDyn_Inflow_C_BINDING
 
    !------------------------------------------------------------------------------------
    !  Debugging: DebugLevel -- passed at PreInit
-   !  Debugging: DebugLevel -- passed at PreInit
    !     0  - none
    !     1  - some summary info
    !     2  - above + all position/orientation info
