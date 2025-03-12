@@ -117,7 +117,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
                            T%ExtLd, T%IfW, T%ExtInfw, T%SC_DX, &
                            T%SeaSt, T%HD, T%SD, T%ExtPtfm, T%MAP, &
                            T%FEAM, T%MD, T%Orca, T%IceF, T%IceD, &
-                           T%MeshMapData, CompAeroMaps, ErrStat2, ErrMsg2)
+                           CompAeroMaps, ErrStat2, ErrMsg2)
    if (Failed()) return
 
    ! Initialize module data transfer mappings
@@ -213,9 +213,6 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    ! Allocate arrays to store inputs
    call AllocAry(AM%u1, AM%Mod%Vars%Nu, 'u1', ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(AM%u2, AM%Mod%Vars%Nu, 'u2', ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Move hub orientation matrices to AeroMap structure
-   call move_alloc(T%MeshMapData%HubOrient, AM%HubOrientation)
 
    !----------------------------------------------------------------------------
    ! AeroMap structure initialization

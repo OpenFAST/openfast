@@ -1495,19 +1495,6 @@ subroutine InitMappings_FEAM(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
    end select
 
-   select case (SrcMod%ID)
-   case (Module_ED)
-
-      if (Turbine%p_FAST%CompSub /= Module_SD) then
-         ! CALL MeshMapCreate( SubstructureMotion, FEAM%u%PtFairleadDisplacement,  MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-      end if
-
-   case (Module_SD)
-
-      ! CALL MeshMapCreate( SubstructureMotion, FEAM%u%PtFairleadDisplacement,  MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-
-   end select
-
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

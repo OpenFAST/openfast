@@ -104,12 +104,6 @@ typedef   ^   FAST_VTK_ModeShapeType   R8Ki     DampedFreq_Hz   {:}        -  - 
 typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_magnitude {:}{:}{:}  -  -  "magnitude of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode)" -
 typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_phase     {:}{:}{:}  -  -  "phase of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode)" -
 
-
-typedef	^	FAST_SS_CaseType	ReKi	RotSpeed	-	-	-	"Rotor speed for this case of the steady-state solve [>0]"	"(rad/s)"
-typedef	^	FAST_SS_CaseType	ReKi	TSR	-	-	-	"TSR for this case of the steady-state solve [>0]"	"(-)"
-typedef	^	FAST_SS_CaseType	ReKi	WindSpeed	-	-	-	"Windspeed for this case of the steady-state solve [>0]"	"(m/s)"
-typedef	^	FAST_SS_CaseType	ReKi	Pitch	-	-	-	"Pitch angle for this case of the steady-state solve"	"(rad)"
-
 # ..... FAST_ParameterType data .......................................................................................................
 # Misc data for coupling:
 typedef	FAST	FAST_ParameterType	DbKi	DT	-	-	-	"Integration time step [global time]"	s
@@ -233,49 +227,10 @@ typedef	^	FAST_ParameterType	ReKi	WS_TSR	{:}	-	-	"List of WindSpeed or TSRs (dep
 typedef	^	FAST_ParameterType	ReKi	Pitch	{:}	-	-	"List of pitch angles for aeromap generation"	"(rad)"
 typedef	^	FAST_ParameterType	IntKi	GearBox_index	-	-	-	"Index to gearbox rotation in state array (for steady-state calculations)"   -
 
-
-
-# ..... FAST_LinType data .......................................................................................................
-typedef	FAST	FAST_LinType	CHARACTER(LinChanLen)	Names_u	{:}	-	-	"Names of the linearized inputs"
-typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_y	{:}	-	-	"Names of the linearized outputs"
-typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_x	{:}	-	-	"Names of the linearized continuous states"
-typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_xd	{:}	-	-	"Names of the linearized discrete states"
-typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_z	{:}	-	-	"Names of the linearized constraint states"
-typedef	^	FAST_LinType	ReKi	op_u	{:}	-	-	"input operating point"
-typedef	^	FAST_LinType	ReKi	op_y	{:}	-	-	"output operating point"
-typedef	^	FAST_LinType	ReKi	op_x	{:}	-	-	"continuous state operating point"
-typedef	^	FAST_LinType	ReKi	op_dx	{:}	-	-	"1st time derivative of continuous state operating point"
-typedef	^	FAST_LinType	ReKi	op_xd	{:}	-	-	"discrete state operating point"
-typedef	^	FAST_LinType	ReKi	op_z	{:}	-	-	"constraint state operating point"
-typedef	^	FAST_LinType	R8Ki	op_x_eig_mag	{:}	-	-	"continuous state eigenvector magnitude"
-typedef	^	FAST_LinType	R8Ki	op_x_eig_phase	{:}	-	-	"continuous state eigenvector phase"
-typedef	^	FAST_LinType	Logical	Use_u	{:}	-	-	"array same size as names_u, which indicates if this input is used in linearization output file"
-typedef	^	FAST_LinType	Logical	Use_y	{:}	-	-	"array same size as names_y, which indicates if this output is used in linearization output file"
-typedef	^	FAST_LinType	R8Ki	A	{:}{:}	-	-	"A matrix"
-typedef	^	FAST_LinType	R8Ki	B	{:}{:}	-	-	"B matrix"
-typedef	^	FAST_LinType	R8Ki	C	{:}{:}	-	-	"C matrix"
-typedef	^	FAST_LinType	R8Ki	D	{:}{:}	-	-	"D matrix"
-typedef	^	FAST_LinType	R8Ki	StateRotation	{:}{:}	-	-	"Matrix that rotates the continuous states"
-typedef	^	FAST_LinType	Logical	IsLoad_u	{:}	-	-	"Whether the input is a load (used for scaling for potentially ill-conditioned G matrix)"
-typedef	^	FAST_LinType	Logical	RotFrame_u	{:}	-	-	"Whether corresponding input is in rotating frame"
-typedef	^	FAST_LinType	Logical	RotFrame_y	{:}	-	-	"Whether corresponding output is in rotating frame"
-typedef	^	FAST_LinType	Logical	RotFrame_x	{:}	-	-	"Whether corresponding continuous state is in rotating frame"
-typedef	^	FAST_LinType	Logical	RotFrame_z	{:}	-	-	"Whether corresponding constraint state is in rotating frame"
-typedef	^	FAST_LinType	IntKi 	DerivOrder_x	{:}	-	-	"Derivative order for continuous states"
-typedef	^	FAST_LinType	IntKi	SizeLin	{3}	-	-	"sizes of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states"	-
-typedef	^	FAST_LinType	IntKi	LinStartIndx	{3}	-	-	"the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states"	-
-typedef	^	FAST_LinType	IntKi	NumOutputs	-	-	-	"number of WriteOutputs in each linearized module"	-
-
-# ..... FAST_ModLinType data (for output) ...........................................................................................
-typedef	^	FAST_ModLinType	FAST_LinType	Instance	{:}	-	-	"Linearization data for each module instance (e.g., 3 blades for BD)"
-
 # ..... FAST_LinFileType data .......................................................................................................
-typedef	FAST	FAST_LinFileType	FAST_ModLinType	Modules	{NumModules}	-	-	"Linearization data for each module"
-typedef	^	FAST_LinFileType	FAST_LinType	Glue	-	-	-	"Linearization data for the glue code (coupled system)"
 typedef	^	FAST_LinFileType	ReKi	RotSpeed	-	-	-	"Rotor azimuth angular speed"	rad/s
 typedef	^	FAST_LinFileType	ReKi	Azimuth	-	-	-	"Rotor azimuth position"	rad
 typedef	^	FAST_LinFileType	ReKi	WindSpeed	-	-	-	"Wind speed at reference height"	m/s
-
 
 # ..... FAST_MiscLinType data .......................................................................................................
 typedef  ^  FAST_MiscLinType  DbKi     LinTimes       {:} -  -  "List of times at which to linearize" s
@@ -536,110 +491,6 @@ typedef	^	^	Orca_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	Orca_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
-# ..... FAST_ModuleMapType data .......................................................................................................
-# ! Data structures for mapping and coupling the various modules together
-# ED <-> BD
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_BD_P	{:}	-	-	"Map ElastoDyn BladeRootMotion meshes to BeamDyn RootMotion point meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	BD_P_2_ED_P	{:}	-	-	"Map BeamDyn ReactionForce loads point meshes to ElastoDyn HubPtLoad point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_BD_P_Hub	{:}	-	-	"ElastoDyn hub to BeamDyn for hub orientation necessary for pitch actuator"
-# ED/SD <-> HD
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_HD_PRP_P	-	-	-	"Map ElastoDyn PlatformPtMesh to HydroDyn platform reference Point"
-typedef	^	FAST_ModuleMapType	MeshMapType	SubStructure_2_HD_W_P	-	-	-	"Map ElastoDyn PlatformPtMesh or SubDyn y2Mesh to HydroDyn WAMIT Point"
-typedef	^	FAST_ModuleMapType	MeshMapType	HD_W_P_2_SubStructure	-	-	-	"Map HydroDyn WAMIT Point from y%WAMITMesh to ElastoDyn PlatformPtMesh or SD LMesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SubStructure_2_HD_M_P	-	-	-	"Map ElastoDyn PlatformPtMesh or SubDyn y2Mesh to HydroDyn Morison Point"
-typedef	^	FAST_ModuleMapType	MeshMapType	HD_M_P_2_SubStructure	-	-	-	"Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh or SD LMesh"
-# Structure (ED, SD, ExtPtfm) <-> Mooring (MAP, FEAM, MoorDyn, OrcaFlex)
-typedef	^	FAST_ModuleMapType	MeshMapType	Structure_2_Mooring	-	-	-	"Map structural SD (y3Mesh)/ED to MAP/FEAM/MoorDyn/OrcaFlex point mesh" "Motions"
-typedef	^	FAST_ModuleMapType	MeshMapType	Mooring_2_Structure	-	-	-	"Map FEAM/MAP/MoorDyn/OrcaFlex mesh to SD (LMesh)/ED (PlatformPtMesh)/ExtPtfm mesh" "Loads"
-# ED <-> SD or User-Platform (ExtPtfm_MCKF)
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SD_TP	-	-	-	"Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SD_TP_2_ED_P	-	-	-	"Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh"
-# ED/BD <-> SrvD/StC
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_NStC_P_N	{:}	-	-	"Map ElastoDyn      nacelle point mesh to ServoDyn/NStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	NStC_P_2_ED_P_N	{:}	-	-	"Map ServoDyn/NStC  nacelle point mesh to ElastoDyn     point mesh on the nacelle"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_TStC_P_T	{:}	-	-	"Map ElastoDyn      tower   line2 mesh to ServoDyn/TStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	TStC_P_2_ED_P_T	{:}	-	-	"Map ServoDyn/TStC  tower   point mesh to ElastoDyn     point load mesh on the tower"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_BStC_P_B 	{:}{:}	-	-	"Map ElastoDyn blade line2 mesh to ServoDyn/BStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_ED_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to ElastoDyn point load mesh on the blade"
-typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BStC_P_B 	{:}{:}	-	-	"Map BeamDyn blade line2 mesh to ServoDyn/BStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_BD_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade"
-# ED/SD <-> SrvD/StC -- Platform TMD
-typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_SubStructure	{:}	-	-	"Map ServoDyn/SStC platform point mesh load   to SubDyn/ElastoDyn  point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SubStructure_2_SStC_P_P	{:}	-	-	"Map SubDyn y3mesh or ED platform mesh motion to ServoDyn/SStC point mesh"
-# ED --> SrvD -- PlatformPtMesh motion to SrvD%PtfmMotionMesh for passing to DLL
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	-   	-	-	"Map ElastoDyn/Simplified-ElastoDyn platform point mesh motion to ServoDyn      point mesh -- for passing to controller"
-# ED/BD/SED <-> AD (blades)
-typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_BDED_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BD_L	{:}	-	-	"Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_L_B	{:}	-	-	"Map Simplified-ElastoDyn BladeRoot point meshes to rigid AeroDyn BladeMotion line2 meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_R	{:}	-	-	"Map Simplified-ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_SED_P	{:}	-	-	"Map AeroDyn blade load output mesh to Simplified-ElastoDyn Hub point mesh"
-# ED <-> AD (nacelle, tower, hub, blade root, tailfin)
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_N	-	-	-	"Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_TF	-	-	-	"Map ElastoDyn TailFin CM point motion mesh to AeroDyn TailFin ref point motion mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_TF	-	-	-	"Map AeroDyn TailFin ref point load mesh to ElastoDyn TailFin CM point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_P_T	-	-	-	"Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
-# ED <-> ADsk (hub)
-typedef	^	FAST_ModuleMapType	MeshMapType	ADsk_P_2_ED_P_H	-	-	-	"Map AeroDisk point load mesh to ElastoDyn hub point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_ADsk_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh"
-# SED <-> AD (nacelle, tower, hub, blade root)
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_N	-	-	-	"Map Simplified-ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_L_2_AD_L_T	-	-	-	"Map Simplified-ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn TowerMotion line2 mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_H	-	-	-	"Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
-# SED <-> ADsk (hub)
-typedef	^	FAST_ModuleMapType	MeshMapType	ADsk_P_2_SED_P_H	-	-	-	"Map AeroDisk point load mesh to Simplfied-ElastoDyn hub point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_ADsk_P_H	-	-	-	"Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_H	-	-	-	"Map AeroDyn HubLoad point mesh to ElastoDyn HubPtLoad point mesh"
-# ED/BD <-> ExtLd (blades)
-typedef  ^  FAST_ModuleMapType   MeshMapType BDED_L_2_ExtLd_P_B  {:}  -  -  "Map ElastoDyn/BeamDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to ExtLoads point meshes"
-typedef  ^  FAST_ModuleMapType   MeshMapType ExtLd_P_2_BDED_B    {:}  -  -  "Map ExtLoads at points to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"
-# ED <-> ExtLd (tower, hub, blade root)
-typedef  ^  FAST_ModuleMapType   MeshMapType ED_L_2_ExtLd_P_T   -   -  -  "Map ElastoDyn TowerLn2Mesh line2 mesh to ExtLoads point mesh"
-typedef  ^  FAST_ModuleMapType   MeshMapType ExtLd_P_2_ED_P_T   -   -  -  "Map ExtLoads TowerLoad point mesh to ElastoDyn TowerPtLoads point mesh"
-typedef  ^  FAST_ModuleMapType   MeshMapType ED_P_2_ExtLd_P_R  {:}  -  -  "Map ElastoDyn BladeRootMotion point meshes to ExtLoads BladeRootMotion point meshes"
-typedef  ^  FAST_ModuleMapType   MeshMapType ED_P_2_ExtLd_P_H   -   -  -  "Map ElastoDyn HubPtMotion point mesh to ExtLoads HubMotion point mesh"
-typedef  ^  FAST_ModuleMapType   MeshMapType AD_L_2_ExtLd_B    {:}  -  -  "Map AeroDyn line loads on blades to ExtLoads point loads"
-typedef  ^  FAST_ModuleMapType   MeshMapType AD_L_2_ExtLd_T     -   -  -  "Map AeroDyn line loads on tower to ExtKoads point loads"
-# IceF <-> SD
-typedef	^	FAST_ModuleMapType	MeshMapType	IceF_P_2_SD_P	-	-	-	"Map IceFloe point mesh to SubDyn LMesh point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceF_P	-	-	-	"Map SubDyn y3Mesh point mesh to IceFloe point mesh"
-# IceD <-> SD
-typedef	^	FAST_ModuleMapType	MeshMapType	IceD_P_2_SD_P	{:}	-	-	"Map IceDyn point mesh to SubDyn LMesh point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceD_P	{:}	-	-	"Map SubDyn y3Mesh point mesh to IceDyn point mesh"
-# Stored Jacobians:
-typedef	^	FAST_ModuleMapType	ReKi	Jacobian_Opt1	{:}{:}	-	-	"Stored Jacobian in ED_HD_InputOutputSolve or FullOpt1_InputOutputSolve"
-typedef	^	FAST_ModuleMapType	Integer	Jacobian_pivot	{:}	-	-	"Pivot array used for LU decomposition of Jacobian_Opt1"
-typedef	^	FAST_ModuleMapType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"
-# Temporary copies of input meshes (stored here so we don't have to keep allocating/destroying them)
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_NacelleLoads	-	-	-	"copy of ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	SubstructureLoads_Tmp	-	-	-	"copy of substructure loads input mesh (ED or SD)"
-typedef	^	FAST_ModuleMapType	MeshType	SubstructureLoads_Tmp2	-	-	-	"copy of substructure loads input mesh (ED or SD, used only for temporary storage)"
-typedef	^	FAST_ModuleMapType	MeshType	PlatformLoads_Tmp	-	-	-	"copy of platform loads input mesh (ED)"
-typedef	^	FAST_ModuleMapType	MeshType	PlatformLoads_Tmp2	-	-	-	"copy of platform loads input mesh (ED, used only for temporary storage)"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_TowerPtloads	-	-	-	"copy of ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_BladePtLoads	{:}	-	-	"copy of ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_SD_TPMesh	-	-	-	"copy of SD input mesh"
-#typedef	^	FAST_ModuleMapType	MeshType	u_HD_M_LumpedMesh	-	-	-	"copy of HD input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_HD_M_Mesh	-	-	-	"copy of HD morison input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_HD_W_Mesh	-	-	-	"copy of HD wamit input mesh"
-#typedef	^	FAST_ModuleMapType	MeshType	u_HD_PRP_Mesh	-	-	-	"copy of HD PRP input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_HubPtLoad	-	-	-	"copy of  ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_HubPtLoad_2	-	-	-	"copy of  ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_BD_RootMotion	{:}	-	-	"copy of  BD input meshes"
-typedef	^	FAST_ModuleMapType	MeshType	y_BD_BldMotion_4Loads	{:}	-	-	"BD blade motion output at locations on DistrLoad input meshes"
-typedef	^	FAST_ModuleMapType	MeshType	u_BD_Distrload	{:}	-	-	"copy of BD DistrLoad input meshes"
-typedef	^	FAST_ModuleMapType	MeshType	u_Orca_PtfmMesh	-	-	-	"copy of Orca PtfmMesh input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_ExtPtfm_PtfmMesh	-	-	-	"copy of ExtPtfm_MCKF PtfmMesh input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_SED_HubPtLoad	-	-	-	"copy of  SED input mesh"
-#typedef	^	FAST_ModuleMapType	MeshType	u_FarmMD_CoupledLoads -	-	-	"FAST-internal copy of MoorDyn's CoupledLoads output mesh for use with shared moorings in FAST.Farm"
-# for steady-state solve (convert 1 blade to all blades)
-typedef	^	FAST_ModuleMapType	R8Ki	HubOrient	{:}{:}{:}	-	-	"Orientation matrix to translate results from blade 1 to remaining blades in aeromaps"	"(-)"
-
 # ..... FAST_ExternalInput data .......................................................................................................
 typedef	FAST	FAST_ExternInputType	ReKi	GenTrq	-	-	-	"generator torque input from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	ElecPwr	-	-	-	"electric power input from Simulink/Labview"
@@ -740,7 +591,6 @@ typedef	^	FAST_TurbineType	FAST_MiscVarType	m_FAST	-	-	-	"Miscellaneous variable
 typedef	^	FAST_TurbineType	Glue_ParameterType	p_Glue	-	-	-	"Parameters for the glue code"	-
 typedef	^	FAST_TurbineType	Glue_OutputFileType	y_Glue	-	-	-	"Output variables for the glue code"	-
 typedef	^	FAST_TurbineType	Glue_MiscVarType	m_Glue	-	-	-	"Miscellaneous variables"	-
-typedef	^	FAST_TurbineType	FAST_ModuleMapType	MeshMapData	-	-	-	"Data for mapping between modules"	-
 typedef	^	FAST_TurbineType	ElastoDyn_Data	ED	-	-	-	"Data for the ElastoDyn module"	-
 typedef	^	FAST_TurbineType	SED_Data	SED	-	-	-	"Data for the Simplified-ElastoDyn module"	-
 typedef	^	FAST_TurbineType	BeamDyn_Data	BD	-	-	-	"Data for the BeamDyn module"	-
