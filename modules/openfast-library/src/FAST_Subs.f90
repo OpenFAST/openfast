@@ -785,8 +785,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       ! Set pointer to flowfield -- I would prefer that we did this through the AD_Init, but AD_InitOut results are required for ExtInfw_Init
       IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtInfw%FlowField
-
-      write(*,*) "flowfield pointers", c_loc(AD%p%FlowField) , c_loc(Init%OutData_ExtInfw%FlowField)
    endif
 
 
