@@ -37,6 +37,8 @@ USE Waves2_Types
 USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SeaSt_u_WaveElev0                = -1      ! WaveElev0 Extended input DatLoc number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SeaSt_y_WaveElev0                = -2      ! WaveElev0 Extended output DatLoc number [-]
 ! =========  SeaSt_InputFile  =======
   TYPE, PUBLIC :: SeaSt_InputFile
     LOGICAL  :: EchoFlag = .false.      !< Echo the input file [-]
@@ -114,11 +116,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevVisY      !< Y locations of grid output [m,-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevVisGrid      !< Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second/third dimensions are the grid of points. [(m)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE SeaSt_InitOutputType
 ! =======================
 ! =========  SeaSt_ContinuousStateType  =======
@@ -140,36 +138,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SeaSt_OtherStateType
     REAL(R8Ki)  :: UnusedStates = 0.0_R8Ki      !< placeholder for states [-]
   END TYPE SeaSt_OtherStateType
-! =======================
-! =========  SeaSt_MiscVarType  =======
-  TYPE, PUBLIC :: SeaSt_MiscVarType
-    INTEGER(IntKi)  :: Decimate = 0_IntKi      !< The output decimation counter [-]
-    REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
-    INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< The last index used in the wave kinematics arrays, used to optimize interpolation [-]
-    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
-  END TYPE SeaSt_MiscVarType
-! =======================
-! =========  Jac_u_idxStarts  =======
-  TYPE, PUBLIC :: Jac_u_idxStarts
-    INTEGER(IntKi)  :: Extended = 1      !< Index to first point in u jacobian for Extended [-]
-  END TYPE Jac_u_idxStarts
-! =======================
-! =========  Jac_y_idxStarts  =======
-  TYPE, PUBLIC :: Jac_y_idxStarts
-    INTEGER(IntKi)  :: Extended = 1      !< Index to first point in y jacobian for Extended [-]
-    INTEGER(IntKi)  :: WrOuts = 2      !< Index to first point in y jacobian for WrOuts [-]
-  END TYPE Jac_y_idxStarts
-! =======================
-! =========  SeaSt_LinParams  =======
-  TYPE, PUBLIC :: SeaSt_LinParams
-    INTEGER(IntKi)  :: NumExtendedInputs = 1      !< number of extended inputs [-]
-    INTEGER(IntKi)  :: NumExtendedOutputs = 1      !< number of extended outputs [-]
-    TYPE(Jac_u_idxStarts)  :: Jac_u_idxStartList      !< Starting indices for all Jac_u components [-]
-    TYPE(Jac_y_idxStarts)  :: Jac_y_idxStartList      !< Starting indices for all Jac_y components [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
-    INTEGER(IntKi)  :: Jac_nu = 0_IntKi      !< number of inputs  in jacobian matrix [-]
-    INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
-  END TYPE SeaSt_LinParams
 ! =======================
 ! =========  SeaSt_ParameterType  =======
   TYPE, PUBLIC :: SeaSt_ParameterType
@@ -193,7 +161,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UnOutFile = 0_IntKi      !< File unit for the SeaState outputs [-]
     INTEGER(IntKi)  :: OutDec = 0_IntKi      !< Write every OutDec time steps [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Wave field [-]
-    TYPE(SeaSt_LinParams)  :: LinParams      !< Linearization parameters [-]
   END TYPE SeaSt_ParameterType
 ! =======================
 ! =========  SeaSt_InputType  =======
@@ -206,7 +173,22 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Outputs to be written to the output file(s) [-]
   END TYPE SeaSt_OutputType
 ! =======================
-CONTAINS
+! =========  SeaSt_MiscVarType  =======
+  TYPE, PUBLIC :: SeaSt_MiscVarType
+    INTEGER(IntKi)  :: Decimate = 0_IntKi      !< The output decimation counter [-]
+    REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
+    INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< The last index used in the wave kinematics arrays, used to optimize interpolation [-]
+    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
+    TYPE(SeaSt_InputType)  :: u_perturb      !< Input type for linearization perturbation [-]
+    TYPE(SeaSt_OutputType)  :: y_lin      !< Output type for linearization perturbation [-]
+  END TYPE SeaSt_MiscVarType
+! =======================
+   integer(IntKi), public, parameter :: SeaSt_x_UnusedStates             =   1 ! SeaSt%UnusedStates
+   integer(IntKi), public, parameter :: SeaSt_u_DummyInput               =   2 ! SeaSt%DummyInput
+   integer(IntKi), public, parameter :: SeaSt_y_WriteOutput              =   3 ! SeaSt%WriteOutput
+
+contains
 
 subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(SeaSt_InputFile), intent(in) :: SrcInputFileData
@@ -644,66 +626,9 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
       DstInitOutputData%WaveElevVisGrid = SrcInitOutputData%WaveElevVisGrid
    end if
    DstInitOutputData%WaveField => SrcInitOutputData%WaveField
-   if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
-      if (.not. allocated(DstInitOutputData%LinNames_y)) then
-         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   end if
-   if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
-      if (.not. allocated(DstInitOutputData%LinNames_u)) then
-         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
-      if (.not. allocated(DstInitOutputData%RotFrame_u)) then
-         allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
-      if (.not. allocated(DstInitOutputData%RotFrame_y)) then
-         allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   end if
-   if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
-      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
-         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   end if
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine SeaSt_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -733,21 +658,8 @@ subroutine SeaSt_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
       deallocate(InitOutputData%WaveElevVisGrid)
    end if
    nullify(InitOutputData%WaveField)
-   if (allocated(InitOutputData%LinNames_y)) then
-      deallocate(InitOutputData%LinNames_y)
-   end if
-   if (allocated(InitOutputData%LinNames_u)) then
-      deallocate(InitOutputData%LinNames_u)
-   end if
-   if (allocated(InitOutputData%RotFrame_u)) then
-      deallocate(InitOutputData%RotFrame_u)
-   end if
-   if (allocated(InitOutputData%RotFrame_y)) then
-      deallocate(InitOutputData%RotFrame_y)
-   end if
-   if (allocated(InitOutputData%IsLoad_u)) then
-      deallocate(InitOutputData%IsLoad_u)
-   end if
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SeaSt_PackInitOutput(RF, Indata)
@@ -770,11 +682,7 @@ subroutine SeaSt_PackInitOutput(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%IsLoad_u)
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -813,11 +721,7 @@ subroutine SeaSt_UnPackInitOutput(RF, OutData)
    else
       OutData%WaveField => null()
    end if
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine SeaSt_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -972,226 +876,6 @@ subroutine SeaSt_UnPackOtherState(RF, OutData)
    call RegUnpack(RF, OutData%UnusedStates); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine SeaSt_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(SeaSt_MiscVarType), intent(in) :: SrcMiscData
-   type(SeaSt_MiscVarType), intent(inout) :: DstMiscData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'SeaSt_CopyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstMiscData%Decimate = SrcMiscData%Decimate
-   DstMiscData%LastOutTime = SrcMiscData%LastOutTime
-   DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-end subroutine
-
-subroutine SeaSt_DestroyMisc(MiscData, ErrStat, ErrMsg)
-   type(SeaSt_MiscVarType), intent(inout) :: MiscData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'SeaSt_DestroyMisc'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-end subroutine
-
-subroutine SeaSt_PackMisc(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(SeaSt_MiscVarType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'SeaSt_PackMisc'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%Decimate)
-   call RegPack(RF, InData%LastOutTime)
-   call RegPack(RF, InData%LastIndWave)
-   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine SeaSt_UnPackMisc(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(SeaSt_MiscVarType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'SeaSt_UnPackMisc'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%Decimate); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
-end subroutine
-
-subroutine SeaSt_CopyJac_u_idxStarts(SrcJac_u_idxStartsData, DstJac_u_idxStartsData, CtrlCode, ErrStat, ErrMsg)
-   type(Jac_u_idxStarts), intent(in) :: SrcJac_u_idxStartsData
-   type(Jac_u_idxStarts), intent(inout) :: DstJac_u_idxStartsData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'SeaSt_CopyJac_u_idxStarts'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstJac_u_idxStartsData%Extended = SrcJac_u_idxStartsData%Extended
-end subroutine
-
-subroutine SeaSt_DestroyJac_u_idxStarts(Jac_u_idxStartsData, ErrStat, ErrMsg)
-   type(Jac_u_idxStarts), intent(inout) :: Jac_u_idxStartsData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'SeaSt_DestroyJac_u_idxStarts'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine SeaSt_PackJac_u_idxStarts(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(Jac_u_idxStarts), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'SeaSt_PackJac_u_idxStarts'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%Extended)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine SeaSt_UnPackJac_u_idxStarts(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(Jac_u_idxStarts), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'SeaSt_UnPackJac_u_idxStarts'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%Extended); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine SeaSt_CopyJac_y_idxStarts(SrcJac_y_idxStartsData, DstJac_y_idxStartsData, CtrlCode, ErrStat, ErrMsg)
-   type(Jac_y_idxStarts), intent(in) :: SrcJac_y_idxStartsData
-   type(Jac_y_idxStarts), intent(inout) :: DstJac_y_idxStartsData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'SeaSt_CopyJac_y_idxStarts'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstJac_y_idxStartsData%Extended = SrcJac_y_idxStartsData%Extended
-   DstJac_y_idxStartsData%WrOuts = SrcJac_y_idxStartsData%WrOuts
-end subroutine
-
-subroutine SeaSt_DestroyJac_y_idxStarts(Jac_y_idxStartsData, ErrStat, ErrMsg)
-   type(Jac_y_idxStarts), intent(inout) :: Jac_y_idxStartsData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'SeaSt_DestroyJac_y_idxStarts'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine SeaSt_PackJac_y_idxStarts(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(Jac_y_idxStarts), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'SeaSt_PackJac_y_idxStarts'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%Extended)
-   call RegPack(RF, InData%WrOuts)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine SeaSt_UnPackJac_y_idxStarts(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(Jac_y_idxStarts), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'SeaSt_UnPackJac_y_idxStarts'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%Extended); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WrOuts); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine SeaSt_CopyLinParams(SrcLinParamsData, DstLinParamsData, CtrlCode, ErrStat, ErrMsg)
-   type(SeaSt_LinParams), intent(in) :: SrcLinParamsData
-   type(SeaSt_LinParams), intent(inout) :: DstLinParamsData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'SeaSt_CopyLinParams'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstLinParamsData%NumExtendedInputs = SrcLinParamsData%NumExtendedInputs
-   DstLinParamsData%NumExtendedOutputs = SrcLinParamsData%NumExtendedOutputs
-   call SeaSt_CopyJac_u_idxStarts(SrcLinParamsData%Jac_u_idxStartList, DstLinParamsData%Jac_u_idxStartList, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SeaSt_CopyJac_y_idxStarts(SrcLinParamsData%Jac_y_idxStartList, DstLinParamsData%Jac_y_idxStartList, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcLinParamsData%du)) then
-      LB(1:1) = lbound(SrcLinParamsData%du)
-      UB(1:1) = ubound(SrcLinParamsData%du)
-      if (.not. allocated(DstLinParamsData%du)) then
-         allocate(DstLinParamsData%du(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinParamsData%du.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinParamsData%du = SrcLinParamsData%du
-   end if
-   DstLinParamsData%Jac_nu = SrcLinParamsData%Jac_nu
-   DstLinParamsData%Jac_ny = SrcLinParamsData%Jac_ny
-end subroutine
-
-subroutine SeaSt_DestroyLinParams(LinParamsData, ErrStat, ErrMsg)
-   type(SeaSt_LinParams), intent(inout) :: LinParamsData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'SeaSt_DestroyLinParams'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call SeaSt_DestroyJac_u_idxStarts(LinParamsData%Jac_u_idxStartList, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SeaSt_DestroyJac_y_idxStarts(LinParamsData%Jac_y_idxStartList, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(LinParamsData%du)) then
-      deallocate(LinParamsData%du)
-   end if
-end subroutine
-
-subroutine SeaSt_PackLinParams(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(SeaSt_LinParams), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'SeaSt_PackLinParams'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%NumExtendedInputs)
-   call RegPack(RF, InData%NumExtendedOutputs)
-   call SeaSt_PackJac_u_idxStarts(RF, InData%Jac_u_idxStartList) 
-   call SeaSt_PackJac_y_idxStarts(RF, InData%Jac_y_idxStartList) 
-   call RegPackAlloc(RF, InData%du)
-   call RegPack(RF, InData%Jac_nu)
-   call RegPack(RF, InData%Jac_ny)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine SeaSt_UnPackLinParams(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(SeaSt_LinParams), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'SeaSt_UnPackLinParams'
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%NumExtendedInputs); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumExtendedOutputs); if (RegCheckErr(RF, RoutineName)) return
-   call SeaSt_UnpackJac_u_idxStarts(RF, OutData%Jac_u_idxStartList) ! Jac_u_idxStartList 
-   call SeaSt_UnpackJac_y_idxStarts(RF, OutData%Jac_y_idxStartList) ! Jac_y_idxStartList 
-   call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_nu); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
 subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(SeaSt_ParameterType), intent(in) :: SrcParamData
    type(SeaSt_ParameterType), intent(inout) :: DstParamData
@@ -1306,9 +990,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end if
-   call SeaSt_CopyLinParams(SrcParamData%LinParams, DstParamData%LinParams, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine SeaSt_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1352,8 +1033,6 @@ subroutine SeaSt_DestroyParam(ParamData, ErrStat, ErrMsg)
       deallocate(ParamData%WaveField)
       ParamData%WaveField => null()
    end if
-   call SeaSt_DestroyLinParams(ParamData%LinParams, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SeaSt_PackParam(RF, Indata)
@@ -1398,7 +1077,6 @@ subroutine SeaSt_PackParam(RF, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
       end if
    end if
-   call SeaSt_PackLinParams(RF, InData%LinParams) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1462,7 +1140,6 @@ subroutine SeaSt_UnPackParam(RF, OutData)
    else
       OutData%WaveField => null()
    end if
-   call SeaSt_UnpackLinParams(RF, OutData%LinParams) ! LinParams 
 end subroutine
 
 subroutine SeaSt_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1559,5 +1236,296 @@ subroutine SeaSt_UnPackOutput(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+subroutine SeaSt_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_MiscVarType), intent(in) :: SrcMiscData
+   type(SeaSt_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstMiscData%Decimate = SrcMiscData%Decimate
+   DstMiscData%LastOutTime = SrcMiscData%LastOutTime
+   DstMiscData%LastIndWave = SrcMiscData%LastIndWave
+   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyInput(SrcMiscData%u_perturb, DstMiscData%u_perturb, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine SeaSt_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(SeaSt_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInput(MiscData%u_perturb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine SeaSt_PackMisc(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(SeaSt_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SeaSt_PackMisc'
+   if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%Decimate)
+   call RegPack(RF, InData%LastOutTime)
+   call RegPack(RF, InData%LastIndWave)
+   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
+   call SeaSt_PackInput(RF, InData%u_perturb) 
+   call SeaSt_PackOutput(RF, InData%y_lin) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine SeaSt_UnPackMisc(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(SeaSt_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SeaSt_UnPackMisc'
+   if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%Decimate); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%LastIndWave); if (RegCheckErr(RF, RoutineName)) return
+   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
+   call SeaSt_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
+   call SeaSt_UnpackOutput(RF, OutData%y_lin) ! y_lin 
+end subroutine
+
+function SeaSt_InputMeshPointer(u, DL) result(Mesh)
+   type(SeaSt_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function SeaSt_OutputMeshPointer(y, DL) result(Mesh)
+   type(SeaSt_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine SeaSt_VarsPackContState(Vars, x, ValAry)
+   type(SeaSt_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call SeaSt_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine SeaSt_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SeaSt_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_x_UnusedStates)
+         VarVals(1) = x%UnusedStates                                          ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SeaSt_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SeaSt_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call SeaSt_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine SeaSt_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SeaSt_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_x_UnusedStates)
+         x%UnusedStates = VarVals(1)                                          ! Scalar
+      end select
+   end associate
+end subroutine
+
+function SeaSt_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SeaSt_x_UnusedStates)
+       Name = "x%UnusedStates"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine SeaSt_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(SeaSt_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call SeaSt_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine SeaSt_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SeaSt_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_x_UnusedStates)
+         VarVals(1) = x%UnusedStates                                          ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SeaSt_VarsPackInput(Vars, u, ValAry)
+   type(SeaSt_InputType), intent(in)       :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call SeaSt_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine SeaSt_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SeaSt_InputType), intent(in)       :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_u_DummyInput)
+         VarVals(1) = u%DummyInput                                            ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SeaSt_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SeaSt_InputType), intent(inout)    :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call SeaSt_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine SeaSt_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SeaSt_InputType), intent(inout)    :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_u_DummyInput)
+         u%DummyInput = VarVals(1)                                            ! Scalar
+      end select
+   end associate
+end subroutine
+
+function SeaSt_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SeaSt_u_DummyInput)
+       Name = "u%DummyInput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine SeaSt_VarsPackOutput(Vars, y, ValAry)
+   type(SeaSt_OutputType), intent(in)      :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call SeaSt_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine SeaSt_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SeaSt_OutputType), intent(in)      :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SeaSt_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SeaSt_OutputType), intent(inout)   :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call SeaSt_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine SeaSt_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SeaSt_OutputType), intent(inout)   :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SeaSt_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function SeaSt_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SeaSt_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE SeaState_Types
+
 !ENDOFREGISTRYGENERATEDFILE

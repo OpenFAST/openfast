@@ -36,7 +36,7 @@ import pass_fail
 from errorPlotting import exportCaseSummary
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
+excludeExt=['.ech','.yaml','.sum','.log']
 
 ##### Main program
 
@@ -125,7 +125,8 @@ if not os.path.isdir(dst):
 
 # create the local output directory if it does not already exist
 if not os.path.isdir(testBuildDirectory):
-    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, 
+                 renameExtDict={'.out':'.ref.out', '.outb':'.ref.outb'})
 
 caseName='FAST.Farm' # for ease of comparison
 

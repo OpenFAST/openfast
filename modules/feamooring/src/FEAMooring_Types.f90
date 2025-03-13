@@ -86,6 +86,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType)  :: Vars      !< Pointer to module variables [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LAnchxi      !< Anchor coordinate [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LAnchyi      !< Anchor coordinate [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LAnchzi      !< Anchor coordinate [-]
@@ -128,6 +129,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  FEAM_MiscVarType  =======
   TYPE, PUBLIC :: FEAM_MiscVarType
+    TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GLF      !< Global forcing matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: GLK      !< Global stiffness matrix [-]
     REAL(ReKi) , DIMENSION(1:15,1:15)  :: EMASS = 0.0_ReKi      !< Line element mass [-]
@@ -223,7 +225,15 @@ IMPLICIT NONE
     TYPE(MeshType)  :: LineMeshPosition      !< Meshed output data [-]
   END TYPE FEAM_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: FEAM_x_GLU                       =   1 ! FEAM%GLU
+   integer(IntKi), public, parameter :: FEAM_x_GLDU                      =   2 ! FEAM%GLDU
+   integer(IntKi), public, parameter :: FEAM_u_HydroForceLineMesh        =   3 ! FEAM%HydroForceLineMesh
+   integer(IntKi), public, parameter :: FEAM_u_PtFairleadDisplacement    =   4 ! FEAM%PtFairleadDisplacement
+   integer(IntKi), public, parameter :: FEAM_y_WriteOutput               =   5 ! FEAM%WriteOutput
+   integer(IntKi), public, parameter :: FEAM_y_PtFairleadLoad            =   6 ! FEAM%PtFairleadLoad
+   integer(IntKi), public, parameter :: FEAM_y_LineMeshPosition          =   7 ! FEAM%LineMeshPosition
+
+contains
 
 subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(FEAM_InputFile), intent(in) :: SrcInputFileData
@@ -758,6 +768,9 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%LAnchxi)) then
       LB(1:1) = lbound(SrcInitOutputData%LAnchxi)
       UB(1:1) = ubound(SrcInitOutputData%LAnchxi)
@@ -849,6 +862,8 @@ subroutine FEAM_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%LAnchxi)) then
       deallocate(InitOutputData%LAnchxi)
    end if
@@ -877,6 +892,7 @@ subroutine FEAM_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    call RegPackAlloc(RF, InData%LAnchxi)
    call RegPackAlloc(RF, InData%LAnchyi)
    call RegPackAlloc(RF, InData%LAnchzi)
@@ -897,6 +913,7 @@ subroutine FEAM_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call RegUnpackAlloc(RF, OutData%LAnchxi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LAnchyi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LAnchzi); if (RegCheckErr(RF, RoutineName)) return
@@ -1223,9 +1240,13 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*),    intent(  out) :: ErrMsg
    integer(B4Ki)                  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FEAM_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%GLF)) then
       LB(1:2) = lbound(SrcMiscData%GLF)
       UB(1:2) = ubound(SrcMiscData%GLF)
@@ -1366,9 +1387,13 @@ subroutine FEAM_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(FEAM_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FEAM_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%GLF)) then
       deallocate(MiscData%GLF)
    end if
@@ -1406,6 +1431,7 @@ subroutine FEAM_PackMisc(RF, Indata)
    type(FEAM_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FEAM_PackMisc'
    if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call RegPackAlloc(RF, InData%GLF)
    call RegPackAlloc(RF, InData%GLK)
    call RegPack(RF, InData%EMASS)
@@ -1441,6 +1467,7 @@ subroutine FEAM_UnPackMisc(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call RegUnpackAlloc(RF, OutData%GLF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%GLK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%EMASS); if (RegCheckErr(RF, RoutineName)) return
@@ -2410,5 +2437,254 @@ SUBROUTINE FEAM_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
    CALL MeshExtrapInterp2(y1%LineMeshPosition, y2%LineMeshPosition, y3%LineMeshPosition, tin, y_out%LineMeshPosition, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
+
+function FEAM_InputMeshPointer(u, DL) result(Mesh)
+   type(FEAM_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (FEAM_u_HydroForceLineMesh)
+       Mesh => u%HydroForceLineMesh
+   case (FEAM_u_PtFairleadDisplacement)
+       Mesh => u%PtFairleadDisplacement
+   end select
+end function
+
+function FEAM_OutputMeshPointer(y, DL) result(Mesh)
+   type(FEAM_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (FEAM_y_PtFairleadLoad)
+       Mesh => y%PtFairleadLoad
+   case (FEAM_y_LineMeshPosition)
+       Mesh => y%LineMeshPosition
+   end select
+end function
+
+subroutine FEAM_VarsPackContState(Vars, x, ValAry)
+   type(FEAM_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FEAM_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine FEAM_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FEAM_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FEAM_x_GLU)
+         VarVals = x%GLU(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (FEAM_x_GLDU)
+         VarVals = x%GLDU(V%iLB:V%iUB,V%j)                                    ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FEAM_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FEAM_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FEAM_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine FEAM_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FEAM_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FEAM_x_GLU)
+         x%GLU(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (FEAM_x_GLDU)
+         x%GLDU(V%iLB:V%iUB, V%j) = VarVals                                   ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function FEAM_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FEAM_x_GLU)
+       Name = "x%GLU"
+   case (FEAM_x_GLDU)
+       Name = "x%GLDU"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine FEAM_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(FEAM_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FEAM_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine FEAM_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FEAM_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FEAM_x_GLU)
+         VarVals = x%GLU(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (FEAM_x_GLDU)
+         VarVals = x%GLDU(V%iLB:V%iUB,V%j)                                    ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FEAM_VarsPackInput(Vars, u, ValAry)
+   type(FEAM_InputType), intent(in)        :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call FEAM_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine FEAM_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FEAM_InputType), intent(in)        :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FEAM_u_HydroForceLineMesh)
+         call MV_PackMesh(V, u%HydroForceLineMesh, ValAry)                    ! Mesh
+      case (FEAM_u_PtFairleadDisplacement)
+         call MV_PackMesh(V, u%PtFairleadDisplacement, ValAry)                ! Mesh
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FEAM_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FEAM_InputType), intent(inout)     :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call FEAM_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine FEAM_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FEAM_InputType), intent(inout)     :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FEAM_u_HydroForceLineMesh)
+         call MV_UnpackMesh(V, ValAry, u%HydroForceLineMesh)                  ! Mesh
+      case (FEAM_u_PtFairleadDisplacement)
+         call MV_UnpackMesh(V, ValAry, u%PtFairleadDisplacement)              ! Mesh
+      end select
+   end associate
+end subroutine
+
+function FEAM_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FEAM_u_HydroForceLineMesh)
+       Name = "u%HydroForceLineMesh"
+   case (FEAM_u_PtFairleadDisplacement)
+       Name = "u%PtFairleadDisplacement"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine FEAM_VarsPackOutput(Vars, y, ValAry)
+   type(FEAM_OutputType), intent(in)       :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call FEAM_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine FEAM_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FEAM_OutputType), intent(in)       :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FEAM_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (FEAM_y_PtFairleadLoad)
+         call MV_PackMesh(V, y%PtFairleadLoad, ValAry)                        ! Mesh
+      case (FEAM_y_LineMeshPosition)
+         call MV_PackMesh(V, y%LineMeshPosition, ValAry)                      ! Mesh
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FEAM_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FEAM_OutputType), intent(inout)    :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call FEAM_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine FEAM_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FEAM_OutputType), intent(inout)    :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FEAM_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (FEAM_y_PtFairleadLoad)
+         call MV_UnpackMesh(V, ValAry, y%PtFairleadLoad)                      ! Mesh
+      case (FEAM_y_LineMeshPosition)
+         call MV_UnpackMesh(V, ValAry, y%LineMeshPosition)                    ! Mesh
+      end select
+   end associate
+end subroutine
+
+function FEAM_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FEAM_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case (FEAM_y_PtFairleadLoad)
+       Name = "y%PtFairleadLoad"
+   case (FEAM_y_LineMeshPosition)
+       Name = "y%LineMeshPosition"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE FEAMooring_Types
+
 !ENDOFREGISTRYGENERATEDFILE

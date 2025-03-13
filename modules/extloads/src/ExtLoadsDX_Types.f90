@@ -117,7 +117,16 @@ IMPLICIT NONE
     REAL(KIND=C_DOUBLE) , DIMENSION(:), POINTER  :: bldLd => NULL()      !< Loads on all blades - Externally supplied [-]
   END TYPE ExtLdDX_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: ExtLdDX_u_twrDef                 =   1 ! ExtLdDX%twrDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_bldDef                 =   2 ! ExtLdDX%bldDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_hubDef                 =   3 ! ExtLdDX%hubDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_nacDef                 =   4 ! ExtLdDX%nacDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_bldRootDef             =   5 ! ExtLdDX%bldRootDef
+   integer(IntKi), public, parameter :: ExtLdDX_u_bldPitch               =   6 ! ExtLdDX%bldPitch
+   integer(IntKi), public, parameter :: ExtLdDX_y_twrLd                  =   7 ! ExtLdDX%twrLd
+   integer(IntKi), public, parameter :: ExtLdDX_y_bldLd                  =   8 ! ExtLdDX%bldLd
+
+contains
 
 subroutine ExtLdDX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    type(ExtLdDX_InputType), intent(in) :: SrcInputData
@@ -1681,5 +1690,175 @@ SUBROUTINE ExtLdDX_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
       y_out%bldLd = a1*y1%bldLd + a2*y2%bldLd + a3*y3%bldLd
    END IF ! check if allocated
 END SUBROUTINE
+
+function ExtLdDX_InputMeshPointer(u, DL) result(Mesh)
+   type(ExtLdDX_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function ExtLdDX_OutputMeshPointer(y, DL) result(Mesh)
+   type(ExtLdDX_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine ExtLdDX_VarsPackInput(Vars, u, ValAry)
+   type(ExtLdDX_InputType), intent(in)     :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call ExtLdDX_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine ExtLdDX_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtLdDX_InputType), intent(in)     :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLdDX_u_twrDef)
+         VarVals = u%twrDef(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (ExtLdDX_u_bldDef)
+         VarVals = u%bldDef(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (ExtLdDX_u_hubDef)
+         VarVals = u%hubDef(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (ExtLdDX_u_nacDef)
+         VarVals = u%nacDef(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (ExtLdDX_u_bldRootDef)
+         VarVals = u%bldRootDef(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case (ExtLdDX_u_bldPitch)
+         VarVals = u%bldPitch(V%iLB:V%iUB)                                    ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtLdDX_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ExtLdDX_InputType), intent(inout)  :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call ExtLdDX_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine ExtLdDX_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtLdDX_InputType), intent(inout)  :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLdDX_u_twrDef)
+         u%twrDef(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (ExtLdDX_u_bldDef)
+         u%bldDef(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (ExtLdDX_u_hubDef)
+         u%hubDef(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (ExtLdDX_u_nacDef)
+         u%nacDef(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (ExtLdDX_u_bldRootDef)
+         u%bldRootDef(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      case (ExtLdDX_u_bldPitch)
+         u%bldPitch(V%iLB:V%iUB) = VarVals                                    ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function ExtLdDX_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtLdDX_u_twrDef)
+       Name = "u%twrDef"
+   case (ExtLdDX_u_bldDef)
+       Name = "u%bldDef"
+   case (ExtLdDX_u_hubDef)
+       Name = "u%hubDef"
+   case (ExtLdDX_u_nacDef)
+       Name = "u%nacDef"
+   case (ExtLdDX_u_bldRootDef)
+       Name = "u%bldRootDef"
+   case (ExtLdDX_u_bldPitch)
+       Name = "u%bldPitch"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine ExtLdDX_VarsPackOutput(Vars, y, ValAry)
+   type(ExtLdDX_OutputType), intent(in)    :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call ExtLdDX_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine ExtLdDX_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(ExtLdDX_OutputType), intent(in)    :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLdDX_y_twrLd)
+         VarVals = y%twrLd(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case (ExtLdDX_y_bldLd)
+         VarVals = y%bldLd(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine ExtLdDX_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(ExtLdDX_OutputType), intent(inout) :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call ExtLdDX_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine ExtLdDX_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(ExtLdDX_OutputType), intent(inout) :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (ExtLdDX_y_twrLd)
+         y%twrLd(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      case (ExtLdDX_y_bldLd)
+         y%bldLd(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function ExtLdDX_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (ExtLdDX_y_twrLd)
+       Name = "y%twrLd"
+   case (ExtLdDX_y_bldLd)
+       Name = "y%bldLd"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE ExtLoadsDX_Types
+
 !ENDOFREGISTRYGENERATEDFILE

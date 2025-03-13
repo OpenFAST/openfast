@@ -76,7 +76,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
   END TYPE Waves_InitOutputType
 ! =======================
-CONTAINS
+
+contains
 
 subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(Waves_InitInputType), intent(in) :: SrcInitInputData
@@ -334,5 +335,7 @@ subroutine Waves_UnPackInitOutput(RF, OutData)
    call RegUnpack(RF, OutData%WaveNDir); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveTMax); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE Waves_Types
+
 !ENDOFREGISTRYGENERATEDFILE

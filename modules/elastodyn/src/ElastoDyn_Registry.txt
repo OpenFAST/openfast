@@ -14,7 +14,7 @@ include	Registry_NWTC_Library.txt
 
 # ElastoDyn Constants
 param	ElastoDyn/ED	-	IntKi	ED_NMX	-	4	-	"Used in updating predictor-corrector values (size of state history)"	-
-
+param	^           	-	IntKi	ED_u_BlPitchComC	-	-1	-	"DatLoc number for collective blade pitch extended input"	-
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -49,15 +49,8 @@ typedef	^	InitOutputType	R8Ki	TwrBaseOrient	{3}{3}	-	-	"initial orientation of t
 typedef	^	InitOutputType	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
 typedef	^	InitOutputType	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/s
 typedef	^	InitOutputType	LOGICAL	isFixed_GenDOF	-	-	-	"whether the generator is fixed or free" -
-typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
-typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_x	{:}	-	-	"Names of the continuous states used in linearization"	-
-typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
-typedef	^	InitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
-typedef	^	InitOutputType	LOGICAL	RotFrame_x	{:}	-	-	"Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
-typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
-typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
-typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef	^	InitOutputType	IntKi	GearBox_index	-	-	-	"Index to gearbox rotation in state array (for steady-state calculations)"   -
+typedef	^	InitOutputType	ModVarsType	Vars	-	-	-	"Module Variables"
 
 # ..... Blade Input file data ...........................................................................................................
 typedef	ElastoDyn/ED	BladeInputData	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
@@ -537,40 +530,10 @@ typedef ^       OtherStateType  ReKi    YawFriMfp     -       -       -       "Y
 typedef ^       OtherStateType  R8Ki    OmegaTn -       -       -       "Yaw rate at t_n used to calculate friction torque and yaw rate at t_n+1"       rad/s
 typedef ^       OtherStateType  R8Ki    OmegaDotTn      -       -       -       "Yaw acceleration at t_n used to calculate friction torque and yaw rate at t_n+1"       rad/s^2
 
-# ..... Misc Vars ................................................................................................................
-typedef	^	MiscVarType	ED_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
-typedef	^	MiscVarType	ED_RtHndSide	RtHS	-	-	-	"Values used in calculating the right-hand-side RtHS (and outputs)"
-typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
-typedef	^	MiscVarType	R8Ki	AugMat	{:}{:}	-	-	"The augmented matrix used for the solution of the QD2T()s"
-typedef	^	MiscVarType	R8Ki	AugMat_factor	{:}{:}	-	-	"factored version of AugMat matrix"
-typedef	^	MiscVarType	R8Ki	SolnVec	{:}	-	-	"b in the equation Ax=b (last column of AugMat)"
-typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAPACK factorization"
-typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
-typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
-typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
-typedef ^       MiscVarType     ReKi    OgnlYawRow      {:}     -       -       "Original DOF_Yaw row in AugMat"        -
-typedef ^       MiscVarType     ReKi    FrcONcRt        3       -       -       "Force acting on yaw bearing including inertial contributions"     N
-typedef ^       MiscVarType     ReKi    MomONcRt        3       -       -       "Moment acting on yaw bearing including inertial contributions"    N-m
-typedef ^       MiscVarType     ReKi    YawFriMz      -       -       -       "External loading on yaw bearing not including inertial contributions"  N-m
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef	^	Jac_u_idxStarts	IntKi	BladeLoad	-	1	-	"Index to first point in y jacobian for BladeLoad" -
-typedef	^	Jac_u_idxStarts	IntKi	PlatformLoad	-	1	-	"Index to first point in y jacobian for PlatformLoad" -
-typedef	^	Jac_u_idxStarts	IntKi	TowerLoad	-	1	-	"Index to first point in y jacobian for TowerLoad" -
-typedef	^	Jac_u_idxStarts	IntKi	HubLoad	-	1	-	"Index to first point in y jacobian for HubLoad" -
-typedef	^	Jac_u_idxStarts	IntKi	NacelleLoad	-	1	-	"Index to first point in y jacobian for NacelleLoad" -
-typedef	^	Jac_u_idxStarts	IntKi	TFinLoad	-	1	-	"Index to first point in y jacobian for TFinLoad" -
-typedef	^	Jac_u_idxStarts	IntKi	BlPitchCom	-	1	-	"Index to first point in y jacobian for BlPitchCom" -
-typedef	^	Jac_y_idxStarts	IntKi	Blade	-	1	-	"Index to first point in u jacobian for Blade" -
-typedef	^	Jac_y_idxStarts	IntKi	Platform	-	1	-	"Index to first point in u jacobian for Platform" -
-typedef	^	Jac_y_idxStarts	IntKi	Tower	-	1	-	"Index to first point in u jacobian for Tower" -
-typedef	^	Jac_y_idxStarts	IntKi	Hub	-	1	-	"Index to first point in u jacobian for Hub" -
-typedef	^	Jac_y_idxStarts	IntKi	BladeRoot	-	1	-	"Index to first point in u jacobian for BladeRoot" -
-typedef	^	Jac_y_idxStarts	IntKi	Nacelle	-	1	-	"Index to first point in u jacobian for Nacelle" -
-typedef	^	Jac_y_idxStarts	IntKi	TFin	-	1	-	"Index to first point in u jacobian for TFin" -
-
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	DbKi	DT24	-	-	-	"=DT/24 (used in loose coupling)"	seconds
 typedef	^	ParameterType	IntKi	BldNodes	-	-	-	"Number of blade nodes used in the analysis"	-
@@ -806,8 +769,6 @@ typedef  ^  ParameterType  OutParmType BldNd_OutParam  {:} -  -  "Names and unit
 #typedef  ^  ParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
 typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
 
-typedef	^	ParameterType	Jac_u_idxStarts Jac_u_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
-typedef	^	ParameterType	Jac_y_idxStarts Jac_y_idxStartList	-	-	-	"Starting indices for all Jac_u compenents" -
 typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
 typedef	^	ParameterType	R8Ki	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	ParameterType	R8Ki	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
@@ -874,3 +835,24 @@ typedef	^	OutputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the l
 typedef	^	OutputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
 typedef	^	OutputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
 typedef	^	OutputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
+
+# ..... Misc Vars ................................................................................................................
+typedef	^	MiscVarType	ED_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
+typedef	^	MiscVarType	ED_RtHndSide	RtHS	-	-	-	"Values used in calculating the right-hand-side RtHS (and outputs)"
+typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
+typedef	^	MiscVarType	R8Ki	AugMat	{:}{:}	-	-	"The augmented matrix used for the solution of the QD2T()s"
+typedef	^	MiscVarType	R8Ki	AugMat_factor	{:}{:}	-	-	"factored version of AugMat matrix"
+typedef	^	MiscVarType	R8Ki	SolnVec	{:}	-	-	"b in the equation Ax=b (last column of AugMat)"
+typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAPACK factorization"
+typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
+typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
+typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
+typedef ^       MiscVarType     ReKi    OgnlYawRow      {:}     -       -       "Original DOF_Yaw row in AugMat"        -
+typedef ^       MiscVarType     ReKi    FrcONcRt        3       -       -       "Force acting on yaw bearing including inertial contributions"     N
+typedef ^       MiscVarType     ReKi    MomONcRt        3       -       -       "Moment acting on yaw bearing including inertial contributions"    N-m
+typedef ^       MiscVarType     ReKi    YawFriMz      -       -       -       "External loading on yaw bearing not including inertial contributions"  N-m
+typedef	^	MiscVarType	ModJacType	Jac	-	-	-   "Values corresponding to module variables"
+typedef	^	MiscVarType	ED_ContinuousStateType	x_perturb	-	-	-	""	-
+typedef	^	MiscVarType	ED_ContinuousStateType	dxdt_lin	-	-	-	""	-
+typedef	^	MiscVarType	ED_InputType	u_perturb	-	-	-	""	-
+typedef	^	MiscVarType	ED_OutputType	y_lin	-	-	-	""	-

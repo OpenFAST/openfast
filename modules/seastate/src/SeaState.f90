@@ -53,7 +53,9 @@ MODULE SeaState
    PUBLIC :: SeaSt_JacobianPContState           ! Jacobians dY/dx, dX/dx, dXd/dx, and dZ/dx
    PUBLIC :: SeaSt_JacobianPDiscState           ! Jacobians dY/dxd, dX/dxd, dXd/dxd, and dZ/dxd
    PUBLIC :: SeaSt_JacobianPConstrState         ! Jacobians dY/dz, dX/dz, dXd/dz, and dZ/dz
-   PUBLIC :: SeaSt_GetOP                        ! operating points u_op, y_op, x_op, dx_op, xd_op, and z_op
+
+   PUBLIC :: SeaSt_PackExtInputAry              ! Pack extended inputs
+   PUBLIC :: SeaSt_PackExtOutputAry             ! Pack extended outputs
   
    CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -334,13 +336,13 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             call SetErrStat( ErrID_Fatal, 'Constrained wave conditions cannot be used for linearization. Set ConstWaveMod=0.', ErrStat, ErrMsg, RoutineName )
          end if
 
-         ! set the Jacobian info if we don't have a fatal error
-         if (ErrStat < AbortErrLev) then
-            call SeaSt_Init_Jacobian(p, InitOut, ErrStat2, ErrMsg2)
-            if (Failed()) return
-         endif
       end if
 
+         ! Initialize module variables if we don't have a fatal error
+      if (ErrStat < AbortErrLev) then
+         call SeaSt_InitVars(InitOut%Vars, u, p, x, y, m, InitOut, InputFileData, InitInp%Linearize, ErrStat2, ErrMsg2)
+         if (Failed()) return
+      endif
 
          ! Destroy the local initialization data
       CALL CleanUp()
@@ -447,6 +449,81 @@ CONTAINS
    end subroutine SurfaceVisGenerate
 
 END SUBROUTINE SeaSt_Init
+
+subroutine SeaSt_InitVars(Vars, u, p, x, y, m, InitOut, InputFileData, Linearize, ErrStat, ErrMsg)
+   type(ModVarsType),               intent(out)    :: Vars           !< Module variables
+   type(SeaSt_InputType),           intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+   type(SeaSt_ParameterType),       intent(inout)  :: p              !< Parameters
+   type(SeaSt_ContinuousStateType), intent(inout)  :: x              !< Continuous state
+   type(SeaSt_OutputType),          intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
+   type(SeaSt_MiscVarType),         intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+   type(SeaSt_InitOutputType),      intent(inout)  :: InitOut        !< Output for initialization routine
+   type(SeaSt_InputFile),           intent(in)     :: InputFileData  !< Input file data
+   logical,                         intent(in)     :: Linearize      !< Flag to initialize linearization variables
+   integer(IntKi),                  intent(out)    :: ErrStat        !< Error status of the operation
+   character(*),                    intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter       :: RoutineName = 'SeaSt_InitVars'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+
+   integer(IntKi)                :: i, j, k
+   integer(IntKi), allocatable   :: BladeMeshFields(:)
+   real(R8Ki)                    :: MaxThrust, MaxTorque, ScaleLength
+   integer(IntKi)                :: Flags, Field
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------   
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   ! Extended input
+   call MV_AddVar(Vars%u, "WaveElev0", FieldScalar, DatLoc(SeaSt_u_WaveElev0), &
+                  Flags=VF_ExtLin, &
+                  Perturb=0.02_R8Ki * Pi / 180.0_R8Ki * max(1.0_R8Ki, real(p%WaveField%WtrDpth, R8Ki)), &
+                  LinNames=['Extended input: wave elevation at platform ref point, m'])
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   ! Extended output
+   call MV_AddVar(Vars%y, "WaveElev0", FieldScalar, DatLoc(SeaSt_y_WaveElev0), &
+                  Flags=VF_ExtLin, &
+                  LinNames=['Extended output: wave elevation at platform ref point, m'])
+
+   ! Output variables
+   call MV_AddVar(Vars%y, "WriteOutput", FieldScalar, DatLoc(SeaSt_y_WriteOutput), &
+                  Num=p%NumOuts, &
+                  Flags=VF_WriteOut, &
+                  LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Jacobian data
+   !----------------------------------------------------------------------------
+
+   call MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call SeaSt_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call SeaSt_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   function WriteOutputLinName(idx) result(name)
+      integer(IntKi), intent(in) :: idx
+      character(LinChanLen)      :: name
+      name = trim(InitOut%WriteOutputHdr(idx))//', '//trim(InitOut%WriteOutputUnt(idx))
+   end function
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AddArrays_4D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
    REAL(SiKi),                      INTENT(INOUT)  :: Array1(:,:,:,:)
@@ -668,12 +745,10 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       ! Compute the wave elevations at the requested output locations for this time.  Note that p%WaveElev has the second order added to it already.
       DO i = 1, p%NWaveElev
          positionXY = (/p%WaveElevxi(i),p%WaveElevyi(i)/)
-         WaveElev1(i) = WaveField_GetNodeWaveElev1( p%WaveField, m%WaveField_m, Time, positionXY, ErrStat2, ErrMsg2 )
+         zeta = WaveField_GetNodeTotalWaveElev(p%WaveField, m%WaveField_m, Time, positionXY, ErrStat2, ErrMsg2, Elev1=WaveElev1(i), Elev2=WaveElev2(i))
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         WaveElev2(i) = WaveField_GetNodeWaveElev2( p%WaveField, m%WaveField_m, Time, positionXY, ErrStat2, ErrMsg2 )
-           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         WaveElev(i)  = WaveElev1(i) + WaveElev2(i)
       END DO
+      WaveElev = WaveElev1 + WaveElev2
 
       ! Map calculated results into the AllOuts Array
       CALL SeaStOut_MapOutputs( p, WaveElev, WaveElev1, WaveElev2, WaveVel, WaveAcc, WaveAccMCF, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
@@ -735,102 +810,11 @@ END SUBROUTINE SeaSt_CalcConstrStateResidual
 
 
 
-!----------------------------------------------------------------------------------------------------------------------------------
-! Linearization routines
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Initialize Jacobian info for linearization (only u and y)
-subroutine SeaSt_Init_Jacobian(p, InitOut, ErrStat, ErrMsg)
-   type(SeaSt_ParameterType),          intent(inout)  :: p          !< Parameters
-   type(SeaSt_InitOutputType),         intent(inout)  :: InitOut     !< Output for initialization routine
-   integer(IntKi),                     intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                       intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-   integer(IntKi)          :: nu, ny      ! counters for number of u and y linearization terms
-   integer(IntKi)          :: i, idx      ! generic indexing
-   integer(IntKi)          :: ExtStart    ! start of Extended input/output
-   integer(IntKi)          :: ErrStat2
-   character(ErrMsgLen)    :: ErrMsg2
-   character(*), parameter :: RoutineName = 'SeaSt_Init_Jacobian'
-
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   !--------------------------
-   ! Init Jacobians for u
-   !--------------------------
-
-   ! One extended input (WaveElev0), and no regular inputs.  Starts at first index.
-   nu = 1
-   p%LinParams%NumExtendedInputs  = 1
-   ! Total number of inputs (including regular and extended inputs)
-   p%LinParams%Jac_nu = nu
-
-   ! Allocate storage for names, indexing, and perturbations
-   call AllocAry(InitOut%LinNames_u, nu, "LinNames_u",   ErrStat2, ErrMsg2);   if (Failed()) return
-   call AllocAry(InitOut%RotFrame_u, nu, "RotFrame_u",   ErrStat2, ErrMsg2);   if (Failed()) return
-   call AllocAry(InitOut%IsLoad_u,   nu, "IsLoad_u",     ErrStat2, ErrMsg2);   if (Failed()) return
-   call AllocAry(p%LinParams%du,     nu, "LinParams%du", ErrStat2, ErrMsg2);   if (Failed()) return
-
-   ! Step through list of inputs and save names.  No regular inputs, so we skip directly to the Extended input
-   ! WaveElev0 - extended input
-   ExtStart = 1
-   InitOut%LinNames_u(ExtStart) = 'Extended input: wave elevation at platform ref point, m'
-   InitOut%RotFrame_u(ExtStart) = .false.
-   InitOut%IsLoad_u(  ExtStart) = .false.
-
-   p%LinParams%Jac_u_idxStartList%Extended = ExtStart
-   p%LinParams%du(ExtStart) = 0.02_ReKi * Pi / 180.0_ReKi * max(1.0_ReKi, p%WaveField%WtrDpth)  ! TODO: check that this is the correct perturbation to use
-
-
-   !--------------------------
-   ! Init Jacobians for y
-   !--------------------------
-
-   ! No regular outputs, only the extended outputs and the WrOuts
-   p%LinParams%NumExtendedOutputs = 1
-   ExtStart = 1   ! Extended output is the first output
-   ny = 1         ! one extended output
-   p%LinParams%Jac_y_idxStartList%Extended = 1
-
-   ! Nunber of WrOuts (only if output to OpenFAST)
-   if ( p%OutSwtch /= 1 .and. allocated(InitOut%WriteOutputHdr) ) then
-      ny = ny + size(InitOut%WriteOutputHdr)
-   endif
-
-   ! start position for WrOuts (may be beyond ny)
-   p%LinParams%Jac_y_idxStartList%WrOuts = p%LinParams%Jac_y_idxStartList%Extended + p%LinParams%NumExtendedOutputs
-
-   ! Total number of outs (including regular outs and extended outs)
-   p%LinParams%Jac_ny = ny
-
-   ! allocate some things
-   call AllocAry(InitOut%LinNames_y, ny, "LinNames_y", ErrStat2, ErrMsg2);   if (Failed()) return;
-   call AllocAry(InitOut%RotFrame_y, ny, "RotFrame_y", ErrStat2, ErrMsg2);   if (Failed()) return;
-   InitOut%RotFrame_y = .false.  ! No outputs in rotating frame
-
-   ! Set names: no regular output, so start at extended output
-   InitOut%LinNames_y(ExtStart) = 'Extended output: wave elevation at platform ref point, m'
-
-   ! WrOuts names (only if output to OpenFAST)
-   if ( p%OutSwtch > 1 .and. allocated(InitOut%WriteOutputHdr) ) then
-      do i = 1,size(InitOut%WriteOutputHdr)
-         idx = p%LinParams%Jac_y_idxStartList%WrOuts - 1 + i   ! current index
-         InitOut%LinNames_y(idx) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
-      enddo
-   endif
-
-
-contains
-   logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function Failed
-end subroutine SeaSt_Init_Jacobian
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Linearization Jacobians dY/du, dX/du, dXd/du, and dZ/du
-subroutine SeaSt_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+subroutine SeaSt_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   type(ModVarsType),                  intent(in   )  :: Vars       !< Module variables
    real(DbKi),                         intent(in   )  :: t          !< Time in seconds at operating point
    type(SeaSt_InputType),              intent(inout)  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    type(SeaSt_ParameterType),          intent(in   )  :: p          !< Parameters
@@ -847,54 +831,47 @@ subroutine SeaSt_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, E
    real(R8Ki), allocatable, optional,  intent(inout)  :: dXddu(:,:) !< Partial derivatives of discrete state
    real(R8Ki), allocatable, optional,  intent(inout)  :: dZdu(:,:)  !< Partial derivatives of constraint state
 
+   character(*), parameter :: RoutineName = 'SeaSt_JacobianPInput'
    integer(IntKi)          :: idx_dY,idx_du,i
    integer(IntKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
-   character(*), parameter :: RoutineName = 'SeaSt_JacobianPInput'
+   integer(IntKi)          :: iVar_u_WaveElev0, iVar_y_WaveElev0
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   if ( present( dYdu ) ) then
-
-      ! If dYdu is allocated, make sure it is the correct size
-      if (allocated(dYdu)) then
-         if (size(dYdu,1) /= p%LinParams%Jac_ny .or. size(dYdu,2) /= p%LinParams%Jac_nu)  deallocate (dYdu)
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u)
+   if (present(dYdu)) then
+      
+      if (.not. allocated(dYdu)) then
+         call AllocAry(dYdu, m%Jac%Ny, m%Jac%Nu, 'dYdu', ErrStat2, ErrMsg2); if(Failed()) return
       endif
 
-      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-      !  -  inputs are extended inputs only
-      !  -  outputs are the extended outputs and the WriteOutput values
-      if (.not. ALLOCATED(dYdu)) then
-         call AllocAry( dYdu, p%LinParams%Jac_ny, p%LinParams%Jac_nu, 'dYdu', ErrStat2, ErrMsg2 )
-         if (Failed()) return
-      end if
-
+      ! Initialize Jacobian to zero
       dYdu = 0.0_R8Ki
 
-      ! Extended inputs to extended outputs (direct pass-through)
-      do i=1,min(p%LinParams%NumExtendedInputs,p%LinParams%NumExtendedOutputs)
-         idx_du = p%LinParams%Jac_u_idxStartList%Extended + i - 1
-         idx_dY = p%LinParams%Jac_y_idxStartList%Extended + i - 1
-         dYdu(idx_dY,idx_du) = 1.0_R8Ki
-      enddo
+      iVar_u_WaveElev0 = MV_FindVarDatLoc(Vars%u, DatLoc(SeaSt_u_WaveElev0))
+      iVar_y_WaveElev0 = MV_FindVarDatLoc(Vars%y, DatLoc(SeaSt_y_WaveElev0))
 
+      ! Extended input to extended output (direct pass-through)
+      if (iVar_u_WaveElev0 > 0 .and. iVar_y_WaveElev0 > 0) then
+         dYdu(Vars%y(iVar_y_WaveElev0)%iLoc(1), Vars%u(iVar_u_WaveElev0)%iLoc(1)) = 1.0_R8Ki
+      end if
+      
       ! It isn't possible to determine the relationship between the extended input and the WrOuts.  So we leave them all zero.
-
    endif
 
-
    ! No states or constraints, so deallocate any such matrices
-   if ( present( dXdu ) ) then
+   if (present(dXdu)) then
       if (allocated(dXdu)) deallocate(dXdu)
    endif
 
-   if ( present( dXddu ) ) then
+   if (present(dXddu)) then
       if (allocated(dXddu)) deallocate(dXddu)
    endif
 
-   if ( present( dZdu ) ) then
+   if (present(dZdu)) then
       if (allocated(dZdu)) deallocate(dZdu)
    endif
 
@@ -908,7 +885,8 @@ end subroutine SeaSt_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Linearization Jacobians dY/dx, dX/dx, dXd/dx, and dZ/dx
 !! No continuous states, so this doesn't do anything
-subroutine SeaSt_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+subroutine SeaSt_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
+   type(ModVarsType),                  intent(in   )  :: Vars       !< Module variables
    real(DbKi),                         intent(in   )  :: t          !< Time in seconds at operating point
    type(SeaSt_InputType),              intent(in   )  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    type(SeaSt_ParameterType),          intent(in   )  :: p          !< Parameters
@@ -949,7 +927,8 @@ end subroutine SeaSt_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Linearization Jacobians dY/dxd, dX/dxd, dXd/dxd, and dZ/dxd
 !! No discrete states, so this doesn't do anything
-subroutine SeaSt_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
+subroutine SeaSt_JacobianPDiscState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd)
+   type(ModVarsType),                  intent(in   )  :: Vars       !< Module variables
    real(DbKi),                         intent(in   )  :: t          !< Time in seconds at operating point
    type(SeaSt_InputType),              intent(in   )  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    type(SeaSt_ParameterType),          intent(in   )  :: p          !< Parameters
@@ -990,7 +969,8 @@ end subroutine SeaSt_JacobianPDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Linearization Jacobians dY/dz, dX/dz, dXd/dz, and dZ/dz
 !! No constraint states, so this doesn't do anything
-subroutine SeaSt_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+subroutine SeaSt_JacobianPConstrState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz)
+   type(ModVarsType),                  intent(in   )  :: Vars       !< Module variables
    real(DbKi),                         intent(in   )  :: t          !< Time in seconds at operating point
    type(SeaSt_InputType),              intent(in   )  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    type(SeaSt_ParameterType),          intent(in   )  :: p          !< Parameters
@@ -1028,79 +1008,43 @@ subroutine SeaSt_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrS
    ! endif
 end subroutine SeaSt_JacobianPConstrState
 
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Linearization operating points u_op, y_op, x_op, dx_op, xd_op, and z_op
-subroutine SeaSt_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
-   real(DbKi),                         intent(in   )  :: t          !< Time in seconds at operating point
-   type(SeaSt_InputType),              intent(in   )  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   type(SeaSt_ParameterType),          intent(in   )  :: p          !< Parameters
-   type(SeaSt_ContinuousStateType),    intent(in   )  :: x          !< Continuous states at operating point
-   type(SeaSt_DiscreteStateType),      intent(in   )  :: xd         !< Discrete states at operating point
-   type(SeaSt_ConstraintStateType),    intent(in   )  :: z          !< Constraint states at operating point
-   type(SeaSt_OtherStateType),         intent(in   )  :: OtherState !< Other states at operating point
-   type(SeaSt_OutputType),             intent(in   )  :: y          !< Output at operating point
-   type(SeaSt_MiscVarType),            intent(inout)  :: m          !< Misc/optimization variables
-   integer(IntKi),                     intent(  out)  :: ErrStat    !< Error status of the operation
-   character(*),                       intent(  out)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   real(ReKi), allocatable, optional,  intent(inout)  :: u_op(:)    !< values of linearized inputs
-   real(ReKi), allocatable, optional,  intent(inout)  :: y_op(:)    !< values of linearized outputs
-   real(ReKi), allocatable, optional,  intent(inout)  :: x_op(:)    !< values of linearized continuous states
-   real(ReKi), allocatable, optional,  intent(inout)  :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   real(ReKi), allocatable, optional,  intent(inout)  :: xd_op(:)   !< values of linearized discrete states
-   real(ReKi), allocatable, optional,  intent(inout)  :: z_op(:)    !< values of linearized constraint states
+subroutine SeaSt_PackExtInputAry(Vars, u, ValAry)
+   type(ModVarsType), intent(in)       :: Vars        !< Module variables
+   type(SeaSt_InputType), intent(in)   :: u           !< Inputs
+   real(R8Ki), intent(inout)           :: ValAry(:)
+   integer(IntKi)                      :: i
 
-   integer(IntKi)          :: idxStart, idxEnd
-   integer(IntKi)          :: ErrStat2
-   character(ErrMsgLen)    :: ErrMsg2
-   character(*), parameter :: RoutineName = 'SeaSt_GetOP'
+   ! Loop through Input variables
+   do i = 1, size(Vars%u)
+      associate (Var => Vars%u(i))
+         ! Select based on data location number
+         select case (Var%DL%Num)
+         case (SeaSt_u_WaveElev0)
+             ! WaveElev0 is zero to be consistent with linearization requirements
+            ValAry(Vars%u(i)%iLoc(1):Vars%u(i)%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
+   end do
+end subroutine
 
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ''
+subroutine SeaSt_PackExtOutputAry(Vars, y, ValAry)
+   type(ModVarsType), intent(in)       :: Vars        !< Module variables
+   type(SeaSt_OutputType), intent(in)  :: y           !< Outputs
+   real(R8Ki), intent(inout)           :: ValAry(:)
+   integer(IntKi)                      :: i
 
-
-   if ( present( u_op ) ) then
-      if (.not. allocated(u_op)) then
-         call AllocAry(u_op, p%LinParams%Jac_nu, 'u_op', ErrStat2, ErrMsg2)
-         if (Failed()) return
-      end if
-
-      ! no regular inputs, only extended input
-      u_op(p%LinParams%Jac_u_idxStartList%Extended) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
-      ! NOTE: if more extended inputs are added, place them here
-   end if
-
-   if ( present( y_op ) ) then
-      if (.not. allocated(y_op)) then
-         call AllocAry(y_op, p%LinParams%Jac_ny, 'y_op', ErrStat2, ErrMsg2)
-         if (Failed()) return
-      end if
-
-      ! no regular outputs, only extended output and WrOuts
-      y_op(p%LinParams%Jac_y_idxStartList%Extended) = 0.0_ReKi    ! WaveElev0 is zero to be consistent with linearization requirements
-      ! NOTE: if more extended inputs are added, place them here
-
-      ! WrOuts may not be sent to OpenFAST (y_op sized smaller if WrOuts not sent to OpenFAST)
-      if (p%LinParams%Jac_y_idxStartList%WrOuts <= p%LinParams%Jac_ny) then
-         idxStart = p%LinParams%Jac_y_idxStartList%WrOuts
-         idxEnd   = p%LinParams%Jac_y_idxStartList%WrOuts + p%NumOuts - 1
-         ! unnecessary array check to make me feel better about the potentially sloppy indexing
-         if (idxEnd > p%LinParams%Jac_ny) then
-            ErrStat2 = ErrID_Fatal; ErrMsg2 = "Error in the y_op sizing -- u_op not large enough for WrOuts"
-            if (Failed()) return
-         endif
-         ! copy over the returned outputs
-         y_op(idxStart:idxEnd) = y%WriteOutput(1:p%NumOuts)
-      endif
-   end if
-
-
-contains
-   logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function Failed
-end subroutine SeaSt_GetOP
+   ! Loop through output variables
+   do i = 1, size(Vars%y)
+      associate (Var => Vars%y(i))
+         ! Select based on data location number
+         select case (Var%DL%Num)
+         case (SeaSt_y_WaveElev0)
+             ! WaveElev0 is zero to be consistent with linearization requirements
+            ValAry(Vars%y(i)%iLoc(1):Vars%y(i)%iLoc(2)) = 0.0_R8Ki
+         end select
+      end associate
+   end do
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE SeaState

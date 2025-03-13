@@ -36,18 +36,24 @@ USE InflowWind_IO_Types
 USE Lidar_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Undef_WindNumber = 0      ! This is the code for an undefined WindFileType [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Steady_WindNumber = 1      ! Steady wind.  Calculated internally. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Uniform_WindNumber = 2      ! Uniform wind.  Formally known as a Hub-Height wind file. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: TSFF_WindNumber = 3      ! TurbSim full-field binary file. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_WindNumber = 4      ! Bladed style binary full-field file.  Includes native bladed format [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: HAWC_WindNumber = 5      ! HAWC wind file. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: User_WindNumber = 6      ! User defined wind. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_Shr_WindNumber = 7      ! Native Bladed binary full-field file. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: FDext_WindNumber = 8      ! 4D wind from external souce (i.e., FAST.Farm). [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Point_WindNumber = 9      ! 1D wind components from ExtInflow [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Highest_WindNumber = 9      ! Highest wind number supported. [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: IfW_NumPtsAvg = 144      ! Number of points averaged for rotor-average wind speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Undef_WindNumber                 = 0      ! This is the code for an undefined WindFileType [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Steady_WindNumber                = 1      ! Steady wind.  Calculated internally. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Uniform_WindNumber               = 2      ! Uniform wind.  Formally known as a Hub-Height wind file. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: TSFF_WindNumber                  = 3      ! TurbSim full-field binary file. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_WindNumber              = 4      ! Bladed style binary full-field file.  Includes native bladed format [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: HAWC_WindNumber                  = 5      ! HAWC wind file. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: User_WindNumber                  = 6      ! User defined wind. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_Shr_WindNumber          = 7      ! Native Bladed binary full-field file. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: FDext_WindNumber                 = 8      ! 4D wind from external souce (i.e., FAST.Farm). [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Point_WindNumber                 = 9      ! 1D wind components from ExtInflow [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Highest_WindNumber               = 9      ! Highest wind number supported. [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: IfW_NumPtsAvg                    = 144      ! Number of points averaged for rotor-average wind speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: InflowWind_u_HWindSpeed          = -1      ! DatLoc number for HWindSpeed extended input [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: InflowWind_u_PLExp               = -2      ! DatLoc number for PLExp extended input [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: InflowWind_u_PropagationDir      = -3      ! DatLoc number for PropagationDir extended input [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: InflowWind_y_HWindSpeed          = -4      ! DatLoc number for HWindSpeed extended output [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: InflowWind_y_PLExp               = -5      ! DatLoc number for PLExp extended output [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: InflowWind_y_PropagationDir      = -6      ! DatLoc number for PropagationDir extended output [-]
 ! =========  InflowWind_InputFile  =======
   TYPE, PUBLIC :: InflowWind_InputFile
     LOGICAL  :: EchoFlag = .false.      !< Echo the input file [-]
@@ -127,12 +133,8 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< Version information of InflowWind module [-]
     TYPE(WindFileDat)  :: WindFileInfo      !< Meta data from the wind file [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Flow field data to represent all wind types [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE InflowWind_InitOutputType
 ! =======================
 ! =========  InflowWind_ParameterType  =======
@@ -198,9 +200,30 @@ IMPLICIT NONE
     TYPE(InflowWind_OutputType)  :: y_Avg      !< outputs for computing rotor-averaged values [-]
     TYPE(InflowWind_InputType)  :: u_Hub      !< inputs for computing hub values [-]
     TYPE(InflowWind_OutputType)  :: y_Hub      !< outputs for computing hub values [-]
+    TYPE(ModJacType)  :: Jac      !< Values corresponding to module variables [-]
   END TYPE InflowWind_MiscVarType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: InflowWind_x_DummyContState      =   1 ! InflowWind%DummyContState
+   integer(IntKi), public, parameter :: InflowWind_u_PositionXYZ         =   2 ! InflowWind%PositionXYZ
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_PulseLidEl    =   3 ! InflowWind%lidar%PulseLidEl
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_PulseLidAz    =   4 ! InflowWind%lidar%PulseLidAz
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_HubDisplacementX =   5 ! InflowWind%lidar%HubDisplacementX
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_HubDisplacementY =   6 ! InflowWind%lidar%HubDisplacementY
+   integer(IntKi), public, parameter :: InflowWind_u_lidar_HubDisplacementZ =   7 ! InflowWind%lidar%HubDisplacementZ
+   integer(IntKi), public, parameter :: InflowWind_u_HubPosition         =   8 ! InflowWind%HubPosition
+   integer(IntKi), public, parameter :: InflowWind_u_HubOrientation      =   9 ! InflowWind%HubOrientation
+   integer(IntKi), public, parameter :: InflowWind_y_VelocityUVW         =  10 ! InflowWind%VelocityUVW
+   integer(IntKi), public, parameter :: InflowWind_y_AccelUVW            =  11 ! InflowWind%AccelUVW
+   integer(IntKi), public, parameter :: InflowWind_y_WriteOutput         =  12 ! InflowWind%WriteOutput
+   integer(IntKi), public, parameter :: InflowWind_y_DiskVel             =  13 ! InflowWind%DiskVel
+   integer(IntKi), public, parameter :: InflowWind_y_HubVel              =  14 ! InflowWind%HubVel
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_LidSpeed      =  15 ! InflowWind%lidar%LidSpeed
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_WtTrunc       =  16 ! InflowWind%lidar%WtTrunc
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_MsrPositionsX =  17 ! InflowWind%lidar%MsrPositionsX
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_MsrPositionsY =  18 ! InflowWind%lidar%MsrPositionsY
+   integer(IntKi), public, parameter :: InflowWind_y_lidar_MsrPositionsZ =  19 ! InflowWind%lidar%MsrPositionsZ
+
+contains
 
 subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(InflowWind_InputFile), intent(in) :: SrcInputFileData
@@ -639,67 +662,10 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
    call InflowWind_IO_CopyWindFileDat(SrcInitOutputData%WindFileInfo, DstInitOutputData%WindFileInfo, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
-      if (.not. allocated(DstInitOutputData%LinNames_y)) then
-         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   end if
-   if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
-      if (.not. allocated(DstInitOutputData%LinNames_u)) then
-         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
-      if (.not. allocated(DstInitOutputData%RotFrame_y)) then
-         allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
-      if (.not. allocated(DstInitOutputData%RotFrame_u)) then
-         allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   end if
-   if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
-      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
-         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   end if
    DstInitOutputData%FlowField => SrcInitOutputData%FlowField
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine InflowWind_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -721,22 +687,9 @@ subroutine InflowWind_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call InflowWind_IO_DestroyWindFileDat(InitOutputData%WindFileInfo, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InitOutputData%LinNames_y)) then
-      deallocate(InitOutputData%LinNames_y)
-   end if
-   if (allocated(InitOutputData%LinNames_u)) then
-      deallocate(InitOutputData%LinNames_u)
-   end if
-   if (allocated(InitOutputData%RotFrame_y)) then
-      deallocate(InitOutputData%RotFrame_y)
-   end if
-   if (allocated(InitOutputData%RotFrame_u)) then
-      deallocate(InitOutputData%RotFrame_u)
-   end if
-   if (allocated(InitOutputData%IsLoad_u)) then
-      deallocate(InitOutputData%IsLoad_u)
-   end if
    nullify(InitOutputData%FlowField)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_PackInitOutput(RF, Indata)
@@ -749,11 +702,6 @@ subroutine InflowWind_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call InflowWind_IO_PackWindFileDat(RF, InData%WindFileInfo) 
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%IsLoad_u)
    call RegPack(RF, associated(InData%FlowField))
    if (associated(InData%FlowField)) then
       call RegPackPointer(RF, c_loc(InData%FlowField), PtrInIndex)
@@ -761,6 +709,7 @@ subroutine InflowWind_PackInitOutput(RF, Indata)
          call IfW_FlowField_PackFlowFieldType(RF, InData%FlowField) 
       end if
    end if
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -778,11 +727,6 @@ subroutine InflowWind_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call InflowWind_IO_UnpackWindFileDat(RF, OutData%WindFileInfo) ! WindFileInfo 
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%FlowField)) deallocate(OutData%FlowField)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -801,6 +745,7 @@ subroutine InflowWind_UnPackInitOutput(RF, OutData)
    else
       OutData%FlowField => null()
    end if
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -1427,6 +1372,9 @@ subroutine InflowWind_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrM
    call InflowWind_CopyOutput(SrcMiscData%y_Hub, DstMiscData%y_Hub, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine InflowWind_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -1455,6 +1403,8 @@ subroutine InflowWind_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call InflowWind_DestroyOutput(MiscData%y_Hub, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_PackMisc(RF, Indata)
@@ -1469,6 +1419,7 @@ subroutine InflowWind_PackMisc(RF, Indata)
    call InflowWind_PackOutput(RF, InData%y_Avg) 
    call InflowWind_PackInput(RF, InData%u_Hub) 
    call InflowWind_PackOutput(RF, InData%y_Hub) 
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1487,6 +1438,7 @@ subroutine InflowWind_UnPackMisc(RF, OutData)
    call InflowWind_UnpackOutput(RF, OutData%y_Avg) ! y_Avg 
    call InflowWind_UnpackInput(RF, OutData%u_Hub) ! u_Hub 
    call InflowWind_UnpackOutput(RF, OutData%y_Hub) ! y_Hub 
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
 end subroutine
 
 subroutine InflowWind_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
@@ -1848,5 +1800,316 @@ SUBROUTINE InflowWind_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrS
    CALL Lidar_Output_ExtrapInterp2( y1%lidar, y2%lidar, y3%lidar, tin, y_out%lidar, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 END SUBROUTINE
+
+function InflowWind_InputMeshPointer(u, DL) result(Mesh)
+   type(InflowWind_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function InflowWind_OutputMeshPointer(y, DL) result(Mesh)
+   type(InflowWind_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine InflowWind_VarsPackContState(Vars, x, ValAry)
+   type(InflowWind_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call InflowWind_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine InflowWind_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(InflowWind_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_x_DummyContState)
+         VarVals(1) = x%DummyContState                                        ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine InflowWind_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(InflowWind_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call InflowWind_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine InflowWind_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(InflowWind_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_x_DummyContState)
+         x%DummyContState = VarVals(1)                                        ! Scalar
+      end select
+   end associate
+end subroutine
+
+function InflowWind_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (InflowWind_x_DummyContState)
+       Name = "x%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine InflowWind_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(InflowWind_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call InflowWind_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine InflowWind_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(InflowWind_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_x_DummyContState)
+         VarVals(1) = x%DummyContState                                        ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine InflowWind_VarsPackInput(Vars, u, ValAry)
+   type(InflowWind_InputType), intent(in)  :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call InflowWind_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine InflowWind_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(InflowWind_InputType), intent(in)  :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_u_PositionXYZ)
+         VarVals = u%PositionXYZ(V%iLB:V%iUB,V%j)                             ! Rank 2 Array
+      case (InflowWind_u_lidar_PulseLidEl)
+         VarVals(1) = u%lidar%PulseLidEl                                      ! Scalar
+      case (InflowWind_u_lidar_PulseLidAz)
+         VarVals(1) = u%lidar%PulseLidAz                                      ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementX)
+         VarVals(1) = u%lidar%HubDisplacementX                                ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementY)
+         VarVals(1) = u%lidar%HubDisplacementY                                ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementZ)
+         VarVals(1) = u%lidar%HubDisplacementZ                                ! Scalar
+      case (InflowWind_u_HubPosition)
+         VarVals = u%HubPosition(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (InflowWind_u_HubOrientation)
+         VarVals = u%HubOrientation(V%iLB:V%iUB,V%j)                          ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine InflowWind_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(InflowWind_InputType), intent(inout) :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call InflowWind_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine InflowWind_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(InflowWind_InputType), intent(inout) :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_u_PositionXYZ)
+         u%PositionXYZ(V%iLB:V%iUB, V%j) = VarVals                            ! Rank 2 Array
+      case (InflowWind_u_lidar_PulseLidEl)
+         u%lidar%PulseLidEl = VarVals(1)                                      ! Scalar
+      case (InflowWind_u_lidar_PulseLidAz)
+         u%lidar%PulseLidAz = VarVals(1)                                      ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementX)
+         u%lidar%HubDisplacementX = VarVals(1)                                ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementY)
+         u%lidar%HubDisplacementY = VarVals(1)                                ! Scalar
+      case (InflowWind_u_lidar_HubDisplacementZ)
+         u%lidar%HubDisplacementZ = VarVals(1)                                ! Scalar
+      case (InflowWind_u_HubPosition)
+         u%HubPosition(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (InflowWind_u_HubOrientation)
+         u%HubOrientation(V%iLB:V%iUB, V%j) = VarVals                         ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function InflowWind_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (InflowWind_u_PositionXYZ)
+       Name = "u%PositionXYZ"
+   case (InflowWind_u_lidar_PulseLidEl)
+       Name = "u%lidar%PulseLidEl"
+   case (InflowWind_u_lidar_PulseLidAz)
+       Name = "u%lidar%PulseLidAz"
+   case (InflowWind_u_lidar_HubDisplacementX)
+       Name = "u%lidar%HubDisplacementX"
+   case (InflowWind_u_lidar_HubDisplacementY)
+       Name = "u%lidar%HubDisplacementY"
+   case (InflowWind_u_lidar_HubDisplacementZ)
+       Name = "u%lidar%HubDisplacementZ"
+   case (InflowWind_u_HubPosition)
+       Name = "u%HubPosition"
+   case (InflowWind_u_HubOrientation)
+       Name = "u%HubOrientation"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine InflowWind_VarsPackOutput(Vars, y, ValAry)
+   type(InflowWind_OutputType), intent(in) :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call InflowWind_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine InflowWind_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(InflowWind_OutputType), intent(in) :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_y_VelocityUVW)
+         VarVals = y%VelocityUVW(V%iLB:V%iUB,V%j)                             ! Rank 2 Array
+      case (InflowWind_y_AccelUVW)
+         VarVals = y%AccelUVW(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (InflowWind_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case (InflowWind_y_DiskVel)
+         VarVals = y%DiskVel(V%iLB:V%iUB)                                     ! Rank 1 Array
+      case (InflowWind_y_HubVel)
+         VarVals = y%HubVel(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (InflowWind_y_lidar_LidSpeed)
+         VarVals = y%lidar%LidSpeed(V%iLB:V%iUB)                              ! Rank 1 Array
+      case (InflowWind_y_lidar_WtTrunc)
+         VarVals = y%lidar%WtTrunc(V%iLB:V%iUB)                               ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsX)
+         VarVals = y%lidar%MsrPositionsX(V%iLB:V%iUB)                         ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsY)
+         VarVals = y%lidar%MsrPositionsY(V%iLB:V%iUB)                         ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsZ)
+         VarVals = y%lidar%MsrPositionsZ(V%iLB:V%iUB)                         ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine InflowWind_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(InflowWind_OutputType), intent(inout) :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call InflowWind_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine InflowWind_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(InflowWind_OutputType), intent(inout) :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (InflowWind_y_VelocityUVW)
+         y%VelocityUVW(V%iLB:V%iUB, V%j) = VarVals                            ! Rank 2 Array
+      case (InflowWind_y_AccelUVW)
+         y%AccelUVW(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (InflowWind_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      case (InflowWind_y_DiskVel)
+         y%DiskVel(V%iLB:V%iUB) = VarVals                                     ! Rank 1 Array
+      case (InflowWind_y_HubVel)
+         y%HubVel(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (InflowWind_y_lidar_LidSpeed)
+         y%lidar%LidSpeed(V%iLB:V%iUB) = VarVals                              ! Rank 1 Array
+      case (InflowWind_y_lidar_WtTrunc)
+         y%lidar%WtTrunc(V%iLB:V%iUB) = VarVals                               ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsX)
+         y%lidar%MsrPositionsX(V%iLB:V%iUB) = VarVals                         ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsY)
+         y%lidar%MsrPositionsY(V%iLB:V%iUB) = VarVals                         ! Rank 1 Array
+      case (InflowWind_y_lidar_MsrPositionsZ)
+         y%lidar%MsrPositionsZ(V%iLB:V%iUB) = VarVals                         ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function InflowWind_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (InflowWind_y_VelocityUVW)
+       Name = "y%VelocityUVW"
+   case (InflowWind_y_AccelUVW)
+       Name = "y%AccelUVW"
+   case (InflowWind_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case (InflowWind_y_DiskVel)
+       Name = "y%DiskVel"
+   case (InflowWind_y_HubVel)
+       Name = "y%HubVel"
+   case (InflowWind_y_lidar_LidSpeed)
+       Name = "y%lidar%LidSpeed"
+   case (InflowWind_y_lidar_WtTrunc)
+       Name = "y%lidar%WtTrunc"
+   case (InflowWind_y_lidar_MsrPositionsX)
+       Name = "y%lidar%MsrPositionsX"
+   case (InflowWind_y_lidar_MsrPositionsY)
+       Name = "y%lidar%MsrPositionsY"
+   case (InflowWind_y_lidar_MsrPositionsZ)
+       Name = "y%lidar%MsrPositionsZ"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE InflowWind_Types
+
 !ENDOFREGISTRYGENERATEDFILE

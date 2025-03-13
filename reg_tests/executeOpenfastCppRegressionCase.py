@@ -29,7 +29,7 @@ from errorPlotting import exportCaseSummary
 import glob
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.sum','.log']
+excludeExt=['.ech','.sum','.log']
 
 ##### Main program
 
@@ -101,7 +101,8 @@ else:
             shutil.copy2(srcname, dstname)
 
 if not os.path.isdir(testBuildDirectory):
-    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt,
+                 renameExtDict={'.outb':'.ref.outb', '.out':'.ref.out'})
 
 ### Run openfast on the test case
 if not noExec:
@@ -124,7 +125,7 @@ if '_Restart' in caseName:
 
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, "5MW_Land_DLL_WTurb_cpp.outb")
-baselineOutFile = os.path.join(inputsDirectory, "5MW_Land_DLL_WTurb_cpp.outb.gold")
+baselineOutFile = os.path.join(inputsDirectory, "5MW_Land_DLL_WTurb_cpp.outb")
 
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)

@@ -42,16 +42,7 @@ typedef   ^         InitInputType LOGICAL         CompAeroMaps -   .FALSE. - "fl
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputHdr {:}  -   -   "Names of the output-to-file channels"   -
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   -   "Units of the output-to-file channels"   -
 typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
-typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
-#typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_z   {:}  -   -   "Names of the constraint states used in linearization" -
-typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -
-typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_u   {:}  -   -   "Names of the inputs used in linearization" -
-typedef   ^        InitOutputType LOGICAL               RotFrame_y   {:}  -   -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
-#typedef   ^        InitOutputType LOGICAL               RotFrame_z   {:}  -   -   "Flag that tells FAST/MBC3 if the constraint states used in linearization are in the rotating frame (not used for glue)" -
-typedef   ^        InitOutputType LOGICAL               RotFrame_x   {:}  -   -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)" -
-typedef   ^        InitOutputType LOGICAL               RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
-typedef   ^        InitOutputType LOGICAL               IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
-typedef   ^        InitOutputType IntKi                 DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
+typedef	  ^	       InitOutputType ModVarsType         Vars            -   -   -   "Module Variables"
 
 # ..... Blade Input file data........................................................................
 typedef   ^        BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
@@ -98,7 +89,6 @@ typedef   ^        BD_InputFile     ^       pitchC - - -     "Pitch actuator dam
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef   ^        BD_InputFile    Logical             Echo        -  - - "Echo" -
 typedef   ^        BD_InputFile    Logical             RotStates -  .TRUE. - "Orient states in rotating frame during linearization? (flag)" -
-typedef   ^        BD_InputFile    Logical             RelStates -  .FALSE. - "Define states relative to root motion during linearization? (flag)" -
 typedef   ^        BD_InputFile    Logical             tngt_stf_fd -  - - "Flag to compute tangent stifness matrix via finite difference" - 
 typedef   ^        BD_InputFile    Logical             tngt_stf_comp -  - - "Flag to compare finite differenced and analytical tangent stifness" -
 typedef   ^        BD_InputFile    IntKi               NNodeOuts   -  - - "Number of node outputs [0 - 9]"	-
@@ -241,14 +231,7 @@ typedef   ^        ParameterType    ^           QPtw_ShpDer_ShpDer_Jac {:}{:}{:}
 typedef   ^        ParameterType    ^           QPtw_Shp_Jac           {:}{:}{:}     - - "optimization variable: QPtw_Shp_Jac(idx_qp,i,nelem) = p%Shp(i,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
 typedef   ^        ParameterType    ^           QPtw_ShpDer            {:}{:}        - - "optimization variable: QPtw_ShpDer(idx_qp,i) = p%ShpDer(i,idx_qp)*p%QPtWeight(idx_qp)" -
 typedef   ^        ParameterType    ^           FEweight               {:}{:}        - - "weighting factors for integrating local sectional loads" -
-
-typedef   ^        ParameterType    Integer     Jac_u_indx             {:}{:}        - - "matrix to help fill/pack the u vector in computing the jacobian" -
-typedef   ^        ParameterType    R8Ki        du                     {:}           - - "vector that determines size of perturbation for u (inputs)"
-typedef   ^        ParameterType    R8Ki        dx                     {6}           - - "vector that determines size of perturbation for x (continuous states)"
-typedef   ^        ParameterType    Integer     Jac_ny                  -            - - "number of outputs in jacobian matrix" -
-typedef   ^        ParameterType    Integer     Jac_nx                  -            - - "half the number of continuous states in jacobian matrix" -
 typedef   ^        ParameterType    logical     RotStates               -            - - "Orient states in rotating frame during linearization? (flag)" -
-typedef   ^        ParameterType    Logical     RelStates               -            - - "Define states relative to root motion during linearization? (flag)" -
 typedef   ^        ParameterType    LOGICAL     CompAeroMaps            -   .FALSE.    - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
 
 
@@ -374,4 +357,8 @@ typedef   ^        MiscVarType    ^            LP_RHS_LU    {:}           - - "R
 typedef   ^        MiscVarType    IntKi        LP_indx      {:}           - - "Index vector for LU" -
 typedef   ^        MiscVarType    BD_InputType u             -            - - "Inputs converted to the internal BD coordinate system" -
 typedef   ^        MiscVarType    BD_InputType u2            -            - - "Inputs in the FAST coordinate system, possibly modified by pitch actuator" -
-
+typedef   ^        MiscVarType    ModJacType   Jac           -            - - "Jacobian matrices and arrays corresponding to module variables"
+typedef   ^        MiscVarType    BD_ContinuousStateType    x_perturb   - - - "" -
+typedef   ^        MiscVarType    BD_ContinuousStateType    dxdt_lin  - - - "" -
+typedef   ^        MiscVarType    BD_InputType  u_perturb    -            - - "" -
+typedef   ^        MiscVarType    BD_OutputType y_lin    -            - - "" -

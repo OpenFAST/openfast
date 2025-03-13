@@ -34,7 +34,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.2.2', '2024-01-16' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.3.8', '2025-02-27' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -47,7 +47,6 @@ MODULE MoorDyn
    PUBLIC :: MD_JacobianPInput 
    PUBLIC :: MD_JacobianPDiscState 
    PUBLIC :: MD_JacobianPConstrState 
-   PUBLIC :: MD_GetOP 
 
 CONTAINS
 
@@ -98,6 +97,8 @@ CONTAINS
       REAL(DbKi)                                      :: dtM         ! actual mooring dynamics time step
       INTEGER(IntKi)                                  :: NdtM        ! number of time steps to integrate through with RK2
 !      INTEGER(IntKi)                                  :: ntWave      ! number of time steps of wave data
+      LOGICAL                                       :: compVIV = .FALSE.     ! flag to check if simulating VIV
+      LOGICAL                                       :: compVisco = .FALSE.   ! flag to check if simulating viscoelastic line
       
       TYPE(MD_InputType)    :: u_array(1)    ! a size-one array for u to make call to TimeStep happy
       REAL(DbKi)            :: t_array(1)    ! a size-one array saying time is 0 to make call to TimeStep happy  
@@ -117,6 +118,7 @@ CONTAINS
       CHARACTER(20)                :: LineOutString        ! String to temporarially hold characters specifying line output options
       CHARACTER(20)                :: OptString            ! String to temporarially hold name of option variable
       CHARACTER(40)                :: OptValue             ! String to temporarially hold value of options variable input
+      CHARACTER(40)                :: tSchemeString = 'RK2'! String to temporarially hold value of tScheme variable input (initial string sets RK2 as default if not provided by user)
       CHARACTER(40)                :: DepthValue           ! Temporarily stores the optional WtrDpth setting for MD, which could be a number or a filename
       CHARACTER(40)                :: WaterKinValue        ! Temporarily stores the optional WaterKin setting for MD, which is typically a filename
       INTEGER(IntKi)               :: nOpts                ! number of options lines in input file
@@ -443,6 +445,8 @@ CONTAINS
                      end if
                   else if ( OptString == 'DTM') THEN
                      read (OptValue,*) p%dtM0 
+                  else if ( OptString == 'TSCHEME') THEN
+                     read (OptValue,*) tSchemeString
                   else if ( OptString == 'G') then
                      read (OptValue,*) p%g
                   else if (( OptString == 'RHOW') .or. ( OptString == 'RHO')) then
@@ -471,7 +475,7 @@ CONTAINS
                      read (OptValue,*) p%mu_kA
                   else if ( OptString == 'MC')  then
                      read (OptValue,*) p%mc
-                  else if ( OptString == 'CV')  then
+                  else if (( OptString == 'CV') .or. (OptString == 'FRICDAMP'))  then
                      read (OptValue,*) p%cv
                   else if ( OptString == 'INERTIALF')  then
                      read (OptValue,*) p%inertialF
@@ -491,6 +495,7 @@ CONTAINS
                if (p%writeLog > 1) then
                   write(p%UnLog, '(A)'        ) "  - Options List:"
                   write(p%UnLog, '(A17,f12.4)') "   dtm      : ", p%dtM0 
+                  write(p%UnLog, '(A17,A)'    ) "   tScheme  : ", tSchemeString
                   write(p%UnLog, '(A17,f12.4)') "   g        : ", p%g
                   write(p%UnLog, '(A17,f12.4)') "   rhoW     : ", p%rhoW
                   write(p%UnLog, '(A17,A)'    ) "   Depth    : ", DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
@@ -544,6 +549,17 @@ CONTAINS
       ! set up wave and current kinematics 
       CALL setupWaterKin(WaterKinValue, p, InitInp%Tmax, ErrStat2, ErrMsg2); if(Failed()) return
 
+      ! set up time integration method
+      CALL Conv2UC(tSchemeString)
+      IF (tSchemeString == 'RK2') THEN
+         p%tScheme = 0
+      ELSEIF (tSchemeString == 'RK4') THEN 
+         p%tScheme = 1
+      ELSE 
+         CALL SetErrStat( ErrID_Fatal, 'Unrecognized tScheme option: '//tSchemeString//' Only RK2 and RK4 supported in MD-F', ErrStat, ErrMsg, RoutineName )
+         CALL CleanUp()
+         RETURN
+      ENDIF
 
 
       ! ----------------------------- misc checks to be sorted -----------------------------
@@ -632,16 +648,34 @@ CONTAINS
                    Line = NextLine(i)
                    
                    ! check for correct number of columns in current line
-                   IF ( CountWords( Line ) /= 10 ) THEN
-                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 10 columns.', ErrStat, ErrMsg, RoutineName )
+                   IF ( CountWords( Line ) < 10 ) THEN
+                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be at least 10 columns.', ErrStat, ErrMsg, RoutineName )
                        CALL CleanUp()
                        RETURN
                    END IF
-
-                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp EI    Cd  Ca  CdAx  CaAx 
+                   
+                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp EI    Cd  Ca  CdAx  CaAx  Cl  dF  cF
+                   if (CountWords( Line ) == 10) then
                    READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
                       m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
                       m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat
+                   elseif (CountWords( Line ) == 11) then               
+                     READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
+                     m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
+                     m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat, m%LineTypeList(l)%Cl
+                     m%LineTypeList(l)%dF = 0.08 ! set to default Thorsen synchronization range if not provided
+                     m%LineTypeList(l)%cF = 0.18 ! set to default Thorsen synchronization centering if not provided
+                   elseif (CountWords( Line ) == 13) then
+                     READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
+                     m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
+                     m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat, &
+                     m%LineTypeList(l)%Cl, m%LineTypeList(l)%dF, m%LineTypeList(l)%cF
+                   else 
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must have 10, 11, or 13 columns.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                   endif
+
                    
                     IF ( ErrStat2 /= ErrID_None ) THEN
                       CALL SetErrStat( ErrID_Fatal, 'Failed to process line type inputs of entry '//trim(Num2LStr(l))//'. Check formatting and correct number of columns.', ErrStat, ErrMsg, RoutineName )
@@ -707,10 +741,16 @@ CONTAINS
                      write(p%UnLog, '(A12,A)'    ) " name: ", trim(m%LineTypeList(l)%name)
                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
+                     write(p%UnLog, '(A12,A)'    ) " EA  : ", tempString1
+                     write(p%UnLog, '(A12,A)'    ) " EA_D: ", tempString2
+                     write(p%UnLog, '(A12,A)'    ) " EI  : ", tempString3
                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
+                     write(p%UnLog, '(A12,f12.4)') " Cl  : ", m%LineTypeList(l)%Cl
+                     write(p%UnLog, '(A12,f12.4)') " dF  : ", m%LineTypeList(l)%dF 
+                     write(p%UnLog, '(A12,f12.4)') " cF  : ", m%LineTypeList(l)%cF 
                    end if
 
                   IF ( ErrStat2 /= ErrID_None ) THEN
@@ -1445,13 +1485,19 @@ CONTAINS
                   
                   ! account for states of line
                   m%LineStateIs1(l) = Nx + 1
+                  Nx = Nx + 6*m%LineList(l)%N - 6       ! normal case, just 6 states per internal node   
+
                   if (m%LineTypeList(m%LineList(l)%PropsIdNum)%ElasticMod > 1) then ! todo add an error check here? or change to 2 or 3?
-                     Nx = Nx + 7*m%LineList(l)%N - 6       ! if using viscoelastic model, need one more state per segment
-                     m%LineStateIsN(l) = Nx          
-                  else
-                     Nx = Nx + 6*m%LineList(l)%N - 6       ! normal case, just 6 states per internal node   
-                     m%LineStateIsN(l) = Nx          
+                     Nx = Nx + m%LineList(l)%N      ! if using viscoelastic model, need one more state per segment    
+                     compVisco = .TRUE. ! turn of flag for linearization error checking
                   end if
+                  
+                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%Cl > 0) then 
+                     Nx = Nx + m%LineList(l)%N+1      ! if using VIV model, need one more state per node (note here N is the num sgemnts, so N+1 is number of nodes).
+                     compVIV = .TRUE. ! turn of flag for linearization error checking
+                  endif
+
+                  m%LineStateIsN(l) = Nx      
                   
                   ! Process attachment identfiers and attach line ends 
                   
@@ -1545,9 +1591,10 @@ CONTAINS
                   IF ( scan( LineOutString, 'U') > 0 )  m%LineList(l)%OutFlagList(4) = 1
                   IF ( scan( LineOutString, 'D') > 0 )  m%LineList(l)%OutFlagList(5) = 1
                   IF ( scan( LineOutString, 'b') > 0 )  m%LineList(l)%OutFlagList(6) = 1   ! seabed contact forces
+                  IF ( scan( LineOutString, 'V') > 0 )  m%LineList(l)%OutFlagList(7) = 1   ! VIV forces
                   ! per node 1 component
-                  IF ( scan( LineOutString, 'W') > 0 )  m%LineList(l)%OutFlagList(7) = 1  ! node weight/buoyancy (positive up)
-                  IF ( scan( LineOutString, 'K') > 0 )  m%LineList(l)%OutFlagList(8) = 1  ! curvature at node
+                  IF ( scan( LineOutString, 'W') > 0 )  m%LineList(l)%OutFlagList(8) = 1  ! node weight/buoyancy (positive up)
+                  IF ( scan( LineOutString, 'K') > 0 )  m%LineList(l)%OutFlagList(9) = 1  ! curvature at node
                   ! per element 1 component
                   IF ( scan( LineOutString, 't') > 0 )  m%LineList(l)%OutFlagList(10) = 1  ! segment tension force (just EA)
                   IF ( scan( LineOutString, 'c') > 0 )  m%LineList(l)%OutFlagList(11) = 1  ! segment internal damping force
@@ -1569,7 +1616,7 @@ CONTAINS
                      write(p%UnLog, '(A15,f12.4)') "   Len    : ", m%LineList(l)%UnstrLen
                      write(p%UnLog, '(A15,A)'    ) "   Node A : ", " "//tempString2 
                      write(p%UnLog, '(A15,A)'    ) "   Node B : ", " "//tempString3
-                     write(p%UnLog, '(A15,I2)'   ) "   NumSegs: ", m%LineList(l)%N
+                     write(p%UnLog, '(A15,I4)'   ) "   NumSegs: ", m%LineList(l)%N
                   end if
 
                   ! check for sequential IdNums
@@ -1591,6 +1638,8 @@ CONTAINS
                      CALL CleanUp()
                      RETURN
                   END IF
+
+                  IF (wordy > 0) print *, "Set up Line", l, "of type",  m%LineList(l)%PropsIdNum
 
                END DO   ! l = 1,p%nLines
 
@@ -2230,7 +2279,7 @@ CONTAINS
       !                               prepare state vector etc.
       !------------------------------------------------------------------------------------
 
-      ! the number of states is Nx and Nxtra includes additional states for potential line failures
+      ! the number of states is Nx and Nxtra includes additional states (points) for potential line failures
       m%Nx = Nx
       m%Nxtra = m%Nx + 6*2*p%nLines
       
@@ -2238,15 +2287,22 @@ CONTAINS
 
       ! allocate state vector and temporary state vectors based on size just calculated
       ALLOCATE ( x%states(m%Nxtra), m%xTemp%states(m%Nxtra), m%xdTemp%states(m%Nxtra), STAT = ErrStat2 )
-      IF ( ErrStat2 /= ErrID_None ) THEN
-        ErrMsg  = ' Error allocating state vectors.'
-        !CALL CleanUp()
-        RETURN
-      END IF
+
       x%states        = 0.0_DbKi
       m%xTemp%states  = 0.0_DbKi
       m%xdTemp%states = 0.0_DbKi
 
+      ! Allocate kSum if using RK4 method. Not needed for RK2 becasue slopes not summed
+      IF (p%tScheme == 1_Intki) THEN 
+         ALLOCATE (m%kSum%states(m%Nxtra), STAT = ErrStat2)
+         m%kSum%states = 0.0_DbKi
+      END IF
+
+      IF ( ErrStat2 /= ErrID_None ) THEN
+         ErrMsg  = ' Error allocating state vectors.'
+         !CALL CleanUp()
+         RETURN
+      END IF
 
 
       ! ================================ initialize system ================================
@@ -2635,6 +2691,7 @@ CONTAINS
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
          DO I = 1, p%nLines
+            m%LineList(I)%IC_gen = .True. ! turn on IC_gen flag for Line VIV model
             m%LineList(I)%Cdn = m%LineList(I)%Cdn * InputFileDat%CdScaleIC
             m%LineList(I)%Cdt = m%LineList(I)%Cdt * InputFileDat%CdScaleIC 
          END DO
@@ -2677,7 +2734,7 @@ CONTAINS
          t = 0.0_DbKi     ! start time at zero
 
          ! because TimeStep wants an array...
-         call MD_CopyInput( u, u_array(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! make a size=1 array of inputs (since MD_RK2 expects an array to InterpExtrap)
+         call MD_CopyInput( u, u_array(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! make a size=1 array of inputs (since MD_RK2 and MD_RK4 expects an array to InterpExtrap)
          call MD_CopyInput( u,  u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! also make an inputs object to interpExtrap to
          t_array(1) = t                                                       ! fill in the times "array" for u_array
 
@@ -2687,7 +2744,7 @@ CONTAINS
             !loop through line integration time steps
             DO J = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
 
-               CALL MD_RK2(t, dtM, u_interp, u_array, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2)
+               Call MD_Step(t, dtM, u_interp, u_array, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2) ; if(Failed()) return
                               
                ! check for NaNs - is this a good place/way to do it?
                DO K = 1, m%Nx
@@ -2792,6 +2849,7 @@ CONTAINS
 
          ! UNboost drag coefficient of each line type   <<<
          DO I = 1, p%nLines
+            m%LineList(I)%IC_gen = .False. ! turn off IC_gen flag for Line VIV model
             m%LineList(I)%Cdn = m%LineList(I)%Cdn / InputFileDat%CdScaleIC
             m%LineList(I)%Cdt = m%LineList(I)%Cdt / InputFileDat%CdScaleIC 
          END DO
@@ -2819,9 +2877,14 @@ CONTAINS
       xd%dummy    = 0
       z%dummy     = 0      
       
-      if (InitInp%Linearize) then
-         call MD_Init_Jacobian(InitInp, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+      if (InitInp%Linearize .and. ((compVIV) .OR. (compVisco))) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2 = "Linearization cannot be used with the VIV or Viscoelastic model in MoorDyn"
+         CALL CheckError( ErrStat2, ErrMsg2 )
       endif
+
+      ! Initialize module variables
+      call MD_InitVars(InitOut%Vars, InitInp, u, p, x, z, y, m, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2); if(Failed()) return
       
       CALL WrScr('   MoorDyn initialization completed.')
       if (p%writeLog > 0) then
@@ -2925,15 +2988,341 @@ CONTAINS
             NextLine="---"       ! Set as a separator so we can escape some of the while loops
          else
             NextLine=trim(FileInfo_In%Lines(i))
-            !TODO: add comment character recognition here? (discard any characters past a #)
+            ! # is comment character handled by file loading stuff earlier on (in NWTC routine ProcessComFile)
          endif
       end function NextLine
 
    END SUBROUTINE MD_Init
    !----------------------------------------------------------------------------------------======
 
+   !-----------------------------------------------------------------------------------------------------------------------   
+   !> This routine initializes module variables for use by the solver and linearization.
+   subroutine MD_InitVars(Vars, InitInp, u, p, x, z, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+      type(ModVarsType),               intent(out)    :: Vars        !< Module variables
+      type(MD_InitInputType),          intent(in)     :: InitInp     !< Initialization input
+      type(MD_InputType),              intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
+      type(MD_ParameterType),          intent(inout)  :: p           !< Parameters
+      type(MD_ContinuousStateType),    intent(inout)  :: x           !< Continuous state
+      type(MD_ConstraintStateType),    intent(inout)  :: z           !< Constraint state
+      type(MD_OutputType),             intent(inout)  :: y           !< Initial system outputs (outputs are not calculated;
+      type(MD_MiscVarType),            intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+      type(MD_InitOutputType),         intent(inout)  :: InitOut     !< Output for initialization routine
+      logical,                         intent(in)     :: Linearize   !< Flag to initialize linearization variables
+      integer(IntKi),                  intent(out)    :: ErrStat     !< Error status of the operation
+      character(*),                    intent(out)    :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
+      character(*), parameter    :: RoutineName = 'MD_InitVars'
+      integer(IntKi)             :: ErrStat2                     ! Temporary Error status
+      character(ErrMsgLen)       :: ErrMsg2                      ! Temporary Error message
+      integer(IntKi)             :: i, j, l, N
+      real(R8Ki)                 :: Perturb
+      real(R8Ki)                 :: dl_slack     ! how much a given line segment is stretched [m] 
+      real(R8Ki)                 :: dl_slack_min ! minimum change in a node position for the least-strained segment in the simulation to go slack [m]
+      character(32)              :: LinStr       ! Used for constructing linearization variable names
+      logical                    :: LinCtrl      ! Is the current DeltaL channel associated with a line?
+      type(ModVarType)           :: VarTmp       ! Temporary variable for velocity states
+      character(20), parameter   :: TransDispSuffix(*) = [' Px, m', ' Py, m', ' Pz, m']
+      character(20), parameter   :: TransVelSuffix(*)  = [' Vx, m/s', ' Vy, m/s', ' Vz, m/s']
+      character(20), parameter   :: AngularDispSuffix(*) = [' rot_x, rad', ' rot_y, rad', ' rot_z, rad']
+      character(20), parameter   :: AngularVelSuffix(*)  = [' omega_x, rad/s', ' omega_y, rad/s', ' omega_z, rad/s']
 
+      ErrStat = ErrID_None
+      ErrMsg = ""
+
+      !-------------------------------------------------------------------------
+      ! Perturbation sizes
+      !-------------------------------------------------------------------------
+
+      ! Figure out appropriate transverse perturbation size to avoid slack segments
+      dl_slack_min = 0.1_ReKi  ! start at 0.1 m
+      
+      do l = 1,p%nLines
+         do I = 1, m%LineList(l)%N
+            dl_slack = m%LineList(l)%lstr(I) - m%LineList(l)%l(I)
+         
+            ! store the smallest positive length margin to a segment going slack
+            if (( dl_slack > 0.0_ReKi) .and. (dl_slack < dl_slack_min)) then
+               dl_slack_min = dl_slack  
+            end if
+         end do
+      end do
+      
+      dl_slack_min = 0.5*dl_slack_min  ! apply 0.5 safety factor
+
+      !-------------------------------------------------------------------------
+      ! Continuous State Variables
+      !-------------------------------------------------------------------------
+
+      ! NOTE: the order is different than the order of the internal states.  This is to
+      !       match what the OpenFAST framework is expecting: all positions first, then all
+      !       derviatives of positions (velocity terms) second.  This adds slight complexity
+      !       here, but considerably simplifies post processing of the full OpenFAST results
+      !       for linearization.
+      !       The p%dxIdx_map2_xStateIdx array holds the index for the x%states array
+      !       corresponding to the current jacobian index.
+
+      !-----------------
+      ! position states
+      !-----------------
+   
+      ! Free bodies
+      DO l = 1, p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
+         LinStr = 'Body '//Num2LStr(m%FreeBodyIs(l))
+
+         ! If coupled pinned body
+         if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then 
+            ! Add angular displacement
+            call MV_AddVar(Vars%x, LinStr, FieldAngularDisp, &
+                           DL=DatLoc(MD_x_states), &
+                           iAry=m%BodyStateIs1(l)+3, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.02_R8Ki, &
+                           LinNames=[(trim(LinStr)//AngularDispSuffix(j), j=1,3)])
+         else
+            ! Add translation displacement
+            call MV_AddVar(Vars%x, LinStr, FieldTransDisp, &
+                           DL=DatLoc(MD_x_states), &
+                           iAry=m%BodyStateIs1(l)+6, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=dl_slack_min, &
+                           LinNames=[(trim(LinStr)//TransDispSuffix(j), j=1,3)])
+            ! Add angular displacement
+            call MV_AddVar(Vars%x, LinStr, FieldAngularDisp, &
+                           DL=DatLoc(MD_x_states), &
+                           iAry=m%BodyStateIs1(l)+9, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.02_R8Ki, &
+                           LinNames=[(trim(LinStr)//AngularDispSuffix(j), j=1,3)])
+         end if
+      end do
+
+      ! Rods
+      DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
+         LinStr = 'Rod '//Num2LStr(m%FreeRodIs(l))
+
+         ! If pinned rod
+         if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then
+            ! Add angular displacement
+            call MV_AddVar(Vars%x, LinStr, FieldAngularDisp, DatLoc(MD_x_states), &
+                           iAry=m%RodStateIs1(l)+3, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.02_R8Ki, &
+                           LinNames=[(trim(LinStr)//AngularDispSuffix(j), j=1,3)])
+         else
+            ! Add translation displacement
+            call MV_AddVar(Vars%x, LinStr, FieldTransDisp, DatLoc(MD_x_states), &
+                           iAry=m%RodStateIs1(l)+6, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=dl_slack_min, &
+                           LinNames=[(trim(LinStr)//TransDispSuffix(j), j=1,3)])
+            ! Add angular displacement
+            call MV_AddVar(Vars%x, LinStr, FieldAngularDisp, DatLoc(MD_x_states), &
+                           iAry=m%RodStateIs1(l)+9, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.02_R8Ki, &
+                           LinNames=[(trim(LinStr)//AngularDispSuffix(j), j=1,3)])
+         end if
+      end do
+
+      ! Free Points
+      do l = 1, p%nFreePoints                   ! Point m%PointList(m%FreePointIs(l))
+         ! corresponds to state indices: (m%PointStateIs1(l)+3:m%PointStateIs1(l)+5)
+         LinStr = 'Point '//Num2LStr(m%FreePointIs(l))
+         call MV_AddVar(Vars%x, LinStr, FieldTransDisp, DatLoc(MD_x_states), &
+                        iAry=m%PointStateIs1(l)+3, &  ! x%state index
+                        Num=3, Flags=VF_DerivOrder2, &
+                        Perturb=dl_slack_min, &
+                        LinNames=[(trim(LinStr)//TransDispSuffix(j), j=1,3)])
+      end do
+
+      ! Lines
+      do l = 1, p%nLines                      ! Line m%LineList(l)
+         ! corresponds to state indices: (m%LineStateIs1(l)+3*N-3:m%LineStateIs1(l)+6*N-7) -- NOTE: end nodes not included 
+         N = m%LineList(l)%N                 ! number of segments in the line
+         do i = 0, N-2
+            LinStr = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))
+            call MV_AddVar(Vars%x, LinStr, FieldTransDisp, DatLoc(MD_x_states), &
+                           iAry=m%LineStateIs1(l) + 3*N + 3*i - 3, & ! x%state index
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=dl_slack_min, &
+                           LinNames=[(trim(LinStr)//TransDispSuffix(j), j=1,3)])
+         end do         
+      end do
+
+      !-----------------
+      ! velocity states
+      !-----------------
+
+      ! Free bodies
+      DO l = 1, p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
+         LinStr = 'Body '//Num2LStr(m%FreeBodyIs(l))
+
+         ! If coupled pinned body
+         if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then 
+            ! Add angular displacement
+            call MV_AddVar(Vars%x, LinStr, FieldAngularVel, DatLoc(MD_x_states), &
+                           iAry=m%BodyStateIs1(l)+0, &   
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.1_R8Ki, &
+                           LinNames=[(trim(LinStr)//AngularVelSuffix(j), j=1,3)])
+         else
+            ! Add translation displacement
+            call MV_AddVar(Vars%x, LinStr, FieldTransVel, DatLoc(MD_x_states), &
+                           iAry=m%BodyStateIs1(l)+0, &   
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.1_R8Ki, &
+                           LinNames=[(trim(LinStr)//TransVelSuffix(j), j=1,3)])
+            ! Add angular displacement
+            call MV_AddVar(Vars%x, LinStr, FieldAngularVel, DatLoc(MD_x_states), &
+                           iAry=m%BodyStateIs1(l)+3, &   
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.1_R8Ki, &
+                           LinNames=[(trim(LinStr)//AngularVelSuffix(j), j=1,3)])
+         end if
+      end do
+
+      ! Rods
+      DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
+         LinStr = 'Rod '//Num2LStr(m%FreeRodIs(l))
+
+         ! If pinned rod
+         if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then
+            ! Add angular displacement
+            call MV_AddVar(Vars%x, LinStr, FieldAngularVel, DatLoc(MD_x_states), &
+                           iAry=m%RodStateIs1(l)+0, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.1_R8Ki, &
+                           LinNames=[(trim(LinStr)//AngularVelSuffix(j), j=1,3)])
+         else
+            ! Add translation displacement
+            call MV_AddVar(Vars%x, LinStr, FieldTransVel, DatLoc(MD_x_states), &
+                           iAry=m%RodStateIs1(l)+0, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.1_R8Ki, &
+                           LinNames=[(trim(LinStr)//TransVelSuffix(j), j=1,3)])
+            ! Add angular displacement
+            call MV_AddVar(Vars%x, LinStr, FieldAngularVel, DatLoc(MD_x_states), &
+                           iAry=m%RodStateIs1(l)+3, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.02_R8Ki, &
+                           LinNames=[(trim(LinStr)//AngularVelSuffix(j), j=1,3)])
+         end if
+      end do
+
+      ! Free Points
+      do l = 1, p%nFreePoints                   ! Point m%PointList(m%FreePointIs(l))
+         ! corresponds to state indices: (m%PointStateIs1(l)+3:m%PointStateIs1(l)+5)
+         LinStr = 'Point '//Num2LStr(m%FreePointIs(l))
+         call MV_AddVar(Vars%x, LinStr, FieldTransVel, DatLoc(MD_x_states), &
+                        iAry=m%PointStateIs1(l)+0, & 
+                        Num=3, Flags=VF_DerivOrder2, &
+                        Perturb=0.1_R8Ki, &
+                        LinNames=[(trim(LinStr)//TransVelSuffix(j), j=1,3)])
+      end do
+
+      ! Lines
+      do l = 1, p%nLines                      ! Line m%LineList(l)
+         ! corresponds to state indices: (m%LineStateIs1(l)+3*N-3:m%LineStateIs1(l)+6*N-7) -- NOTE: end nodes not included 
+         N = m%LineList(l)%N                 ! number of segments in the line
+         do i = 0, N-2
+            LinStr = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))
+            call MV_AddVar(Vars%x, LinStr, FieldTransVel, DatLoc(MD_x_states), &
+                           iAry=m%LineStateIs1(l) + 3*i + 0, &
+                           Num=3, Flags=VF_DerivOrder2, &
+                           Perturb=0.1_R8Ki, &
+                           LinNames=[(trim(LinStr)//TransVelSuffix(j), j=1,3)])
+         end do         
+      end do
+
+      !-------------------------------------------------------------------------
+      ! Input variables
+      !-------------------------------------------------------------------------
+
+      allocate(Vars%u(0))
+
+      do i = 1, p%nTurbines
+         call MV_AddMeshVar(Vars%u, "CoupledKinematics", MotionFields, &
+                            DatLoc(MD_u_CoupledKinematics, i), &
+                            Mesh=u%CoupledKinematics(i), &
+                            Perturbs=[dl_slack_min, & ! FieldTransDisp
+                                     0.1_R8Ki, &     ! FieldOrientation
+                                     0.1_R8Ki, &     ! FieldTransVel
+                                     0.1_R8Ki, &     ! FieldAngularVel
+                                     0.1_R8Ki, &     ! FieldTransAcc
+                                     0.1_R8Ki])      ! FieldAngularAcc
+      end do
+
+      ! This could be stored more efficiently, but maintains order compatible with previous implementation.
+      if (allocated(u%DeltaL)) then
+
+         ! Signals may be passed in without being requested for control
+         do i = 1,size(u%DeltaL) 
+
+            ! Figure out if this DeltaL control channel is associated with a line or multiple or none and label
+            LinCtrl = .FALSE.
+            LinStr = '(lines: '
+            do j = 1, p%NLines
+               if (m%LineList(j)%CtrlChan == i) then
+                  LinCtrl = .TRUE.
+                  LinStr = LinStr//trim(num2lstr(i))//' '
+               endif
+            enddo
+
+            if (LinCtrl) then
+               LinStr = LinStr//' )'
+            else
+               LinStr = '(lines: none)'
+            end if
+
+            call MV_AddVar(Vars%u, "DeltaL "//trim(num2lstr(i)), FieldTransDisp, &
+                           DatLoc(MD_u_DeltaL), iAry=i, &
+                           Perturb=dl_slack_min, &
+                           LinNames=['CtrlChan DeltaL '//trim(num2lstr(i))//', m '//trim(LinStr)])
+
+            call MV_AddVar(Vars%u, "DeltaLdot "//trim(num2lstr(i)), FieldTransVel, &
+                           DatLoc(MD_u_DeltaLdot), iAry=i, &
+                           Perturb=0.2_R8Ki, &
+                           LinNames=['CtrlChan DeltaLdot '//trim(num2lstr(i))//', m/s'//trim(LinStr)])
+         end do
+      endif
+
+      !-------------------------------------------------------------------------
+      ! Output variables
+      !-------------------------------------------------------------------------
+
+      do i = 1, p%nTurbines
+         call MV_AddMeshVar(Vars%y, "LinNames_y", LoadFields, &
+                           DatLoc(MD_y_CoupledLoads, i), &
+                           Mesh=y%CoupledLoads(i))
+      end do
+
+      ! Write outputs
+      call MV_AddVar(Vars%y, "WriteOutput", FieldScalar, DatLoc(MD_y_WriteOutput), &
+                     Flags=VF_WriteOut, &
+                     Num=p%numOuts,&
+                     LinNames=[(WriteOutputLinName(i), i = 1, p%numOuts)])
+
+      !-------------------------------------------------------------------------
+      ! Initialize Variables and Jacobian data
+      !-------------------------------------------------------------------------
+
+      CALL MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+      call MD_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      call MD_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      call MD_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      call MD_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+   contains
+      character(LinChanLen) function WriteOutputLinName(idx)
+         integer(IntKi), intent(in) :: idx
+         WriteOutputLinName = trim(InitOut%WriteOutputHdr(idx))//', '//trim(InitOut%WriteOutputUnt(idx))
+      end function
+      logical function Failed()
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+         Failed =  ErrStat >= AbortErrLev
+      end function Failed
+   end subroutine
 
    !----------------------------------------------------------------------------------------======
    SUBROUTINE MD_UpdateStates( t, n, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
@@ -3012,20 +3401,22 @@ CONTAINS
       !loop through line integration time steps
       DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
 
-         CALL MD_RK2(t2, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2)
-         
+         Call MD_Step(t2, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2) 
+         IF ( ErrStat2 /= ErrID_None ) THEN
+            CALL CheckError(ErrStat2, ErrMsg2)
+         END IF
          
          ! check for NaNs - is this a good place/way to do it?
          DO J = 1, m%Nx
             IF (Is_NaN(x%states(J))) THEN
                ErrStat = ErrID_Fatal
-               ErrMsg = ' NaN state detected.'
+               ErrMsg = ' NaN state detected at time '//TRIM(Num2LStr(t2))
                IF (wordy > 1) THEN
                   print *, ". Here is the state vector: "
                   print *, x%states
                END IF
                CALL CheckError(ErrStat, ErrMsg)
-               EXIT
+               RETURN
             END IF
          END DO
          
@@ -3042,22 +3433,7 @@ CONTAINS
       END IF
       !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_UpdateStates')
 
-
-      ! check for NaNs - is this a good place/way to do it?
-      DO J = 1, m%Nx
-         IF (Is_NaN(x%states(J))) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' NaN state detected.'
-            IF (wordy > 1) THEN
-               print *, ". Here is the state vector: "
-               print *, x%states
-            END IF
-            CALL CheckError(ErrStat, ErrMsg)
-            EXIT
-         END IF
-      END DO
-
-      ! do we want to check failures here (at the coupling step level? Or at the dtM level?)
+      ! do we want to check failures here (at the coupling step level? Or at the dtM level?) TODO: move this to the dtM level
       ! --------------- check for line failures (detachments!) ----------------
       DO l= 1,p%nFails 
 
@@ -3484,7 +3860,7 @@ CONTAINS
       INTEGER(IntKi)                                     :: J       ! index
       INTEGER(IntKi)                                     :: K       ! index
       INTEGER(IntKi)                                     :: iTurb   ! index
-!      INTEGER(IntKi)                                     :: Istart  ! start index of line/point in state vector
+!      INTEGER(IntKi)                                     :: iAry  ! start index of line/point in state vector
 !      INTEGER(IntKi)                                     :: Iend    ! end index of line/point in state vector
 
 !      REAL(DbKi)                                         :: temp(3) ! temporary for passing kinematics
@@ -3855,7 +4231,37 @@ CONTAINS
  !----------------------------------------------------------------------------------------==================
 
 
-   ! RK2 integrater (part of what was in TimeStep)
+   ! Advances the state one time step using the integration scheme specified in the input file
+   SUBROUTINE MD_Step ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+   
+      REAL(DbKi)                     , INTENT(INOUT)      :: t          ! intial time (s) for this integration step
+      REAL(DbKi)                     , INTENT(IN   )      :: dtM        ! single time step  size (s) for this integration step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
+      REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
+      TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
+      TYPE( MD_ContinuousStateType ) , INTENT(INOUT)      :: x
+      TYPE( MD_DiscreteStateType )   , INTENT(IN   )      :: xd         ! INTENT(IN   )
+      TYPE( MD_ConstraintStateType ) , INTENT(IN   )      :: z          ! INTENT(IN   )
+      TYPE( MD_OtherStateType )      , INTENT(IN   )      :: other      ! INTENT(INOUT)
+      TYPE(MD_MiscVarType)           , INTENT(INOUT)      :: m          ! INTENT(INOUT)
+      INTEGER(IntKi)                 , INTENT(  OUT)      :: ErrStat
+      CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
+
+      IF (p%tScheme == 0_Intki) THEN
+         CALL MD_RK2(t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
+      ELSEIF (p%tScheme == 1_Intki) THEN
+         CALL MD_RK4(t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
+      ELSE
+         ErrStat = ErrID_Fatal
+         ErrMsg = ' Unrecognized tScheme option in MD_Step'
+      ENDIF
+
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+   END SUBROUTINE MD_Step
+
+   ! RK2 integrator (part of what was in TimeStep)
    !--------------------------------------------------------------
    SUBROUTINE MD_RK2 ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
    
@@ -3885,17 +4291,23 @@ CONTAINS
       ! step 1
 
       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
-   
+      if ( ErrStat >= AbortErrLev ) return
+
       CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg )
+      if ( ErrStat >= AbortErrLev ) return
+        ! k0 = m%xdTemp
       DO J = 1, m%Nx
-         m%xTemp%states(J) = x%states(J) + 0.5*dtM*m%xdTemp%states(J)                                           !x1 = x0 + dt*f0/2.0;
+         m%xTemp%states(J) = x%states(J) + 0.5_DbKi*dtM*m%xdTemp%states(J)                                           !x1 = x0 + dt*k0/2.0;
       END DO
 
       ! step 2
 
       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
-         
+      if ( ErrStat >= AbortErrLev ) return
+
       CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
+      if ( ErrStat >= AbortErrLev ) return
+         ! k1 = m%xdTemp
       DO J = 1, m%Nx
          x%states(J) = x%states(J) + dtM*m%xdTemp%states(J)
       END DO
@@ -3907,13 +4319,13 @@ CONTAINS
    END SUBROUTINE MD_RK2
    !--------------------------------------------------------------
 
-
-   !----------------------------------------------------------------------------------------================
-   ! this would do a full (coupling) time step and is no longer used
-   SUBROUTINE TimeStep ( t, dtStep, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+   ! RK4 integrator
+   !--------------------------------------------------------------
+   SUBROUTINE MD_RK4 ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
    
-      REAL(DbKi)                     , INTENT(INOUT)      :: t
-      REAL(DbKi)                     , INTENT(IN   )      :: dtStep     ! how long to advance the time for
+      REAL(DbKi)                     , INTENT(INOUT)      :: t          ! intial time (s) for this integration step
+      REAL(DbKi)                     , INTENT(IN   )      :: dtM        ! single time step  size (s) for this integration step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
       TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
       REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
       TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
@@ -3926,99 +4338,186 @@ CONTAINS
       CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
 
 
-      TYPE(MD_ContinuousStateType)                        :: dxdt       ! time derivatives of continuous states (initialized in CalcContStateDeriv)
-      TYPE(MD_ContinuousStateType)                        :: x2         ! temporary copy of continuous states used in RK2 calculations
-      INTEGER(IntKi)                                      :: NdtM       ! the number of time steps to make with the mooring model
-      Real(DbKi)                                          :: dtM        ! the actual time step size to use
-      INTEGER(IntKi)                                      :: Nx         ! size of states vector
       INTEGER(IntKi)                                      :: I          ! counter
       INTEGER(IntKi)                                      :: J          ! counter
-      TYPE(MD_InputType)                                  :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
 
-  !    Real(DbKi)                                          :: tDbKi   ! double version because that's what MD_Input_ExtrapInterp needs.
-      
-      
-      ! allocate space for x2
-      CALL MD_CopyContState( x, x2, 0, ErrStat, ErrMsg)
-         
-      ! create space for arrays/meshes in u_interp   ... is it efficient to do this every time step???
-      CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg)
-         
+      ! -------------------------------------------------------------------------------
+      !       RK4 integrator written here, calling CalcContStateDeriv
+      !--------------------------------------------------------------------------------
 
-      Nx = size(x%states)   ! <<<< should this be the m%Nx parameter instead?
+      ! k0
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+      if ( ErrStat >= AbortErrLev ) return
 
+      CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+      if ( ErrStat >= AbortErrLev ) return
+         ! k0 = m%xdTemp 
 
-      ! round dt to integer number of time steps
-      NdtM = ceiling(dtStep/p%dtM0)                  ! get number of mooring time steps to do based on desired time step size
-      dtM = dtStep/REAL(NdtM,DbKi)                   ! adjust desired time step to satisfy dt with an integer number of time steps
-
-
-      !loop through line integration time steps
-      DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
-      
-      
-   !      tDbKi = t        ! get DbKi version of current time (why does ExtrapInterp except different time type than UpdateStates?)
-         
-      
-         ! -------------------------------------------------------------------------------
-         !       RK2 integrator written here, now calling CalcContStateDeriv
-         !--------------------------------------------------------------------------------
-
-         ! step 1
-
-         CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
-      
-         CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
-         DO J = 1, Nx
-            x2%states(J) = x%states(J) + 0.5*dtM*dxdt%states(J)                                           !x1 = x0 + dt*f0/2.0;
-         END DO
-
-         ! step 2
-   
-         CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
-            
-         CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
-         DO J = 1, Nx
-            x%states(J) = x%states(J) + dtM*dxdt%states(J)
-         END DO
-
-         t = t + dtM  ! update time
-
-         !----------------------------------------------------------------------------------
-
-   ! >>> below should no longer be necessary thanks to using ExtrapInterp of u(:) within the mooring time stepping loop.. <<<
-   !      ! update Fairlead positions by integrating velocity and last position (do this AFTER the processing of the time step rather than before)
-   !      DO J = 1, p%nCpldPoints
-   !         DO K = 1, 3
-   !          m%PointList(m%CpldPointIs(J))%r(K) = m%PointList(m%CpldPointIs(J))%r(K) + m%PointList(m%CpldPointIs(J))%rd(K)*dtM
-   !         END DO
-   !      END DO
-      
-   
-      END DO  ! I  time steps
-
-
-      ! destroy dxdt and x2, and u_interp
-      CALL MD_DestroyContState( dxdt, ErrStat, ErrMsg)
-      CALL MD_DestroyContState( x2, ErrStat, ErrMsg)
-      CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error destroying dxdt or x2.'
-      END IF
-      !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_UpdateStates')
-
-      
-      ! check for NaNs - is this a good place/way to do it?
-      DO J = 1, Nx
-         IF (Is_NaN(x%states(J))) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' NaN state detected.'
-         END IF
+      ! k1
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%xdTemp%states(J) ! k0 - In loop to avoid unecessary extra loop
+         m%xTemp%states(J) = x%states(J) + 0.5_DbKi*dtM*m%xdTemp%states(J)   !x1 = x0 + dt*k0/2.0 = m%xTemp;
       END DO
+
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+      if ( ErrStat >= AbortErrLev ) return
+
+      CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+      if ( ErrStat >= AbortErrLev ) return
+         ! k1 = m%xdTemp 
+
+      ! k2
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%kSum%states(J) + 2.0_DbKi * m%xdTemp%states(J) ! 2 * k1 - In loop to avoid unecessary extra loop
+         m%xTemp%states(J) = x%states(J) + 0.5_DbKi*dtM*m%xdTemp%states(J)   !x2 = x0 + dt*k1/2.0 = m%xTemp;
+      END DO
+
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t) TODO: is this needed, it is already called for k1
+      if ( ErrStat >= AbortErrLev ) return
+
+      CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+      if ( ErrStat >= AbortErrLev ) return
+         ! k2 = m%xdTemp 
+
+      ! k3
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%kSum%states(J) + 2.0_DbKi * m%xdTemp%states(J) ! 2 * k2 -  In loop to avoid unecessary extra loop
+         m%xTemp%states(J) = x%states(J) + dtM*m%xdTemp%states(J)   !x3 = x0 + dt*k2 = m%xTemp;
+      END DO
+
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+      if ( ErrStat >= AbortErrLev ) return
+      
+      CALL MD_CalcContStateDeriv( (t + dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+      if ( ErrStat >= AbortErrLev ) return
+         ! k3 = m%xdTemp
+
+      ! Apply
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%kSum%states(J) + m%xdTemp%states(J) ! k3 - In loop to avoid unecessary extra loop
+
+         ! x(t+dtM) =  x(t) + dtM * kSum / 6 = x(t) + dtM * (k0 + 2*k1 + 2*k2 + k3) / 6
+         x%states(J) = x%states(J) + dtM*(m%kSum%states(J)) / 6.0_DbKi
+      END DO
+
+      t = t + dtM  ! update time
+      
+      !TODO error check? <<<<
+
+   END SUBROUTINE MD_RK4
+   !--------------------------------------------------------------
+
+   ! !----------------------------------------------------------------------------------------================
+   ! ! this would do a full (coupling) time step and is no longer used
+   ! SUBROUTINE TimeStep ( t, dtStep, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+   
+   !    REAL(DbKi)                     , INTENT(INOUT)      :: t
+   !    REAL(DbKi)                     , INTENT(IN   )      :: dtStep     ! how long to advance the time for
+   !    TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
+   !    REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
+   !    TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
+   !    TYPE( MD_ContinuousStateType ) , INTENT(INOUT)      :: x
+   !    TYPE( MD_DiscreteStateType )   , INTENT(IN   )      :: xd         ! INTENT(IN   )
+   !    TYPE( MD_ConstraintStateType ) , INTENT(IN   )      :: z          ! INTENT(IN   )
+   !    TYPE( MD_OtherStateType )      , INTENT(IN   )      :: other      ! INTENT(INOUT)
+   !    TYPE(MD_MiscVarType)           , INTENT(INOUT)      :: m          ! INTENT(INOUT)
+   !    INTEGER(IntKi)                 , INTENT(  OUT)      :: ErrStat
+   !    CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
+
+
+   !    TYPE(MD_ContinuousStateType)                        :: dxdt       ! time derivatives of continuous states (initialized in CalcContStateDeriv)
+   !    TYPE(MD_ContinuousStateType)                        :: x2         ! temporary copy of continuous states used in RK2 calculations
+   !    INTEGER(IntKi)                                      :: NdtM       ! the number of time steps to make with the mooring model
+   !    Real(DbKi)                                          :: dtM        ! the actual time step size to use
+   !    INTEGER(IntKi)                                      :: Nx         ! size of states vector
+   !    INTEGER(IntKi)                                      :: I          ! counter
+   !    INTEGER(IntKi)                                      :: J          ! counter
+   !    TYPE(MD_InputType)                                  :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
+
+   !    ! Real(DbKi)                                          :: tDbKi   ! double version because that's what MD_Input_ExtrapInterp needs.
+      
+      
+   !    ! allocate space for x2
+   !    CALL MD_CopyContState( x, x2, 0, ErrStat, ErrMsg)
+         
+   !    ! create space for arrays/meshes in u_interp   ... is it efficient to do this every time step???
+   !    CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg)
+         
+
+   !    Nx = size(x%states)   ! <<<< should this be the m%Nx parameter instead?
+
+
+   !    ! round dt to integer number of time steps
+   !    NdtM = ceiling(dtStep/p%dtM0)                  ! get number of mooring time steps to do based on desired time step size
+   !    dtM = dtStep/REAL(NdtM,DbKi)                   ! adjust desired time step to satisfy dt with an integer number of time steps
+
+
+   !    !loop through line integration time steps
+   !    DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
+      
+      
+   !       ! tDbKi = t        ! get DbKi version of current time (why does ExtrapInterp except different time type than UpdateStates?)
+         
+      
+   !       ! -------------------------------------------------------------------------------
+   !       !       RK2 integrator written here, now calling CalcContStateDeriv
+   !       !--------------------------------------------------------------------------------
+
+   !       ! step 1
+
+   !       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+      
+   !       CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
+   !       DO J = 1, Nx
+   !          x2%states(J) = x%states(J) + 0.5*dtM*dxdt%states(J)                                           !x1 = x0 + dt*f0/2.0;
+   !       END DO
+
+   !       ! step 2
+   
+   !       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
+            
+   !       CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
+   !       DO J = 1, Nx
+   !          x%states(J) = x%states(J) + dtM*dxdt%states(J)
+   !       END DO
+
+   !       t = t + dtM  ! update time
+
+   !       !----------------------------------------------------------------------------------
+
+   !       ! >>> below should no longer be necessary thanks to using ExtrapInterp of u(:) within the mooring time stepping loop.. <<<
+   !       !      ! update Fairlead positions by integrating velocity and last position (do this AFTER the processing of the time step rather than before)
+   !       !      DO J = 1, p%nCpldPoints
+   !       !         DO K = 1, 3
+   !       !          m%PointList(m%CpldPointIs(J))%r(K) = m%PointList(m%CpldPointIs(J))%r(K) + m%PointList(m%CpldPointIs(J))%rd(K)*dtM
+   !       !         END DO
+   !       !      END DO
+      
+   
+   !    END DO  ! I  time steps
+
+
+   !    ! destroy dxdt and x2, and u_interp
+   !    CALL MD_DestroyContState( dxdt, ErrStat, ErrMsg)
+   !    CALL MD_DestroyContState( x2, ErrStat, ErrMsg)
+   !    CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
+   !    IF ( ErrStat /= ErrID_None ) THEN
+   !       ErrMsg  = ' Error destroying dxdt or x2.'
+   !    END IF
+   !    !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_UpdateStates')
+
+      
+   !    ! check for NaNs - is this a good place/way to do it?
+   !    DO J = 1, Nx
+   !       IF (Is_NaN(x%states(J))) THEN
+   !          ErrStat = ErrID_Fatal
+   !          ErrMsg = ' NaN state detected.'
+   !       END IF
+   !    END DO
  
 
-   END SUBROUTINE TimeStep
-   !--------------------------------------------------------------
+   ! END SUBROUTINE TimeStep
+   ! !--------------------------------------------------------------
 
 
 
@@ -4052,7 +4551,8 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-SUBROUTINE MD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+SUBROUTINE MD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   type(ModVarsType),                 INTENT(IN   ) :: Vars               !< Module variables for packing arrays
    REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
    TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
@@ -4070,99 +4570,111 @@ SUBROUTINE MD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdu(:,:)          !< Partial derivatives of constraint state functions (Z) wrt the inputs (u) [intent in to avoid deallocation]
    
    ! local variables
-   TYPE(MD_OutputType)          :: y_m, y_p
-   TYPE(MD_ContinuousStateType) :: x_m, x_p
-   TYPE(MD_InputType)           :: u_perturb
-   REAL(R8Ki)                   :: delta_p, delta_m   ! delta change in input (plus, minus)
-   INTEGER(IntKi)               :: i
-   integer(intKi)               :: ErrStat2
-   character(ErrMsgLen)         :: ErrMsg2
-   character(*), parameter      :: RoutineName = 'MD_JacobianPInput'
-   
-   ! Initialize ErrStat
+   character(*), parameter       :: RoutineName = 'MD_JacobianPInput'
+   integer(intKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   INTEGER(IntKi)                :: i, j, iCol
+
    ErrStat = ErrID_None
    ErrMsg  = ''
-   
-   ! get OP values here:
-   call MD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ); if(Failed()) return
-   
-   ! make a copy of the inputs to perturb
-   call MD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-   
-   IF ( PRESENT( dYdu ) ) THEN
-      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-      if (.not. allocated(dYdu) ) then
-         call AllocAry(dYdu, p%Jac_ny, size(p%Jac_u_indx,1),'dYdu', ErrStat2, ErrMsg2); if(Failed()) return
-      end if
-      ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call MD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-      call MD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-      do i=1,size(p%Jac_u_indx,1)
-         ! get u_op + delta_p u
-         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_Perturb_u( p, i, 1, u_perturb, delta_p )
-         ! compute y at u_op + delta_p u
-         call MD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ! get u_op - delta_m u
-         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_Perturb_u( p, i, -1, u_perturb, delta_m )
-         ! compute y at u_op - delta_m u
-         call MD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ! get central difference:
-         call MD_Compute_dY( p, y_p, y_m, delta_p, dYdu(:,i) )
-      end do
-      if(Failed()) return
-   END IF
-   IF ( PRESENT( dXdu ) ) THEN
-      if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, p%Jac_nx, size(p%Jac_u_indx,1), 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
-      endif
-      do i=1,size(p%Jac_u_indx,1)
-         ! get u_op + delta u
-         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_Perturb_u( p, i, 1, u_perturb, delta_p )
-         ! compute x at u_op + delta u
-         call MD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ! get u_op - delta u
-         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         call MD_Perturb_u( p, i, -1, u_perturb, delta_m )
-         ! compute x at u_op - delta u
-         call MD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         ! get central difference:
-         ! we may have had an error allocating memory, so we'll check
-         if(Failed()) return
-         ! get central difference (state entries are mapped the the dXdu column in routine):
-         call MD_Compute_dX( p, x_p, x_m, delta_p, dXdu(:,i) )
-      end do
-   END IF ! dXdu
-   IF ( PRESENT( dXddu ) ) THEN
-      if (allocated(dXddu)) deallocate(dXddu)
-   END IF
-   IF ( PRESENT( dZdu ) ) THEN
-      if (allocated(dZdu)) deallocate(dZdu)
-   END IF
-   call CleanUp()
-contains
 
+   ! Get OP values here
+   call MD_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2); if(Failed()) return
+   
+   ! Copy inputs to perturb
+   call MD_CopyInput(u, m%u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call MD_VarsPackInput(Vars, u, m%Jac%u)
+   
+   ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+   if (present(dYdu)) then
+
+      ! Allocate dYdu if not allocated
+      if (.not. allocated(dYdu)) then
+         call AllocAry(dYdu, m%Jac%Ny, m%Jac%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
+      end if
+
+      ! Loop through input variables
+      do i = 1, size(Vars%u)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, Vars%u(i)%Num
+
+            ! Calculate column index
+            iCol = Vars%u(i)%iLoc(1) + j - 1
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call MD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call MD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call MD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call MD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call MD_CalcOutput(t, m%u_perturb, p, x, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call MD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(Vars%y, Vars%u(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdu(:,iCol))
+         end do
+      end do
+   END IF
+
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
+   if (present(dXdu)) then
+
+      ! Allocate dXdu if not allocated
+      if (.not. allocated(dXdu)) then
+         call AllocAry(dXdu, m%Jac%Nx, m%Jac%Nu, 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
+      end if
+
+      ! Loop through input variables
+      do i = 1, size(Vars%u)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, Vars%u(i)%Num
+
+            ! Calculate column index
+            iCol = Vars%u(i)%iLoc(1) + j - 1
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%u(i), j, 1, m%Jac%u, m%Jac%u_perturb)
+            call MD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call MD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call MD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%u(i), j, -1, m%Jac%u, m%Jac%u_perturb)
+            call MD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
+            call MD_CalcContStateDeriv(t, m%u_perturb, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call MD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
+
+            ! Get partial derivative via central difference and store in full linearization array
+            dXdu(:,iCol) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
+         end do
+      end do
+
+   end if ! dXdu
+
+   if (present(dxddu)) then
+      if (allocated(dxddu)) deallocate(dxddu)
+   end if
+
+   if (present(dzdu)) then
+      if (allocated(dzdu)) deallocate(dzdu)
+   end if
+
+contains
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
         Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp()
    end function Failed
-
-   subroutine CleanUp()
-      call MD_DestroyContState(  x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call MD_DestroyContState(  x_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call MD_DestroyOutput(     y_p, ErrStat2, ErrMsg2 )
-      call MD_DestroyOutput(     y_m, ErrStat2, ErrMsg2 )
-      call MD_DestroyInput(u_perturb, ErrStat2, ErrMsg2 )
-   end subroutine cleanup
-
 END SUBROUTINE MD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
+SUBROUTINE MD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
+   type(ModVarsType),                 INTENT(IN   ) :: Vars               !< Module variables for packing arrays
    REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
    TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
@@ -4178,98 +4690,103 @@ SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) wrt the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) wrt the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdx(:,:)          !< Partial derivatives of constraint state functions (Z) wrt the continuous states (x) [intent in to avoid deallocation]
+
    ! local variables
-   TYPE(MD_OutputType)          :: y_p, y_m
-   TYPE(MD_ContinuousStateType) :: x_p, x_m
-   TYPE(MD_ContinuousStateType) :: x_perturb
-   REAL(R8Ki)                   :: delta        ! delta change in input or state
-   INTEGER(IntKi)               :: i, k
-   INTEGER(IntKi)               :: ErrStat2
-   CHARACTER(ErrMsgLen)         :: ErrMsg2
-   CHARACTER(*), PARAMETER      :: RoutineName = 'MD_JacobianPContState'
-   
-   ! Initialize ErrStat
+   character(*), parameter      :: RoutineName = 'MD_JacobianPContState'
+   integer(IntKi)               :: ErrStat2
+   character(ErrMsgLen)         :: ErrMsg2
+   integer(IntKi)               :: i, j, iCol
+
    ErrStat = ErrID_None
    ErrMsg  = ''
    
-   ! make a copy of the continuous states to perturb NOTE: MESH_NEWCOPY
-   call MD_CopyContState( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Copy state values
+   call MD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call MD_VarsPackContState(Vars, x, m%Jac%x)
    
-   IF ( PRESENT( dYdx ) ) THEN
-      ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+   ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+   if (present(dYdx)) then
+
+      ! Allocate dYdx if not allocated
       if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Jac_ny, p%Jac_nx, 'dYdx', ErrStat2, ErrMsg2); if(Failed()) return
+         call AllocAry(dYdx, m%Jac%Ny, m%Jac%Nx, 'dYdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
-      ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call MD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call MD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-      !  Loop over the dx dimension of the dYdx array.  Perturb the corresponding state (note difference in ordering of dYdx and x%states).
-      !  The p%dxIdx_map2_xStateIdx(i) is the index to the state array for the given dx index
-      do i=1,p%Jac_nx      ! index into dx dimension
-         ! get x_op + delta x
-         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, i, 1, x_perturb, delta )
-         ! compute y at x_op + delta x
-         call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ! get x_op - delta x
-         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, i, -1, x_perturb, delta )
-         ! compute y at x_op - delta x
-         call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ! get central difference:
-         call MD_Compute_dY( p, y_p, y_m, delta, dYdx(:,i) )
+
+      ! Loop through state variables
+      do i = 1, size(Vars%x)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, Vars%x(i)%Num
+
+            ! Calculate column index
+            iCol = Vars%x(i)%iLoc(1) + j - 1
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call MD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call MD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call MD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call MD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call MD_CalcOutput(t, u, p, m%x_perturb, xd, z, OtherState, m%y_lin, m, ErrStat2, ErrMsg2); if (Failed()) return
+            call MD_VarsPackOutput(Vars, m%y_lin, m%Jac%y_neg)
+
+            ! Get partial derivative via central difference and store in full linearization array
+            call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,iCol))
+         end do
       end do
-      if(Failed()) return
-   END IF
-   
-   IF ( PRESENT( dXdx ) ) THEN
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+   end if
+
+   ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+   if (present(dXdx)) then
+
+      ! Allocate dXdx if not allocated
       if (.not. allocated(dXdx)) then
-         call AllocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2); if(Failed()) return
+         call AllocAry(dXdx, m%Jac%Nx, m%Jac%Nx, 'dXdx', ErrStat2, ErrMsg2); if (Failed()) return
       end if
-      !  Loop over the dx dimension of the array.  Perturb the corresponding state (note difference in ordering of dXdx and x%states).
-      !  The resulting x_p and x_m are used to calculate the column for dXdx (mapping of state entry to dXdx row entry occurs in MD_Compute_dX)
-      !  The p%dxIdx_map2_xStateIdx(i) is the index to the state array for the given dx index
-      do i=1,p%Jac_nx      ! index into dx dimension
-         ! get x_op + delta x
-         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, i, 1, x_perturb, delta )
-         ! compute x at x_op + delta x
-         call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ! get x_op - delta x
-         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call MD_perturb_x(p, i, -1, x_perturb, delta )
-         ! compute x at x_op - delta x
-         call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-         if(Failed()) return
-         ! get central difference:
-         call MD_Compute_dX( p, x_p, x_m, delta, dXdx(:,i) )
+
+      ! Loop through state variables
+      do i = 1, size(Vars%x)
+
+         ! Loop through number of linearization perturbations in variable
+         do j = 1, Vars%x(i)%Num
+
+            ! Calculate column index
+            iCol = Vars%x(i)%iLoc(1) + j - 1
+
+            ! Calculate positive perturbation
+            call MV_Perturb(Vars%x(i), j, 1, m%Jac%x, m%Jac%x_perturb)
+            call MD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call MD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call MD_VarsPackContStateDeriv(Vars, m%dxdt_lin, m%Jac%x_pos)
+
+            ! Calculate negative perturbation
+            call MV_Perturb(Vars%x(i), j, -1, m%Jac%x, m%Jac%x_perturb)
+            call MD_VarsUnpackContState(Vars, m%Jac%x_perturb, m%x_perturb)
+            call MD_CalcContStateDeriv(t, u, p, m%x_perturb, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2); if (Failed()) return
+            call MD_VarsPackContStateDeriv(Vars, m%dxdt_lin, m%Jac%x_neg)
+
+            ! Get partial derivative via central difference and store in full linearization array
+            dXdx(:,iCol) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
+         end do
       end do
-   END IF
-   IF ( PRESENT( dXddx ) ) THEN
+   end if
+
+   if (present(dXddx)) then
       if (allocated(dXddx)) deallocate(dXddx)
-   END IF
-   IF ( PRESENT( dZdx ) ) THEN
+   end if
+
+   if (present(dZdx)) then
       if (allocated(dZdx)) deallocate(dZdx)
-   END IF
-   call CleanUp()
+   end if
    
 contains
-
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_JacobianPContState') 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
         Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp()
    end function Failed
-
-   subroutine CleanUp()
-      call MD_DestroyOutput(         y_p, ErrStat2, ErrMsg2 )
-      call MD_DestroyOutput(         y_m, ErrStat2, ErrMsg2 )
-      call MD_DestroyContState(      x_p, ErrStat2, ErrMsg2 )
-      call MD_DestroyContState(      x_m, ErrStat2, ErrMsg2 )
-      call MD_DestroyContState(x_perturb, ErrStat2, ErrMsg2 )
-   end subroutine cleanup
-
 END SUBROUTINE MD_JacobianPContState
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4338,609 +4855,5 @@ SUBROUTINE MD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    IF ( PRESENT(dZdz) ) THEN
    END IF
 END SUBROUTINE MD_JacobianPConstrState
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
-   REAL(DbKi),                        INTENT(IN   ) :: t          !< Time in seconds at operating point
-   TYPE(MD_InputType),                INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(MD_ParameterType),            INTENT(IN   ) :: p          !< Parameters
-   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x          !< Continuous states at operating point
-   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd         !< Discrete states at operating point
-   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z          !< Constraint states at operating point
-   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState !< Other states at operating point
-   TYPE(MD_OutputType),               INTENT(IN   ) :: y          !< Output at operating point
-   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: u_op(:)    !< values of linearized inputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: y_op(:)    !< values of linearized outputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: x_op(:)    !< values of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: xd_op(:)   !< values of linearized discrete states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: z_op(:)    !< values of linearized constraint states
-   ! Local
-   INTEGER(IntKi)                                                :: idx, i
-   INTEGER(IntKi)                                                :: nu
-   INTEGER(IntKi)                                                :: ny
-   INTEGER(IntKi)                                                :: ErrStat2
-   CHARACTER(ErrMsgLen)                                          :: ErrMsg2
-   CHARACTER(*), PARAMETER                                       :: RoutineName = 'MD_GetOP'
-   LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
-   TYPE(MD_ContinuousStateType)                                  :: dx          ! derivative of continuous states at operating point
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   ! inputs
-   IF ( PRESENT( u_op ) ) THEN
-      nu = size(p%Jac_u_indx,1) + u%CoupledKinematics(1)%NNodes * 6  ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
-      if (.not. allocated(u_op)) then
-         call AllocAry(u_op, nu, 'u_op', ErrStat2, ErrMsg2); if(Failed()) return
-      end if
-      idx = 1
-      FieldMask = .false.
-      FieldMask(MASKID_TranslationDisp) = .true.
-      FieldMask(MASKID_Orientation)     = .true.
-      FieldMask(MASKID_TranslationVel)  = .true.
-      FieldMask(MASKID_RotationVel)     = .true.
-      FieldMask(MASKID_TranslationAcc)  = .true.
-      FieldMask(MASKID_RotationAcc)     = .true.
-      ! fill in the u_op values from the input mesh
-      call PackMotionMesh(u%CoupledKinematics(1), u_op, idx, FieldMask=FieldMask)
-      
-      ! now do the active tensioning commands if there are any
-      if (allocated(u%DeltaL)) then
-         do i=1,size(u%DeltaL)
-            u_op(idx) = u%DeltaL(i)
-            idx = idx + 1
-            u_op(idx) = u%DeltaLdot(i)
-            idx = idx + 1
-         end do
-      endif
-   END IF
-   ! outputs
-   IF ( PRESENT( y_op ) ) THEN
-      ny = p%Jac_ny + y%CoupledLoads(1)%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
-      if (.not. allocated(y_op)) then
-         call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
-      end if
-      idx = 1
-      call PackLoadMesh(y%CoupledLoads(1), y_op, idx)
-      do i=1,p%NumOuts
-         y_op(idx) = y%WriteOutput(i)
-         idx = idx + 1
-      end do
-   END IF
-   ! states
-   IF ( PRESENT( x_op ) ) THEN
-      if (.not. allocated(x_op)) then
-         call AllocAry(x_op, p%Jac_nx,'x_op',ErrStat2,ErrMsg2); if (Failed()) return
-      end if
-      do i=1, p%Jac_nx
-         x_op(i) = x%states(p%dxIdx_map2_xStateIdx(i))      ! x for lin is different order, so use mapping
-      end do
-   END IF
-   ! state derivatives?
-   IF ( PRESENT( dx_op ) ) THEN
-      if (.not. allocated(dx_op)) then
-         call AllocAry(dx_op, p%Jac_nx,'dx_op',ErrStat2,ErrMsg2); if(failed()) return
-      end if
-      call MD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) ; if(Failed()) return
-      do i=1, p%Jac_nx
-         dx_op(i) = dx%states(p%dxIdx_map2_xStateIdx(i))    ! x for lin is different order, so use mapping
-      end do
-   END IF
-   IF ( PRESENT( xd_op ) ) THEN
-      ! pass
-   END IF
-   IF ( PRESENT( z_op ) ) THEN
-      ! pass
-   END IF
-   call CleanUp()
-contains
-   logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_GetOP') 
-        Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp()
-   end function Failed
-
-   subroutine CleanUp()
-      call MD_DestroyContState(dx, ErrStat2, ErrMsg2);
-   end subroutine
-END SUBROUTINE MD_GetOP
-
-
-
-!====================================================================================================
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
-!! Do not change the order of this packing without changing subroutines calculating dXdx etc (MD_Compute_dX)
-SUBROUTINE MD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
-   TYPE(MD_InitInputType)            , INTENT(IN   ) :: Init                  !< Init
-   TYPE(MD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
-   TYPE(MD_InputType)                , INTENT(IN   ) :: u                     !< inputs
-   TYPE(MD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
-   TYPE(MD_MiscVarType)              , INTENT(INOUT) :: m                     !< misc variables <<<<<<<<
-   TYPE(MD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
-   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
-   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
-   
-   INTEGER(IntKi)                                    :: ErrStat2
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'SD_Init_Jacobian'
-!   real(ReKi) :: dx, dy, dz, maxDim
-   
-   INTEGER(IntKi)                                    :: l, I
-   real(ReKi)                                        :: dl_slack     ! how much a given line segment is stretched [m] 
-   real(ReKi)                                        :: dl_slack_min ! minimum change in a node position for the least-strained segment in the simulation to go slack [m]
-   
-   
-   ! local variables:
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   
-   !! --- System dimension
-   !dx = maxval(Init%Nodes(:,2))- minval(Init%Nodes(:,2))
-   !dy = maxval(Init%Nodes(:,3))- minval(Init%Nodes(:,3))
-   !dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
-   !maxDim = max(dx, dy, dz)
-   
-   
-   ! Figure out appropriate transverse perturbation size to avoid slack segments
-   dl_slack_min = 0.1_ReKi  ! start at 0.1 m
-   
-   do l = 1,p%nLines
-      do I = 1, m%LineList(l)%N
-         dl_slack = m%LineList(l)%lstr(I) - m%LineList(l)%l(I)
-      
-         ! store the smallest positive length margin to a segment going slack
-         if (( dl_slack > 0.0_ReKi) .and. (dl_slack < dl_slack_min)) then
-            dl_slack_min = dl_slack  
-         end if
-      end do
-   end do
-   
-   dl_slack_min = 0.5*dl_slack_min  ! apply 0.5 safety factor
-   
-   !TODO: consider attachment radii to also produce a rotational perturbation size from the above
-   
-   
-   ! --- System dimension
-   call Init_Jacobian_y(); if (Failed()) return
-   call Init_Jacobian_x(); if (Failed()) return
-   call Init_Jacobian_u(); if (Failed()) return
-
-contains
-   LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init_Jacobian') 
-        Failed =  ErrStat >= AbortErrLev
-   END FUNCTION Failed
-   
-   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized outputs.
-   SUBROUTINE Init_Jacobian_y()
-      INTEGER(IntKi) :: index_next, i
-      
-      ! Number of outputs
-      p%Jac_ny = y%CoupledLoads(1)%nNodes * 6     & ! 3 forces + 3 moments at each node (moments may be zero)
-               + p%NumOuts                       ! WriteOutput values 
-      ! Storage info for each output (names, rotframe)
-      call AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
-      call AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
-      ! Names
-      index_next = 1
-      call PackLoadMesh_Names(  y%CoupledLoads(1), 'LinNames_y', InitOut%LinNames_y, index_next)  ! <<< should a specific name be provided here?
-      do i=1,p%NumOuts
-         InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
-      end do
-      
-      InitOut%RotFrame_y(:) = .false.
-   END SUBROUTINE Init_Jacobian_y
-
-   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized continuous states.
-   SUBROUTINE Init_Jacobian_x()
-      INTEGER(IntKi) :: idx      ! index into the LinNames_x array
-      INTEGER(IntKi) :: i
-      INTEGER(IntKi) :: l
-      INTEGER(IntKi) :: N
-
-      
-      p%Jac_nx = m%Nx ! size of (continuous) state vector (includes the first derivatives)
-      
-      ! allocate space for the row/column names and for perturbation sizes
-      CALL AllocAry(InitOut%LinNames_x    , p%Jac_nx, 'LinNames_x'            , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      CALL AllocAry(InitOut%RotFrame_x    , p%Jac_nx, 'RotFrame_x'            , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      CALL AllocAry(InitOut%DerivOrder_x  , p%Jac_nx, 'DerivOrder_x'          , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      CALL AllocAry(p%dx                  , p%Jac_nx, 'p%dx'                  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-      CALL AllocAry(p%dxIdx_map2_xStateIdx, p%Jac_nx, 'p%dxIdx_map2_xStateIdx', ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
-
-      p%dxIdx_map2_xStateIdx = 0_IntKi ! all values should be overwritten by logic below
-
-      ! set linearization output names and default perturbations, p%dx:
-      !  NOTE: the order is different than the order of the internal states.  This is to
-      !        match what the OpenFAST framework is expecting: all positions first, then all
-      !        derviatives of positions (velocity terms) second.  This adds slight complexity
-      !        here, but considerably simplifies post processing of the full OpenFAST results
-      !        for linearization.
-      !        The p%dxIdx_map2_xStateIdx array holds the index for the x%states array
-      !        corresponding to the current jacobian index.
-
-      !-----------------
-      ! position states
-      !-----------------
-      idx = 0
-      ! Free bodies
-      DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
-         if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then ! Coupled pinned body
-            p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
-            ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+8)
-            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
-            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
-            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
-            p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for rot_x
-            p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4        ! x%state index for rot_y
-            p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5        ! x%state index for rot_z
-            idx = idx + 3
-         else ! free body
-            p%dx(idx+1:idx+3) = dl_slack_min    ! body displacement [m]
-            p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
-            ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+11)
-            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
-            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Py, m'
-            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Pz, m'
-            InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
-            InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
-            InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
-            p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+6         ! x%state index for Px
-            p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+7         ! x%state index for Py
-            p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+8         ! x%state index for Pz
-            p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+9         ! x%state index for rot_x
-            p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+10        ! x%state index for rot_y
-            p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+11        ! x%state index for rot_z
-            idx = idx + 6
-         endif
-      END DO      
-
-      ! Rods
-      DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
-         if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then  ! pinned rod
-            p%dx(idx+1:idx+3) = 0.02         ! rod rotation [rad]
-            ! corresponds to state indices: (m%RodStateIs1(l)+3:m%RodStateIs1(l)+5)
-            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
-            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
-            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
-            p%dxIdx_map2_xStateIdx(idx+4) = m%RodStateIs1(l)+3          ! x%state index for rot_x
-            p%dxIdx_map2_xStateIdx(idx+5) = m%RodStateIs1(l)+4          ! x%state index for rot_y
-            p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+5          ! x%state index for rot_z
-            idx = idx + 3
-         else                                ! free rod
-            p%dx(idx+1:idx+3) = dl_slack_min ! rod displacement [m]
-            p%dx(idx+4:idx+6) = 0.02         ! rod rotation [rad]
-            ! corresponds to state indices: (m%RodStateIs1(l)+6:m%RodStateIs1(l)+11)
-            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Px, m'
-            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Py, m'
-            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Pz, m'
-            InitOut%LinNames_x(idx+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
-            InitOut%LinNames_x(idx+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
-            InitOut%LinNames_x(idx+6) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
-            p%dxIdx_map2_xStateIdx(idx+1) = m%RodStateIs1(l)+6          ! x%state index for Px
-            p%dxIdx_map2_xStateIdx(idx+2) = m%RodStateIs1(l)+7          ! x%state index for Py
-            p%dxIdx_map2_xStateIdx(idx+3) = m%RodStateIs1(l)+8          ! x%state index for Pz
-            p%dxIdx_map2_xStateIdx(idx+4) = m%RodStateIs1(l)+9          ! x%state index for rot_x
-            p%dxIdx_map2_xStateIdx(idx+5) = m%RodStateIs1(l)+10         ! x%state index for rot_y
-            p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+11         ! x%state index for rot_z
-            idx = idx + 6
-         end if
-      END DO      
-
-      ! Free Points
-      DO l = 1,p%nFreePoints                   ! Point m%PointList(m%FreePointIs(l))
-         ! corresponds to state indices: (m%PointStateIs1(l)+3:m%PointStateIs1(l)+5)
-         p%dx(idx+1:idx+3) = dl_slack_min    ! point displacement [m]
-         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Px, m'
-         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Py, m'
-         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Pz, m'
-         p%dxIdx_map2_xStateIdx(idx+1) = m%PointStateIs1(l)+3          ! x%state index for Px
-         p%dxIdx_map2_xStateIdx(idx+2) = m%PointStateIs1(l)+4          ! x%state index for Py
-         p%dxIdx_map2_xStateIdx(idx+3) = m%PointStateIs1(l)+5          ! x%state index for Pz
-         idx = idx + 3
-      END DO
-
-      ! Lines
-      DO l = 1,p%nLines                      ! Line m%LineList(l)         
-         ! corresponds to state indices: (m%LineStateIs1(l)+3*N-3:m%LineStateIs1(l)+6*N-7) -- NOTE: end nodes not included 
-         N = m%LineList(l)%N                 ! number of segments in the line
-         DO i = 0,N-2
-            p%dx(idx+1:idx+3) = dl_slack_min ! line internal node displacement [m]
-            InitOut%LinNames_x(idx+1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Px, m'
-            InitOut%LinNames_x(idx+2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Py, m'
-            InitOut%LinNames_x(idx+3) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Pz, m'
-            p%dxIdx_map2_xStateIdx(idx+1) = m%LineStateIs1(l)+3*N+3*i-3 ! x%state index for Px
-            p%dxIdx_map2_xStateIdx(idx+2) = m%LineStateIs1(l)+3*N+3*i-2 ! x%state index for Py
-            p%dxIdx_map2_xStateIdx(idx+3) = m%LineStateIs1(l)+3*N+3*i-1 ! x%state index for Pz
-            idx = idx + 3
-         END DO         
-      END DO
-
-      !-----------------
-      ! velocity states
-      !-----------------
-      ! Free bodies
-      DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
-         if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then ! Coupled pinned body
-            ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
-            p%dx(idx+1:idx+3) = 0.1             ! body rotational velocity [rad/s]
-            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
-            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
-            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
-            p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for omega_x
-            p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for omega_y
-            p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for omega_z
-            idx = idx + 3
-         else  !Free body
-            ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
-            p%dx(idx+1:idx+3) = 0.1             ! body translational velocity [m/s]
-            p%dx(idx+4:idx+6) = 0.1             ! body rotational velocity [rad/s]
-            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vx, m/s'
-            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vy, m/s'
-            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vz, m/s'
-            InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
-            InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
-            InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
-            p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for Rx
-            p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for Ry
-            p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for Rz
-            p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for omega_x
-            p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4         ! x%state index for omega_y
-            p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5         ! x%state index for omega_z
-            idx = idx + 6
-         endif
-      END DO      
-
-      ! Rods
-      DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
-         if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then ! pinned rod
-            ! corresponds to state indices: (m%RodStateIs1(l):m%RodStateIs1(l)+2)
-            p%dx(idx+1:idx+3) = 0.1          ! body rotational velocity [rad/s]
-            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
-            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
-            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
-            p%dxIdx_map2_xStateIdx(idx+1) = m%RodStateIs1(l)+0          ! x%state index for Vx
-            p%dxIdx_map2_xStateIdx(idx+2) = m%RodStateIs1(l)+1          ! x%state index for Vy
-            p%dxIdx_map2_xStateIdx(idx+3) = m%RodStateIs1(l)+2          ! x%state index for Vz
-            idx = idx + 3
-         else                                ! free rod
-            ! corresponds to state indices: (m%RodStateIs1(l):m%RodStateIs1(l)+5)
-            p%dx(idx+1:idx+3) = 0.1          ! body translational velocity [m/s]
-            p%dx(idx+4:idx+6) = 0.02         ! body rotational velocity [rad/s]
-            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vx, m/s'
-            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vy, m/s'
-            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vz, m/s'
-            InitOut%LinNames_x(idx+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
-            InitOut%LinNames_x(idx+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
-            InitOut%LinNames_x(idx+6) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
-            p%dxIdx_map2_xStateIdx(idx+1) = m%RodStateIs1(l)+0          ! x%state index for Vx
-            p%dxIdx_map2_xStateIdx(idx+2) = m%RodStateIs1(l)+1          ! x%state index for Vy
-            p%dxIdx_map2_xStateIdx(idx+3) = m%RodStateIs1(l)+2          ! x%state index for Vz
-            p%dxIdx_map2_xStateIdx(idx+4) = m%RodStateIs1(l)+3          ! x%state index for omega_x
-            p%dxIdx_map2_xStateIdx(idx+5) = m%RodStateIs1(l)+4          ! x%state index for omega_y
-            p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+5          ! x%state index for omega_z
-            idx = idx + 6
-         end if
-      END DO      
-
-      ! Free Points
-      DO l = 1,p%nFreePoints                   ! Point m%PointList(m%FreePointIs(l))
-         ! corresponds to state indices: (m%PointStateIs1(l):m%PointStateIs1(l)+2)
-         p%dx(idx+1:idx+3) = 0.1             ! point translational velocity [m/s]
-         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Vx, m/s'
-         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Vy, m/s'
-         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreePointIs(l)))//' Vz, m/s'
-         p%dxIdx_map2_xStateIdx(idx+1) = m%PointStateIs1(l)+0          ! x%state index for Vx
-         p%dxIdx_map2_xStateIdx(idx+2) = m%PointStateIs1(l)+1          ! x%state index for Vy
-         p%dxIdx_map2_xStateIdx(idx+3) = m%PointStateIs1(l)+2          ! x%state index for Vz
-         idx = idx + 3
-      END DO
-
-      ! Lines
-      DO l = 1,p%nLines                      ! Line m%LineList(l)         
-         ! corresponds to state indices: (m%LineStateIs1(l):m%LineStateIs1(l)+3*N-4) -- NOTE: end nodes not included
-         N = m%LineList(l)%N                 ! number of segments in the line
-         DO i = 0,N-2
-            p%dx(idx+1:idx+3) = 0.1          ! line internal node translational velocity [m/s]
-            InitOut%LinNames_x(idx+1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vx, m/s'
-            InitOut%LinNames_x(idx+2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vy, m/s'
-            InitOut%LinNames_x(idx+3) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vz, m/s'
-            p%dxIdx_map2_xStateIdx(idx+1) = m%LineStateIs1(l)+3*i+0  ! x%state index for Vx
-            p%dxIdx_map2_xStateIdx(idx+2) = m%LineStateIs1(l)+3*i+1  ! x%state index for Vy
-            p%dxIdx_map2_xStateIdx(idx+3) = m%LineStateIs1(l)+3*i+2  ! x%state index for Vz
-            idx = idx + 3
-         END DO
-      END DO
-
-      ! If a summary file is ever made...
-      !  !Formatting may be needed to make it pretty
-      !  if(UnSum > 0) then
-      !     write(UnSum,*) ' Lin_Jac_x       idx        x%state idx'
-      !     do i=1,p%Jac_nx
-      !        write(UnSum,*) InitOut%LinNames_x(i),'  ',i,'   ',p%dxIdx_map2_xStateIdx(i)
-      !     enddo
-      !  endif
-
-      InitOut%RotFrame_x   = .false.
-      InitOut%DerivOrder_x = 2      
-   END SUBROUTINE Init_Jacobian_x
-
-   SUBROUTINE Init_Jacobian_u()
-      INTEGER(IntKi) :: i, j, idx, nu, i_meshField
-      character(10)  :: LinStr      ! for noting which line a DeltaL control is attached to
-      logical        :: LinCtrl     ! Is the current DeltaL channel associated with a line?
-      ! Number of inputs
-      i = 0
-      if (allocated(u%DeltaL))   i=size(u%DeltaL)
-      nu = u%CoupledKinematics(1)%nNodes * 18 &   ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each node <<<<<<<
-         + i*2                                 ! a deltaL and rate of change for each active tension control channel
-      
-      ! --- Info of linearized inputs (Names, RotFrame, IsLoad)
-      call AllocAry(InitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      call AllocAry(InitOut%RotFrame_u, nu, 'RotFrame_u', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      call AllocAry(InitOut%IsLoad_u  , nu, 'IsLoad_u'  , ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      
-      InitOut%IsLoad_u   = .false. ! None of MoorDyn's inputs are loads
-      InitOut%RotFrame_u = .false. ! every input is on a mesh, which stores values in the global (not rotating) frame
-      
-      idx = 1
-      call PackMotionMesh_Names(u%CoupledKinematics(1), 'CoupledKinematics', InitOut%LinNames_u, idx) ! all 6 motion fields
-      
-      ! --- Jac_u_indx:  matrix to store index to help us figure out what the ith value of the u vector really means
-      ! (see perturb_u ... these MUST match )
-      ! column 1 indicates module's mesh and field
-      ! column 2 indicates the first index (x-y-z component) of the field
-      ! column 3 is the node
-      call allocAry( p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      p%Jac_u_indx = 0  ! initialize to zero
-      idx = 1
-      !Module/Mesh/Field: u%CoupledKinematics(1)%TranslationDisp  = 1;
-      !Module/Mesh/Field: u%CoupledKinematics(1)%Orientation      = 2;
-      !Module/Mesh/Field: u%CoupledKinematics(1)%TranslationVel   = 3;
-      !Module/Mesh/Field: u%CoupledKinematics(1)%RotationVel      = 4;
-      !Module/Mesh/Field: u%CoupledKinematics(1)%TranslationAcc   = 5;
-      !Module/Mesh/Field: u%CoupledKinematics(1)%RotationAcc      = 6;
-      do i_meshField = 1,6
-         do i=1,u%CoupledKinematics(1)%nNodes
-            do j=1,3
-               p%Jac_u_indx(idx,1) =  i_meshField     ! mesh field type (indicated by 1-6)
-               p%Jac_u_indx(idx,2) =  j               ! x, y, or z
-               p%Jac_u_indx(idx,3) =  i               ! node
-               idx = idx + 1
-            end do !j
-         end do !i
-      end do
-      ! now do the active tensioning commands if there are any
-      if (allocated(u%DeltaL)) then
-         do i=1,size(u%DeltaL)            ! Signals may be passed in without being requested for control
-            ! Figure out if this DeltaL control channel is associated with a line or multiple or none and label
-            LinCtrl = .FALSE.
-            LinStr = '(lines: '
-            do J=1,p%NLines
-               if (m%LineList(J)%CtrlChan == i) then
-                  LinCtrl = .TRUE.
-                  LinStr = LinStr//trim(num2lstr(i))//' '
-               endif
-            enddo
-            if (      LinCtrl)   LinStr = LinStr//' )'
-            if (.not. LinCtrl)   LinStr = '(lines: none)'
-
-            p%Jac_u_indx(idx,1) =  10              ! 10-11 mean active tension changes (10: deltaL; 11: deltaLdot)
-            p%Jac_u_indx(idx,2) =  0               ! not used
-            p%Jac_u_indx(idx,3) =  i               ! indicates DeltaL entry number 
-            InitOut%LinNames_u(idx) = 'CtrlChan DeltaL '//trim(num2lstr(i))//', m '//trim(LinStr)
-            idx = idx + 1
-         
-            p%Jac_u_indx(idx,1) =  11
-            p%Jac_u_indx(idx,2) =  0
-            p%Jac_u_indx(idx,3) =  i               
-            InitOut%LinNames_u(idx) = 'CtrlChan DeltaLdot '//trim(num2lstr(i))//', m/s'//trim(LinStr)
-            idx = idx + 1
-         end do
-      endif
-
-      ! --- Default perturbations, p%du:
-      call allocAry( p%du, 11, 'p%du', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
-      p%du( 1) = dl_slack_min  ! u%CoupledKinematics(1)%TranslationDisp  = 1;
-      p%du( 2) = 0.1_ReKi      ! u%CoupledKinematics(1)%Orientation      = 2;
-      p%du( 3) = 0.1_ReKi      ! u%CoupledKinematics(1)%TranslationVel   = 3;
-      p%du( 4) = 0.1_ReKi      ! u%CoupledKinematics(1)%RotationVel      = 4;
-      p%du( 5) = 0.1_ReKi      ! u%CoupledKinematics(1)%TranslationAcc   = 5;
-      p%du( 6) = 0.1_ReKi      ! u%CoupledKinematics(1)%RotationAcc      = 6;
-      p%du(10) = dl_slack_min  ! deltaL [m]
-      p%du(11) = 0.2_ReKi      ! deltaLdot [m/s] 
-   END SUBROUTINE Init_Jacobian_u
-
-END SUBROUTINE MD_Init_Jacobian
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
-!! Do not change this without making sure subroutine MD_init_jacobian is consistant with this routine!
-SUBROUTINE MD_Perturb_u( p, n, perturb_sign, u, du )
-   TYPE(MD_ParameterType)              , INTENT(IN   ) :: p            !< parameters
-   INTEGER( IntKi )                    , INTENT(IN   ) :: n            !< number of array element to use
-   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-   TYPE(MD_InputType)                  , INTENT(INOUT) :: u            !< perturbed MD inputs
-   REAL( R8Ki )                        , INTENT(  OUT) :: du           !< amount that specific input was perturbed
-   ! local variables
-   INTEGER :: fieldIndx
-   INTEGER :: node
-   fieldIndx = p%Jac_u_indx(n,2)
-   node      = p%Jac_u_indx(n,3)
-   du = p%du(  p%Jac_u_indx(n,1) )
-   ! determine which mesh we're trying to perturb and perturb the input:
-   SELECT CASE( p%Jac_u_indx(n,1) )
-   CASE ( 1)
-      u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) = u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) + du * perturb_sign
-   CASE ( 2)
-      CALL PerturbOrientationMatrix( u%CoupledKinematics(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.false. )
-   CASE ( 3)
-      u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) = u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) + du * perturb_sign
-   CASE ( 4)
-      u%CoupledKinematics(1)%RotationVel(fieldIndx,node) = u%CoupledKinematics(1)%RotationVel(fieldIndx,node) + du * perturb_sign
-   CASE ( 5)
-      u%CoupledKinematics(1)%TranslationAcc( fieldIndx,node) = u%CoupledKinematics(1)%TranslationAcc( fieldIndx,node) + du * perturb_sign
-   CASE ( 6)
-      u%CoupledKinematics(1)%RotationAcc(fieldIndx,node) = u%CoupledKinematics(1)%RotationAcc(fieldIndx,node) + du * perturb_sign
-   CASE (10)
-      u%deltaL(node) = u%deltaL(node) + du * perturb_sign
-   CASE (11)
-      u%deltaLdot(node) = u%deltaLdot(node) + du * perturb_sign
-   END SELECT
-END SUBROUTINE MD_Perturb_u
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine uses values of two output types to compute an array of differences.
-!! Do not change this packing without making sure subroutine MD_init_jacobian is consistant with this routine!
-SUBROUTINE MD_Compute_dY(p, y_p, y_m, delta, dY)
-   TYPE(MD_ParameterType)            , INTENT(IN   ) :: p     !< parameters
-   TYPE(MD_OutputType)               , INTENT(IN   ) :: y_p   !< MD outputs at \f$ u + \Delta_p u \f$ or \f$ z + \Delta_p z \f$ (p=plus)
-   TYPE(MD_OutputType)               , INTENT(IN   ) :: y_m   !< MD outputs at \f$ u - \Delta_m u \f$ or \f$ z - \Delta_m z \f$ (m=minus)
-   REAL(R8Ki)                        , INTENT(IN   ) :: delta !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
-   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:) !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial z_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
-   ! local variables:
-   INTEGER(IntKi) :: i              ! loop over outputs
-   INTEGER(IntKi) :: indx_first     ! index indicating next value of dY to be filled
-   indx_first = 1
-   call PackLoadMesh_dY(  y_p%CoupledLoads(1), y_m%CoupledLoads(1), dY, indx_first)
-   !call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first) ! all 6 motion fields
-   do i=1,p%NumOuts
-      dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
-   end do
-   dY = dY / (2.0_R8Ki*delta)
-END SUBROUTINE MD_Compute_dY
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine perturbs the nth element of the x array (and mesh/field it corresponds to)
-!! Do not change this without making sure subroutine MD_init_jacobian is consistant with this routine!
-SUBROUTINE MD_Perturb_x( p, i, perturb_sign, x, dx )
-   TYPE(MD_ParameterType)      , INTENT(IN   ) :: p            !< parameters
-   INTEGER( IntKi )            , INTENT(IN   ) :: i            !< state array index number 
-   INTEGER( IntKi )            , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-   TYPE(MD_ContinuousStateType), INTENT(INOUT) :: x            !< perturbed MD states
-   REAL( R8Ki )                , INTENT(  OUT) :: dx           !< amount that specific state was perturbed
-   integer(IntKi) :: j
-   dx = p%dx(i)
-   j = p%dxIdx_map2_xStateIdx(i)
-   x%states(j)    = x%states(j)    + dx * perturb_sign
-END SUBROUTINE MD_Perturb_x
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine uses values of two output types to compute an array of differences.
-!! Do not change this packing without making sure subroutine MD_init_jacobian is consistant with this routine!
-SUBROUTINE MD_Compute_dX(p, x_p, x_m, delta, dX)
-   TYPE(MD_ParameterType)      , INTENT(IN   ) :: p            !< parameters
-   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_p          !< <D continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
-   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_m          !< <D continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)
-   REAL(R8Ki)                  , INTENT(IN   ) :: delta        !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
-   REAL(R8Ki)                  , INTENT(INOUT) :: dX(:)        !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
-   INTEGER(IntKi) :: i ! loop over modes
-   do i=1,p%Jac_nx   ! index to dX 
-      ! NOTE: order of entries in dX is different than the x%states, so mapping is required
-      dX(i) = x_p%states(p%dxIdx_map2_xStateIdx(i)) - x_m%states(p%dxIdx_map2_xStateIdx(i))
-   end do
-   dX = dX / (2.0_R8Ki*delta)
-END SUBROUTINE MD_Compute_dX
-
-
 
 END MODULE MoorDyn
