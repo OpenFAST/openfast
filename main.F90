@@ -11,6 +11,10 @@ program main
   real(ReKi)      :: gridSpacing(3)
   real(c_double)  :: time
 
+  integer :: idim, i, j, k
+  integer(c_int) :: dlo(3), dhi(3)
+  real(c_double), allocatable :: data(:,:,:,:)
+
   call amrex_init()
 
   FileName = "my_subvol00006"
@@ -20,6 +24,22 @@ program main
   print*, "origin = " , origin(1) , origin(2) , origin(3)
   print*, "gridSpacing = ", gridSpacing(1), gridSpacing(2), gridSpacing(3)
   print*, "time = ", time
+
+  do idim = 1, 3
+     dlo(idim) = dims(idim)/3
+     dhi(idim) = dlo(idim) + dims(idim)/2
+  end do
+
+  allocate(data(3,dlo(1):dhi(1),dlo(2):dhi(2),dlo(3):dhi(3)))
+  call ReadAMReXSubdomain(data, dlo, dhi)
+
+  do k = dlo(3), dhi(3)
+     do j = dlo(2), dhi(2)
+        do i = dlo(1), dhi(1)
+           print*, i,j,k, data(1,i,j,k), data(2,i,j,k), data(3,i,j,k)
+        end do
+     end do
+  end do
 
   call amrex_finalize()
 
