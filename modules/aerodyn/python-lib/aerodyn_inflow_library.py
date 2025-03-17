@@ -35,7 +35,7 @@ from ctypes import (CDLL, POINTER, byref, c_char, c_char_p, c_double, c_float,
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Array, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -50,7 +50,7 @@ def flatten_array(
     array_name: str,
     elements_per_item: int,
     c_type: Any = c_float
-) -> Array:
+) -> Any:
     """Flattens arrays for passing to C.
 
     This is a helper function to flatten arrays for passing to C. It is used to flatten
@@ -70,6 +70,8 @@ def flatten_array(
     Raises:
         RuntimeError: If current_count differs from initial_count
     """
+    # print array name
+    print(f"Flattening array: {array_name}")
     if initial_count != current_count:
         error_msg = (
             f"The number of {array_name} points changed from initial value of"
@@ -80,7 +82,7 @@ def flatten_array(
     c_array = (c_type * (elements_per_item * current_count))(*array.flatten())
     return c_array
 
-def to_c_array(array: npt.NDArray, c_type: Any = c_float) -> Array:
+def to_c_array(array: npt.NDArray, c_type: Any = c_float) -> Any:
     """Converts numpy array to C array of specified type.
 
     Args:
@@ -90,8 +92,37 @@ def to_c_array(array: npt.NDArray, c_type: Any = c_float) -> Array:
     Returns:
         C-compatible array of the specified type
     """
-    flat_array = array.flatten()
-    return (c_type * len(flat_array))(*flat_array)
+    try:
+        print(f"Flattening array: {array}")
+
+        # if not np array, do not try to flatten
+        if not isinstance(array, np.ndarray):
+            print(f"Array is not a numpy array: {array}")
+            #return (c_type * len(array))(*array)
+
+        if isinstance(array, (list, tuple)):
+            print(f"Array is a list or tuple: {array}")
+            array = np.array(array, dtype=np.float32 if c_type == c_float else np.float64)
+
+        flat_array = array.flatten()
+        return (c_type * len(flat_array))(*flat_array)
+    except Exception as e:
+        print(f"Error while flattening array: {e}")
+        raise
+
+def to_c_string(input_array: List[str]) -> Tuple[bytes, int]:
+    """Converts input string array into a null-separated byte string for use in C.
+
+    Args:
+        input_array: List of strings to join with null characters
+
+    Returns:
+        Tuple containing:
+            - The encoded byte string
+            - Length of the encoded string
+    """
+    encoded_string = '\x00'.join(input_array).encode('utf-8')
+    return encoded_string, len(encoded_string)
 
 @dataclass
 class MotionData:
@@ -161,14 +192,14 @@ class AeroDynInflowLib(CDLL):
 
         # Error handling setup
         self.abort_error_level = 4
-        self.error_status = c_int(0)
-        self.error_message = create_string_buffer(self.ERROR_MESSAGE_LENGTH)
+        self.error_status_c = c_int(0)
+        self.error_message_c = create_string_buffer(self.ERROR_MESSAGE_LENGTH)
 
         # Channel information buffers
-        self._channel_names = create_string_buffer(
+        self._channel_names_c = create_string_buffer(
             self.CHANNEL_NAME_LENGTH * self.MAX_CHANNELS
         )
-        self._channel_units = create_string_buffer(
+        self._channel_units_c = create_string_buffer(
             self.CHANNEL_NAME_LENGTH * self.MAX_CHANNELS
         )
 
@@ -246,7 +277,7 @@ class AeroDynInflowLib(CDLL):
         # Environmental conditions
         #--------------------------------------
         self.gravity: float = 9.80665            # Gravitational acceleration (m/s^2)
-        self.density: float = 1.225              # Air/fluid density (kg/m^3)
+        self.fluid_density: float = 1.225        # Air/fluid density (kg/m^3)
         self.kinematic_viscosity: float = 1.464E-05  # Kinematic viscosity (m^2/s)
         self.sound_speed: float = 335.           # Speed of sound (m/s)
         self.atm_pressure: float = 103500.       # Atmospheric pressure (Pa)
@@ -272,18 +303,13 @@ class AeroDynInflowLib(CDLL):
         message = f"AeroDyn/InflowWind {error_level}: {error_msg}"
 
         if self.error_status_c.value >= self.abort_error_level:
-            self.adi_end()
-            raise RuntimeError(message)
-        else:
-            print(message)
-
-    def __del__(self) -> None:
-        """Ensures proper cleanup when the object is destroyed."""
-        if not self.ended:
             try:
                 self.adi_end()
             except Exception as e:
-                print(f"Error during cleanup: {e}")
+                message += f"\nAdditional error during cleanup: {e}"
+            raise RuntimeError(message)
+        else:
+            print(message)
 
     def adi_preinit(self) -> None:
         """Pre-initializes the AeroDyn/InflowWind interface.
@@ -298,8 +324,8 @@ class AeroDynInflowLib(CDLL):
             byref(c_int(self.transpose_dcm)),       # IN -> transpose_dcm flag (0=false, 1=true)
             byref(c_int(self.point_load_output)),   # IN -> point_load_output flag (0=false, 1=true)
             byref(c_int(self.debug_level)),         # IN -> debug level (0=None to 4=Fatal)
-            byref(self.error_status),               # OUT <- error status code
-            self.error_message                      # OUT <- error message buffer
+            byref(self.error_status_c),             # OUT <- error status code
+            self.error_message_c                    # OUT <- error message buffer
         )
         self.check_error()
 
@@ -346,8 +372,8 @@ class AeroDynInflowLib(CDLL):
             init_arrays['mesh_position_c'],       # IN -> initial mesh point positions (flattened array)
             init_arrays['mesh_orientation_c'],    # IN -> initial mesh point orientations (flattened array)
             init_arrays['mesh_blade_num_c'],      # IN -> mapping of mesh points to blade numbers
-            byref(self.error_status),             # OUT <- error status code
-            self.error_message                    # OUT <- error message buffer
+            byref(self.error_status_c),           # OUT <- error status code
+            self.error_message_c                  # OUT <- error message buffer
         )
         self.check_error()
 
@@ -369,19 +395,15 @@ class AeroDynInflowLib(CDLL):
         self._num_channels_c = c_int(0)
 
         # Join input strings with null character separator
-        process_input_string = lambda input_array: (
-            encoded_string := '\x00'.join(input_array).encode('utf-8'),
-            len(encoded_string)
-        )
-        ad_input_string, ad_input_string_length = process_input_string(ad_input_string_array)
-        ifw_input_string, ifw_input_string_length = process_input_string(ifw_input_string_array)
+        ad_input_string, ad_input_string_length = to_c_string(ad_input_string_array)
+        ifw_input_string, ifw_input_string_length = to_c_string(ifw_input_string_array)
 
         # Prepare output file paths
         output_file_root_name_c = create_string_buffer(
-            self.output_root_name.ljust(self.DEFAULT_STR_LEN).encode('utf-8')
+            self.output_root_name.ljust(self.DEFAULT_STRING_LENGTH).encode('utf-8')
         )
         vtk_output_dir_c = create_string_buffer(
-            self.output_vtk_dir.ljust(self.DEFAULT_STR_LEN).encode('utf-8')
+            self.output_vtk_dir.ljust(self.DEFAULT_STRING_LENGTH).encode('utf-8')
         )
 
         # Convert VTK nacelle dimensions to C array
@@ -485,23 +507,23 @@ class AeroDynInflowLib(CDLL):
 
         self.ADI_C_SetRotorMotion(
             c_int(i_turbine),                           # IN -> current turbine number (0-based)
-            motion_arrays['hub_position'],              # IN -> hub positions
-            motion_arrays['hub_orientation'],           # IN -> hub orientations
-            motion_arrays['hub_velocity'],              # IN -> hub velocity [TVx, TVy, TVz, RVx, RVy, RVz]
-            motion_arrays['hub_acceleration'],          # IN -> hub accelerations [TAx, TAy, TAz, RAx, RAy, RAz]
-            motion_arrays['nacelle_position'],          # IN -> nacelle positions
-            motion_arrays['nacelle_orientation'],       # IN -> nacelle orientations
-            motion_arrays['nacelle_velocity'],          # IN -> nacelle velocity [TVx, TVy, TVz, RVx, RVy, RVz]
-            motion_arrays['nacelle_acceleration'],      # IN -> nacelle accelerations [TAx, TAy, TAz, RAx, RAy, RAz]
-            motion_arrays['root_position'],             # IN -> root positions
-            motion_arrays['root_orientation'],          # IN -> root orientations (DCM)
-            motion_arrays['root_velocity'],             # IN -> root velocities at desired positions
-            motion_arrays['root_acceleration'],         # IN -> root accelerations at desired positions
+            motion_arrays['hub_position_c'],              # IN -> hub positions
+            motion_arrays['hub_orientation_c'],           # IN -> hub orientations
+            motion_arrays['hub_velocity_c'],              # IN -> hub velocity [TVx, TVy, TVz, RVx, RVy, RVz]
+            motion_arrays['hub_acceleration_c'],          # IN -> hub accelerations [TAx, TAy, TAz, RAx, RAy, RAz]
+            motion_arrays['nacelle_position_c'],          # IN -> nacelle positions
+            motion_arrays['nacelle_orientation_c'],       # IN -> nacelle orientations
+            motion_arrays['nacelle_velocity_c'],          # IN -> nacelle velocity [TVx, TVy, TVz, RVx, RVy, RVz]
+            motion_arrays['nacelle_acceleration_c'],      # IN -> nacelle accelerations [TAx, TAy, TAz, RAx, RAy, RAz]
+            motion_arrays['root_position_c'],             # IN -> root positions
+            motion_arrays['root_orientation_c'],          # IN -> root orientations (DCM)
+            motion_arrays['root_velocity_c'],             # IN -> root velocities at desired positions
+            motion_arrays['root_acceleration_c'],         # IN -> root accelerations at desired positions
             byref(c_int(self.num_mesh_pts)),            # IN -> number of attachment points expected (where motions are transferred into HD)
-            motion_arrays['mesh_position'],             # IN -> mesh positions
-            motion_arrays['mesh_orientation'],          # IN -> mesh orientations (DCM)
-            motion_arrays['mesh_velocity'],             # IN -> mesh velocities at desired positions
-            motion_arrays['mesh_acceleration'],         # IN -> mesh accelerations at desired positions
+            motion_arrays['mesh_position_c'],             # IN -> mesh positions
+            motion_arrays['mesh_orientation_c'],          # IN -> mesh orientations (DCM)
+            motion_arrays['mesh_velocity_c'],             # IN -> mesh velocities at desired positions
+            motion_arrays['mesh_acceleration_c'],         # IN -> mesh accelerations at desired positions
             byref(self.error_status_c),                 # OUT <- error status
             self.error_message_c                        # OUT <- error message
         )
@@ -639,9 +661,25 @@ class AeroDynInflowLib(CDLL):
                 - 'units': List of corresponding units
         """
         return {
-            'names': self.output_channel_names,
-            'units': self.output_channel_units
+            'names': self.output_channel_names_c,
+            'units': self.output_channel_units_c
         }
+
+    @property
+    def output_channel_names(self) -> List[str]:
+        """Get the names of available output channels."""
+        if not self._channel_names_c.value:
+            return []
+        names = self._channel_names_c.value.split()
+        return [name.decode('utf-8') for name in names]
+
+    @property
+    def output_channel_units(self) -> List[str]:
+        """Get the units of available output channels."""
+        if not self._channel_units_c.value:
+            return []
+        units = self._channel_units_c.value.split()
+        return [unit.decode('utf-8') for unit in units]
 
     def __enter__(self) -> 'AeroDynInflowLib':
         """Context manager entry.
@@ -940,9 +978,12 @@ class AeroDynInflowLib(CDLL):
         Raises:
             ValueError: If dimensions are incorrect
         """
-        expected_shape = (3,) if single_pt else (num_pts, 3)
-        expected_orient_shape = (9,) if single_pt else (num_pts, 9)
-        expected_vel_shape = (6,) if single_pt else (num_pts, 6)
+        expected_shape = (1,3) if single_pt else (num_pts, 3)
+        expected_orient_shape = (1,9) if single_pt else (num_pts, 9)
+        expected_vel_shape = (1,6) if single_pt else (num_pts, 6)
+
+        # print motion.position shape and size
+        print(f"{name} position shape: {motion.position.shape}, size: {motion.position.size}")
 
         if motion.position.shape != expected_shape:
             raise ValueError(
@@ -1069,58 +1110,43 @@ class AeroDynInflowLib(CDLL):
 # Write output channels to a file
 #-------------------------------------------------------------------------------
 class WriteOutChans:
-    """
-    A helper class for writing output channels to file.
+    """A helper class for writing output channels to file.
 
-    This class is used for regression testing to mirror the output from AD15 and InflowWind
-    from an OpenFAST simulation. It's also valuable for debugging interfaces to the
+    This class writes simulation output channels to a text file in a tabular format.
+    It's used for regression testing to mirror the output from AD15 and InflowWind
+    from an OpenFAST simulation, and is valuable for debugging interfaces to the
     ADI_C_Binding library.
 
     When coupled to another code, this data would typically be passed back for inclusion
     in any output files there.
-    """
-    def __init__(self, filename: str, channel_names: List[str], channel_units: List[str]) -> None:
-        """Initialize the output file with headers.
 
-        Args:
-            filename: Path to the output file
-            channel_names: List of channel names
-            channel_units: List of channel units
-        """
-        self.channel_names = ['Time'] + channel_names.copy()
-        self.channel_units = ['(s)'] + channel_units.copy()
-        self.filename = filename
+    Attributes:
+        filename: Name of the output file
+        opened: Boolean flag indicating if the output file is currently open
+    """
+
+    def __init__(self, filename: str, channel_names: List[str], channel_units: List[str]) -> None:
+        channel_names.insert(0, 'Time')             # add time index header
+        channel_units.insert(0, '(s)')              # add time index unit
+        self.out_file = open(filename, 'wt')        # open output file and write header info
+        # write file header
+        t_string = datetime.now()
+        dt_string = datetime.today()
+        self.out_file.write(f"## This file was generated by AeroDyn_Inflow_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
+        self.out_file.write(f"## This file contains output channels requested from the OutList section of the AD15 and IfW input files")
+        self.out_file.write(f"{filename}\n")
+        self.out_file.write("#\n")
+        self.out_file.write("#\n")
+        self.out_file.write("#\n")
+        self.out_file.write("#\n")
+        l = len(channel_names)
+        f_string = "{:^15s}"+"   {:^20s}  "*(l-1)
+        self.out_file.write(f_string.format(*channel_names) + '\n')
+        self.out_file.write(f_string.format(*channel_units) + '\n')
         self.opened = True
 
-        with open(filename, 'wt') as self.out_file:
-            self._write_header()
-
-        self.out_file = open(filename, 'at') # switch to append mode
-
-    def _write_header(self) -> None:
-        """Write the file header with metadata and column information."""
-        timestamp = datetime.now().strftime('%b-%d-%Y %H:%M:%S')
-        date_str = datetime.now().strftime('%b-%d-%Y')
-        header_lines = [
-            f"## This file was generated by AeroDyn_Inflow_Driver on {date_str} at {timestamp}",
-            f"## This file contains output channels requested from the OutList section of the AD15 and IfW input files",
-            f"{self.filename}",
-            "#",
-            "#",
-            "#",
-            "#"
-        ]
-
-        col_width = 20   # Standard column width
-        time_width = 15  # Time column width
-        format_str = "{:^" + str(time_width) + "s}" + "   {:^" + str(col_width) + "s}  " * (len(self.channel_names) - 1)
-        header_lines.append(format_str.format(*self.channel_names))
-        header_lines.append(format_str.format(*self.channel_units))
-
-        self.out_file.write("\n".join(header_lines) + "\n")
-
     def write(self, channel_data: npt.NDArray) -> None:
-        """Write channel data to the output file.
+        """Write the channel data to the output file.
 
         Args:
             channel_data: Array of channel data with shape (n_timesteps, n_channels)
@@ -1130,10 +1156,7 @@ class WriteOutChans:
         data_format = "{:25.7f}" * (channel_data.shape[1] - 1)
         format_str = time_format + data_format
 
-        rows = []
-        for i in range(channel_data.shape[0]):
-            rows.append(format_str.format(*channel_data[i, :]))
-
+        rows = [format_str.format(*row) for row in channel_data]
         self.out_file.write("\n".join(rows) + "\n")
         self.out_file.flush()
 
@@ -1237,11 +1260,11 @@ class DriverDbg:
     def write(
         self,
         t: float,
-        mesh_position: Any,
-        mesh_velocity: Any,
-        mesh_acceleration: Any,
-        mesh_forces_moments: Any,
-        disk_avg_velocity: Any
+        mesh_position: npt.NDArray,
+        mesh_velocity: npt.NDArray,
+        mesh_acceleration: npt.NDArray,
+        mesh_forces_moments: npt.NDArray,
+        disk_avg_velocity: npt.NDArray
     ) -> None:
         """Writes the current state to the debug file."""
         row_data = [f"{t:10.4f}"]
