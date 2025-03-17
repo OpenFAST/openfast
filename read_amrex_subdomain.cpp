@@ -282,11 +282,4 @@ void read_amrex_subdomain (double* a, int const* lo, int const* hi)
     }
 }
 
-void get_subdomain_offset (int* offset)
-{
-    offset[0] = subdomain_offset[0];
-    offset[1] = subdomain_offset[1];
-    offset[2] = subdomain_offset[2];
-}
-
 }
