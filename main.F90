@@ -26,8 +26,8 @@ program main
   print*, "time = ", time
 
   do idim = 1, 3
-     dlo(idim) = dims(idim)/3
-     dhi(idim) = dlo(idim) + dims(idim)/2
+     dlo(idim) = dims(idim)/2
+     dhi(idim) = dlo(idim) + dims(idim)/4
   end do
 
   allocate(data(3,dlo(1):dhi(1),dlo(2):dhi(2),dlo(3):dhi(3)))

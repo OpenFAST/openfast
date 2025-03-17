@@ -8,15 +8,40 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace
 {
+    int coarsen (int i, int ratio)
+    {
+	return (i<0) ? -std::abs(i+1)/ratio-1 : i/ratio;
+    }
+
     struct IntVect
     {
 	int a[3];
 	int& operator[] (int i) { return a[i]; }
 	int const& operator[] (int i) const { return a[i]; }
+
+	bool operator== (IntVect const& rhs) const noexcept
+	{
+	    return (a[0] == rhs.a[0])
+		&& (a[1] == rhs.a[1])
+		&& (a[2] == rhs.a[2]);
+	}
+
+	struct shift_hasher
+	{
+	    std::size_t operator() (IntVect const& vec) const noexcept
+	    {
+                static constexpr unsigned shift1 = sizeof(size_t)>=8 ? 20 : 10;
+                static constexpr unsigned shift2 = sizeof(size_t)>=8 ? 40 : 20;
+                return static_cast<std::size_t>(vec[0]) ^
+                      (static_cast<std::size_t>(vec[1]) << shift1) ^
+                      (static_cast<std::size_t>(vec[2]) << shift2);
+            }
+        };
     };
 
     std::ostream& operator<< (std::ostream& os, IntVect const& iv)
@@ -63,9 +88,17 @@ namespace
 	std::size_t offset;
     };
 
-    IntVect subdomain_offset;
+    struct HashMap
+    {
+	IntVect blo;
+	IntVect bhi;
+	IntVect maxext;
+	std::unordered_map<IntVect,std::vector<int>,IntVect::shift_hasher> hash;
+    };
+
     std::vector<Box> grids;
     std::vector<FOD> fods;
+    HashMap hashmap;
 
     void read_file (std::string const& File, std::vector<char>& file_char_vec)
     {
@@ -158,22 +191,21 @@ void read_amrex_header (char const* name, int* dims, double* origin, double* dx,
 	}
 	is.ignore(1000000, ')');
 
-	int lo[3] = {std::numeric_limits<int>::max(),
-	             std::numeric_limits<int>::max(),
-	             std::numeric_limits<int>::max()};
-	int hi[3] = {std::numeric_limits<int>::lowest(),
-	             std::numeric_limits<int>::lowest(),
-	             std::numeric_limits<int>::lowest()};
+	for (int i = 0; i < 3; ++i) {
+	    hashmap.blo[i] = std::numeric_limits<int>::max();
+	    hashmap.bhi[i] = std::numeric_limits<int>::lowest();
+	    hashmap.maxext[i] = 1;
+	}
 	for (auto const& b : grids) {
 	    for (int i = 0; i < 3; ++i) {
-		lo[i] = std::min(lo[i], b.lo[i]);
-		hi[i] = std::max(hi[i], b.hi[i]);
+		hashmap.blo[i] = std::min(hashmap.blo[i], b.lo[i]);
+		hashmap.bhi[i] = std::max(hashmap.bhi[i], b.hi[i]);
+		hashmap.maxext[i] = std::max(hashmap.maxext[i], b.hi[i]-b.lo[i]+1);
 	    }
 	}
 	for (int i = 0; i < 3; ++i) {
-	    dims[i] = hi[i] - lo[i] + 1;
+	    dims[i] = hashmap.bhi[i] - hashmap.blo[i] + 1;
 	    origin[i] = prob_lo[i] + i*dx[i];
-	    subdomain_offset[i] = lo[i];
 	}
 
 	// Read FabOnDisk
@@ -187,98 +219,128 @@ void read_amrex_header (char const* name, int* dims, double* origin, double* dx,
 	    fods[i].file = std::string(name) + "/Level_0/" + str;
 	}
     }
+
+    // Build hash
+    auto nboxes = int(grids.size());
+    for (int i = 0; i < nboxes; ++i) {
+	IntVect key;
+	for (int idim = 0; idim < 3; ++idim) {
+	    key[idim] = coarsen(grids[i].lo[idim], hashmap.maxext[idim]);
+	}
+	hashmap.hash[key].push_back(i);
+    }
 }
 
-void read_amrex_subdomain (double* a, int const* lo, int const* hi)
+void read_amrex_subdomain (double* a, int const* a_lo, int const* a_hi)
 {
     long long istride_a = 3;
-    long long jstride_a = istride_a * (hi[0]-lo[0]+1);
-    long long kstride_a = jstride_a * (hi[1]-lo[1]+1);
+    long long jstride_a = istride_a * (a_hi[0]-a_lo[0]+1);
+    long long kstride_a = jstride_a * (a_hi[1]-a_lo[1]+1);
 
-    auto const nboxes = int(grids.size());
     std::map<std::string,std::ifstream> ifs_map;
-    for (int ibox = 0; ibox < nboxes; ++ibox) {
-	int ilo[3], ihi[3];
-	bool ok = true;
-	for (int idim = 0; idim < 3; ++idim) {
-	    ilo[idim] = std::max(lo[idim]+subdomain_offset[idim], grids[ibox].lo[idim]);
-	    ihi[idim] = std::min(hi[idim]+subdomain_offset[idim], grids[ibox].hi[idim]);
-	    ok = ok && (ilo[idim] <= ihi[idim]);
-	}
-	if (ok) {
-	    auto& ifs = ifs_map[fods[ibox].file];
-	    if (! ifs.is_open()) {
-		ifs.open(fods[ibox].file, std::ios::in|std::ios::binary);
-	    }
-	    ifs.seekg(fods[ibox].offset, std::ios::beg);
-	    char c;
-	    bool badfab = false;
-	    ifs >> c;
-	    if(c != 'F') {
-		badfab = true;
-	    }
-	    ifs >> c;
-	    if(c != 'A') {
-		badfab = true;
-	    }
-	    ifs >> c;
-	    if (c != 'B') {
-		badfab = true;
-	    }
-	    if (badfab) {
-		std::cout << "Bad Fab in " << fods[ibox].file << "\n";
-		std::abort();
-	    }
-	    for (int i = 0; i < 5; ++i) { // Real descriptor has 5 ')'s
-		ifs.ignore(1000000, ')');
-	    }
-	    Box box;
-	    ifs >> box;
-	    bool badbox = false;
-	    for (int idim = 0; idim < 3; ++idim) {
-		if ((box.lo[idim] != grids[ibox].lo[idim]) ||
-		    (box.hi[idim] != grids[ibox].hi[idim])) {
-		    badbox = true;
+
+    IntVect clo, chi, alo, ahi;
+    for (int idim = 0; idim < 3; ++idim) {
+	alo[idim] = a_lo[idim] + hashmap.blo[idim];
+	ahi[idim] = a_hi[idim] + hashmap.blo[idim]; // Yes blo is the offset.
+	clo[idim] = coarsen(std::max(alo[idim],hashmap.blo[idim]),
+			    hashmap.maxext[idim]);
+	chi[idim] = coarsen(std::min(ahi[idim],hashmap.bhi[idim]),
+			    hashmap.maxext[idim]);
+    }
+
+    // -1 because we use the lower corner for hash
+    for (int kk = clo[2]-1; kk <= chi[2]; ++kk) {
+    for (int jj = clo[1]-1; jj <= chi[1]; ++jj) {
+    for (int ii = clo[0]-1; ii <= chi[0]; ++ii) {
+	IntVect key{ii,jj,kk};
+	auto it = hashmap.hash.find(key);
+	if (it != hashmap.hash.cend()) {
+	    for (int ibox : it->second) {
+		int ilo[3], ihi[3];
+		bool ok = true;
+		for (int idim = 0; idim < 3; ++idim) {
+		    ilo[idim] = std::max(alo[idim], grids[ibox].lo[idim]);
+		    ihi[idim] = std::min(ahi[idim], grids[ibox].hi[idim]);
+		    ok = ok && (ilo[idim] <= ihi[idim]);
 		}
-	    }
-	    if (badbox) {
-		std::cout << "Bad box in " << fods[ibox].file << ", " << box
-			  << ", " << grids[ibox] << "\n";
-		std::abort();
-	    }
-	    int ncomp;
-	    ifs >> ncomp;
-	    assert(ncomp == 3);
-	    ifs.ignore(1000000, '\n');
 
-	    long long jstride_p = box.hi[0]-box.lo[0]+1;
-	    long long kstride_p = jstride_p * (box.hi[1]-box.lo[1]+1);
-	    long long nstride_p = kstride_p * (box.hi[2]-box.lo[2]+1);
-	    auto nreals = nstride_p * ncomp;
-	    auto nbytes = sizeof(double)*nreals;
-	    auto* p = (double*)std::malloc(nbytes);
-	    ifs.read((char*)p, std::streamsize(nbytes));
-
-	    for (int k = ilo[2]; k <= ihi[2]; ++k) {
-		int ka = k - subdomain_offset[2] - lo[2];
-		int kp = k - box.lo[2];
-		for (int j = ilo[1]; j <= ihi[1]; ++j) {
-		    int ja = j - subdomain_offset[1] - lo[1];
-		    int jp = j - box.lo[1];
-		    for (int i = ilo[0]; i <= ihi[0]; ++i) {
-			int ia = i - subdomain_offset[0] - lo[0];
-			int ip = i - box.lo[0];
-			long long aoff = ia*istride_a + ja*jstride_a + ka*kstride_a;
-			long long poff = ip + jp*jstride_p + kp*kstride_p;
-			a[aoff  ] = p[poff            ];
-			a[aoff+1] = p[poff+nstride_p  ];
-			a[aoff+2] = p[poff+nstride_p*2];
+		if (ok) {
+		    auto& ifs = ifs_map[fods[ibox].file];
+		    if (! ifs.is_open()) {
+			ifs.open(fods[ibox].file, std::ios::in|std::ios::binary);
 		    }
+		    ifs.seekg(fods[ibox].offset, std::ios::beg);
+		    char c;
+		    bool badfab = false;
+		    ifs >> c;
+		    if(c != 'F') {
+			badfab = true;
+		    }
+		    ifs >> c;
+		    if(c != 'A') {
+			badfab = true;
+		    }
+		    ifs >> c;
+		    if (c != 'B') {
+			badfab = true;
+		    }
+		    if (badfab) {
+			std::cout << "Bad Fab in " << fods[ibox].file << "\n";
+			std::abort();
+		    }
+		    for (int i = 0; i < 5; ++i) { // Real descriptor has 5 ')'s
+			ifs.ignore(1000000, ')');
+		    }
+		    Box box;
+		    ifs >> box;
+		    bool badbox = false;
+		    for (int idim = 0; idim < 3; ++idim) {
+			if ((box.lo[idim] != grids[ibox].lo[idim]) ||
+			    (box.hi[idim] != grids[ibox].hi[idim])) {
+			    badbox = true;
+			}
+		    }
+		    if (badbox) {
+			std::cout << "Bad box in " << fods[ibox].file << ", " << box
+				  << ", " << grids[ibox] << "\n";
+			std::abort();
+		    }
+		    int ncomp;
+		    ifs >> ncomp;
+		    assert(ncomp == 3);
+		    ifs.ignore(1000000, '\n');
+
+		    long long jstride_p = box.hi[0]-box.lo[0]+1;
+		    long long kstride_p = jstride_p * (box.hi[1]-box.lo[1]+1);
+		    long long nstride_p = kstride_p * (box.hi[2]-box.lo[2]+1);
+		    auto nreals = nstride_p * ncomp;
+		    auto nbytes = sizeof(double)*nreals;
+		    auto* p = (double*)std::malloc(nbytes);
+		    ifs.read((char*)p, std::streamsize(nbytes));
+
+		    for (int k = ilo[2]; k <= ihi[2]; ++k) {
+			int ka = k - alo[2];
+			int kp = k - box.lo[2];
+			for (int j = ilo[1]; j <= ihi[1]; ++j) {
+			    int ja = j - alo[1];
+			    int jp = j - box.lo[1];
+			    for (int i = ilo[0]; i <= ihi[0]; ++i) {
+				int ia = i - alo[0];
+				int ip = i - box.lo[0];
+				long long aoff = ia*istride_a + ja*jstride_a + ka*kstride_a;
+				long long poff = ip + jp*jstride_p + kp*kstride_p;
+				a[aoff  ] = p[poff            ];
+				a[aoff+1] = p[poff+nstride_p  ];
+				a[aoff+2] = p[poff+nstride_p*2];
+			    }
+			}
+		    }
+
+		    std::free(p);
 		}
 	    }
-
-	    std::free(p);
-	}
+	}}}
     }
 }
 
