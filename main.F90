@@ -6,9 +6,9 @@ program main
   implicit none
 
   character(1024) :: FileName
-  integer(IntKi)  :: dims(3)
-  real(ReKi)      :: origin(3)
-  real(ReKi)      :: gridSpacing(3)
+  integer(c_int)  :: dims(3)
+  real(c_double)  :: origin(3)
+  real(c_double)  :: gridSpacing(3)
   real(c_double)  :: time
 
   integer :: idim, i, j, k

@@ -4,11 +4,6 @@ module read_amrex_subdomain_module
   private
   public :: ReadAMReXHeader, ReadAMReXSubdomain
 
-  integer, public, parameter :: IntKi = c_int
-  integer, public, parameter :: ReKi = c_double
-  integer, public, parameter :: DbKi = c_double
-  integer, public, parameter :: SiKi = c_double
-
   interface
      subroutine read_amrex_header (name,dims,origin,dx,t) bind(c)
        import
@@ -34,9 +29,9 @@ contains
   ! If we want, we could add an assertion.
   subroutine ReadAMReXHeader (FileName, dims, origin, gridSpacing, time)
     character(1024), intent(in   )  :: FileName        ! Name of Header file 
-    integer(IntKi),  intent(  out)  :: dims(3)         ! Dimension of the full grid (nx,ny,nz)
-    real(ReKi),      intent(  out)  :: origin(3)       ! The lower-left corner of the full grid (x0,y0,z0)
-    real(ReKi),      intent(  out)  :: gridSpacing(3)  ! Spacing between grid points (dx,dy,dz)
+    integer(c_int),  intent(  out)  :: dims(3)         ! Dimension of the full grid (nx,ny,nz)
+    real(c_double),  intent(  out)  :: origin(3)       ! The lower-left corner of the full grid (x0,y0,z0)
+    real(c_double),  intent(  out)  :: gridSpacing(3)  ! Spacing between grid points (dx,dy,dz)
     real(c_double),  intent(  out)  :: time
 
     character(kind=c_char) :: cstr(len_trim(FileName)+1)
