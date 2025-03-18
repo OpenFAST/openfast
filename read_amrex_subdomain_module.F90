@@ -29,8 +29,8 @@ contains
   ! If we want, we could add an assertion.
   subroutine ReadAMReXHeader (FileName, dims, origin, gridSpacing, time)
     character(1024), intent(in   )  :: FileName        ! Name of Header file 
-    integer(c_int),  intent(  out)  :: dims(3)         ! Dimension of the full grid (nx,ny,nz)
-    real(c_double),  intent(  out)  :: origin(3)       ! The lower-left corner of the full grid (x0,y0,z0)
+    integer(c_int),  intent(  out)  :: dims(3)         ! Dimension of the subdomain grid (nx,ny,nz)
+    real(c_double),  intent(  out)  :: origin(3)       ! The lower-left corner of the subdomain
     real(c_double),  intent(  out)  :: gridSpacing(3)  ! Spacing between grid points (dx,dy,dz)
     real(c_double),  intent(  out)  :: time
 
@@ -45,8 +45,12 @@ contains
   end subroutine ReadAMReXHeader
 
   ! The natural ordering in amrex is (nx,ny,nz,3).
-  ! We will transpose it to (3,nx,ny,nz)
-  ! The center of cell (i,j,k) is at origins + ((i,j,k)+0.5)*gridSpacing.
+  ! We will transpose it to (3,nx,ny,nz).
+  ! The starting index of the entire subdomain data is 0.
+  ! This subroutine reads part of the subdomain specified by lo and hi.
+  ! The center of cell (i,j,k) is at origin + ((i,j,k)+0.5)*gridSpacing.
+  ! This subroutine is thread safe. But using too many threads may not be good
+  ! for performance.
   subroutine ReadAMReXSubdomain (a, lo, hi)
     integer(c_int), intent(in) :: lo(3), hi(3)
     real(c_double), intent(out) :: a(3,lo(1):hi(1),lo(2):hi(2),lo(3):hi(3))
