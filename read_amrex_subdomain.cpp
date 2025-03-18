@@ -6,6 +6,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -390,8 +391,8 @@ void read_amrex_subdomain (double* a, int const* a_lo, int const* a_hi,
                         long long nstride_p = kstride_p * (box.hi[2]-box.lo[2]+1);
                         auto nreals = nstride_p * ncomp;
                         auto nbytes = sizeof(double)*nreals;
-                        auto* p = (double*)std::malloc(nbytes);
-                        ifs.read((char*)p, std::streamsize(nbytes));
+                        auto p = std::make_unique<double[]>(nreals);
+                        ifs.read((char*)p.get(), std::streamsize(nbytes));
 
                         for (int k = ilo[2]; k <= ihi[2]; ++k) {
                             int ka = k - alo[2];
@@ -410,8 +411,6 @@ void read_amrex_subdomain (double* a, int const* a_lo, int const* a_hi,
                                 }
                             }
                         }
-
-                        std::free(p);
                     }
                 }
             }
