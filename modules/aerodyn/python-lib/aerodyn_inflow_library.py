@@ -451,34 +451,6 @@ class AeroDynInflowLib(CDLL):
     def adi_setrotormotion(
         self,
         i_turbine: int,
-        hub_position: npt.NDArray[np.float32],
-        hub_orientation: npt.NDArray[np.float64],
-        hub_velocity: npt.NDArray[np.float32],
-        hub_acceleration: npt.NDArray[np.float32],
-        nacelle_position: npt.NDArray[np.float32],
-        nacelle_orientation: npt.NDArray[np.float64],
-        nacelle_velocity: npt.NDArray[np.float32],
-        nacelle_acceleration: npt.NDArray[np.float32],
-        root_position: npt.NDArray[np.float32],
-        root_orientation: npt.NDArray[np.float64],
-        root_velocity: npt.NDArray[np.float32],
-        root_acceleration: npt.NDArray[np.float32],
-        mesh_position: npt.NDArray[np.float32],
-        mesh_orientation: npt.NDArray[np.float64],
-        mesh_velocity: npt.NDArray[np.float32],
-        mesh_acceleration: npt.NDArray[np.float32]
-    ) -> None:
-        """Sets the rotor motion for simulation."""
-        hub = MotionData(hub_position, hub_orientation, hub_velocity, hub_acceleration)
-        nacelle = MotionData(nacelle_position, nacelle_orientation, nacelle_velocity, nacelle_acceleration)
-        root = MotionData(root_position, root_orientation, root_velocity, root_acceleration)
-        mesh = MotionData(mesh_position, mesh_orientation, mesh_velocity, mesh_acceleration)
-
-        self.set_rotor_motion_new(i_turbine, hub, nacelle, root, mesh)
-
-    def set_rotor_motion_new(
-        self,
-        i_turbine: int,
         hub: MotionData,
         nacelle: MotionData,
         root: MotionData,
@@ -506,7 +478,7 @@ class AeroDynInflowLib(CDLL):
         motion_arrays = self._prepare_motion_arrays(hub, nacelle, root, mesh)
 
         self.ADI_C_SetRotorMotion(
-            c_int(i_turbine),                           # IN -> current turbine number (0-based)
+            c_int(i_turbine),                             # IN -> current turbine number (0-based)
             motion_arrays['hub_position_c'],              # IN -> hub positions
             motion_arrays['hub_orientation_c'],           # IN -> hub orientations
             motion_arrays['hub_velocity_c'],              # IN -> hub velocity [TVx, TVy, TVz, RVx, RVy, RVz]
@@ -519,13 +491,13 @@ class AeroDynInflowLib(CDLL):
             motion_arrays['root_orientation_c'],          # IN -> root orientations (DCM)
             motion_arrays['root_velocity_c'],             # IN -> root velocities at desired positions
             motion_arrays['root_acceleration_c'],         # IN -> root accelerations at desired positions
-            byref(c_int(self.num_mesh_pts)),            # IN -> number of attachment points expected (where motions are transferred into HD)
+            byref(c_int(self.num_mesh_pts)),              # IN -> number of attachment points expected (where motions are transferred into HD)
             motion_arrays['mesh_position_c'],             # IN -> mesh positions
             motion_arrays['mesh_orientation_c'],          # IN -> mesh orientations (DCM)
             motion_arrays['mesh_velocity_c'],             # IN -> mesh velocities at desired positions
             motion_arrays['mesh_acceleration_c'],         # IN -> mesh accelerations at desired positions
-            byref(self.error_status_c),                 # OUT <- error status
-            self.error_message_c                        # OUT <- error message
+            byref(self.error_status_c),                   # OUT <- error status
+            self.error_message_c                          # OUT <- error message
         )
         self.check_error()
 
