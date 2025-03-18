@@ -5,7 +5,8 @@ program main
 
   implicit none
 
-  character(1024) :: FileName
+  character(1024) :: FileName, ErrorMsg
+  integer(c_int)  :: ErrorStat
   integer(c_int)  :: dims(3)
   real(c_double)  :: origin(3)
   real(c_double)  :: gridSpacing(3)
@@ -18,8 +19,12 @@ program main
   call amrex_init()
 
   FileName = "my_subvol00006"
-  call ReadAMReXHeader(FileName, dims, origin, gridSpacing, time)
+  call ReadAMReXHeader(FileName, dims, origin, gridSpacing, time, ErrorStat, ErrorMsg)
 
+  print*, "ErrorStat = ", ErrorStat
+  if (ErrorStat .ne. 0) then
+     print*, "ErrorMsg: ", ErrorMsg
+  end if
   print*, "dims = " , dims(1) , dims(2) , dims(3)
   print*, "origin = " , origin(1) , origin(2) , origin(3)
   print*, "gridSpacing = ", gridSpacing(1), gridSpacing(2), gridSpacing(3)
@@ -31,7 +36,12 @@ program main
   end do
 
   allocate(data(3,dlo(1):dhi(1),dlo(2):dhi(2),dlo(3):dhi(3)))
-  call ReadAMReXSubdomain(data, dlo, dhi)
+  call ReadAMReXSubdomain(data, dlo, dhi, ErrorStat, ErrorMsg)
+
+  print*, "ErrorStat = ", ErrorStat
+  if (ErrorStat .ne. 0) then
+     print*, "ErrorMsg: ", ErrorMsg
+  end if
 
   do k = dlo(3), dhi(3)
      do j = dlo(2), dhi(2)
