@@ -22,9 +22,29 @@
 #-------------------------------------------------------------------------------
 # This is the Python-C interface library for AeroDyn with InflowWind. This may
 # be used directly with Python based codes to call and run AeroDyn and
-# InflowWind together. An example of using this library from Python is given
-# in the accompanying Python driver program. Additional notes and information
-# on the interfacing is included there.
+# InflowWind together.
+
+#--------------------------------------
+# Key Features
+#--------------------------------------
+# - AeroDyn: Blade element momentum (BEM) theory for aerodynamic force
+#   calculations (dynamic stall, unsteady aerodynamics, tower shadow, wind shear,
+#   tip/hub losses)
+# - InflowWind: Simulates complex inflow conditions (turbulence, wind shear,
+#   gusts)
+
+#--------------------------------------
+# Usage
+#--------------------------------------
+# 1. Instantiate AeroDynInflowLib with shared library path
+# 2. Initialize: adi_preinit() -> adi_setuprotor() -> adi_init()
+# 3. Simulate: adi_setrotormotion() -> adi_updateStates() ->
+#    adi_calcOutput() -> adi_getrotorloads()
+# 4. adi_end() and handle errors via check_error()
+
+# An example of using this library from Python is given in the accompanying
+# Python driver program(s) in reg_tests/r-test/modules/aerodyn directory.
+# Additional notes and information on the interfacing is included there.
 
 #-------------------------------------------------------------------------------
 # Imports
@@ -70,8 +90,6 @@ def flatten_array(
     Raises:
         RuntimeError: If current_count differs from initial_count
     """
-    # print array name
-    print(f"Flattening array: {array_name}")
     if initial_count != current_count:
         error_msg = (
             f"The number of {array_name} points changed from initial value of"
@@ -93,22 +111,13 @@ def to_c_array(array: npt.NDArray, c_type: Any = c_float) -> Any:
         C-compatible array of the specified type
     """
     try:
-        print(f"Flattening array: {array}")
-
-        # if not np array, do not try to flatten
-        if not isinstance(array, np.ndarray):
-            print(f"Array is not a numpy array: {array}")
-            #return (c_type * len(array))(*array)
-
-        if isinstance(array, (list, tuple)):
-            print(f"Array is a list or tuple: {array}")
-            array = np.array(array, dtype=np.float32 if c_type == c_float else np.float64)
-
-        flat_array = array.flatten()
-        return (c_type * len(flat_array))(*flat_array)
+        if isinstance(array, np.ndarray):
+            flat_array = array.flatten()
+            return (c_type * len(flat_array))(*flat_array)
+        # If list/tuple, convert directly to C array
+        return (c_type * len(array))(*array)
     except Exception as e:
-        print(f"Error while flattening array: {e}")
-        raise
+        raise TypeError(f"Failed to convert to C array: {e}")
 
 def to_c_string(input_array: List[str]) -> Tuple[bytes, int]:
     """Converts input string array into a null-separated byte string for use in C.
@@ -276,14 +285,14 @@ class AeroDynInflowLib(CDLL):
         #--------------------------------------
         # Environmental conditions
         #--------------------------------------
-        self.gravity: float = 9.80665            # Gravitational acceleration (m/s^2)
-        self.fluid_density: float = 1.225        # Air/fluid density (kg/m^3)
+        self.gravity: float = 9.80665                # Gravitational acceleration (m/s^2)
+        self.fluid_density: float = 1.225            # Air/fluid density (kg/m^3)
         self.kinematic_viscosity: float = 1.464E-05  # Kinematic viscosity (m^2/s)
-        self.sound_speed: float = 335.           # Speed of sound (m/s)
-        self.atm_pressure: float = 103500.       # Atmospheric pressure (Pa)
-        self.vapor_pressure: float = 1700.       # Vapor pressure (Pa)
-        self.water_depth: float = 0.             # Water depth (m)
-        self.msl_to_swl: float = 0.              # Mean sea level to still water level offset (m)
+        self.sound_speed: float = 335.               # Speed of sound (m/s)
+        self.atmospheric_pressure: float = 103500.   # Atmospheric pressure (Pa)
+        self.vapor_pressure: float = 1700.           # Vapor pressure (Pa)
+        self.water_depth: float = 0.                 # Water depth (m)
+        self.mean_sea_level_offset: float = 0.       # Mean sea level to still water level offset (m)
 
     def check_error(self) -> None:
         """Checks for and handles any errors from the Fortran library.
@@ -291,17 +300,19 @@ class AeroDynInflowLib(CDLL):
         Raises:
             RuntimeError: If a fatal error occurs in the Fortran code
         """
+        # If the error status is 0, return
         if self.error_status_c.value == 0:
             return
 
+        # Get the error level and error message
         error_level = self.error_levels.get(
             self.error_status_c.value,
             f"Unknown Error Level: {self.error_status_c.value}"
         )
         error_msg = self.error_message_c.value.decode('utf-8').strip()
-
         message = f"AeroDyn/InflowWind {error_level}: {error_msg}"
 
+        # If the error level is fatal, call adi_end() and raise an error
         if self.error_status_c.value >= self.abort_error_level:
             try:
                 self.adi_end()
@@ -350,7 +361,7 @@ class AeroDynInflowLib(CDLL):
         self._init_num_blades = self.num_blades
         turb_ref_pos_c = to_c_array(turb_ref_pos, c_float)
 
-        # Validate inputs
+        # Validate the inputs
         self._validate_hub_root()
         self._validate_mesh()
 
@@ -422,10 +433,10 @@ class AeroDynInflowLib(CDLL):
             byref(c_float(self.fluid_density)),                  # IN -> fluid density
             byref(c_float(self.kinematic_viscosity)),            # IN -> kinematic viscosity
             byref(c_float(self.sound_speed)),                    # IN -> speed of sound
-            byref(c_float(self.atm_pressure)),                   # IN -> atmospheric pressure
+            byref(c_float(self.atmospheric_pressure)),           # IN -> atmospheric pressure
             byref(c_float(self.vapor_pressure)),                 # IN -> vapor pressure
             byref(c_float(self.water_depth)),                    # IN -> water depth
-            byref(c_float(self.msl_to_swl)),                     # IN -> MSL to SWL offset
+            byref(c_float(self.mean_sea_level_offset)),          # IN -> MSL to SWL offset
             byref(c_int(self.interpolation_order)),              # IN -> interpolation order (1: linear, 2: quadratic)
             byref(c_double(self.dt)),                            # IN -> time step
             byref(c_double(self.t_max)),                         # IN -> maximum simulation time
@@ -953,9 +964,6 @@ class AeroDynInflowLib(CDLL):
         expected_shape = (1,3) if single_pt else (num_pts, 3)
         expected_orient_shape = (1,9) if single_pt else (num_pts, 9)
         expected_vel_shape = (1,6) if single_pt else (num_pts, 6)
-
-        # print motion.position shape and size
-        print(f"{name} position shape: {motion.position.shape}, size: {motion.position.size}")
 
         if motion.position.shape != expected_shape:
             raise ValueError(
