@@ -923,7 +923,6 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
 
 
    p%RotStates      = InputFileData%RotStates      ! Rotate states in linearization?
-   ! if (ChangeRefFrame) p%RotStates = .true.
    
    p%rhoinf         = InputFileData%rhoinf         ! Numerical damping coefficient: [0,1].  No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
    p%dt             = InputFileData%DTBeam         ! Time step size
@@ -6167,16 +6166,6 @@ SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
             dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
          end do
       end do
-
-      ! If rotate states is enabled, modify Jacobian
-      if (p%RotStates) then
-         ! Calculate difference between input root orientation and root reference orientation
-         RotateStates = matmul(u%RootMotion%Orientation(:,:,1), OtherState%GlbRot)
-         do i=1,size(dXdu,1),3
-            dXdu(i:i+2, :) = matmul(RotateStates, dXdu(i:i+2, :))
-         end do
-      end if
-
    end if
 
    !----------------------------------------------------------------------------
@@ -6202,7 +6191,7 @@ END SUBROUTINE BD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, StateRotation)
+SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
 
    TYPE(ModVarsType),                    INTENT(IN   )      :: Vars               !< Module variables
    REAL(DbKi),                           INTENT(IN   )      :: t                  !< Time in seconds at operating point
@@ -6223,7 +6212,6 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) with respect to the continuous states (x)
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) with respect to the continuous states (x)
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dZdx(:,:)          !< Partial derivatives of constraint state functions (Z) with respect to the continuous states (x)
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: StateRotation(:,:) !< Matrix by which the states are optionally rotated
 
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_JacobianPContState'
    INTEGER(IntKi)                :: ErrStat2
@@ -6239,24 +6227,6 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
    ! Copy state values
    call BD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call BD_VarsPackContState(Vars, x, m%Jac%x)
-   
-   ! If rotate states is enabled
-   if (p%RotStates) then
-      ! Calculate difference between input root orientation and root reference orientation
-      RotateStates = matmul(u%RootMotion%Orientation(:,:,1), OtherState%GlbRot)
-      RotateStatesTranspose = transpose( RotateStates )
-
-      if (present(StateRotation)) then
-         if (.not. allocated(StateRotation)) then
-            call AllocAry(StateRotation, 3, 3, 'StateRotation', ErrStat2, ErrMsg2); if (Failed()) return
-         end if
-         StateRotation = RotateStates
-      end if
-   else
-      if (present(StateRotation)) then
-         if (allocated(StateRotation)) deallocate(StateRotation)
-      end if
-   end if
 
    !----------------------------------------------------------------------------
 
@@ -6302,14 +6272,6 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
             call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
          end do
       end do
-            
-      ! If rotate state is enabled, modify Jacobian
-      if (p%RotStates) then
-         do i = 1, size(dYdx,2), 3
-            dYdx(:, i:i+2) = matmul( dYdx(:, i:i+2), RotateStatesTranspose)
-         end do
-      end if
-
    end if
 
    !----------------------------------------------------------------------------
@@ -6347,17 +6309,6 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
             dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
          end do
       end do
-
-      ! If rotate state is enabled, modify Jacobian
-      if (p%RotStates) then
-         do i=1,size(dXdx,1),3
-            dXdx(i:i+2,:) = matmul(RotateStates, dXdx(i:i+2,:))
-         end do
-         do i=1,size(dXdx,2),3
-            dXdx(:, i:i+2) = matmul(dXdx(:, i:i+2), RotateStatesTranspose)
-         end do
-      end if
-
    end if
 
    !----------------------------------------------------------------------------

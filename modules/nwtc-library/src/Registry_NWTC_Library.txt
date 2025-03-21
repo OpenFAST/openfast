@@ -123,7 +123,6 @@ typedef     ^       ^           R8Ki            x_pos               :   -   -   
 typedef     ^       ^           R8Ki            x_neg               :   -   -   ""  -
 typedef     ^       ^           R8Ki            y_pos               :   -   -   ""  -
 typedef     ^       ^           R8Ki            y_neg               :   -   -   ""  -
-typedef     ^       ^           R8Ki            StateRotation       ::  -   -   ""  -
 
 typedef     ^       ModLinType  R8Ki            x                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            dx                  :   -   -   ""  -
@@ -137,7 +136,6 @@ typedef     ^       ^           R8Ki            dXdu                ::  -   -   
 typedef     ^       ^           R8Ki            dXdy                ::  -   -   ""  -
 typedef     ^       ^           R8Ki            dUdu                ::  -   -   ""  -
 typedef     ^       ^           R8Ki            dUdy                ::  -   -   ""  -
-typedef     ^       ^           R8Ki            StateRotation       :: -  -     ""  -
 
 typedef     ^       ModDataType character(ChanLen) Abbr             -   -   -   "Module name abbreviation"  -
 typedef     ^       ^           IntKi           iMod                -   0   -   "Module index in array of modules"  -

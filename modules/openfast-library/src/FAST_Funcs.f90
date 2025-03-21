@@ -1312,7 +1312,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat
                                  T%BD%x(ModData%Ins, iState), T%BD%xd(ModData%Ins, iState), &
                                  T%BD%z(ModData%Ins, iState), T%BD%OtherSt(ModData%Ins, iState), &
                                  T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
-                                 dYdx=dYdx, dXdx=dXdx, StateRotation=ModData%Lin%StateRotation)
+                                 dYdx=dYdx, dXdx=dXdx)
 
    case (Module_ED)
       call ED_JacobianPContState(ModData%Vars, ThisTime, T%ED%Input(iInput, ModData%Ins), T%ED%p(ModData%Ins), &

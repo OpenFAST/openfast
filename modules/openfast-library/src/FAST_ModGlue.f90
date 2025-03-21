@@ -1482,7 +1482,6 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    if (allocated(Lin%dXdu)) call WrPartialMatrix(Lin%dXdu, Un, p_FAST%OutFmt, 'B', UseRow=xUse, UseCol=uUse)
    if (allocated(Lin%dYdx)) call WrPartialMatrix(Lin%dYdx, Un, p_FAST%OutFmt, 'C', UseRow=yUse, UseCol=xUse)
    if (allocated(Lin%dYdu)) call WrPartialMatrix(Lin%dYdu, Un, p_FAST%OutFmt, 'D', UseRow=yUse, UseCol=uUse)
-   if (allocated(Lin%StateRotation)) call WrPartialMatrix(Lin%StateRotation, Un, p_FAST%OutFmt, 'StateRotation')
 
    ! Close file
    close (Un)
@@ -1515,7 +1514,7 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
    character(100)                :: Fmt, FmtStr, FmtRot
    character(25)                 :: DerivStr, DerivUnitStr
    logical                       :: ShowRotLoc
-   real(R8Ki)                    :: DCM(3, 3), wm(3)
+   real(R8Ki)                    :: DCM(3, 3), rv(3)
    integer(IntKi)                :: i, j, RowColIdx
 
    ShowRotLoc = .false.
@@ -1596,18 +1595,18 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
 
                write (Un, Fmt) RowColIdx, op(i_op), VarRotFrame, VarDerivOrder, trim(DerivStr)//' '//trim(Var%LinNames(j))//trim(DerivUnitStr)
 
-            else if (MV_HasFlagsAll(Var, VF_WM_Rot)) then ! BeamDyn Wiener-Milenkovic orientation
+            else if (MV_HasFlagsAll(Var, VF_WM_Rot)) then ! BeamDyn state orientation
 
                ! Skip writing if not the first value in orientation (3 values)
                if (mod(j - 1, 3) /= 0) cycle
 
-               ! Convert from quaternion in operating point to BeamDyn WM parameter
-               wm = -quat_to_wm(op(i_op:i_op + 2))
+               ! Convert from quaternion to rotation vector
+               rv = quat_to_rvec(op(i_op:i_op + 2))
 
                ! Write all components of WM parameters
-               write (Un, Fmt) RowColIdx, wm(1), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 0))
-               write (Un, Fmt) RowColIdx, wm(2), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 1))
-               write (Un, Fmt) RowColIdx, wm(3), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 2))
+               write (Un, Fmt) RowColIdx, rv(1), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 0))
+               write (Un, Fmt) RowColIdx, rv(2), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 1))
+               write (Un, Fmt) RowColIdx, rv(3), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 2))
 
             else
 
