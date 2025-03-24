@@ -215,10 +215,14 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    call AllocAry(m%J12, p%NumQ, p%NumUT, "m%J12", ErrStat, ErrMsg); if (Failed()) return
    call AllocAry(m%J21, p%NumUT, p%NumQ, "m%J21", ErrStat, ErrMsg); if (Failed()) return
    call AllocAry(m%J22, p%NumU, p%NumU, "m%J22", ErrStat, ErrMsg); if (Failed()) return
+   call AllocAry(m%Tan, p%NumQ, p%NumQ, "m%Tan", ErrStat, ErrMsg); if (Failed()) return
    call AllocAry(m%Mod%Lin%J, p%NumJ, p%NumJ, "m%J", ErrStat, ErrMsg); if (Failed()) return
    call AllocAry(m%XB, p%NumJ, 1, "m%XB", ErrStat, ErrMsg); if (Failed()) return
    call AllocAry(m%IPIV, p%NumJ, "m%IPIV", ErrStat, ErrMsg); if (Failed()) return
    m%Mod%Lin%J = 0.0_R8Ki
+   if (p%NumQ > 0) then
+      call Eye2D(m%Tan, ErrStat2, ErrMsg2); if (Failed()) return
+   end if
 
    ! Allocate input-output solve Jacobian matrix and RHS vector
    call AllocAry(m%IO_Jac, m%Mod%Vars%Nu, m%Mod%Vars%Nu, 'IO_Jac', ErrStat2, ErrMsg2); if (Failed()) return
@@ -1722,7 +1726,7 @@ subroutine BuildJacobianTC(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    real(R8Ki), allocatable                :: J22(:, :)
-   integer(IntKi)                         :: i, j, k, idx
+   integer(IntKi)                         :: i, j, k, idx, iq1, iq2
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -1791,11 +1795,19 @@ subroutine BuildJacobianTC(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat
 
    ! If states in Jacobian
    if (p%iJX(1) > 0) then
+      do i = 1, size(m%Mod%Vars%x)
+         if (m%Mod%Vars%x(i)%Field == FieldOrientation) then
+            do iq1 = m%Mod%Vars%x(i)%iq(1), m%Mod%Vars%x(i)%iq(2), 3
+               iq2 = iq1 + 2
+               m%Tan(iq1:iq2,iq1:iq2) = transpose(rvec_to_tan(m%StatePred%x(iq1:iq2)))
+            end do
+         end if
+      end do
 
       ! Group (1,1)
       associate (dX2dx2 => m%Mod%Lin%dXdx(p%iX2(1):p%iX2(2), p%iX2(1):p%iX2(2)), &
                  dX2dx1 => m%Mod%Lin%dXdx(p%iX2(1):p%iX2(2), p%iX1(1):p%iX1(2)))
-         m%J11 = -p%GammaPrime*dX2dx2 - p%BetaPrime*dX2dx1
+         m%J11 = -p%GammaPrime*dX2dx2 - p%BetaPrime*matmul(dX2dx1, m%Tan)
          do i = p%iJX(1), p%iJX(2)
             m%J11(i, i) = m%J11(i, i) + 1.0_R8Ki
          end do
@@ -1808,7 +1820,7 @@ subroutine BuildJacobianTC(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat
                     dYTdx2 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX2(1):p%iX2(2)), &
                     dYTdx1 => m%Mod%Lin%dYdx(p%iyT(1):p%iyT(2), p%iX1(1):p%iX1(2)))
             m%Mod%Lin%J(p%iJUT(1):p%iJUT(2), p%iJX(1):p%iJX(2)) = &
-               p%GammaPrime*matmul(dUTdyT, dYTdx2) + p%BetaPrime*matmul(dUTdyT, dYTdx1)
+               p%GammaPrime*matmul(dUTdyT, dYTdx2) + p%BetaPrime*matmul(dUTdyT, matmul(dYTdx1, m%Tan))
          end associate
       end if
 

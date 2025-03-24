@@ -37,7 +37,8 @@ public :: MV_Perturb, MV_ComputeCentralDiff, MV_ComputeDiff, MV_ExtrapInterp, MV
 public :: MV_HasFlagsAll, MV_HasFlagsAny, MV_SetFlags, MV_ClearFlags
 public :: MV_NumVars, MV_NumVals, MV_FindVarDatLoc
 public :: LoadFields, MotionFields, TransFields, AngularFields
-public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, rvec_to_quat, wm_to_quat, quat_to_wm, wm_inv, quat_compose
+public :: quat_to_dcm, dcm_to_quat, quat_inv, quat_to_rvec, wm_to_quat, quat_to_wm, wm_inv, quat_compose
+public :: rvec_to_quat, rvec_to_tan_inv, rvec_to_tan
 public :: MV_FieldString, MV_IsLoad, MV_IsMotion, IdxStr
 public :: DumpMatrix, MV_AddModule
 public :: MV_EqualDL
@@ -48,6 +49,11 @@ integer(IntKi), parameter :: TransFields(*) = [FieldTransDisp, FieldTransVel, Fi
 integer(IntKi), parameter :: AngularFields(*) = [FieldOrientation, FieldAngularVel, FieldAngularAcc, FieldAngularDisp]
 integer(IntKi), parameter :: MotionFields(*) = [FieldTransDisp, FieldOrientation, FieldTransVel, &
                                                 FieldAngularVel, FieldTransAcc, FieldAngularAcc]
+
+real(R8Ki), parameter :: I33(3,3) = reshape([1.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki, &
+                                             0.0_R8Ki, 1.0_R8Ki, 0.0_R8Ki, &
+                                             0.0_R8Ki, 0.0_R8Ki, 1.0_R8Ki], &
+                                             [3,3])
 
 logical, parameter   :: UseSmallRotAngles = .false.
 
@@ -1296,6 +1302,38 @@ pure function rvec_to_quat(rvec) result(q)
       q = rvec/theta*sin(half_theta)
       q = -quat_canonical(q0, q) ! Negative sign doesn't make sense, but needed for quaternions
    end if
+end function
+
+! Returns the tangent (T) matrix
+! https://doi.org/10.1007/s11044-024-09970-8 (Appendix A)
+pure function rvec_to_tan(rvec) result(T)
+   real(R8Ki), intent(in)  :: rvec(3)
+   real(R8Ki)              :: theta, a, b, rv_tilde(3,3), T(3,3)
+   theta = sqrt(dot_product(rvec, rvec))
+   rv_tilde = SkewSymMat(rvec)
+   if (theta < 0.01_R8Ki) then
+      a = -0.5_R8Ki + theta**2/24.0_R8Ki - theta**4/720.0_R8Ki
+      b = 1.0_R8Ki / 6.0_R8Ki - theta**2/120.0_R8Ki + theta**4/5040.0_R8Ki
+   else
+      a = (cos(theta) - 1.0_R8Ki) / theta**2
+      b = (theta - sin(theta)) / theta**3
+   end if
+   T = I33 + a * rv_tilde + b * matmul(rv_tilde, rv_tilde)
+end function
+
+! Returns the tangent inverse (T^-1) matrix
+! https://doi.org/10.1007/s11044-024-09970-8 (Appendix A)
+pure function rvec_to_tan_inv(rvec) result(T)
+   real(R8Ki), intent(in)  :: rvec(3)
+   real(R8Ki)              :: theta, a, rv_tilde(3,3), T(3,3)
+   theta = sqrt(dot_product(rvec, rvec))
+   rv_tilde = SkewSymMat(rvec)
+   if (theta < 0.01_R8Ki) then
+      a = 1.0_R8Ki / 12.0_R8Ki + theta**2/720.0_R8Ki + theta**4/30240.0_R8Ki
+   else
+      a = (1.0_R8Ki - 0.5_R8Ki * theta * cotan(0.5_R8Ki * theta)) / theta**2
+   end if
+   T = I33 + 0.5_R8Ki * rv_tilde + a * matmul(rv_tilde, rv_tilde)
 end function
 
 pure function wm_to_quat(c) result(q)

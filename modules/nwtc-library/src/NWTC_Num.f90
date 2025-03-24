@@ -6155,7 +6155,7 @@ end function Rad2M180to180Deg
 !! \end{bmatrix}
 !! \f}   
 !> Use SkewSymMat (nwtc_num::skewsymmat) instead of directly calling a specific routine in the generic interface.
-   FUNCTION SkewSymMatR4 ( x ) RESULT(M)
+   pure FUNCTION SkewSymMatR4 ( x ) RESULT(M)
 
       ! Function arguments
 
@@ -6178,7 +6178,7 @@ end function Rad2M180to180Deg
    END FUNCTION SkewSymMatR4 
 !=======================================================================
 !> \copydoc nwtc_num::skewsymmatr4
-   FUNCTION SkewSymMatR8 ( x ) RESULT(M)
+   pure FUNCTION SkewSymMatR8 ( x ) RESULT(M)
 
       ! Function arguments
 

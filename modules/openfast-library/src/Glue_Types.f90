@@ -227,6 +227,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J12      !< Jacobian upper right quadrant [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J21      !< Jacobian lower left quadrant [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J22      !< Jacobian lower right quadrant [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Tan      !< State tangent matrix [-]
   END TYPE Glue_TCMisc
 ! =======================
 ! =========  Glue_LinMisc  =======
@@ -1987,6 +1988,18 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       end if
       DstTCMiscData%J22 = SrcTCMiscData%J22
    end if
+   if (allocated(SrcTCMiscData%Tan)) then
+      LB(1:2) = lbound(SrcTCMiscData%Tan)
+      UB(1:2) = ubound(SrcTCMiscData%Tan)
+      if (.not. allocated(DstTCMiscData%Tan)) then
+         allocate(DstTCMiscData%Tan(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%Tan.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%Tan = SrcTCMiscData%Tan
+   end if
 end subroutine
 
 subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
@@ -2034,6 +2047,9 @@ subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
    if (allocated(TCMiscData%J22)) then
       deallocate(TCMiscData%J22)
    end if
+   if (allocated(TCMiscData%Tan)) then
+      deallocate(TCMiscData%Tan)
+   end if
 end subroutine
 
 subroutine Glue_PackTCMisc(RF, Indata)
@@ -2058,6 +2074,7 @@ subroutine Glue_PackTCMisc(RF, Indata)
    call RegPackAlloc(RF, InData%J12)
    call RegPackAlloc(RF, InData%J21)
    call RegPackAlloc(RF, InData%J22)
+   call RegPackAlloc(RF, InData%Tan)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2086,6 +2103,7 @@ subroutine Glue_UnPackTCMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%J12); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J21); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J22); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Tan); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Glue_CopyLinMisc(SrcLinMiscData, DstLinMiscData, CtrlCode, ErrStat, ErrMsg)

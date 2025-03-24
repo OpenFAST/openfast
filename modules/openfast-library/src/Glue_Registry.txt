@@ -184,6 +184,7 @@ typedef ^ ^                     R8Ki            J11                     :: -  - 
 typedef ^ ^                     R8Ki            J12                     :: -  -     "Jacobian upper right quadrant" -
 typedef ^ ^                     R8Ki            J21                     :: -  -     "Jacobian lower left quadrant" -
 typedef ^ ^                     R8Ki            J22                     :: -  -     "Jacobian lower right quadrant" -
+typedef ^ ^                     R8Ki            Tan                     :: -  -     "State tangent matrix" -
 
 typedef ^ Glue_LinMisc          IntKi           TimeIndex               -  -  -     "" -
 typedef ^ ^                     IntKi           AzimuthIndex            -  -  -     "" -
