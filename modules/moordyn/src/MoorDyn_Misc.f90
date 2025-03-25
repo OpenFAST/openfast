@@ -1384,6 +1384,9 @@ CONTAINS
       ELSE IF (SCAN(WaterKinString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
          ! If the input has no letters, let's assume it's a number         
          CALL WrScr( "ERROR WaveKin option does not currently support numeric entries. It must be a filename." )
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "ERROR WaveKin option does not currently support numeric entries. It must be a filename."
+         ENDIF
          p%WaveKin  = 0
          p%Current  = 0
          p%WaterKin = 0
@@ -1569,6 +1572,9 @@ CONTAINS
                CALL OpenFInpFile ( UnElev, WaveKinFile, ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
             
                CALL WrScr( '    Reading wave elevation data from '//trim(WaveKinFile) )
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) '    Reading wave elevation data from '//trim(WaveKinFile)
+               ENDIF
                
                ! Read through length of file to find its length
                i         = 0 ! start line counter
@@ -1620,6 +1626,9 @@ CONTAINS
                ENDIF
                
                CALL WrScr( "    Read "//trim(num2lstr(ntIn))//" time steps from input file." )
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "    Read "//trim(num2lstr(ntIn))//" time steps from input file."
+               ENDIF
 
                ! IF (WaveTimeIn(ntIn) < TMax) THEN <<<< need to handle if time series is too short?
                
@@ -1823,12 +1832,24 @@ CONTAINS
       ! some status messages:
       IF (p%WaterKin == 0) THEN
          CALL WrScr("    No water kinematics set up")
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "    No water kinematics set up"
+         ENDIF
       ELSEIF (p%WaterKin == 1) THEN
          CALL WrScr("    Water kinematics will be simulated using the old method (user provided grid and water kinematic data)")
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "    Water kinematics will be simulated using the old method (user provided grid and water kinematic data)"
+         ENDIF
       ELSEIF (p%WaterKin == 2) THEN
          CALL WrScr("    Water kinematics will be simulated using the hybrid method (user provided grid with SeaState water kinematics data)")
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "    Water kinematics will be simulated using the hybrid method (user provided grid with SeaState water kinematics data)"
+         ENDIF
       ELSEIF (p%WaterKin == 3) THEN
          CALL WrScr("    Water kinematics will be simulated using the SeaState method (SeaState provided grid and water kinematics data)")
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "    Water kinematics will be simulated using the SeaState method (SeaState provided grid and water kinematics data)"
+         ENDIF
       ELSE
          CALL SetErrStat( ErrID_Fatal,"Invalid value for WaterKin",ErrStat, ErrMsg, RoutineName); RETURN
       ENDIF
@@ -1858,6 +1879,9 @@ CONTAINS
 
          IF (len(trim(entries)) == len(entries)) THEN
             CALL WrScr("Warning: Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates")
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "Warning: Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates"
+            ENDIF
          END IF
 
          IF (entries(len(entries):len(entries)) == ',') THEN
@@ -1876,6 +1900,9 @@ CONTAINS
                n = int(tempArray(3))
             ELSE
                CALL WrScr("Error: invalid coordinate type specified to gridAxisCoords")
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "Error: invalid coordinate type specified to gridAxisCoords"
+               ENDIF
             END IF
             
             ! allocate coordinate array
@@ -1899,6 +1926,9 @@ CONTAINS
             
             ELSE
                CALL WrScr("Error: invalid coordinate type specified to gridAxisCoords")
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "Error: invalid coordinate type specified to gridAxisCoords"
+               ENDIF
             END IF
             
             ! print *, "Set water grid coordinates to :"
@@ -1935,6 +1965,9 @@ CONTAINS
             n = n + 1
             IF (n > 100) THEN
                CALL WrScr( "ERROR - stringToArray cannot do more than 100 entries")
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "ERROR - stringToArray cannot do more than 100 entries"
+               ENDIF
             END IF            
             READ(instring(pos1:pos1+pos2-2), *) outarray(n)
 
