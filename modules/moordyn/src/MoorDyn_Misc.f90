@@ -136,7 +136,7 @@ CONTAINS
          GetCurvature = 4.0/length * sqrt(0.5*(1.0 - q1_dot_q2))    ! this is the normal curvature calculation
       END IF
       
-      return
+      RETURN
    END function GetCurvature
    
 
@@ -1379,15 +1379,15 @@ CONTAINS
          p%WaveKin  = 0
          p%Current  = 0
          p%WaterKin = 0
-         return
+         RETURN
          
       ELSE IF (SCAN(WaterKinString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
          ! If the input has no letters, let's assume it's a number         
-         call WrScr( "ERROR WaveKin option does not currently support numeric entries. It must be a filename." )
+         CALL WrScr( "ERROR WaveKin option does not currently support numeric entries. It must be a filename." )
          p%WaveKin  = 0
          p%Current  = 0
          p%WaterKin = 0
-         return
+         RETURN
       END IF
 
       tmpString = WaterKinString
@@ -1402,7 +1402,10 @@ CONTAINS
       ELSE ! we must be using the old or hybrid methods. Start setting up the user grids by reading the WaveKin File
 
          ! otherwise interpret the input as a file name to load the bathymetry lookup data from
-         call WrScr( "   The waterKin input contains a filename so will load a water kinematics input file" )
+         CALL WrScr( "   The waterKin input contains a filename so will load a water kinematics input file" )
+         IF (p%writeLog > 0) THEN
+            WRITE(p%UnLog, '(A)'        ) "   The waterKin input contains a filename so will load a water kinematics input file"
+         ENDIF
          
          
          ! -------- load water kinematics input file -------------
@@ -1418,47 +1421,48 @@ CONTAINS
          
          UnEcho=-1
          CALL GetNewUnit( UnIn )   
-         CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2); IF(Failed()) return
+         CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2); IF(Failed()) RETURN
 
 
-         CALL ReadCom( UnIn, FileName, 'MoorDyn water kinematics input file header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) return
-         CALL ReadCom( UnIn, FileName, 'MoorDyn water kinematics input file header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) return
+         CALL ReadCom( UnIn, FileName, 'MoorDyn water kinematics input file header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadCom( UnIn, FileName, 'MoorDyn water kinematics input file header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
          ! ----- waves -----
-         CALL ReadCom( UnIn, FileName,                               'waves header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) return
-         CALL ReadVar( UnIn, FileName, p%WaveKin  , 'WaveKinMod' ,  'WaveKinMod'   , ErrStat2, ErrMsg2, UnEcho); IF(Failed()) return
-         CALL ReadVar( UnIn, FileName, WaveKinFile, 'WaveKinFile',  'WaveKinFile'  , ErrStat2, ErrMsg2, UnEcho); IF(Failed()) return
-         CALL ReadVar( UnIn, FileName, p%dtWave   , 'dtWave', 'time step for waves', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) return
-         CALL ReadVar( UnIn, FileName, WaveDir    , 'WaveDir'    , 'wave direction', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) return
+         CALL ReadCom( UnIn, FileName,                               'waves header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadVar( UnIn, FileName, p%WaveKin  , 'WaveKinMod' ,  'WaveKinMod'   , ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadVar( UnIn, FileName, WaveKinFile, 'WaveKinFile',  'WaveKinFile'  , ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadVar( UnIn, FileName, p%dtWave   , 'dtWave', 'time step for waves', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadVar( UnIn, FileName, WaveDir    , 'WaveDir'    , 'wave direction', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
          ! X grid points
-         READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
-         READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
+         CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
+         CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
          Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
          ! Y grid points
-         READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
-         READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
+         CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
+         CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
          Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
          ! Z grid points
-         READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
-         READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
+         CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
+         CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
          Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
          ! TODO: log what is read in for waves
          ! ----- current -----
-         CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) return
-         CALL ReadVar( UnIn, FileName, p%Current,   'CurrentMod', 'CurrentMod', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) return
+         CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         CALL ReadVar( UnIn, FileName, p%Current,   'CurrentMod', 'CurrentMod', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
          ! read in the current profile
          IF (p%Current == 2) THEN
 
             ! log the method being used
-            if (p%writeLog > 0) then
-               write(p%UnLog, '(A)'        ) "   CurrentMod = 2. Reading in the user provided current grid and using SeaState for profile calculation."
-            endif
+            CALL WrScr("    CurrentMod = 2. Reading in the user provided current grid and using SeaState for profile calculation.")
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 2. Reading in the user provided current grid and using SeaState for profile calculation."
+            ENDIF
 
             ! Z grid points
-            READ(UnIn,*, IOSTAT=ErrStat2)   coordtype         ! get the entry type
-            READ(UnIn,'(A)', IOSTAT=ErrStat2)   entries2          ! get entries as string to be processed
+            CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN         ! get the entry type
+            CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN         ! get entries as string to be processed
             CALL gridAxisCoords(coordtype, entries2, pzCurrentTemp, p%nzCurrent, ErrStat2, ErrMsg2) ! max size of 100 because gridAxisCoords has a 100 element temporary array used for processing entries2 
             Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
             uxCurrentTemp = 0.0 ! set these to zero to avoid unitialized values. This will be set later in this routine by SeaState
@@ -1466,7 +1470,7 @@ CONTAINS
 
          ELSE IF (p%Current == 1) THEN 
 
-            CALL AllocAry(pzCurrentTemp, 100, 'pzCurrentTemp', ErrStat2, ErrMsg2 ); IF(Failed()) return ! allocate pzCurrentTemp if reading in user provided current table
+            CALL AllocAry(pzCurrentTemp, 100, 'pzCurrentTemp', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN ! allocate pzCurrentTemp if reading in user provided current table
             
             DO I=1,4 ! ignore lines until table is found, or exit after four lines. Old file format has 2 header lines, new file format has four (two info lines for CurrentMod = 2 and then the two headers).
                READ(UnIn, *, IOSTAT=ErrStat2) pzCurrentTemp(1), uxCurrentTemp(1), uyCurrentTemp(1)     ! try to read into a line to first elements in the array     
@@ -1476,11 +1480,12 @@ CONTAINS
             ENDDO
 
             ! log the first line read
+            CALL WrScr("    CurrentMod = 1. Reading in the user provided current profile.")
             IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "   CurrentMod = 1. Reading in the user provided current profile."
+               WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 1. Reading in the user provided current profile."
                IF (p%writeLog > 1) THEN
-                  WRITE(p%UnLog, '(A)'        ) "    The first line read from the table is:"
-                  WRITE(p%UnLog, '(A)'        ) "    "//trim(num2lstr(pzCurrentTemp(1)))//"     "//trim(num2lstr(uxCurrentTemp(1)))//"     "//trim(num2lstr(uyCurrentTemp(1)))
+                  WRITE(p%UnLog, '(A)'        ) "     The first line read from the table is:"
+                  WRITE(p%UnLog, '(A)'        ) "     "//trim(num2lstr(pzCurrentTemp(1)))//"     "//trim(num2lstr(uxCurrentTemp(1)))//"     "//trim(num2lstr(uyCurrentTemp(1)))
                ENDIF
             ENDIF
 
@@ -1507,27 +1512,27 @@ CONTAINS
          
 
          IF (p%Current > 2 .OR. p%WaveKin > 2) THEN
-            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be less than 3',ErrStat, ErrMsg, RoutineName); return
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be less than 3',ErrStat, ErrMsg, RoutineName); RETURN
             RETURN
          END IF
 
          ! set p%WaterKin, note that p%WaterKin is not used in this routine, but is necessary for getWaterKin
-         IF (p%Current == p%WaveKin) THEN ! if they are the same, set waterkin as that value
-            p%WaterKin = p%WaterKin
+         IF (p%Current == p%WaveKin) THEN ! if they are the same, set WaveKin as that value
+            p%WaterKin = p%WaveKin
          ELSEIF (p%Current == 0) THEN ! if one is zero, use the other for water kin
             p%WaterKin = p%WaveKin
-            CALL WrScr("    CurrentMod = 0, no currents will be simulated")
+            CALL WrScr("     CurrentMod = 0, no currents will be simulated")
             IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 0, no currents will be simulated"
+               WRITE(p%UnLog, '(A)'        ) "     CurrentMod = 0, no currents will be simulated"
             ENDIF  
          ELSEIF (p%WaveKin == 0) THEN ! if one is zero, use the other for water kin
             p%WaterKin = p%Current
-            CALL WrScr("    WaveKinMod = 0, no waves will be simulated")
+            CALL WrScr("     WaveKinMod = 0, no waves will be simulated")
             IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "    WaveKinMod = 0, no waves will be simulated"
+               WRITE(p%UnLog, '(A)'        ) "     WaveKinMod = 0, no waves will be simulated"
             ENDIF  
          ELSE
-            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); return
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN
             RETURN 
          ENDIF
             
@@ -1542,11 +1547,13 @@ CONTAINS
             ELSEIF (p%WaveKin == 1) THEN ! must be a filepath therefore using the old method
 
                ! --------------------- set from inputted wave elevation time series, grid approach -------------------
-
-               call WrScr( 'Setting up WaveKin 3 option: read wave elevation time series from file' )
+               CALL WrScr( '    WaveKinMod = 1. Reading wave elevation time series from file' )
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "    WaveKinMod = 1. Reading wave elevation time series from file"
+               ENDIF
                
                IF ( LEN_TRIM( WaveKinFile ) == 0 )  THEN
-                  CALL SetErrStat( ErrID_Fatal,'WaveKinFile must not be an empty string.',ErrStat, ErrMsg, RoutineName); return
+                  CALL SetErrStat( ErrID_Fatal,'WaveKinFile must not be an empty string.',ErrStat, ErrMsg, RoutineName); RETURN
                   RETURN
                END IF
 
@@ -1559,9 +1566,9 @@ CONTAINS
                
                CALL GetNewUnit( UnElev ) 
             
-               CALL OpenFInpFile ( UnElev, WaveKinFile, ErrStat2, ErrMsg2 ); IF(Failed()) return
+               CALL OpenFInpFile ( UnElev, WaveKinFile, ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
             
-               call WrScr( 'Reading wave elevation data from '//trim(WaveKinFile) )
+               CALL WrScr( '    Reading wave elevation data from '//trim(WaveKinFile) )
                
                ! Read through length of file to find its length
                i         = 0 ! start line counter
@@ -1574,7 +1581,7 @@ CONTAINS
                   READ(Line,*,IOSTAT=ErrStatTmp) tmpReal
                   IF (ErrStatTmp/=0) THEN  ! Not a number
                      IF (dataBegin) THEN
-                        CALL SetErrStat( ErrID_Fatal,' Non-data line detected in WaveKinFile past the header lines.',ErrStat, ErrMsg, RoutineName); return
+                        CALL SetErrStat( ErrID_Fatal,' Non-data line detected in WaveKinFile past the header lines.',ErrStat, ErrMsg, RoutineName); RETURN
                      END IF
                      numHdrLn = numHdrLn + 1
                   ELSE
@@ -1589,8 +1596,8 @@ CONTAINS
                
 
                ! allocate space for input wave elevation array (including time column)
-               CALL AllocAry(WaveTimeIn,  ntIn, 'WaveTimeIn', ErrStat2, ErrMsg2 ); IF(Failed()) return
-               CALL AllocAry(WaveElevIn,  ntIn, 'WaveElevIn', ErrStat2, ErrMsg2 ); IF(Failed()) return
+               CALL AllocAry(WaveTimeIn,  ntIn, 'WaveTimeIn', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
+               CALL AllocAry(WaveElevIn,  ntIn, 'WaveElevIn', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
 
                ! read the data in from the file
                DO i = 1, numHdrLn
@@ -1601,7 +1608,7 @@ CONTAINS
                   READ (UnElev, *, IOSTAT=ErrStat2) WaveTimeIn(i), WaveElevIn(i) ! read wave elevation time series
                      
                   IF ( ErrStat2 /= 0 ) THEN
-                  CALL SetErrStat( ErrID_Fatal,'Error reading WaveElev input file.',ErrStat, ErrMsg, RoutineName); return
+                  CALL SetErrStat( ErrID_Fatal,'Error reading WaveElev input file.',ErrStat, ErrMsg, RoutineName); RETURN
                   END IF 
                END DO  
 
@@ -1609,10 +1616,10 @@ CONTAINS
                CLOSE ( UnElev ) 
 
                IF (WaveTimeIn(1) .NE. 0.0) THEN
-                  CALL SetErrStat( ErrID_Fatal, ' MoorDyn WaveElev time series should start at t = 0 seconds.',ErrStat, ErrMsg, RoutineName); return
+                  CALL SetErrStat( ErrID_Fatal, ' MoorDyn WaveElev time series should start at t = 0 seconds.',ErrStat, ErrMsg, RoutineName); RETURN
                ENDIF
                
-               CALL WrScr( "Read "//trim(num2lstr(ntIn))//" time steps from input file." )
+               CALL WrScr( "    Read "//trim(num2lstr(ntIn))//" time steps from input file." )
 
                ! IF (WaveTimeIn(ntIn) < TMax) THEN <<<< need to handle if time series is too short?
                
@@ -1683,11 +1690,11 @@ CONTAINS
 
                ! Initialize the FFT
                CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName); IF(Failed()) return
+               CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName); IF(Failed()) RETURN
 
                ! Apply the forward FFT on the wave elevation timeseries to get the real and imaginary parts of the frequency information.      
                CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStatTmp )    ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the forwards FFT to TmpFFTWaveElev array.',ErrStat,ErrMsg,RoutineName); IF(Failed()) return
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the forwards FFT to TmpFFTWaveElev array.',ErrStat,ErrMsg,RoutineName); IF(Failed()) RETURN
 
                ! Copy the resulting TmpFFTWaveElev(:) data over to the WaveElevC0 array
                DO I=1,NStepWave2-1
@@ -1697,7 +1704,7 @@ CONTAINS
                WaveElevC0(:,NStepWave2) = 0.0_SiKi
 
                CALL  ExitFFT(FFT_Data, ErrStatTmp)
-               CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName); IF(Failed()) return
+               CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName); IF(Failed()) RETURN
 
 
                IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStatTmp)
@@ -1736,7 +1743,7 @@ CONTAINS
             
             ! set up FFTer for doing IFFTs
             CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.', ErrStat, ErrMsg, routineName); IF(Failed()) return
+            CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.', ErrStat, ErrMsg, routineName); IF(Failed()) RETURN
 
             ! Loop through all points where the incident wave kinematics will be computed      
             DO ix = 1,p%nxWave 
@@ -1778,7 +1785,7 @@ CONTAINS
             ! could also reproduce the wave elevation at 0,0,0 on a separate channel for verIFication...
             
             CALL  ExitFFT(FFT_Data, ErrStatTmp)
-            CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the IFFTs.', ErrStat,ErrMsg,RoutineName); IF(Failed()) return
+            CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the IFFTs.', ErrStat,ErrMsg,RoutineName); IF(Failed()) RETURN
          
          END IF ! p%WaveKin > 0
 
@@ -1798,9 +1805,9 @@ CONTAINS
             ! TODO: if SeaState also has currents throw warning or error so currents aren't double counted -- dont think we need to do this becasue we wont be using seasate grid with old or hybrid methods
 
             ! allocate current profile arrays to correct size
-            CALL AllocAry( p%pzCurrent, p%nzCurrent, 'pzCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) return
-            CALL AllocAry( p%uxCurrent, p%nzCurrent, 'uxCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) return
-            CALL AllocAry( p%uyCurrent, p%nzCurrent, 'uyCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) return
+            CALL AllocAry( p%pzCurrent, p%nzCurrent, 'pzCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
+            CALL AllocAry( p%uxCurrent, p%nzCurrent, 'uxCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
+            CALL AllocAry( p%uyCurrent, p%nzCurrent, 'uyCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
             
             ! copy over data, flipping sign of depth values (to be positive-up) and reversing order
             DO i = 1,p%nzCurrent
@@ -1823,7 +1830,7 @@ CONTAINS
       ELSEIF (p%WaterKin == 3) THEN
          CALL WrScr("    Water kinematics will be simulated using the SeaState method (SeaState provided grid and water kinematics data)")
       ELSE
-         CALL SetErrStat( ErrID_Fatal,"Invalid value for WaterKin",ErrStat, ErrMsg, RoutineName); return
+         CALL SetErrStat( ErrID_Fatal,"Invalid value for WaterKin",ErrStat, ErrMsg, RoutineName); RETURN
       ENDIF
 
       ! ------------------------------ clean up and finished ---------------------------
@@ -1850,7 +1857,7 @@ CONTAINS
          INTEGER(IntKi)                   :: nEntries, I
 
          IF (len(trim(entries)) == len(entries)) THEN
-            call WrScr("Warning: Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates")
+            CALL WrScr("Warning: Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates")
          END IF
 
          IF (entries(len(entries):len(entries)) == ',') THEN
@@ -1868,7 +1875,7 @@ CONTAINS
             ELSE IF (coordtype==2) THEN   ! 2: uniform specified by -xlim, xlim, num
                n = int(tempArray(3))
             ELSE
-               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
+               CALL WrScr("Error: invalid coordinate type specified to gridAxisCoords")
             END IF
             
             ! allocate coordinate array
@@ -1891,7 +1898,7 @@ CONTAINS
                END DO
             
             ELSE
-               call WrScr("Error: invalid coordinate type specified to gridAxisCoords")
+               CALL WrScr("Error: invalid coordinate type specified to gridAxisCoords")
             END IF
             
             ! print *, "Set water grid coordinates to :"
@@ -1927,7 +1934,7 @@ CONTAINS
             END IF
             n = n + 1
             IF (n > 100) THEN
-               call WrScr( "ERROR - stringToArray cannot do more than 100 entries")
+               CALL WrScr( "ERROR - stringToArray cannot do more than 100 entries")
             END IF            
             READ(instring(pos1:pos1+pos2-2), *) outarray(n)
 
@@ -1955,9 +1962,9 @@ CONTAINS
       
       ! compact way to set the right error status and check if an abort is needed (and do cleanup if so)
       LOGICAL FUNCTION Failed()
-           call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetupWaterKin') 
+           CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetupWaterKin') 
            Failed =  ErrStat >= AbortErrLev
-           IF (Failed) call CleanUp()
+           IF (Failed) CALL CleanUp()
       END FUNCTION Failed
    
 
