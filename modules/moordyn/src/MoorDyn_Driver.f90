@@ -234,6 +234,8 @@ PROGRAM MoorDyn_Driver
    ! call the initialization routine
    CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat2, ErrMsg2 ); call AbortIfFailed()
    
+   ! TODO: How does SeaState coupling work here? Can we call SeaState if only using the driver? What does the HydroDyn driver do?
+
    CALL MD_DestroyInitInput  ( MD_InitInp , ErrStat2, ErrMsg2 ); call AbortIfFailed()
    CALL MD_DestroyInitOutput ( MD_InitOut , ErrStat2, ErrMsg2 ); call AbortIfFailed()
       

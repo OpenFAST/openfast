@@ -439,8 +439,9 @@ typedef   ^       ^                    CHARACTER(1024)     PriPath        -     
 typedef   ^       ^                    IntKi               writeLog       -     -1   -   "Switch for level of log file output"
 #NOTE: there may be an issue with start/restart with the UnLog stored in parameters. We'll ignore this for now -- ADP
 typedef   ^       ^                    IntKi               UnLog          -     -1   -   "Unit number of log file"
-typedef   ^       ^                    IntKi               WaveKin        -     -    -   "Flag for whether or how to consider water kinematics"
-typedef   ^       ^                    IntKi               Current        -     -    -   "Flag for whether or how to consider water kinematics"
+typedef   ^       ^                    IntKi               WaveKin        -     0    -   "Flag for whether or how to consider wave kinematics. (0: no waves, 1: old method, 2: hybrid method, 3: SeaState method)"
+typedef   ^       ^                    IntKi               Current        -     0    -   "Flag for whether or how to consider currents. (0: no currents, 1: old method, 2: hybrid method, 3: SeaState method)"
+typedef   ^       ^                    IntKi               WaterKin       -     0    -   "Flag for whether or how to consider water kinematics. (0: no kinematics, 1: old method, 2: hybrid method, 3: SeaState method)"
 typedef   ^       ^                    IntKi               nTurbines      -     -    -   "Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0"
 typedef   ^       ^                    ReKi                TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
 typedef   ^       ^                    DbKi                mu_kT          -     -    -   "transverse kinetic friction coefficient" "(-)"

@@ -474,8 +474,9 @@ IMPLICIT NONE
     CHARACTER(1024)  :: PriPath      !< The path to the primary MoorDyn input file, used if looking for additional input files [-]
     INTEGER(IntKi)  :: writeLog = -1      !< Switch for level of log file output [-]
     INTEGER(IntKi)  :: UnLog = -1      !< Unit number of log file [-]
-    INTEGER(IntKi)  :: WaveKin = 0_IntKi      !< Flag for whether or how to consider water kinematics [-]
-    INTEGER(IntKi)  :: Current = 0_IntKi      !< Flag for whether or how to consider water kinematics [-]
+    INTEGER(IntKi)  :: WaveKin = 0_IntKi      !< Flag for whether or how to consider wave kinematics. (0: no waves, 1: old method, 2: hybrid method, 3: SeaState method) [-]
+    INTEGER(IntKi)  :: Current = 0_IntKi      !< Flag for whether or how to consider currents. (0: no currents, 1: old method, 2: hybrid method, 3: SeaState method) [-]
+    INTEGER(IntKi)  :: WaterKin = 0_IntKi      !< Flag for whether or how to consider water kinematics. (0: no kinematics, 1: old method, 2: hybrid method, 3: SeaState method) [-]
     INTEGER(IntKi)  :: nTurbines = 0_IntKi      !< Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0 [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TurbineRefPos      !< reference position of turbines in farm, shape: 3, nTurbines [-]
     REAL(DbKi)  :: mu_kT = 0.0_R8Ki      !< transverse kinetic friction coefficient [(-)]
@@ -3962,6 +3963,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%UnLog = SrcParamData%UnLog
    DstParamData%WaveKin = SrcParamData%WaveKin
    DstParamData%Current = SrcParamData%Current
+   DstParamData%WaterKin = SrcParamData%WaterKin
    DstParamData%nTurbines = SrcParamData%nTurbines
    if (allocated(SrcParamData%TurbineRefPos)) then
       LB(1:2) = lbound(SrcParamData%TurbineRefPos)
@@ -4376,6 +4378,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%UnLog)
    call RegPack(RF, InData%WaveKin)
    call RegPack(RF, InData%Current)
+   call RegPack(RF, InData%WaterKin)
    call RegPack(RF, InData%nTurbines)
    call RegPackAlloc(RF, InData%TurbineRefPos)
    call RegPack(RF, InData%mu_kT)
@@ -4484,6 +4487,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%UnLog); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveKin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Current); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WaterKin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nTurbines); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TurbineRefPos); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%mu_kT); if (RegCheckErr(RF, RoutineName)) return
