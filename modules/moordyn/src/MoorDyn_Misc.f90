@@ -938,14 +938,23 @@ CONTAINS
 
          IF (p%WaterKin == 3) THEN ! If using the SeaState approach, just need to pass the node position and time and it will give the rest
             
-            ! TODO: SeaStateCoupling
-            !     call wave field module (see Hydrodyn for example)
-            !     need to pass in the waterKinematics pointer
-            !     need to handle when queried location is out of bounds from the SeaState grid
-            U  = 0.0_DbKi ! TODO
-            Ud = 0.0_DbKi ! TODO
-            zeta = 0.0_DbKi ! TODO
-            PDyn = 0.0_DbKi ! TODO
+            ! TODO: need to handle when queried location is out of bounds from the SeaState grid
+
+            ! TODO: need to interpolate queried points for SS grid
+
+            ! find x-y interpolation indices and coefficients
+            ! CALL getInterpNumsSiKi(p%WaveField%   , REAL(x,SiKi),  1, ix, fx) ! wave grid x direction
+            ! CALL getInterpNumsSiKi(p%WaveField   , REAL(y,SiKi),  1, iy, fy) ! wave grid y direction
+            
+            ! ! interpolate wave elevation
+            ! CALL calculate3Dinterpolation(p%WaveField%WaveElev0(), ix, iy, it, fx, fy, ft, zeta)   
+
+            ! U  = p%WaveField%WaveVel()
+            ! Ud = p%WaveField%WaveAcc()
+            ! PDyn = p%WaveField%WaveDynP()
+
+            ! p%WaveField ! TODO: pull the wave field data from the wave field module
+            ! p%WaveField%getWaterKin(x, y, z, t, U, Ud, zeta, PDyn, ErrStat, ErrMsg) ! TODO: this is the idea, but need to implement the wave field module
 
          ELSEIF (p%WaterKin == 1 .OR. p%WaterKin == 2) THEN ! old or hybrid approach. SeaState contributions handeled in setupWaterKin, just proceed using old method
 
@@ -1383,24 +1392,40 @@ CONTAINS
          
       ELSE IF (SCAN(WaterKinString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
          ! If the input has no letters, let's assume it's a number         
-         CALL WrScr( "ERROR WaveKin option does not currently support numeric entries. It must be a filename." )
          IF (p%writeLog > 0) THEN
             WRITE(p%UnLog, '(A)'        ) "ERROR WaveKin option does not currently support numeric entries. It must be a filename."
          ENDIF
          p%WaveKin  = 0
          p%Current  = 0
          p%WaterKin = 0
-         RETURN
+         CALL SetErrStat( ErrID_Fatal, "ERROR WaveKin option does not currently support numeric entries. It must be a filename.", ErrStat, ErrMsg, RoutineName); RETURN
       END IF
 
       tmpString = WaterKinString
       CALL Conv2UC(tmpString)
-      IF (tmpString == "SEASTATE") THEN ! if its the SeaState Keyword, then we are using the SeaState method
-         ! turn on flags, for getWaterKin to know to just call SeaState and not DO anything fancy
+
+      IF (tmpString == "SEASTATE") THEN ! if its the SeaState Keyword, then we are using the SeaState method (WaterKin = 3)
+
+         ! Error check to make sure we are not running in FAST.Farm
+         IF (p%nTurbines > 1) THEN ! if running in FAST.Farm, cannot use the SeaState coupling method because of multiple SeaState instances and only a single MoorDyn instance
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "MoorDyn fully coupled with SeaState is not compatible with FAST.Farm. Please use the WaterKin 1 or 2 methods."
+            ENDIF
+            CALL SetErrStat(ErrID_Fatal, "MoorDyn fully coupled with SeaState is not compatible with FAST.Farm. Please use the WaterKin 1 or 2 methods.", ErrStat, ErrMsg, RoutineName); RETURN
+         END IF
+
+         ! Error check to make sure the wave field pointer is not null
+         IF (.NOT. ASSOCIATED(p%WaveField)) THEN
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "ERROR WaveField pointer is null. SeaState method requires SeaState to be enabled. Please check input files."
+            ENDIF
+            CALL SetErrStat(ErrID_Fatal, "WaveField pointer is null. SeaState method requires SeaState to be enabled. Please check input files.", ErrStat, ErrMsg, RoutineName); RETURN
+         END IF
+
+         ! turn on flags, for getWaterKin to know to just pull data from the WaveField pointer. Nothing more is needed for setup
          p%WaveKin  = 3
          p%Current  = 3
          p%WaterKin = 3
-         ! TODO: if running as FAST.Farm throw Fatal error. This will not work because of multiple SeaState instances
 
       ELSE ! we must be using the old or hybrid methods. Start setting up the user grids by reading the WaveKin File
 
@@ -1439,17 +1464,17 @@ CONTAINS
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
          CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
-         Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
+         Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Y grid points
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
          CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
-         Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
+         Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Z grid points
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
          CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
-         Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
+         Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! TODO: log what is read in for waves
          ! ----- current -----
          CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
@@ -1467,7 +1492,7 @@ CONTAINS
             CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN         ! get the entry type
             CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN         ! get entries as string to be processed
             CALL gridAxisCoords(coordtype, entries2, pzCurrentTemp, p%nzCurrent, ErrStat2, ErrMsg2) ! max size of 100 because gridAxisCoords has a 100 element temporary array used for processing entries2 
-            Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, 'MD_getWaterKin')
+            Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
             uxCurrentTemp = 0.0 ! set these to zero to avoid unitialized values. This will be set later in this routine by SeaState
             uyCurrentTemp = 0.0 ! set these to zero to avoid unitialized values. This will be set later in this routine by SeaState
 
@@ -1512,10 +1537,8 @@ CONTAINS
 
          CLOSE(UnIn)
 
-         
-
          IF (p%Current > 2 .OR. p%WaveKin > 2) THEN
-            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be less than 3',ErrStat, ErrMsg, RoutineName); RETURN
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be less than 3 if using user defined MoorDyn grid',ErrStat, ErrMsg, RoutineName); RETURN
             RETURN
          END IF
 
@@ -1535,6 +1558,9 @@ CONTAINS
                WRITE(p%UnLog, '(A)'        ) "     WaveKinMod = 0, no waves will be simulated"
             ENDIF  
          ELSE
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "ERROR WaveKinMod and CurrentMod must be equal or one must be zero"
+            ENDIF
             CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN
             RETURN 
          ENDIF
@@ -1544,8 +1570,19 @@ CONTAINS
          IF (p%WaveKin > 0) THEN 
             
             IF (p%WaveKin == 2) THEN ! must be using the hybrid approach
+
+               ! Error check to make sure the wave field pointer is not null
+               IF (.NOT. ASSOCIATED(p%WaveField)) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "ERROR WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files.", ErrStat, ErrMsg, RoutineName); RETURN
+               END IF
+
                ! TODO: SeaState coupling
-               !     Call SeaState to get the wave elevation frequency data (WaveElevC0), which can be interpolated to the custom grid
+               !    Get WaveElevC0 array from p%WaveField, which can be interpolated to the custom grid
+               !    Do we also want to get wave heading and wave dt? Also check that SeaState is not using directional spreading (as MD does not support this)
+               !    p%dtWave needs to be set to SeaStates dtWave
 
             ELSEIF (p%WaveKin == 1) THEN ! must be a filepath therefore using the old method
 
@@ -1556,6 +1593,9 @@ CONTAINS
                ENDIF
                
                IF ( LEN_TRIM( WaveKinFile ) == 0 )  THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "ERROR WaveKinFile must not be an empty string."
+                  ENDIF
                   CALL SetErrStat( ErrID_Fatal,'WaveKinFile must not be an empty string.',ErrStat, ErrMsg, RoutineName); RETURN
                   RETURN
                END IF
@@ -1587,6 +1627,9 @@ CONTAINS
                   READ(Line,*,IOSTAT=ErrStatTmp) tmpReal
                   IF (ErrStatTmp/=0) THEN  ! Not a number
                      IF (dataBegin) THEN
+                        IF (p%writeLog > 0) THEN
+                           WRITE(p%UnLog, '(A)'        ) "ERROR Non-data line detected in WaveKinFile past the header lines."
+                        ENDIF
                         CALL SetErrStat( ErrID_Fatal,' Non-data line detected in WaveKinFile past the header lines.',ErrStat, ErrMsg, RoutineName); RETURN
                      END IF
                      numHdrLn = numHdrLn + 1
@@ -1614,7 +1657,10 @@ CONTAINS
                   READ (UnElev, *, IOSTAT=ErrStat2) WaveTimeIn(i), WaveElevIn(i) ! read wave elevation time series
                      
                   IF ( ErrStat2 /= 0 ) THEN
-                  CALL SetErrStat( ErrID_Fatal,'Error reading WaveElev input file.',ErrStat, ErrMsg, RoutineName); RETURN
+                     IF (p%writeLog > 0) THEN
+                        WRITE(p%UnLog, '(A)'        ) "ERROR reading WaveElev input file."
+                     ENDIF
+                     CALL SetErrStat( ErrID_Fatal,'Error reading WaveElev input file.',ErrStat, ErrMsg, RoutineName); RETURN
                   END IF 
                END DO  
 
@@ -1622,6 +1668,9 @@ CONTAINS
                CLOSE ( UnElev ) 
 
                IF (WaveTimeIn(1) .NE. 0.0) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)') "ERROR MoorDyn WaveElev time series should start at t = 0 seconds."
+                  ENDIF
                   CALL SetErrStat( ErrID_Fatal, ' MoorDyn WaveElev time series should start at t = 0 seconds.',ErrStat, ErrMsg, RoutineName); RETURN
                ENDIF
                
@@ -1719,10 +1768,7 @@ CONTAINS
                IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStatTmp)
                IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStatTmp)
 
-            ENDIF
-            ! TODO: ENDIF (getting frequency data either from time series or from SeaState). The below needs to happen for both old and hybrid approach
-            
-            ! note: following is a very streamlined adaptation from from Waves.v90 VariousWaves_Init
+            ENDIF ! End getting frequency data either from time series or from SeaState. The below needs to happen for both old and hybrid approach
             
             ! allocate all the wave kinematics FFT arrays  
             ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveNmbr.  ',ErrStat,ErrMsg,RoutineName)
@@ -1738,7 +1784,6 @@ CONTAINS
             
             ! allocate time series grid data arrays (now that we know the number of time steps coming from the IFFTs)
             CALL allocateKinematicsArrays() 
-            
             
             ! Set the CosWaveDir and SinWaveDir values
             CosWaveDir=COS(D2R*WaveDir)
@@ -1899,10 +1944,10 @@ CONTAINS
             ELSE IF (coordtype==2) THEN   ! 2: uniform specified by -xlim, xlim, num
                n = int(tempArray(3))
             ELSE
-               CALL WrScr("Error: invalid coordinate type specified to gridAxisCoords")
                IF (p%writeLog > 0) THEN
                   WRITE(p%UnLog, '(A)'        ) "Error: invalid coordinate type specified to gridAxisCoords"
                ENDIF
+               CALL SetErrStat(ErrID_Fatal, "Error: invalid coordinate type specified to gridAxisCoords", ErrStat, ErrMsg, RoutineName); RETURN
             END IF
             
             ! allocate coordinate array
@@ -1925,10 +1970,10 @@ CONTAINS
                END DO
             
             ELSE
-               CALL WrScr("Error: invalid coordinate type specified to gridAxisCoords")
                IF (p%writeLog > 0) THEN
                   WRITE(p%UnLog, '(A)'        ) "Error: invalid coordinate type specified to gridAxisCoords"
                ENDIF
+               CALL SetErrStat(ErrID_Fatal, "Error: invalid coordinate type specified to gridAxisCoords", ErrStat, ErrMsg, RoutineName); RETURN
             END IF
             
             ! print *, "Set water grid coordinates to :"
@@ -1964,10 +2009,10 @@ CONTAINS
             END IF
             n = n + 1
             IF (n > 100) THEN
-               CALL WrScr( "ERROR - stringToArray cannot do more than 100 entries")
                IF (p%writeLog > 0) THEN
                   WRITE(p%UnLog, '(A)'        ) "ERROR - stringToArray cannot do more than 100 entries"
                ENDIF
+               CALL SetErrStat(ErrID_Fatal, "ERROR - stringToArray cannot do more than 100 entries", ErrStat, ErrMsg, RoutineName); RETURN
             END IF            
             READ(instring(pos1:pos1+pos2-2), *) outarray(n)
 

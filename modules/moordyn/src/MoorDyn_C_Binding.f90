@@ -23,6 +23,8 @@ MODULE MoorDyn_C
    USE ISO_C_BINDING
    USE MoorDyn
    USE MoorDyn_Types
+   USE SeaState
+   USE SeaState_Types
    USE NWTC_Library
    USE VersionInfo
 
@@ -64,6 +66,25 @@ TYPE(MD_OtherStateType)                 :: other(0:2)          !< Initial other 
 TYPE(MD_OutputType)                     :: y                   !< Initial system outputs (outputs are not calculated; only the output mesh is initialized)
 TYPE(MD_MiscVarType)                    :: m                   !< Initial misc/optimization variables
 TYPE(MD_InitOutputType)                 :: InitOutData         !< Output for initialization routine
+
+!  Primary SeaState derived data types
+! NOTE: SeaSt does not contain states, so only using single instance of states.
+type :: SeaSt_data
+   type(SeaSt_InputType)                  :: u                 !< Inputs at T -- since no states, only need single
+   type(SeaSt_InitInputType)              :: InitInp           !< Initialization data
+   type(SeaSt_InitOutputType)             :: InitOutData       !< Initial output data -- Names, units, and version info.
+   type(SeaSt_ParameterType)              :: p                 !< Parameters
+   type(SeaSt_ContinuousStateType)        :: x                 !< continuous states -- contains no data
+   type(SeaSt_DiscreteStateType)          :: xd                !< discrete states   -- contains no data
+   type(SeaSt_ConstraintStateType)        :: z                 !< Constraint states -- contains no data
+   type(SeaSt_OtherStateType)             :: OtherStates       !< Initial other/optimization states
+   type(SeaSt_OutputType)                 :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
+   type(SeaSt_MiscVarType)                :: m                 !< Misc variables for optimization (not copied in glue code)
+   logical                                :: Initialized = .FALSE.
+   real(DbKi)                             :: dtC               !< Coupling timestep for SeaState
+end type SeaSt_data
+
+type(SeaSt_data)  :: SeaSt
 
 !--------------------------------------------------------------------------------------------------------------------------------------------------------
 ! Time tracking
@@ -151,14 +172,17 @@ end subroutine SetErr
 !===============================================================================================================
 !---------------------------------------------- MD INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, InterpOrder_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_C_Init')
+SUBROUTINE MD_C_Init(SeaSt_InputFileString_C, SeaSt_InputFileStringLength_C, InputFileString_C, InputFileStringLength_C, DT_C, TMax_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, InterpOrder_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_C_Init')
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: MD_C_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: MD_C_Init
 #endif
+   TYPE(C_PTR)                                    , INTENT(IN   )   :: SeaSt_InputFileString_C                !< SeaSt input file as a single string with lines deliniated by C_NULL_CHAR
+   INTEGER(C_INT)                                 , INTENT(IN   )   :: SeaSt_InputFileStringLength_C          !< SeaSt length of the input file string
    TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C        !< Input file as a single string with lines deliniated by C_NULL_CHAR
    INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C  !< length of the input file string
    REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DT_C
+   REAL(C_DOUBLE)                                 , INTENT(IN   )   :: TMax_C                   !< Maximum time for simulation (used to set arrays for wave kinematics)
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: G_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: RHO_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: DEPTH_C
@@ -171,11 +195,12 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local Variables
-   CHARACTER(KIND=C_char, LEN=InputFileStringLength_C), POINTER     :: InputFileString          !< Input file as a single string with NULL chracter separating lines
-   INTEGER(IntKi)                                                   :: ErrStat, ErrStat2
-   CHARACTER(ErrMsgLen)                                             :: ErrMsg,  ErrMsg2
-   INTEGER                                                          :: I, J, K
-   character(*), parameter                                          :: RoutineName = 'MD_C_Init'
+   CHARACTER(KIND=C_char, LEN=SeaSt_InputFileStringLength_C), POINTER  :: SeaSt_InputFileString    !< Input file as a single string with NULL chracter separating lines
+   CHARACTER(KIND=C_char, LEN=InputFileStringLength_C), POINTER        :: InputFileString          !< Input file as a single string with NULL chracter separating lines
+   INTEGER(IntKi)                                                      :: ErrStat, ErrStat2
+   CHARACTER(ErrMsgLen)                                                :: ErrMsg,  ErrMsg2
+   INTEGER                                                             :: I, J, K
+   character(*), parameter                                             :: RoutineName = 'MD_C_Init'
 
 
    ! Initialize library and display info on this compile
@@ -212,6 +237,7 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
 
    dT_Global                = REAL(DT_C, DbKi)
    N_Global                 = 0_IntKi                     ! Assume we are on timestep 0 at start
+   InitInp%Tmax             = REAL(TMax_C, DbKi)
    InitInp%FileName         = 'notUsed'
    InitInp%RootName         = 'MDroot'
    InitInp%UsePrimaryInputFile = .FALSE.
@@ -234,7 +260,48 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
       ErrMsg2  = 'Failed to allocate Inputs type for MD'
       if (Failed()) return
    endif
-   
+
+   ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string
+   call C_F_pointer(SeaSt_InputFileString_C, SeaSt_InputFileString)
+   ! Initialize the SeaState module (if SeaSt_InputFileString_C is not Null)
+
+   IF (LEN_TRIM(SeaSt_InputFileString) > 1) THEN ! if a single character, null string. 
+      ! Get the data to pass to SeaSt%Init
+      call InitFileInfo(SeaSt_InputFileString, SeaSt%InitInp%PassedFileData, ErrStat2, ErrMsg2);   if (Failed())  return
+
+      ! For diagnostic purposes, the following can be used to display the contents
+      ! of the InFileInfo data structure.
+      !     CU is the screen -- system dependent.
+      !call Print_FileInfo_Struct( CU, SeaSt%InitInp%PassedFileData )
+
+      SeaSt%InitInp%hasIce       = .FALSE.
+      SeaSt%InitInp%Gravity      = InitInp%g
+      SeaSt%InitInp%defWtrDens   = InitInp%rhoW
+      SeaSt%InitInp%defWtrDpth   = InitInp%WtrDepth
+      SeaSt%InitInp%defMSL2SWL   = 0.0_DbKi ! MoorDyn does not allow for a sea level offset
+      SeaSt%InitInp%InputFile       = "passed_SeaSt_file"      ! dummy
+      SeaSt%InitInp%UseInputFile    = .FALSE.                  ! this probably should be passed in
+      SeaSt%InitInp%OutRootName  = trim(InitInp%RootName)//'.SEA'
+      SeaSt%InitInp%TMax         = InitInp%TMax
+      SeaSt%InitInp%Linearize    = .FALSE. ! For now, don't allow linearization (same as hydrodyn)
+
+      ! Set timestep for SeaState
+      SeaSt%dtC = dT_Global
+      
+      CALL SeaSt_Init( SeaSt%InitInp, SeaSt%u, SeaSt%p,  SeaSt%x, SeaSt%xd, SeaSt%z, SeaSt%OtherStates, SeaSt%y, SeaSt%m, SeaSt%dtC, SeaSt%InitOutData, ErrStat2, ErrMsg2 ); if (Failed())  return
+      SeaSt%Initialized = .TRUE.
+
+      IF ( SeaSt%dtC /= dT_Global) THEN
+         ErrMsg2 = 'The SeaState Module attempted to change the coupling timestep, but this is not allowed.  The SeaState Module must use the Driver coupling timestep.'
+         ErrStat2 = ErrID_Fatal
+         if (Failed())  return
+      ENDIF
+
+      ! pass the pointer
+      InitInp%WaveField => SeaSt%InitOutData%WaveField
+
+   ENDIF
+
    !-------------------------------------------------
    ! Call the main subroutine MD_Init
    !-------------------------------------------------
@@ -571,6 +638,16 @@ SUBROUTINE MD_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_C_End')
    call MD_DestroyOtherState(  other(STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    call MD_DestroyOtherState(  other(STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    call MD_DestroyOtherState(  other(STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   ! Call the main subroutine SeaSt_End
+   call SeaSt_End( SeaSt%u, SeaSt%p, SeaSt%x, SeaSt%xd, SeaSt%z, SeaSt%OtherStates, SeaSt%y, SeaSt%m, ErrStat2, ErrMsg2 )
+   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   ! Destroy any other copies of states (rerun on (STATE_CURR) is ok)
+   call SeaSt_DestroyContState(   SeaSt%x          , ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call SeaSt_DestroyDiscState(   SeaSt%xd         , ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call SeaSt_DestroyConstrState( SeaSt%z          , ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call SeaSt_DestroyOtherState(  SeaSt%OtherStates, ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ! if deallocate other items now
    if (allocated(InputTimes))    deallocate(InputTimes)

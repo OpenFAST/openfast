@@ -3246,14 +3246,19 @@ class InputReader_OpenFAST(object):
         self.fst_vt['WaterKin']['Z_Grid']  = read_array(f,None,split_val='-',array_type=float)
         f.readline()
         self.fst_vt['WaterKin']['CurrentMod']  = int_read(f.readline().split()[0])
-        f.readline()
-        f.readline()
-        data_line = readline_filterComments(f).split()
-        while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
-            self.fst_vt['WaterKin']['z-depth'].append(float(data_line[0]))     
-            self.fst_vt['WaterKin']['x-current'].append(float(data_line[1]))      
-            self.fst_vt['WaterKin']['y-current'].append(float(data_line[2]))
-            data_line = readline_filterComments(f).split()   
+        # depending on CurrentMod, the rest of the WaterKin input file changes
+        if self.fst_vt['WaterKin']['CurrentMod'] == 2: # user provided depths 
+            self.fst_vt['WaterKin']['current_Z_type'] = int_read(f.readline().split()[0])
+            self.fst_vt['WaterKin']['current_Z_Grid']  = read_array(f,None,split_val='-',array_type=float)
+        elif self.fst_vt['WaterKin']['CurrentMod'] == 1: # user provided depths and current speeds
+            f.readline()
+            f.readline()
+            data_line = readline_filterComments(f).split()
+            while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+                self.fst_vt['WaterKin']['z-depth'].append(float(data_line[0]))     
+                self.fst_vt['WaterKin']['x-current'].append(float(data_line[1]))      
+                self.fst_vt['WaterKin']['y-current'].append(float(data_line[2]))
+                data_line = readline_filterComments(f).split() 
         f.close()
 
     def read_NonLinearEA(self,Stiffness_file): # read and return the nonlinear line stiffness lookup table for a given line
