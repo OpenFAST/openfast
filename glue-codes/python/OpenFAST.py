@@ -1,7 +1,7 @@
 
-import openfast_library
+from OpynFAST import openfast_library
 
-project_root = '/Users/rmudafor/Development/weis'
+project_root = '/Users/rmudafor/Development/openfast'
 library_path = project_root + '/build/modules/openfast-library/libopenfastlib.dylib'
 
 def serial(input_file):
