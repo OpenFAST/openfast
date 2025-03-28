@@ -398,6 +398,7 @@ typedef   ^       ^                    DbKi             BathymetryGrid   {:}{:} 
 typedef   ^       ^                    DbKi                BathGrid_Xs      {:}  -  -   "array of x-coordinates in the bathymetry grid"
 typedef   ^       ^                    DbKi                BathGrid_Ys      {:}  -  -   "array of y-coordinates in the bathymetry grid"
 typedef   ^       ^                    IntKi               BathGrid_npoints {:}  -  -   "number of grid points to describe the bathymetry grid"
+typedef   ^       ^          SeaSt_WaveField_MiscVarType   WaveField_m       -   -  -   "misc var information from the SeaState Interpolation module"   -
 
 
 ## ============================== Parameters ============================================================================================================================================
