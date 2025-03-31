@@ -1208,18 +1208,15 @@ CONTAINS
          ! X grid points
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
          CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
-         CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave, ErrStat2, ErrMsg2)
-         Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave); IF(Failed()) RETURN 
          ! Y grid points
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
          CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
-         CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave, ErrStat2, ErrMsg2)
-         Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave); IF(Failed()) RETURN 
          ! Z grid points
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
          CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
-         CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave, ErrStat2, ErrMsg2)
-         Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave); IF(Failed()) RETURN 
          ! TODO: log what is read in for waves
          ! ----- current -----
          CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
@@ -1228,7 +1225,6 @@ CONTAINS
          IF (p%Current == 2) THEN
 
             ! log the method being used
-            CALL WrScr("    CurrentMod = 2. Reading in the user provided current grid and using SeaState for profile calculation.")
             IF (p%writeLog > 0) THEN
                WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 2. Reading in the user provided current grid and using SeaState for profile calculation."
             ENDIF
@@ -1236,8 +1232,7 @@ CONTAINS
             ! Z grid points
             CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN         ! get the entry type
             CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN         ! get entries as string to be processed
-            CALL gridAxisCoords(coordtype, entries2, pzCurrentTemp, p%nzCurrent, ErrStat2, ErrMsg2) ! max size of 100 because gridAxisCoords has a 100 element temporary array used for processing entries2 
-            Call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            CALL gridAxisCoords(coordtype, entries2, pzCurrentTemp, p%nzCurrent); IF(Failed()) RETURN  ! max size of 100 because gridAxisCoords has a 100 element temporary array used for processing entries2 
             uxCurrentTemp = 0.0 ! set these to zero to avoid unitialized values. This will be set later in this routine by SeaState
             uyCurrentTemp = 0.0 ! set these to zero to avoid unitialized values. This will be set later in this routine by SeaState
 
@@ -1253,7 +1248,6 @@ CONTAINS
             ENDDO
 
             ! log the first line read
-            CALL WrScr("    CurrentMod = 1. Reading in the user provided current profile.")
             IF (p%writeLog > 0) THEN
                WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 1. Reading in the user provided current profile."
                IF (p%writeLog > 1) THEN
@@ -1306,8 +1300,7 @@ CONTAINS
             IF (p%writeLog > 0) THEN
                WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKinMod and CurrentMod must be equal or one must be zero"
             ENDIF
-            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN
-            RETURN 
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN 
          ENDIF
             
          ! ------------------- start with wave kinematics -----------------------
@@ -1359,9 +1352,10 @@ CONTAINS
                ! set dtWave to WaveField dtWave (for interpolation use in getWaterKin)
                p%dtWave = p%WaveField%WaveTime(2)-p%WaveField%WaveTime(1) ! from Waves.f90 (line 1040),  DO I = 0,WaveField%NStepWave; WaveField%WaveTime(I) = I*REAL(InitInp%WaveDT,SiKi)
 
-               ! Interpolations need the following from SeaState: WaveElevC0, NStepWave2, WaveDOmega. In p%WaveKin = 1, these values are extracted from the wave elevation time series
+               ! Interpolations need the following from SeaState: WaveElevC0, NStepWave2, NStepWave, WaveDOmega. In p%WaveKin = 1, these values are extracted from the wave elevation time series
                WaveElevC0 = p%WaveField%WaveElevC0
                NStepWave2 = p%WaveField%NStepWave2
+               NStepWave  = p%WaveField%NStepWave
                WaveDOmega = p%WaveField%WaveDOmega
 
             ELSEIF (p%WaveKin == 1) THEN ! must be a filepath therefore read wave elevations from timeseries
@@ -1687,34 +1681,29 @@ CONTAINS
    
    
       ! get grid axis coordinates, initialize/record in array, and return size
-      SUBROUTINE gridAxisCoords(coordtype, entries, coordarray, n, ErrStat, ErrMsg)
+      SUBROUTINE gridAxisCoords(coordtype, entries, coordarray, n)
          
          INTEGER(IntKi),          INTENT(IN   )  :: coordtype
          CHARACTER(*),            INTENT(INOUT)  :: entries
          REAL(SiKi), ALLOCATABLE,  INTENT(INOUT)  :: coordarray(:)
          INTEGER(IntKi),          INTENT(  OUT)  :: n
-      
-      
-         INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat             ! Error status of the operation
-         CHARACTER(*),            INTENT(  OUT)  :: ErrMsg              ! Error message if ErrStat /= ErrID_None
-      
+            
          REAL(ReKi) :: tempArray (100)
          REAL(ReKi) :: dx
          INTEGER(IntKi)                   :: nEntries, I
 
          IF (len(trim(entries)) == len(entries)) THEN
-            CALL WrScr("Warning: Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates")
+            CALL SetErrStat(ErrID_Warn, "Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates", ErrStat, ErrMsg, RoutineName)
             IF (p%writeLog > 0) THEN
                WRITE(p%UnLog, '(A)'        ) "   Warning: Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates"
             ENDIF
          END IF
 
          IF (entries(len(entries):len(entries)) == ',') THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = 'Last character of wave grid coordinate list cannot be comma'
+            CALL SetErrStat(ErrID_Fatal, "Error in gridAxisCoords: Last character of wave grid coordinate list cannot be comma", ErrStat, ErrMsg, RoutineName); RETURN
          ELSE
             ! get array of coordinate entries 
-            CALL stringToArray(entries, nEntries, tempArray)
+            CALL stringToArray(entries, nEntries, tempArray); IF(Failed()) RETURN 
             
             ! set number of coordinates
             IF (     coordtype==0) THEN   ! 0: not used - make one grid point at zero
@@ -1725,9 +1714,9 @@ CONTAINS
                n = int(tempArray(3))
             ELSE
                IF (p%writeLog > 0) THEN
-                  WRITE(p%UnLog, '(A)'        ) "   Error: invalid coordinate type specified to gridAxisCoords"
+                  WRITE(p%UnLog, '(A)'        ) "   Error: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines"
                ENDIF
-               CALL SetErrStat(ErrID_Fatal, "Error: invalid coordinate type specified to gridAxisCoords", ErrStat, ErrMsg, RoutineName); RETURN
+               CALL SetErrStat(ErrID_Fatal, "Error in gridAxisCoords: invalid coordinate type. Check WaterKin input file format for missing lines", ErrStat, ErrMsg, RoutineName); RETURN
             END IF
             
             ! allocate coordinate array
@@ -1751,9 +1740,9 @@ CONTAINS
             
             ELSE
                IF (p%writeLog > 0) THEN
-                  WRITE(p%UnLog, '(A)'        ) "   Error: invalid coordinate type specified to gridAxisCoords"
+                  WRITE(p%UnLog, '(A)'        ) "   Error: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines"
                ENDIF
-               CALL SetErrStat(ErrID_Fatal, "Error: invalid coordinate type specified to gridAxisCoords", ErrStat, ErrMsg, RoutineName); RETURN
+               CALL SetErrStat(ErrID_Fatal, "Error: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines", ErrStat, ErrMsg, RoutineName); RETURN
             END IF
             
             ! print *, "Set water grid coordinates to :"
@@ -1765,7 +1754,7 @@ CONTAINS
       END SUBROUTINE gridAxisCoords
    
    
-      ! Extract an array of numbers out of a string with comma-separated numbers (this could go in a more general location)
+      ! Extract an array of numbers out of a string with comma-separated numbers (cannot use NWTC function ReadArr for now becasue len not known)
       SUBROUTINE stringToArray(instring, n, outarray)
    
          CHARACTER(*),          INTENT(INOUT)  :: instring
@@ -1784,7 +1773,10 @@ CONTAINS
             pos2 = INDEX(instring(pos1:), ",")  ! find index of next comma
             IF (pos2 == 0) THEN                 ! if there isn't another comma, read the last entry and call it done (this could be the only entry if no commas)
                n = n + 1
-               READ(instring(pos1:), *) outarray(n)
+               READ(instring(pos1:), *, IOSTAT=ErrStatTmp) outarray(n)
+               IF (ErrStatTmp /= ErrID_None) THEN
+                  CALL SetErrStat(ErrID_Fatal, "ERROR in stringToArray: invalid value in string", ErrStat, ErrMsg, RoutineName); RETURN
+               ENDIF
                EXIT
             END IF
             n = n + 1
@@ -1792,9 +1784,12 @@ CONTAINS
                IF (p%writeLog > 0) THEN
                   WRITE(p%UnLog, '(A)'        ) "   ERROR - stringToArray cannot do more than 100 entries"
                ENDIF
-               CALL SetErrStat(ErrID_Fatal, "ERROR - stringToArray cannot do more than 100 entries", ErrStat, ErrMsg, RoutineName); RETURN
+               CALL SetErrStat(ErrID_Fatal, "ERROR in stringToArray: cannot do more than 100 entries", ErrStat, ErrMsg, RoutineName); RETURN
             END IF            
-            READ(instring(pos1:pos1+pos2-2), *) outarray(n)
+            READ(instring(pos1:pos1+pos2-2), *, IOSTAT=ErrStat2) outarray(n)
+            IF (ErrStatTmp /= ErrID_None) THEN
+               CALL SetErrStat(ErrID_Fatal, "ERROR in stringToArray: invalid value in string", ErrStat, ErrMsg, RoutineName); RETURN
+            ENDIF
 
             pos1 = pos2+pos1
          END DO
