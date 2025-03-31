@@ -165,6 +165,9 @@ macro(set_fast_intel_fortran_posix)
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     if(${CMAKE_Fortran_COMPILER_ID} MATCHES "IntelLLVM")
+      # NOTE: there is a bug in the 2024 and 2025 IFX compiler causing conflicts between the `check:uninit` and `-lm -ldl` flags
+      #     When this is fixed in IFX, we will want to update this to check against versions before fix
+      #     See here: https://community.intel.com/t5/Intel-Fortran-Compiler/ifx-IFX-2023-2-0-20230721-linker-problems-with-check-uninit/m-p/1527816
       set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all,noarg_temp_created,nouninit -traceback -init=huge,infinity" )
     else()
       set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all,noarg_temp_created -traceback -init=huge,infinity" )
