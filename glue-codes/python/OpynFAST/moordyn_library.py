@@ -49,7 +49,7 @@ class MoorDynLib(OpenFASTInterfaceType):
 
         # Create buffers for class data
         self.error_status_c = c_int(0)
-        self.error_message_c = create_string_buffer(self.error_msg_c_len)
+        self.error_message_c = create_string_buffer(self.ERROR_MSG_C_LEN)
         self.error_message     = create_string_buffer(1025)
         self.ended             = False   # For error handling at end
 

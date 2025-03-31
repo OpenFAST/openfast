@@ -26,7 +26,7 @@ class FastLibAPI(OpenFASTInterfaceType):
     def __init__(self, library_path: str, input_file_name: str):
         super().__init__(library_path)
         
-        self.input_file_name = create_string_buffer(Path.absolute(input_file_name).encode('utf-8'))
+        self.input_file_name = create_string_buffer(str(Path(input_file_name).absolute()).encode('utf-8'))
 
         self._initialize_routines()
 
