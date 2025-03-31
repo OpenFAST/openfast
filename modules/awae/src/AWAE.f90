@@ -1311,7 +1311,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
    !#endif   
       
-      !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, i_hl, errStat2, errMsg2) !Private(nt,tm2,tm3)
+      !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, errStat2, errMsg2) COLLAPSE(2)
       do nt = 1,p%NumTurbines
          do i_hl=0, n_high_low
                ! read from file the ambient flow for the current time step
