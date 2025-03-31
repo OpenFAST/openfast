@@ -81,12 +81,9 @@ class MoorDynLib(CDLL):
     # Initialize routines ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
         self.MD_C_Init.argtypes = [
-            POINTER(c_char_p),                    # IN: SeaState input file string
-            POINTER(c_int),                       # IN: SeaState input file string length
             POINTER(c_char_p),                    # IN: input file string
             POINTER(c_int),                       # IN: input file string length
             POINTER(c_double),                    # IN: dt
-            POINTER(c_double),                    # IN: Tmax
             POINTER(c_float),                     # IN: g
             POINTER(c_float),                     # IN: rho_water
             POINTER(c_float),                     # IN: depth_water
@@ -130,12 +127,7 @@ class MoorDynLib(CDLL):
         self.MD_C_End.restype = c_int
 
     # md_init ------------------------------------------------------------------------------------------------------------
-    def md_init(self, SeaSt_input_string_array, input_string_array, g, rho_water, depth_water, platform_init_pos, interpOrder):
-
-        # Convert the SeaSt string into a c_char byte array
-        SeaSt_input_string = '\x00'.join(SeaSt_input_string_array)
-        SeaSt_input_string = SeaSt_input_string.encode('utf-8')
-        SeaSt_input_string_length = len(SeaSt_input_string)
+    def md_init(self, input_string_array, g, rho_water, depth_water, platform_init_pos, interpOrder):
 
         # Convert the string into a c_char byte array
         input_string = '\x00'.join(input_string_array)
@@ -150,22 +142,19 @@ class MoorDynLib(CDLL):
         self._numChannels = c_int(0)
 
         self.MD_C_Init(
-            c_char_p(SeaSt_input_string),             # IN: SeaState input file string
-            byref(c_int(SeaSt_input_string_length)),  # IN: SeaState input file string length
-            c_char_p(input_string),                   # IN: input file string
-            byref(c_int(input_string_length)),        # IN: input file string length
-            byref(c_double(self.dt)),                 # IN: time step (dtC)
-            byref(c_double(self.total_time)),         # IN: total time (Tmax)
-            byref(c_float(g)),                        # IN: g
-            byref(c_float(rho_water)),                # IN: rho_water
-            byref(c_float(depth_water)),              # IN: depth_water
-            init_positions_c,                         # IN: platform initial position
-            byref(c_int(interpOrder)),                # IN: interpolation order
-            byref(self._numChannels),                 # OUT: number of channels
-            self._channel_names,                      # OUT: output channel names
-            self._channel_units,                      # OUT: output channel units
-            byref(self.error_status_c),               # OUT: ErrStat_C
-            self.error_message_c                      # OUT: ErrMsg_C
+            c_char_p(input_string),                # IN: input file string
+            byref(c_int(input_string_length)),     # IN: input file string length
+            byref(c_double(self.dt)),              # IN: time step (dt)
+            byref(c_float(g)),                     # IN: g
+            byref(c_float(rho_water)),             # IN: rho_water
+            byref(c_float(depth_water)),           # IN: depth_water
+            init_positions_c,                      # IN: platform initial position
+            byref(c_int(interpOrder)),             # IN: interpolation order
+            byref(self._numChannels),              # OUT: number of channels
+            self._channel_names,                   # OUT: output channel names
+            self._channel_units,                   # OUT: output channel units
+            byref(self.error_status_c),            # OUT: ErrStat_C
+            self.error_message_c                   # OUT: ErrMsg_C
         )
         
         self.check_error()
