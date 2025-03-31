@@ -164,7 +164,11 @@ macro(set_fast_intel_fortran_posix)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all,noarg_temp_created -traceback -init=huge,infinity" )
+    if(${CMAKE_Fortran_COMPILER_ID} MATCHES "IntelLLVM")
+      set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all,noarg_temp_created,nouninit -traceback -init=huge,infinity" )
+    else()
+      set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all,noarg_temp_created -traceback -init=huge,infinity" )
+    endif()
   endif()
 
   # If double precision, make real and double constants 64 bits
@@ -222,7 +226,11 @@ macro(set_fast_intel_fortran_windows)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all,noarg_temp_created /traceback /Qinit=huge,infinity" )
+    if(${CMAKE_Fortran_COMPILER_ID} MATCHES "IntelLLVM")
+      set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all,noarg_temp_created,nouninit /traceback /Qinit=huge,infinity" )
+    else()
+      set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all,noarg_temp_created /traceback /Qinit=huge,infinity" )
+    endif()
   endif()
 
   check_f2008_features()
