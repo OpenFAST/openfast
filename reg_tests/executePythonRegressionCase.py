@@ -36,7 +36,7 @@ import rtestlib as rtl
 import openfastDrivers
 import pass_fail
 from errorPlotting import exportCaseSummary
-from OpynFAST import openfast_library
+from OpynFAST import fast
 
 ##### Helper functions
 excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
@@ -133,7 +133,7 @@ if not noExec:
     else:
         raise SystemError("Platform could not be determined: platform.system -> {}".format(platform.system()))
 
-    openfastlib = openfast_library.FastLibAPI(openfastlib_path, caseInputFile)
+    openfastlib = fast.FastLibAPI(openfastlib_path, caseInputFile)
     openfastlib.run()
 
     output_channel_names = openfastlib.output_channel_names
