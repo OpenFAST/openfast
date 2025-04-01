@@ -7916,10 +7916,8 @@ end subroutine ReadR8AryWDefault
       endif
 
       ! Open file
-      !$OMP critical(fileopen_critical)
       call GetNewUnit(UnIn) 
       call OpenFInpFile(UnIn, Filename_Loc, errStat2, errMsg2); if(Failed()) return 
-      !$OMP end critical(fileopen_critical)
       ! Count number of lines
       nLine = line_count(UnIn, errStat2, errMsg2); if(Failed()) return
       if (allocated(array)) deallocate(array)
