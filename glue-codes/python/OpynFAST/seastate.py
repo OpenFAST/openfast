@@ -59,9 +59,7 @@ class SeaStateLib(OpenFASTInterfaceType):
 
         # Create buffers for class data
         # These will generally be overwritten by the Fortran code
-        self.dt                = c_double(0)
-        self.total_time        = c_double(0)
-        self.num_outs = c_int(0)
+        self.num_outs_c = c_int(0)
         self.output_channel_names = []
         self.output_channel_units = []
         self.output_values = None
@@ -100,7 +98,18 @@ class SeaStateLib(OpenFASTInterfaceType):
         ]
         self.SeaSt_C_End.restype = c_int
 
-    def init(self):
+    def init(
+        self,
+        gravity: float = 9.80665,
+        water_density: float = 1025,
+        water_depth: float = 200,
+        msl2swl: float = 0,
+        outrootname: str = "./seastate.SeaSt",
+        wave_kinematics_mode: int = 0,
+        n_steps: int = 801,
+        time_interval: float = 0.125,
+        wave_elevation_series_flag: int = 0,
+    ):
         _error_status = c_int(0)
         _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
 
@@ -110,27 +119,18 @@ class SeaStateLib(OpenFASTInterfaceType):
         _channel_names = create_string_buffer(20 * 4000 + 1)
         _channel_units = create_string_buffer(20 * 4000 + 1)
 
-        gravity = c_float(9.80665)
-        water_density = c_float(1025)
-        water_depth = c_float(200)
-        msl2swl = c_float(0)
-        outrootname = "./seastate.SeaSt".encode('utf-8')
-        wave_kinematics_mode = c_int(0)
-        n_steps = c_int(801)
-        time_interval = c_float(0.125)
-        wave_elevation_series_flag = c_int(0)
         self.SeaSt_C_Init(
             self.input_file_name,
-            create_string_buffer(outrootname),
-            byref(gravity),
-            byref(water_density),
-            byref(water_depth),
-            byref(msl2swl),
-            byref(n_steps),
-            byref(time_interval),
-            byref(wave_elevation_series_flag),
-            byref(wave_kinematics_mode),
-            byref(self.num_outs),
+            create_string_buffer(outrootname.encode('utf-8')),
+            byref(c_float(gravity)),
+            byref(c_float(water_density)),
+            byref(c_float(water_depth)),
+            byref(c_float(msl2swl)),
+            byref(c_int(n_steps)),
+            byref(c_float(time_interval)),
+            byref(c_int(wave_elevation_series_flag)),
+            byref(c_int(wave_kinematics_mode)),
+            byref(self.num_outs_c),
             _channel_names,
             _channel_units,
             byref(_error_status),
@@ -152,7 +152,7 @@ class SeaStateLib(OpenFASTInterfaceType):
         self.output_channel_units = [n.decode('UTF-8') for n in _channel_units.value.split()] 
 
         # Allocate the data for the outputs
-        self.output_values = np.zeros( self.num_outs.value, dtype=c_float, order='C' )
+        self.output_values = np.zeros( self.num_outs_c.value, dtype=c_float, order='C' )
 
     def calc_output(self, t):
         _error_status = c_int(0)
@@ -183,3 +183,7 @@ class SeaStateLib(OpenFASTInterfaceType):
 
             if self.fatal_error(_error_status):
                 raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
+
+    @property
+    def num_outs(self):
+        return self.num_outs_c.value
