@@ -779,7 +779,7 @@ end subroutine HighResGridCalcOutput
 subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, errStat, errMsg )
    type(AWAE_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
    type(AWAE_InputType),           intent(  out) :: u             !< An initial guess for the input; input mesh must be defined
-   type(AWAE_ParameterType),target,intent(  out) :: p             !< Parameters
+   type(AWAE_ParameterType),       intent(  out) :: p             !< Parameters
    type(AWAE_ContinuousStateType), intent(  out) :: x             !< Initial continuous states
    type(AWAE_DiscreteStateType),   intent(  out) :: xd            !< Initial discrete states
    type(AWAE_ConstraintStateType), intent(  out) :: z             !< Initial guess of the constraint states
@@ -799,7 +799,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    character(ErrMsgLen)                          :: errMsg2       ! temporary error message
    character(*), parameter                       :: RoutineName = 'AWAE_Init'
    type(InflowWind_InitInputType)                :: IfW_InitInp
-   type(InflowWind_InitOutputType), target       :: IfW_InitOut
+   type(InflowWind_InitOutputType)               :: IfW_InitOut
 
       ! Initialize variables for this routine
    errStat = ErrID_None
@@ -1112,12 +1112,9 @@ contains
       real(ReKi)                       :: ff_lim(2)
       real(ReKi)                       :: hr_lim(2)
       real(ReKi),          parameter   :: GridTol = 1.0E-3  ! Tolerance from IfW for checking the high-res grid (Mod_AmbWind=3 only).
-      type(FlowFieldType), pointer     :: ff                ! alias to shorten notation to fullfield
-      type(WindFileDat),   pointer     :: wfi               ! alias to shorten notation to WindFileInfo
       character(1024)                  :: tmpMsg
 
-      ff  => p%IfW(nt)%FlowField 
-      wfi => IfW_InitOut%WindFileInfo
+      associate(ff => p%IfW(nt)%FlowField, wfi => IfW_InitOut%WindFileInfo)
 
       tmpMsg = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires the FAST.Farm high-res grid '// &
                'is entirely contained within the flow-field from InflowWind. '//NewLine//' Try setting:'//NewLine
@@ -1192,6 +1189,7 @@ contains
             ErrMsg2  = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires InflowWind propagation direction alignment with X or Y (0, 90, 180, 270 degrees).'
          endif
       endif
+      end associate
    end subroutine CheckModAmb3Boundaries
 
    logical function Failed()
