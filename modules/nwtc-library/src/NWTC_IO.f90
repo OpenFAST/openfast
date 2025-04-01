@@ -6114,9 +6114,6 @@ subroutine ReadR4AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
 
    if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
 
-      ! Values exist, so reread line into AryLen of words
-      call GetWords( Line, Word(AryLen), AryLen)
-
       ! read the first AryLen numbers from the line
       read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
 
@@ -6177,9 +6174,6 @@ subroutine ReadR8AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
    call Conv2UC( Word(1) )
 
    if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
-
-      ! Values exist, so reread line into AryLen of words
-      call GetWords( Line, Word(AryLen), AryLen)
 
       ! read the first AryLen numbers from the line
       read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
