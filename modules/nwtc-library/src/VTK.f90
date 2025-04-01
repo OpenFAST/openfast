@@ -119,7 +119,9 @@ contains
       WRITE(Un,'(A)')         '    </Piece>'
       WRITE(Un,'(A)')         '  </PolyData>'
       WRITE(Un,'(A)')         '</VTKFile>'
+      !$OMP critical(fileopen_critical)
       CLOSE(Un)         
+      !$OMP end critical(fileopen_critical)
    
       RETURN
    END SUBROUTINE WrVTK_footer                
@@ -316,7 +318,9 @@ contains
       END IF
       
       IF ( (ErrStat >= AbortErrLev) .or. closeOnReturn ) THEN        
+         !$OMP critical(fileopen_critical)
          close(Un)
+         !$OMP end critical(fileopen_critical)
          Un = -1
          RETURN
       END IF
@@ -409,7 +413,9 @@ contains
       WRITE(Un,'(A,i15)')         'POINT_DATA ',  nPts
       WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
       WRITE(Un,'(3(f10.2,1X))')   gridVals
+      !$OMP critical(fileopen_critical)
       close(Un)
+      !$OMP end critical(fileopen_critical)
       RETURN
       
    END SUBROUTINE WrVTK_SP_vectors3D
@@ -501,7 +507,9 @@ contains
     subroutine vtk_close_file(mvtk)
         type(VTK_Misc),intent(inout) :: mvtk
         if ( mvtk%bFileOpen ) then
+            !$OMP critical(fileopen_critical)
             close(mvtk%vtk_unit)
+            !$OMP end critical(fileopen_critical)
             mvtk%bFileOpen=.false.
         endif
     endsubroutine
