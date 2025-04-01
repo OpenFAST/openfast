@@ -35,6 +35,16 @@ from pathlib import Path
 from .interface_abc import OpenFASTInterfaceType
 
 class SeaStateLib(OpenFASTInterfaceType):
+    """
+    This is the Python interface to the OpenFAST SeaState module.
+
+    Notes:
+    - SeaState is different from the other OpenFAST modules in that it does not do the typical
+        CalcOutput-UpdateStates sequence. The calc_output function here is essentially an
+        interrogation of the lookup table stored in SeaState. Therefore, the output_values
+        attribute does not store a timeseries of values. It only stores a 1D array of outputs
+        from the last call to calc_output.
+    """
 
     def __init__(self, library_path: str, input_file_name: str):
         super().__init__(library_path)
@@ -45,45 +55,42 @@ class SeaStateLib(OpenFASTInterfaceType):
 
         self._initialize_routines()
 
-        # Create buffers for class data
         self.ended = False   # For error handling at end
 
-        # This buffer for the channel names and units is set arbitrarily large
-        # to start. Channel name and unit lengths are currently hard
-        # coded to 20 (this must match ChanLen in NWTC_Base.f90).
-        # self._channel_names_c = create_string_buffer(20 * 4000 + 1)
-        # self._channel_units_c = create_string_buffer(20 * 4000 + 1)
-
+        # Create buffers for class data
+        # These will generally be overwritten by the Fortran code
         self.dt                = c_double(0)
         self.total_time        = c_double(0)
-        self.numTimeSteps      = c_int(0)
+        self.num_outs = c_int(0)
+        self.output_channel_names = []
+        self.output_channel_units = []
+        self.output_values = None
 
     def _initialize_routines(self):
         self.SeaSt_C_Init.argtypes = [
-            POINTER(c_char),        #  intent(in   ) :: InputFile_c(IntfStrLen)
-            POINTER(c_char),        #  intent(in   ) :: OutRootName_c(IntfStrLen)
-            POINTER(c_float),       #  intent(in   ) :: Gravity_c
-            POINTER(c_float),       #  intent(in   ) :: WtrDens_c
-            POINTER(c_float),       #  intent(in   ) :: WtrDpth_c
-            POINTER(c_float),       #  intent(in   ) :: MSL2SWL_c
-            POINTER(c_int),         #  intent(in   ) :: NSteps_c
-            POINTER(c_float),       #  intent(in   ) :: TimeInterval_c
-            POINTER(c_int),         #  intent(in   ) :: WaveElevSeriesFlag_c
-            POINTER(c_int),         #  intent(in   ) :: WrWvKinMod_c
-            POINTER(c_int),         #  intent(  out) :: ErrStat_C
-            POINTER(c_char),        #  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+            POINTER(c_char),        # intent(in   ) :: InputFile_c(IntfStrLen)
+            POINTER(c_char),        # intent(in   ) :: OutRootName_c(IntfStrLen)
+            POINTER(c_float),       # intent(in   ) :: Gravity_c
+            POINTER(c_float),       # intent(in   ) :: WtrDens_c
+            POINTER(c_float),       # intent(in   ) :: WtrDpth_c
+            POINTER(c_float),       # intent(in   ) :: MSL2SWL_c
+            POINTER(c_int),         # intent(in   ) :: NSteps_c
+            POINTER(c_float),       # intent(in   ) :: TimeInterval_c
+            POINTER(c_int),         # intent(in   ) :: WaveElevSeriesFlag_c
+            POINTER(c_int),         # intent(in   ) :: WrWvKinMod_c
+            POINTER(c_int),         # intent(  out) :: NumChannels_c
+            POINTER(c_char),        # intent(  out) :: OutputChannelNames_C
+            POINTER(c_char),        # intent(  out) :: OutputChannelUnits_C
+            POINTER(c_int),         # intent(  out) :: ErrStat_C
+            POINTER(c_char),        # intent(  out) :: ErrMsg_C(ErrMsgLen_C)
         ]
         self.SeaSt_C_Init.restype = c_int
 
         self.SeaSt_C_CalcOutput.argtypes = [
-        #     POINTER(c_double),                    # IN: Time @ n
-        #     POINTER(c_float),                     # IN: Positions -- node positions    (1 x 6 array)  
-        #     POINTER(c_float),                     # IN: Velocities -- node velocities  (1 x 6 array)
-        #     POINTER(c_float),                     # IN: Accelerations -- node accelerations  (1 x 6 array)
-        #     POINTER(c_float),                     # OUT: Forces (3 forces and 3 moments)
-        #     POINTER(c_float),                     # OUT: Output Channel Values
-        #     POINTER(c_int),                       # OUT: ErrStat_C
-        #     POINTER(c_char)                       # OUT: ErrMsg_C
+            POINTER(c_double),      # intent(in   ) :: Time_C
+            POINTER(c_float),       # intent(  out) :: OutputChannelValues_C(p%NumOuts)
+            POINTER(c_int),         # intent(  out) :: ErrStat_C
+            POINTER(c_char),        # intent(  out) :: ErrMsg_C(ErrMsgLen_C)
         ]
         self.SeaSt_C_CalcOutput.restype = c_int
 
@@ -97,17 +104,11 @@ class SeaStateLib(OpenFASTInterfaceType):
         _error_status = c_int(0)
         _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
 
-        # Convert the string into a c_char byte array
-        # input_string = '\x00'.join(input_string_array)
-        # input_string = input_string.encode('utf-8')
-        # input_string_length = len(input_string)
-
-        # # Convert the initial positions array into c_float array
-        # init_positions_c = (c_float * 6)(0.0, )
-        # for i, p in enumerate(platform_init_pos):
-        #     init_positions_c[i] = c_float(p)
-
-        # self._numChannels = c_int(0)
+        # This buffer for the channel names and units is set arbitrarily large
+        # to start. Channel name and unit lengths are currently hard
+        # coded to 20 (this must match ChanLen in NWTC_Base.f90).
+        _channel_names = create_string_buffer(20 * 4000 + 1)
+        _channel_units = create_string_buffer(20 * 4000 + 1)
 
         gravity = c_float(9.80665)
         water_density = c_float(1025)
@@ -129,80 +130,44 @@ class SeaStateLib(OpenFASTInterfaceType):
             byref(time_interval),
             byref(wave_elevation_series_flag),
             byref(wave_kinematics_mode),
+            byref(self.num_outs),
+            _channel_names,
+            _channel_units,
             byref(_error_status),
             _error_message,
         )
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
+        # if len(_channel_names.value.split()) == 0:
+        #     self.output_channel_names = []
+        # else:
+        #     self.output_channel_names = [n.decode('UTF-8') for n in _channel_names.value.split()] 
+        self.output_channel_names = [n.decode('UTF-8') for n in _channel_names.value.split()] 
 
-    # def calc_output(self, t, positions, velocities, accelerations, forces, output_channel_values):
+        # if len(_channel_units.value.split()) == 0:
+        #     self.output_channel_units = []
+        # else:
+        #     self.output_channel_units = [n.decode('UTF-8') for n in _channel_units.value.split()] 
+        self.output_channel_units = [n.decode('UTF-8') for n in _channel_units.value.split()] 
 
-        # y%writeoutput has the outputs
-        # outputchannel_values_c
+        # Allocate the data for the outputs
+        self.output_values = np.zeros( self.num_outs.value, dtype=c_float, order='C' )
 
+    def calc_output(self, t):
+        _error_status = c_int(0)
+        _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
 
+        self.SeaSt_C_CalcOutput(
+            byref(c_double(t)),                    # IN: time
+            self.output_values.ctypes.data_as(POINTER(c_float)), # OUT: output channel values
+            byref(_error_status),                  # OUT: ErrStat_C
+            _error_message                         # OUT: ErrMsg_C
+        )
 
-    #     velocities_c = (c_float * 6)(0.0,)
-    #     for i, p in enumerate(velocities):
-    #         velocities_c[i] = c_float(p)
-
-    #     accelerations_c = (c_float * 6)(0.0,)
-    #     for i, p in enumerate(accelerations):
-    #         accelerations_c[i] = c_float(p)
-
-    #     forces_c = (c_float * 6)(0.0,)
-    #     for i, p in enumerate(forces):
-    #         forces_c[i] = c_float(p)
-
-    #     outputs_c = (c_float * self._numChannels.value)(0.0,)
-    #     for i, p in enumerate(output_channel_values):
-    #         outputs_c[i] = c_float(p)
-
-    #     self.MD_C_CalcOutput(
-    #         byref(c_double(t)),                    # IN: time
-    #         positions_c,                           # IN: positions
-    #         velocities_c,                          # IN: velocities
-    #         accelerations_c,                       # IN: accelerations
-    #         forces_c,                              # OUT: forces
-    #         outputs_c,                             # OUT: output channel values
-    #         byref(self.error_status_c),            # OUT: ErrStat_C
-    #         self.error_message_c                   # OUT: ErrMsg_C
-    #     )
-
-    #     for i in range(0,len(forces_c)):
-    #         forces[i] = c_float(forces_c[i]).value
-
-    #     for i in range(0,len(outputs_c)):
-    #         output_channel_values[i] = c_float(outputs_c[i]).value
-        
-    #     self.check_error()
-
-    # def md_updateStates(self, t1, t2, positions, velocities, accelerations):
-
-    #     positions_c = (c_float * 6)(0.0,)
-    #     for i, p in enumerate(positions):
-    #         positions_c[i] = c_float(p)
-
-    #     velocities_c = (c_float * 6)(0.0,)
-    #     for i, p in enumerate(velocities):
-    #         velocities_c[i] = c_float(p)
-
-    #     accelerations_c = (c_float * 6)(0.0,)
-    #     for i, p in enumerate(accelerations):
-    #         accelerations_c[i] = c_float(p)
-
-    #     self.MD_C_UpdateStates(
-    #         byref(c_double(t1)),                   # IN: current time (t)
-    #         byref(c_double(t2)),                   # IN: next time step (t+1)
-    #         positions_c,                           # IN: positions
-    #         velocities_c,                          # IN: velocities
-    #         accelerations_c,                       # IN: accelerations
-    #         byref(self.error_status_c),            # OUT: ErrStat_C
-    #         self.error_message_c                   # OUT: ErrMsg_C
-    #     )
-        
-    #     self.check_error()
+        if self.fatal_error(_error_status):
+            self.end()
+            raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
     def end(self):
         _error_status = c_int(0)
@@ -218,19 +183,3 @@ class SeaStateLib(OpenFASTInterfaceType):
 
             if self.fatal_error(_error_status):
                 raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
-
-    @property
-    def output_channel_names(self):
-        if len(self._channel_names.value.split()) == 0:
-            return []
-        output_channel_names = self._channel_names.value.split()
-        output_channel_names = [n.decode('UTF-8') for n in output_channel_names]
-        return output_channel_names
-
-    @property
-    def output_channel_units(self):
-        if len(self._channel_units.value.split()) == 0:
-            return []
-        output_channel_units = self._channel_units.value.split()
-        output_channel_units = [n.decode('UTF-8') for n in output_channel_units]
-        return output_channel_units

@@ -74,6 +74,7 @@ subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
     character(ErrMsgLen),   intent(in   )  :: ErrMsg                  !< aggregated error message (fortran type)
     integer(c_int),         intent(  out)  :: ErrStat_C
     character(kind=c_char), intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+
     ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
     if (ErrMsgLen > ErrMsgLen_C-1) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
         ErrMsg_C = TRANSFER( trim(ErrMsg(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C )
@@ -84,7 +85,7 @@ subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
 end subroutine SetErr
 
 
-subroutine SeaSt_C_Init(InputFile_c, OutRootName_c, Gravity_c, WtrDens_c, WtrDpth_c, MSL2SWL_c, NSteps_c, TimeInterval_c, WaveElevSeriesFlag_c, WrWvKinMod_c, ErrStat_C, ErrMsg_C) BIND (C, NAME='SeaSt_C_Init')
+subroutine SeaSt_C_Init(InputFile_c, OutRootName_c, Gravity_c, WtrDens_c, WtrDpth_c, MSL2SWL_c, NSteps_c, TimeInterval_c, WaveElevSeriesFlag_c, WrWvKinMod_c, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='SeaSt_C_Init')
 implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_Init
@@ -100,6 +101,9 @@ implicit none
     real(c_float),              intent(in   ) :: TimeInterval_c
     integer(c_int),             intent(in   ) :: WaveElevSeriesFlag_c
     integer(c_int),             intent(in   ) :: WrWvKinMod_c
+    integer(c_int),             intent(  out) :: NumChannels_C
+    character(kind=c_char),     intent(  out) :: OutputChannelNames_C(ChanLen*MaxOutPts+1)
+    character(kind=c_char),     intent(  out) :: OutputChannelUnits_C(ChanLen*MaxOutPts+1)
     integer(c_int),             intent(  out) :: ErrStat_C
     character(kind=c_char),     intent(  out) :: ErrMsg_C(ErrMsgLen_C)
 
@@ -117,7 +121,6 @@ implicit none
                                                                    !!   Input is the suggested time from the glue code; 
                                                                    !!   Output is the actual coupling interval that will be used 
                                                                    !!   by the glue code.
-    type(SeaSt_InitOutputType)      :: InitOut     !< Output for initialization routine
 
     integer                    :: ErrStat                          !< aggregated error status
     character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
@@ -215,13 +218,31 @@ implicit none
     ! INTEGER(IntKi)  :: SurfaceVisNx = 0      !< Number of points in X direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
     ! INTEGER(IntKi)  :: SurfaceVisNy = 0      !< Number of points in Y direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
 
-    call SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+    call SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat2, ErrMsg2 )
+        if (Failed()) return
+
+    ! Number of channels
+    NumChannels_C = size(InitOutData%WriteOutputHdr)
+
+    ! transfer the output channel names and units to c_char arrays for returning
+    k=1
+    do i=1,NumChannels_C
+        do j=1,ChanLen    ! max length of channel name.  Same for units
+            OutputChannelNames_C(k)=InitOutData%WriteOutputHdr(i)(j:j)
+            OutputChannelUnits_C(k)=InitOutData%WriteOutputUnt(i)(j:j)
+            k=k+1
+        end do
+    end do
+
+    ! null terminate the string
+    OutputChannelNames_C(k) = C_NULL_CHAR
+    OutputChannelUnits_C(k) = C_NULL_CHAR
 
     call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 contains
     logical function Failed()
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         Failed = ErrStat >= AbortErrLev
         if (Failed) then
             call Cleanup()
@@ -273,11 +294,11 @@ implicit none
     type(SeaSt_ConstraintStateType) :: z           !< Initial guess of the constraint states
     type(SeaSt_OtherStateType)      :: OtherState  !< Initial other states            
 
-    REAL(DbKi)                 :: Time
+    real(DbKi)                 :: Time
     integer                    :: ErrStat                          !< aggregated error status
     character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
-    INTEGER                    :: ErrStat2                         !< temporary error status  from a call
-    CHARACTER(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
+    integer                    :: ErrStat2                         !< temporary error status  from a call
+    character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
     character(*), parameter    :: RoutineName = 'SeaSt_C_End'  !< for error handling
 
     ! Initialize error handling
@@ -287,7 +308,7 @@ implicit none
     ! Convert the inputs from C to Fortran
     Time = REAL(Time_C,DbKi)
 
-    call SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+    call SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )
         if (Failed()) return
 
     ! Get the output channel info out of y
@@ -321,10 +342,17 @@ implicit none
 
     integer                    :: ErrStat                          !< aggregated error status
     character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
+    integer                    :: ErrStat2                         !< temporary error status  from a call
+    character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
     character(*), parameter    :: RoutineName = 'SeaSt_C_End'  !< for error handling
 
-    call SeaSt_End(u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
-    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+    ! Initialize error handling
+    ErrStat  =  ErrID_None
+    ErrMsg   =  ""
+    call SeaSt_End(u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2)
+
+    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    call SetErr( ErrStat, ErrMsg, ErrStat_C, ErrMsg_C )
 
 end subroutine
 
