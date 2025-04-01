@@ -179,7 +179,7 @@ SUBROUTINE MD_C_Init(                                             &
    ! Format input file contents
    if (InputFilePassed==1_c_int) then
       InitInp%UsePrimaryInputFile   = .FALSE.            ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
-      InitInp%FileName             = "passed_ad_file"   ! not actually used
+      InitInp%FileName              = ""                 ! not actually used
       CALL InitFileInfo(InputFileString, InitInp%PassedPrimaryInputData, ErrStat2, ErrMsg2); if (Failed()) return
    else
       InitInp%UsePrimaryInputFile   = .TRUE.             ! Read input info from a primary input file
