@@ -28,28 +28,28 @@ CONTAINS
 
 SUBROUTINE SetErrStat_C(ErrStatLocal, ErrMessLocal, ErrStatGlobal, ErrMessGlobal, RoutineName)
 
-INTEGER(C_INT), INTENT(IN   )               :: ErrStatLocal      ! Error status of the operation
-CHARACTER(*, KIND=C_CHAR),   INTENT(IN   )  :: ErrMessLocal      ! Error message if ErrStat /= ErrID_None
-INTEGER(C_INT), INTENT(INOUT)               :: ErrStatGlobal     ! Error status of the operation
-CHARACTER(KIND=C_CHAR),   INTENT(INOUT)     :: ErrMessGlobal     ! Error message if ErrStat /= ErrID_None
-CHARACTER(*),   INTENT(IN   )               :: RoutineName  ! Name of the routine error occurred in
+    INTEGER(C_INT),             INTENT(IN   )   :: ErrStatLocal     ! Error status of the operation
+    CHARACTER(KIND=C_CHAR),     INTENT(IN   )   :: ErrMessLocal     ! Error message if ErrStat /= ErrID_None
+    INTEGER(C_INT),             INTENT(INOUT)   :: ErrStatGlobal    ! Error status of the operation
+    CHARACTER(KIND=C_CHAR),     INTENT(INOUT)   :: ErrMessGlobal    ! Error message if ErrStat /= ErrID_None
+    CHARACTER(*),               INTENT(IN   )   :: RoutineName      ! Name of the routine error occurred in
 
-IF ( ErrStatLocal == ErrID_None ) RETURN
+    IF ( ErrStatLocal == ErrID_None ) RETURN
 
-IF (ErrStatGlobal /= ErrID_None) ErrMessGlobal = TRIM(ErrMessGlobal)//new_line('a')
-ErrMessGlobal = TRIM(ErrMessGlobal)//TRIM(RoutineName)//':'//TRIM(ErrMessLocal)
-ErrStatGlobal = MAX(ErrStatGlobal,ErrStatLocal)
+    IF (ErrStatGlobal /= ErrID_None) ErrMessGlobal = TRIM(ErrMessGlobal)//new_line('a')
+    ErrMessGlobal = TRIM(ErrMessGlobal)//TRIM(RoutineName)//':'//TRIM(ErrMessLocal)
+    ErrStatGlobal = MAX(ErrStatGlobal,ErrStatLocal)
 
 END SUBROUTINE 
 
 SUBROUTINE WaveTank_Init(   &
-    MD_InputFile_c,         &
-    SS_InputFile_c,         &
-    AD_InputFile_c,         &
-    IfW_InputFile_c,        &
-    n_camera_points_c,      & 
-    ErrStat_c,              &
-    ErrMsg_c                &
+    MD_InputFile_C,         &
+    SS_InputFile_C,         &
+    AD_InputFile_C,         &
+    IfW_InputFile_C,        &
+    n_camera_points_C,      & 
+    ErrStat_C,              &
+    ErrMsg_C                &
 ) BIND (C, NAME='WaveTank_Init')
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_Init
@@ -58,44 +58,114 @@ SUBROUTINE WaveTank_Init(   &
 
 IMPLICIT NONE
 
-CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: MD_InputFile_c(IntfStrLen)
-CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: SS_InputFile_c(IntfStrLen)
-CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: AD_InputFile_c(IntfStrLen)
-CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: IfW_InputFile_c(IntfStrLen)
-INTEGER(C_INT),         INTENT(IN   ) :: n_camera_points_c
-INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
-CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
+    TYPE(C_PTR),        INTENT(IN   ) :: MD_InputFile_C
+    TYPE(C_PTR),        INTENT(IN   ) :: SS_InputFile_C
+    TYPE(C_PTR),        INTENT(IN   ) :: AD_InputFile_C
+    TYPE(C_PTR),        INTENT(IN   ) :: IfW_InputFile_C
+    INTEGER(C_INT),     INTENT(IN   ) :: n_camera_points_c
+    INTEGER(C_INT),     INTENT(  OUT)         :: ErrStat_C
+    CHARACTER(*, KIND=C_CHAR), INTENT(  OUT)  :: ErrMsg_C
 
-! Local variables
-integer(c_int) :: numchannels_c
-character(kind=c_char) :: outputchannelnames_c(100000)
-character(kind=c_char) :: outputchannelunits_c(100000)
-integer(c_int) :: input_file_passed = 0                         ! We're passing paths to input files rather than input strings for all modules
-! character(kind=c_char), pointer :: filestring_c(IntfStrLen)     ! Point to input file path input argument
+    ! Local variables
+    INTEGER(C_INT)                          :: ErrStat_C2
+    CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
+    INTEGER(C_INT)                          :: input_file_passed = 0  ! We're passing paths to input files rather than input strings for all modules
 
-print *, MD_InputFile_c
-print *, SS_InputFile_c
-print *, AD_InputFile_c
-print *, IfW_InputFile_c
+    ! SeaState variables
+    CHARACTER(KIND=C_CHAR), TARGET :: SS_OutRootName(IntfStrLen)
+    TYPE(C_PTR)    :: SS_OutRootName_C           ! TYPE(C_PTR),    intent(in   )
+    REAL(C_FLOAT)  :: SS_Gravity_C               ! REAL(C_FLOAT),  intent(in   )
+    REAL(C_FLOAT)  :: SS_WtrDens_C               ! REAL(C_FLOAT),  intent(in   )
+    REAL(C_FLOAT)  :: SS_WtrDpth_C               ! REAL(C_FLOAT),  intent(in   )
+    REAL(C_FLOAT)  :: SS_MSL2SWL_C               ! REAL(C_FLOAT),  intent(in   )
+    INTEGER(C_INT) :: SS_NSteps_C                ! INTEGER(C_INT), intent(in   )
+    REAL(C_FLOAT)  :: SS_TimeInterval_C          ! REAL(C_FLOAT),  intent(in   )
+    INTEGER(C_INT) :: SS_WaveElevSeriesFlag_C    ! INTEGER(C_INT), intent(in   )
+    INTEGER(C_INT) :: SS_WrWvKinMod_C            ! INTEGER(C_INT), intent(in   )
+    INTEGER(C_INT) :: SS_NumChannels_C           ! INTEGER(C_INT), intent(  out)
+    CHARACTER(KIND=C_CHAR) :: SS_OutputChannelNames_c(ChanLen*MaxOutPts+1)  ! CHARACTER(KIND=C_CHAR), intent(  out)
+    CHARACTER(KIND=C_CHAR) :: SS_OutputChannelUnits_c(ChanLen*MaxOutPts+1)  ! CHARACTER(KIND=C_CHAR), intent(  out)
 
-N_CAMERA_POINTS = n_camera_points_c
+    ! MD variables
+    ! CHARACTER(KIND=C_CHAR), TARGET :: MD_InputFileString(IntfStrLen)
+    INTEGER(C_INT) :: MD_InputFilePassed            ! INTEGER(C_INT, INTENT(IN   ) :: InputFilePassed        !< Whether to load the file from the filesystem - 1: InputFileString_C contains the contents of the input file; otherwise, InputFileString_C contains the path to the input file
+    TYPE(C_PTR)    :: MD_InputFileString_C          ! TYPE(C_PTR),   INTENT(IN   ) :: InputFileString_C        !< Input file as a single string with lines deliniated by C_NULL_CHAR
+    INTEGER(C_INT) :: MD_InputFileStringLength_C    ! INTEGER(C_INT, INTENT(IN   ) :: InputFileStringLength_C  !< length of the input file string
+    REAL(C_DOUBLE) :: MD_DT_C                       ! REAL(C_DOUBLE, INTENT(IN   ) :: DT_C
+    REAL(C_FLOAT)  :: MD_G_C                        ! REAL(C_FLOAT), INTENT(IN   ) :: G_C
+    REAL(C_FLOAT)  :: MD_RHO_C                      ! REAL(C_FLOAT), INTENT(IN   ) :: RHO_C
+    REAL(C_FLOAT)  :: MD_DEPTH_C                    ! REAL(C_FLOAT), INTENT(IN   ) :: DEPTH_C
+    REAL(C_FLOAT)  :: MD_PtfmInit_C(6)              ! REAL(C_FLOAT), INTENT(IN   ) :: PtfmInit_C(6)
+    INTEGER(C_INT) :: MD_InterpOrder_C              ! INTEGER(C_INT, INTENT(IN   ) :: InterpOrder_C
+    INTEGER(C_INT) :: MD_NumChannels_C              ! INTEGER(C_INT, INTENT(  OUT) :: NumChannels_C
+    CHARACTER(KIND=C_CHAR) :: MD_OutputChannelNames_C(100000)  ! CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)
+    CHARACTER(KIND=C_CHAR) :: MD_OutputChannelUnits_C(100000)  ! CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(100000)
 
-! filestring_c => MD_InputFile_c
-! call MD_C_Init(                 &
-!     input_file_passed,          &
-!     filestring_c,               &
-!     IntfStrLen,                 &
-!     dt_c,                       &
-!     g_c,                        &
-!     rho_c,                      &
-!     depth_c,                    &
-!     ptfminit_c,                 &
-!     interporder_c,              &
-!     numchannels_c,              &
-!     outputchannelnames_c,       &
-!     outputchannelunits_c,       &
-!     ErrStat_C, ErrMsg_C         &
-! )
+    ! Initialize error handling
+    ErrStat_C  =  ErrID_None
+    ErrMsg_C   =  ""
+
+    ! N_CAMERA_POINTS = n_camera_points_c
+
+    SS_OutRootName = "seastate"
+    SS_OutRootName_C = c_loc(SS_OutRootName)
+    SS_Gravity_C = 9.80665
+    SS_WtrDens_C = 1025
+    SS_WtrDpth_C = 200.0
+    SS_MSL2SWL_C = 0.0
+    SS_NSteps_C = 801
+    SS_TimeInterval_C = 0.125
+    SS_WaveElevSeriesFlag_C = 0
+    SS_WrWvKinMod_C = 0
+
+    CALL SeaSt_C_Init(              &    
+        SS_InputFile_C,             & ! TYPE(C_PTR),                intent(in   ) :: InputFile_c
+        SS_OutRootName_C,           & ! TYPE(C_PTR),                intent(in   ) :: OutRootName_c
+        SS_Gravity_C,               & ! REAL(C_FLOAT),              intent(in   ) :: Gravity_c
+        SS_WtrDens_C,               & ! REAL(C_FLOAT),              intent(in   ) :: WtrDens_c
+        SS_WtrDpth_C,               & ! REAL(C_FLOAT),              intent(in   ) :: WtrDpth_c
+        SS_MSL2SWL_C,               & ! REAL(C_FLOAT),              intent(in   ) :: MSL2SWL_c
+        SS_NSteps_C,                & ! INTEGER(C_INT),             intent(in   ) :: NSteps_c
+        SS_TimeInterval_C,          & ! REAL(C_FLOAT),              intent(in   ) :: TimeInterval_c
+        SS_WaveElevSeriesFlag_C,    & ! INTEGER(C_INT),             intent(in   ) :: WaveElevSeriesFlag_c
+        SS_WrWvKinMod_C,            & ! INTEGER(C_INT),             intent(in   ) :: WrWvKinMod_c
+        SS_NumChannels_C,           & ! INTEGER(C_INT),             intent(  out) :: NumChannels_c
+        SS_OutputChannelNames_C,    & ! CHARACTER(KIND=C_CHAR),     intent(  out) :: OutputChannelNames_c(ChanLen*MaxOutPts+1)
+        SS_OutputChannelUnits_C,    & ! CHARACTER(KIND=C_CHAR),     intent(  out) :: OutputChannelUnits_c(ChanLen*MaxOutPts+1)
+        ErrStat_C2,                 & ! INTEGER(C_INT),             intent(  out) :: ErrStat_c
+        ErrMsg_C2                   & ! CHARACTER(KIND=C_CHAR),     intent(  out) :: ErrMsg_c(ErrMsgLen_c)
+    )
+    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'SeaSt_C_Init')
+
+    ! SS_GetFlowFieldPtr(SSFFPTR)
+    ! MD_SetFlowFieldPtr(SSFFPTR)
+
+    MD_InputFilePassed = 0
+    MD_InputFileString_C = MD_InputFile_C
+    MD_InputFileStringLength_C = IntfStrLen
+    MD_DT_C = 0.125
+    MD_G_C = 9.80665
+    MD_RHO_C = 1025
+    MD_DEPTH_C = 200
+    MD_PtfmInit_C = (/ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 /)
+    MD_InterpOrder_C = 1  ! 1 - Linear, 2 - quadratic
+
+    CALL MD_C_Init(                 &
+        MD_InputFilePassed,         &
+        MD_InputFileString_C,       &
+        MD_InputFileStringLength_C, &
+        MD_DT_C,                    &
+        MD_G_C,                     &
+        MD_RHO_C,                   &     ! Verify that this matches WtrDens in the pointer set above - this is checking that the pointer has values loaded by the init function
+        MD_DEPTH_C,                 &
+        MD_PtfmInit_C,              &
+        MD_InterpOrder_C,           &
+        MD_NumChannels_C,           &
+        MD_OutputChannelNames_C,    &
+        MD_OutputChannelUnits_C,    &
+        ErrStat_C2,                 &
+        ErrMsg_C2                   &
+    )
 
 ! call ADI_C_Init(                &
 !     ADinputFilePassed,          &  ! integer(c_int),            intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
@@ -185,8 +255,8 @@ SUBROUTINE WaveTank_CalcOutput( &
     positions_z,                &
     rotation_matrix,            &
     loads,                      &
-    ErrStat_c,                  &
-    ErrMsg_c                    &
+    ErrStat_C,                  &
+    ErrMsg_C                    &
 ) BIND (C, NAME='WaveTank_CalcOutput')
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_CalcOutput

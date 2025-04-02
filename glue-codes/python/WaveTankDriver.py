@@ -37,33 +37,28 @@ class WaveTankLib(OpenFASTInterfaceType):
         super().__init__(library_path)
 
         self.input_file_names = {
-            k: create_string_buffer(str(Path(v).absolute() ).encode('utf-8'))
-            for k,v in input_file_names.items()
+            k: str(Path(v).absolute()).encode('utf-8') for k,v in input_file_names.items()
         }
 
         self._initialize_routines()
 
-        # Create buffers for class data
         self.ended = False   # For error handling at end
 
-        # This buffer for the channel names and units is set arbitrarily large
-        # to start. Channel name and unit lengths are currently hard
-        # coded to 20 (this must match ChanLen in NWTC_Base.f90).
-        # self._channel_names_c = create_string_buffer(20 * 4000 + 1)
-        # self._channel_units_c = create_string_buffer(20 * 4000 + 1)
-
-        self.dt                = c_double(0)
-        self.total_time        = c_double(0)
-        self.numTimeSteps      = c_int(0)
+        # Create buffers for class data
+        # These will generally be overwritten by the Fortran code
+        self.num_outs_c = c_int(0)
+        self.output_channel_names = []
+        self.output_channel_units = []
+        self.output_values = None
 
     def _initialize_routines(self):
         self.WaveTank_Init.argtypes = [
-            POINTER(c_char),        #  intent(in   ) :: MD_InputFile_c(IntfStrLen)
-            POINTER(c_char),        #  intent(in   ) :: SS_InputFile_c(IntfStrLen)
-            POINTER(c_char),        #  intent(in   ) :: AD_InputFile_c(IntfStrLen)
-            POINTER(c_char),        #  intent(in   ) :: IfW_InputFile_c(IntfStrLen)
-            POINTER(c_int),         #  intent(in   ) :: IfW_InputFile_c(IntfStrLen)
+            POINTER(c_char_p),      #  intent(in   ) :: MD_InputFile_c(IntfStrLen)
+            POINTER(c_char_p),      #  intent(in   ) :: SS_InputFile_c(IntfStrLen)
+            POINTER(c_char_p),      #  intent(in   ) :: AD_InputFile_c(IntfStrLen)
+            POINTER(c_char_p),      #  intent(in   ) :: IfW_InputFile_c(IntfStrLen)
             POINTER(c_int),         #  intent(in   ) :: n_camera_points_c
+            POINTER(c_int),         #  intent(  out) :: ErrStat_C
             POINTER(c_char),        #  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
         ]
         self.WaveTank_Init.restype = c_int
@@ -85,17 +80,10 @@ class WaveTankLib(OpenFASTInterfaceType):
         _error_status = c_int(0)
         _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
 
-        # Convert the string into a c_char byte array
-        # input_string = '\x00'.join(input_string_array)
-        # input_string = input_string.encode('utf-8')
-        # input_string_length = len(input_string)
-
         # # Convert the initial positions array into c_float array
         # init_positions_c = (c_float * 6)(0.0, )
         # for i, p in enumerate(platform_init_pos):
         #     init_positions_c[i] = c_float(p)
-
-        # self._numChannels = c_int(0)
 
         # gravity = c_float(9.80665)
         # water_density = c_float(1025)
@@ -107,10 +95,10 @@ class WaveTankLib(OpenFASTInterfaceType):
         # time_interval = c_float(0.125)
         # wave_elevation_series_flag = c_int(0)
         self.WaveTank_Init(
-            self.input_file_names["MoorDyn"],
-            self.input_file_names["SeaState"],
-            self.input_file_names["AeroDyn"],
-            self.input_file_names["InflowWind"],
+            c_char_p(self.input_file_names["MoorDyn"]),
+            c_char_p(self.input_file_names["SeaState"]),
+            c_char_p(self.input_file_names["AeroDyn"]),
+            c_char_p(self.input_file_names["InflowWind"]),
             byref(c_int(n_camera_points)),
             # create_string_buffer(outrootname),
             # byref(gravity),
@@ -126,6 +114,10 @@ class WaveTankLib(OpenFASTInterfaceType):
         )
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
+
+        # self.output_channel_names = [n.decode('UTF-8') for n in _channel_names.value.split()] 
+        # self.output_channel_units = [n.decode('UTF-8') for n in _channel_units.value.split()] 
+        # self.output_values = np.zeros( self.num_outs_c.value, dtype=c_float, order='C' )
 
     def calc_output(
         self,
@@ -151,22 +143,6 @@ class WaveTankLib(OpenFASTInterfaceType):
         )
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
-
-    @property
-    def output_channel_names(self):
-        if len(self._channel_names.value.split()) == 0:
-            return []
-        output_channel_names = self._channel_names.value.split()
-        output_channel_names = [n.decode('UTF-8') for n in output_channel_names]
-        return output_channel_names
-
-    @property
-    def output_channel_units(self):
-        if len(self._channel_units.value.split()) == 0:
-            return []
-        output_channel_units = self._channel_units.value.split()
-        output_channel_units = [n.decode('UTF-8') for n in output_channel_units]
-        return output_channel_units
 
 
 if __name__=="__main__":
