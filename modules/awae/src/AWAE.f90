@@ -701,6 +701,13 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    ! NOTE: loop here is different from low res grid, doing: turbines > grid > turbines(nt/=nt2) > planes
    ! instead of grid > turbines > planes
    ! TODO explain 
+   !
+   ! WARNING: the way this is setup can use a lot of memory, and may run out of OMP stack.  If that happens,
+   !           use `export OMP_STACKSIZE="32 M"` (default is 4 M).
+   !     Rough calculation of memory expected:
+   !           maxN_wake * 13 * OMP_NUM_THREADS * <precision> = size in bytes
+   !     HOWEVER, real world testing shows that for 103 threads with 114 turbines and maxN_wake=101346 is more like
+   !           maxN_wake * 40 * <precision> = size in bytes
    NumGrid_high  = p%nX_high*p%nY_high*p%nZ_high
 
    do nt = 1,p%NumTurbines
