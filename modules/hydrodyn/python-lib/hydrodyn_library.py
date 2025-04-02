@@ -315,7 +315,7 @@ class HydroDynLib(CDLL):
     def hydrodyn_calcOutput(self, time, nodePos, nodeVel, nodeAcc, nodeFrcMom, outputChannelValues):
 
         # Check input motion info
-        self.check_input_motions(nodePos,nodeVel,nodeAcc)
+        self.check_input_motions(time,nodePos,nodeVel,nodeAcc)
 
         # set flat arrays for inputs of motion
         #   Position -- [x1,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
