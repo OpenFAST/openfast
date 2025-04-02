@@ -376,7 +376,7 @@ class HydroDynLib(CDLL):
     def hydrodyn_calcOutput_and_addedMass(self, time, nodePos, nodeVel, nodeFrcMom, nodeAdm, outputChannelValues):
 
         # Check input motion info
-        self.check_input_motions_noAcc(nodePos,nodeVel)
+        self.check_input_motions_noAcc(time,nodePos,nodeVel)
 
         # set flat arrays for inputs of motion
         #   Position -- [x1,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
@@ -441,7 +441,7 @@ class HydroDynLib(CDLL):
     def hydrodyn_updateStates(self, time, timeNext, nodePos, nodeVel, nodeAcc, nodeFrcMom):
 
         # Check input motion info
-        self.check_input_motions(nodePos,nodeVel,nodeAcc)
+        self.check_input_motions(time,nodePos,nodeVel,nodeAcc)
 
         # set flat arrays for inputs of motion
         #   Position -- [x2,y1,z1,Rx1,Ry1,Rz1, x2,y2,z2,Rx2,Ry2,Rz2 ...]
@@ -503,10 +503,9 @@ class HydroDynLib(CDLL):
             raise Exception("\nHydroDyn terminated prematurely.")
 
 
-    def check_input_motions(self,nodePos,nodeVel,nodeAcc):
+    def check_input_motions(self,time,nodePos,nodeVel,nodeAcc):
         # make sure number of nodes didn't change for some reason
         if self._initNumNodePts != self.numNodePts:
-            # @ANDY TODO: `time` is not available here so this would be a runtime error
             print(f"At time {time}, the number of node points changed from initial value of {self._initNumNodePts}.  This is not permitted during the simulation.")
             self.hydrodyn_end()
             raise Exception("\nError in calling HydroDyn library.")
@@ -544,10 +543,9 @@ class HydroDynLib(CDLL):
             raise Exception("\nHydroDyn terminated prematurely.")
 
 
-    def check_input_motions_noAcc(self,nodePos,nodeVel):
+    def check_input_motions_noAcc(self,time,nodePos,nodeVel):
         # make sure number of nodes didn't change for some reason
         if self._initNumNodePts != self.numNodePts:
-            # @ANDY TODO: `time` is not available here so this would be a runtime error
             print(f"At time {time}, the number of node points changed from initial value of {self._initNumNodePts}.  This is not permitted during the simulation.")
             self.hydrodyn_end()
             raise Exception("\nError in calling HydroDyn library.")
