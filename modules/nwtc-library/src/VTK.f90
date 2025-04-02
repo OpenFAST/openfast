@@ -93,10 +93,10 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
-      !$OMP critical(fileopen_critical)
+      !$OMP critical(fileopenNWTCio_critical)
       CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-      !$OMP end critical(fileopen_critical)
+      !$OMP end critical(fileopenNWTCio_critical)
          if (ErrStat >= AbortErrLev) return
       
       ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)
@@ -119,9 +119,9 @@ contains
       WRITE(Un,'(A)')         '    </Piece>'
       WRITE(Un,'(A)')         '  </PolyData>'
       WRITE(Un,'(A)')         '</VTKFile>'
-      !$OMP critical(fileopen_critical)
+      !$OMP critical(fileopenNWTCio_critical)
       CLOSE(Un)         
-      !$OMP end critical(fileopen_critical)
+      !$OMP end critical(fileopenNWTCio_critical)
    
       RETURN
    END SUBROUTINE WrVTK_footer                
@@ -161,10 +161,10 @@ contains
          closeOnReturn = .FALSE.
       END IF
       
-      !$OMP critical(fileopen_critical)
+      !$OMP critical(fileopenNWTCio_critical)
       CALL GetNewUnit( Un, ErrStat2, ErrMsg2 )
       CALL OpenFInpFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-      !$OMP end critical(fileopen_critical)
+      !$OMP end critical(fileopenNWTCio_critical)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
       
@@ -318,9 +318,9 @@ contains
       END IF
       
       IF ( (ErrStat >= AbortErrLev) .or. closeOnReturn ) THEN        
-         !$OMP critical(fileopen_critical)
+         !$OMP critical(fileopenNWTCio_critical)
          close(Un)
-         !$OMP end critical(fileopen_critical)
+         !$OMP end critical(fileopenNWTCio_critical)
          Un = -1
          RETURN
       END IF
@@ -348,9 +348,9 @@ contains
       
       READ(Un,*, IOSTAT=ErrStat2)  gridVals(1:3,1:dims(1),1:dims(2),1:dims(3))
       
-      !$OMP critical(fileopen_critical)
+      !$OMP critical(fileopenNWTCio_critical)
       close(Un)
-      !$OMP end critical(fileopen_critical)
+      !$OMP end critical(fileopenNWTCio_critical)
       if (ErrStat2 /= 0) then
          CALL SetErrStat( ErrID_Fatal, 'Invalid vtk file: '//trim(FileName)//'.', ErrStat, ErrMsg, 'ReadVTK_SP_vectors' )
       end if
@@ -368,10 +368,10 @@ contains
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
-      !$OMP critical(fileopen_critical)
+      !$OMP critical(fileopenNWTCio_critical)
       CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-      !$OMP end critical(fileopen_critical)
+      !$OMP end critical(fileopenNWTCio_critical)
          if (ErrStat >= AbortErrLev) return
       
       WRITE(Un,'(A)')  '# vtk DataFile Version 3.0'
@@ -413,9 +413,9 @@ contains
       WRITE(Un,'(A,i15)')         'POINT_DATA ',  nPts
       WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
       WRITE(Un,'(3(f10.2,1X))')   gridVals
-      !$OMP critical(fileopen_critical)
+      !$OMP critical(fileopenNWTCio_critical)
       close(Un)
-      !$OMP end critical(fileopen_critical)
+      !$OMP end critical(fileopenNWTCio_critical)
       RETURN
       
    END SUBROUTINE WrVTK_SP_vectors3D
@@ -461,7 +461,7 @@ contains
         logical :: b
 
         if (.not. mvtk%bFileOpen) then
-            !$OMP critical(fileopen_critical)
+            !$OMP critical(fileopenNWTCio_critical)
             CALL GetNewUnit( mvtk%vtk_unit )   
             if (mvtk%bBinary) then
                 ! Fortran 2003 stream, otherwise intel fortran !
@@ -477,7 +477,7 @@ contains
             else
                 open(mvtk%vtk_unit,file=trim(adjustl(filename)),iostat=iostatvar,action="write",status='replace')
             endif
-            !$OMP end critical(fileopen_critical)
+            !$OMP end critical(fileopenNWTCio_critical)
             if (iostatvar == 0) then
                 if (mvtk%bBinary) then
                     write(mvtk%vtk_unit)'# vtk DataFile Version 3.0'//NewLine
@@ -507,9 +507,9 @@ contains
     subroutine vtk_close_file(mvtk)
         type(VTK_Misc),intent(inout) :: mvtk
         if ( mvtk%bFileOpen ) then
-            !$OMP critical(fileopen_critical)
+            !$OMP critical(fileopenNWTCio_critical)
             close(mvtk%vtk_unit)
-            !$OMP end critical(fileopen_critical)
+            !$OMP end critical(fileopenNWTCio_critical)
             mvtk%bFileOpen=.false.
         endif
     endsubroutine
