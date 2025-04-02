@@ -170,10 +170,6 @@ class WaveTankLib(OpenFASTInterfaceType):
 
 
 if __name__=="__main__":
-    # import sys
-    # if len(sys.argv) > 1:
-    #     input_file = sys.argv[1]
-    #     serial(input_file)
     wavetanklib = WaveTankLib(
         library_path,
         {

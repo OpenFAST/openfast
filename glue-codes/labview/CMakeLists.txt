@@ -17,7 +17,7 @@
 add_library(wavetanktestinglib SHARED 
     src/WaveTank.f90
 )
-target_link_libraries(wavetanktestinglib aerodyn_inflow_c_binding moordyn_c_binding nwtclibs versioninfolib)
+target_link_libraries(wavetanktestinglib aerodyn_inflow_c_binding moordyn_c_binding seastate_c_binding nwtclibs versioninfolib)
 if(APPLE OR UNIX)
     target_compile_definitions(wavetanktestinglib PRIVATE IMPLICIT_DLLEXPORT)
 endif()

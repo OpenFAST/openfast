@@ -1,31 +1,48 @@
 
-module WaveTankTesting
+MODULE WaveTankTesting
 
-    use iso_c_binding
-    use NWTC_Library
-    ! use Precision
-    use MoorDyn_C
-    use NWTC_C_Binding, ONLY: IntfStrLen
+    USE ISO_C_BINDING
+    USE NWTC_Library
+    ! USE Precision
+    USE MoorDyn_C
+    USE SeaState_C_Binding
+    USE NWTC_C_Binding, ONLY: IntfStrLen, SetErr
 
-    implicit none
-    save
+    IMPLICIT NONE
+    SAVE
 
-    public :: WaveTank_Init
+    PUBLIC :: WaveTank_Init
 
-    real(c_double) :: dt_c = 0.01  ! 100 hertz
-    real(c_float) :: g_c = 9.8065
-    real(c_float) :: rho_c = 1025
-    real(c_float) :: depth_c = 200
-    real(c_float), dimension(6) :: ptfminit_c = (/ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0/)
-    integer(c_int) :: interporder_c = 2     ! 1: linear (uses two time steps) or 2: quadratic (uses three time steps)
+    REAL(C_DOUBLE) :: dt_c = 0.01  ! 100 hertz
+    REAL(C_FLOAT) :: g_c = 9.8065
+    REAL(C_FLOAT) :: rho_c = 1025
+    REAL(C_FLOAT) :: depth_c = 200
+    REAL(C_FLOAT), DIMENSION(6) :: ptfminit_c = (/ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0/)
+    INTEGER(C_INT) :: interporder_c = 2     ! 1: linear (uses two time steps) or 2: quadratic (uses three time steps)
     
-    integer(c_int) :: N_CAMERA_POINTS
+    INTEGER(C_INT) :: N_CAMERA_POINTS
     
-    integer(c_int) :: load_period = 20 ! seconds
+    INTEGER(C_INT) :: load_period = 20 ! seconds
 
-contains
+CONTAINS
 
-subroutine WaveTank_Init(   &
+SUBROUTINE SetErrStat_C(ErrStatLocal, ErrMessLocal, ErrStatGlobal, ErrMessGlobal, RoutineName)
+
+INTEGER(C_INT), INTENT(IN   )               :: ErrStatLocal      ! Error status of the operation
+CHARACTER(*, KIND=C_CHAR),   INTENT(IN   )  :: ErrMessLocal      ! Error message if ErrStat /= ErrID_None
+INTEGER(C_INT), INTENT(INOUT)               :: ErrStatGlobal     ! Error status of the operation
+CHARACTER(KIND=C_CHAR),   INTENT(INOUT)     :: ErrMessGlobal     ! Error message if ErrStat /= ErrID_None
+CHARACTER(*),   INTENT(IN   )               :: RoutineName  ! Name of the routine error occurred in
+
+IF ( ErrStatLocal == ErrID_None ) RETURN
+
+IF (ErrStatGlobal /= ErrID_None) ErrMessGlobal = TRIM(ErrMessGlobal)//new_line('a')
+ErrMessGlobal = TRIM(ErrMessGlobal)//TRIM(RoutineName)//':'//TRIM(ErrMessLocal)
+ErrStatGlobal = MAX(ErrStatGlobal,ErrStatLocal)
+
+END SUBROUTINE 
+
+SUBROUTINE WaveTank_Init(   &
     MD_InputFile_c,         &
     SS_InputFile_c,         &
     AD_InputFile_c,         &
@@ -39,15 +56,15 @@ subroutine WaveTank_Init(   &
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_Init
 #endif
 
-implicit none
+IMPLICIT NONE
 
-character(kind=c_char), intent(in   ), target :: MD_InputFile_c(IntfStrLen)
-character(kind=c_char), intent(in   ) :: SS_InputFile_c(IntfStrLen)
-character(kind=c_char), intent(in   ) :: AD_InputFile_c(IntfStrLen)
-character(kind=c_char), intent(in   ) :: IfW_InputFile_c(IntfStrLen)
-integer(c_int),         intent(in   ) :: n_camera_points_c
-integer(c_int),         intent(  out) :: ErrStat_C
-character(kind=c_char), intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: MD_InputFile_c(IntfStrLen)
+CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: SS_InputFile_c(IntfStrLen)
+CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: AD_InputFile_c(IntfStrLen)
+CHARACTER(KIND=C_CHAR), INTENT(IN   ), TARGET :: IfW_InputFile_c(IntfStrLen)
+INTEGER(C_INT),         INTENT(IN   ) :: n_camera_points_c
+INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
+CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
 ! Local variables
 integer(c_int) :: numchannels_c
@@ -158,10 +175,10 @@ N_CAMERA_POINTS = n_camera_points_c
 ! Set compiler flag for Labview
 ! Cmpl4LV   = .TRUE.
 
-end subroutine WaveTank_Init
+END SUBROUTINE WaveTank_Init
 
 ! delta_time,                 &
-subroutine WaveTank_CalcOutput( &
+SUBROUTINE WaveTank_CalcOutput( &
     frame_number,               &
     positions_x,                &
     positions_y,                &
@@ -176,26 +193,36 @@ subroutine WaveTank_CalcOutput( &
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_CalcOutput
 #endif
 
-implicit none
+IMPLICIT NONE
 
-! integer(c_int)                        :: delta_time
-integer(c_int)                        :: frame_number
-real(c_float),          intent(in   ) :: positions_x(N_CAMERA_POINTS)
-real(c_float),          intent(in   ) :: positions_y(N_CAMERA_POINTS)
-real(c_float),          intent(in   ) :: positions_z(N_CAMERA_POINTS)
-real(c_float),          intent(in   ) :: rotation_matrix(9)
-real(c_float),          intent(  out) :: loads(N_CAMERA_POINTS)
-integer(c_int),         intent(  out) :: ErrStat_C
-character(kind=c_char), intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+! INTEGER(C_INT)                        :: delta_time
+INTEGER(C_INT)                        :: frame_number
+REAL(C_FLOAT),          INTENT(IN   ) :: positions_x(N_CAMERA_POINTS)
+REAL(C_FLOAT),          INTENT(IN   ) :: positions_y(N_CAMERA_POINTS)
+REAL(C_FLOAT),          INTENT(IN   ) :: positions_z(N_CAMERA_POINTS)
+REAL(C_FLOAT),          INTENT(IN   ) :: rotation_matrix(9)
+REAL(C_FLOAT),          INTENT(  OUT) :: loads(N_CAMERA_POINTS)
+INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
+CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
-integer :: i
+INTEGER :: i
 
-if ( MOD(frame_number / load_period, 2) == 0 ) then
+IF ( MOD(frame_number / load_period, 2) == 0 ) THEN
     loads = -1.0
-else
+ELSE
     loads = 1.0
-endif
+ENDIF
 
-end subroutine
+END SUBROUTINE
+
+SUBROUTINE WaveTank_End() bind (C, NAME="WaveTank_End")
+
+
+IMPLICIT NONE
+
+
+
+
+END SUBROUTINE
 
 end module WaveTankTesting

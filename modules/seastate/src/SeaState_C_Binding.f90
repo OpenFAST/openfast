@@ -36,7 +36,7 @@ MODULE SeaState_C_Binding
 
     !------------------------------------------------------------------------------------
     !  Version info for display
-    type(ProgDesc), parameter              :: version   = SeaSt_ProgDesc
+    TYPE(ProgDesc), PARAMETER              :: version   = SeaSt_ProgDesc
 
     !------------------------------------------------------------------------------------
     !  Debugging: DebugLevel -- passed at PreInit
@@ -45,65 +45,65 @@ MODULE SeaState_C_Binding
     !     2  - above + all position/orientation info
     !     3  - above + input files (if direct passed)
     !     4  - above + meshes
-    integer(IntKi)                         :: DebugLevel = 0
+    INTEGER(IntKi)                         :: DebugLevel = 0
 
     !------------------------------
     !  Primary derived types
-    type(SeaSt_InputType)                    :: InputData         !< Inputs to SeaState
-    type(SeaSt_InitInputType)                :: InitInp
-    type(SeaSt_InitOutputType)               :: InitOutData       !< Initial output data -- Names, units, and version info.
-    type(SeaSt_ParameterType)                :: p                 !< Parameters
-    type(SeaSt_OutputType)                   :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
-    type(SeaSt_MiscVarType)                  :: m                 !< Misc variables for optimization (not copied in glue code)
+    TYPE(SeaSt_InputType)                    :: InputData         !< Inputs to SeaState
+    TYPE(SeaSt_InitInputType)                :: InitInp
+    TYPE(SeaSt_InitOutputType)               :: InitOutData       !< Initial output data -- Names, units, and version info.
+    TYPE(SeaSt_ParameterType)                :: p                 !< Parameters
+    TYPE(SeaSt_OutputType)                   :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
+    TYPE(SeaSt_MiscVarType)                  :: m                 !< Misc variables for optimization (not copied in glue code)
 
 CONTAINS
 
 
-subroutine SeaSt_C_Init(InputFile_c, OutRootName_c, Gravity_c, WtrDens_c, WtrDpth_c, MSL2SWL_c, NSteps_c, TimeInterval_c, WaveElevSeriesFlag_c, WrWvKinMod_c, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='SeaSt_C_Init')
-implicit none
+SUBROUTINE SeaSt_C_Init(InputFile_C, OutRootName_C, Gravity_C, WtrDens_C, WtrDpth_C, MSL2SWL_C, NSteps_C, TimeInterval_C, WaveElevSeriesFlag_C, WrWvKinMod_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='SeaSt_C_Init')
+IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_Init
 #endif
-    type(c_ptr),                intent(in   ) :: InputFile_c
-    type(c_ptr),                intent(in   ) :: OutRootName_c
-    real(c_float),              intent(in   ) :: Gravity_c
-    real(c_float),              intent(in   ) :: WtrDens_c
-    real(c_float),              intent(in   ) :: WtrDpth_c
-    real(c_float),              intent(in   ) :: MSL2SWL_c
-    integer(c_int),             intent(in   ) :: NSteps_c
-    real(c_float),              intent(in   ) :: TimeInterval_c
-    integer(c_int),             intent(in   ) :: WaveElevSeriesFlag_c
-    integer(c_int),             intent(in   ) :: WrWvKinMod_c
-    integer(c_int),             intent(  out) :: NumChannels_C
-    character(kind=c_char),     intent(  out) :: OutputChannelNames_C(ChanLen*MaxOutPts+1)
-    character(kind=c_char),     intent(  out) :: OutputChannelUnits_C(ChanLen*MaxOutPts+1)
-    integer(c_int),             intent(  out) :: ErrStat_C
-    character(kind=c_char),     intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+    TYPE(C_PTR),                INTENT(IN   ) :: InputFile_C
+    TYPE(C_PTR),                INTENT(IN   ) :: OutRootName_C
+    REAL(C_FLOAT),              INTENT(IN   ) :: Gravity_C
+    REAL(C_FLOAT),              INTENT(IN   ) :: WtrDens_C
+    REAL(C_FLOAT),              INTENT(IN   ) :: WtrDpth_C
+    REAL(C_FLOAT),              INTENT(IN   ) :: MSL2SWL_C
+    INTEGER(C_INT),             INTENT(IN   ) :: NSteps_C
+    REAL(C_FLOAT),              INTENT(IN   ) :: TimeInterval_C
+    INTEGER(C_INT),             INTENT(IN   ) :: WaveElevSeriesFlag_C
+    INTEGER(C_INT),             INTENT(IN   ) :: WrWvKinMod_C
+    INTEGER(C_INT),             INTENT(  OUT) :: NumChannels_C
+    CHARACTER(KIND=C_CHAR),     INTENT(  OUT) :: OutputChannelNames_C(ChanLen*MaxOutPts+1)
+    CHARACTER(KIND=C_CHAR),     INTENT(  OUT) :: OutputChannelUnits_C(ChanLen*MaxOutPts+1)
+    INTEGER(C_INT),             INTENT(  OUT) :: ErrStat_C
+    CHARACTER(KIND=C_CHAR),     INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
     ! Local variables
-    character(kind=c_char, len=IntfStrLen), pointer :: InputFileString          !< Input file as a single string with NULL chracter separating lines
-    character(kind=c_char, len=IntfStrLen), pointer :: OutputFileString          !< Input file as a single string with NULL chracter separating lines
-    character(IntfStrLen)           :: InputFileName
-    character(IntfStrLen)           :: OutRootName
-    type(SeaSt_InputType)           :: u           !< An initial guess for the input; input mesh must be defined
-    type(SeaSt_ContinuousStateType) :: x           !< Initial continuous states
-    type(SeaSt_DiscreteStateType)   :: xd          !< Initial discrete states
-    type(SeaSt_ConstraintStateType) :: z           !< Initial guess of the constraint states
-    type(SeaSt_OtherStateType)      :: OtherState  !< Initial other states            
-    real(DbKi)                      :: Interval    !< Coupling interval in seconds: the rate that 
+    CHARACTER(KIND=C_CHAR, len=IntfStrLen), POINTER :: InputFileString          !< Input file as a single string with NULL chracter separating lines
+    CHARACTER(KIND=C_CHAR, len=IntfStrLen), POINTER :: OutputFileString          !< Input file as a single string with NULL chracter separating lines
+    CHARACTER(IntfStrLen)           :: InputFileName
+    CHARACTER(IntfStrLen)           :: OutRootName
+    TYPE(SeaSt_InputType)           :: u           !< An initial guess for the input; input mesh must be defined
+    TYPE(SeaSt_ContinuousStateType) :: x           !< Initial continuous states
+    TYPE(SeaSt_DiscreteStateType)   :: xd          !< Initial discrete states
+    TYPE(SeaSt_ConstraintStateType) :: z           !< Initial guess of the constraint states
+    TYPE(SeaSt_OtherStateType)      :: OtherState  !< Initial other states            
+    REAL(DbKi)                      :: Interval    !< Coupling interval in seconds: the rate that 
                                                                    !!   (1) SeaSt_UpdateStates() is called in loose coupling &
                                                                    !!   (2) SeaSt_UpdateDiscState() is called in tight coupling.
                                                                    !!   Input is the suggested time from the glue code; 
                                                                    !!   Output is the actual coupling interval that will be used 
                                                                    !!   by the glue code.
 
-    integer                    :: ErrStat                          !< aggregated error status
-    character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
-    integer                    :: ErrStat2                         !< temporary error status  from a call
-    character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
-    integer                    :: i,j,k
-    character(*), parameter    :: RoutineName = 'SeaSt_C_Init'  !< for error handling
+    INTEGER                    :: ErrStat                          !< aggregated error status
+    CHARACTER(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
+    INTEGER                    :: ErrStat2                         !< temporary error status  from a call
+    CHARACTER(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
+    INTEGER                    :: i,j,k
+    CHARACTER(*), PARAMETER    :: RoutineName = 'SeaSt_C_Init'  !< for error handling
 
     ! Initialize error handling
     ErrStat  =  ErrID_None
@@ -117,19 +117,19 @@ implicit none
     ! DebugLevel = int(DebugLevel_in,IntKi)
 
     ! Input files
-    call c_f_pointer(InputFile_c, InputFileString)  ! Get a pointer to the input file string
+    CALL C_F_POINTER(InputFile_C, InputFileString)  ! Get a pointer to the input file string
     InputFileName = FileNameFromCString(InputFileString, IntfStrLen)  ! convert the input file name from c_char to fortran character
 
-    call c_f_pointer(OutRootName_c, OutputFileString)  ! Get a pointer to the input file string
+    CALL C_F_POINTER(OutRootName_C, OutputFileString)  ! Get a pointer to the input file string
     OutRootName = FileNameFromCString(OutputFileString, IntfStrLen)  ! convert the input file name from c_char to fortran character
 
     ! if non-zero, show all passed data here.  Then check valid values
-    if (DebugLevel /= 0_IntKi) then
-        call WrScr("   Interface debugging level "//trim(Num2Lstr(DebugLevel))//" requested.")
-        call ShowPassedData()
-    endif
+    IF (DebugLevel /= 0_IntKi) THEN
+        CALL WrScr("   Interface debugging level "//trim(Num2Lstr(DebugLevel))//" requested.")
+        CALL ShowPassedData()
+    ENDIF
     ! check valid debug level
-    if (DebugLevel < 0_IntKi) then
+    IF (DebugLevel < 0_IntKi) THEN
         ErrStat2 = ErrID_Fatal
         ErrMsg2  = "Interface debug level must be 0 or greater"//NewLine// &
         "  0  - none"//NewLine// &
@@ -137,115 +137,106 @@ implicit none
         "  2  - above + all position/orientation info"//NewLine// &
         "  3  - above + input files (if direct passed)"//NewLine// &
         "  4  - above + meshes"
-        if (Failed()) return;
-    endif
+        IF (Failed()) RETURN;
+    ENDIF
 
     ! For debugging the interface:
-    if (DebugLevel > 0) then
-        call ShowPassedData()
-    endif
+    IF (DebugLevel > 0) THEN
+        CALL ShowPassedData()
+    ENDIF
 
     ! Set other inputs for calling SeaSt_Init
     InitInp%InputFile    = InputFileName
     InitInp%UseInputFile = .TRUE. 
     InitInp%OutRootName  = OutRootName
-    InitInp%Gravity      = Gravity_c
-    InitInp%defWtrDens   = WtrDens_c
-    InitInp%defWtrDpth   = WtrDpth_c
-    InitInp%defMSL2SWL   = MSL2SWL_c
-    InitInp%TMax         = (NSteps_c - 1) * TimeInterval_c   ! Using this to match the SeaState driver; could otherwise get TMax directly
-    InitInp%WaveFieldMod = WaveElevSeriesFlag_c
+    InitInp%Gravity      = Gravity_C
+    InitInp%defWtrDens   = WtrDens_C
+    InitInp%defWtrDpth   = WtrDpth_C
+    InitInp%defMSL2SWL   = MSL2SWL_C
+    InitInp%TMax         = (NSteps_C - 1) * TimeInterval_C   ! Using this to match the SeaState driver; could otherwise get TMax directly
+    InitInp%WaveFieldMod = WaveElevSeriesFlag_C
     ! REAL(ReKi)  :: PtfmLocationX = 0.0_ReKi      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     ! REAL(ReKi)  :: PtfmLocationY = 0.0_ReKi      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
-    InitInp%WrWvKinMod = WrWvKinMod_c
+    InitInp%WrWvKinMod = WrWvKinMod_C
     ! LOGICAL  :: HasIce = .false.      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     ! LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     ! LOGICAL  :: SurfaceVis = .FALSE.      !< Turn on grid surface visualization outputs [-]
     ! INTEGER(IntKi)  :: SurfaceVisNx = 0      !< Number of points in X direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
     ! INTEGER(IntKi)  :: SurfaceVisNy = 0      !< Number of points in Y direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
 
-    call SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat2, ErrMsg2 )
-        if (Failed()) return
+    CALL SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat2, ErrMsg2 )
+        IF (Failed()) RETURN
 
     ! Number of channels
     NumChannels_C = size(InitOutData%WriteOutputHdr)
 
     ! transfer the output channel names and units to c_char arrays for returning
     k=1
-    do i=1,NumChannels_C
-        do j=1,ChanLen    ! max length of channel name.  Same for units
+    DO i=1,NumChannels_C
+        DO j=1,ChanLen    ! max length of channel name.  Same for units
             OutputChannelNames_C(k)=InitOutData%WriteOutputHdr(i)(j:j)
             OutputChannelUnits_C(k)=InitOutData%WriteOutputUnt(i)(j:j)
             k=k+1
-        end do
-    end do
+        ENDDO
+    ENDDO
 
     ! null terminate the string
     OutputChannelNames_C(k) = C_NULL_CHAR
     OutputChannelUnits_C(k) = C_NULL_CHAR
 
-    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+    CALL SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
-contains
-    logical function Failed()
-        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+CONTAINS
+    LOGICAL FUNCTION Failed()
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         Failed = ErrStat >= AbortErrLev
-        if (Failed) then
-            call Cleanup()
-            call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-        endif
-    end function Failed
+        IF (Failed) THEN
+            CALL Cleanup()
+            CALL SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+        ENDIF
+    END FUNCTION Failed
 
-    subroutine Cleanup()    ! NOTE: we are ignoring any error reporting from here
-    end subroutine Cleanup 
+    SUBROUTINE Cleanup()    ! NOTE: we are ignoring any error reporting from here
+    END SUBROUTINE Cleanup 
 
-    subroutine ShowPassedData()
-        ! character(1) :: TmpFlag
+    SUBROUTINE ShowPassedData()
+        ! CHARACTER(1) :: TmpFlag
         ! integer      :: i,j
-        call WrSCr("")
-        call WrScr("-----------------------------------------------------------")
-        call WrScr("Interface debugging:  Variables passed in through interface")
-        call WrScr("   SeaSt_C_Init")
-        call WrScr("   --------------------------------------------------------")
-        call WrScr("   FileInfo")
-        ! TmpFlag="F";   if (IfWinputFilePassed==1_c_int) TmpFlag="T"
-        ! call WrScr("       IfWinputFilePassed_C           "//TmpFlag )
-        ! call WrScr("       IfWinputFileString_C (ptr addr)"//trim(Num2LStr(LOC(IfWinputFileString_C))) )
-        ! call WrScr("       IfWinputFileStringLength_C     "//trim(Num2LStr( IfWinputFileStringLength_C )) )
-        ! call WrScr("       OutRootName                    "//trim(OutRootName) )
-        ! call WrScr("   Input variables")
-        ! call WrScr("       NumWindPts_C                   "//trim(Num2LStr( NumWindPts_C)) )
-        ! call WrScr("   Time variables")
-        ! call WrScr("       DT_C                           "//trim(Num2LStr( DT_C          )) )
-        call WrScr("-----------------------------------------------------------")
-    end subroutine ShowPassedData
-end subroutine SeaSt_C_Init
+        CALL WrSCr("")
+        CALL WrScr("-----------------------------------------------------------")
+        CALL WrScr("Interface debugging:  Variables passed in through interface")
+        CALL WrScr("   SeaSt_C_Init")
+        CALL WrScr("   --------------------------------------------------------")
+        CALL WrScr("   FileInfo")
+        CALL WrScr("-----------------------------------------------------------")
+    END SUBROUTINE ShowPassedData
+END SUBROUTINE SeaSt_C_Init
 
-subroutine SeaSt_C_CalcOutput(Time_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='SeaSt_C_CalcOutput')
-implicit none
+SUBROUTINE SeaSt_C_CalcOutput(Time_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='SeaSt_C_CalcOutput')
+IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_CalcOutput
 !GCC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_CalcOutput
 #endif
 
-    real(C_DOUBLE),             intent(in   ) :: Time_C
-    real(C_FLOAT),              intent(  out) :: OutputChannelValues_C(p%NumOuts)
-    integer(C_INT),             intent(  out) :: ErrStat_C
-    character(KIND=C_CHAR),     intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+    REAL(C_DOUBLE),             INTENT(IN   ) :: Time_C
+    REAL(C_FLOAT),              INTENT(  OUT) :: OutputChannelValues_C(p%NumOuts)
+    INTEGER(C_INT),             INTENT(  OUT) :: ErrStat_C
+    CHARACTER(KIND=C_CHAR),     INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
     ! Local variables
-    type(SeaSt_InputType)           :: u           !< An initial guess for the input; input mesh must be defined
-    type(SeaSt_ContinuousStateType) :: x           !< Initial continuous states
-    type(SeaSt_DiscreteStateType)   :: xd          !< Initial discrete states
-    type(SeaSt_ConstraintStateType) :: z           !< Initial guess of the constraint states
-    type(SeaSt_OtherStateType)      :: OtherState  !< Initial other states            
+    TYPE(SeaSt_InputType)           :: u           !< An initial guess for the input; input mesh must be defined
+    TYPE(SeaSt_ContinuousStateType) :: x           !< Initial continuous states
+    TYPE(SeaSt_DiscreteStateType)   :: xd          !< Initial discrete states
+    TYPE(SeaSt_ConstraintStateType) :: z           !< Initial guess of the constraint states
+    TYPE(SeaSt_OtherStateType)      :: OtherState  !< Initial other states            
 
-    real(DbKi)                 :: Time
-    integer                    :: ErrStat                          !< aggregated error status
-    character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
-    integer                    :: ErrStat2                         !< temporary error status  from a call
-    character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
-    character(*), parameter    :: RoutineName = 'SeaSt_C_End'  !< for error handling
+    REAL(DbKi)                 :: Time
+    INTEGER                    :: ErrStat                          !< aggregated error status
+    CHARACTER(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
+    INTEGER                    :: ErrStat2                         !< temporary error status  from a call
+    CHARACTER(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
+    CHARACTER(*), PARAMETER    :: RoutineName = 'SeaSt_C_End'  !< for error handling
 
     ! Initialize error handling
     ErrStat  =  ErrID_None
@@ -254,63 +245,63 @@ implicit none
     ! Convert the inputs from C to Fortran
     Time = REAL(Time_C,DbKi)
 
-    call SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )
-        if (Failed()) return
+    CALL SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )
+        IF (Failed()) RETURN
 
     ! Get the output channel info out of y
     OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
-    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+    CALL SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
-contains
-    logical function Failed()
+CONTAINS
+    LOGICAL FUNCTION Failed()
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         Failed = ErrStat >= AbortErrLev
-        if (Failed) call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-    end function Failed
-end subroutine
+        IF (Failed) CALL SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+    END FUNCTION Failed
+END SUBROUTINE
 
-subroutine SeaSt_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='SeaSt_C_End')
-implicit none
+SUBROUTINE SeaSt_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='SeaSt_C_End')
+IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_End
 !GCC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_End
 #endif
-    integer(c_int),             intent(  out) :: ErrStat_C
-    character(kind=c_char),     intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+    INTEGER(C_INT),             INTENT(  OUT) :: ErrStat_C
+    CHARACTER(KIND=C_CHAR),     INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
     ! Local variables
-    type(SeaSt_InputType)           :: u           !< An initial guess for the input; input mesh must be defined
-    type(SeaSt_ContinuousStateType) :: x           !< Initial continuous states
-    type(SeaSt_DiscreteStateType)   :: xd          !< Initial discrete states
-    type(SeaSt_ConstraintStateType) :: z           !< Initial guess of the constraint states
-    type(SeaSt_OtherStateType)      :: OtherState  !< Initial other states            
+    TYPE(SeaSt_InputType)           :: u           !< An initial guess for the input; input mesh must be defined
+    TYPE(SeaSt_ContinuousStateType) :: x           !< Initial continuous states
+    TYPE(SeaSt_DiscreteStateType)   :: xd          !< Initial discrete states
+    TYPE(SeaSt_ConstraintStateType) :: z           !< Initial guess of the constraint states
+    TYPE(SeaSt_OtherStateType)      :: OtherState  !< Initial other states            
 
-    integer                    :: ErrStat                          !< aggregated error status
-    character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
-    integer                    :: ErrStat2                         !< temporary error status  from a call
-    character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
-    character(*), parameter    :: RoutineName = 'SeaSt_C_End'  !< for error handling
+    INTEGER                    :: ErrStat                          !< aggregated error status
+    CHARACTER(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
+    INTEGER                    :: ErrStat2                         !< temporary error status  from a call
+    CHARACTER(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
+    CHARACTER(*), PARAMETER    :: RoutineName = 'SeaSt_C_End'  !< for error handling
 
     ! Initialize error handling
     ErrStat  =  ErrID_None
     ErrMsg   =  ""
-    call SeaSt_End(u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2)
+    CALL SeaSt_End(u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2)
 
-    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-    call SetErr( ErrStat, ErrMsg, ErrStat_C, ErrMsg_C )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    CALL SetErr( ErrStat, ErrMsg, ErrStat_C, ErrMsg_C )
 
-end subroutine
+END SUBROUTINE
 
-! subroutine get_wave_height(position)
+! SUBROUTINE get_wave_height(position)
 
 
-! subroutine get_wave_field_pointer()
+! SUBROUTINE get_wave_field_pointer()
 ! pass back the internal pointer to the wave field to the calling code
-! end subroutine
+! END SUBROUTINE
 
-! subroutine set_flow_field_pointer()
+! SUBROUTINE set_flow_field_pointer()
 
-! end subroutine
+! END SUBROUTINE
 
 end module SeaState_C_Binding
