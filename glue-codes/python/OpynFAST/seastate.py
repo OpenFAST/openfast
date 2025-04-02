@@ -49,9 +49,7 @@ class SeaStateLib(OpenFASTInterfaceType):
     def __init__(self, library_path: str, input_file_name: str):
         super().__init__(library_path)
 
-        self.input_file_name = create_string_buffer(
-            str( Path(input_file_name).absolute() ).encode('utf-8')
-        )
+        self.input_file_name = str( Path(input_file_name).absolute() ).encode('utf-8')
 
         self._initialize_routines()
 
@@ -66,8 +64,8 @@ class SeaStateLib(OpenFASTInterfaceType):
 
     def _initialize_routines(self):
         self.SeaSt_C_Init.argtypes = [
-            POINTER(c_char),        # intent(in   ) :: InputFile_c(IntfStrLen)
-            POINTER(c_char),        # intent(in   ) :: OutRootName_c(IntfStrLen)
+            POINTER(c_char_p),      # intent(in   ) :: InputFile_c(IntfStrLen)
+            POINTER(c_char_p),      # intent(in   ) :: OutRootName_c(IntfStrLen)
             POINTER(c_float),       # intent(in   ) :: Gravity_c
             POINTER(c_float),       # intent(in   ) :: WtrDens_c
             POINTER(c_float),       # intent(in   ) :: WtrDpth_c
@@ -120,8 +118,8 @@ class SeaStateLib(OpenFASTInterfaceType):
         _channel_units = create_string_buffer(20 * 4000 + 1)
 
         self.SeaSt_C_Init(
-            self.input_file_name,
-            create_string_buffer(outrootname.encode('utf-8')),
+            c_char_p(self.input_file_name),
+            c_char_p(outrootname.encode('utf-8')),
             byref(c_float(gravity)),
             byref(c_float(water_density)),
             byref(c_float(water_depth)),

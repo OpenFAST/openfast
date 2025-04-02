@@ -24,6 +24,7 @@ MODULE SeaState_C_Binding
     USE SeaState_Types
     USE SeaState_Output
     USE NWTC_Library
+    USE NWTC_C_Binding, ONLY: ErrMsgLen_C, IntfStrLen, SetErr, FileNameFromCString
     USE VersionInfo
 
     IMPLICIT NONE
@@ -55,34 +56,7 @@ MODULE SeaState_C_Binding
     type(SeaSt_OutputType)                   :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
     type(SeaSt_MiscVarType)                  :: m                 !< Misc variables for optimization (not copied in glue code)
 
-    !------------------------------------------------------------------------------------
-    !  Error handling
-    !     This must exactly match the value in the python-lib. If ErrMsgLen changes at
-    !     some point in the nwtc-library, this should be updated, but the logic exists
-    !     to correctly handle different lengths of the strings
-    integer(IntKi),   parameter            :: ErrMsgLen_C = 1025
-    integer(IntKi),   parameter            :: IntfStrLen  = 1025       ! length of other strings through the C interface
-
 CONTAINS
-
-!> This routine sets the error status in C_CHAR for export to calling code.
-!! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
-!! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
-!! inadvertant buffer overrun -- that can lead to bad things.
-subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
-    integer,                intent(in   )  :: ErrStat                 !< aggregated error message (fortran type)
-    character(ErrMsgLen),   intent(in   )  :: ErrMsg                  !< aggregated error message (fortran type)
-    integer(c_int),         intent(  out)  :: ErrStat_C
-    character(kind=c_char), intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
-
-    ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-    if (ErrMsgLen > ErrMsgLen_C-1) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
-        ErrMsg_C = TRANSFER( trim(ErrMsg(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C )
-    else
-        ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
-    endif
-    if (ErrStat /= ErrID_None) call WrScr(NewLine//'SeaState_C_Binding: '//trim(ErrMsg)//NewLine)
-end subroutine SetErr
 
 
 subroutine SeaSt_C_Init(InputFile_c, OutRootName_c, Gravity_c, WtrDens_c, WtrDpth_c, MSL2SWL_c, NSteps_c, TimeInterval_c, WaveElevSeriesFlag_c, WrWvKinMod_c, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='SeaSt_C_Init')
@@ -91,8 +65,8 @@ implicit none
 !DEC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: SeaSt_C_Init
 #endif
-    character(kind=c_char),     intent(in   ) :: InputFile_c(IntfStrLen)
-    character(kind=c_char),     intent(in   ) :: OutRootName_c(IntfStrLen)
+    type(c_ptr),                intent(in   ) :: InputFile_c
+    type(c_ptr),                intent(in   ) :: OutRootName_c
     real(c_float),              intent(in   ) :: Gravity_c
     real(c_float),              intent(in   ) :: WtrDens_c
     real(c_float),              intent(in   ) :: WtrDpth_c
@@ -108,6 +82,8 @@ implicit none
     character(kind=c_char),     intent(  out) :: ErrMsg_C(ErrMsgLen_C)
 
     ! Local variables
+    character(kind=c_char, len=IntfStrLen), pointer :: InputFileString          !< Input file as a single string with NULL chracter separating lines
+    character(kind=c_char, len=IntfStrLen), pointer :: OutputFileString          !< Input file as a single string with NULL chracter separating lines
     character(IntfStrLen)           :: InputFileName
     character(IntfStrLen)           :: OutRootName
     type(SeaSt_InputType)           :: u           !< An initial guess for the input; input mesh must be defined
@@ -141,13 +117,11 @@ implicit none
     ! DebugLevel = int(DebugLevel_in,IntKi)
 
     ! Input files
-    InputFileName = TRANSFER( InputFile_c, InputFileName )
-    i = INDEX(InputFileName,C_NULL_CHAR) - 1               ! if this has a c null character at the end...
-    if ( i > 0 ) InputFileName = InputFileName(1:I)        ! remove it
+    call c_f_pointer(InputFile_c, InputFileString)  ! Get a pointer to the input file string
+    InputFileName = FileNameFromCString(InputFileString, IntfStrLen)  ! convert the input file name from c_char to fortran character
 
-    OutRootName = TRANSFER( OutRootName_c, OutRootName )
-    i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
-    if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
+    call c_f_pointer(OutRootName_c, OutputFileString)  ! Get a pointer to the input file string
+    OutRootName = FileNameFromCString(OutputFileString, IntfStrLen)  ! convert the input file name from c_char to fortran character
 
     ! if non-zero, show all passed data here.  Then check valid values
     if (DebugLevel /= 0_IntKi) then
@@ -170,34 +144,6 @@ implicit none
     if (DebugLevel > 0) then
         call ShowPassedData()
     endif
-
-    ! NOT currently supporting input file as a string
-    ! -----------------------------------------------
-    ! ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string 
-    ! CALL C_F_pointer(IfWinputFileString_C, IfWinputFileString)
-
-    ! ! Format IfW input file contents
-    ! if (IfWinputFilePassed==1_c_int) then
-    !     InitInp%FilePassingMethod   = 1_IntKi                 ! Don't try to read an input -- use passed data instead (blades and AF tables not passed) using FileInfoType
-    !     InitInp%InputFileName       = "passed_ifw_file"       ! not actually used
-    !     call InitFileInfo(IfWinputFileString, InitInp%PassedFileInfo, ErrStat2, ErrMsg2); if (Failed())  return
-    ! else
-    !     InitInp%FilePassingMethod   = 0_IntKi                 ! Read input info from a primary input file
-    !     i = min(IntfStrLen,IfWinputFileStringLength_C)
-    !     TmpFileName = ''
-    !     TmpFileName(1:i) = IfWinputFileString(1:i)
-    !     i = INDEX(TmpFileName,C_NULL_CHAR) - 1                ! if this has a c null character at the end...
-    !     if ( i > 0 ) TmpFileName = TmpFileName(1:I)           ! remove it
-    !     InitInp%InputFileName  = TmpFileName
-    ! endif
-
-    ! ! For diagnostic purposes, the following can be used to display the contents
-    ! ! of the InFileInfo data structure.
-    ! !     CU is the screen -- system dependent.
-    ! if (DebugLevel >= 3) then
-    !     if (IfWinputFilePassed==1_c_int)    call Print_FileInfo_Struct( CU, InitInp%PassedFileInfo )
-    ! endif
-    ! -----------------------------------------------
 
     ! Set other inputs for calling SeaSt_Init
     InitInp%InputFile    = InputFileName
