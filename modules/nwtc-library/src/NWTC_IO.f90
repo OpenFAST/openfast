@@ -6100,7 +6100,7 @@ subroutine ReadR4AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
 
    integer                                :: Ind                  ! Index into the string array.  Assumed to be one digit.
    integer                                :: IOS                  ! I/O status returned from the read statement.
-   character(30)                          :: Word(AryLen)         ! String to hold the words on the line.
+   character(30)                          :: Word                 ! String to hold the words on the line.
    character(2048)                        :: Line                 ! The contents of a line returned from ReadLine() with comment removed.
    integer                                :: LineLen              ! Length of line read in
 
@@ -6109,10 +6109,10 @@ subroutine ReadR4AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
       if (ErrStat >= AbortErrLev) return
 
    ! check for default
-   call GetWords(Line, Word(1), 1)
-   call Conv2UC( Word(1) )
+   call GetWords(Line, Word, 1)
+   call Conv2UC( Word )
 
-   if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
+   if ( index(Word, "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
 
       ! read the first AryLen numbers from the line
       read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
@@ -6161,7 +6161,7 @@ subroutine ReadR8AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
 
    integer                                :: Ind                  ! Index into the string array.  Assumed to be one digit.
    integer                                :: IOS                  ! I/O status returned from the read statement.
-   character(30)                          :: Word(AryLen)         ! String to hold the words on the line.
+   character(30)                          :: Word                 ! String to hold the words on the line.
    character(2048)                        :: Line                 ! The contents of a line returned from ReadLine() with comment removed.
    integer                                :: LineLen              ! Length of line read in
 
@@ -6170,10 +6170,10 @@ subroutine ReadR8AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
       if (ErrStat >= AbortErrLev) return
 
    ! check for default
-   call GetWords(Line, Word(1), 1)
-   call Conv2UC( Word(1) )
+   call GetWords(Line, Word, 1)
+   call Conv2UC( Word )
 
-   if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
+   if ( index(Word, "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
 
       ! read the first AryLen numbers from the line
       read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
