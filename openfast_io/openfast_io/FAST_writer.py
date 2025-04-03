@@ -239,18 +239,17 @@ class InputWriter_OpenFAST(object):
             if 'options' in self.fst_vt['MoorDyn'] and 'WaterKin' in self.fst_vt['MoorDyn']['options']:
                 self.write_WaterKin(os.path.join(self.FAST_runDirectory,self.fst_vt['MoorDyn']['WaterKin_file']))
 
-        if self.fst_vt['Fst']['CompElast'] == 2:
+        #     # look at if the the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
+        #     # if its a dictionary, just write the same BeamDyn file 
 
-            # look at if the the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
-            # if its a dictionary, just write the same BeamDyn file 
-
-            if isinstance(self.fst_vt['BeamDyn'], list):
-                for i_BD, BD in enumerate(self.fst_vt['BeamDyn']):
-
+        if isinstance(self.fst_vt['BeamDyn'], list):
+            for i_BD, BD in enumerate(self.fst_vt['BeamDyn']):
+                if not BD == {}:
                     self.fst_vt['Fst']['BDBldFile(%d)'%(i_BD+1)] = self.FAST_namingOut + '_BeamDyn_%d.dat'%(i_BD+1)
                     self.write_BeamDyn(bldInd = i_BD)
 
-            elif isinstance(self.fst_vt['BeamDyn'], dict):
+        elif isinstance(self.fst_vt['BeamDyn'], dict):
+            if not self.fst_vt['BeamDyn'] == {}:
                 self.fst_vt['Fst']['BDBldFile(1)'] = self.FAST_namingOut + '_BeamDyn.dat'
                 self.fst_vt['Fst']['BDBldFile(2)'] = self.fst_vt['Fst']['BDBldFile(1)']
                 self.fst_vt['Fst']['BDBldFile(3)'] = self.fst_vt['Fst']['BDBldFile(1)']
