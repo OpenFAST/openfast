@@ -13,11 +13,11 @@ MODULE WaveTankTesting
 
     PUBLIC :: WaveTank_Init
 
-    REAL(C_DOUBLE) :: dt_c = 0.01  ! 100 hertz
-    REAL(C_FLOAT) :: g_c = 9.8065
-    REAL(C_FLOAT) :: rho_c = 1025
-    REAL(C_FLOAT) :: depth_c = 200
-    REAL(C_FLOAT), DIMENSION(6) :: ptfminit_c = (/ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0/)
+    REAL(C_DOUBLE) :: dt_c = 0.01_C_DOUBLE  ! 100 hertz
+    REAL(C_FLOAT) :: g_c = 9.8065_C_FLOAT
+    REAL(C_FLOAT) :: rho_c = 1025.0_C_FLOAT
+    REAL(C_FLOAT) :: depth_c = 200.0_C_FLOAT
+    REAL(C_FLOAT), DIMENSION(6) :: ptfminit_c = 0.0_C_FLOAT
     INTEGER(C_INT) :: interporder_c = 2     ! 1: linear (uses two time steps) or 2: quadratic (uses three time steps)
     
     INTEGER(C_INT) :: N_CAMERA_POINTS
