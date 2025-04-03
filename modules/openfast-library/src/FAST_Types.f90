@@ -43,7 +43,6 @@ USE SeaState_Types
 USE HydroDyn_Types
 USE IceFloe_Types
 USE ExternalInflow_Types
-USE SCDataEx_Types
 USE IceDyn_Types
 USE FEAMooring_Types
 USE MAP_Types
@@ -220,7 +219,6 @@ IMPLICIT NONE
     LOGICAL  :: LinOutJac = .false.      !< Include full Jacabians in linearization output (for debug) (flag) [unused if Linearize=False; used only if LinInputs=LinOutputs=2] [-]
     LOGICAL  :: LinOutMod = .false.      !< Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False] [-]
     TYPE(FAST_VTK_ModeShapeType)  :: VTK_modes      !< Data for VTK mode-shape visualization [-]
-    LOGICAL  :: UseSC = .false.      !< Use Supercontroller [-]
     INTEGER(IntKi)  :: Lin_NumMods = 0_IntKi      !< number of modules in the linearization [-]
     INTEGER(IntKi) , DIMENSION(1:NumModules)  :: Lin_ModOrder = 0_IntKi      !< indices that determine which order the modules are in the glue-code linearization matrix [-]
     INTEGER(IntKi)  :: LinInterpOrder = 0_IntKi      !< Interpolation order for CalcSteady solution [-]
@@ -561,13 +559,6 @@ IMPLICIT NONE
     TYPE(ExtInfw_MiscVarType)  :: m      !< Parameters [-]
   END TYPE ExternalInflow_Data
 ! =======================
-! =========  SCDataEx_Data  =======
-  TYPE, PUBLIC :: SCDataEx_Data
-    TYPE(SC_DX_InputType)  :: u      !< System inputs [-]
-    TYPE(SC_DX_OutputType)  :: y      !< System outputs [-]
-    TYPE(SC_DX_ParameterType)  :: p      !< System parameters [-]
-  END TYPE SCDataEx_Data
-! =======================
 ! =========  SubDyn_Data  =======
   TYPE, PUBLIC :: SubDyn_Data
     TYPE(SD_ContinuousStateType) , DIMENSION(1:NumStateTimes)  :: x      !< Continuous states [-]
@@ -883,11 +874,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TurbIDforName = -1      !< ID number for turbine (used to create output file naming convention) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TurbinePos = 0.0_ReKi      !< Initial position of turbine base (origin used for graphics or in FAST.Farm) [m]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< number of global controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< number of turbine specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< number of controller outputs [to supercontroller] [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: fromSCGlob      !< Initial global inputs to the controller [from the supercontroller] [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Initial turbine specific inputs to the controller [from the supercontroller] [-]
     LOGICAL  :: FarmIntegration = .false.      !< whether this is called from FAST.Farm (or another program that doesn't want FAST to call all of the init stuff first) [-]
     INTEGER(IntKi) , DIMENSION(1:4)  :: windGrid_n = 0_IntKi      !< number of grid points in the x, y, z, and t directions for IfW [-]
     REAL(ReKi) , DIMENSION(1:4)  :: windGrid_delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction for IfW [m,m,m,s]
@@ -919,7 +905,6 @@ IMPLICIT NONE
     TYPE(ExtLoads_Data)  :: ExtLd      !< Data for the External loads module [-]
     TYPE(InflowWind_Data)  :: IfW      !< Data for InflowWind module [-]
     TYPE(ExternalInflow_Data)  :: ExtInfw      !< Data for ExternalInflow integration module [-]
-    TYPE(SCDataEx_Data)  :: SC_DX      !< Data for SuperController integration module [-]
     TYPE(SeaState_Data)  :: SeaSt      !< Data for the SeaState module [-]
     TYPE(HydroDyn_Data)  :: HD      !< Data for the HydroDyn module [-]
     TYPE(SubDyn_Data)  :: SD      !< Data for the SubDyn module [-]
@@ -1502,7 +1487,6 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    call FAST_CopyVTK_ModeShapeType(SrcParamData%VTK_modes, DstParamData%VTK_modes, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstParamData%UseSC = SrcParamData%UseSC
    DstParamData%Lin_NumMods = SrcParamData%Lin_NumMods
    DstParamData%Lin_ModOrder = SrcParamData%Lin_ModOrder
    DstParamData%LinInterpOrder = SrcParamData%LinInterpOrder
@@ -1670,7 +1654,6 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%LinOutJac)
    call RegPack(RF, InData%LinOutMod)
    call FAST_PackVTK_ModeShapeType(RF, InData%VTK_modes) 
-   call RegPack(RF, InData%UseSC)
    call RegPack(RF, InData%Lin_NumMods)
    call RegPack(RF, InData%Lin_ModOrder)
    call RegPack(RF, InData%LinInterpOrder)
@@ -1785,7 +1768,6 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%LinOutJac); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LinOutMod); if (RegCheckErr(RF, RoutineName)) return
    call FAST_UnpackVTK_ModeShapeType(RF, OutData%VTK_modes) ! VTK_modes 
-   call RegUnpack(RF, OutData%UseSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Lin_NumMods); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Lin_ModOrder); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LinInterpOrder); if (RegCheckErr(RF, RoutineName)) return
@@ -9826,66 +9808,6 @@ subroutine FAST_UnPackExternalInflow_Data(RF, OutData)
    call ExtInfw_UnpackMisc(RF, OutData%m) ! m 
 end subroutine
 
-subroutine FAST_CopySCDataEx_Data(SrcSCDataEx_DataData, DstSCDataEx_DataData, CtrlCode, ErrStat, ErrMsg)
-   type(SCDataEx_Data), intent(in) :: SrcSCDataEx_DataData
-   type(SCDataEx_Data), intent(inout) :: DstSCDataEx_DataData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_CopySCDataEx_Data'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call SC_DX_CopyInput(SrcSCDataEx_DataData%u, DstSCDataEx_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_DX_CopyOutput(SrcSCDataEx_DataData%y, DstSCDataEx_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_DX_CopyParam(SrcSCDataEx_DataData%p, DstSCDataEx_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-end subroutine
-
-subroutine FAST_DestroySCDataEx_Data(SCDataEx_DataData, ErrStat, ErrMsg)
-   type(SCDataEx_Data), intent(inout) :: SCDataEx_DataData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_DestroySCDataEx_Data'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call SC_DX_DestroyInput(SCDataEx_DataData%u, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DX_DestroyOutput(SCDataEx_DataData%y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DX_DestroyParam(SCDataEx_DataData%p, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-end subroutine
-
-subroutine FAST_PackSCDataEx_Data(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(SCDataEx_Data), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackSCDataEx_Data'
-   if (RF%ErrStat >= AbortErrLev) return
-   call SC_DX_PackInput(RF, InData%u) 
-   call SC_DX_PackOutput(RF, InData%y) 
-   call SC_DX_PackParam(RF, InData%p) 
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_UnPackSCDataEx_Data(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(SCDataEx_Data), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackSCDataEx_Data'
-   if (RF%ErrStat /= ErrID_None) return
-   call SC_DX_UnpackInput(RF, OutData%u) ! u 
-   call SC_DX_UnpackOutput(RF, OutData%y) ! y 
-   call SC_DX_UnpackParam(RF, OutData%p) ! p 
-end subroutine
-
 subroutine FAST_CopySubDyn_Data(SrcSubDyn_DataData, DstSubDyn_DataData, CtrlCode, ErrStat, ErrMsg)
    type(SubDyn_Data), intent(inout) :: SrcSubDyn_DataData
    type(SubDyn_Data), intent(inout) :: DstSubDyn_DataData
@@ -15209,33 +15131,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
    DstExternInitTypeData%TurbIDforName = SrcExternInitTypeData%TurbIDforName
    DstExternInitTypeData%TurbinePos = SrcExternInitTypeData%TurbinePos
    DstExternInitTypeData%WaveFieldMod = SrcExternInitTypeData%WaveFieldMod
-   DstExternInitTypeData%NumSC2CtrlGlob = SrcExternInitTypeData%NumSC2CtrlGlob
-   DstExternInitTypeData%NumSC2Ctrl = SrcExternInitTypeData%NumSC2Ctrl
-   DstExternInitTypeData%NumCtrl2SC = SrcExternInitTypeData%NumCtrl2SC
-   if (allocated(SrcExternInitTypeData%fromSCGlob)) then
-      LB(1:1) = lbound(SrcExternInitTypeData%fromSCGlob)
-      UB(1:1) = ubound(SrcExternInitTypeData%fromSCGlob)
-      if (.not. allocated(DstExternInitTypeData%fromSCGlob)) then
-         allocate(DstExternInitTypeData%fromSCGlob(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstExternInitTypeData%fromSCGlob.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstExternInitTypeData%fromSCGlob = SrcExternInitTypeData%fromSCGlob
-   end if
-   if (allocated(SrcExternInitTypeData%fromSC)) then
-      LB(1:1) = lbound(SrcExternInitTypeData%fromSC)
-      UB(1:1) = ubound(SrcExternInitTypeData%fromSC)
-      if (.not. allocated(DstExternInitTypeData%fromSC)) then
-         allocate(DstExternInitTypeData%fromSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstExternInitTypeData%fromSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstExternInitTypeData%fromSC = SrcExternInitTypeData%fromSC
-   end if
    DstExternInitTypeData%FarmIntegration = SrcExternInitTypeData%FarmIntegration
    DstExternInitTypeData%windGrid_n = SrcExternInitTypeData%windGrid_n
    DstExternInitTypeData%windGrid_delta = SrcExternInitTypeData%windGrid_delta
@@ -15258,12 +15153,6 @@ subroutine FAST_DestroyExternInitType(ExternInitTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyExternInitType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ExternInitTypeData%fromSCGlob)) then
-      deallocate(ExternInitTypeData%fromSCGlob)
-   end if
-   if (allocated(ExternInitTypeData%fromSC)) then
-      deallocate(ExternInitTypeData%fromSC)
-   end if
    nullify(ExternInitTypeData%windGrid_data)
 end subroutine
 
@@ -15277,11 +15166,6 @@ subroutine FAST_PackExternInitType(RF, Indata)
    call RegPack(RF, InData%TurbIDforName)
    call RegPack(RF, InData%TurbinePos)
    call RegPack(RF, InData%WaveFieldMod)
-   call RegPack(RF, InData%NumSC2CtrlGlob)
-   call RegPack(RF, InData%NumSC2Ctrl)
-   call RegPack(RF, InData%NumCtrl2SC)
-   call RegPackAlloc(RF, InData%fromSCGlob)
-   call RegPackAlloc(RF, InData%fromSC)
    call RegPack(RF, InData%FarmIntegration)
    call RegPack(RF, InData%windGrid_n)
    call RegPack(RF, InData%windGrid_delta)
@@ -15312,11 +15196,6 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    call RegUnpack(RF, OutData%TurbIDforName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbinePos); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2CtrlGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2Ctrl); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumCtrl2SC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSCGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FarmIntegration); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%windGrid_n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%windGrid_delta); if (RegCheckErr(RF, RoutineName)) return
@@ -15381,9 +15260,6 @@ subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call FAST_CopyExternalInflow_Data(SrcTurbineTypeData%ExtInfw, DstTurbineTypeData%ExtInfw, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call FAST_CopySCDataEx_Data(SrcTurbineTypeData%SC_DX, DstTurbineTypeData%SC_DX, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call FAST_CopySeaState_Data(SrcTurbineTypeData%SeaSt, DstTurbineTypeData%SeaSt, CtrlCode, ErrStat2, ErrMsg2)
@@ -15453,8 +15329,6 @@ subroutine FAST_DestroyTurbineType(TurbineTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyExternalInflow_Data(TurbineTypeData%ExtInfw, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FAST_DestroySCDataEx_Data(TurbineTypeData%SC_DX, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroySeaState_Data(TurbineTypeData%SeaSt, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyHydroDyn_Data(TurbineTypeData%HD, ErrStat2, ErrMsg2)
@@ -15496,7 +15370,6 @@ subroutine FAST_PackTurbineType(RF, Indata)
    call FAST_PackExtLoads_Data(RF, InData%ExtLd) 
    call FAST_PackInflowWind_Data(RF, InData%IfW) 
    call FAST_PackExternalInflow_Data(RF, InData%ExtInfw) 
-   call FAST_PackSCDataEx_Data(RF, InData%SC_DX) 
    call FAST_PackSeaState_Data(RF, InData%SeaSt) 
    call FAST_PackHydroDyn_Data(RF, InData%HD) 
    call FAST_PackSubDyn_Data(RF, InData%SD) 
@@ -15529,7 +15402,6 @@ subroutine FAST_UnPackTurbineType(RF, OutData)
    call FAST_UnpackExtLoads_Data(RF, OutData%ExtLd) ! ExtLd 
    call FAST_UnpackInflowWind_Data(RF, OutData%IfW) ! IfW 
    call FAST_UnpackExternalInflow_Data(RF, OutData%ExtInfw) ! ExtInfw 
-   call FAST_UnpackSCDataEx_Data(RF, OutData%SC_DX) ! SC_DX 
    call FAST_UnpackSeaState_Data(RF, OutData%SeaSt) ! SeaSt 
    call FAST_UnpackHydroDyn_Data(RF, OutData%HD) ! HD 
    call FAST_UnpackSubDyn_Data(RF, OutData%SD) ! SD 

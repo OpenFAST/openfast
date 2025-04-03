@@ -16,7 +16,7 @@
 
 if (GENERATE_TYPES)
   generate_f90_types(src/SuperController_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SuperController_Types.f90 -ccode)
-  generate_f90_types(src/SC_DataEx_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SCDataEx_Types.f90 -ccode -noextrap)
+  #generate_f90_types(src/SC_DataEx_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SCDataEx_Types.f90 -ccode -noextrap)
 endif()
 
 add_library(sctypeslib STATIC
@@ -25,7 +25,7 @@ add_library(sctypeslib STATIC
 target_link_libraries(sctypeslib nwtclibs)
 
 add_library(scfastlib STATIC
-  src/SC_DataEx.f90
+  #src/SC_DataEx.f90
   src/SuperController_Types.f90
   src/SuperController.f90
 )
