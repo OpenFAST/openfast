@@ -75,6 +75,11 @@ class WaveTankLib(OpenFASTInterfaceType):
         ]
         self.WaveTank_CalcOutput.restype = c_int
 
+        self.WaveTank_End.argtypes = [
+            POINTER(c_int),         # integer(c_int),         intent(  out) :: ErrStat_C
+            POINTER(c_char),        # character(kind=c_char), intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+        ]
+        self.WaveTank_End.restype = c_int
 
     def init(self, n_camera_points):
         _error_status = c_int(0)
@@ -144,6 +149,17 @@ class WaveTankLib(OpenFASTInterfaceType):
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
+    def end(self):
+        _error_status = c_int(0)
+        _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
+
+        self.WaveTank_End(
+            byref(_error_status),
+            _error_message,
+        )
+        if self.fatal_error(_error_status):
+            raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
+
 
 if __name__=="__main__":
     wavetanklib = WaveTankLib(
@@ -172,3 +188,5 @@ if __name__=="__main__":
             rotation_matrix=rotation_matrix,
             loads=loads,
         )
+
+    wavetanklib.end()

@@ -5,8 +5,8 @@ MODULE WaveTankTesting
     USE NWTC_Library
     ! USE Precision
     USE SeaState_C_Binding, ONLY: SeaSt_C_Init, SeaSt_C_CalcOutput, SeaSt_C_End, MaxOutPts
-    USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_Init, MaxADIOutputs
-    USE MoorDyn_C, ONLY: MD_C_Init
+    USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_Init, ADI_C_End, MaxADIOutputs
+    USE MoorDyn_C, ONLY: MD_C_Init, MD_C_End
     USE NWTC_C_Binding, ONLY: IntfStrLen, SetErr, ErrMsgLen_C
 
     IMPLICIT NONE
@@ -301,34 +301,53 @@ SUBROUTINE WaveTank_CalcOutput( &
 
 IMPLICIT NONE
 
-! INTEGER(C_INT)                        :: delta_time
-INTEGER(C_INT)                        :: frame_number
-REAL(C_FLOAT),          INTENT(IN   ) :: positions_x(N_CAMERA_POINTS)
-REAL(C_FLOAT),          INTENT(IN   ) :: positions_y(N_CAMERA_POINTS)
-REAL(C_FLOAT),          INTENT(IN   ) :: positions_z(N_CAMERA_POINTS)
-REAL(C_FLOAT),          INTENT(IN   ) :: rotation_matrix(9)
-REAL(C_FLOAT),          INTENT(  OUT) :: loads(N_CAMERA_POINTS)
-INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
-CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
+    ! INTEGER(C_INT)                        :: delta_time
+    INTEGER(C_INT)                        :: frame_number
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_x(N_CAMERA_POINTS)
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_y(N_CAMERA_POINTS)
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_z(N_CAMERA_POINTS)
+    REAL(C_FLOAT),          INTENT(IN   ) :: rotation_matrix(9)
+    REAL(C_FLOAT),          INTENT(  OUT) :: loads(N_CAMERA_POINTS)
+    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
+    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
-INTEGER :: i
+    INTEGER :: i
 
-IF ( MOD(frame_number / load_period, 2) == 0 ) THEN
-    loads = -1.0_C_FLOAT
-ELSE
-    loads = 1.0_C_FLOAT
-ENDIF
+    IF ( MOD(frame_number / load_period, 2) == 0 ) THEN
+        loads = -1.0_C_FLOAT
+    ELSE
+        loads = 1.0_C_FLOAT
+    ENDIF
 
 END SUBROUTINE
 
-SUBROUTINE WaveTank_End() bind (C, NAME="WaveTank_End")
-
+SUBROUTINE WaveTank_End(ErrStat_C, ErrMsg_C) bind (C, NAME="WaveTank_End")
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_End
+!GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_End
+#endif
 
 IMPLICIT NONE
 
+    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
+    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
+    ! Local variables
+    INTEGER(C_INT)                          :: ErrStat_C2
+    CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
 
+    CALL MD_C_END(ErrStat_C, ErrMsg_C)
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_END')
+    IF (ErrStat_C >= AbortErrLev) RETURN
+
+    CALL SeaSt_C_END(ErrStat_C, ErrMsg_C)
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'SeaSt_C_END')
+    IF (ErrStat_C >= AbortErrLev) RETURN
+
+    CALL ADI_C_END(ErrStat_C, ErrMsg_C)
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_END')
+    IF (ErrStat_C >= AbortErrLev) RETURN
 
 END SUBROUTINE
 
-end module WaveTankTesting
+END MODULE WaveTankTesting
