@@ -1464,8 +1464,8 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    integer, parameter                             :: indx = 1
    character(p%VTK_tWidth)                        :: Tstr        ! string for current VTK write-out step (padded with zeros)
    integer(intKi)                                 :: i, j, k
-   integer(intKi)                                 :: errStat2
-   character(ErrMsgLen)                           :: errMsg2
+   integer(intKi)                                 :: errStat2, ErrStat3
+   character(ErrMsgLen)                           :: errMsg2,  ErrMsg3
    character(*), parameter                        :: RoutineName = 'AWAE_CalcOutput'
    integer(intKi)                                 :: n, n_high
    character(3)                                   :: PlaneNumStr ! 2 digit number of the output plane
@@ -1496,35 +1496,74 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       ! TimeStamp
       write(Tstr, '(i' // trim(Num2LStr(p%VTK_tWidth)) //'.'// trim(Num2LStr(p%VTK_tWidth)) // ')') n/p%WrDisSkp1 ! TODO use n instead..
 
-         ! XY plane slices
+      ! XY plane slices
+      ErrStat2=ErrID_None
+      ErrMsg2=""
+      !$OMP PARALLEL DO &
+      !$OMP PRIVATE(k, FileName, Un, ErrStat3, ErrMsg3)&
+      !$OMP SHARED(PlaneNumStr, p, m, t, ErrStat2, ErrMsg2, Tstr) DEFAULT(NONE)
       do k = 1,p%NOutDisWindXY
          write(PlaneNumStr, '(i3.3)') k
          call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low_full, m%outVizXYPlane(:,:,:,1))
-            ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n/p%WrDisSkp1>.vtk
+         ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileVTKRoot)//".Low.DisXY"//PlaneNumStr//"."//trim(Tstr)//".vtk"
-         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
-         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,p%nY_low,1_IntKi/), (/p%X0_low,p%Y0_low,p%OutDisWindZ(k)/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXYPlane, ErrStat2, ErrMsg2 );   if (Failed()) return;
+         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat3, ErrMsg3 );
+         !$OMP critical(awae_slice_err_critical)
+         call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
+         !$OMP end critical(awae_slice_err_critical)
+         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,p%nY_low,1_IntKi/), (/p%X0_low,p%Y0_low,p%OutDisWindZ(k)/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXYPlane, ErrStat3, ErrMsg3 )
+         !$OMP critical(awae_slice_err_critical)
+         call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
+         !$OMP end critical(awae_slice_err_critical)
       end do
+      !$OMP END PARALLEL DO
+      if (Failed()) return;
 
-         ! YZ plane slices
+      ! YZ plane slices
+      ErrStat2=ErrID_None
+      ErrMsg2=""
+      !$OMP PARALLEL DO &
+      !$OMP PRIVATE(k, FileName, Un, ErrStat3, ErrMsg3)&
+      !$OMP SHARED(PlaneNumStr, p, m, t, ErrStat2, ErrMsg2, Tstr) DEFAULT(NONE)
       do k = 1,p%NOutDisWindYZ
          write(PlaneNumStr, '(i3.3)') k
          call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low_full, m%outVizYZPlane(:,:,:,1))
-            ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n/p%WrDisSkp1>.vtk
+         ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileVTKRoot)//".Low.DisYZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
-         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
-         call WrVTK_SP_vectors3D( Un, "Velocity", (/1,p%nY_low,p%nZ_low/), (/p%OutDisWindX(k),p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizYZPlane, ErrStat2, ErrMsg2 );   if (Failed()) return;
+         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat3, ErrMsg3 )
+         !$OMP critical(awae_slice_err_critical)
+         call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
+         !$OMP end critical(awae_slice_err_critical)
+         call WrVTK_SP_vectors3D( Un, "Velocity", (/1,p%nY_low,p%nZ_low/), (/p%OutDisWindX(k),p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizYZPlane, ErrStat3, ErrMsg3 )
+         !$OMP critical(awae_slice_err_critical)
+         call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
+         !$OMP end critical(awae_slice_err_critical)
       end do
+      !$OMP END PARALLEL DO
+      if (Failed()) return;
 
-         ! XZ plane slices
+      ! XZ plane slices
+      ErrStat2=ErrID_None
+      ErrMsg2=""
+      !$OMP PARALLEL DO &
+      !$OMP PRIVATE(k, FileName, Un, ErrStat3, ErrMsg3)&
+      !$OMP SHARED(PlaneNumStr, p, m, t, ErrStat2, ErrMsg2, Tstr) DEFAULT(NONE)
       do k = 1,p%NOutDisWindXZ
          write(PlaneNumStr, '(i3.3)') k
          call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low_full, m%outVizXZPlane(:,:,:,1))
-            ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n/p%WrDisSkp1>.vtk
+         ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileVTKRoot)//".Low.DisXZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
-         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
-         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,1,p%nZ_low/), (/p%X0_low,p%OutDisWindY(k),p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXZPlane, ErrStat2, ErrMsg2 );   if (Failed()) return;
+         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat3, ErrMsg3 )
+         !$OMP critical(awae_slice_err_critical)
+         call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
+         !$OMP end critical(awae_slice_err_critical)
+         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,1,p%nZ_low/), (/p%X0_low,p%OutDisWindY(k),p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXZPlane, ErrStat3, ErrMsg3 )
+         !$OMP critical(awae_slice_err_critical)
+         call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
+         !$OMP end critical(awae_slice_err_critical)
       end do
+      !$OMP END PARALLEL DO
+      if (Failed()) return;
    end if
 
 contains
