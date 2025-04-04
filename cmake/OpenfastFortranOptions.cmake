@@ -158,9 +158,7 @@ endmacro(set_fast_intel_fortran)
 # arch
 #
 macro(set_fast_intel_fortran_posix)
-  # Set size where temporary are stored on heap instead of stack
-  #   1000: size in kB (1 MB)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic -fpp -heap-arrays 1000")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic -fpp")
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -207,9 +205,7 @@ macro(set_fast_intel_fortran_windows)
   # Turn off specific warnings
   # - 5199: too many continuation lines
   # - 5268: 132 column limit
-  # Set size where temporary are stored on heap instead of stack
-  #   1000: size in kB (1 MB)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268 /fpp /heap-arrays:1000")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268 /fpp")
 
   # If double precision, make constants double precision
   if (DOUBLE_PRECISION)
