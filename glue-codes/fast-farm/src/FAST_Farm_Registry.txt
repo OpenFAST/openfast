@@ -15,7 +15,6 @@ include Registry_NWTC_Library.txt
 usefrom FASTWrapper_Registry.txt
 usefrom WakeDynamics_Registry.txt
 usefrom AWAE_Registry.txt
-usefrom SuperController_Registry.txt
 
 param FAST_Farm/Farm    -  INTEGER  NumFFModules      - 5 -  "The number of modules available in FAST.Farm" -
 param        ^          -  INTEGER  ModuleFF_None     - 0 -  "No module selected" -

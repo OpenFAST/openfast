@@ -34,7 +34,6 @@ MODULE FAST_Farm_Types
 USE FASTWrapper_Types
 USE WakeDynamics_Types
 USE AWAE_Types
-USE SuperController_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: NumFFModules = 5      ! The number of modules available in FAST.Farm [-]
