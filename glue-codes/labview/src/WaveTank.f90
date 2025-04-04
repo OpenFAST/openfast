@@ -7,6 +7,7 @@ MODULE WaveTankTesting
     USE MoorDyn_C
     USE SeaState_C_Binding
     USE NWTC_C_Binding, ONLY: IntfStrLen, SetErr
+    USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_Init, MaxADIOutputs
 
     IMPLICIT NONE
     SAVE
@@ -101,6 +102,44 @@ IMPLICIT NONE
     CHARACTER(KIND=C_CHAR) :: MD_OutputChannelNames_C(100000)  ! CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)
     CHARACTER(KIND=C_CHAR) :: MD_OutputChannelUnits_C(100000)  ! CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(100000)
 
+    ! ADI variables
+    INTEGER(C_INT) :: AD_InputFilePassed             ! intent(in   )  :: ADinputFilePassed                      !< Whether to load the file from the filesystem - 1: ADinputFileString_C contains the contents of the input file; otherwise, ADinputFileString_C contains the path to the input file
+    TYPE(C_PTR)    :: AD_InputFileString_C           ! intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines delineated by C_NULL_CHAR
+    INTEGER(C_INT) :: AD_InputFileStringLength_C     ! intent(in   )  :: ADinputFileStringLength_C              !< length of the input file string
+    INTEGER(C_INT) :: IfW_InputFilePassed            ! intent(in   )  :: IfWinputFilePassed                     !< Whether to load the file from the filesystem - 1: IfWinputFileString_C contains the contents of the input file; otherwise, IfWinputFileString_C contains the path to the input file
+    TYPE(C_PTR)    :: IfW_InputFileString_C          ! intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines delineated by C_NULL_CHAR
+    INTEGER(C_INT) :: IfW_InputFileStringLength_C    ! intent(in   )  :: IfWinputFileStringLength_C             !< length of the input file string
+    CHARACTER(KIND=C_CHAR) :: ADI_OutRootName_C(IntfStrLen) ! intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
+    CHARACTER(KIND=C_CHAR) :: ADI_OutVTKDir_C(IntfStrLen)   ! intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
+    ! Environmental
+    REAL(C_FLOAT) :: ADI_gravity_C                   ! intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
+    REAL(C_FLOAT) :: ADI_defFldDens_C                ! intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
+    REAL(C_FLOAT) :: ADI_defKinVisc_C                ! intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
+    REAL(C_FLOAT) :: ADI_defSpdSound_C               ! intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
+    REAL(C_FLOAT) :: ADI_defPatm_C                   ! intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+    REAL(C_FLOAT) :: ADI_defPvap_C                   ! intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+    REAL(C_FLOAT) :: ADI_WtrDpth_C                   ! intent(in   )  :: WtrDpth_C                              !< Water depth (m)
+    REAL(C_FLOAT) :: ADI_MSL2SWL_C                   ! intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
+    ! Interpolation
+    INTEGER(C_INT) :: ADI_InterpOrder_C              ! intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
+    ! Time
+    REAL(C_DOUBLE) :: ADI_DT_C                       ! intent(in   )  :: DT_C                                   !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
+    REAL(C_DOUBLE) :: ADI_TMax_C                     ! intent(in   )  :: TMax_C                                 !< Maximum time for simulation
+    ! Flags
+    INTEGER(C_INT) :: ADI_storeHHVel                 ! intent(in   )  :: storeHHVel                             !< Store hub height time series from IfW
+    ! VTK
+    INTEGER(C_INT) :: ADI_WrVTK_in                   ! intent(in   )  :: WrVTK_in                               !< Write VTK outputs [0: none, 1: init only, 2: animation]
+    INTEGER(C_INT) :: ADI_WrVTK_inType               ! intent(in   )  :: WrVTK_inType                           !< Write VTK outputs as [1: surface, 2: lines, 3: both]
+    REAL(C_DOUBLE) :: ADI_WrVTK_inDT                 ! intent(in   )  :: WrVTK_inDT                             !< Timestep between VTK writes
+    REAL(C_FLOAT)  :: ADI_VTKNacDim_in(6)            ! intent(in   )  :: VTKNacDim_in(6)                        !< Nacelle dimension passed in for VTK surface rendering [0,y0,z0,Lx,Ly,Lz] (m)
+    REAL(C_FLOAT)  :: ADI_VTKHubrad_in               ! intent(in   )  :: VTKHubrad_in                           !< Hub radius for VTK surface rendering
+    INTEGER(C_INT) :: ADI_wrOuts_C                   ! intent(in   )  :: wrOuts_C                               !< Write ADI output file
+    REAL(C_DOUBLE) :: ADI_DT_Outs_C                  ! intent(in   )  :: DT_Outs_C                              !< Timestep to write output file from ADI
+    ! Output
+    INTEGER(C_INT) :: ADI_NumChannels_C              ! intent(  out)  :: NumChannels_C                          !< Number of output channels requested from the input file
+    CHARACTER(KIND=C_CHAR) :: ADI_OutputChannelNames_C(ChanLen*MaxADIOutputs+1) ! intent(  out)  :: OutputChannelNames_C(ChanLen*MaxADIOutputs+1)    !< NOTE: if MaxADIOutputs is sufficiently large, we may overrun the buffer on the Python side.
+    CHARACTER(KIND=C_CHAR) :: ADI_OutputChannelUnits_C(ChanLen*MaxADIOutputs+1) ! intent(  out)  :: OutputChannelUnits_C(ChanLen*MaxADIOutputs+1)
+
     ! Initialize error handling
     ErrStat_C  =  ErrID_None
     ErrMsg_C   =  ""
@@ -166,81 +205,73 @@ IMPLICIT NONE
         ErrStat_C2,                 &
         ErrMsg_C2                   &
     )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
+    IF (ErrStat_C >= AbortErrLev) RETURN
 
-! call ADI_C_Init(                &
-!     ADinputFilePassed,          &  ! integer(c_int),            intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
-!     ADinputFileString_C,        &  ! type(c_ptr),               intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines deliniated by C_NULL_CHAR
-!     ADinputFileStringLength_C,  &  ! integer(c_int),            intent(in   )  :: ADinputFileStringLength_C              !< lenght of the input file string
-!     IfWinputFilePassed,         &  ! integer(c_int),            intent(in   )  :: IfWinputFilePassed                     !< Write VTK outputs [0: none, 1: init only, 2: animation]
-!     IfWinputFileString_C,       &  ! type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
-!     IfWinputFileStringLength_C, &  ! integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
-!     OutRootName_C,              &  ! character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
-!     OutVTKDir_C,                &  ! character(kind=c_char),    intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
-!     gravity_C,                  &  ! real(c_float),             intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
-!     defFldDens_C,               &  ! real(c_float),             intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
-!     defKinVisc_C,               &  ! real(c_float),             intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
-!     defSpdSound_C,              &  ! real(c_float),             intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
-!     defPatm_C,                  &  ! real(c_float),             intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
-!     defPvap_C,                  &  ! real(c_float),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
-!     WtrDpth_C,                  &  ! real(c_float),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
-!     MSL2SWL_C,                  &  ! real(c_float),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
-!     InterpOrder_C,              &  ! integer(c_int),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
-!     DT_C,                       &  ! real(c_double),            intent(in   )  :: DT_C                                   !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
-!     TMax_C,                     &  ! real(c_double),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation
-!     storeHHVel,                 &  ! integer(c_int),            intent(in   )  :: storeHHVel                             !< Store hub height time series from IfW
-!     WrVTK_in,                   &  ! integer(c_int), intent(in   ) :: WrVTK_in        !< Write VTK outputs [0: none, 1: init only, 2: animation]
-!     WrVTK_inType,               &  ! integer(c_int), intent(in   ) :: WrVTK_inType    !< Write VTK outputs as [1: surface, 2: lines, 3: both]
-!     WrVTK_inDT,                 &  ! real(c_double), intent(in   ) :: WrVTK_inDT      !< Timestep between VTK writes
-!     VTKNacDim_in,               &  ! real(c_float),  intent(in   ) :: VTKNacDim_in(6) !< Nacelle dimension passed in for VTK surface rendering [0,y0,z0,Lx,Ly,Lz] (m)
-!     VTKHubRad_in,               &  ! real(c_float),  intent(in   ) :: VTKHubrad_in    !< Hub radius for VTK surface rendering
-!     wrOuts_C,                   &
-!     DT_Outs_C,                  &
-!     NumChannels_C,              &
-!     OutputChannelNames_C,       &
-!     OutputChannelUnits_C,       &
-!     ErrStat_C, ErrMsg_C         &
-! )
+    AD_InputFilePassed = 0
+    AD_InputFileString_C = AD_InputFile_C
+    AD_InputFileStringLength_C = IntfStrLen
+    IfW_InputFilePassed = 0
+    IfW_InputFileString_C = IfW_InputFile_C
+    IfW_InputFileStringLength_C = IntfStrLen
+    ADI_OutRootName_C(IntfStrLen) = "adi"
+    ADI_OutVTKDir_C(IntfStrLen) = "vtk"
+    ADI_gravity_C = 9.80655
+    ADI_defFldDens_C = 1025
+    ADI_defKinVisc_C = 1.06E-06
+    ADI_defSpdSound_C = 1500
+    ADI_defPatm_C = 101325
+    ADI_defPvap_C = 2500
+    ADI_WtrDpth_C = 200
+    ADI_MSL2SWL_C = 0.0
+    ADI_InterpOrder_C = 1
+    ADI_DT_C = 0.125
+    ADI_TMax_C = 100.0
+    ADI_storeHHVel = 1
+    ADI_WrVTK_in = 0
+    ADI_WrVTK_inType = 3
+    ADI_WrVTK_inDT = 0.125
+    ADI_VTKNacDim_in = (/ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 /)
+    ADI_VTKHubrad_in = 12.0
+    ADI_wrOuts_C = 0
+    ADI_DT_Outs_C = 0.125
 
-
-! ! Input file info
-! integer(c_int),            intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
-! type(c_ptr),               intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines deliniated by C_NULL_CHAR
-! integer(c_int),            intent(in   )  :: ADinputFileStringLength_C              !< lenght of the input file string
-! integer(c_int),            intent(in   )  :: IfWinputFilePassed                     !< Write VTK outputs [0: none, 1: init only, 2: animation]
-! type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
-! integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
-! character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
-! character(kind=c_char),    intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
-! ! Environmental
-! real(c_float),             intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
-! real(c_float),             intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
-! real(c_float),             intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
-! real(c_float),             intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
-! real(c_float),             intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
-! real(c_float),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
-! real(c_float),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
-! real(c_float),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
-! ! Interpolation
-! integer(c_int),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
-! ! Time
-! real(c_double),            intent(in   )  :: DT_C                                   !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
-! real(c_double),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation
-! ! Flags
-! integer(c_int),            intent(in   )  :: storeHHVel                             !< Store hub height time series from IfW
-! ! VTK
-! integer(c_int),            intent(in   )  :: WrVTK_in                               !< Write VTK outputs [0: none, 1: init only, 2: animation]
-! integer(c_int),            intent(in   )  :: WrVTK_inType                           !< Write VTK outputs as [1: surface, 2: lines, 3: both]
-! real(c_double),            intent(in   )  :: WrVTK_inDT                             !< Timestep between VTK writes
-! real(c_float),             intent(in   )  :: VTKNacDim_in(6)                        !< Nacelle dimension passed in for VTK surface rendering [0,y0,z0,Lx,Ly,Lz] (m)
-! real(c_float),             intent(in   )  :: VTKHubrad_in                           !< Hub radius for VTK surface rendering
-! integer(c_int),            intent(in   )  :: wrOuts_C                               !< Write ADI output file
-! real(c_double),            intent(in   )  :: DT_Outs_C                              !< Timestep to write output file from ADI
-! ! Output
-! integer(c_int),            intent(  out)  :: NumChannels_C                          !< Number of output channels requested from the input file
-! character(kind=c_char),    intent(  out)  :: OutputChannelNames_C(ChanLen*MaxADIOutputs+1)    !< NOTE: if MaxADIOutputs is sufficiently large, we may overrun the buffer on the Python side.
-! character(kind=c_char),    intent(  out)  :: OutputChannelUnits_C(ChanLen*MaxADIOutputs+1)
-! integer(c_int),            intent(  out)  :: ErrStat_C                              !< Error status
-! character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)                  !< Error message (C_NULL_CHAR terminated)
+    call ADI_C_Init(                 &
+        AD_InputFilePassed,          &  ! INTEGER(C_INT),            intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
+        AD_InputFileString_C,        &  ! TYPE(C_PTR),               intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines deliniated by C_NULL_CHAR
+        AD_InputFileStringLength_C,  &  ! INTEGER(C_INT),            intent(in   )  :: ADinputFileStringLength_C              !< lenght of the input file string
+        IfW_InputFilePassed,         &  ! INTEGER(C_INT),            intent(in   )  :: IfWinputFilePassed                     !< Write VTK outputs [0: none, 1: init only, 2: animation]
+        IfW_InputFileString_C,       &  ! TYPE(C_PTR),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
+        IfW_InputFileStringLength_C, &  ! INTEGER(C_INT),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
+        ADI_OutRootName_C,           &  ! CHARACTER(KIND=C_CHAR),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
+        ADI_OutVTKDir_C,             &  ! CHARACTER(KIND=C_CHAR),    intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
+        ADI_gravity_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
+        ADI_defFldDens_C,            &  ! REAL(C_FLOAT),             intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
+        ADI_defKinVisc_C,            &  ! REAL(C_FLOAT),             intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
+        ADI_defSpdSound_C,           &  ! REAL(C_FLOAT),             intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
+        ADI_defPatm_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+        ADI_defPvap_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+        ADI_WtrDpth_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
+        ADI_MSL2SWL_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
+        ADI_InterpOrder_C,           &  ! INTEGER(C_INT),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
+        ADI_DT_C,                    &  ! REAL(C_DOUBLE),            intent(in   )  :: DT_C                                   !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
+        ADI_TMax_C,                  &  ! REAL(C_DOUBLE),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation
+        ADI_storeHHVel,              &  ! INTEGER(C_INT),            intent(in   )  :: storeHHVel                             !< Store hub height time series from IfW
+        ADI_WrVTK_in,                &  ! INTEGER(C_INT), intent(in   ) :: WrVTK_in        !< Write VTK outputs [0: none, 1: init only, 2: animation]
+        ADI_WrVTK_inType,            &  ! INTEGER(C_INT), intent(in   ) :: WrVTK_inType    !< Write VTK outputs as [1: surface, 2: lines, 3: both]
+        ADI_WrVTK_inDT,              &  ! REAL(C_DOUBLE), intent(in   ) :: WrVTK_inDT      !< Timestep between VTK writes
+        ADI_VTKNacDim_in,            &  ! REAL(C_FLOAT),  intent(in   ) :: VTKNacDim_in(6) !< Nacelle dimension passed in for VTK surface rendering [0,y0,z0,Lx,Ly,Lz] (m)
+        ADI_VTKHubRad_in,            &  ! REAL(C_FLOAT),  intent(in   ) :: VTKHubrad_in    !< Hub radius for VTK surface rendering
+        ADI_wrOuts_C,                &
+        ADI_DT_Outs_C,               &
+        ADI_NumChannels_C,           &
+        ADI_OutputChannelNames_C,    &
+        ADI_OutputChannelUnits_C,    &
+        ErrStat_C2,                  &
+        ErrMsg_C2                    &
+    )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
+    IF (ErrStat_C >= AbortErrLev) RETURN
 
 ! Set compiler flag for Labview
 ! Cmpl4LV   = .TRUE.
