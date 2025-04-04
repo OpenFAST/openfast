@@ -153,12 +153,12 @@ IMPLICIT NONE
 
     SS_OutRootName = "seastate" // C_NULL_CHAR
     SS_OutRootName_C = c_loc(SS_OutRootName)
-    SS_Gravity_C = 9.80665
-    SS_WtrDens_C = 1025
-    SS_WtrDpth_C = 200.0
-    SS_MSL2SWL_C = 0.0
+    SS_Gravity_C = 9.80665_C_FLOAT
+    SS_WtrDens_C = 1025_C_FLOAT
+    SS_WtrDpth_C = 200.0_C_FLOAT
+    SS_MSL2SWL_C = 0.0_C_FLOAT
     SS_NSteps_C = 801
-    SS_TimeInterval_C = 0.125
+    SS_TimeInterval_C = 0.125_C_FLOAT
     SS_WaveElevSeriesFlag_C = 0
     SS_WrWvKinMod_C = 0
 
@@ -188,11 +188,11 @@ IMPLICIT NONE
     MD_InputFilePassed = 0
     MD_InputFileString_C = MD_InputFile_C
     MD_InputFileStringLength_C = IntfStrLen
-    MD_DT_C = 0.125
-    MD_G_C = 9.80665
-    MD_RHO_C = 1025
-    MD_DEPTH_C = 200
-    MD_PtfmInit_C = (/ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 /)
+    MD_DT_C = 0.125_C_DOUBLE
+    MD_G_C = 9.80665_C_FLOAT
+    MD_RHO_C = 1025_C_FLOAT
+    MD_DEPTH_C = 200_C_FLOAT
+    MD_PtfmInit_C = 0.0_C_FLOAT
     MD_InterpOrder_C = 1  ! 1 - Linear, 2 - quadratic
 
     CALL MD_C_Init(                 &
@@ -284,7 +284,6 @@ IMPLICIT NONE
 
 END SUBROUTINE WaveTank_Init
 
-! delta_time,                 &
 SUBROUTINE WaveTank_CalcOutput( &
     frame_number,               &
     positions_x,                &
@@ -315,9 +314,9 @@ CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 INTEGER :: i
 
 IF ( MOD(frame_number / load_period, 2) == 0 ) THEN
-    loads = -1.0
+    loads = -1.0_C_FLOAT
 ELSE
-    loads = 1.0
+    loads = 1.0_C_FLOAT
 ENDIF
 
 END SUBROUTINE
