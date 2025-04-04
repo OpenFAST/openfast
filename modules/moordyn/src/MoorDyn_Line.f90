@@ -121,6 +121,12 @@ CONTAINS
       ! If input value is negative, it is considered to be desired damping ratio (zeta)
       ! from which the line's BA can be calculated based on the segment natural frequency.
       IF (LineProp%BA < 0) THEN
+         IF (Line%nEApoints > 0) THEN
+            ErrMsg  = ' Line damping cannot be a ratio if stress-strain lookup table is used.'
+            ErrStat = ErrID_Fatal
+            RETURN
+         ENDIF 
+
          ! - we assume desired damping coefficient is zeta = -LineProp%BA
          ! - highest axial vibration mode of a segment is wn = sqrt(k/m) = 2N/UnstrLen*sqrt(EA/w)
          Line%BA = -LineProp%BA * Line%UnstrLen / Line%N * SQRT(LineProp%EA * LineProp%w)
@@ -188,10 +194,6 @@ CONTAINS
             !CALL CleanUp()
             RETURN
          END IF
-         ! initialize to unique values on the range 0-2pi
-         do I=0, Line%N 
-            Line%phi(I) = (REAL(I)/Line%N)*2*Pi
-         enddo
 
          ! initialize other things to 0
          Line%rdd_old = 0.0_DbKi
@@ -410,6 +412,23 @@ CONTAINS
 
       ENDIF
 
+      ! If using the viscoelastic model, initalize the deltaL_1 to the delta L of the segment. 
+      ! This is required here to initalize the state as non-zero, which avoids an initial 
+      ! transient where the segment goes from unstretched to stretched in one time step.
+      IF (Line%ElasticMod > 1) THEN
+         DO I = 1, N
+            ! calculate current (Stretched) segment lengths and unit tangent vectors (qs) for each segment (this is used for bending calculations)
+            CALL UnitVector(Line%r(:,I-1), Line%r(:,I), Line%qs(:,I), Line%lstr(I))
+            Line%dl_1(I) = Line%lstr(I) - Line%l(I) ! delta l of the segment
+         END DO
+      ENDIF
+
+      ! initialize phi to unique values on the range 0-2pi if VIV model is active
+      IF (Line%Cl > 0) THEN
+         DO I=0, Line%N 
+            Line%phi(I) = (REAL(I)/Line%N)*2*Pi
+         ENDDO
+      ENDIF
 
 
       CALL CleanUp()  ! deallocate temporary arrays
@@ -1349,7 +1368,7 @@ CONTAINS
                   ! Double check none of the assumptions were violated (this should never happen)
                   IF (Line%alphaMBL <= 0 .OR. Line%vbeta <= 0 .OR. Line%l(I) <= 0 .OR. Line%dl_1(I) <= 0 .OR. EA_D < Line%EA) THEN
                      ErrStat = ErrID_Warn
-                     ErrMsg = "Viscoelastic model: Assumption for mean laod dependent dynamic stiffness violated"
+                     ErrMsg = "Viscoelastic model: Assumption for mean load dependent dynamic stiffness violated"
                      if (wordy > 2) then
                         print *, "Line%alphaMBL", Line%alphaMBL
                         print *, "Line%vbeta", Line%vbeta
@@ -1535,8 +1554,13 @@ CONTAINS
 
          ! Vortex Induced Vibration (VIV) cross-flow lift force
          Line%Lf(:,I) = 0.0_DbKi ! Zero lift force
-         IF ((Line%Cl > 0.0) .AND. (.NOT. Line%IC_gen)) THEN ! If non-zero lift coefficient and not during IC_gen ! Ignore the following: and internal node then VIV to be calculated .AND. (I /= 0) .AND. (I /= N)
+         IF ((Line%Cl > 0.0) .AND. (.NOT. Line%IC_gen)) THEN ! If non-zero lift coefficient and not during IC_gen 
    
+            ! Note: This logic is slightly different than MD-C, but equivalent. MD-C runs the VIV model for only the internal 
+            ! nodes. That means in MD-F the state vector has N+1 extra states when using the VIV model while the MD-C state 
+            ! matrix can keep N-1 rows. That approach means in the future if we can get the end node accelerations, we can 
+            ! easily add those into the VIV model. MD-C does not do that, and only computes the lift force for internal nodes. 
+
             ! ----- The Synchronization Model ------
             ! Crossflow velocity and acceleration. rd component in the crossflow direction
       
@@ -1563,31 +1587,11 @@ CONTAINS
                Line%phi_yd = 2*Pi + Line%phi_yd ! atan2 to 0-2Pi range
             ENDIF
 
-            ! Note: amplitude calculations and states commented out. Would be needed if a Cl vs A lookup table was ever implemented
-   
-            ! const real A_int = Misc(I)[1];
-            ! const real As = Misc(I)[2];
-
             ! non-dimensional frequency
             f_hat = Line%cF + Line%dF *sin(Line%phi_yd - Line%phi(I)) ! phi is integrated from state deriv phi_dot
             ! frequency of lift force (rad/s)
             phi_dot = 2*Pi*f_hat*MagVp / d ! to be added to state
-   
-            ! ----- The rest of the model -----
-   
-            ! ! Oscillation amplitude 
-            ! const real A_int_dot = abs(yd);
-            ! ! Note: Check if this actually measures zero crossings
-            ! if ((yd * yd_old[i]) < 0) { ! if sign changed, i.e. a zero crossing
-            ! 	Amp[i] = A_int-A_int_old[i]; ! amplitude calculation since last zero crossing
-            ! 	A_int_old[i] = A_int; ! stores amplitude of previous zero crossing for finding Amp
-            ! }
-            ! ! Careful with integrating smoothed amplitude, as 0.1 was a calibarated value based on a very simple integration method
-            ! const real As_dot = (0.1/dtm)*(Amp[i]-As); ! As to be variable integrated from the state. stands for amplitude smoothed
-   
-            ! ! Lift coefficient from lookup table
-            ! const real C_l = cl_lookup(x = As/d); ! create function in Line.hpp that uses lookup table 
-   
+      
             ! The Lift force
             IF (I==0) THEN ! Disable for end nodes for now, node acceleration needed for synch model
                Line%Lf(:,0) = 0.0_DbKi
@@ -1610,8 +1614,6 @@ CONTAINS
             else ! if only VIV state, then N+1 entries after internal node states
                Xd( 6*Line%N-6 + I + 1) = phi_dot
             endif
-
-            ! Miscd(I)[2] = As_dot; ! unused state that could be used for future amplitude calculations
    
          ENDIF
 
