@@ -20,7 +20,7 @@
  #define MPICH_SKIP_MPICXX
 #endif
 #include "mpi.h"
-#include "SC.h"
+//#include "SC.h"
 
 
 namespace fast {
@@ -231,13 +231,13 @@ class fastInputs {
   double dtDriver{0.0};
   //! Time step for openfast.
   double dtFAST{0.0};
-  //! Supercontroller status: True/False.
-  bool scStatus{false};
-  //! Name of the dynamic library containing the supercontroller implementation
-  std::string scLibFile{""};
-  //! Number of inputs and output to the supercontroller from/to each turbine
-  int numScInputs{0};
-  int numScOutputs{0};
+//  //! Supercontroller status: True/False.
+//  bool scStatus{false};
+//  //! Name of the dynamic library containing the supercontroller implementation
+//  std::string scLibFile{""};
+//  //! Number of inputs and output to the supercontroller from/to each turbine
+//  int numScInputs{0};
+//  int numScOutputs{0};
 
   //! Vector of turbine specific input data
   std::vector<turbineDataType>  globTurbineData;
@@ -338,7 +338,7 @@ class OpenFAST {
   //! Data structure to send force information to ExternalLoads module in OpenFAST
   std::vector<ExtLdDX_OutputType_t> extld_o_t_FAST; // Output to OpenFAST
 
-  scInitOutData scio;
+//  scInitOutData scio;
 
   // Mapping of local turbine number to global turbine and processor number
   // Turbine Number is DIFFERENT from TurbID. Turbine Number simply runs from 0:n-1 locally and globally.
@@ -353,16 +353,16 @@ class OpenFAST {
   //! Same as the turbineSetProcs, but as an integer array
   std::vector<int> turbineProcs;
 
-  // Supercontroller stuff
-    bool scStatus{false};
-  std::string scLibFile;
-  // Dynamic load stuff copied from 'C++ dlopen mini HOWTO' on tldp.org
-  void *scLibHandle ;
-  typedef SuperController* create_sc_t();
-  create_sc_t * create_SuperController;
-  typedef void destroy_sc_t(SuperController *);
-  destroy_sc_t * destroy_SuperController;
-  std::unique_ptr<SuperController> sc;
+//  // Supercontroller stuff
+//    bool scStatus{false};
+//  std::string scLibFile;
+//  // Dynamic load stuff copied from 'C++ dlopen mini HOWTO' on tldp.org
+//  void *scLibHandle ;
+//  typedef SuperController* create_sc_t();
+//  create_sc_t * create_SuperController;
+//  typedef void destroy_sc_t(SuperController *);
+//  destroy_sc_t * destroy_SuperController;
+//  std::unique_ptr<SuperController> sc;
 
   // MPI related book keeping for all processors containing turbines
   //! Number of processors in a fastMPIGroup
