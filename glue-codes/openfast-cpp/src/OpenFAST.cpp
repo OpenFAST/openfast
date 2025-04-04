@@ -31,7 +31,7 @@ fast::fastInputs::fastInputs():
     tStart(-1.0),
     restartFreq(-1),
     tMax(0.0),
-    dtDriver(0.0),
+    dtDriver(0.0)
 //    scStatus(false),
 //    scLibFile("")
 {
