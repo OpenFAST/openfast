@@ -6841,13 +6841,18 @@ SUBROUTINE ExitThisProgram_T( Turbine, ErrLevel_in, StopTheProgram, ErrLocMsg, S
          UnSum = -1
       END IF
 
-      SimMsg = trim(FAST_Ver%Name)//' encountered an error '//trim(SimMsg)//'.'//NewLine//' Simulation error level: '//GetErrStr(ErrorLevel)
+
+      SimMsg = TRIM(FAST_Ver%Name)//' encountered an error '//TRIM(SimMsg)//'.'//NewLine//' Simulation error level: '//TRIM(GetErrStr(ErrorLevel))
+#if (defined COMPILE_SIMULINK || defined COMPILE_LABVIEW)
+   ! When built as a shared library/dll, don't end the program.
+     CALL WrScr(trim(SimMsg))
+#else
       if (StopTheProgram) then
          CALL ProgAbort(SimMsg, TrapErrors=.FALSE., TimeWait=3._ReKi)  ! wait 3 seconds (in case they double-clicked and got an error)
       else
          CALL WrScr(trim(SimMsg))
       end if
-
+#endif
    END IF
 
    !----------------------------------------------------------------------------
