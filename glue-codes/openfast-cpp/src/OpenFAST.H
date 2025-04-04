@@ -736,8 +736,6 @@ private:
   //! Get reference positions of blade-resolved FSI nodes from OpenFAST
   void get_ref_positions_from_openfast(int iTurb);
 
-  void loadSuperController(const fastInputs & fi);
-
   //! Apply the velocity data at the Aerodyn nodes in 'velData' to turbine number 'iTurb' at time step 'iPrestart' through the data structure 'cDriver_Output_to_FAST'
   void applyVelocityData(int iPrestart, int iTurb, ExtInfw_OutputType_t o_t_FAST, std::vector<double> & velData) ;
 

@@ -884,12 +884,6 @@ void fast::OpenFAST::solution0(bool writeFiles) {
 
     if (!dryRun) {
 
-//        if(scStatus) {
-//
-//            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
-//            // sc.fastSCInputOutput();
-//        }
-
         if (writeFiles) {
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
                 prepareRestartFile(iTurb);
@@ -1141,10 +1135,6 @@ void fast::OpenFAST::prework() {
 
     } else {
 
-//        if(scStatus) {
-//            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
-//        }
-
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
             FAST_CFD_Prework(&iTurb, &ErrStat, ErrMsg);
             checkError(ErrStat, ErrMsg);
@@ -1336,10 +1326,6 @@ void fast::OpenFAST::step(double ss_time) {
     /* ******************************
        set inputs from this code and call FAST:
        ********************************* */
-
-//    if(scStatus) {
-//        std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
-//    }
 
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
 

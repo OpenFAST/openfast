@@ -1601,9 +1601,8 @@ farm%m%AllOuts(WkDiamTD(iOutDist, nt)) = delta*farm%WD(nt)%y%D_wake(np + 1) + de
 !!       1. CALL WAT_End
 !!       2. CALL AWAE_End
 !!       3. CALL WD_End
-!!       4. CALL SC_End
-!!       5. CALL FWrap_End
-!!       6. CALL MD_End
+!!       4. CALL FWrap_End
+!!       5. CALL MD_End
 !!    -  Close Output File
    subroutine FARM_End(farm, ErrStat, ErrMsg)
       type(All_FastFarm_Data), INTENT(INOUT) :: farm
@@ -1654,10 +1653,7 @@ farm%m%AllOuts(WkDiamTD(iOutDist, nt)) = delta*farm%WD(nt)%y%D_wake(np + 1) + de
       end if
 
       !--------------
-      ! 4. End supercontroller
-
-      !--------------
-      ! 5. End each instance of FAST (each instance of FAST can be done in parallel, too)
+      ! 4. End each instance of FAST (each instance of FAST can be done in parallel, too)
       if (allocated(farm%FWrap)) then
          DO nt = 1, farm%p%NumTurbines
             if (farm%FWrap(nt)%IsInitialized) then
