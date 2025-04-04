@@ -124,6 +124,9 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
    errMsg  = ""
    maxPln =   min(n,p%NumPlanes-2)
    rmax = p%y(p%NumRadii-1) 
+   !$OMP PARALLEL DO COLLAPSE(2)&
+   !$OMP PRIVATE(nt, np, sinTerm, cosTerm, dp)&
+   !$OMP SHARED(n, u, p, y, m, maxPln, rmax) DEFAULT(NONE)
    do nt = 1,p%NumTurbines
       do np = 0, maxPln
          cosTerm = dot_product(u%xhat_plane(:,np+1,nt),u%xhat_plane(:,np,nt))
@@ -148,10 +151,9 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
          else
             m%parallelFlag(np,nt) = .true.
          end if
-
       end do
-
    end do
+   !$OMP END PARALLEL DO
 
 
 end subroutine ComputeLocals
@@ -487,6 +489,15 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    end do ! iXYZ, loop NumGrid_low points
    !$OMP END PARALLEL DO
 
+
+   !$OMP PARALLEL DO COLLAPSE(2)&
+   !$OMP PRIVATE(nt, np, nr, npsi, wamb, iwsum, &
+   !$OMP&        n_r_polar, n_psi_polar, &
+   !$OMP&        Vave_amb_low_norm, Vamb_lowpol_tmp, Vdist_lowpol_tmp, Vamb_low_tmp, &
+   !$OMP&        wsum_tmp, w, xxplane, xyplane, yyplane, yxplane, psi_polar, r_polar, p_polar, &
+   !$OMP&        yzplane_Y, xyplane_norm, xplane_sq, yplane_sq, xysq_Z, xzplane_X, &
+   !$OMP&        i, yHat_plane, zHat_plane, tmpPln, within)&
+   !$OMP SHARED(n, u, p, xd, y, m,ErrStat,ErrMsg,TwoPi) DEFAULT(NONE)
    do nt = 1,p%NumTurbines
          
       do np = 0,tmpPln 
@@ -556,17 +567,25 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
                 end do
 
                 if ( iwsum == 0 ) then
-
+                   !$OMP critical(awaeCalcErr_critical)
                    call SetErrStat( ErrID_Fatal, 'The rotor plane for turbine '//trim(num2lstr(nt))//' has left the low-resolution domain (i.e., there are no points in the polar grid that lie within the low-resolution domain).', errStat, errMsg, RoutineName )
-                   return
+                   !$OMP end critical(awaeCalcErr_critical)
+#ifndef _OPENMP
+                      return
+#endif
 
                 else
 
                    m%V_amb_low_disk(1:3,nt) = m%V_amb_low_disk(1:3,nt)/REAL(iwsum/8,ReKi)   ! iwsum is always a multiple of 8
                    Vave_amb_low_norm  = TwoNorm(m%V_amb_low_disk(1:3,nt))
                    if ( EqualRealNos(Vave_amb_low_norm, 0.0_ReKi ) )  then
+                      !$OMP critical(awaeCalcErr_critical)
+                      ! If parallelized, we will wait until the end to return.
                       call SetErrStat( ErrID_Fatal, 'The magnitude of the spatial-averaged ambient wind speed in the low-resolution domain associated with the wake plane at the rotor disk for turbine #'//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
+                      !$OMP end critical(awaeCalcErr_critical)
+#ifndef _OPENMP
                       return
+#endif
                    else
                       y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,np,nt),m%V_amb_low_disk(1:3,nt) )
                       y%TI_amb(nt) = 0.0_ReKi
@@ -626,6 +645,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
 
       end do ! np, tmpPln
    end do ! nt, turbines
+   !$OMP END PARALLEL DO
 
    if (allocated(wk_R_p2i)) deallocate(wk_R_p2i)
    if (allocated(wk_V))     deallocate(wk_V)
