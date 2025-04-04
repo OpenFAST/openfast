@@ -571,7 +571,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
                    call SetErrStat( ErrID_Fatal, 'The rotor plane for turbine '//trim(num2lstr(nt))//' has left the low-resolution domain (i.e., there are no points in the polar grid that lie within the low-resolution domain).', errStat, errMsg, RoutineName )
                    !$OMP end critical(awaeCalcErr_critical)
 #ifndef _OPENMP
-                      return
+                   return
 #endif
 
                 else
@@ -1313,9 +1313,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    errMsg  = ""
    
    ! Read the ambient wind data that is needed for t+dt, i.e., n+1
-!#ifdef _OPENMP
-!   t1 = omp_get_wtime()  
-!#endif 
    
    if ( (n+1) == (p%NumDT-1) ) then
       n_high_low = 0
@@ -1326,10 +1323,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    if ( p%Mod_AmbWind == 1 ) then
          ! read from file the ambient flow for the n+1 time step
       call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat2, errMsg2);   if (Failed()) return;
-   !#ifdef _OPENMP
-   !   t2 = omp_get_wtime()      
-   !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
-   !#endif   
       
       !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, errStat2, errMsg2) COLLAPSE(2)
       do nt = 1,p%NumTurbines
@@ -1425,11 +1418,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       xd%WAT_B_Box(1:3) = xd%WAT_B_Box(1:3) + xd%Ufarm(1:3)*real(p%dt_low,ReKi)
    endif
 
-!#ifdef _OPENMP
-!   t1 = omp_get_wtime()      
-!   write(*,*) '        AWAE_UpdateStates: Time spent reading High Res data : '//trim(num2lstr(t1-t2))//' seconds'             
-!#endif
-
 contains
    logical function Failed()
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1501,7 +1489,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       ErrMsg2=""
       !$OMP PARALLEL DO &
       !$OMP PRIVATE(k, FileName, Un, ErrStat3, ErrMsg3)&
-      !$OMP SHARED(PlaneNumStr, p, m, t, ErrStat2, ErrMsg2, Tstr) DEFAULT(NONE)
+      !$OMP SHARED(PlaneNumStr, p, m, t, ErrStat2, ErrMsg2, Tstr, AbortErrLev) DEFAULT(NONE)
       do k = 1,p%NOutDisWindXY
          write(PlaneNumStr, '(i3.3)') k
          call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low_full, m%outVizXYPlane(:,:,:,1))
@@ -1511,10 +1499,12 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          !$OMP critical(awae_slice_err_critical)
          call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
          !$OMP end critical(awae_slice_err_critical)
-         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,p%nY_low,1_IntKi/), (/p%X0_low,p%Y0_low,p%OutDisWindZ(k)/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXYPlane, ErrStat3, ErrMsg3 )
-         !$OMP critical(awae_slice_err_critical)
-         call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
-         !$OMP end critical(awae_slice_err_critical)
+         if (ErrStat2 < AbortErrLev) then
+            call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,p%nY_low,1_IntKi/), (/p%X0_low,p%Y0_low,p%OutDisWindZ(k)/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXYPlane, ErrStat3, ErrMsg3 )
+            !$OMP critical(awae_slice_err_critical)
+            call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
+            !$OMP end critical(awae_slice_err_critical)
+         endif
       end do
       !$OMP END PARALLEL DO
       if (Failed()) return;
@@ -1524,7 +1514,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       ErrMsg2=""
       !$OMP PARALLEL DO &
       !$OMP PRIVATE(k, FileName, Un, ErrStat3, ErrMsg3)&
-      !$OMP SHARED(PlaneNumStr, p, m, t, ErrStat2, ErrMsg2, Tstr) DEFAULT(NONE)
+      !$OMP SHARED(PlaneNumStr, p, m, t, ErrStat2, ErrMsg2, Tstr, AbortErrLev) DEFAULT(NONE)
       do k = 1,p%NOutDisWindYZ
          write(PlaneNumStr, '(i3.3)') k
          call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low_full, m%outVizYZPlane(:,:,:,1))
@@ -1534,10 +1524,12 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          !$OMP critical(awae_slice_err_critical)
          call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
          !$OMP end critical(awae_slice_err_critical)
-         call WrVTK_SP_vectors3D( Un, "Velocity", (/1,p%nY_low,p%nZ_low/), (/p%OutDisWindX(k),p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizYZPlane, ErrStat3, ErrMsg3 )
-         !$OMP critical(awae_slice_err_critical)
-         call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
-         !$OMP end critical(awae_slice_err_critical)
+         if (ErrStat2 < AbortErrLev) then
+            call WrVTK_SP_vectors3D( Un, "Velocity", (/1,p%nY_low,p%nZ_low/), (/p%OutDisWindX(k),p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizYZPlane, ErrStat3, ErrMsg3 )
+            !$OMP critical(awae_slice_err_critical)
+            call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
+            !$OMP end critical(awae_slice_err_critical)
+         endif
       end do
       !$OMP END PARALLEL DO
       if (Failed()) return;
@@ -1547,7 +1539,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       ErrMsg2=""
       !$OMP PARALLEL DO &
       !$OMP PRIVATE(k, FileName, Un, ErrStat3, ErrMsg3)&
-      !$OMP SHARED(PlaneNumStr, p, m, t, ErrStat2, ErrMsg2, Tstr) DEFAULT(NONE)
+      !$OMP SHARED(PlaneNumStr, p, m, t, ErrStat2, ErrMsg2, Tstr, AbortErrLev) DEFAULT(NONE)
       do k = 1,p%NOutDisWindXZ
          write(PlaneNumStr, '(i3.3)') k
          call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low_full, m%outVizXZPlane(:,:,:,1))
@@ -1557,10 +1549,12 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          !$OMP critical(awae_slice_err_critical)
          call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
          !$OMP end critical(awae_slice_err_critical)
-         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,1,p%nZ_low/), (/p%X0_low,p%OutDisWindY(k),p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXZPlane, ErrStat3, ErrMsg3 )
-         !$OMP critical(awae_slice_err_critical)
-         call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
-         !$OMP end critical(awae_slice_err_critical)
+         if (ErrStat2 < AbortErrLev) then
+            call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,1,p%nZ_low/), (/p%X0_low,p%OutDisWindY(k),p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXZPlane, ErrStat3, ErrMsg3 )
+            !$OMP critical(awae_slice_err_critical)
+            call SetErrStat(ErrStat3, ErrMsg3, ErrStat2, ErrMsg2, RoutineName)
+            !$OMP end critical(awae_slice_err_critical)
+         endif
       end do
       !$OMP END PARALLEL DO
       if (Failed()) return;
