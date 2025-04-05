@@ -9,7 +9,7 @@ turbines within a wind farm. FAST.Farm uses
 `OpenFAST <https://github.com/OpenFAST/openfast>`__ to solve the
 aero-hydro-servo-elastic dynamics of each individual turbine, but
 considers additional physics for wind-farm-wide ambient wind in the
-atmospheric boundary layer; a wind-farm super controller; and wake
+atmospheric boundary layer; and wake
 deficits, advection, deflection, meandering, and merging. FAST.Farm is
 based on the principles of the DWM model -- including passive tracer
 modeling of wake meandering -- but addresses many of the limitations of
@@ -101,9 +101,6 @@ appropriate in the next section.
    |    farm or based on mesoscale    |                                  |
    |    conditions or local terrain.  |                                  |
    +----------------------------------+----------------------------------+
-   | -  No treatment of a wind farm   | -  Optional inclusion of a wind  |
-   |    super controller.             |    farm super controller.        |
-   +----------------------------------+----------------------------------+
    | -  Wake advects at mean ambient  | -  Wake advects based on the     |
    |    wind speed, not accelerating  |    local spatially averaged      |
    |    from near wake to far wake or |    ambient wind speed and wake   |
@@ -178,8 +175,8 @@ code. The submodel hierarchy of FAST.Farm is illustrated in
 near-wake correction; and wake-deficit increment are submodels of the
 wake-dynamics (*WD*) model, implemented in a single module. Ambient wind
 and wake merging are submodels of the ambient wind and array effects
-(*AWAE*) model, implemented in a single module. Combined with the super
-controller (*SC*) and OpenFAST (*OF*) modules, FAST.Farm has four
+(*AWAE*) model, implemented in a single module. Combined with the 
+OpenFAST (*OF*) modules, FAST.Farm has three
 modules and one driver. There are multiple instances of the *OF* and
 *WD* modules -- one instance for each wind turbine/rotor. Each
 submodel/module is described in the subsections below.
@@ -272,9 +269,6 @@ sections below.
    +-----------------------------------------+---------------------------------------------------------------------------------+---------------------------------------------------------------------+----------------------------------------------------------------------+
    | **Module**                              | **States (Discrete Time)**                                                      | **Inputs**                                                          | **Outputs**                                                          |
    +=========================================+=================================================================================+=====================================================================+======================================================================+
-   | *Super Controller (SC)*                 | - User-defined                                                                  | - Global measurements                                               | - Global controller commands                                         |
-   |                                         |                                                                                 | - Commands/measurements from individual turbine controllers         | - Commands to individual turbine controllers                         |
-   +-----------------------------------------+---------------------------------------------------------------------------------+---------------------------------------------------------------------+----------------------------------------------------------------------+
    | *OpenFAST (OF)*                         | -  None in the OpenFAST wrapper, but there are many states internal to OpenFAST | - Global controller commands                                        | - Commands/measurements from the individual turbine controller       |
    |                                         |                                                                                 | - Commands to the individual turbine controller                     | - :math:`\hat{x}^\text{Disk}`                                        |
    |                                         |                                                                                 | - :math:`\vec{V}_\text{Dist}^\text{High}`                           | - :math:`\vec{p}^\text{Hub}`                                         |
@@ -334,55 +328,6 @@ results in simulations that are computationally inexpensive enough to
 run the many simulations necessary for wind turbine/farm design and
 analysis.
 
-.. _FF:Theory:SC:
-
-Super Controller (SC Module)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Wind-farm-wide super controllers have the potential to achieve the
-global benefit of improving overall power performance and reducing
-turbine loads, based on modifying wake deficits through variations in
-blade pitch or generator torque and/or redirecting (steering) wakes
-through variations in nacelle yaw or tilt, as illustrated in
-:numref:`FF:NacYaw`.
-
-.. figure:: Pictures/NacYawControl.png
-   :alt: Nacelle-yaw control used to redirect wakes away from downwind wind turbines. :cite:`ff-Gebraad16_1`
-   :name: FF:NacYaw
-   :width: 100%
-   :align: center
-
-   Nacelle-yaw control used to redirect wakes away from downwind wind
-   turbines. :cite:`ff-Gebraad16_1`
-
-The *SC* module of FAST.Farm provides an interface to the super
-controller dynamic library -- essentially identical to the super controller
-available in `SOWFA <https://github.com/NREL/SOWFA>`__ -- which allows the
-user of FAST.Farm to implement their own wind-farm-wide control logic in
-discrete time and without direct feedthrough of input to output -- perhaps
-developed through the application of
-`FLORIS <https://github.com/WISDEM/FLORISSE>`__. The inputs to the *SC*
-module are commands or measurements from individual turbine controllers
-(output from the *OF* module). [3]_ The outputs of the *SC* module are
-the global controller commands and individual turbine controller
-commands (inputs to the *OF* module).
-
-Note that at time zero, the *SC* module is called before the call to the
-*OF* module and the associated individual turbine controllers. So, the
-initial outputs from the super controller are sent as inputs to the
-individual turbine controllers, but the initial inputs to the super
-controller from the individual turbine controller outputs at time zero
-are always zero. At subsequent time steps, the *OF* module and the
-associated individual turbine controllers are called before the output
-calculation of the *SC* module. As a result, at each time step other
-than time zero, the outputs from the super controller are extrapolated
-in time based on past values within *OF* before being sent as input to
-the individual turbine controllers. Thus, care should be taken to ensure
-that the outputs from the super controller vary smoothly over time
-(without steps). See :numref:`FF:Parallel` for more information.
-
-.. _FF:OF:
-
 OpenFAST (OF Module)
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -441,13 +386,6 @@ level. The global inertial-frame coordinate system is defined with *Z*
 directed vertically upward (opposite gravity), *X* directed horizontally
 nominally downwind (along the zero-degree wind direction), and *Y*
 directed horizontally transversely.
-
-The global and turbine-dependent commands from the super controller
-(outputs from the *SC* module) are used as inputs to the *OF* module to
-enable the individual turbine controller to be guided by wind farm-level
-effects; likewise, the turbine-dependent commands or measurements are
-output from the *OF* module for access by the super controller (inputs
-to the *SC* module).
 
 The *OF* module also uses the disturbed wind (ambient plus wakes of
 neighboring turbines) across a high-resolution wind domain (in both time
