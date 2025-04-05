@@ -9,6 +9,20 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
+OpenFAST v4.0.2 to OpenFAST v4.0.3
+----------------------------------
+Supercontroller module has been removed from FAST.Farm.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST `v4.0.3`
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+FAST.Farm                                     7    UseSC           False         UseSC                 - Use a super controller? (flag)
+FAST.Farm                                     11   na              --- SUPER CONTROLLER --- [used only for UseSC=True]
+FAST.Farm                                     12   SC_FileName     "SC_DLL.dll"  SC_FileName Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoted string)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
 
 OpenFAST v4.0.1 to OpenFAST v4.0.2
 ----------------------------------
