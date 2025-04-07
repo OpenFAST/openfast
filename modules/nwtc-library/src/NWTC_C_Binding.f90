@@ -74,7 +74,48 @@ SUBROUTINE SetErrStat_C(ErrStatLocal, ErrMessLocal, ErrStatGlobal, ErrMessGlobal
     ! ErrMessGlobal = TRIM(ErrMessGlobal)//TRIM(RoutineName)//':'//TRIM(ErrMessLocal)
     ErrStatGlobal = MAX(ErrStatGlobal, ErrStatLocal)
 
-END SUBROUTINE 
+END SUBROUTINE
+
+SUBROUTINE StringConvert_F2C(F_String, C_String, Length)
+    !> This was taken from https://github.com/vmagnin/gtk-fortran/blob/gtk4/src/gtk-sup.f90#L640.
+    !! The original implementation has textptr as an allocatable array, but in OpenFAST
+    !! the C string arrays will already be created in the calling code.
+
+    ! Convert a Fortran string into a null-terminated C-string
+    !
+    ! F_STRING |  F_String |  required |  The Fortran string to convert
+    ! TEXTPR |  string |  required |  A C type string, (allocatable).
+    ! LENGTH |  c_int |  optional |  The Length of the generated C string.
+    !-
+
+    character(len=*), intent(in) :: F_String
+    character(kind=c_char), dimension(:), intent(out) :: C_String   ! , allocatable
+    integer(c_int), intent(out), optional :: Length
+
+    integer :: lcstr, j
+    logical :: add_null
+
+    lcstr = len_trim(F_String)
+    if (lcstr == 0) then
+        lcstr = lcstr + 1
+        add_null = .true.
+    else if (F_String(lcstr:lcstr) /= c_null_char) then
+        lcstr = lcstr + 1
+        add_null = .true.
+    else
+        add_null = .false.
+    end if
+
+    ! allocate(C_String(lcstr))
+    if (present(Length)) Length = lcstr
+
+    do j = 1, len_trim(F_String)
+        C_String(j) = F_String(j:j)
+    end do
+
+    if (add_null) C_String(lcstr) = c_null_char
+
+END SUBROUTINE
 
 FUNCTION RemoveCStringNullChar(String_C, StringLength_C)
     INTEGER(C_INT), INTENT(IN)                              :: StringLength_C

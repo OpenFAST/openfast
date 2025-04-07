@@ -7,7 +7,7 @@ MODULE WaveTankTesting
     USE SeaState_C_Binding, ONLY: SeaSt_C_Init, SeaSt_C_CalcOutput, SeaSt_C_End, MaxOutPts
     USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_PreInit, ADI_C_SetupRotor, ADI_C_Init, ADI_C_End, MaxADIOutputs
     USE MoorDyn_C, ONLY: MD_C_Init, MD_C_End
-    USE NWTC_C_Binding, ONLY: IntfStrLen, SetErrStat_C, ErrMsgLen_C
+    USE NWTC_C_Binding, ONLY: IntfStrLen, SetErrStat_C, ErrMsgLen_C, StringConvert_F2C
 
     IMPLICIT NONE
     SAVE
@@ -26,8 +26,6 @@ MODULE WaveTankTesting
     INTEGER(C_INT) :: load_period = 20 ! seconds
 
 CONTAINS
-
-
 
 SUBROUTINE WaveTank_Init(   &
     MD_InputFile_C,         &
@@ -248,8 +246,9 @@ IMPLICIT NONE
     IfW_InputFilePassed = 0
     IfW_InputFileString_C = IfW_InputFile_C
     IfW_InputFileStringLength_C = IntfStrLen
-    ADI_OutRootName_C(IntfStrLen) = "adi"
-    ADI_OutVTKDir_C(IntfStrLen) = "vtk"
+
+    call StringConvert_F2C("adi", ADI_OutRootName_C)
+    call StringConvert_F2C("vtk", ADI_OutVTKDir_C)
     ADI_gravity_C = 9.80655
     ADI_defFldDens_C = 1025
     ADI_defKinVisc_C = 1.06E-06
