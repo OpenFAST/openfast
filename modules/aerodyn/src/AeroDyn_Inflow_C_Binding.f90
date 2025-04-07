@@ -249,7 +249,7 @@ end subroutine SetErr
 !--------------------------------------------- AeroDyn PreInit -------------------------------------------------
 !===============================================================================================================
 !> Allocate all the arrays for data storage for all turbine rotors
-subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, DebugLevel_in, ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_PreInit')
+subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK_in, DebugLevel_in, ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_PreInit')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_PreInit
@@ -258,6 +258,7 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, Deb
    integer(c_int),          intent(in   ) :: NumTurbines_C
    integer(c_int),          intent(in   ) :: TransposeDCM_in        !< Transpose DCMs as they are passed i
    integer(c_int),          intent(in   ) :: PointLoadOutput_in
+   integer(c_int),          intent(in   ) :: MHK_in
    integer(c_int),          intent(in   ) :: DebugLevel_in
    integer(c_int),          intent(  out) :: ErrStat_C
    character(kind=c_char),  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
@@ -309,6 +310,10 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, Deb
       ErrMsg2  =  'AeroDyn_Inflow simulates between 1 and 9 turbines, but '//trim(Num2LStr(Sim%NumTurbines))//' was specified'
       if (Failed()) return;
    endif
+
+   ! Set whether these are MHK turbines
+   InitInp%AD%MHK = MHK_in
+   InitInp%IW_InitInp%MHK = MHK_in
 
    ! Flag to transpose DCMs as they are passed in
    TransposeDCM      = TransposeDCM_in==1_c_int
@@ -627,6 +632,11 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    ! setup rotors for AD -- interface only supports one rotor at present
    do iWT=1,Sim%NumTurbines
       InitInp%AD%rotors(iWT)%numBlades   = Sim%WT(iWT)%NumBlades
+
+      ! TODO: If we modify Sim%WT(iWT)%originInit here, then it's not used in ADI_C_SetupRotor to create the AD mesh
+      ! if ( InitInp%AD%MHK == MHK_FixedBottom ) then
+      !    Sim%WT(iWT)%originInit(3) = Sim%WT(iWT)%originInit(3) - InitInp%AD%WtrDpth
+      ! end if
    enddo
 
 

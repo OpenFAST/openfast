@@ -112,6 +112,7 @@ IMPLICIT NONE
     INTEGER(C_INT) :: NumTurbines_C
     INTEGER(C_INT) :: TransposeDCM
     INTEGER(C_INT) :: PointLoadOutput
+    INTEGER(C_INT) :: MHK
     INTEGER(C_INT) :: DebugLevel
     ! SetupRotor
     integer(c_int) :: iWT_c     !< Wind turbine / rotor number
@@ -240,6 +241,7 @@ IMPLICIT NONE
     NumTurbines_C = 1
     TransposeDCM = 1
     PointLoadOutput = 1      ! TODO: Use point load or distributed load?; 0 - distributed load, 1 - point load
+    MHK = MHK_Floating
     DebugLevel = 1
 
     ! ADI SetupRotor
@@ -291,6 +293,7 @@ IMPLICIT NONE
         NumTurbines_C,              &
         TransposeDCM,               &
         PointLoadOutput,            &
+        MHK,                        &
         DebugLevel,                 &
         ErrStat_C2,                 &
         ErrMsg_C2                   &
