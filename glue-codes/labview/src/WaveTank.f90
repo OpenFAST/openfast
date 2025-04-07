@@ -5,7 +5,7 @@ MODULE WaveTankTesting
     USE NWTC_Library
     ! USE Precision
     USE SeaState_C_Binding, ONLY: SeaSt_C_Init, SeaSt_C_CalcOutput, SeaSt_C_End, MaxOutPts
-    USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_Init, ADI_C_End, MaxADIOutputs
+    USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_PreInit, ADI_C_SetupRotor, ADI_C_Init, ADI_C_End, MaxADIOutputs
     USE MoorDyn_C, ONLY: MD_C_Init, MD_C_End
     USE NWTC_C_Binding, ONLY: IntfStrLen, SetErr, ErrMsgLen_C
 
@@ -108,6 +108,28 @@ IMPLICIT NONE
     CHARACTER(KIND=C_CHAR) :: MD_OutputChannelUnits_C(100000)  ! CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(100000)
 
     ! ADI variables
+    ! Preinit
+    INTEGER(C_INT) :: NumTurbines_C
+    INTEGER(C_INT) :: TransposeDCM
+    INTEGER(C_INT) :: PointLoadOutput
+    INTEGER(C_INT) :: DebugLevel
+    ! SetupRotor
+    integer(c_int) :: iWT_c     !< Wind turbine / rotor number
+    integer(c_int) :: TurbineIsHAWT_c                         !< true for HAWT, false for VAWT
+    real(c_float)  :: TurbOrigin_C(3)                         !< turbine origin (tower base). Gets added to all meshes to shift turbine position.
+    real(c_float)  :: HubPos_C( 3 )                          !< Hub position
+    real(c_double) :: HubOri_C( 9 )                          !< Hub orientation
+    real(c_float)  :: NacPos_C( 3 )                          !< Nacelle position
+    real(c_double) :: NacOri_C( 9 )                          !< Nacelle orientation
+    integer(c_int), parameter :: NumBlades_C = 2                        !< Number of blades
+    real(c_float)  :: BldRootPos_C( 3*NumBlades_C )          !< Blade root positions
+    real(c_double) :: BldRootOri_C( 9*NumBlades_C )          !< Blade root orientations
+    ! Initial nodes
+    ! integer(c_int) :: NumMeshPts_C = n_camera_points_c                           !< Number of mesh points we are transferring motions and outputting loads to
+    real(c_float)  :: InitMeshPos_C( 3*n_camera_points_c )        !< A 3xNumMeshPts_C array [x,y,z]
+    real(c_double) :: InitMeshOri_C( 9*n_camera_points_c )        !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+    integer(c_int) :: MeshPtToBladeNum_C( n_camera_points_c )     !< A NumMeshPts_C array of blade numbers associated with each mesh point
+    ! Init
     INTEGER(C_INT) :: AD_InputFilePassed             ! intent(in   )  :: ADinputFilePassed                      !< Whether to load the file from the filesystem - 1: ADinputFileString_C contains the contents of the input file; otherwise, ADinputFileString_C contains the path to the input file
     TYPE(C_PTR)    :: AD_InputFileString_C           ! intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines delineated by C_NULL_CHAR
     INTEGER(C_INT) :: AD_InputFileStringLength_C     ! intent(in   )  :: ADinputFileStringLength_C              !< length of the input file string
@@ -214,6 +236,29 @@ IMPLICIT NONE
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
     IF (ErrStat_C >= AbortErrLev) RETURN
 
+    ! ADI PreInit
+    NumTurbines_C = 1
+    TransposeDCM = 1
+    PointLoadOutput = 1      ! TODO: Use point load or distributed load?; 0 - distributed load, 1 - point load
+    DebugLevel = 1
+
+    ! ADI SetupRotor
+    iWT_c = 1
+    TurbineIsHAWT_c = 1
+    TurbOrigin_C = (/ 20.0, 0.0, 0.0 /)
+    HubPos_C = (/ 0.0, 0.0, 0.0 /)
+    HubOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
+    NacPos_C = (/ 0.0, 0.0, 0.0 /)
+    NacOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
+    ! NumBlades_C = 3   ! Set as parameter in variable declarations
+    BldRootPos_C = (/ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 /)
+    BldRootOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
+    ! n_camera_points_c
+    InitMeshPos_C = (/ 0.0, 0.0, 0.0 /)
+    InitMeshOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
+    MeshPtToBladeNum_C = (/ 1, 2, 2 /)          ! TODO: Configure n mesh points and mapping correctly. Currently, mesh points are the camera points
+
+    ! ADI Init
     AD_InputFilePassed = 0
     AD_InputFileString_C = AD_InputFile_C
     AD_InputFileStringLength_C = IntfStrLen
@@ -242,7 +287,39 @@ IMPLICIT NONE
     ADI_wrOuts_C = 0
     ADI_DT_Outs_C = 0.125
 
-    call ADI_C_Init(                 &
+    CALL ADI_C_PreInit(             &
+        NumTurbines_C,              &
+        TransposeDCM,               &
+        PointLoadOutput,            &
+        DebugLevel,                 &
+        ErrStat_C2,                 &
+        ErrMsg_C2                   &
+    )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_PreInit')
+    IF (ErrStat_C >= AbortErrLev) RETURN
+
+    CALL ADI_C_SetupRotor(          &
+        iWT_c,                      &
+        TurbineIsHAWT_c,            &
+        TurbOrigin_C,               &
+        HubPos_C,                   &
+        HubOri_C,                   &
+        NacPos_C,                   &
+        NacOri_C,                   &
+        NumBlades_C,                &
+        BldRootPos_C,               &
+        BldRootOri_C,               &
+        n_camera_points_c,          & !  NumMeshPts_C,               &
+        InitMeshPos_C,              &
+        InitMeshOri_C,              &
+        MeshPtToBladeNum_C,         &
+        ErrStat_C2,                 &
+        ErrMsg_C2                   &
+    )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_SetupRotor')
+    IF (ErrStat_C >= AbortErrLev) RETURN
+
+    CALL ADI_C_Init(                 &
         AD_InputFilePassed,          &  ! INTEGER(C_INT),            intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
         AD_InputFileString_C,        &  ! TYPE(C_PTR),               intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines deliniated by C_NULL_CHAR
         AD_InputFileStringLength_C,  &  ! INTEGER(C_INT),            intent(in   )  :: ADinputFileStringLength_C              !< lenght of the input file string
