@@ -397,12 +397,12 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
 !GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_Init
 #endif
    ! Input file info
-   integer(c_int),            intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
-   type(c_ptr),               intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines deliniated by C_NULL_CHAR
-   integer(c_int),            intent(in   )  :: ADinputFileStringLength_C              !< lenght of the input file string
-   integer(c_int),            intent(in   )  :: IfWinputFilePassed                     !< Write VTK outputs [0: none, 1: init only, 2: animation]
-   type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines deliniated by C_NULL_CHAR
-   integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
+   integer(c_int),            intent(in   )  :: ADinputFilePassed                      !< Whether to load the file from the filesystem - 1: ADinputFileString_C contains the contents of the input file; otherwise, ADinputFileString_C contains the path to the input file
+   type(c_ptr),               intent(in   )  :: ADinputFileString_C                    !< Input file as a single string with lines delineated by C_NULL_CHAR
+   integer(c_int),            intent(in   )  :: ADinputFileStringLength_C              !< length of the input file string
+   integer(c_int),            intent(in   )  :: IfWinputFilePassed                     !< Whether to load the file from the filesystem - 1: IfWinputFileString_C contains the contents of the input file; otherwise, IfWinputFileString_C contains the path to the input file
+   type(c_ptr),               intent(in   )  :: IfWinputFileString_C                   !< Input file as a single string with lines delineated by C_NULL_CHAR
+   integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< length of the input file string
    character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
    character(kind=c_char),    intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
    ! Environmental
@@ -439,8 +439,8 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    ! Local variables
    character(IntfStrLen)                                          :: OutRootName       !< Root name to use for echo files and other
    character(IntfStrLen)                                          :: TmpFileName       !< Temporary file name if not passing AD or IfW input file contents directly
-   character(kind=C_char, len=ADinputFileStringLength_C), pointer :: ADinputFileString !< Input file as a single string with NULL chracter separating lines
-   character(kind=C_char, len=IfWinputFileStringLength_C), pointer:: IfWinputFileString !< Input file as a single string with NULL chracter separating lines
+   character(kind=C_char, len=ADinputFileStringLength_C), pointer :: ADinputFileString !< Input file as a single string with NULL character separating lines
+   character(kind=C_char, len=IfWinputFileStringLength_C), pointer:: IfWinputFileString !< Input file as a single string with NULL character separating lines
 
    integer(IntKi)                                                 :: ErrStat_F         !< aggregated error message
    character(ErrMsgLen)                                           :: ErrMsg_F          !< aggregated error message
@@ -1334,7 +1334,6 @@ SUBROUTINE ADI_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_End')
               sWT = ''
             endif
             call WrBinFAST(trim(WrOutputsData%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'ADI_C_Library', WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, (/0.0_DbKi, Sim%dT/), WrOutputsData%storage(:,:,iWT), ErrStat_F2, ErrMsg_F2)
-            ! TODO: the error handling below should be _F2
             call SetErrStat(ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName)
          enddo
       endif
@@ -1348,7 +1347,6 @@ SUBROUTINE ADI_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_End')
    if (allocated(ADI%u)) then
       ! TODO: @andrew-platt does the (:) need to be on u below? This slows down i/o
       call ADI_End( ADI%u(:), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat_F2, ErrMsg_F2 )
-      ! TODO: the error handling below should be _F2
       call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
    endif
 

@@ -43,6 +43,7 @@ class WaveTankLib(OpenFASTInterfaceType):
         self._initialize_routines()
 
         self.ended = False   # For error handling at end
+        self.print_error_level = 2
 
         # Create buffers for class data
         # These will generally be overwritten by the Fortran code
@@ -117,8 +118,10 @@ class WaveTankLib(OpenFASTInterfaceType):
             byref(_error_status),
             _error_message,
         )
+        if self.print_messages(_error_status):
+            print(f"WaveTank_Init:\n{_error_status.value}:\n{_error_message.value.decode('cp437')}")
         if self.fatal_error(_error_status):
-            raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
+            raise RuntimeError(f"Error Status: {_error_status.value}:\n{_error_message.value.decode('cp437')}")
 
         # self.output_channel_names = [n.decode('UTF-8') for n in _channel_names.value.split()] 
         # self.output_channel_units = [n.decode('UTF-8') for n in _channel_units.value.split()] 
@@ -160,6 +163,8 @@ class WaveTankLib(OpenFASTInterfaceType):
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
+    def print_messages(self, error_status):
+        return error_status.value >= self.print_error_level
 
 if __name__=="__main__":
     wavetanklib = WaveTankLib(
