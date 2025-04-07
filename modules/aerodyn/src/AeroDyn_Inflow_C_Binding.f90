@@ -26,6 +26,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    USE AeroDyn_Driver_Subs,   only: Dvr_InitializeOutputs, Dvr_WriteOutputs, SetVTKParameters   !, WrVTK_Surfaces, WrVTK_Lines, WrVTK_Ground
    USE IfW_FlowField, only: IfW_FlowField_GetVelAcc
    USE NWTC_Library
+   USE NWTC_C_Binding, only: ErrMsgLen_C, IntfStrLen, SetErrStat_F2C, FileNameFromCString, RemoveCStringNullChar
    USE VersionInfo
 
    IMPLICIT NONE
@@ -60,14 +61,6 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     true  - loads returned by ADI_C_GetRotorLoads are point loads (N, N-m) at mesh points
    !     false - loads returned by ADI_C_GetRotorLoads are distributed (N/m, N-m/m) loads at mesh points
    logical                                :: PointLoadOutput = .true.
-
-   !------------------------------------------------------------------------------------
-   !  Error handling
-   !     This must exactly match the value in the python-lib. If ErrMsgLen changes at
-   !     some point in the nwtc-library, this should be updated, but the logic exists
-   !     to correctly handle different lengths of the strings
-   integer(IntKi),   parameter            :: ErrMsgLen_C = 1025
-   integer(IntKi),   parameter            :: IntfStrLen  = 1025       ! length of other strings through the C interface
 
    !------------------------------------------------------------------------------------
    !  Potential issues
@@ -225,25 +218,6 @@ MODULE AeroDyn_Inflow_C_BINDING
 
 CONTAINS
 
-!> This routine sets the error status in C_CHAR for export to calling code.
-!! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
-!! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
-!! inadvertant buffer overrun -- that can lead to bad things.
-subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
-   integer,                intent(in   )  :: ErrStat                 !< aggregated error message (fortran type)
-   character(ErrMsgLen),   intent(in   )  :: ErrMsg                  !< aggregated error message (fortran type)
-   integer(c_int),         intent(  out)  :: ErrStat_C
-   character(kind=c_char), intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
-   integer                                :: i
-   ErrStat_C = ErrStat     ! We will send back the same error status that is used in OpenFAST
-   if (ErrMsgLen > ErrMsgLen_C-1) then   ! If ErrMsgLen is > the space in ErrMsg_C, do not copy everything over
-      ErrMsg_C = TRANSFER( trim(ErrMsg(1:ErrMsgLen_C-1))//C_NULL_CHAR, ErrMsg_C )
-   else
-      ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
-   endif
-   if (ErrStat /= ErrID_None) call WrScr(NewLine//'ADI_C_Binding: '//trim(ErrMsg)//NewLine)
-end subroutine SetErr
-
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn PreInit -------------------------------------------------
@@ -265,15 +239,15 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK
 
    ! Local variables
    integer(IntKi)             :: iWT                              !< current turbine
-   integer                    :: ErrStat                          !< aggregated error status
-   character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
-   integer                    :: ErrStat2                         !< temporary error status  from a call
-   character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
+   integer                    :: ErrStat_F                        !< aggregated error status
+   character(ErrMsgLen)       :: ErrMsg_F                         !< aggregated error message
+   integer                    :: ErrStat_F2                       !< temporary error status  from a call
+   character(ErrMsgLen)       :: ErrMsg_F2                        !< temporary error message from a call
    character(*), parameter    :: RoutineName = 'ADI_C_PreInit'    !< for error handling
 
    ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
 
    CALL NWTC_Init( ProgNameIn=version%Name )
    CALL DispCopyrightLicense( version%Name )
@@ -292,8 +266,8 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK
 
    ! check valid debug level
    if (DebugLevel < 0_IntKi) then
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2  = "Interface debug level must be 0 or greater"//NewLine// &
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = "Interface debug level must be 0 or greater"//NewLine// &
          "  0  - none"//NewLine// &
          "  1  - some summary info and variables passed through interface"//NewLine// &
          "  2  - above + all position/orientation info"//NewLine// &
@@ -306,8 +280,8 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK
    Sim%NumTurbines = int(NumTurbines_C,IntKi)
 
    if (Sim%NumTurbines < 1_IntKi .or. Sim%NumTurbines > 9_IntKi) then
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  'AeroDyn_Inflow simulates between 1 and 9 turbines, but '//trim(Num2LStr(Sim%NumTurbines))//' was specified'
+      ErrStat_F2 =  ErrID_Fatal
+      ErrMsg_F2  =  'AeroDyn_Inflow simulates between 1 and 9 turbines, but '//trim(Num2LStr(Sim%NumTurbines))//' was specified'
       if (Failed()) return;
    endif
 
@@ -320,22 +294,22 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK
 
    ! Allocate arrays and meshes for the number of turbines
    if (allocated(InitInp%AD%rotors))   deallocate(InitInp%AD%rotors)
-   allocate(InitInp%AD%rotors(Sim%NumTurbines),stat=errStat2); if (Failed0('rotors')) return
+   allocate(InitInp%AD%rotors(Sim%NumTurbines),stat=ErrStat_F2); if (Failed0('rotors')) return
 
    ! allocate data storage for DiskAvgVel retrieval
    if (allocated(DiskAvgVelVars))   deallocate(DiskAvgVelVars)
-   allocate(DiskAvgVelVars(Sim%NumTurbines), STAT=ErrStat2); if (Failed0('DiskAvgVelVars')) return
+   allocate(DiskAvgVelVars(Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('DiskAvgVelVars')) return
 
    ! Allocate data storage for turbine info
    if (allocated(Sim%WT))  deallocate(Sim%WT)
-   allocate(Sim%WT(Sim%NumTurbines),stat=errStat2); if (Failed0('wind turbines')) return
+   allocate(Sim%WT(Sim%NumTurbines),stat=ErrStat_F2); if (Failed0('wind turbines')) return
    do iWT=1,Sim%NumTurbines
       Sim%WT(iWT)%NumBlades = -999
    enddo
 
    ! Storage for number of meshpoints
    if (allocated(NumMeshPts)) deallocate(NumMeshPts)
-   allocate(NumMeshPts(Sim%NumTurbines),stat=errStat2); if (Failed0('NumMeshPts')) return
+   allocate(NumMeshPts(Sim%NumTurbines),stat=ErrStat_F2); if (Failed0('NumMeshPts')) return
    NumMeshPts = -999
 
    ! Allocate meshes and mesh mappings
@@ -344,42 +318,43 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK
    if (allocated(BldStrLoadMesh_tmp)) deallocate(BldStrLoadMesh_tmp)
    ! if (allocated(NacMotionMesh    )) deallocate(NacMotionMesh    )
    ! if (allocated(NacLoadMesh      )) deallocate(NacLoadMesh      )
-   allocate(BldStrMotionMesh(  Sim%NumTurbines), STAT=ErrStat2); if (Failed0('BldStrMotionMesh'  )) return
-   allocate(BldStrLoadMesh(    Sim%NumTurbines), STAT=ErrStat2); if (Failed0('BldStrLoadMesh'    )) return
-   allocate(BldStrLoadMesh_tmp(Sim%NumTurbines), STAT=ErrStat2); if (Failed0('BldStrLoadMesh_tmp')) return
-   ! allocate(NacMotionMesh(    Sim%NumTurbines), STAT=ErrStat2); if (Failed0('NacMotionMesh'    )) return
-   ! allocate(NacLoadMesh(      Sim%NumTurbines), STAT=ErrStat2); if (Failed0('NacLoadMesh'      )) return
+   allocate(BldStrMotionMesh(  Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('BldStrMotionMesh'  )) return
+   allocate(BldStrLoadMesh(    Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('BldStrLoadMesh'    )) return
+   allocate(BldStrLoadMesh_tmp(Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('BldStrLoadMesh_tmp')) return
+   ! allocate(NacMotionMesh(    Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('NacMotionMesh'    )) return
+   ! allocate(NacLoadMesh(      Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('NacLoadMesh'      )) return
 
    if (allocated(Map_BldStrMotion_2_AD_Blade   )) deallocate(Map_BldStrMotion_2_AD_Blade  )
    if (allocated(Map_AD_BldLoad_P_2_BldStrLoad )) deallocate(Map_AD_BldLoad_P_2_BldStrLoad)
    ! if (allocated(Map_NacPtMotion_2_AD_Nac    )) deallocate(Map_NacPtMotion_2_AD_Nac    )
-   ! allocate(Map_NacPtMotion_2_AD_Nac(Sim%NumTurbines),STAT=ErrStat2); if (Failed0('Map_AD_BldLoad_P_2_BldStrLoad')) returns
+   ! allocate(Map_NacPtMotion_2_AD_Nac(Sim%NumTurbines),STAT=ErrStat_F2); if (Failed0('Map_AD_BldLoad_P_2_BldStrLoad')) returns
 
    ! Allocate the StrucPtsToBladeMapType array used for mapping structural points to blades of the rotor
    if (allocated(StrucPts_2_Bld_Map)) deallocate(StrucPts_2_Bld_Map)
-   allocate(StrucPts_2_Bld_Map(Sim%NumTurbines), STAT=ErrStat2); if (Failed0('StrucPts_2_Bld_Map'  )) return
+   allocate(StrucPts_2_Bld_Map(Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('StrucPts_2_Bld_Map'  )) return
 
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
 contains
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
       if (Failed) then
          call ClearTmpStorage()
-         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
 
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
+   ! TODO: This does not move the error the C variables; this looks incorrect
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Could not allocate "//trim(txt)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat_F /= 0) then
+         ErrStat_F2 = ErrID_Fatal
+         ErrMsg_F2  = "Could not allocate "//trim(txt)
+         call SetErrStat(ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName)
       endif
-      Failed0 = ErrStat >= AbortErrLev
+      Failed0 = ErrStat_F >= AbortErrLev
       if(Failed0) call ClearTmpStorage()
    end function Failed0
 
@@ -467,10 +442,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    character(kind=C_char, len=ADinputFileStringLength_C), pointer :: ADinputFileString !< Input file as a single string with NULL chracter separating lines
    character(kind=C_char, len=IfWinputFileStringLength_C), pointer:: IfWinputFileString !< Input file as a single string with NULL chracter separating lines
 
-   integer(IntKi)                                                 :: ErrStat           !< aggregated error message
-   character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
-   integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
-   character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
+   integer(IntKi)                                                 :: ErrStat_F         !< aggregated error message
+   character(ErrMsgLen)                                           :: ErrMsg_F          !< aggregated error message
+   integer(IntKi)                                                 :: ErrStat_F2        !< temporary error status  from a call
+   character(ErrMsgLen)                                           :: ErrMsg_F2         !< temporary error message from a call
    character(IntfStrLen)                                          :: OutVTKDir         !< Output directory for files (relative to current location)
    integer(IntKi)                                                 :: i,j,k             !< generic index variables
    integer(IntKi)                                                 :: iWT               !< current turbine number (iterate through during setup for ADI_Init call)
@@ -478,10 +453,10 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    character(*), parameter                                        :: RoutineName = 'ADI_C_Init'  !< for error handling
 
    ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
-   ErrStat2 =  ErrID_None
-   ErrMsg2  =  ""
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
+   ErrStat_F2 =  ErrID_None
+   ErrMsg_F2  =  ""
    NumChannels_C = 0_c_int
    OutputChannelNames_C(:) = ''
    OutputChannelUnits_C(:) = ''
@@ -489,13 +464,14 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
 
    ! check if Pre-Init was called
    if (Sim%NumTurbines < 0_IntKi) then
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2  = "Call ADI_C_PreInit and ADI_C_SetupRotor prior to calling ADI_C_Init"
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = "Call ADI_C_PreInit and ADI_C_SetupRotor prior to calling ADI_C_Init"
       if (Failed()) return
    endif
 
    do iWT=1,Sim%NumTurbines
-      if (Sim%WT(iWT)%NumBlades < 0)   call SetErrStat(ErrID_Fatal,"Rotor "//trim(Num2LStr(iWT))//" not initialized. Call ADI_C_SetupRotor prior to calling ADI_C_Init",ErrStat,ErrMsg,RoutineName)
+      ! TODO: error handling below should be _F2
+      if (Sim%WT(iWT)%NumBlades < 0)   call SetErrStat(ErrID_Fatal,"Rotor "//trim(Num2LStr(iWT))//" not initialized. Call ADI_C_SetupRotor prior to calling ADI_C_Init",ErrStat_F,ErrMsg_F,RoutineName)
    enddo
    if (Failed()) return
 
@@ -504,14 +480,14 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    AeroProjMod = InitInp%AD%rotors(1)%AeroProjMod
    do iWT = 2,Sim%NumTurbines
       if(AeroProjMod /= InitInp%AD%rotors(iWT)%AeroProjMod) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Different AeroProjMod values for each turbine (set from TurbineIsHAWT flag).  Check that all turbines are of the same type (HAWT or not)."
+         ErrStat_F2 = ErrID_Fatal
+         ErrMsg_F2  = "Different AeroProjMod values for each turbine (set from TurbineIsHAWT flag).  Check that all turbines are of the same type (HAWT or not)."
          if (Failed()) return
       endif
    enddo
 
    ! Setup temporary storage arrays for simpler transfers
-   call SetTempStorage(ErrStat2,ErrMsg2); if (Failed()) return
+   call SetTempStorage(ErrStat_F2,ErrMsg_F2); if (Failed()) return
 
 
    !--------------------------
@@ -542,7 +518,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    if (ADinputFilePassed==1_c_int) then
       InitInp%AD%UsePrimaryInputFile   = .FALSE.            ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
       InitInp%AD%InputFile             = "passed_ad_file"   ! not actually used
-      call InitFileInfo(ADinputFileString, InitInp%AD%PassedPrimaryInputData, ErrStat2, ErrMsg2); if (Failed())  return
+      call InitFileInfo(ADinputFileString, InitInp%AD%PassedPrimaryInputData, ErrStat_F2, ErrMsg_F2); if (Failed())  return
    else
       InitInp%AD%UsePrimaryInputFile   = .TRUE.             ! Read input info from a primary input file
       i = min(IntfStrLen,ADinputFileStringLength_C)
@@ -559,7 +535,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    if (IfWinputFilePassed==1_c_int) then
       InitInp%IW_InitInp%FilePassingMethod   = 1_IntKi           ! Don't try to read an input -- use passed data instead (blades and AF tables not passed) using FileInfoType
       InitInp%IW_InitInp%InputFile           = "passed_ifw_file" ! not actually used
-      call InitFileInfo(IfWinputFileString, InitInp%IW_InitInp%PassedFileInfo, ErrStat2, ErrMsg2); if (Failed())  return
+      call InitFileInfo(IfWinputFileString, InitInp%IW_InitInp%PassedFileInfo, ErrStat_F2, ErrMsg_F2); if (Failed())  return
    else
       InitInp%IW_InitINp%FilePassingMethod   = 0_IntKi           ! Read input info from a primary input file
       i = min(IntfStrLen,IfWinputFileStringLength_C)
@@ -605,7 +581,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    WrOutputsData%DT_Outs = real(DT_Outs_C, DbKi)
 
    ! Validate and set some inputs (moved to subroutine to make cleaner to read
-   call ValidateSetInputs(ErrStat2,ErrMsg2); if(Failed()) return
+   call ValidateSetInputs(ErrStat_F2,ErrMsg_F2); if(Failed()) return
 
    ! Linearization
    !     for now, set linearization to false. Pass this in later when interface supports it
@@ -649,19 +625,19 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    !        u(1)  inputs at t
    !        u(2)  inputs at t -   dt
    !        u(3)  inputs at t - 2*dt      ! quadratic only
-   allocate(ADI%u(InterpOrder+1), STAT=ErrStat2);  if (Failed0("inputs"    )) return
-   allocate(ADI%x(0:2),           STAT=errStat2);  if (Failed0("x"         )) return
-   allocate(ADI%xd(0:2),          STAT=errStat2);  if (Failed0("xd"        )) return
-   allocate(ADI%z(0:2),           STAT=errStat2);  if (Failed0("z"         )) return
-   allocate(ADI%OtherState(0:2),  STAT=errStat2);  if (Failed0("OtherState")) return
-   call AllocAry( ADI%InputTimes, InterpOrder+1, "InputTimes", ErrStat2, ErrMsg2 );  if (Failed())  return
+   allocate(ADI%u(InterpOrder+1), STAT=ErrStat_F2);  if (Failed0("inputs"    )) return
+   allocate(ADI%x(0:2),           STAT=ErrStat_F2);  if (Failed0("x"         )) return
+   allocate(ADI%xd(0:2),          STAT=ErrStat_F2);  if (Failed0("xd"        )) return
+   allocate(ADI%z(0:2),           STAT=ErrStat_F2);  if (Failed0("z"         )) return
+   allocate(ADI%OtherState(0:2),  STAT=ErrStat_F2);  if (Failed0("OtherState")) return
+   call AllocAry( ADI%InputTimes, InterpOrder+1, "InputTimes", ErrStat_F2, ErrMsg_F2 );  if (Failed())  return
 
    ! Call the main subroutine AeroDyn_Inflow_Init
    !     Sim%dT and InitInp are passed into AD_Init, all the rest are set by AD_Init
    !
    !     NOTE: Pass u(1) only (this is empty and will be set inside Init).  We will copy
    !           this to u(2) and u(3) afterwards
-   call ADI_Init( InitInp, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, Sim%dT, InitOutData, ErrStat2, ErrMsg2 )
+   call ADI_Init( InitInp, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, Sim%dT, InitOutData, ErrStat_F2, ErrMsg_F2 )
       if (Failed())  return
 
 
@@ -682,13 +658,13 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
       if (len_trim(OutVTKDir) <= 0) then
          OutVTKDir = 'vtk-ADI'
       endif
-      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, OutVTKDir)
+      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat_F2, ErrMsg_F2, OutVTKDir)
       if (Failed())  return
    endif
    ! write meshes for this rotor
    if (WrOutputsData%WrVTK > 0_IntKi) then
       do iWT=1,Sim%NumTurbines
-         call WrVTK_refMeshes(ADI%u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
+         call WrVTK_refMeshes(ADI%u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat_F2,ErrMsg_F2)
       enddo
       if (Failed())  return
    endif
@@ -711,7 +687,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    !     Since we may run correction steps, there are some things we don't want to do
    !-------------------------------------------------------------
    do i=2,InterpOrder+1
-      call ADI_CopyInput (ADI%u(1),  ADI%u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+      call ADI_CopyInput (ADI%u(1),  ADI%u(i),  MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2)
          if (Failed())  return
    enddo
    do i = 1, InterpOrder + 1
@@ -724,25 +700,25 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    ! copy of ADI inputs. AD_SetInputMotion will set this mesh.  When CalcOutput is called,
    ! this data is used.  When UpdateStates is called, this data is copied over to the ADI%u
    !-------------------------------------------------------------
-   call ADI_CopyInput (ADI%u(1),  ADI_u,  MESH_NEWCOPY, Errstat2, ErrMsg2)
+   call ADI_CopyInput (ADI%u(1),  ADI_u,  MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2)
       if (Failed())  return
 
 
    !-------------------------------------------------------------
    ! Initial setup of other pieces of x,xd,z,OtherState
    !-------------------------------------------------------------
-   CALL ADI_CopyContState  ( ADI%x(         STATE_CURR), ADI%x(         STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyDiscState  ( ADI%xd(        STATE_CURR), ADI%xd(        STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyConstrState( ADI%z(         STATE_CURR), ADI%z(         STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyOtherState ( ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyContState  ( ADI%x(         STATE_CURR), ADI%x(         STATE_PRED), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
+   CALL ADI_CopyDiscState  ( ADI%xd(        STATE_CURR), ADI%xd(        STATE_PRED), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
+   CALL ADI_CopyConstrState( ADI%z(         STATE_CURR), ADI%z(         STATE_PRED), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
+   CALL ADI_CopyOtherState ( ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_PRED), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
 
    !-------------------------------------------------------------
    ! Setup the previous timestep copies of states
    !-------------------------------------------------------------
-   CALL ADI_CopyContState  ( ADI%x(         STATE_CURR), ADI%x(         STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyDiscState  ( ADI%xd(        STATE_CURR), ADI%xd(        STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyConstrState( ADI%z(         STATE_CURR), ADI%z(         STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyOtherState ( ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyContState  ( ADI%x(         STATE_CURR), ADI%x(         STATE_LAST), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
+   CALL ADI_CopyDiscState  ( ADI%xd(        STATE_CURR), ADI%xd(        STATE_LAST), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
+   CALL ADI_CopyConstrState( ADI%z(         STATE_CURR), ADI%z(         STATE_LAST), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
+   CALL ADI_CopyOtherState ( ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_LAST), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
 
 
    !-------------------------------------------------
@@ -776,36 +752,36 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
 
 
    ! destroy the InitInp and InitOutput
-   call ADI_DestroyInitInput( InitInp,     Errstat2, ErrMsg2);    if (Failed())  return
-   call ADI_DestroyInitOutput(InitOutData, Errstat2, ErrMsg2);    if (Failed())  return
+   call ADI_DestroyInitInput( InitInp,     ErrStat_F2, ErrMsg_F2);    if (Failed())  return
+   call ADI_DestroyInitOutput(InitOutData, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
 
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
 
 CONTAINS
    logical function Failed(Msg)
       character(*), optional :: Msg
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
       if (Failed) then
-         if (present(Msg)) ErrMsg = trim(ErrMsg)//' ('//trim(Msg)//')'
+         if (present(Msg)) ErrMsg_F = trim(ErrMsg_F)//' ('//trim(Msg)//')'
          call ClearTmpStorage()
-         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
 
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat2 /= 0) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Could not allocate "//trim(txt)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat_F2 /= 0) then
+         ErrStat_F2 = ErrID_Fatal
+         ErrMsg_F2  = "Could not allocate "//trim(txt)
+         call SetErrStat(ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName)
       endif
-      Failed0 = ErrStat >= AbortErrLev
+      Failed0 = ErrStat_F >= AbortErrLev
       if(Failed0) then
          call ClearTmpStorage()
-         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
       endif
    end function Failed0
 
@@ -878,25 +854,25 @@ CONTAINS
    !> allocate data storage for file outputs
    subroutine SetupFileOutputs()
       ! time channel (stored but not counted as an output)
-      allocate(WrOutputsData%WriteOutputHdr(1), STAT=ErrStat2); if(Failed0("WriteOutputHdr")) return;
-      allocate(WrOutputsData%WriteOutputUnt(1), STAT=ErrStat2); if(Failed0("WriteOutputUnt")) return;
-      allocate(Sim%wt(1)%WriteOutput(1),        STAT=ErrStat2); if(Failed0("WriteOutput")) return;
+      allocate(WrOutputsData%WriteOutputHdr(1), STAT=ErrStat_F2); if(Failed0("WriteOutputHdr")) return;
+      allocate(WrOutputsData%WriteOutputUnt(1), STAT=ErrStat_F2); if(Failed0("WriteOutputUnt")) return;
+      allocate(Sim%wt(1)%WriteOutput(1),        STAT=ErrStat_F2); if(Failed0("WriteOutput")) return;
       WrOutputsData%WriteOutputHdr(1) = 'Time'
       WrOutputsData%WriteOutputUnt(1) = '(s)'
       WrOutputsData%nDvrOutputs = 0
 
       ! assemble all headers
-      call concatOutputHeaders(WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, InitOutData%WriteOutputHdr, InitOutData%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+      call concatOutputHeaders(WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, InitOutData%WriteOutputHdr, InitOutData%WriteOutputUnt, ErrStat_F2, ErrMsg_F2); if(Failed()) return
 
       ! allocate output file handling and set formats
       WrOutputsData%outFmt = "ES15.8E2"
       WrOutputsData%delim  = TAB
       WrOutputsData%AD_ver = InitOutData%Ver
-      allocate(WrOutputsData%unOutFile(Sim%numTurbines), STAT=ErrStat2); if(Failed0("unOutFile")) return;
+      allocate(WrOutputsData%unOutFile(Sim%numTurbines), STAT=ErrStat_F2); if(Failed0("unOutFile")) return;
       WrOutputsData%unOutFile = -1
 !FIXME: number of timesteps is incorrect!
-      call Dvr_InitializeOutputs(Sim%numTurbines, WrOutputsData, Sim%numSteps-1, ErrStat2, ErrMsg2); if(Failed()) return
-      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, errStat2, errMsg2); if(Failed()) return
+      call Dvr_InitializeOutputs(Sim%numTurbines, WrOutputsData, Sim%numSteps-1, ErrStat_F2, ErrMsg_F2); if(Failed()) return
+      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, ErrStat_F2, ErrMsg_F2); if(Failed()) return
    end subroutine SetupFileOutputs
 
 
@@ -962,8 +938,8 @@ CONTAINS
 
       ! NOTE: storing mappings in 2D this way may increase memory usage slightly if one turbine has many more blades than another.  However
       ! the speed an memory penalties are negligible, so I don't see much reason to change that at this point.
-      allocate(Map_BldStrMotion_2_AD_Blade(  maxBlades, Sim%NumTurbines), STAT=ErrStat2); if (Failed0('Map_BldStrMotion_2_AD_Blade'  )) return
-      allocate(Map_AD_BldLoad_P_2_BldStrLoad(maxBlades, Sim%NumTurbines), STAT=ErrStat2); if (Failed0('Map_AD_BldLoad_P_2_BldStrLoad')) return
+      allocate(Map_BldStrMotion_2_AD_Blade(  maxBlades, Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('Map_BldStrMotion_2_AD_Blade'  )) return
+      allocate(Map_AD_BldLoad_P_2_BldStrLoad(maxBlades, Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('Map_AD_BldLoad_P_2_BldStrLoad')) return
 
       ! Step through all turbine rotors
       do iWT=1,Sim%NumTurbines
@@ -977,8 +953,8 @@ CONTAINS
                            DestMesh = BldStrLoadMesh(iWT)%Mesh(iBlade)    ,&
                            CtrlCode = MESH_SIBLING                        ,&
                            IOS      = COMPONENT_OUTPUT                    ,&
-                           ErrStat  = ErrStat2                            ,&
-                           ErrMess  = ErrMsg2                             ,&
+                           ErrStat  = ErrStat_F2                            ,&
+                           ErrMess  = ErrMsg_F2                             ,&
                            Force    = .TRUE.                              ,&
                            Moment   = .TRUE.                              )
                if(Failed()) return
@@ -989,8 +965,8 @@ CONTAINS
                            DestMesh = BldStrLoadMesh_tmp(iWT)%Mesh(iBlade)  ,&
                            CtrlCode = MESH_COUSIN                           ,&
                            IOS      = COMPONENT_OUTPUT                      ,&
-                           ErrStat  = ErrStat2                              ,&
-                           ErrMess  = ErrMsg2                               ,&
+                           ErrStat  = ErrStat_F2                              ,&
+                           ErrMess  = ErrMsg_F2                               ,&
                            Force    = .TRUE.                                ,&
                            Moment   = .TRUE.                                )
                if(Failed()) return
@@ -1018,8 +994,8 @@ CONTAINS
             !-------------------------------------------------------------
             ! Set the mapping meshes
             ! blades
-            call MeshMapCreate( BldStrMotionMesh(iWT)%Mesh(iBlade),     ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(iBlade, iWT),   ErrStat2, ErrMsg2 ); if(Failed('Struct to blade '//trim(Num2LStr(iBlade)))) return
-            call MeshMapCreate( ADI%y%AD%rotors(iWT)%BladeLoad(iBlade), BldStrLoadMesh(iWT)%Mesh(iBlade),            Map_AD_BldLoad_P_2_BldStrLoad(iBlade, iWT), ErrStat2, ErrMsg2 ); if(Failed('Blade '//trim(Num2LStr(iBlade))//' to struct')) return
+            call MeshMapCreate( BldStrMotionMesh(iWT)%Mesh(iBlade),     ADI%u(1)%AD%rotors(iWT)%BladeMotion(iBlade), Map_BldStrMotion_2_AD_Blade(iBlade, iWT),   ErrStat_F2, ErrMsg_F2 ); if(Failed('Struct to blade '//trim(Num2LStr(iBlade)))) return
+            call MeshMapCreate( ADI%y%AD%rotors(iWT)%BladeLoad(iBlade), BldStrLoadMesh(iWT)%Mesh(iBlade),            Map_AD_BldLoad_P_2_BldStrLoad(iBlade, iWT), ErrStat_F2, ErrMsg_F2 ); if(Failed('Blade '//trim(Num2LStr(iBlade))//' to struct')) return
          enddo ! iBlade
       enddo ! iWT
    end subroutine MapLoadsInterfaceMeshes
@@ -1077,8 +1053,8 @@ END SUBROUTINE ADI_C_Init
 !
 !   integer(IntKi)                            :: ErrStat           !< aggregated error message
 !   character(ErrMsgLen)                      :: ErrMsg            !< aggregated error message
-!   integer(IntKi)                            :: ErrStat2          !< temporary error status  from a call
-!   character(ErrMsgLen)                      :: ErrMsg2           !< temporary error message from a call
+!   integer(IntKi)                            :: ErrStat_F2          !< temporary error status  from a call
+!   character(ErrMsgLen)                      :: ErrMsg_F2           !< temporary error message from a call
 !   character(*), parameter                   :: RoutineName = 'ADI_C_ReInit'  !< for error handling
 !
 !   ! Initialize error handling
@@ -1089,14 +1065,14 @@ END SUBROUTINE ADI_C_Init
 !ErrMsg   =  "AeroDyn_Inflo_C_ReInit is not currently functional. Aborting."
 !call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 !
-!   call ADI_ReInit(ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%m, Sim%dT, errStat2, errMsg2)
+!   call ADI_ReInit(ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%m, Sim%dT, ErrStat_F2, ErrMsg_F2)
 !      if (Failed())  return
 !
 !   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 !
 !CONTAINS
 !   logical function Failed()
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat, ErrMsg, RoutineName )
 !      Failed = ErrStat >= AbortErrLev
 !      if (Failed) then
 !         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -1124,23 +1100,23 @@ SUBROUTINE ADI_C_CalcOutput(Time_C, &
 
    ! Local variables
    real(DbKi)                                :: Time
-   integer(IntKi)                            :: ErrStat                       !< aggregated error status
-   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
-   integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
-   character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
+   integer(IntKi)                            :: ErrStat_F                       !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg_F                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat_F2                      !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg_F2                       !< temporary error message from a call
    character(*), parameter                   :: RoutineName = 'ADI_C_CalcOutput' !< for error handling
 
    ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
 
    ! Convert the inputs from C to Fortrn
    Time = REAL(Time_C,DbKi)
 
    ! Call the main subroutine ADI_CalcOutput to get the resulting forces and moments at time T
-   call ADI_CopyInput (ADI_u, ADI%u(1), MESH_UPDATECOPY, Errstat2, ErrMsg2)   ! copy new inputs over
+   call ADI_CopyInput (ADI_u, ADI%u(1), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2)   ! copy new inputs over
       if (Failed())  return
-   CALL ADI_CalcOutput( Time, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat2, ErrMsg2 )
+   CALL ADI_CalcOutput( Time, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat_F2, ErrMsg_F2 )
       if (Failed())  return
 
    ! Get the output channel info out of y
@@ -1157,26 +1133,26 @@ SUBROUTINE ADI_C_CalcOutput(Time_C, &
          if (.not. EqualRealNos( real(Time,DbKi), InputTimePrev_Calc ) ) then
             n_VTK = n_VTK + 1_IntKi ! Increment for this write
          endif
-         call WrVTK_Meshes(ADI%u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
+         call WrVTK_Meshes(ADI%u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat_F2,ErrMsg_F2)
       endif
    endif
 
    if (WrOutputsData%fileFmt > idFmtNone) then
 !FIXME: need some way to overwrite the correction timesteps (for text file)!
-      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, errStat2, errMsg2); if(Failed()) return
+      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, ErrStat_F2, ErrMsg_F2); if(Failed()) return
    endif
 
    ! Set error status
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
    ! Store info what time we just ran calcs for
    InputTimePrev_Calc = Time
 
 CONTAINS
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-      if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
+      if (Failed)    call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
    end function Failed
 END SUBROUTINE ADI_C_CalcOutput
 
@@ -1203,15 +1179,15 @@ SUBROUTINE ADI_C_UpdateStates( Time_C, TimeNext_C, &
 
    ! Local variables
    logical                                   :: CorrectionStep                ! if we are repeating a timestep in UpdateStates, don't update the inputs array
-   integer(IntKi)                            :: ErrStat                       !< aggregated error status
-   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
-   integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
-   character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
+   integer(IntKi)                            :: ErrStat_F                       !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg_F                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat_F2                      !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg_F2                       !< temporary error message from a call
    character(*), parameter                   :: RoutineName = 'ADI_C_UpdateStates' !< for error handling
 
    ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
    CorrectionStep = .false.
 
 
@@ -1253,36 +1229,36 @@ SUBROUTINE ADI_C_UpdateStates( Time_C, TimeNext_C, &
       ! Step back to previous state because we are doing a correction step
       !     -- repeating the T -> T+dt update with new inputs at T+dt
       !     -- the STATE_CURR contains states at T+dt from the previous call, so revert those
-      CALL ADI_CopyContState   (ADI%x(         STATE_LAST), ADI%x(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-      CALL ADI_CopyDiscState   (ADI%xd(        STATE_LAST), ADI%xd(        STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-      CALL ADI_CopyConstrState (ADI%z(         STATE_LAST), ADI%z(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-      CALL ADI_CopyOtherState  (ADI%OtherState(STATE_LAST), ADI%OtherState(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+      CALL ADI_CopyContState   (ADI%x(         STATE_LAST), ADI%x(         STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+      CALL ADI_CopyDiscState   (ADI%xd(        STATE_LAST), ADI%xd(        STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+      CALL ADI_CopyConstrState (ADI%z(         STATE_LAST), ADI%z(         STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+      CALL ADI_CopyOtherState  (ADI%OtherState(STATE_LAST), ADI%OtherState(STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
    else
       ! Cycle inputs back one timestep since we are moving forward in time.
       if (InterpOrder>1) then ! quadratic, so keep the old time
-         call ADI_CopyInput( ADI%u(INPUT_CURR), ADI%u(INPUT_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);        if (Failed())  return
+         call ADI_CopyInput( ADI%u(INPUT_CURR), ADI%u(INPUT_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);        if (Failed())  return
       endif
       ! Move inputs from previous t+dt (now t) to t
-      call ADI_CopyInput( ADI%u(INPUT_PRED), ADI%u(INPUT_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);           if (Failed())  return
+      call ADI_CopyInput( ADI%u(INPUT_PRED), ADI%u(INPUT_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);           if (Failed())  return
    endif
 
 
    ! Set copy the current state over to the predicted state for sending to UpdateStates
    !     -- The STATE_PREDicted will get updated in the call.
    !     -- The UpdateStates routine expects this to contain states at T at the start of the call (history not passed in)
-   CALL ADI_CopyContState   (ADI%x(         STATE_CURR), ADI%x(         STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyDiscState   (ADI%xd(        STATE_CURR), ADI%xd(        STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyConstrState (ADI%z(         STATE_CURR), ADI%z(         STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyOtherState  (ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyContState   (ADI%x(         STATE_CURR), ADI%x(         STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   CALL ADI_CopyDiscState   (ADI%xd(        STATE_CURR), ADI%xd(        STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   CALL ADI_CopyConstrState (ADI%z(         STATE_CURR), ADI%z(         STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   CALL ADI_CopyOtherState  (ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
 
 
    ! Copy newinputs for time u(INPUT_PRED)
-   call ADI_CopyInput (ADI_u, ADI%u(INPUT_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   call ADI_CopyInput (ADI_u, ADI%u(INPUT_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2)
       if (Failed())  return
 
 
    ! Call the main subroutine ADI_UpdateStates to get the velocities
-   CALL ADI_UpdateStates( ADI%InputTimes(INPUT_CURR), n_Global, ADI%u, ADI%InputTimes, ADI%p, ADI%x(STATE_PRED), ADI%xd(STATE_PRED), ADI%z(STATE_PRED), ADI%OtherState(STATE_PRED), ADI%m, ErrStat2, ErrMsg2 )
+   CALL ADI_UpdateStates( ADI%InputTimes(INPUT_CURR), n_Global, ADI%u, ADI%InputTimes, ADI%p, ADI%x(STATE_PRED), ADI%xd(STATE_PRED), ADI%z(STATE_PRED), ADI%OtherState(STATE_PRED), ADI%m, ErrStat_F2, ErrMsg_F2 )
       if (Failed())  return
 
 
@@ -1292,25 +1268,25 @@ SUBROUTINE ADI_C_UpdateStates( Time_C, TimeNext_C, &
    ! move current state at T to previous state at T-dt
    !     -- STATE_LAST now contains info at time T
    !     -- this allows repeating the T --> T+dt update
-   CALL ADI_CopyContState   (ADI%x(         STATE_CURR), ADI%x(         STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyDiscState   (ADI%xd(        STATE_CURR), ADI%xd(        STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyConstrState (ADI%z(         STATE_CURR), ADI%z(         STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyOtherState  (ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyContState   (ADI%x(         STATE_CURR), ADI%x(         STATE_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   CALL ADI_CopyDiscState   (ADI%xd(        STATE_CURR), ADI%xd(        STATE_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   CALL ADI_CopyConstrState (ADI%z(         STATE_CURR), ADI%z(         STATE_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   CALL ADI_CopyOtherState  (ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
    ! Update the predicted state as the new current state
    !     -- we have now advanced from T to T+dt.  This allows calling with CalcOuput to get the outputs at T+dt
-   CALL ADI_CopyContState   (ADI%x(         STATE_PRED), ADI%x(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyDiscState   (ADI%xd(        STATE_PRED), ADI%xd(        STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyConstrState (ADI%z(         STATE_PRED), ADI%z(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyOtherState  (ADI%OtherState(STATE_PRED), ADI%OtherState(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyContState   (ADI%x(         STATE_PRED), ADI%x(         STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   CALL ADI_CopyDiscState   (ADI%xd(        STATE_PRED), ADI%xd(        STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   CALL ADI_CopyConstrState (ADI%z(         STATE_PRED), ADI%z(         STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
+   CALL ADI_CopyOtherState  (ADI%OtherState(STATE_PRED), ADI%OtherState(STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  if (Failed())  return
 
 
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
 contains
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-      if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
+      if (Failed)    call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
    end function Failed
 END SUBROUTINE ADI_C_UpdateStates
 
@@ -1332,15 +1308,15 @@ SUBROUTINE ADI_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_End')
    integer(IntKi)             :: i                                !< generic loop counter
    character(10)              :: sWT                              !< string for turbine
    integer(IntKi)             :: iWT                              !< current wind turbine
-   integer                    :: ErrStat                          !< aggregated error status
-   character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
-   integer                    :: ErrStat2                         !< temporary error status  from a call
-   character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
+   integer                    :: ErrStat_F                          !< aggregated error status
+   character(ErrMsgLen)       :: ErrMsg_F                           !< aggregated error message
+   integer                    :: ErrStat_F2                         !< temporary error status  from a call
+   character(ErrMsgLen)       :: ErrMsg_F2                          !< temporary error message from a call
    character(*), parameter    :: RoutineName = 'ADI_C_End'   !< for error handling
 
    ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
 
    ! Finalize output file
    if (WrOutputsData%fileFmt > idFmtNone .and. allocated(WrOutputsData%unOutFile)) then
@@ -1357,8 +1333,9 @@ SUBROUTINE ADI_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_End')
             else
               sWT = ''
             endif
-            call WrBinFAST(trim(WrOutputsData%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'ADI_C_Library', WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, (/0.0_DbKi, Sim%dT/), WrOutputsData%storage(:,:,iWT), errStat2, errMsg2)
-            call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+            call WrBinFAST(trim(WrOutputsData%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'ADI_C_Library', WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, (/0.0_DbKi, Sim%dT/), WrOutputsData%storage(:,:,iWT), ErrStat_F2, ErrMsg_F2)
+            ! TODO: the error handling below should be _F2
+            call SetErrStat(ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName)
          enddo
       endif
    end if
@@ -1369,8 +1346,10 @@ SUBROUTINE ADI_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_End')
    !     or AD_C_End got called before Init.  We don't want a segfault, so check
    !     for allocation.
    if (allocated(ADI%u)) then
-      call ADI_End( ADI%u(:), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ! TODO: @andrew-platt does the (:) need to be on u below? This slows down i/o
+      call ADI_End( ADI%u(:), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat_F2, ErrMsg_F2 )
+      ! TODO: the error handling below should be _F2
+      call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
    endif
 
    !  NOTE: ADI_End only takes 1 instance of u, not the array.  So extra
@@ -1379,25 +1358,25 @@ SUBROUTINE ADI_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_End')
    !        or some other code using the c-bindings.
    if (allocated(ADI%u)) then
       do i=2,size(ADI%u)
-         call ADI_DestroyInput( ADI%u(i), ErrStat2, ErrMsg2 )
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         call ADI_DestroyInput( ADI%u(i), ErrStat_F2, ErrMsg_F2 )
+         call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
       enddo
       if (allocated(ADI%u))             deallocate(ADI%u)
    endif
 
    ! Destroy any other copies of states (rerun on (STATE_CURR) is ok)
-   call ADI_DestroyContState(   ADI%x(         STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyContState(   ADI%x(         STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyContState(   ADI%x(         STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyDiscState(   ADI%xd(        STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyDiscState(   ADI%xd(        STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyDiscState(   ADI%xd(        STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyConstrState( ADI%z(         STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyConstrState( ADI%z(         STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyConstrState( ADI%z(         STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyOtherState(  ADI%OtherState(STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyOtherState(  ADI%OtherState(STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyOtherState(  ADI%OtherState(STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyContState(   ADI%x(         STATE_LAST), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyContState(   ADI%x(         STATE_CURR), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyContState(   ADI%x(         STATE_PRED), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyDiscState(   ADI%xd(        STATE_LAST), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyDiscState(   ADI%xd(        STATE_CURR), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyDiscState(   ADI%xd(        STATE_PRED), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyConstrState( ADI%z(         STATE_LAST), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyConstrState( ADI%z(         STATE_CURR), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyConstrState( ADI%z(         STATE_PRED), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyOtherState(  ADI%OtherState(STATE_LAST), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyOtherState(  ADI%OtherState(STATE_CURR), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call ADI_DestroyOtherState(  ADI%OtherState(STATE_PRED), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
 
    ! if deallocate other items now
    !if (allocated(InputTimes))    deallocate(InputTimes)
@@ -1405,7 +1384,7 @@ SUBROUTINE ADI_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_End')
    ! Clear out mesh related data storage
    call ClearTmpStorage()
 
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 END SUBROUTINE ADI_C_End
 
 
@@ -1447,16 +1426,16 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
    integer(IntKi)                                                 :: iWT               !< current turbine
    integer(IntKi)                                                 :: iBlade            !< current blade
    logical                                                        :: TurbineIsHAWT     !< true for HAWT, false for VAWT
-   integer(IntKi)                                                 :: ErrStat           !< aggregated error messagNumBlades_ee
-   character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
-   integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
-   character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
+   integer(IntKi)                                                 :: ErrStat_F           !< aggregated error messagNumBlades_ee
+   character(ErrMsgLen)                                           :: ErrMsg_F            !< aggregated error message
+   integer(IntKi)                                                 :: ErrStat_F2          !< temporary error status  from a call
+   character(ErrMsgLen)                                           :: ErrMsg_F2           !< temporary error message from a call
    integer(IntKi)                                                 :: i,j,k             !< generic index variables
    character(*), parameter                                        :: RoutineName = 'ADI_C_SetupRotor'  !< for error handling
 
    ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
 
 
    ! For debugging the interface:
@@ -1484,8 +1463,8 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
    endif
 
 
-   call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition,       3, Sim%WT(iWT)%NumBlades, 'BldRootPos', errStat2, errMsg2 ); if (Failed()) return
-   call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, Sim%WT(iWT)%NumBlades, 'BldRootOri', errStat2, errMsg2 ); if (Failed()) return
+   call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition,       3, Sim%WT(iWT)%NumBlades, 'BldRootPos', ErrStat_F2, ErrMsg_F2 ); if (Failed()) return
+   call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, Sim%WT(iWT)%NumBlades, 'BldRootOri', ErrStat_F2, ErrMsg_F2 ); if (Failed()) return
    InitInp%AD%rotors(iWT)%originInit           = Sim%WT(iWT)%OriginInit(1:3)
    InitInp%AD%rotors(iWT)%HubPosition          = real(HubPos_C(1:3),ReKi) + Sim%WT(iWT)%OriginInit(1:3)
    InitInp%AD%rotors(iWT)%HubOrientation       = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
@@ -1516,8 +1495,8 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
    !     side.  Will validate this against what AD reads from the initialization info.
    NumMeshPts(iWT) = int(NumMeshPts_C, IntKi)
    if (NumMeshPts(iWT) < 1) then
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "At least one node point must be specified"
+      ErrStat_F2 =  ErrID_Fatal
+      ErrMsg_F2  =  "At least one node point must be specified"
       if (Failed())  return
    endif
 
@@ -1527,27 +1506,28 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
    call SetupMotionMesh()
 
    ! Set error status
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
 contains
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
       if (Failed) then
          call ClearTmpStorage()
-         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
 
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
+   ! TODO: This does not move the error the C variables; this looks incorrect
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Could not allocate "//trim(txt)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat_F /= 0) then
+         ErrStat_F2 = ErrID_Fatal
+         ErrMsg_F2  = "Could not allocate "//trim(txt)
+         call SetErrStat(ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName)
       endif
-      Failed0 = ErrStat >= AbortErrLev
+      Failed0 = ErrStat_F >= AbortErrLev
       if(Failed0) call ClearTmpStorage()
    end function Failed0
 
@@ -1613,8 +1593,8 @@ contains
       integer(IntKi), intent(in) :: iWT
       do i=1,size(MeshPtToBladeNum_C)
          if ((MeshPtToBladeNum_C(i) < 1_c_int) .or. (MeshPtToBladeNum_C(i) > int(Sim%WT(iWT)%NumBlades))) then
-            ErrStat2=ErrID_Fatal
-            ErrMsg2 = 'Mesh Point '//trim(Num2LStr(i))//' assigned to invalid blade '//trim(Num2LStr(MeshPtToBladeNum_C(i)))//' on rotor '//trim(Num2LStr(iWT))
+            ErrStat_F2=ErrID_Fatal
+            ErrMsg_F2 = 'Mesh Point '//trim(Num2LStr(i))//' assigned to invalid blade '//trim(Num2LStr(MeshPtToBladeNum_C(i)))//' on rotor '//trim(Num2LStr(iWT))
             if (Failed()) return
          endif
       enddo
@@ -1630,10 +1610,10 @@ contains
       !-------------------------------------------------------------
       StrucPts_2_Bld_Map(iWT)%NumBlades  = Sim%WT(iWT)%NumBlades
 
-      call AllocAry(StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade, Sim%WT(iWT)%NumBlades, "NumMeshPtsPerBlade", ErrStat2, ErrMsg2 );    if (Failed())  return
-      call AllocAry( StrucPts_2_Bld_Map(iWT)%MeshPt_2_BladeNum,       NumMeshPts(iWT),  "MeshPt_2_BladeNum", ErrStat2, ErrMsg2 );    if (Failed())  return
+      call AllocAry(StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade, Sim%WT(iWT)%NumBlades, "NumMeshPtsPerBlade", ErrStat_F2, ErrMsg_F2 );    if (Failed())  return
+      call AllocAry( StrucPts_2_Bld_Map(iWT)%MeshPt_2_BladeNum,       NumMeshPts(iWT),  "MeshPt_2_BladeNum", ErrStat_F2, ErrMsg_F2 );    if (Failed())  return
 
-      allocate(StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt( Sim%WT(iWT)%NumBlades ), STAT=ErrStat2); if (Failed0('StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt'  )) return
+      allocate(StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt( Sim%WT(iWT)%NumBlades ), STAT=ErrStat_F2); if (Failed0('StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt'  )) return
 
       ! Calculate the number of mesh points per blade
       do i=1,Sim%WT(iWT)%NumBlades
@@ -1650,7 +1630,7 @@ contains
 
       ! Allocate remaining components of StrucPts_2_Bld_Map based on the number of mesh points per blade
       do i=1,Sim%WT(iWT)%NumBlades
-         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt(i)%BladeNodeToMeshPoint, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeNodeToMeshPoint", ErrStat2, ErrMsg2);    if (Failed())  return
+         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeNode_2_MeshPt(i)%BladeNodeToMeshPoint, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeNodeToMeshPoint", ErrStat_F2, ErrMsg_F2);    if (Failed())  return
       enddo
 
       do i=1,Sim%WT(iWT)%NumBlades
@@ -1664,13 +1644,13 @@ contains
       enddo
 
       ! Allocate and define the components of BladeStrMeshCoords
-      allocate(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(Sim%WT(iWT)%NumBlades), STAT=ErrStat2); if (Failed0('StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords')) return
+      allocate(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(Sim%WT(iWT)%NumBlades), STAT=ErrStat_F2); if (Failed0('StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords')) return
       do i=1,Sim%WT(iWT)%NumBlades
-         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Position,    3, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Position", ErrStat2, ErrMsg2 );    if (Failed())  return
-         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Orient,   3, 3, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Orient",   ErrStat2, ErrMsg2 );    if (Failed())  return
-         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Velocity,    6, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Velocity", ErrStat2, ErrMsg2 );    if (Failed())  return
-         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Accln,       6, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Accln",    ErrStat2, ErrMsg2 );    if (Failed())  return
-         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Force,       6, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Force",    ErrStat2, ErrMsg2 );    if (Failed())  return
+         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Position,    3, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Position", ErrStat_F2, ErrMsg_F2 );    if (Failed())  return
+         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Orient,   3, 3, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Orient",   ErrStat_F2, ErrMsg_F2 );    if (Failed())  return
+         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Velocity,    6, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Velocity", ErrStat_F2, ErrMsg_F2 );    if (Failed())  return
+         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Accln,       6, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Accln",    ErrStat_F2, ErrMsg_F2 );    if (Failed())  return
+         call AllocAry(StrucPts_2_Bld_Map(iWT)%BladeStrMeshCoords(i)%Force,       6, StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(i), "BladeStrMeshCoords(i)%Force",    ErrStat_F2, ErrMsg_F2 );    if (Failed())  return
       enddo
 
       do i=1,Sim%WT(iWT)%NumBlades
@@ -1681,9 +1661,9 @@ contains
       enddo
 
       ! Allocate the meshes
-      allocate(BldStrMotionMesh(iWT)%Mesh(   Sim%WT(iWT)%NumBlades ), STAT=ErrStat2); if (Failed0('BldStrMotionMesh( iWT )%Mesh'    )) return
-      allocate(BldStrLoadMesh(iWT)%Mesh(     Sim%WT(iWT)%NumBlades ), STAT=ErrStat2); if (Failed0('BldStrLoadMesh( iWT )%Mesh'      )) return
-      allocate(BldStrLoadMesh_tmp(iWT)%Mesh( Sim%WT(iWT)%NumBlades ), STAT=ErrStat2); if (Failed0('BldStrLoadMesh_tmp( iWT )%Mesh'  )) return
+      allocate(BldStrMotionMesh(iWT)%Mesh(   Sim%WT(iWT)%NumBlades ), STAT=ErrStat_F2); if (Failed0('BldStrMotionMesh( iWT )%Mesh'    )) return
+      allocate(BldStrLoadMesh(iWT)%Mesh(     Sim%WT(iWT)%NumBlades ), STAT=ErrStat_F2); if (Failed0('BldStrLoadMesh( iWT )%Mesh'      )) return
+      allocate(BldStrLoadMesh_tmp(iWT)%Mesh( Sim%WT(iWT)%NumBlades ), STAT=ErrStat_F2); if (Failed0('BldStrLoadMesh_tmp( iWT )%Mesh'  )) return
 
       !-------------------------------------------------------------
       ! Set the interface  meshes for motion inputs and loads output
@@ -1693,8 +1673,8 @@ contains
          call MeshCreate(  BldStrMotionMesh(iWT)%Mesh(iBlade)                                      ,  &
                            IOS              = COMPONENT_INPUT                                     ,  &
                            Nnodes           = StrucPts_2_Bld_Map(iWT)%NumMeshPtsPerBlade(iBlade)  ,  &
-                           ErrStat          = ErrStat2                                            ,  &
-                           ErrMess          = ErrMsg2                                             ,  &
+                           ErrStat          = ErrStat_F2                                            ,  &
+                           ErrMess          = ErrMsg_F2                                             ,  &
                            TranslationDisp  = .TRUE.,    Orientation = .TRUE.                     , &
                            TranslationVel   = .TRUE.,    RotationVel = .TRUE.                     , &
                            TranslationAcc   = .TRUE.,    RotationAcc = .FALSE.                    )
@@ -1714,22 +1694,22 @@ contains
             call MeshPositionNode(  BldStrMotionMesh(iWT)%Mesh(iBlade)  , &
                                     j                                  , &
                                     InitPos                            , &  ! position
-                                    ErrStat2, ErrMsg2                  , &
+                                    ErrStat_F2, ErrMsg_F2                  , &
                                     Orient                             )    ! orientation
                if(Failed()) return
 
             ! Create point or line element based on flag
             if (PointLoadOutput) then
-               call MeshConstructElement ( BldStrMotionMesh(iWT)%Mesh(iBlade), ELEMENT_POINT, ErrStat2, ErrMsg2, j ); if(Failed()) return
+               call MeshConstructElement ( BldStrMotionMesh(iWT)%Mesh(iBlade), ELEMENT_POINT, ErrStat_F2, ErrMsg_F2, j ); if(Failed()) return
             else if (j > 1) then
                ! This assumes that the first point is the root
-               call MeshConstructElement ( BldStrMotionMesh(iWT)%Mesh(iBlade), ELEMENT_LINE2, ErrStat2, ErrMsg2, j-1, j ); if(Failed()) return
+               call MeshConstructElement ( BldStrMotionMesh(iWT)%Mesh(iBlade), ELEMENT_LINE2, ErrStat_F2, ErrMsg_F2, j-1, j ); if(Failed()) return
             end if
          enddo
       enddo
 
       do iBlade=1,Sim%WT(iWT)%NumBlades
-         call MeshCommit ( BldStrMotionMesh(iWT)%Mesh(iBlade), ErrStat2, ErrMsg2 ); if(Failed()) return
+         call MeshCommit ( BldStrMotionMesh(iWT)%Mesh(iBlade), ErrStat_F2, ErrMsg_F2 ); if(Failed()) return
          BldStrMotionMesh(iWT)%Mesh(iBlade)%RemapFlag  = .FALSE.
 
          ! For checking the mesh
@@ -1742,8 +1722,8 @@ contains
 !     call MeshCreate(  NacMotionMesh(iWT)                  ,  &
 !                       IOS              = COMPONENT_INPUT  ,  &
 !                       Nnodes           = 1                ,  &
-!                       ErrStat          = ErrStat2         ,  &
-!                       ErrMess          = ErrMsg2          ,  &
+!                       ErrStat          = ErrStat_F2         ,  &
+!                       ErrMess          = ErrMsg_F2          ,  &
 !                       TranslationDisp  = .TRUE.,    Orientation = .TRUE., &
 !                       TranslationVel   = .TRUE.,    RotationVel = .TRUE., &
 !                       TranslationAcc   = .TRUE.,    RotationAcc = .FALSE. )
@@ -1755,13 +1735,13 @@ contains
 !     call MeshPositionNode(  NacMotionMesh(iWT)      , &
 !                             1                       , &
 !                             InitPos                 , &  ! position
-!                             ErrStat2, ErrMsg2       , &
+!                             ErrStat_F2, ErrMsg_F2       , &
 !                             Orient                    )  ! orientation
 !        if(Failed()) return
 !
-!     call MeshConstructElement ( NacMotionMesh(iWT), ELEMENT_POINT, ErrStat2, ErrMsg2, p1=1 ); if(Failed()) return
+!     call MeshConstructElement ( NacMotionMesh(iWT), ELEMENT_POINT, ErrStat_F2, ErrMsg_F2, p1=1 ); if(Failed()) return
 !
-!     call MeshCommit ( NacMotionMesh(iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
+!     call MeshCommit ( NacMotionMesh(iWT), ErrStat_F2, ErrMsg_F2 ); if(Failed()) return
 !     NacMotionMesh(iWT)%RemapFlag    = .FALSE.
 !
 !     ! For checking the mesh, uncomment this.
@@ -1813,15 +1793,15 @@ subroutine ADI_C_SetRotorMotion( iWT_c,                             &
    real(DbKi)                                :: Time
    integer(IntKi)                            :: iWT                           !< current wind turbine / rotor
    integer(IntKi)                            :: i,j                           !< generic index variables
-   integer(IntKi)                            :: ErrStat                       !< aggregated error status
-   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
-   integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
-   character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
+   integer(IntKi)                            :: ErrStat_F                       !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg_F                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat_F2                      !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg_F2                       !< temporary error message from a call
    character(*), parameter                   :: RoutineName = 'ADI_C_SetRotorMotion' !< for error handling
 
    ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
 
    ! For debugging the interface:
    if (DebugLevel > 0) then
@@ -1833,8 +1813,8 @@ subroutine ADI_C_SetRotorMotion( iWT_c,                             &
 
    ! Sanity check -- number of node points cannot change
    if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
+      ErrStat_F2 =  ErrID_Fatal
+      ErrMsg_F2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
       if (Failed())  return
    endif
 
@@ -1850,23 +1830,23 @@ subroutine ADI_C_SetRotorMotion( iWT_c,                             &
 
    ! Transfer motions to input meshes
    do iWT=1,Sim%NumTurbines
-      call Set_MotionMesh(iWT, ErrStat2, ErrMsg2);    if (Failed())  return
+      call Set_MotionMesh(iWT, ErrStat_F2, ErrMsg_F2);    if (Failed())  return
       call AD_SetInputMotion( iWT, ADI_u, &
                HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
                NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
                BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
-               ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+               ErrStat_F2, ErrMsg_F2 )  ! transfer input motion mesh to u(1) meshes
          if (Failed())  return
    enddo
 
    ! Set error status
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
 CONTAINS
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-      if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
+      if (Failed)    call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
    end function Failed
    !> This subroutine prints out all the variables that are passed in.  Use this only
    !! for debugging the interface on the Fortran side.
@@ -1969,16 +1949,16 @@ subroutine ADI_C_GetRotorLoads(iWT_C, &
 
    ! Local variables
    integer(IntKi)                            :: iWT                           !< current wind turbine / rotor
-   integer(IntKi)                            :: ErrStat                       !< aggregated error status
-   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
-   integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
-   character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
+   integer(IntKi)                            :: ErrStat_F                       !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg_F                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat_F2                      !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg_F2                       !< temporary error message from a call
    character(*), parameter                   :: RoutineName = 'ADI_C_SetRotorMotion' !< for error handling
    integer(IntKi)                            :: i,j                           !< generic index variables
 
    ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
 
    ! For debugging the interface:
    if (DebugLevel > 0) then
@@ -1990,13 +1970,13 @@ subroutine ADI_C_GetRotorLoads(iWT_C, &
 
    ! Sanity check -- number of node points cannot change
    if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
+      ErrStat_F2 =  ErrID_Fatal
+      ErrMsg_F2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
       if (Failed())  return
    endif
 
    ! Transfer resulting load meshes to intermediate mesh
-   call AD_TransferLoads( iWT, ADI%u(1), ADI%y, ErrStat2, ErrMsg2 )
+   call AD_TransferLoads( iWT, ADI%u(1), ADI%y, ErrStat_F2, ErrMsg_F2 )
       if (Failed())  return
 
    ! Set output force/moment array
@@ -2015,13 +1995,13 @@ subroutine ADI_C_GetRotorLoads(iWT_C, &
    end if
 
    ! Set error status
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
 CONTAINS
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-      if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
+      if (Failed)    call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
    end function Failed
    !> This subroutine prints out all the variables that are passed in.  Use this only
    !! for debugging the interface on the Fortran side.
@@ -2063,13 +2043,13 @@ subroutine ADI_C_GetDiskAvgVel(iWT_C, &
    integer(IntKi), parameter                 :: StartNode = 1                 ! so all points are calculated
    real(ReKi), allocatable                   :: NoAcc(:,:)                    ! Placeholder array not used when accelerations not required.
    real(ReKi)                                :: DiskAvgVel(3)                 !< Wind speed vector for disk average [Vx,Vy,Vz] -- (m/s) (global)
-   integer(IntKi)                            :: ErrStat                       !< aggregated error status
-   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat_F                     !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg_F                      !< aggregated error message
    character(*), parameter                   :: RoutineName = 'ADI_C_GetDiskAvgVel' !< for error handling
 
    ! Initialize error handling
-   ErrStat  =  ErrID_None
-   ErrMsg   =  ""
+   ErrStat_F  =  ErrID_None
+   ErrMsg_F   =  ""
 
    ! For debugging the interface:
    if (DebugLevel > 0) then
@@ -2087,14 +2067,14 @@ subroutine ADI_C_GetDiskAvgVel(iWT_C, &
       DiskAvgVelVars(iWT)%DiskWindPosAbs(:,i) = real(Hub%Position(1:3,1)+Hub%TranslationDisp(1:3,1),ReKi)  &
                            + matmul(real(Hub%Orientation(1:3,1:3,1),ReKi),DiskAvgVelVars(iWT)%DiskWindPosRel(:,i))
    enddo
-   call IfW_FlowField_GetVelAcc(ADI%m%IW%p%FlowField, StartNode, InputTimePrev_Calc, DiskAvgVelVars(iWT)%DiskWindPosAbs, DiskAvgVelVars(iWT)%DiskWindVel, NoAcc, ErrStat, ErrMsg)
+   call IfW_FlowField_GetVelAcc(ADI%m%IW%p%FlowField, StartNode, InputTimePrev_Calc, DiskAvgVelVars(iWT)%DiskWindPosAbs, DiskAvgVelVars(iWT)%DiskWindVel, NoAcc, ErrStat_F, ErrMsg_F)
 
    ! calculate average
    DiskAvgVel   = sum(DiskAvgVelVars(iWT)%DiskWindVel, dim=2) / REAL(NumPtsDiskAvg,SiKi)
    DiskAvgVel_C = real(DiskAvgVel, c_float)
 
    ! Set error status
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
 CONTAINS
    !> This subroutine prints out all the variables that are passed in.  Use this only
@@ -2309,8 +2289,8 @@ subroutine WrVTK_refMeshes(rot_u, RefPoint, ErrStat, ErrMsg)
    integer(IntKi)                         :: nBlades
    integer(IntKi)                         :: iWT, nWT, iBlade
    character(*), parameter                :: RoutineName = 'WrVTK_refMeshes'  !< for error handling
-   integer(IntKi)                         :: ErrStat2       !< temporary error status
-   character(ErrMsgLen)                   :: ErrMsg2        !< temporary error message
+   integer(IntKi)                         :: ErrStat_F2       !< temporary error status
+   character(ErrMsgLen)                   :: ErrMsg_F2        !< temporary error message
    character(10)                          :: sWT
 
    ErrStat =  0_IntKi
@@ -2327,19 +2307,19 @@ subroutine WrVTK_refMeshes(rot_u, RefPoint, ErrStat, ErrMsg)
 
       select case (WrOutputsData%WrVTK_Type)
          case (1)    ! surfaces -- don't write any surface references
-            call WrVTK_PointsRef(  ErrStat2,ErrMsg2); if (Failed()) return;
+            call WrVTK_PointsRef(  ErrStat_F2,ErrMsg_F2); if (Failed()) return;
          case (2)    ! lines
-            call WrVTK_PointsRef(  ErrStat2,ErrMsg2); if (Failed()) return;
-            call WrVTK_LinesRef(   ErrStat2,ErrMsg2); if (Failed()) return;
+            call WrVTK_PointsRef(  ErrStat_F2,ErrMsg_F2); if (Failed()) return;
+            call WrVTK_LinesRef(   ErrStat_F2,ErrMsg_F2); if (Failed()) return;
          case (3)    ! both
-            call WrVTK_PointsRef(  ErrStat2,ErrMsg2); if (Failed()) return;
-            call WrVTK_LinesRef(   ErrStat2,ErrMsg2); if (Failed()) return;
+            call WrVTK_PointsRef(  ErrStat_F2,ErrMsg_F2); if (Failed()) return;
+            call WrVTK_LinesRef(   ErrStat_F2,ErrMsg_F2); if (Failed()) return;
       end select
    enddo
 
 contains
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
    end function Failed
 
@@ -2413,8 +2393,8 @@ subroutine WrVTK_Meshes(rot_u, RefPoint, ErrStat, ErrMsg)
    integer(IntKi)                         :: iWT, nWT, iBlade
    character(IntfStrLen)                  :: TmpFileName
    character(*), parameter                :: RoutineName = 'WrVTK_Meshes'  !< for error handling
-   integer(IntKi)                         :: ErrStat2       !< temporary error status
-   character(ErrMsgLen)                   :: ErrMsg2        !< temporary error message
+   integer(IntKi)                         :: ErrStat_F2       !< temporary error status
+   character(ErrMsgLen)                   :: ErrMsg_F2        !< temporary error message
    character(10)                          :: sWT
 
    ErrStat =  0_IntKi
@@ -2431,21 +2411,21 @@ subroutine WrVTK_Meshes(rot_u, RefPoint, ErrStat, ErrMsg)
 
       select case (WrOutputsData%WrVTK_Type)
          case (1)    ! surfaces
-            call WrVTK_Points(  ErrStat2,ErrMsg2); if (Failed()) return;
-            call WrVTK_Surfaces(ErrStat2,ErrMsg2); if (Failed()) return;
+            call WrVTK_Points(  ErrStat_F2,ErrMsg_F2); if (Failed()) return;
+            call WrVTK_Surfaces(ErrStat_F2,ErrMsg_F2); if (Failed()) return;
          case (2)    ! lines
-            call WrVTK_Points(  ErrStat2,ErrMsg2); if (Failed()) return;
-            call WrVTK_Lines(   ErrStat2,ErrMsg2); if (Failed()) return;
+            call WrVTK_Points(  ErrStat_F2,ErrMsg_F2); if (Failed()) return;
+            call WrVTK_Lines(   ErrStat_F2,ErrMsg_F2); if (Failed()) return;
          case (3)    ! both
-            call WrVTK_Points(  ErrStat2,ErrMsg2); if (Failed()) return;
-            call WrVTK_Surfaces(ErrStat2,ErrMsg2); if (Failed()) return;
-            call WrVTK_Lines(   ErrStat2,ErrMsg2); if (Failed()) return;
+            call WrVTK_Points(  ErrStat_F2,ErrMsg_F2); if (Failed()) return;
+            call WrVTK_Surfaces(ErrStat_F2,ErrMsg_F2); if (Failed()) return;
+            call WrVTK_Lines(   ErrStat_F2,ErrMsg_F2); if (Failed()) return;
       end select
    enddo
 
 contains
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
    end function Failed
 
@@ -2581,13 +2561,13 @@ subroutine WrVTK_Ground (RefPoint, HalfLengths, FileRootName, errStat, errMsg)
    INTEGER(IntKi), parameter :: NumberOfPoints = 4
    INTEGER(IntKi), parameter :: NumberOfLines = 0
    INTEGER(IntKi), parameter :: NumberOfPolys = 1
-   INTEGER(IntKi)            :: errStat2
-   CHARACTER(ErrMsgLen)      :: errMsg2
+   INTEGER(IntKi)            :: ErrStat_F2
+   CHARACTER(ErrMsgLen)      :: ErrMsg_F2
    errStat = ErrID_None
    errMsg  = ""
    FileName = TRIM(FileRootName)//'.vtp'
-   call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, errStat2, errMsg2 )
-   call SetErrStat(errStat2,errMsg2,errStat,errMsg,'WrVTK_Ground'); if (errStat >= AbortErrLev) return
+   call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat_F2, ErrMsg_F2 )
+   call SetErrStat(ErrStat_F2,ErrMsg_F2,errStat,errMsg,'WrVTK_Ground'); if (errStat >= AbortErrLev) return
    WRITE(Un,'(A)')         '      <Points>'
    WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
    WRITE(Un,VTK_AryFmt) RefPoint(1) + HalfLengths(1) , RefPoint(2) + HalfLengths(2), RefPoint(3)
@@ -2614,8 +2594,8 @@ end subroutine WrVTK_Ground
 subroutine SetTempStorage(ErrStat,ErrMsg)
    INTEGER(IntKi),  intent(out)  :: errStat         !< Indicates whether an error occurred (see NWTC_Library)
    character(*),    intent(out)  :: errMsg          !< Error message associated with the errStat
-   INTEGER(IntKi)                :: errStat2
-   CHARACTER(ErrMsgLen)          :: errMsg2
+   INTEGER(IntKi)                :: ErrStat_F2
+   CHARACTER(ErrMsgLen)          :: ErrMsg_F2
    character(*), parameter       :: RoutineName = 'SetTempStorage'  !< for error handling
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2632,7 +2612,7 @@ subroutine SetTempStorage(ErrStat,ErrMsg)
 
 contains
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
    end function Failed
 end subroutine SetTempStorage
@@ -2640,8 +2620,8 @@ end subroutine SetTempStorage
 !--------------------------------------------------------------------
 !> Don't leave junk in memory.  So destroy meshes and mappings.
 subroutine ClearTmpStorage()
-   INTEGER(IntKi)                :: errStat2, iWT
-   CHARACTER(ErrMsgLen)          :: errMsg2
+   INTEGER(IntKi)                :: ErrStat_F2, iWT
+   CHARACTER(ErrMsgLen)          :: ErrMsg_F2
    ! Meshes
    do iWT=1,Sim%NumTurbines
       if (allocated(BldStrMotionMesh(iWT)%Mesh))   call ClearMeshArr1(BldStrMotionMesh(iWT)%Mesh)
@@ -2658,7 +2638,7 @@ contains
       type(MeshType), allocatable :: MeshName(:)
       integer :: i
       do i=1,size(MeshName)
-         call MeshDestroy( MeshName(i), ErrStat2, ErrMsg2 )    ! ignore errors
+         call MeshDestroy( MeshName(i), ErrStat_F2, ErrMsg_F2 )    ! ignore errors
       enddo
       deallocate(MeshName)
    end subroutine ClearMeshArr1
@@ -2668,7 +2648,7 @@ contains
       integer :: i,j
       do j=1,size(MapName,2)
          do i=1,size(MapName,1)
-            call NWTC_Library_Destroymeshmaptype( MapName(i,j), ErrStat2, ErrMsg2 )
+            call NWTC_Library_Destroymeshmaptype( MapName(i,j), ErrStat_F2, ErrMsg_F2 )
          enddo
       enddo
       deallocate(MapName)

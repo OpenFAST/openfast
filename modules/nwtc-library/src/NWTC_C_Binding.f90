@@ -37,7 +37,7 @@ CONTAINS
 !! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
 !! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
 !! inadvertant buffer overrun -- that can lead to bad things.
-SUBROUTINE SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
+SUBROUTINE SetErrStat_F2C(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
     INTEGER,                INTENT(IN   )  :: ErrStat                 !< aggregated error message (fortran type)
     CHARACTER(ErrMsgLen),   INTENT(IN   )  :: ErrMsg                  !< aggregated error message (fortran type)
     INTEGER(C_INT),         INTENT(  OUT)  :: ErrStat_C
@@ -49,7 +49,32 @@ SUBROUTINE SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
     else
         ErrMsg_C = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
     endif
-END SUBROUTINE SetErr
+END SUBROUTINE SetErrStat_F2C
+
+!> This subroutine incorporates the local error status and error messages into the global error
+!! status and message. It expects both local and global error messages to be null-terminated
+!! C strings.
+SUBROUTINE SetErrStat_C(ErrStatLocal, ErrMessLocal, ErrStatGlobal, ErrMessGlobal, RoutineName)
+
+    INTEGER(C_INT),                          INTENT(IN   ) :: ErrStatLocal                  ! Error status of the operation
+    CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C), INTENT(IN   ) :: ErrMessLocal                  ! Error message if ErrStat /= ErrID_None
+    INTEGER(C_INT),                          INTENT(INOUT) :: ErrStatGlobal                 ! Error status of the operation
+    CHARACTER(KIND=C_CHAR),                  INTENT(INOUT) :: ErrMessGlobal(ErrMsgLen_C)    ! Error message if ErrStat /= ErrID_None
+    CHARACTER(*),                            INTENT(IN   ) :: RoutineName                   ! Name of the routine error occurred in
+
+    IF ( ErrStatLocal == ErrID_None ) RETURN
+
+    IF (ErrStatGlobal /= ErrID_None) THEN
+        ! print *, "in if", ErrStatGlobal, ErrID_None
+        ! ErrMessGlobal = TRIM(ErrMessGlobal)//new_line('a')
+        ! print *, "ErrMessGlobal", ErrMessGlobal
+    ENDIF
+    ! TODO: Does the line below need to remove the null char from ErrMessGlobal prior to appending to it?
+    ErrMessGlobal = TRANSFER( ErrMessGlobal//TRIM(RoutineName)//':'//TRIM(ErrMessLocal)//C_NULL_CHAR, ErrMessGlobal )
+    ! ErrMessGlobal = TRIM(ErrMessGlobal)//TRIM(RoutineName)//':'//TRIM(ErrMessLocal)
+    ErrStatGlobal = MAX(ErrStatGlobal, ErrStatLocal)
+
+END SUBROUTINE 
 
 FUNCTION RemoveCStringNullChar(String_C, StringLength_C)
     INTEGER(C_INT), INTENT(IN)                              :: StringLength_C

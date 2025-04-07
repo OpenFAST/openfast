@@ -24,7 +24,7 @@ MODULE MoorDyn_C
    USE MoorDyn
    USE MoorDyn_Types
    USE NWTC_Library
-   USE NWTC_C_Binding
+   USE NWTC_C_Binding, ONLY: IntfStrLen, ErrMsgLen_C, FileNameFromCString, SetErrStat_F2C
    USE VersionInfo
 
 IMPLICIT NONE
@@ -154,15 +154,15 @@ SUBROUTINE MD_C_Init(                                             &
 
    ! Local Variables
    CHARACTER(KIND=C_char, LEN=InputFileStringLength_C), POINTER     :: InputFileString          !< Input file as a single string with NULL chracter separating lines
-   INTEGER(IntKi)                                                   :: ErrStat, ErrStat2
-   CHARACTER(ErrMsgLen)                                             :: ErrMsg,  ErrMsg2
+   INTEGER(IntKi)                                                   :: ErrStat_F, ErrStat_F2
+   CHARACTER(ErrMsgLen)                                             :: ErrMsg_F,  ErrMsg_F2
    INTEGER                                                          :: I, J, K
    character(*), parameter                                          :: RoutineName = 'MD_C_Init'
 
 
    ! Initialize library and display info on this compile
-   ErrStat = ErrID_None
-   ErrMsg = ''
+   ErrStat_F = ErrID_None
+   ErrMsg_F = ''
 
    CALL NWTC_Init( ProgNameIn=version%Name )
    CALL DispCopyrightLicense( version%Name )
@@ -180,7 +180,7 @@ SUBROUTINE MD_C_Init(                                             &
    if (InputFilePassed==1_c_int) then
       InitInp%UsePrimaryInputFile   = .FALSE.            ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
       InitInp%FileName              = ""                 ! not actually used
-      CALL InitFileInfo(InputFileString, InitInp%PassedPrimaryInputData, ErrStat2, ErrMsg2); if (Failed()) return
+      CALL InitFileInfo(InputFileString, InitInp%PassedPrimaryInputData, ErrStat_F2, ErrMsg_F2); if (Failed()) return
    else
       InitInp%UsePrimaryInputFile   = .TRUE.             ! Read input info from a primary input file
       InitInp%FileName = FileNameFromCString(InputFileString, InputFileStringLength_C)
@@ -192,10 +192,10 @@ SUBROUTINE MD_C_Init(                                             &
    ! Check the interpolation order
    IF (InterpOrder_C .EQ. 1 .OR. InterpOrder_C .EQ. 2) THEN
       InterpOrder = INT(InterpOrder_C, IntKi)
-      call AllocAry( InputTimes, InterpOrder+1, 'InputTimes', ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry( InputTimes, InterpOrder+1, 'InputTimes', ErrStat_F2, ErrMsg_F2); if (Failed()) return
    ELSE
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2  = 'InterpOrder must be 1 (linear) or 2 (quadratic)'
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'InterpOrder must be 1 (linear) or 2 (quadratic)'
       if (Failed()) return
    END IF
 
@@ -210,22 +210,22 @@ SUBROUTINE MD_C_Init(                                             &
 
    ! Platform position (x,y,z,Rx,Ry,Rz) -- where rotations are small angle assumption in radians.
    ! This data is used to set the CoupledKinematics mesh that will be used at each timestep call
-   CALL AllocAry (InitInp%PtfmInit, 6, 1, 'InitInp%PtfmInit', ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry (InitInp%PtfmInit, 6, 1, 'InitInp%PtfmInit', ErrStat_F2, ErrMsg_F2 ); if (Failed()) return
    DO I = 1,6
       InitInp%PtfmInit(I,1)  = REAL(PtfmInit_C(I),ReKi)
    END DO
 
-   ALLOCATE(u(InterpOrder+1), STAT=ErrStat2)
-   if (ErrStat2 /= 0) then
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2  = 'Failed to allocate Inputs type for MD'
+   ALLOCATE(u(InterpOrder+1), STAT=ErrStat_F2)
+   if (ErrStat_F2 /= 0) then
+      ErrStat_F2 = ErrID_Fatal
+      ErrMsg_F2  = 'Failed to allocate Inputs type for MD'
       if (Failed()) return
    endif
    
    !-------------------------------------------------
    ! Call the main subroutine MD_Init
    !-------------------------------------------------
-   CALL MD_Init(InitInp, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, dT_Global, InitOutData, ErrStat2, ErrMsg2); if (Failed()) return
+   CALL MD_Init(InitInp, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, dT_Global, InitOutData, ErrStat_F2, ErrMsg_F2); if (Failed()) return
 
    !-------------------------------------------------
    !  Set output channel information for driver code
@@ -256,45 +256,43 @@ SUBROUTINE MD_C_Init(                                             &
    END DO
    tmpVelocities     = 0_ReKi
    tmpAccelerations  = 0_ReKi
-   CALL SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2); if (Failed()) return
+   CALL SetMotionLoadsInterfaceMeshes(ErrStat_F2,ErrMsg_F2); if (Failed()) return
 
    DO i=2,InterpOrder+1
-      CALL MD_CopyInput (u(1),  u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
+      CALL MD_CopyInput (u(1),  u(i),  MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2); if (Failed()) return
    END DO
    InputTimePrev = -dT_Global    ! Initialize for MD_C_UpdateStates
 
    !-------------------------------------------------------------
    ! Initial setup of other pieces of x,xd,z,other
    !-------------------------------------------------------------
-   CALL MD_CopyContState  ( x(    STATE_CURR), x(    STATE_PRED), MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return
-   CALL MD_CopyDiscState  ( xd(   STATE_CURR), xd(   STATE_PRED), MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return
-   CALL MD_CopyConstrState( z(    STATE_CURR), z(    STATE_PRED), MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return
-   CALL MD_CopyOtherState ( other(STATE_CURR), other(STATE_PRED), MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return
+   CALL MD_CopyContState  ( x(    STATE_CURR), x(    STATE_PRED), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);   if (Failed())  return
+   CALL MD_CopyDiscState  ( xd(   STATE_CURR), xd(   STATE_PRED), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);   if (Failed())  return
+   CALL MD_CopyConstrState( z(    STATE_CURR), z(    STATE_PRED), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);   if (Failed())  return
+   CALL MD_CopyOtherState ( other(STATE_CURR), other(STATE_PRED), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);   if (Failed())  return
 
    !-------------------------------------------------------------
    ! Setup the previous timestep copies of states
    !-------------------------------------------------------------
-   CALL MD_CopyContState  ( x(    STATE_CURR), x(    STATE_LAST), MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return
-   CALL MD_CopyDiscState  ( xd(   STATE_CURR), xd(   STATE_LAST), MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return
-   CALL MD_CopyConstrState( z(    STATE_CURR), z(    STATE_LAST), MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return
-   CALL MD_CopyOtherState ( other(STATE_CURR), other(STATE_LAST), MESH_NEWCOPY, ErrStat2, ErrMsg2);   if (Failed())  return
+   CALL MD_CopyContState  ( x(    STATE_CURR), x(    STATE_LAST), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);   if (Failed())  return
+   CALL MD_CopyDiscState  ( xd(   STATE_CURR), xd(   STATE_LAST), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);   if (Failed())  return
+   CALL MD_CopyConstrState( z(    STATE_CURR), z(    STATE_LAST), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);   if (Failed())  return
+   CALL MD_CopyOtherState ( other(STATE_CURR), other(STATE_LAST), MESH_NEWCOPY, ErrStat_F2, ErrMsg_F2);   if (Failed())  return
 
    !-------------------------------------------------
    ! Clean up variables and set up for MD_C_CalcOutput
    !------------------------------------------------- 
-   CALL MD_DestroyInitInput( InitInp, ErrStat2, ErrMsg2 );        if (Failed())  return
-   CALL MD_DestroyInitOutput( InitOutData, ErrStat2, ErrMsg2 );   if (Failed())  return
+   CALL MD_DestroyInitInput( InitInp, ErrStat_F2, ErrMsg_F2 );        if (Failed())  return
+   CALL MD_DestroyInitOutput( InitOutData, ErrStat_F2, ErrMsg_F2 );   if (Failed())  return
 
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
 
 CONTAINS
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-      if (Failed) then
-         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-      endif
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
+      if (Failed) call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
    end function Failed
 END SUBROUTINE MD_C_Init
 
@@ -315,14 +313,14 @@ SUBROUTINE MD_C_UpdateStates(Time_C, TimeNext_C, POSITIONS_C, VELOCITIES_C, ACCE
    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local Variables
-   INTEGER(IntKi)                                                   :: ErrStat, ErrStat2, J
-   CHARACTER(ErrMsgLen)                                             :: ErrMsg,  ErrMsg2
+   INTEGER(IntKi)                                                   :: ErrStat_F, ErrStat_F2, J
+   CHARACTER(ErrMsgLen)                                             :: ErrMsg_F,  ErrMsg_F2
    LOGICAL                                                          :: CorrectionStep
    character(*), parameter                                          :: RoutineName = 'MD_C_UpdateStates'
 
    ! Set up error handling for MD_C_CalcOutput
-   ErrStat = ErrID_None
-   ErrMsg = ''
+   ErrStat_F = ErrID_None
+   ErrMsg_F = ''
    CorrectionStep = .FALSE.
 
    !-------------------------------------------------------
@@ -363,17 +361,17 @@ SUBROUTINE MD_C_UpdateStates(Time_C, TimeNext_C, POSITIONS_C, VELOCITIES_C, ACCE
        ! Step back to previous state because we are doing a correction step
        !     -- repeating the T -> T+dt update with new inputs at T+dt
        !     -- the STATE_CURR contains states at T+dt from the previous call, so revert those
-       CALL MD_CopyContState   (x(    STATE_LAST), x(    STATE_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-       CALL MD_CopyDiscState   (xd(   STATE_LAST), xd(   STATE_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-       CALL MD_CopyConstrState (z(    STATE_LAST), z(    STATE_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-       CALL MD_CopyOtherState  (other(STATE_LAST), other(STATE_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
+       CALL MD_CopyContState   (x(    STATE_LAST), x(    STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+       CALL MD_CopyDiscState   (xd(   STATE_LAST), xd(   STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+       CALL MD_CopyConstrState (z(    STATE_LAST), z(    STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+       CALL MD_CopyOtherState  (other(STATE_LAST), other(STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
    ELSE
        ! Cycle inputs back one timestep since we are moving forward in time.
        IF (InterpOrder>1) THEN ! quadratic, so keep the old time
-           CALL MD_CopyInput( u(INPUT_CURR), u(INPUT_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);   IF (Failed())  RETURN
+           CALL MD_CopyInput( u(INPUT_CURR), u(INPUT_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);   IF (Failed())  RETURN
        END IF
        ! Move inputs from previous t+dt (now t) to t
-       CALL MD_CopyInput( u(INPUT_PRED), u(INPUT_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);       IF (Failed())  RETURN
+       CALL MD_CopyInput( u(INPUT_PRED), u(INPUT_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);       IF (Failed())  RETURN
    END IF
 
    ! Reshape position and velocity (transposing from a row vector to a column vector)
@@ -385,20 +383,20 @@ SUBROUTINE MD_C_UpdateStates(Time_C, TimeNext_C, POSITIONS_C, VELOCITIES_C, ACCE
 
    ! Transfer motions to input meshes
    CALL Set_MotionMesh()
-   CALL MD_SetInputMotion( u(INPUT_PRED), ErrStat2, ErrMsg2 ); IF (Failed())  RETURN
+   CALL MD_SetInputMotion( u(INPUT_PRED), ErrStat_F2, ErrMsg_F2 ); IF (Failed())  RETURN
 
    ! Set copy the current state over to the predicted state for sending to UpdateStates
    !     -- The STATE_PREDicted will get updated in the call.
    !     -- The UpdateStates routine expects this to contain states at T at the start of the call (history not passed in)
-   CALL MD_CopyContState   (x(    STATE_CURR), x(    STATE_PRED), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-   CALL MD_CopyDiscState   (xd(   STATE_CURR), xd(   STATE_PRED), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-   CALL MD_CopyConstrState (z(    STATE_CURR), z(    STATE_PRED), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-   CALL MD_CopyOtherState  (other(STATE_CURR), other(STATE_PRED), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
+   CALL MD_CopyContState   (x(    STATE_CURR), x(    STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+   CALL MD_CopyDiscState   (xd(   STATE_CURR), xd(   STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+   CALL MD_CopyConstrState (z(    STATE_CURR), z(    STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+   CALL MD_CopyOtherState  (other(STATE_CURR), other(STATE_PRED), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
 
    !-------------------------------------------------
    ! Call the main subroutine MD_UpdateStates
    !-------------------------------------------------
-   CALL MD_UpdateStates( InputTimes(INPUT_CURR), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), other(STATE_PRED), m, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
+   CALL MD_UpdateStates( InputTimes(INPUT_CURR), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), other(STATE_PRED), m, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
 
    !-------------------------------------------------------
    ! Cycle the states
@@ -406,26 +404,24 @@ SUBROUTINE MD_C_UpdateStates(Time_C, TimeNext_C, POSITIONS_C, VELOCITIES_C, ACCE
    ! Move current state at T to previous state at T-dt
    !     -- STATE_LAST now contains info at time T
    !     -- this allows repeating the T --> T+dt update
-   CALL MD_CopyContState   (x(    STATE_CURR), x(    STATE_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-   CALL MD_CopyDiscState   (xd(   STATE_CURR), xd(   STATE_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-   CALL MD_CopyConstrState (z(    STATE_CURR), z(    STATE_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-   CALL MD_CopyOtherState  (other(STATE_CURR), other(STATE_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
+   CALL MD_CopyContState   (x(    STATE_CURR), x(    STATE_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+   CALL MD_CopyDiscState   (xd(   STATE_CURR), xd(   STATE_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+   CALL MD_CopyConstrState (z(    STATE_CURR), z(    STATE_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+   CALL MD_CopyOtherState  (other(STATE_CURR), other(STATE_LAST), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
    ! Update the predicted state as the new current state
    !     -- we have now advanced from T to T+dt.  This allows calling with CalcOuput to get the outputs at T+dt
-   CALL MD_CopyContState   (x(    STATE_PRED), x(    STATE_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-   CALL MD_CopyDiscState   (xd(   STATE_PRED), xd(   STATE_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-   CALL MD_CopyConstrState (z(    STATE_PRED), z(    STATE_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
-   CALL MD_CopyOtherState  (other(STATE_PRED), other(STATE_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
+   CALL MD_CopyContState   (x(    STATE_PRED), x(    STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+   CALL MD_CopyDiscState   (xd(   STATE_PRED), xd(   STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+   CALL MD_CopyConstrState (z(    STATE_PRED), z(    STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
+   CALL MD_CopyOtherState  (other(STATE_PRED), other(STATE_CURR), MESH_UPDATECOPY, ErrStat_F2, ErrMsg_F2);  IF (Failed())  RETURN
 
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
-
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-
-CONTAINS
+   CONTAINS
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-      if (Failed)  call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
+      if (Failed) call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
    end function Failed
 END SUBROUTINE MD_C_UpdateStates
 
@@ -449,13 +445,13 @@ SUBROUTINE MD_C_CalcOutput(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
 
    ! Local Variables
    REAL(DbKi)                                                       :: t
-   INTEGER(IntKi)                                                   :: ErrStat, ErrStat2, J
-   CHARACTER(ErrMsgLen)                                             :: ErrMsg,  ErrMsg2
+   INTEGER(IntKi)                                                   :: ErrStat_F, ErrStat_F2, J
+   CHARACTER(ErrMsgLen)                                             :: ErrMsg_F,  ErrMsg_F2
    character(*), parameter                                          :: RoutineName = 'MD_C_CalcOutput'
 
    ! Set up error handling for MD_C_CalcOutput
-   ErrStat = ErrID_None
-   ErrMsg = ''
+   ErrStat_F = ErrID_None
+   ErrMsg_F = ''
 
    ! Set up inputs to MD_CalcOutput
    !-----------------------------------------------------------------------------------------------------------
@@ -474,18 +470,18 @@ SUBROUTINE MD_C_CalcOutput(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
    CALL Set_MotionMesh()
 
    ! transfer input motion mesh to u(1) meshes
-   CALL MD_SetInputMotion( u(1), ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL MD_SetInputMotion( u(1), ErrStat_F2, ErrMsg_F2 );  if (Failed()) return;
 
    !-------------------------------------------------
    ! Call the main subroutine MD_CalcOutput
    !-------------------------------------------------
-   CALL MD_CalcOutput( t, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL MD_CalcOutput( t, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, ErrStat_F2, ErrMsg_F2 );  if (Failed()) return;
 
    !-------------------------------------------------
    ! Convert the outputs of MD_calcOutput back to C
    !-------------------------------------------------
    ! Transfer resulting load meshes to intermediate mesh
-   CALL MD_TransferLoads( u(1), y, ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL MD_TransferLoads( u(1), y, ErrStat_F2, ErrMsg_F2 );  if (Failed()) return;
 
    ! Set output force/moment array
    CALL Set_OutputLoadArray( )
@@ -497,14 +493,15 @@ SUBROUTINE MD_C_CalcOutput(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
 
    OUTPUTS_C = REAL(y%WriteOutput, C_FLOAT)
 
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+
 CONTAINS
    logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-      if (Failed) then
-         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-      endif
+      CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      Failed = ErrStat_F >= AbortErrLev
+      if (Failed) call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
    end function Failed
+
 END SUBROUTINE MD_C_CalcOutput
 
 !===============================================================================================================
@@ -521,17 +518,17 @@ SUBROUTINE MD_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_C_End')
    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local variables
-   INTEGER(IntKi)                                     :: ErrStat, ErrStat2, i
-   CHARACTER(ErrMsgLen)                               :: ErrMsg,  ErrMsg2
+   INTEGER(IntKi)                                     :: ErrStat_F, ErrStat_F2, i
+   CHARACTER(ErrMsgLen)                               :: ErrMsg_F,  ErrMsg_F2
    character(*), parameter                            :: RoutineName = 'MD_C_End'
 
    ! Set up error handling for MD_C_End
-   ErrStat = ErrID_None
-   ErrMsg = ''
+   ErrStat_F = ErrID_None
+   ErrMsg_F = ''
 
    ! Call the main subroutine MD_End
-   CALL MD_End(u(1), p, x(1), xd(1), z(1), other(1), y, m, ErrStat2, ErrMsg2)
-   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL MD_End(u(1), p, x(1), xd(1), z(1), other(1), y, m, ErrStat_F2, ErrMsg_F2)
+   call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
 
    !  NOTE: MoorDyn_End only takes 1 instance of u, not the array.  So extra
    !        logic is required here (this isn't necessary in the fortran driver
@@ -539,25 +536,25 @@ SUBROUTINE MD_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_C_End')
    !        or some other code using the c-bindings)
    IF (allocated(u)) THEN
       DO i=2,size(u)
-         CALL MD_DestroyInput( u(i), ErrStat2, ErrMsg2 )
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         CALL MD_DestroyInput( u(i), ErrStat_F2, ErrMsg_F2 )
+         call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
       END DO
       IF (allocated(u))             deallocate(u)
    END IF
 
    ! Destroy any other copies of states (rerun on (STATE_CURR) is ok)
-   call MD_DestroyContState(   x(    STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyContState(   x(    STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyContState(   x(    STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyDiscState(   xd(   STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyDiscState(   xd(   STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyDiscState(   xd(   STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyConstrState( z(    STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyConstrState( z(    STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyConstrState( z(    STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyOtherState(  other(STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyOtherState(  other(STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call MD_DestroyOtherState(  other(STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call MD_DestroyContState(   x(    STATE_LAST), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyContState(   x(    STATE_CURR), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyContState(   x(    STATE_PRED), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyDiscState(   xd(   STATE_LAST), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyDiscState(   xd(   STATE_CURR), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyDiscState(   xd(   STATE_PRED), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyConstrState( z(    STATE_LAST), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyConstrState( z(    STATE_CURR), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyConstrState( z(    STATE_PRED), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyOtherState(  other(STATE_LAST), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyOtherState(  other(STATE_CURR), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+   call MD_DestroyOtherState(  other(STATE_PRED), ErrStat_F2, ErrMsg_F2 );  call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
 
    ! if deallocate other items now
    if (allocated(InputTimes))    deallocate(InputTimes)
@@ -565,19 +562,19 @@ SUBROUTINE MD_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_C_End')
    ! Clear out mesh related data storage
    call ClearMesh()
 
-   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 CONTAINS
    !> Don't leave junk in memory.  So destroy meshes and mappings.
    subroutine ClearMesh()
-      call MeshDestroy( MD_MotionMesh, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      call MeshDestroy( MD_LoadMesh, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call MeshDestroy( MD_MotionMesh, ErrStat_F2, ErrMsg_F2 )
+      call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      call MeshDestroy( MD_LoadMesh, ErrStat_F2, ErrMsg_F2 )
+      call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
       ! Destroy mesh mappings
-      call NWTC_Library_Destroymeshmaptype( Map_Motion_2_MD, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      call NWTC_Library_Destroymeshmaptype( Map_MD_2_Load, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call NWTC_Library_Destroymeshmaptype( Map_Motion_2_MD, ErrStat_F2, ErrMsg_F2 )
+      call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+      call NWTC_Library_Destroymeshmaptype( Map_MD_2_Load, ErrStat_F2, ErrMsg_F2 )
+      call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
    end subroutine ClearMesh
 END SUBROUTINE MD_C_End
 

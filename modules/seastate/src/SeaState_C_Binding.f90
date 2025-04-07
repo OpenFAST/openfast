@@ -24,7 +24,7 @@ MODULE SeaState_C_Binding
     USE SeaState_Types
     USE SeaState_Output
     USE NWTC_Library
-    USE NWTC_C_Binding, ONLY: ErrMsgLen_C, IntfStrLen, SetErr, FileNameFromCString
+    USE NWTC_C_Binding, ONLY: ErrMsgLen_C, IntfStrLen, SetErrStat_F2C, FileNameFromCString
     USE VersionInfo
 
     IMPLICIT NONE
@@ -98,16 +98,16 @@ IMPLICIT NONE
                                                                    !!   Output is the actual coupling interval that will be used 
                                                                    !!   by the glue code.
 
-    INTEGER                    :: ErrStat                          !< aggregated error status
-    CHARACTER(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
-    INTEGER                    :: ErrStat2                         !< temporary error status  from a call
-    CHARACTER(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
+    INTEGER                    :: ErrStat_F                         !< aggregated error status
+    CHARACTER(ErrMsgLen)       :: ErrMsg_F                          !< aggregated error message
+    INTEGER                    :: ErrStat_F2                        !< temporary error status  from a call
+    CHARACTER(ErrMsgLen)       :: ErrMsg_F2                         !< temporary error message from a call
     INTEGER                    :: i,j,k
     CHARACTER(*), PARAMETER    :: RoutineName = 'SeaSt_C_Init'  !< for error handling
 
     ! Initialize error handling
-    ErrStat  =  ErrID_None
-    ErrMsg   =  ""
+    ErrStat_F =  ErrID_None
+    ErrMsg_F  =  ""
 
     CALL NWTC_Init( ProgNameIn=version%Name )
     CALL DispCopyrightLicense( version%Name )
@@ -130,8 +130,8 @@ IMPLICIT NONE
     ENDIF
     ! check valid debug level
     IF (DebugLevel < 0_IntKi) THEN
-        ErrStat2 = ErrID_Fatal
-        ErrMsg2  = "Interface debug level must be 0 or greater"//NewLine// &
+        ErrStat_F2 = ErrID_Fatal
+        ErrMsg_F2  = "Interface debug level must be 0 or greater"//NewLine// &
         "  0  - none"//NewLine// &
         "  1  - some summary info and variables passed through interface"//NewLine// &
         "  2  - above + all position/orientation info"//NewLine// &
@@ -164,7 +164,7 @@ IMPLICIT NONE
     ! INTEGER(IntKi)  :: SurfaceVisNx = 0      !< Number of points in X direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
     ! INTEGER(IntKi)  :: SurfaceVisNy = 0      !< Number of points in Y direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
 
-    CALL SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat2, ErrMsg2 )
+    CALL SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat_F2, ErrMsg_F2 )
         IF (Failed()) RETURN
 
     ! Number of channels
@@ -184,20 +184,18 @@ IMPLICIT NONE
     OutputChannelNames_C(k) = C_NULL_CHAR
     OutputChannelUnits_C(k) = C_NULL_CHAR
 
-    CALL SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+    CALL Cleanup()
 
 CONTAINS
     LOGICAL FUNCTION Failed()
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-        Failed = ErrStat >= AbortErrLev
-        IF (Failed) THEN
-            CALL Cleanup()
-            CALL SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-        ENDIF
+        CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+        Failed = ErrStat_F >= AbortErrLev
+        IF (Failed) CALL Cleanup()
     END FUNCTION Failed
 
     SUBROUTINE Cleanup()    ! NOTE: we are ignoring any error reporting from here
-    END SUBROUTINE Cleanup 
+        CALL SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+    END SUBROUTINE Cleanup
 
     SUBROUTINE ShowPassedData()
         ! CHARACTER(1) :: TmpFlag
@@ -232,33 +230,37 @@ IMPLICIT NONE
     TYPE(SeaSt_OtherStateType)      :: OtherState  !< Initial other states            
 
     REAL(DbKi)                 :: Time
-    INTEGER                    :: ErrStat                          !< aggregated error status
-    CHARACTER(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
-    INTEGER                    :: ErrStat2                         !< temporary error status  from a call
-    CHARACTER(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
+    INTEGER                    :: ErrStat_F                         !< aggregated error status
+    CHARACTER(ErrMsgLen)       :: ErrMsg_F                          !< aggregated error message
+    INTEGER                    :: ErrStat_F2                        !< temporary error status  from a call
+    CHARACTER(ErrMsgLen)       :: ErrMsg_F2                         !< temporary error message from a call
     CHARACTER(*), PARAMETER    :: RoutineName = 'SeaSt_C_End'  !< for error handling
 
     ! Initialize error handling
-    ErrStat  =  ErrID_None
-    ErrMsg   =  ""
+    ErrStat_F =  ErrID_None
+    ErrMsg_F  =  ""
 
     ! Convert the inputs from C to Fortran
     Time = REAL(Time_C,DbKi)
 
-    CALL SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )
+    CALL SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat_F2, ErrMsg_F2 )
         IF (Failed()) RETURN
 
     ! Get the output channel info out of y
     OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
-    CALL SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+    CALL Cleanup()
 
 CONTAINS
     LOGICAL FUNCTION Failed()
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-        Failed = ErrStat >= AbortErrLev
-        IF (Failed) CALL SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+        CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
+        Failed = ErrStat_F >= AbortErrLev
+        IF (Failed) CALL Cleanup()
     END FUNCTION Failed
+
+    SUBROUTINE Cleanup()    ! NOTE: we are ignoring any error reporting from here
+        CALL SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+    END SUBROUTINE Cleanup
 END SUBROUTINE
 
 SUBROUTINE SeaSt_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='SeaSt_C_End')
@@ -289,7 +291,7 @@ IMPLICIT NONE
     CALL SeaSt_End(u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2)
 
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-    CALL SetErr( ErrStat, ErrMsg, ErrStat_C, ErrMsg_C )
+    CALL SetErrStat_F2C( ErrStat, ErrMsg, ErrStat_C, ErrMsg_C )
 
 END SUBROUTINE
 
