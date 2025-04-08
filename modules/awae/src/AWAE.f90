@@ -1293,9 +1293,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    errMsg  = ""
    
    ! Read the ambient wind data that is needed for t+dt, i.e., n+1
-!#ifdef _OPENMP
-!   t1 = omp_get_wtime()  
-!#endif 
    
    if ( (n+1) == (p%NumDT-1) ) then
       n_high_low = 0
@@ -1306,10 +1303,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    if ( p%Mod_AmbWind == 1 ) then
          ! read from file the ambient flow for the n+1 time step
       call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat2, errMsg2);   if (Failed()) return;
-   !#ifdef _OPENMP
-   !   t2 = omp_get_wtime()      
-   !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
-   !#endif   
       
       !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, i_hl, errStat2, errMsg2) !Private(nt,tm2,tm3)
       do nt = 1,p%NumTurbines
@@ -1404,11 +1397,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       ! add mean velocity * dt to the tracer for the position of the WAT box
       xd%WAT_B_Box(1:3) = xd%WAT_B_Box(1:3) + xd%Ufarm(1:3)*real(p%dt_low,ReKi)
    endif
-
-!#ifdef _OPENMP
-!   t1 = omp_get_wtime()      
-!   write(*,*) '        AWAE_UpdateStates: Time spent reading High Res data : '//trim(num2lstr(t1-t2))//' seconds'             
-!#endif
 
 contains
    logical function Failed()
