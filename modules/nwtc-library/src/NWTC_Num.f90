@@ -5746,7 +5746,7 @@ end function Rad2M180to180Deg
          ! Estimate the end time in hours, minutes, and seconds
 
       SimTimeLeft = REAL( ( TMax - ZTime )*DeltTime/( ZTime - PrevSimTime ), ReKi )          ! DeltTime/( ZTime - PrevSimTime ) is the delta_ClockTime divided by the delta_SimulationTime
-      DaysRemain  = real((CurrClockTime+SimTimeLeft) / real(SecPerDay,ReKi),SiKi)
+      DaysRemain  = real((SimTimeLeft) / real(SecPerDay,ReKi),SiKi)
       EndTime  =  MOD( CurrClockTime+SimTimeLeft, SecPerDay )
       EndHour  =  INT(   EndTime*InSecHr )
       EndMin   =  INT( ( EndTime - REAL( 3600*EndHour ) )*InSecMn )
