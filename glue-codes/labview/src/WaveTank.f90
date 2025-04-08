@@ -91,6 +91,15 @@ IMPLICIT NONE
     INTEGER(C_INT) :: NumTurbines_C
     INTEGER(C_INT) :: TransposeDCM
     INTEGER(C_INT) :: PointLoadOutput
+    ! Environmental
+    REAL(C_FLOAT) :: ADI_gravity_C                   ! intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
+    REAL(C_FLOAT) :: ADI_defFldDens_C                ! intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
+    REAL(C_FLOAT) :: ADI_defKinVisc_C                ! intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
+    REAL(C_FLOAT) :: ADI_defSpdSound_C               ! intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
+    REAL(C_FLOAT) :: ADI_defPatm_C                   ! intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+    REAL(C_FLOAT) :: ADI_defPvap_C                   ! intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+    REAL(C_FLOAT) :: ADI_WtrDpth_C                   ! intent(in   )  :: WtrDpth_C                              !< Water depth (m)
+    REAL(C_FLOAT) :: ADI_MSL2SWL_C                   ! intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
     INTEGER(C_INT) :: MHK
     INTEGER(C_INT) :: DebugLevel
     ! SetupRotor
@@ -118,15 +127,6 @@ IMPLICIT NONE
     INTEGER(C_INT) :: IfW_InputFileStringLength_C    ! intent(in   )  :: IfWinputFileStringLength_C             !< length of the input file string
     CHARACTER(KIND=C_CHAR) :: ADI_OutRootName_C(IntfStrLen) ! intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
     CHARACTER(KIND=C_CHAR) :: ADI_OutVTKDir_C(IntfStrLen)   ! intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
-    ! Environmental
-    REAL(C_FLOAT) :: ADI_gravity_C                   ! intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
-    REAL(C_FLOAT) :: ADI_defFldDens_C                ! intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
-    REAL(C_FLOAT) :: ADI_defKinVisc_C                ! intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
-    REAL(C_FLOAT) :: ADI_defSpdSound_C               ! intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
-    REAL(C_FLOAT) :: ADI_defPatm_C                   ! intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
-    REAL(C_FLOAT) :: ADI_defPvap_C                   ! intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
-    REAL(C_FLOAT) :: ADI_WtrDpth_C                   ! intent(in   )  :: WtrDpth_C                              !< Water depth (m)
-    REAL(C_FLOAT) :: ADI_MSL2SWL_C                   ! intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
     ! Interpolation
     INTEGER(C_INT) :: ADI_InterpOrder_C              ! intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
     ! Time
@@ -273,6 +273,14 @@ IMPLICIT NONE
         NumTurbines_C,              &
         TransposeDCM,               &
         PointLoadOutput,            &
+        ADI_gravity_C,              &  ! REAL(C_FLOAT),             intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
+        ADI_defFldDens_C,           &  ! REAL(C_FLOAT),             intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
+        ADI_defKinVisc_C,           &  ! REAL(C_FLOAT),             intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
+        ADI_defSpdSound_C,          &  ! REAL(C_FLOAT),             intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
+        ADI_defPatm_C,              &  ! REAL(C_FLOAT),             intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+        ADI_defPvap_C,              &  ! REAL(C_FLOAT),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+        ADI_WtrDpth_C,              &  ! REAL(C_FLOAT),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
+        ADI_MSL2SWL_C,              &  ! REAL(C_FLOAT),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
         MHK,                        &
         DebugLevel,                 &
         ErrStat_C2,                 &
@@ -311,14 +319,6 @@ IMPLICIT NONE
         IfW_InputFileStringLength_C, &  ! INTEGER(C_INT),            intent(in   )  :: IfWinputFileStringLength_C             !< lenght of the input file string
         ADI_OutRootName_C,           &  ! CHARACTER(KIND=C_CHAR),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
         ADI_OutVTKDir_C,             &  ! CHARACTER(KIND=C_CHAR),    intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
-        ADI_gravity_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
-        ADI_defFldDens_C,            &  ! REAL(C_FLOAT),             intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
-        ADI_defKinVisc_C,            &  ! REAL(C_FLOAT),             intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
-        ADI_defSpdSound_C,           &  ! REAL(C_FLOAT),             intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
-        ADI_defPatm_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
-        ADI_defPvap_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
-        ADI_WtrDpth_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
-        ADI_MSL2SWL_C,               &  ! REAL(C_FLOAT),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
         ADI_InterpOrder_C,           &  ! INTEGER(C_INT),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
         ADI_DT_C,                    &  ! REAL(C_DOUBLE),            intent(in   )  :: DT_C                                   !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
         ADI_TMax_C,                  &  ! REAL(C_DOUBLE),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation

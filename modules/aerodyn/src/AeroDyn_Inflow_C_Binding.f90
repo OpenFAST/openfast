@@ -223,7 +223,15 @@ CONTAINS
 !--------------------------------------------- AeroDyn PreInit -------------------------------------------------
 !===============================================================================================================
 !> Allocate all the arrays for data storage for all turbine rotors
-subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK_in, DebugLevel_in, ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_PreInit')
+subroutine ADI_C_PreInit(                       &
+   NumTurbines_C,                               &
+   TransposeDCM_in, PointLoadOutput_in,         &
+   gravity_in, defFldDens_in, defKinVisc_in,    &
+   defSpdSound_in, defPatm_in, defPvap_in,      &
+   WtrDpth_in, MSL2SWL_in,                      &
+   MHK_in,                                      &
+   DebugLevel_in, ErrStat_C, ErrMsg_C           &
+) BIND (C, NAME='ADI_C_PreInit')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_PreInit
@@ -232,6 +240,14 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK
    integer(c_int),          intent(in   ) :: NumTurbines_C
    integer(c_int),          intent(in   ) :: TransposeDCM_in        !< Transpose DCMs as they are passed i
    integer(c_int),          intent(in   ) :: PointLoadOutput_in
+   real(c_float),           intent(in   ) :: gravity_in             !< Gravitational acceleration (m/s^2)
+   real(c_float),           intent(in   ) :: defFldDens_in          !< Air density (kg/m^3)
+   real(c_float),           intent(in   ) :: defKinVisc_in          !< Kinematic viscosity of working fluid (m^2/s)
+   real(c_float),           intent(in   ) :: defSpdSound_in         !< Speed of sound in working fluid (m/s)
+   real(c_float),           intent(in   ) :: defPatm_in             !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+   real(c_float),           intent(in   ) :: defPvap_in             !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+   real(c_float),           intent(in   ) :: WtrDpth_in             !< Water depth (m)
+   real(c_float),           intent(in   ) :: MSL2SWL_in             !< Offset between still-water level and mean sea level (m) [positive upward]
    integer(c_int),          intent(in   ) :: MHK_in
    integer(c_int),          intent(in   ) :: DebugLevel_in
    integer(c_int),          intent(  out) :: ErrStat_C
@@ -285,10 +301,6 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK
       if (Failed()) return;
    endif
 
-   ! Set whether these are MHK turbines
-   InitInp%AD%MHK = MHK_in
-   InitInp%IW_InitInp%MHK = MHK_in
-
    ! Flag to transpose DCMs as they are passed in
    TransposeDCM      = TransposeDCM_in==1_c_int
 
@@ -333,6 +345,29 @@ subroutine ADI_C_PreInit(NumTurbines_C, TransposeDCM_in, PointLoadOutput_in, MHK
    if (allocated(StrucPts_2_Bld_Map)) deallocate(StrucPts_2_Bld_Map)
    allocate(StrucPts_2_Bld_Map(Sim%NumTurbines), STAT=ErrStat_F2); if (Failed0('StrucPts_2_Bld_Map'  )) return
 
+   !----------------------------------------------------
+   ! Set AeroDyn initialization data
+   !----------------------------------------------------
+   InitInp%AD%Gravity     = REAL(gravity_in,     ReKi)
+   InitInp%AD%defFldDens  = REAL(defFldDens_in,  ReKi)
+   InitInp%AD%defKinVisc  = REAL(defKinVisc_in,  ReKi)
+   InitInp%AD%defSpdSound = REAL(defSpdSound_in, ReKi)
+   InitInp%AD%defPatm     = REAL(defPatm_in,     ReKi)
+   InitInp%AD%defPvap     = REAL(defPvap_in,     ReKi)
+   InitInp%AD%WtrDpth     = REAL(WtrDpth_in,     ReKi)
+   InitInp%AD%MSL2SWL     = REAL(MSL2SWL_in,     ReKi)
+
+   ! Set whether these are MHK turbines
+   InitInp%AD%MHK = MHK_in
+   InitInp%IW_InitInp%MHK = MHK_in
+
+   ! Offset the origin to account for water depth for MHK turbines
+   do iWT=1,Sim%NumTurbines
+      if ( InitInp%AD%MHK == MHK_FixedBottom ) then
+         Sim%WT(iWT)%originInit(3) = Sim%WT(iWT)%originInit(3) - InitInp%AD%WtrDpth
+      end if
+   enddo
+
    call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
 
 contains
@@ -371,6 +406,15 @@ contains
       TmpFlag="F";   if (TransposeDCM_in==1_c_int) TmpFlag="T"
       call WrScr("       TransposeDCM_in                "//TmpFlag )
       call WrScr("       debuglevel                     "//trim(Num2LStr( DebugLevel_in )) )
+      call WrScr("   Environment variables")
+      call WrScr("       gravity_C                      "//trim(Num2LStr( gravity_in     )) )
+      call WrScr("       defFldDens_C                   "//trim(Num2LStr( defFldDens_in  )) )
+      call WrScr("       defKinVisc_C                   "//trim(Num2LStr( defKinVisc_in  )) )
+      call WrScr("       defSpdSound_C                  "//trim(Num2LStr( defSpdSound_in )) )
+      call WrScr("       defPatm_C                      "//trim(Num2LStr( defPatm_in     )) )
+      call WrScr("       defPvap_C                      "//trim(Num2LStr( defPvap_in     )) )
+      call WrScr("       WtrDpth_C                      "//trim(Num2LStr( WtrDpth_in     )) )
+      call WrScr("       MSL2SWL_C                      "//trim(Num2LStr( MSL2SWL_in     )) )
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
 
@@ -382,8 +426,6 @@ end subroutine ADI_C_PreInit
 SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileStringLength_C, &
                IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,  &
                OutVTKDir_C,                                               &
-               gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,      &
-               defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                &
                InterpOrder_C, DT_C, TMax_C,                               &
                storeHHVel,                                                &
                WrVTK_in, WrVTK_inType, WrVTK_inDT,                        &
@@ -405,15 +447,6 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    integer(c_int),            intent(in   )  :: IfWinputFileStringLength_C             !< length of the input file string
    character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
    character(kind=c_char),    intent(in   )  :: OutVTKDir_C(IntfStrLen)                !< Directory to put all vtk output
-   ! Environmental
-   real(c_float),             intent(in   )  :: gravity_C                              !< Gravitational acceleration (m/s^2)
-   real(c_float),             intent(in   )  :: defFldDens_C                           !< Air density (kg/m^3)
-   real(c_float),             intent(in   )  :: defKinVisc_C                           !< Kinematic viscosity of working fluid (m^2/s)
-   real(c_float),             intent(in   )  :: defSpdSound_C                          !< Speed of sound in working fluid (m/s)
-   real(c_float),             intent(in   )  :: defPatm_C                              !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
-   real(c_float),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
-   real(c_float),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
-   real(c_float),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
    ! Interpolation
    integer(c_int),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
    ! Time
@@ -588,33 +621,16 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    InitInp%AD%Linearize          = .FALSE.
    !InitInp%IW_InitInp%Linearize  = .FALSE.
 
+   ! setup rotors for AD -- interface only supports one rotor at present
+   do iWT=1,Sim%NumTurbines
+      InitInp%AD%rotors(iWT)%numBlades   = Sim%WT(iWT)%NumBlades
+   enddo
 
-   !----------------------------------------------------
-   ! Set AeroDyn initialization data
-   !----------------------------------------------------
-   InitInp%AD%Gravity     = REAL(gravity_C,     ReKi)
-   InitInp%AD%defFldDens  = REAL(defFldDens_C,  ReKi)
-   InitInp%AD%defKinVisc  = REAL(defKinVisc_C,  ReKi)
-   InitInp%AD%defSpdSound = REAL(defSpdSound_C, ReKi)
-   InitInp%AD%defPatm     = REAL(defPatm_C,     ReKi)
-   InitInp%AD%defPvap     = REAL(defPvap_C,     ReKi)
-   InitInp%AD%WtrDpth     = REAL(WtrDpth_C,     ReKi)
-   InitInp%AD%MSL2SWL     = REAL(MSL2SWL_C,     ReKi)
+   ! Flags and output data
    InitInp%storeHHVel     = storeHHVel==1_c_int
    InitInp%WrVTK          = WrOutputsData%WrVTK
    InitInp%WrVTK_Type     = WrOutputsData%WrVTK_Type
    InitInp%IW_InitInp%CompInflow = 1    ! Use InflowWind
-
-   ! setup rotors for AD -- interface only supports one rotor at present
-   do iWT=1,Sim%NumTurbines
-      InitInp%AD%rotors(iWT)%numBlades   = Sim%WT(iWT)%NumBlades
-
-      ! TODO: If we modify Sim%WT(iWT)%originInit here, then it's not used in ADI_C_SetupRotor to create the AD mesh
-      ! if ( InitInp%AD%MHK == MHK_FixedBottom ) then
-      !    Sim%WT(iWT)%originInit(3) = Sim%WT(iWT)%originInit(3) - InitInp%AD%WtrDpth
-      ! end if
-   enddo
-
 
    !----------------------------------------------------
    ! Allocate input array u and corresponding InputTimes
@@ -897,15 +913,6 @@ CONTAINS
       call WrScr("       IfWinputFileStringLength_C     "//trim(Num2LStr( IfWinputFileStringLength_C )) )
       call WrScr("       OutRootName                    "//trim(OutRootName) )
       call WrScr("       OutVTKDir                      "//trim(OutVTKDir)   )
-      call WrScr("   Environment variables")
-      call WrScr("       gravity_C                      "//trim(Num2LStr( gravity_C     )) )
-      call WrScr("       defFldDens_C                   "//trim(Num2LStr( defFldDens_C  )) )
-      call WrScr("       defKinVisc_C                   "//trim(Num2LStr( defKinVisc_C  )) )
-      call WrScr("       defSpdSound_C                  "//trim(Num2LStr( defSpdSound_C )) )
-      call WrScr("       defPatm_C                      "//trim(Num2LStr( defPatm_C     )) )
-      call WrScr("       defPvap_C                      "//trim(Num2LStr( defPvap_C     )) )
-      call WrScr("       WtrDpth_C                      "//trim(Num2LStr( WtrDpth_C     )) )
-      call WrScr("       MSL2SWL_C                      "//trim(Num2LStr( MSL2SWL_C     )) )
       call WrScr("   Interpolation")
       call WrScr("       InterpOrder_C                  "//trim(Num2LStr( InterpOrder_C )) )
       call WrScr("   Time variables")

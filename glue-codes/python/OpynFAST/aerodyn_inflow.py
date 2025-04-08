@@ -334,6 +334,14 @@ class AeroDynInflowLib(CDLL):
             byref(c_int(self.num_turbines)),        # IN -> number of turbines
             byref(c_int(self.transpose_dcm)),       # IN -> transpose_dcm flag (0=false, 1=true)
             byref(c_int(self.point_load_output)),   # IN -> point_load_output flag (0=false, 1=true)
+            byref(c_float(self.gravity)),                        # IN -> gravity
+            byref(c_float(self.fluid_density)),                  # IN -> fluid density
+            byref(c_float(self.kinematic_viscosity)),            # IN -> kinematic viscosity
+            byref(c_float(self.sound_speed)),                    # IN -> speed of sound
+            byref(c_float(self.atmospheric_pressure)),           # IN -> atmospheric pressure
+            byref(c_float(self.vapor_pressure)),                 # IN -> vapor pressure
+            byref(c_float(self.water_depth)),                    # IN -> water depth
+            byref(c_float(self.mean_sea_level_offset)),          # IN -> MSL to SWL offset
             byref(c_int(self.debug_level)),         # IN -> debug level (0=None to 4=Fatal)
             byref(self.error_status_c),             # OUT <- error status code
             self.error_message_c                    # OUT <- error message buffer
@@ -429,14 +437,6 @@ class AeroDynInflowLib(CDLL):
             byref(c_int(ifw_input_string_length)),               # IN -> IfW input file string length
             output_file_root_name_c,                             # IN -> rootname for ADI file writing
             vtk_output_dir_c,                                    # IN -> directory for vtk output files
-            byref(c_float(self.gravity)),                        # IN -> gravity
-            byref(c_float(self.fluid_density)),                  # IN -> fluid density
-            byref(c_float(self.kinematic_viscosity)),            # IN -> kinematic viscosity
-            byref(c_float(self.sound_speed)),                    # IN -> speed of sound
-            byref(c_float(self.atmospheric_pressure)),           # IN -> atmospheric pressure
-            byref(c_float(self.vapor_pressure)),                 # IN -> vapor pressure
-            byref(c_float(self.water_depth)),                    # IN -> water depth
-            byref(c_float(self.mean_sea_level_offset)),          # IN -> MSL to SWL offset
             byref(c_int(self.interpolation_order)),              # IN -> interpolation order (1: linear, 2: quadratic)
             byref(c_double(self.dt)),                            # IN -> time step
             byref(c_double(self.t_max)),                         # IN -> maximum simulation time
@@ -695,6 +695,14 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # numTurbines
             POINTER(c_int),                     # transposeDCM
             POINTER(c_int),                     # pointLoadOutput
+            POINTER(c_float),                   # gravity
+            POINTER(c_float),                   # defFldDens
+            POINTER(c_float),                   # defKinVisc
+            POINTER(c_float),                   # defSpdSound
+            POINTER(c_float),                   # defPatm
+            POINTER(c_float),                   # defPvap
+            POINTER(c_float),                   # WtrDpth
+            POINTER(c_float),                   # MSL2SWL
             POINTER(c_int),                     # debuglevel
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
@@ -736,14 +744,6 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # IfW input file string length
             POINTER(c_char),                    # OutRootName
             POINTER(c_char),                    # OutVTKdir
-            POINTER(c_float),                   # gravity
-            POINTER(c_float),                   # defFldDens
-            POINTER(c_float),                   # defKinVisc
-            POINTER(c_float),                   # defSpdSound
-            POINTER(c_float),                   # defPatm
-            POINTER(c_float),                   # defPvap
-            POINTER(c_float),                   # WtrDpth
-            POINTER(c_float),                   # MSL2SWL
             POINTER(c_int),                     # InterpOrder
             POINTER(c_double),                  # dt
             POINTER(c_double),                  # tmax
