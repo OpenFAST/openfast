@@ -4,9 +4,10 @@ MODULE WaveTankTesting
     USE ISO_C_BINDING
     USE NWTC_Library
     ! USE Precision
-    USE SeaState_C_Binding, ONLY: SeaSt_C_Init, SeaSt_C_CalcOutput, SeaSt_C_End, MaxOutPts
+    USE SeaState_C_Binding, ONLY: SeaSt_C_Init, SeaSt_C_CalcOutput, SeaSt_C_End, MaxOutPts, SeaSt_GetWaveFieldPointer_C
+    USE SeaSt_WaveField_Types, ONLY: SeaSt_WaveFieldType
     USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_PreInit, ADI_C_SetupRotor, ADI_C_Init, ADI_C_End, MaxADIOutputs
-    USE MoorDyn_C, ONLY: MD_C_Init, MD_C_End
+    USE MoorDyn_C, ONLY: MD_C_Init, MD_C_End, MD_C_SetWaveFieldData
     USE NWTC_C_Binding, ONLY: IntfStrLen, SetErrStat_C, ErrMsgLen_C, StringConvert_F2C
 
     IMPLICIT NONE
@@ -55,6 +56,8 @@ IMPLICIT NONE
     INTEGER(C_INT)                          :: ErrStat_C2
     CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
     INTEGER(C_INT)                          :: input_file_passed = 0  ! We're passing paths to input files rather than input strings for all modules
+    TYPE(C_PTR)                             :: SeaState_WaveField_Pointer
+    TYPE(SeaSt_WaveFieldType), POINTER      :: SeaState_WaveField
 
     ! SeaState variables
     CHARACTER(KIND=C_CHAR, LEN=IntfStrLen), TARGET :: SS_OutRootName
@@ -184,8 +187,11 @@ IMPLICIT NONE
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'SeaSt_C_Init')
     IF (ErrStat_C >= AbortErrLev) RETURN
 
-    ! SS_GetFlowFieldPtr(SSFFPTR)
-    ! MD_SetFlowFieldPtr(SSFFPTR)
+    ! ! Set the SeaState FlowField pointer onto MoorDyn
+    ! CALL WaveTank_SetFlowFieldPointer(ErrStat_C2, ErrMsg_C2)
+    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'WaveTank_SetFlowFieldPointer')
+    ! IF (ErrStat_C >= AbortErrLev) RETURN
+    ! Moved to below MD_C_Init to enable validation on setting the pointer
 
     MD_InputFilePassed = 0
     MD_InputFileString_C = MD_InputFile_C
@@ -196,6 +202,9 @@ IMPLICIT NONE
     MD_DEPTH_C = 200_C_FLOAT
     MD_PtfmInit_C = 0.0_C_FLOAT
     MD_InterpOrder_C = 1  ! 1 - Linear, 2 - quadratic
+
+    ! Set the SeaState Wave Field pointer onto MoorDyn
+    CALL WaveTank_SetWaveFieldPointer(ErrStat_C2, ErrMsg_C2)
 
     CALL MD_C_Init(                 &
         MD_InputFilePassed,         &
@@ -408,6 +417,31 @@ IMPLICIT NONE
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_END')
     IF (ErrStat_C >= AbortErrLev) RETURN
 
+END SUBROUTINE
+
+SUBROUTINE WaveTank_SetWaveFieldPointer(ErrStat_C, ErrMsg_C) bind (C, NAME="WaveTank_SetWaveFieldPointer")
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_SetWaveFieldPointer
+!GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_SetWaveFieldPointer
+#endif
+IMPLICIT NONE
+
+    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
+    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
+
+    ! Local variables
+    INTEGER(C_INT)                          :: ErrStat_C2
+    CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
+
+    ! Set the SeaState FlowField pointer onto MoorDyn
+    TYPE(C_PTR) :: WaveFieldPointer
+
+    ! Initialize error handling
+    ErrStat_C = ErrID_None
+    ErrMsg_C  = " "//C_NULL_CHAR
+
+    WaveFieldPointer = SeaSt_GetWaveFieldPointer_C()
+    call MD_C_SetWaveFieldData(WaveFieldPointer)
 END SUBROUTINE
 
 END MODULE WaveTankTesting

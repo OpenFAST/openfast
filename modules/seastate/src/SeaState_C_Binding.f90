@@ -295,15 +295,28 @@ IMPLICIT NONE
 
 END SUBROUTINE
 
+FUNCTION SeaSt_GetWaveFieldPointer_C() BIND (C, NAME='SeaSt_GetWaveFieldPointer_C')
+IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: SeaSt_GetWaveFieldPointer_C
+!GCC$ ATTRIBUTES DLLEXPORT :: SeaSt_GetWaveFieldPointer_C
+#endif
+    TYPE(C_PTR) :: SeaSt_GetWaveFieldPointer_C
+    SeaSt_GetWaveFieldPointer_C = C_LOC(p%WaveField)
+    RETURN
+END FUNCTION
+
+! FUNCTION SetFlowFieldPointer_C(FlowFieldPointer) BIND (C, NAME='SetFlowFieldPointer_C')
+! IMPLICIT NONE
+! #ifndef IMPLICIT_DLLEXPORT
+! !DEC$ ATTRIBUTES DLLEXPORT :: SetFlowFieldPointer_C
+! !GCC$ ATTRIBUTES DLLEXPORT :: SetFlowFieldPointer_C
+! #endif
+!     TYPE(C_PTR), INTENT(IN) :: FlowFieldPointer
+!     SetFlowFieldPointer_C = C_LOC(p%FlowField)
+!     RETURN
+! END FUNCTION
+
 ! SUBROUTINE get_wave_height(position)
-
-
-! SUBROUTINE get_wave_field_pointer()
-! pass back the internal pointer to the wave field to the calling code
-! END SUBROUTINE
-
-! SUBROUTINE set_flow_field_pointer()
-
-! END SUBROUTINE
 
 end module SeaState_C_Binding

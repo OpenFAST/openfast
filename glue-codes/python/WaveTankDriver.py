@@ -82,6 +82,12 @@ class WaveTankLib(OpenFASTInterfaceType):
         ]
         self.WaveTank_End.restype = c_int
 
+        self.WaveTank_SetWaveFieldPointer.argtypes = [
+            POINTER(c_int),         # integer(c_int),         intent(  out) :: ErrStat_C
+            POINTER(c_char),        # character(kind=c_char), intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+        ]
+        self.WaveTank_SetWaveFieldPointer.restype = c_int
+
     def init(self, n_camera_points):
         _error_status = c_int(0)
         _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
@@ -163,6 +169,17 @@ class WaveTankLib(OpenFASTInterfaceType):
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
+    def set_wave_field_pointer(self):
+        _error_status = c_int(0)
+        _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
+
+        self.WaveTank_SetWaveFieldPointer(
+            byref(_error_status),
+            _error_message,
+        )
+        if self.fatal_error(_error_status):
+            raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
+
     def print_messages(self, error_status):
         return error_status.value >= self.print_error_level
 
@@ -193,5 +210,8 @@ if __name__=="__main__":
             rotation_matrix=rotation_matrix,
             loads=loads,
         )
+
+    # Just for testing the wave field pointer setting
+    wavetanklib.set_wave_field_pointer()
 
     wavetanklib.end()

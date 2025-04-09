@@ -579,6 +579,30 @@ CONTAINS
 END SUBROUTINE MD_C_End
 
 !===============================================================================================================
+!----------------------------------------------- MD SetWaveFieldData -------------------------------------------
+!===============================================================================================================
+!> Set the wave field data pointer from an external source such as SeaState
+!! Assumes that MD_C_Init has been run since it uses those values to check that there's a valid pointer
+SUBROUTINE MD_C_SetWaveFieldData(WaveFieldData_C) BIND (C, NAME='MD_C_SetWaveFieldData')
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: MD_C_SetWaveFieldData
+!GCC$ ATTRIBUTES DLLEXPORT :: MD_C_SetWaveFieldData
+#endif
+   TYPE(C_PTR), INTENT(IN) :: WaveFieldData_C
+
+   ! Local Variables
+   ! INTEGER(IntKi)                                                   :: ErrStat_F, ErrStat_F2
+   ! CHARACTER(ErrMsgLen)                                             :: ErrMsg_F,  ErrMsg_F2
+   character(*), parameter                                          :: RoutineName = 'MD_C_SetWaveFieldData'
+
+   ! ErrStat_F = ErrID_None
+   ! ErrMsg_F = ''
+
+   call C_F_POINTER(WaveFieldData_C, InitInp%WaveField)  ! Set the wave field data pointer
+
+END SUBROUTINE MD_C_SetWaveFieldData
+
+!===============================================================================================================
 !----------------------------------------- ADDITIONAL SUBROUTINES ----------------------------------------------
 !===============================================================================================================
 !! This subroutine sets the interface meshes to map to the input motions to the MD
