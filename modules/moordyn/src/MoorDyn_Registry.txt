@@ -11,7 +11,10 @@
 #   column   10   Units
 # Keyword   ModuleName/ModName   Derived data type   Field type   Variable name      variable dimension   Initial value   for mix language, not used   Description   Units
 
+# ...... Include files (definitions from NWTC Library) ............................................................................
+# make sure that the file name does not have any trailing white spaces!
 include Registry_NWTC_Library.txt
+usefrom SeaSt_WaveField.txt
 
 ## ====== some data read from the input file, but not needed after init ======
 typedef   MoorDyn/MD  MD_InputFileType DbKi               DTIC           -    0.5   -   "convergence check time step for IC generation"              "[s]"
@@ -20,26 +23,22 @@ typedef   ^           ^                ReKi               CdScaleIC      -    1 
 typedef   ^           ^                ReKi               threshIC       -    0.01  -   "convergence tolerance for ICs  (0.01 means 1%)"              "[]"
 
 ## ============================== Define initialization input types here: =============================================================================================================================
-typedef   MoorDyn/MD  InitInputType    ReKi               g              -   -999.9 -   "gravity constant"   "[m/s^2]"
-typedef   ^           ^                ReKi               rhoW           -   -999.9 -   "sea density"        "[kg/m^3]"
-typedef   ^           ^                ReKi               WtrDepth       -   -999.9 -   "depth of water"     "[m]"
-typedef   ^           ^                ReKi               PtfmInit      {:}{:} -    -   "initial position of platform(s) shape: 6, nTurbines"     -
-typedef   ^           ^                IntKi              FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0"     -
-typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
-typedef   ^           ^                ReKi               Tmax           -     -    -   "simulation duration" "[s]"
-typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
-typedef   ^           ^                CHARACTER(1024)    RootName       -   -      -   "RootName for writing output files"              -
-typedef   ^           ^                LOGICAL            UsePrimaryInputFile    -   .TRUE.  -  "Read input file instead of passed data"   -
-typedef   ^           ^                FileInfoType       PassedPrimaryInputData -   -       -  "Primary input file as FileInfoType (set by driver/glue code) -- String array with metadata"   -
-typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
-typedef   ^           ^                CHARACTER(ChanLen) OutList        {:}   ""   -   "string containing list of output channels requested in input file"
-typedef   ^           ^                Logical            Linearize      -   .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
-typedef   ^           ^                Logical            VisMeshes      -   .FALSE. -  "Glue code requesting visualization meshes" -
-
-#typedef   ^       ^                    DbKi         UGrid                  {:}{:}{:} -  -   "water velocities time series at each grid point"            -
-#typedef   ^       ^                    DbKi         UdGrid                 {:}{:}{:} -  -   "water accelerations time series at each grid point"            -
-#typedef   ^       ^                    DbKi         zetaGrid               {:}{:}    -  -   "water surface elevations time series at each grid point"            -
-#typedef   ^       ^                    DbKi         PDynGrid               {:}{:}    -  -   "water dynamic pressure time series at each grid point"            -
+typedef   MoorDyn/MD  InitInputType    ReKi                  g              -   -999.9 -   "gravity constant"   "[m/s^2]"
+typedef   ^           ^                ReKi                  rhoW           -   -999.9 -   "sea density"        "[kg/m^3]"
+typedef   ^           ^                ReKi                  WtrDepth       -   -999.9 -   "depth of water"     "[m]"
+typedef   ^           ^                ReKi                  PtfmInit      {:}{:} -    -   "initial position of platform(s) shape: 6, nTurbines"     -
+typedef   ^           ^                IntKi                 FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >1"     -
+typedef   ^           ^                ReKi                  TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
+typedef   ^           ^                ReKi                  Tmax           -     -    -   "simulation duration" "[s]"
+typedef   ^           ^                CHARACTER(1024)       FileName       -   ""     -   "MoorDyn input file"
+typedef   ^           ^                CHARACTER(1024)       RootName       -   -      -   "RootName for writing output files"              -
+typedef   ^           ^                LOGICAL               UsePrimaryInputFile    -   .TRUE.  -  "Read input file instead of passed data"   -
+typedef   ^           ^                FileInfoType          PassedPrimaryInputData -   -       -  "Primary input file as FileInfoType (set by driver/glue code) -- String array with metadata"   -
+typedef   ^           ^                LOGICAL               Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
+typedef   ^           ^                CHARACTER(ChanLen)    OutList        {:}   ""   -   "string containing list of output channels requested in input file"
+typedef   ^           ^                Logical               Linearize      -   .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
+typedef   ^           ^                Logical               VisMeshes      -   .FALSE. -  "Glue code requesting visualization meshes" -
+typedef   ^           ^                SeaSt_WaveFieldType   *WaveField     -     -     -  "Pointer to SeaState wave field" -
 
 # nvm # Farm-level simulation inputs - these are passed by FAST.Farm - the arrays are populated from the individual turbine-level MoorDyn instances
 # nvm typedef   ^       ^                    MeshType     FarmCoupledKinematics  {:}    -    -   "array of input kinematics meshes from each of the turbine-level MoorDyn instances"  "[m, m/s]"
@@ -399,6 +398,7 @@ typedef   ^       ^                    DbKi             BathymetryGrid   {:}{:} 
 typedef   ^       ^                    DbKi                BathGrid_Xs      {:}  -  -   "array of x-coordinates in the bathymetry grid"
 typedef   ^       ^                    DbKi                BathGrid_Ys      {:}  -  -   "array of y-coordinates in the bathymetry grid"
 typedef   ^       ^                    IntKi               BathGrid_npoints {:}  -  -   "number of grid points to describe the bathymetry grid"
+typedef   ^       ^          SeaSt_WaveField_MiscVarType   WaveField_m       -   -  -   "misc var information from the SeaState Interpolation module"   -
 
 
 ## ============================== Parameters ============================================================================================================================================
@@ -439,9 +439,11 @@ typedef   ^       ^                    CHARACTER(1024)     PriPath        -     
 typedef   ^       ^                    IntKi               writeLog       -     -1   -   "Switch for level of log file output"
 #NOTE: there may be an issue with start/restart with the UnLog stored in parameters. We'll ignore this for now -- ADP
 typedef   ^       ^                    IntKi               UnLog          -     -1   -   "Unit number of log file"
-typedef   ^       ^                    IntKi               WaveKin        -     -    -   "Flag for whether or how to consider water kinematics"
-typedef   ^       ^                    IntKi               Current        -     -    -   "Flag for whether or how to consider water kinematics"
-typedef   ^       ^                    IntKi               nTurbines      -     -    -   "Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 0"
+typedef   ^       ^                    IntKi               WaveKin        -     0    -   "Flag for whether or how to consider wave kinematics. (0: no waves, 1: old method, 2: hybrid method, 3: SeaState method)"
+typedef   ^       ^                    IntKi               Current        -     0    -   "Flag for whether or how to consider currents. (0: no currents, 1: old method, 2: hybrid method, 3: SeaState method)"
+typedef   ^       ^                    IntKi               WaterKin       -     0    -   "Flag for whether or how to consider water kinematics. (0: no kinematics, 1: old method, 2: hybrid method, 3: SeaState method)"
+typedef   ^       ^                    SeaSt_WaveFieldType *WaveField     -     -    -   "Pointer to SeaState wave field" -
+typedef   ^       ^                    IntKi               nTurbines      -     -    -   "Number of turbines if MoorDyn is performing an array-level simulation with FAST.Farm, otherwise 1"
 typedef   ^       ^                    ReKi                TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
 typedef   ^       ^                    DbKi                mu_kT          -     -    -   "transverse kinetic friction coefficient" "(-)"
 typedef   ^       ^                    DbKi                mu_kA          -     -    -   "axial kinetic friction coefficient" "(-)"

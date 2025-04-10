@@ -1148,6 +1148,12 @@ CONTAINS
       Real(DbKi)                       :: phi_dot       ! frequency of lift force (rad/s)
       Real(DbKi)                       :: f_hat         ! non-dimensional frequency 
 
+      INTEGER(IntKi)                   :: ErrStat2
+      CHARACTER(120)                   :: ErrMsg2   
+      CHARACTER(120)                   :: RoutineName = 'Line_GetStateDeriv'   
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 
       N = Line%N                      ! for convenience
       d = Line%d    
@@ -1196,7 +1202,8 @@ CONTAINS
       
       ! apply wave kinematics (if there are any) 
       DO i=0,N
-         CALL getWaterKin(p, Line%r(1,i), Line%r(2,i), Line%r(3,i), Line%time, m%WaveTi, Line%U(:,i), Line%Ud(:,i), Line%zeta(i), Line%PDyn(i))
+         CALL getWaterKin(p, m%WaveField_m, Line%r(1,i), Line%r(2,i), Line%r(3,i), Line%time, m%WaveTi, Line%U(:,i), Line%Ud(:,i), Line%zeta(i), Line%PDyn(i), ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       END DO
       
       ! --------- calculate line partial submergence (Line::calcSubSeg from MD-C) ---------

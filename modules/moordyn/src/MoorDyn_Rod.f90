@@ -587,6 +587,9 @@ CONTAINS
       Real(DbKi)                 :: depth                  ! local interpolated depth from bathymetry grid [m]
       Real(DbKi)                 :: nvec(3)        ! local seabed surface normal vector (positive out)
 
+      INTEGER(IntKi)                   :: ErrStat2
+      CHARACTER(120)                   :: ErrMsg2   
+
 
       N = Rod%N
 
@@ -619,7 +622,9 @@ CONTAINS
       ! apply wave kinematics (if there are any)
 
       DO i=0,N
-         CALL getWaterKin(p, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, m%WaveTi, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i))
+         CALL getWaterKin(p, m%WaveField_m, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, m%WaveTi, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i), ErrStat2, ErrMsg2)
+         ! TODO: Handle error messages. Roads broadly needs error flags to be supported
+         
          !F(i) = 1.0 ! set VOF value to one for now (everything submerged - eventually this should be element-based!!!) <<<<
          ! <<<< currently F is not being used and instead a VOF variable is used within the node loop
       END DO
@@ -634,7 +639,7 @@ CONTAINS
       else if ((Rod%r(3,N) < zeta) .and. (Rod%r(3,0) > zeta)) then   ! check if it's crossing the water plane but upside down
          Rod%h0 = -(zeta - Rod%r(3,0))/Rod%q(3)                       ! negative distance along rod centerline from end A to the waterplane
       else 
-         Rod%h0 = 0.0_DbKi                                           ! fully unsubmerged case (ever applicable?)
+         Rod%h0 = 0.0_DbKi                                           ! fully unsubmerged case (ever applicable?). (Rod%r(3,0) > zeta) .and. (Rod%r(3,N) > zeta)
       end if
 
    

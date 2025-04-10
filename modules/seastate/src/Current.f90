@@ -73,6 +73,8 @@ END SUBROUTINE UserCurrent
 SUBROUTINE Calc_Current( InitInp, z, h , DirRoot, CurrVxi, CurrVyi )
 !----------------------------------------------------------------------------------------------------------------------------------
 
+! TODO: can we call this from MoorDyn or replicate it?
+
          ! This routine is used to initialize the variables associated with
          ! current.
 

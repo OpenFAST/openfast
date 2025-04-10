@@ -1305,11 +1305,6 @@ CONTAINS
       IF (ALLOCATED(m%MDWrOutput)) THEN
          DEALLOCATE(m%MDWrOutput)
       ENDIF
-      DO I=1,p%NLines
-         IF (ALLOCATED(m%LineList(I)%LineWrOutput)) THEN
-            DEALLOCATE(m%LineList(I)%LineWrOutput)       ! this may be unnecessary and handled by Line destructor
-         ENDIF
-      END DO
 
    END SUBROUTINE MDIO_CloseOutput
    !----------------------------------------------------------------------------------------============

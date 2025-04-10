@@ -275,7 +275,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          DEALLOCATE ( InitOut%WriteOutputHdr )
       END IF
       
-      InitOut%WaveField => p%WaveField
+      InitOut%WaveField => p%WaveField ! TODO: add necessary current information to the wavefield if we cannot call CalcCurrent from SeaState
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:
       InitOut%InvalidWithSSExctn = InputFileData%WaveMod == WaveMod_ExtFull      .or. & ! 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.'

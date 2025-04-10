@@ -204,6 +204,9 @@ CONTAINS
       DepthValue = ""  ! Start off as empty string, to only be filled if MD setting is specified (otherwise InitInp%WtrDepth is used)
                        ! DepthValue and InitInp%WtrDepth are processed later by setupBathymetry.
       WaterKinValue = ""
+
+      ! Read in the SeaState wave field pointer for wave kinematics (regardless if kinematics are enabled in MD or not)
+      p%WaveField => InitInp%WaveField 
       
       m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
 
