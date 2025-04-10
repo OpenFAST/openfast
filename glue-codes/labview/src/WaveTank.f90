@@ -37,12 +37,11 @@ SUBROUTINE WaveTank_Init(   &
     ErrStat_C,              &
     ErrMsg_C                &
 ) BIND (C, NAME='WaveTank_Init')
+IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_Init
 #endif
-
-IMPLICIT NONE
 
     TYPE(C_PTR),        INTENT(IN   ) :: MD_InputFile_C
     TYPE(C_PTR),        INTENT(IN   ) :: SS_InputFile_C
@@ -364,6 +363,7 @@ SUBROUTINE WaveTank_CalcOutput( &
     ErrStat_C,                  &
     ErrMsg_C                    &
 ) BIND (C, NAME='WaveTank_CalcOutput')
+IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_CalcOutput
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_CalcOutput
@@ -397,12 +397,11 @@ IMPLICIT NONE
 END SUBROUTINE
 
 SUBROUTINE WaveTank_End(ErrStat_C, ErrMsg_C) bind (C, NAME="WaveTank_End")
+IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_End
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_End
 #endif
-
-IMPLICIT NONE
 
     INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
     CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
@@ -426,11 +425,11 @@ IMPLICIT NONE
 END SUBROUTINE
 
 SUBROUTINE WaveTank_SetWaveFieldPointer(ErrStat_C, ErrMsg_C) bind (C, NAME="WaveTank_SetWaveFieldPointer")
+IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_SetWaveFieldPointer
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_SetWaveFieldPointer
 #endif
-IMPLICIT NONE
 
     INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
     CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
@@ -451,11 +450,11 @@ IMPLICIT NONE
 END SUBROUTINE
 
 SUBROUTINE WaveTank_NoOp(ErrStat_C, ErrMsg_C) bind (C, NAME="WaveTank_NoOp")
+IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_NoOp
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_NoOp
 #endif
-IMPLICIT NONE
 
     INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
     CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
