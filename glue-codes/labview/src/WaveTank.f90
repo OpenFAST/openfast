@@ -26,6 +26,9 @@ MODULE WaveTankTesting
     
     INTEGER(C_INT) :: load_period = 20 ! seconds
 
+    INTEGER(C_INT) :: SS_NumChannels_C
+    INTEGER(C_INT) :: MD_NumChannels_C
+    INTEGER(C_INT) :: ADI_NumChannels_C
 CONTAINS
 
 SUBROUTINE WaveTank_Init(   &
@@ -69,7 +72,7 @@ IMPLICIT NONE
     REAL(C_FLOAT)  :: SS_TimeInterval_C          ! REAL(C_FLOAT),  intent(in   )
     INTEGER(C_INT) :: SS_WaveElevSeriesFlag_C    ! INTEGER(C_INT), intent(in   )
     INTEGER(C_INT) :: SS_WrWvKinMod_C            ! INTEGER(C_INT), intent(in   )
-    INTEGER(C_INT) :: SS_NumChannels_C           ! INTEGER(C_INT), intent(  out)
+    ! INTEGER(C_INT) :: SS_NumChannels_C           ! INTEGER(C_INT), intent(  out)
     CHARACTER(KIND=C_CHAR) :: SS_OutputChannelNames_c(ChanLen*MaxOutPts+1)  ! CHARACTER(KIND=C_CHAR), intent(  out)
     CHARACTER(KIND=C_CHAR) :: SS_OutputChannelUnits_c(ChanLen*MaxOutPts+1)  ! CHARACTER(KIND=C_CHAR), intent(  out)
 
@@ -84,7 +87,7 @@ IMPLICIT NONE
     REAL(C_FLOAT)  :: MD_DEPTH_C                    ! REAL(C_FLOAT), INTENT(IN   ) :: DEPTH_C
     REAL(C_FLOAT)  :: MD_PtfmInit_C(6)              ! REAL(C_FLOAT), INTENT(IN   ) :: PtfmInit_C(6)
     INTEGER(C_INT) :: MD_InterpOrder_C              ! INTEGER(C_INT, INTENT(IN   ) :: InterpOrder_C
-    INTEGER(C_INT) :: MD_NumChannels_C              ! INTEGER(C_INT, INTENT(  OUT) :: NumChannels_C
+    ! INTEGER(C_INT) :: MD_NumChannels_C              ! INTEGER(C_INT, INTENT(  OUT) :: NumChannels_C
     CHARACTER(KIND=C_CHAR) :: MD_OutputChannelNames_C(100000)  ! CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)
     CHARACTER(KIND=C_CHAR) :: MD_OutputChannelUnits_C(100000)  ! CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(100000)
 
@@ -145,7 +148,7 @@ IMPLICIT NONE
     INTEGER(C_INT) :: ADI_wrOuts_C                   ! intent(in   )  :: wrOuts_C                               !< Write ADI output file
     REAL(C_DOUBLE) :: ADI_DT_Outs_C                  ! intent(in   )  :: DT_Outs_C                              !< Timestep to write output file from ADI
     ! Output
-    INTEGER(C_INT) :: ADI_NumChannels_C              ! intent(  out)  :: NumChannels_C                          !< Number of output channels requested from the input file
+    ! INTEGER(C_INT) :: ADI_NumChannels_C              ! intent(  out)  :: NumChannels_C                          !< Number of output channels requested from the input file
     CHARACTER(KIND=C_CHAR) :: ADI_OutputChannelNames_C(ChanLen*MaxADIOutputs+1) ! intent(  out)  :: OutputChannelNames_C(ChanLen*MaxADIOutputs+1)    !< NOTE: if MaxADIOutputs is sufficiently large, we may overrun the buffer on the Python side.
     CHARACTER(KIND=C_CHAR) :: ADI_OutputChannelUnits_C(ChanLen*MaxADIOutputs+1) ! intent(  out)  :: OutputChannelUnits_C(ChanLen*MaxADIOutputs+1)
 
@@ -472,6 +475,22 @@ IMPLICIT NONE
     ErrMsg_C2 = "Hi Stephen - No op here."
 
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'WaveTank_NoOp')
+
+END SUBROUTINE
+
+SUBROUTINE WaveTank_Sizes(SS_NumOuts, MD_NumOuts, ADI_NumOuts) bind (C, NAME="WaveTank_Sizes")
+IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_Sizes
+!GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_Sizes
+#endif
+    INTEGER(C_INT),         INTENT(  OUT) :: SS_NumOuts
+    INTEGER(C_INT),         INTENT(  OUT) :: MD_NumOuts
+    INTEGER(C_INT),         INTENT(  OUT) :: ADI_NumOuts
+
+    SS_NumOuts = SS_NumChannels_C
+    MD_NumOuts = MD_NumChannels_C
+    ADI_NumOuts = ADI_NumChannels_C
 
 END SUBROUTINE
 

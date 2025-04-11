@@ -47,10 +47,17 @@ class WaveTankLib(OpenFASTInterfaceType):
 
         # Create buffers for class data
         # These will generally be overwritten by the Fortran code
-        self.num_outs_c = c_int(0)
-        self.output_channel_names = []
-        self.output_channel_units = []
-        self.output_values = None
+        self.ss_output_channel_names = []
+        self.ss_output_channel_units = []
+        self.ss_output_values = None
+
+        self.md_output_channel_names = []
+        self.md_output_channel_units = []
+        self.md_output_values = None
+
+        self.adi_output_channel_names = []
+        self.adi_output_channel_units = []
+        self.adi_output_values = None
 
     def _initialize_routines(self):
         self.WaveTank_Init.argtypes = [
@@ -89,8 +96,12 @@ class WaveTankLib(OpenFASTInterfaceType):
         ]
         self.WaveTank_SetWaveFieldPointer.restype = c_int
 
-        self.WaveTank_NoOp.argtypes = [POINTER(c_int), POINTER(c_char)]
-        self.WaveTank_NoOp.restype = c_int
+        self.WaveTank_Sizes.argtypes = [
+            POINTER(c_int),
+            POINTER(c_int),
+            POINTER(c_int),
+        ]
+        self.WaveTank_Sizes.restype = c_int
 
     def init(self, n_camera_points):
         _error_status = c_int(0)
@@ -175,30 +186,26 @@ class WaveTankLib(OpenFASTInterfaceType):
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
-    def set_wave_field_pointer(self):
-        _error_status = c_int(0)
-        _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
-
-        self.WaveTank_SetWaveFieldPointer(
-            byref(_error_status),
-            _error_message,
+    def allocate_outputs(self):
+        ss_numouts = c_int(0)
+        md_numouts = c_int(0)
+        adi_numouts = c_int(0)
+        self.WaveTank_Sizes(
+            byref(ss_numouts),
+            byref(md_numouts),
+            byref(adi_numouts),
         )
-        if self.fatal_error(_error_status):
-            raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
-    def noop(self):
-        _error_status = c_int(0)
-        _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
+        self.ss_output_values = np.zeros(ss_numouts.value, dtype=np.float32, order='C')
+        self.md_output_values = np.zeros(md_numouts.value, dtype=np.float32, order='C')
+        self.adi_output_values = np.zeros(adi_numouts.value, dtype=np.float32, order='C')
+        # self.ss_output_channel_names = [b""] * ss_numouts.value
+        # self.ss_output_channel_units = [b""] * ss_numouts.value
+        # self.md_output_channel_names = [b""] * md_numouts.value
+        # self.md_output_channel_units = [b""] * md_numouts.value
+        # self.adi_output_channel_names = [b""] * adi_numouts.value
+        # self.adi_output_channel_units = [b""] * adi_numouts.value
 
-        self.WaveTank_NoOp(
-            byref(_error_status),
-            _error_message,
-        )
-        if self.print_messages(_error_status):
-            print(f"WaveTank_NoOp:\n{_error_status.value}:\n{_error_message.value.decode('cp437')}")
-
-        if self.fatal_error(_error_status):
-            raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
     def print_messages(self, error_status):
         return error_status.value >= self.print_error_level
@@ -223,6 +230,8 @@ if __name__=="__main__":
     loads = 5 * np.ones(n_camera_points, dtype=np.float32)
 
     for i in range(50):
+    wavetanklib.allocate_outputs()
+
         wavetanklib.calc_output(
             frame_number=i,
             n_camera_points=n_camera_points,
@@ -234,9 +243,5 @@ if __name__=="__main__":
         )
         print(loads)
 
-    # Just for testing the wave field pointer setting
-    wavetanklib.set_wave_field_pointer()
 
     wavetanklib.end()
-
-    wavetanklib.noop()
