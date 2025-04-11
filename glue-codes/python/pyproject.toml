@@ -3,7 +3,7 @@ requires = ["setuptools >= 40.6.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "OpynFAST"
+name = "pyOpenFAST"
 version = "0.1"
 description = "Python interface to OpenFAST FAST Library and physics modules."
 readme = "README.md"
@@ -39,7 +39,7 @@ develop = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["OpynFAST*"]
+include = ["pyOpenFAST*"]
 
 [project.urls]
 Homepage = "https://github.com/openfast/openfast"

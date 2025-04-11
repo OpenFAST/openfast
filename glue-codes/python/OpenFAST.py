@@ -1,5 +1,5 @@
 
-from OpynFAST import fast
+from pyOpenFAST import fast
 
 project_root = '/Users/rmudafor/Development/openfast'
 library_path = project_root + '/build/modules/openfast-library/libopenfastlib.dylib'
