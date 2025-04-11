@@ -43,7 +43,7 @@ class WaveTankLib(OpenFASTInterfaceType):
         self._initialize_routines()
 
         self.ended = False   # For error handling at end
-        self.print_error_level = 2
+        self.print_error_level = 1
 
         # Create buffers for class data
         # These will generally be overwritten by the Fortran code
@@ -220,13 +220,13 @@ if __name__=="__main__":
     wavetanklib = WaveTankLib(
         library_path,
         {
-            "MoorDyn": "/Users/rmudafor/Development/openfast/reg_tests/r-test/modules/moordyn/py_md_5MW_OC4Semi/md_primary.inp",
-            "SeaState": "/Users/rmudafor/Development/openfast/reg_tests/r-test/modules/seastate/seastate_1/NRELOffshrBsline5MW_OC4DeepCwindSemi_SeaState.dat",
-            "AeroDyn": "/Users/rmudafor/Development/openfast/reg_tests/r-test/modules/aerodyn/ad_MHK_RM1_Floating/MHK_RM1_Floating_AeroDyn.dat",
-            "InflowWind": "/Users/rmudafor/Development/openfast/reg_tests/r-test/modules/inflowwind/py_ifw_turbsimff/ifw_primary.inp",
+            "MoorDyn": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_MoorDyn.dat",
+            "SeaState": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/SeaState.dat",
+            "AeroDyn": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_AeroDyn.dat",
+            "InflowWind": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_InflowWind.dat",           
         },
     )
-    n_camera_points=2
+    n_camera_points=1
     wavetanklib.init(n_camera_points=n_camera_points)
 
     positions_x = 1 * np.ones(1, dtype=np.float32)
