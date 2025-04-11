@@ -184,7 +184,7 @@ class FastLibAPI(OpenFASTInterfaceType):
             _error_message
         )
         if self.fatal_error(_error_status):
-            self.fast_deinit()
+            self.deinit()
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
         # Calculate output frequency and initialize output index
@@ -205,7 +205,7 @@ class FastLibAPI(OpenFASTInterfaceType):
             if i%output_frequency == 0:
                 i_out += 1
             if self.fatal_error(_error_status):
-                self.fast_deinit()
+                self.deinit()
                 raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
             if self.end_early:
                 break
