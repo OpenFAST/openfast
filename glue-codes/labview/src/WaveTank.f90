@@ -7,7 +7,7 @@ MODULE WaveTankTesting
     USE SeaState_C_Binding, ONLY: SeaSt_C_Init, SeaSt_C_CalcOutput, SeaSt_C_End, MaxOutPts, SeaSt_GetWaveFieldPointer_C
     USE SeaSt_WaveField_Types, ONLY: SeaSt_WaveFieldType
     USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_PreInit, ADI_C_SetupRotor, ADI_C_Init, ADI_C_End, MaxADIOutputs
-    USE MoorDyn_C, ONLY: MD_C_Init, MD_C_End, MD_C_SetWaveFieldData
+    USE MoorDyn_C, ONLY: MD_C_Init, MD_C_End, MD_C_SetWaveFieldData, MD_C_UpdateStates, MD_C_CalcOutput
     USE NWTC_C_Binding, ONLY: IntfStrLen, SetErrStat_C, ErrMsgLen_C, StringConvert_F2C
 
     IMPLICIT NONE
@@ -22,13 +22,16 @@ MODULE WaveTankTesting
     REAL(C_FLOAT), DIMENSION(6) :: ptfminit_c = 0.0_C_FLOAT
     INTEGER(C_INT) :: interporder_c = 2     ! 1: linear (uses two time steps) or 2: quadratic (uses three time steps)
     
-    ! INTEGER(C_INT) :: N_CAMERA_POINTS
-    
     INTEGER(C_INT) :: load_period = 20 ! seconds
 
     INTEGER(C_INT) :: SS_NumChannels_C
     INTEGER(C_INT) :: MD_NumChannels_C
     INTEGER(C_INT) :: ADI_NumChannels_C
+
+    REAL(C_FLOAT), DIMENSION(3,6) :: Positions = 0.0_C_FLOAT
+    REAL(C_FLOAT), DIMENSION(2,6) :: Velocities = 0.0_C_FLOAT
+    REAL(C_FLOAT), DIMENSION(1,6) :: Accelerations = 0.0_C_FLOAT
+
 CONTAINS
 
 SUBROUTINE WaveTank_Init(   &
@@ -155,8 +158,6 @@ IMPLICIT NONE
     ! Initialize error handling
     ErrStat_C = ErrID_None
     ErrMsg_C  = " "//C_NULL_CHAR
-
-    ! N_CAMERA_POINTS = n_camera_points_c
 
     SS_OutRootName = "seastate" // C_NULL_CHAR
     SS_OutRootName_C = c_loc(SS_OutRootName)
@@ -356,13 +357,16 @@ IMPLICIT NONE
 END SUBROUTINE WaveTank_Init
 
 SUBROUTINE WaveTank_CalcOutput( &
-    frame_number,               &
+    time,                       &
     n_camera_points,            &
     positions_x,                &
     positions_y,                &
     positions_z,                &
     rotation_matrix,            &
     loads,                      &
+    ss_outputs,                    &
+    md_outputs,                    &
+    adi_outputs,                    &
     ErrStat_C,                  &
     ErrMsg_C                    &
 ) BIND (C, NAME='WaveTank_CalcOutput')
@@ -372,7 +376,109 @@ IMPLICIT NONE
 !GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_CalcOutput
 #endif
 
+    REAL(C_DOUBLE),         INTENT(IN   ) :: time
+    INTEGER(C_INT),         INTENT(IN   ) :: n_camera_points
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_x(n_camera_points)
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_y(n_camera_points)
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_z(n_camera_points)
+    REAL(C_FLOAT),          INTENT(IN   ) :: rotation_matrix(9)
+    REAL(C_FLOAT),          INTENT(  OUT) :: loads(n_camera_points)
+    REAL(C_FLOAT),          INTENT(  OUT) :: ss_outputs(SS_NumChannels_C)
+    REAL(C_FLOAT),          INTENT(  OUT) :: md_outputs(MD_NumChannels_C)
+    REAL(C_FLOAT),          INTENT(  OUT) :: adi_outputs(ADI_NumChannels_C)
+    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
+    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
+
+    ! Local variables
+    INTEGER :: i
+    INTEGER(C_INT)                          :: ErrStat_C2
+    CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
+
+
+    ! Initialize error handling
+    ErrStat_C = ErrID_None
+    ErrMsg_C  = " "//C_NULL_CHAR
+
+    ! Shift the positions and velocities over one index
+    Positions(1,:) = Positions(2,:)
+    Positions(2,:) = Positions(3,:)
+    Velocities(1,:) = Velocities(2,:)
+
+    ! Load the new positions
+    Positions(3,:) = (/ positions_x, positions_y, positions_z, 0.0_C_FLOAT, 0.0_C_FLOAT, 0.0_C_FLOAT /)
+
+    ! Calculate velocities and acceleration
+    Velocities(1,:) = (/ (Positions(2,1:3) - Positions(1,1:3)) / real(0.1, c_float), 0.0_C_FLOAT, 0.0_C_FLOAT, 0.0_C_FLOAT /)
+    Velocities(2,:) = (/ (Positions(3,1:3) - Positions(2,1:3)) / real(0.1, c_float), 0.0_C_FLOAT, 0.0_C_FLOAT, 0.0_C_FLOAT /)
+    Accelerations(1,:) = (/ (Velocities(2,1:3) - Velocities(1,1:3)) / real(0.1, c_float), 0.0_C_FLOAT, 0.0_C_FLOAT, 0.0_C_FLOAT /)
+
+    ! Get loads from MoorDyn
+    CALL MD_C_UpdateStates(                 &
+        time,                               &
+        REAL(time + 0.1, C_DOUBLE),         &
+        Positions(3,:),                     &
+        Velocities(2,:),                    &
+        Accelerations(1,:),                 &
+        ErrStat_C, ErrMsg_C                 &
+    )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_UpdateStates')
+    IF (ErrStat_C >= AbortErrLev) RETURN
+
+    CALL MD_C_CalcOutput(                   &
+        time,                               &
+        Positions(3,:),                     &
+        Velocities(2,:),                    &
+        Accelerations(1,:),                 &
+        loads,                              &
+        md_outputs,                         &
+        ErrStat_C, ErrMsg_C                 &
+    )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_CalcOutput')
+    IF (ErrStat_C >= AbortErrLev) RETURN
+
+    ! ! Get loads from ADI
+    ! CALL ADI_C_SetRotorMotion(              &
+    !     ErrStat_C, ErrMsg_C                 &
+    ! )
+    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
+    ! IF (ErrStat_C >= AbortErrLev) RETURN
+
+    ! CALL ADI_C_UpdateStates(                &
+    !     ErrStat_C, ErrMsg_C                 &
+    ! )
+    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
+    ! IF (ErrStat_C >= AbortErrLev) RETURN
+
+    ! CALL ADI_C_CalcOutput(                  &
+    !     ErrStat_C, ErrMsg_C                 &
+    ! )
+    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
+    ! IF (ErrStat_C >= AbortErrLev) RETURN
+
+    ! CALL ADI_C_GetRotorLoads(               &
+    !     ErrStat_C, ErrMsg_C                 &
+    ! )
+    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
+    ! IF (ErrStat_C >= AbortErrLev) RETURN
+
+END SUBROUTINE
+
+SUBROUTINE WaveTank_StepFunction( &
+    frame_number,               &
+    n_camera_points,            &
+    positions_x,                &
+    positions_y,                &
+    positions_z,                &
+    rotation_matrix,            &
+    loads,                      &
+    ErrStat_C,                  &
+    ErrMsg_C                    &
+) BIND (C, NAME='WaveTank_StepFunction')
 IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_StepFunction
+!GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_StepFunction
+#endif
 
     ! INTEGER(C_INT)                        :: delta_time
     INTEGER(C_INT),         INTENT(IN   ) :: frame_number
