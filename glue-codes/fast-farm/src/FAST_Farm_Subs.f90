@@ -834,9 +834,9 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    ALLOCATE( MD_InitInp%PtfmInit(6,farm%p%NumTurbines), MD_InitInp%TurbineRefPos(3,farm%p%NumTurbines), STAT = ErrStat2 )
    if (Failed0("MoorDyn PtfmInit and TurbineRefPos initialization inputs in FAST.Farm.")) return;
    
-   ! gather spatial initialization inputs for Farm-level MoorDyn
-   DO nt = 1,farm%p%NumTurbines              
-      MD_InitInp%PtfmInit(:,nt) = farm%FWrap(nt)%m%Turbine%MD%m%PtfmInit   ! turbine PRP initial positions and rotations in their respective coordinate systems from each FAST/MD instance
+   ! gather spatial initialization inputs for Farm-level MoorDyn (platform locations in their respective coordinate systems and locations of the turbines in the farm global coordinate system)
+   DO nt = 1,farm%p%NumTurbines  
+      MD_InitInp%PtfmInit(:,nt) = farm%FWrap(nt)%m%Turbine%p_FAST%PlatformPosInit ! platform initial positions in their respective coordinate systems from each FAST/ED instance
       MD_InitInp%TurbineRefPos(:,nt) = farm%p%WT_Position(:,nt)            ! reference positions of each turbine in the farm global coordinate system
    END DO 
     
