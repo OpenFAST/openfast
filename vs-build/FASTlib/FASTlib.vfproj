@@ -2409,46 +2409,5 @@
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Output.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Output_Params.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Tests.f90"/></Filter></Filter>
-		<Filter Name="SuperController_DX">
-		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\supercontroller\src\SC_DataEx_Registry.txt">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_OpenMP|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SCDataEX" Description="Running Registry for SCDataEX" Outputs="..\..\modules\supercontroller\src\SCDataEX_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\supercontroller\src\SCDataEX_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\supercontroller\src\SC_DataEx.f90"/></Filter>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
