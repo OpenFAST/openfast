@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+add_library(dummylib SHARED
+    src/Dummy.f90
+)
+
 add_library(wavetanktestinglib SHARED 
     src/WaveTank.f90
 )
@@ -29,7 +33,7 @@ if(APPLE OR UNIX)
     target_compile_definitions(wavetanktestinglib PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-install(TARGETS wavetanktestinglib
+install(TARGETS wavetanktestinglib dummylib
 EXPORT "${CMAKE_PROJECT_NAME}Libraries"
 RUNTIME DESTINATION bin
 LIBRARY DESTINATION lib

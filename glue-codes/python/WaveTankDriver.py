@@ -66,6 +66,7 @@ class WaveTankLib(OpenFASTInterfaceType):
 
         self.WaveTank_CalcOutput.argtypes = [
             POINTER(c_int),         # integer(c_int) :: frame_number
+            POINTER(c_int),         # integer(c_int) :: n_camera_points
             POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_x(N_CAMERA_POINTS)
             POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_y(N_CAMERA_POINTS)
             POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_z(N_CAMERA_POINTS)
@@ -87,6 +88,9 @@ class WaveTankLib(OpenFASTInterfaceType):
             POINTER(c_char),        # character(kind=c_char), intent(  out) :: ErrMsg_C(ErrMsgLen_C)
         ]
         self.WaveTank_SetWaveFieldPointer.restype = c_int
+
+        self.WaveTank_NoOp.argtypes = [POINTER(c_int), POINTER(c_char)]
+        self.WaveTank_NoOp.restype = c_int
 
     def init(self, n_camera_points):
         _error_status = c_int(0)
@@ -136,6 +140,7 @@ class WaveTankLib(OpenFASTInterfaceType):
     def calc_output(
         self,
         frame_number: int,
+        n_camera_points: int,
         positions_x: np.ndarray,
         positions_y: np.ndarray,
         positions_z: np.ndarray,
@@ -147,6 +152,7 @@ class WaveTankLib(OpenFASTInterfaceType):
 
         self.WaveTank_CalcOutput(
             byref(c_int(frame_number)),
+            byref(c_int(n_camera_points)),
             positions_x.ctypes.data_as(POINTER(c_float)),
             positions_y.ctypes.data_as(POINTER(c_float)),
             positions_z.ctypes.data_as(POINTER(c_float)),
@@ -180,6 +186,20 @@ class WaveTankLib(OpenFASTInterfaceType):
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
+    def noop(self):
+        _error_status = c_int(0)
+        _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
+
+        self.WaveTank_NoOp(
+            byref(_error_status),
+            _error_message,
+        )
+        if self.print_messages(_error_status):
+            print(f"WaveTank_NoOp:\n{_error_status.value}:\n{_error_message.value.decode('cp437')}")
+
+        if self.fatal_error(_error_status):
+            raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
+
     def print_messages(self, error_status):
         return error_status.value >= self.print_error_level
 
@@ -193,25 +213,30 @@ if __name__=="__main__":
             "InflowWind": "/Users/rmudafor/Development/openfast/reg_tests/r-test/modules/inflowwind/py_ifw_turbsimff/ifw_primary.inp",
         },
     )
-    wavetanklib.init(n_camera_points=3)
+    n_camera_points=2
+    wavetanklib.init(n_camera_points=n_camera_points)
 
-    positions_x = np.zeros(1, dtype=np.float32)
-    positions_y = np.zeros(1, dtype=np.float32)
-    positions_z = np.zeros(1, dtype=np.float32)
-    rotation_matrix = np.zeros(9, dtype=np.float32)
-    loads = np.zeros(6, dtype=np.float32)
+    positions_x = 1 * np.ones(1, dtype=np.float32)
+    positions_y = 2 * np.ones(1, dtype=np.float32)
+    positions_z = 3 * np.ones(1, dtype=np.float32)
+    rotation_matrix = 4 * np.ones(9, dtype=np.float32)
+    loads = 5 * np.ones(n_camera_points, dtype=np.float32)
 
     for i in range(50):
         wavetanklib.calc_output(
             frame_number=i,
+            n_camera_points=n_camera_points,
             positions_x=positions_x,
             positions_y=positions_y,
             positions_z=positions_z,
             rotation_matrix=rotation_matrix,
             loads=loads,
         )
+        print(loads)
 
     # Just for testing the wave field pointer setting
     wavetanklib.set_wave_field_pointer()
 
     wavetanklib.end()
+
+    wavetanklib.noop()

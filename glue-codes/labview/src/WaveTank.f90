@@ -22,7 +22,7 @@ MODULE WaveTankTesting
     REAL(C_FLOAT), DIMENSION(6) :: ptfminit_c = 0.0_C_FLOAT
     INTEGER(C_INT) :: interporder_c = 2     ! 1: linear (uses two time steps) or 2: quadratic (uses three time steps)
     
-    INTEGER(C_INT) :: N_CAMERA_POINTS
+    ! INTEGER(C_INT) :: N_CAMERA_POINTS
     
     INTEGER(C_INT) :: load_period = 20 ! seconds
 
@@ -355,6 +355,7 @@ END SUBROUTINE WaveTank_Init
 
 SUBROUTINE WaveTank_CalcOutput( &
     frame_number,               &
+    n_camera_points,            &
     positions_x,                &
     positions_y,                &
     positions_z,                &
@@ -371,16 +372,21 @@ SUBROUTINE WaveTank_CalcOutput( &
 IMPLICIT NONE
 
     ! INTEGER(C_INT)                        :: delta_time
-    INTEGER(C_INT)                        :: frame_number
-    REAL(C_FLOAT),          INTENT(IN   ) :: positions_x(N_CAMERA_POINTS)
-    REAL(C_FLOAT),          INTENT(IN   ) :: positions_y(N_CAMERA_POINTS)
-    REAL(C_FLOAT),          INTENT(IN   ) :: positions_z(N_CAMERA_POINTS)
+    INTEGER(C_INT),         INTENT(IN   ) :: frame_number
+    INTEGER(C_INT),         INTENT(IN   ) :: n_camera_points
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_x(n_camera_points)
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_y(n_camera_points)
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_z(n_camera_points)
     REAL(C_FLOAT),          INTENT(IN   ) :: rotation_matrix(9)
-    REAL(C_FLOAT),          INTENT(  OUT) :: loads(N_CAMERA_POINTS)
+    REAL(C_FLOAT),          INTENT(  OUT) :: loads(n_camera_points)
     INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
     CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
     INTEGER :: i
+
+    ! Initialize error handling
+    ErrStat_C = ErrID_None
+    ErrMsg_C  = " "//C_NULL_CHAR
 
     IF ( MOD(frame_number / load_period, 2) == 0 ) THEN
         loads = -1.0_C_FLOAT
@@ -442,6 +448,32 @@ IMPLICIT NONE
 
     WaveFieldPointer = SeaSt_GetWaveFieldPointer_C()
     call MD_C_SetWaveFieldData(WaveFieldPointer)
+END SUBROUTINE
+
+SUBROUTINE WaveTank_NoOp(ErrStat_C, ErrMsg_C) bind (C, NAME="WaveTank_NoOp")
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: WaveTank_NoOp
+!GCC$ ATTRIBUTES DLLEXPORT :: WaveTank_NoOp
+#endif
+IMPLICIT NONE
+
+    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
+    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
+
+    ! Local variables
+    INTEGER(C_INT)                          :: ErrStat_C2
+    CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
+
+    ! Initialize error handling
+    ErrStat_C = ErrID_None
+    ErrMsg_C  = " "//C_NULL_CHAR
+
+    ! No operation
+    ErrStat_C2 = ErrID_Info
+    ErrMsg_C2 = "Hi Stephen - No op here."
+
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'WaveTank_NoOp')
+
 END SUBROUTINE
 
 END MODULE WaveTankTesting
