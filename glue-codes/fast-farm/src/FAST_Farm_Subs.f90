@@ -760,9 +760,23 @@ CONTAINS
       !FWrap_InitInp%n_high_low    = farm%p%n_high_low + 1   ! Add 1 because the FAST wrapper uses an index that starts at 1
       !FWrap_InitInp%dt_high       = farm%p%dt_high
 
-      MD_InitInp%FileName = farm%p%MD_FileName                    ! input file name and path
-      MD_InitInp%RootName = trim(farm%p%OutFileRoot)//'.FarmMD'   ! root of output files
-      MD_InitInp%FarmSize = farm%p%NumTurbines                    ! number of turbines in the array. >0 tells MoorDyn to operate in farm mode
+      MD_InitInp%FileName  = farm%p%MD_FileName                    ! input file name and path
+      MD_InitInp%RootName  = trim(farm%p%OutFileRoot)//'.FarmMD'   ! root of output files
+      MD_InitInp%FarmSize  = farm%p%NumTurbines                    ! number of turbines in the array. >0 tells MoorDyn to operate in farm mode
+
+      ALLOCATE( MD_InitInp%PtfmInit(6,farm%p%NumTurbines), MD_InitInp%TurbineRefPos(3,farm%p%NumTurbines), STAT = ErrStat2 )
+      if (Failed0("MoorDyn PtfmInit and TurbineRefPos initialization inputs in FAST.Farm.")) return;
+
+      ! gather spatial initialization inputs for Farm-level MoorDyn (platform locations in their respective coordinate systems and locations of the turbines in the farm global coordinate system)
+      DO nt = 1,farm%p%NumTurbines  
+         MD_InitInp%PtfmInit(:,nt) = farm%FWrap(nt)%m%Turbine%p_FAST%PlatformPosInit ! platform initial positions in their respective coordinate systems from each FAST/ED instance
+         MD_InitInp%TurbineRefPos(:,nt) = farm%p%WT_Position(:,nt)            ! reference positions of each turbine in the farm global coordinate system
+      END DO 
+
+      ! These aren't currently handled at the FAST.Farm level, so just give the farm's MoorDyn default values, which can be overwridden by its input file
+      MD_InitInp%g         =    9.81
+      MD_InitInp%rhoW      = 1025.0
+      MD_InitInp%WtrDepth  =    0.0   !TODO: eventually connect this to a global depth input variable <<<
 
       ALLOCATE (MD_InitInp%PtfmInit(6, farm%p%NumTurbines), MD_InitInp%TurbineRefPos(3, farm%p%NumTurbines), STAT=ErrStat2)
       if (Failed0("MoorDyn PtfmInit and TurbineRefPos initialization inputs in FAST.Farm.")) return; 

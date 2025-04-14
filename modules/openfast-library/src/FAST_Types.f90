@@ -206,6 +206,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: VTK_fps = 0.0_R8Ki      !< number of frames per second to output VTK data [-]
     TYPE(FAST_VTK_SurfaceType)  :: VTK_surface      !< Data for VTK surface visualization [-]
     CHARACTER(4)  :: Tdesc      !< description of turbine ID (for FAST.Farm) screen printing [-]
+    REAL(DbKi) , DIMENSION(1:6)  :: PlatformPosInit = 0.0_R8Ki      !< Platform inital 6 DOF position from ED (this is different from TurbinePos) [-]
     LOGICAL  :: CalcSteady = .false.      !< Calculate a steady-state periodic operating point before linearization [unused if Linearize=False] [-]
     INTEGER(IntKi)  :: TrimCase = 0_IntKi      !< Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [unused if Linearize=False; used only if CalcSteady=True] [-]
     REAL(ReKi)  :: TrimTol = 0.0_ReKi      !< Tolerance for the rotational speed convergence (>0) [unused if Linearize=False; used only if CalcSteady=True] [-]
@@ -1472,6 +1473,7 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstParamData%Tdesc = SrcParamData%Tdesc
+   DstParamData%PlatformPosInit = SrcParamData%PlatformPosInit
    DstParamData%CalcSteady = SrcParamData%CalcSteady
    DstParamData%TrimCase = SrcParamData%TrimCase
    DstParamData%TrimTol = SrcParamData%TrimTol
@@ -1641,6 +1643,7 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%VTK_fps)
    call FAST_PackVTK_SurfaceType(RF, InData%VTK_surface) 
    call RegPack(RF, InData%Tdesc)
+   call RegPack(RF, InData%PlatformPosInit)
    call RegPack(RF, InData%CalcSteady)
    call RegPack(RF, InData%TrimCase)
    call RegPack(RF, InData%TrimTol)
@@ -1755,6 +1758,7 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%VTK_fps); if (RegCheckErr(RF, RoutineName)) return
    call FAST_UnpackVTK_SurfaceType(RF, OutData%VTK_surface) ! VTK_surface 
    call RegUnpack(RF, OutData%Tdesc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PlatformPosInit); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CalcSteady); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TrimCase); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TrimTol); if (RegCheckErr(RF, RoutineName)) return
