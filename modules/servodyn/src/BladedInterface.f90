@@ -204,13 +204,11 @@ SUBROUTINE CallBladedLegacyDLL ( u, p, dll_data, ErrStat, ErrMsg, ChannelNameUni
    avcMSG      = TRANSFER( C_NULL_CHAR,                            avcMSG,     LEN(ErrMsg)+1 ) !bjj this is intent(out), so we shouldn't have to do this, but, to be safe...
 
 #ifdef STATIC_DLL_LOAD
-
-      ! if we're statically loading the library (i.e., OpenFOAM), we can just call DISCON();
-      ! I'll leave some options for whether the supercontroller is being used
-      CALL DISCON( dll_data%avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
+   ! if we're statically loading the library (i.e., OpenFOAM), we can just call DISCON();
+   CALL DISCON( dll_data%avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
 #else
-      CALL C_F_PROCPOINTER( p%DLL_Trgt%ProcAddr(1), DLL_Legacy_Subroutine)
-      CALL DLL_Legacy_Subroutine ( dll_data%avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
+   CALL C_F_PROCPOINTER( p%DLL_Trgt%ProcAddr(1), DLL_Legacy_Subroutine)
+   CALL DLL_Legacy_Subroutine ( dll_data%avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
 #endif
 
    IF ( aviFAIL /= 0 ) THEN
@@ -261,7 +259,6 @@ SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_Ctrl
 
 
    ! Define all the parameters for the Bladed Interface
-   InputFileData%DLL_ProcName      = 'DISCON'                    ! The name of the procedure in the DLL that will be called.
 
    ErrStat = ErrID_None
    ErrMsg= ''
