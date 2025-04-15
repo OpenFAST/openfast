@@ -58,7 +58,8 @@ software that follows the programming requirements of the FAST
 modularization framework,
 whereby the submodels are implemented as modules interconnected through
 a driver code. The submodel hierarchy of FAST.Farm is illustrated in
-:numref:`FF:FFarm`.
+:numref:`FF:FFarm` where the dashed lines indicated routines compiled 
+separately from FAST.Farm.
 
 .. figure:: Pictures/FFarmHierarchy.png
    :alt: FAST.Farm submodel hierarchy.

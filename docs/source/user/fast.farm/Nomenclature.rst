@@ -62,8 +62,6 @@ Nomenclature
       |eqs_RSS|         |txt_RSS|
       |eqs_r|           |txt_r|
       |eqs_rPlane|      |txt_rPlane|
-      |eqs_S|           |txt_S|
-      |eqs_SC|          |txt_SC|
       |eqs_SOWFA|       |txt_SOWFA|
       |eqs_t|           |txt_t|
       |eqs_TIAmb|       |txt_TIAmb|
