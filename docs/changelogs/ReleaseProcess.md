@@ -58,7 +58,6 @@ After posting and tagging release
     - [ ] `DISCON.dll` (x64)
     - [ ] `DISCON_ITIBarge.dll` (x64)
     - [ ] `DISCON_OC3Hywind.dll` (x64)
-    - [ ] `DISCON_SC.dll` (x64)
     - [ ] `FAST.Farm_x64.exe`
     - [ ] `FAST.Farm_x64_OMP.exe`
     - [ ] `FAST_SFunc.mexw64` -- build from MATLAB
