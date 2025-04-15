@@ -1028,7 +1028,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
       !Ini%tInData_SD%UseInputFile = .TRUE.
       Init%InData_SD%SDInputFile   = p_FAST%SubFile
       Init%InData_SD%RootName      = p_FAST%OutFileRoot
-      Init%InData_SD%TP_RefPoint   = ED%y%PlatformPtMesh%Position(:,1)  ! "Interface point" where loads will be transferred to
+      Init%InData_SD%TP_RefPoint(:,1)   = ED%y%PlatformPtMesh%Position(:,1)  ! "Interface point" where loads will be transferred to
       Init%InData_SD%SubRotateZ    = 0.0                                        ! Used by driver to rotate structure around z
 
 

@@ -1586,7 +1586,7 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    end do
    ! Compute Ainv = 1.0*V^t * U^t + 0.0*Ainv     V*(inv(S))*U' 
    !call DGEMM( 'T', 'T', N, M, K, 1.0, V, K, U, M, 0.0, Ainv, N)
-   print*,'8'
+   !print*,'8'
    call LAPACK_GEMM( 'T', 'T', 1.0_FEKi, Vt, U, 0.0_FEKi, Ainv, ErrStat, ErrMsg)
    ! --- Compute rank
    !tol=maxval(shape(A))*epsilon(maxval(S))

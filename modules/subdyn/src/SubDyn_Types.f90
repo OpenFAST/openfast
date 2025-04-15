@@ -110,7 +110,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< SubDyn rootname [-]
     REAL(ReKi)  :: g = 0.0_ReKi      !< Gravity acceleration [-]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water Depth (positive valued) [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TP_RefPoint = 0.0_ReKi      !< global position of transition piece reference point (could also be defined in SubDyn itself) [-]
+    INTEGER(IntKi)  :: NTP = 0_IntKi      !< Number of coupled transition pieces [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TP_RefPoint      !< global position of transition piece reference point (could also be defined in SubDyn itself) [-]
     REAL(ReKi)  :: SubRotateZ = 0.0_ReKi      !< Rotation angle in degrees about global Z [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: SoilStiffness      !< Soil stiffness matrices from SoilDyn ['(N/m,]
     TYPE(MeshType)  :: SoilMesh      !< Mesh for soil stiffness locations [-]
@@ -136,11 +137,13 @@ IMPLICIT NONE
 ! =========  SD_InitType  =======
   TYPE, PUBLIC :: SD_InitType
     CHARACTER(1024)  :: RootName      !< SubDyn rootname [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TP_RefPoint = 0.0_ReKi      !< global position of transition piece reference point (could also be defined in SubDyn itself) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TP_RefPoint      !< global position of transition piece reference point (could also be defined in SubDyn itself) [-]
     REAL(ReKi)  :: SubRotateZ = 0.0_ReKi      !< Rotation angle in degrees about global Z [-]
     REAL(ReKi)  :: g = 0.0_ReKi      !< Gravity acceleration [m/s^2]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step from Glue Code [seconds]
+    INTEGER(IntKi)  :: NTP = 0_IntKi      !< Number of coupled transition pieces [-]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of joints of the sub structure [-]
+    INTEGER(IntKi)  :: RB_RefJoint = 0_IntKi      !< Input joint ID of the rigid-body reference joint [-]
     INTEGER(IntKi)  :: NPropSetsX = 0_IntKi      !< Number of extended property sets [-]
     INTEGER(IntKi)  :: NPropSetsBC = 0_IntKi      !< Number of property sets for beams with a circular section [-]
     INTEGER(IntKi)  :: NPropSetsBR = 0_IntKi      !< Number of property sets for beams with a rectangular section [-]
@@ -196,12 +199,15 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: NodesConnN      !< Nodes that connect to a common node    [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: NodesConnE      !< Elements that connect to a common node [-]
     LOGICAL  :: SSSum = .false.      !< SubDyn Summary File Flag               [-]
+    REAL(R8Ki) , DIMENSION(1:6)  :: qR0 = 0.0_R8Ki      !< Initial rigid-body displacement (floating only) [-]
   END TYPE SD_InitType
 ! =======================
 ! =========  SD_ContinuousStateType  =======
   TYPE, PUBLIC :: SD_ContinuousStateType
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qm      !< Virtual states, Nmod elements [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qmdot      !< Derivative of states, Nmod elements [-]
+    REAL(R8Ki) , DIMENSION(1:6)  :: qR = 0.0_R8Ki      !< Rigid-body displacement [-]
+    REAL(R8Ki) , DIMENSION(1:6)  :: qRdot = 0.0_R8Ki      !< Derivative of rigid-body displacement [-]
   END TYPE SD_ContinuousStateType
 ! =======================
 ! =========  SD_DiscreteStateType  =======
@@ -222,10 +228,25 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_MiscVarType  =======
   TYPE, PUBLIC :: SD_MiscVarType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qmdotdot      !< 2nd Derivative of states, used only for output-file purposes [-]
-    REAL(ReKi) , DIMENSION(1:6)  :: u_TP = 0.0_ReKi 
-    REAL(ReKi) , DIMENSION(1:6)  :: udot_TP = 0.0_ReKi 
-    REAL(ReKi) , DIMENSION(1:6)  :: udotdot_TP = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qmdotdot      !< 2nd derivative of states, used only for output-file purposes [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: qRdotdot = 0.0_ReKi      !< 2nd derivative of rigid-body states (floating only) [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_TP 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: u_TP 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: udot_TP 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: udotdot_TP 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: EOM_RHS      !< Right-hand-side vector of the combined equations of motion [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: EOM_Sol      !< Solution vector of the combined equations of motion [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_CB 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_CB_L 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_Guy_R 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_Guy_L 
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_Utp 
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: RAllg2b 
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: RAllb2g 
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBB 
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CBB 
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: KBB 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_L      !< Loads on internal DOF, size nL [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_L2      !< Loads on internal DOF, size nL, used for SIM and ADM4 [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: UR_bar 
@@ -269,6 +290,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector, not reduced [N]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DP0      !< Vector from TP to a Node at t=0, used for Floating Rigid Body motion [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: rPG      !< Vector from TP to rigid-body CoG in the Guyan (rigid-body) frame, used for Floating Rigid Body Motion [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rTP0      !< Vector from rigid-body reference point to transition pieces [m]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NodeID2JointID      !< Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: CMassNode      !< Node indices for concentrated masses [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMassWeight      !< Weight of concentrated masses [N]
@@ -281,9 +303,10 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemsDOF      !< 12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: DOFred2Nodes      !< nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1 [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CtrlElem2Channel      !< nCtrlCable x 2, for each CtrlCable, Elem index, and Channel Index [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: RBRefPt = 0.0_ReKi      !< global position of transition piece reference point (could also be defined in SubDyn itself) [-]
+    LOGICAL  :: TP1IsRBRefPt = .false.      !< If the first transition-piece is a dummy one for rigid-body motion - floating only [-]
     INTEGER(IntKi)  :: nDOFM = 0_IntKi      !< retained degrees of freedom (modes) [-]
     INTEGER(IntKi)  :: SttcSolve = 0_IntKi      !< Solve dynamics about static equilibrium point (flag) [-]
-    LOGICAL  :: GuyanLoadCorrection = .false.      !< Add Extra lever arm contribution to interface reaction outputs [-]
     LOGICAL  :: Floating = .false.      !< True if floating bottom (the 6 DOF are free at all reaction nodes) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: KMMDiag      !< Diagonal coefficients of Kmm (OmegaM squared) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CMMDiag      !< Diagonal coefficients of Cmm (~2 Zeta OmegaM)) [-]
@@ -311,6 +334,10 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: AM2JacPiv      !< Pivot array for Jacobian factorization (for Adams-Boulton 2nd order Integration) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI      !< Matrix to calculate TP reference point reaction at top of structure [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TIreact      !< Matrix to calculate single point reaction at base of structure [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GMat      !< Matrix to convert the first 6 Guyan modes to rigid-body modes [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: EOM_LHS      !< (Inverse of) the left-hand side matrix of the combined equations of motion [-]
+    INTEGER(IntKi)  :: nTP = 0_IntKi      !< Total number of transition pieces [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: TPIdx      !< Transition piece index associated with each interface node [-]
     INTEGER(IntKi)  :: nNodes = 0_IntKi      !< Total number of nodes [-]
     INTEGER(IntKi)  :: nNodes_I = 0_IntKi      !< Number of Interface nodes [-]
     INTEGER(IntKi)  :: nNodes_L = 0_IntKi      !< Number of Internal nodes [-]
@@ -322,6 +349,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nDOFI_Rb = 0_IntKi      !< Size of IDI_Rb [-]
     INTEGER(IntKi)  :: nDOFI_F = 0_IntKi      !< Size of IDI_F [-]
     INTEGER(IntKi)  :: nDOFL_L = 0_IntKi      !< Size of IDL_L [-]
+    INTEGER(IntKi)  :: nDOFL_TP = 0_IntKi      !< Number of transition-piece DoF [-]
     INTEGER(IntKi)  :: nDOFC__ = 0_IntKi      !< Size of IDC__ [-]
     INTEGER(IntKi)  :: nDOFC_Rb = 0_IntKi      !< Size of IDC_Rb [-]
     INTEGER(IntKi)  :: nDOFC_L = 0_IntKi      !< Size of IDC_L [-]
@@ -335,9 +363,9 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDI_F      !< Index array of the interface (nodes connect to TP) dofs that are fixed DOF [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDL_L      !< Index array of the internal dofs coming from internal nodes [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDC__      !< Index of all bottom DOF [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDC_Rb      !< Index array of the contraint dofs that are retained/master/follower DOF [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDC_L      !< Index array of the contraint dofs that are follower/internal DOF [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDC_F      !< Index array of the contraint dofs that are fixd DOF [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDC_Rb      !< Index array of the constraint dofs that are retained/master/follower DOF [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDC_L      !< Index array of the constraint dofs that are follower/internal DOF [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDC_F      !< Index array of the constraint dofs that are fixd DOF [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IDR__      !< Index array of the interface and restraint dofs [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ID__Rb      !< Index array of all the retained/leader/master dofs (from any nodes of the structure) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ID__L      !< Index array of all the follower/internal dofs (from any nodes of the structure) [-]
@@ -917,7 +945,19 @@ subroutine SD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%RootName = SrcInitInputData%RootName
    DstInitInputData%g = SrcInitInputData%g
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-   DstInitInputData%TP_RefPoint = SrcInitInputData%TP_RefPoint
+   DstInitInputData%NTP = SrcInitInputData%NTP
+   if (allocated(SrcInitInputData%TP_RefPoint)) then
+      LB(1:2) = lbound(SrcInitInputData%TP_RefPoint)
+      UB(1:2) = ubound(SrcInitInputData%TP_RefPoint)
+      if (.not. allocated(DstInitInputData%TP_RefPoint)) then
+         allocate(DstInitInputData%TP_RefPoint(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%TP_RefPoint.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%TP_RefPoint = SrcInitInputData%TP_RefPoint
+   end if
    DstInitInputData%SubRotateZ = SrcInitInputData%SubRotateZ
    if (allocated(SrcInitInputData%SoilStiffness)) then
       LB(1:3) = lbound(SrcInitInputData%SoilStiffness)
@@ -946,6 +986,9 @@ subroutine SD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SD_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(InitInputData%TP_RefPoint)) then
+      deallocate(InitInputData%TP_RefPoint)
+   end if
    if (allocated(InitInputData%SoilStiffness)) then
       deallocate(InitInputData%SoilStiffness)
    end if
@@ -962,7 +1005,8 @@ subroutine SD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%RootName)
    call RegPack(RF, InData%g)
    call RegPack(RF, InData%WtrDpth)
-   call RegPack(RF, InData%TP_RefPoint)
+   call RegPack(RF, InData%NTP)
+   call RegPackAlloc(RF, InData%TP_RefPoint)
    call RegPack(RF, InData%SubRotateZ)
    call RegPackAlloc(RF, InData%SoilStiffness)
    call MeshPack(RF, InData%SoilMesh) 
@@ -982,7 +1026,8 @@ subroutine SD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%g); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TP_RefPoint); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NTP); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TP_RefPoint); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SubRotateZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%SoilStiffness); if (RegCheckErr(RF, RoutineName)) return
    call MeshUnpack(RF, OutData%SoilMesh) ! SoilMesh 
@@ -1238,11 +1283,24 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstInitTypeData%RootName = SrcInitTypeData%RootName
-   DstInitTypeData%TP_RefPoint = SrcInitTypeData%TP_RefPoint
+   if (allocated(SrcInitTypeData%TP_RefPoint)) then
+      LB(1:2) = lbound(SrcInitTypeData%TP_RefPoint)
+      UB(1:2) = ubound(SrcInitTypeData%TP_RefPoint)
+      if (.not. allocated(DstInitTypeData%TP_RefPoint)) then
+         allocate(DstInitTypeData%TP_RefPoint(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%TP_RefPoint.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%TP_RefPoint = SrcInitTypeData%TP_RefPoint
+   end if
    DstInitTypeData%SubRotateZ = SrcInitTypeData%SubRotateZ
    DstInitTypeData%g = SrcInitTypeData%g
    DstInitTypeData%DT = SrcInitTypeData%DT
+   DstInitTypeData%NTP = SrcInitTypeData%NTP
    DstInitTypeData%NJoints = SrcInitTypeData%NJoints
+   DstInitTypeData%RB_RefJoint = SrcInitTypeData%RB_RefJoint
    DstInitTypeData%NPropSetsX = SrcInitTypeData%NPropSetsX
    DstInitTypeData%NPropSetsBC = SrcInitTypeData%NPropSetsBC
    DstInitTypeData%NPropSetsBR = SrcInitTypeData%NPropSetsBR
@@ -1639,6 +1697,7 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%NodesConnE = SrcInitTypeData%NodesConnE
    end if
    DstInitTypeData%SSSum = SrcInitTypeData%SSSum
+   DstInitTypeData%qR0 = SrcInitTypeData%qR0
 end subroutine
 
 subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
@@ -1648,6 +1707,9 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SD_DestroyInitType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(InitTypeData%TP_RefPoint)) then
+      deallocate(InitTypeData%TP_RefPoint)
+   end if
    if (allocated(InitTypeData%Joints)) then
       deallocate(InitTypeData%Joints)
    end if
@@ -1749,11 +1811,13 @@ subroutine SD_PackInitType(RF, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackInitType'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%RootName)
-   call RegPack(RF, InData%TP_RefPoint)
+   call RegPackAlloc(RF, InData%TP_RefPoint)
    call RegPack(RF, InData%SubRotateZ)
    call RegPack(RF, InData%g)
    call RegPack(RF, InData%DT)
+   call RegPack(RF, InData%NTP)
    call RegPack(RF, InData%NJoints)
+   call RegPack(RF, InData%RB_RefJoint)
    call RegPack(RF, InData%NPropSetsX)
    call RegPack(RF, InData%NPropSetsBC)
    call RegPack(RF, InData%NPropSetsBR)
@@ -1809,6 +1873,7 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPackAlloc(RF, InData%NodesConnN)
    call RegPackAlloc(RF, InData%NodesConnE)
    call RegPack(RF, InData%SSSum)
+   call RegPack(RF, InData%qR0)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1821,11 +1886,13 @@ subroutine SD_UnPackInitType(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TP_RefPoint); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TP_RefPoint); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SubRotateZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%g); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NTP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NJoints); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RB_RefJoint); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsBC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsBR); if (RegCheckErr(RF, RoutineName)) return
@@ -1881,6 +1948,7 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%NodesConnN); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%NodesConnE); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SSSum); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%qR0); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1918,6 +1986,8 @@ subroutine SD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
       end if
       DstContStateData%qmdot = SrcContStateData%qmdot
    end if
+   DstContStateData%qR = SrcContStateData%qR
+   DstContStateData%qRdot = SrcContStateData%qRdot
 end subroutine
 
 subroutine SD_DestroyContState(ContStateData, ErrStat, ErrMsg)
@@ -1942,6 +2012,8 @@ subroutine SD_PackContState(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%qm)
    call RegPackAlloc(RF, InData%qmdot)
+   call RegPack(RF, InData%qR)
+   call RegPack(RF, InData%qRdot)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1955,6 +2027,8 @@ subroutine SD_UnPackContState(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%qm); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%qmdot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%qR); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%qRdot); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
@@ -2138,7 +2212,7 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'SD_CopyMisc'
    ErrStat = ErrID_None
@@ -2155,9 +2229,211 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%qmdotdot = SrcMiscData%qmdotdot
    end if
-   DstMiscData%u_TP = SrcMiscData%u_TP
-   DstMiscData%udot_TP = SrcMiscData%udot_TP
-   DstMiscData%udotdot_TP = SrcMiscData%udotdot_TP
+   DstMiscData%qRdotdot = SrcMiscData%qRdotdot
+   if (allocated(SrcMiscData%F_TP)) then
+      LB(1:1) = lbound(SrcMiscData%F_TP)
+      UB(1:1) = ubound(SrcMiscData%F_TP)
+      if (.not. allocated(DstMiscData%F_TP)) then
+         allocate(DstMiscData%F_TP(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_TP.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_TP = SrcMiscData%F_TP
+   end if
+   if (allocated(SrcMiscData%u_TP)) then
+      LB(1:1) = lbound(SrcMiscData%u_TP)
+      UB(1:1) = ubound(SrcMiscData%u_TP)
+      if (.not. allocated(DstMiscData%u_TP)) then
+         allocate(DstMiscData%u_TP(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_TP.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%u_TP = SrcMiscData%u_TP
+   end if
+   if (allocated(SrcMiscData%udot_TP)) then
+      LB(1:1) = lbound(SrcMiscData%udot_TP)
+      UB(1:1) = ubound(SrcMiscData%udot_TP)
+      if (.not. allocated(DstMiscData%udot_TP)) then
+         allocate(DstMiscData%udot_TP(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%udot_TP.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%udot_TP = SrcMiscData%udot_TP
+   end if
+   if (allocated(SrcMiscData%udotdot_TP)) then
+      LB(1:1) = lbound(SrcMiscData%udotdot_TP)
+      UB(1:1) = ubound(SrcMiscData%udotdot_TP)
+      if (.not. allocated(DstMiscData%udotdot_TP)) then
+         allocate(DstMiscData%udotdot_TP(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%udotdot_TP.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%udotdot_TP = SrcMiscData%udotdot_TP
+   end if
+   if (allocated(SrcMiscData%EOM_RHS)) then
+      LB(1:1) = lbound(SrcMiscData%EOM_RHS)
+      UB(1:1) = ubound(SrcMiscData%EOM_RHS)
+      if (.not. allocated(DstMiscData%EOM_RHS)) then
+         allocate(DstMiscData%EOM_RHS(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%EOM_RHS.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%EOM_RHS = SrcMiscData%EOM_RHS
+   end if
+   if (allocated(SrcMiscData%EOM_Sol)) then
+      LB(1:1) = lbound(SrcMiscData%EOM_Sol)
+      UB(1:1) = ubound(SrcMiscData%EOM_Sol)
+      if (.not. allocated(DstMiscData%EOM_Sol)) then
+         allocate(DstMiscData%EOM_Sol(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%EOM_Sol.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%EOM_Sol = SrcMiscData%EOM_Sol
+   end if
+   if (allocated(SrcMiscData%Y1)) then
+      LB(1:1) = lbound(SrcMiscData%Y1)
+      UB(1:1) = ubound(SrcMiscData%Y1)
+      if (.not. allocated(DstMiscData%Y1)) then
+         allocate(DstMiscData%Y1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Y1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%Y1 = SrcMiscData%Y1
+   end if
+   if (allocated(SrcMiscData%Y1_CB)) then
+      LB(1:1) = lbound(SrcMiscData%Y1_CB)
+      UB(1:1) = ubound(SrcMiscData%Y1_CB)
+      if (.not. allocated(DstMiscData%Y1_CB)) then
+         allocate(DstMiscData%Y1_CB(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Y1_CB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%Y1_CB = SrcMiscData%Y1_CB
+   end if
+   if (allocated(SrcMiscData%Y1_CB_L)) then
+      LB(1:1) = lbound(SrcMiscData%Y1_CB_L)
+      UB(1:1) = ubound(SrcMiscData%Y1_CB_L)
+      if (.not. allocated(DstMiscData%Y1_CB_L)) then
+         allocate(DstMiscData%Y1_CB_L(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Y1_CB_L.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%Y1_CB_L = SrcMiscData%Y1_CB_L
+   end if
+   if (allocated(SrcMiscData%Y1_Guy_R)) then
+      LB(1:1) = lbound(SrcMiscData%Y1_Guy_R)
+      UB(1:1) = ubound(SrcMiscData%Y1_Guy_R)
+      if (.not. allocated(DstMiscData%Y1_Guy_R)) then
+         allocate(DstMiscData%Y1_Guy_R(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Y1_Guy_R.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%Y1_Guy_R = SrcMiscData%Y1_Guy_R
+   end if
+   if (allocated(SrcMiscData%Y1_Guy_L)) then
+      LB(1:1) = lbound(SrcMiscData%Y1_Guy_L)
+      UB(1:1) = ubound(SrcMiscData%Y1_Guy_L)
+      if (.not. allocated(DstMiscData%Y1_Guy_L)) then
+         allocate(DstMiscData%Y1_Guy_L(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Y1_Guy_L.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%Y1_Guy_L = SrcMiscData%Y1_Guy_L
+   end if
+   if (allocated(SrcMiscData%Y1_Utp)) then
+      LB(1:1) = lbound(SrcMiscData%Y1_Utp)
+      UB(1:1) = ubound(SrcMiscData%Y1_Utp)
+      if (.not. allocated(DstMiscData%Y1_Utp)) then
+         allocate(DstMiscData%Y1_Utp(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Y1_Utp.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%Y1_Utp = SrcMiscData%Y1_Utp
+   end if
+   if (allocated(SrcMiscData%RAllg2b)) then
+      LB(1:2) = lbound(SrcMiscData%RAllg2b)
+      UB(1:2) = ubound(SrcMiscData%RAllg2b)
+      if (.not. allocated(DstMiscData%RAllg2b)) then
+         allocate(DstMiscData%RAllg2b(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RAllg2b.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%RAllg2b = SrcMiscData%RAllg2b
+   end if
+   if (allocated(SrcMiscData%RAllb2g)) then
+      LB(1:2) = lbound(SrcMiscData%RAllb2g)
+      UB(1:2) = ubound(SrcMiscData%RAllb2g)
+      if (.not. allocated(DstMiscData%RAllb2g)) then
+         allocate(DstMiscData%RAllb2g(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RAllb2g.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%RAllb2g = SrcMiscData%RAllb2g
+   end if
+   if (allocated(SrcMiscData%MBB)) then
+      LB(1:2) = lbound(SrcMiscData%MBB)
+      UB(1:2) = ubound(SrcMiscData%MBB)
+      if (.not. allocated(DstMiscData%MBB)) then
+         allocate(DstMiscData%MBB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%MBB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%MBB = SrcMiscData%MBB
+   end if
+   if (allocated(SrcMiscData%CBB)) then
+      LB(1:2) = lbound(SrcMiscData%CBB)
+      UB(1:2) = ubound(SrcMiscData%CBB)
+      if (.not. allocated(DstMiscData%CBB)) then
+         allocate(DstMiscData%CBB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CBB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%CBB = SrcMiscData%CBB
+   end if
+   if (allocated(SrcMiscData%KBB)) then
+      LB(1:2) = lbound(SrcMiscData%KBB)
+      UB(1:2) = ubound(SrcMiscData%KBB)
+      if (.not. allocated(DstMiscData%KBB)) then
+         allocate(DstMiscData%KBB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%KBB.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%KBB = SrcMiscData%KBB
+   end if
    if (allocated(SrcMiscData%F_L)) then
       LB(1:1) = lbound(SrcMiscData%F_L)
       UB(1:1) = ubound(SrcMiscData%F_L)
@@ -2460,6 +2736,57 @@ subroutine SD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%qmdotdot)) then
       deallocate(MiscData%qmdotdot)
    end if
+   if (allocated(MiscData%F_TP)) then
+      deallocate(MiscData%F_TP)
+   end if
+   if (allocated(MiscData%u_TP)) then
+      deallocate(MiscData%u_TP)
+   end if
+   if (allocated(MiscData%udot_TP)) then
+      deallocate(MiscData%udot_TP)
+   end if
+   if (allocated(MiscData%udotdot_TP)) then
+      deallocate(MiscData%udotdot_TP)
+   end if
+   if (allocated(MiscData%EOM_RHS)) then
+      deallocate(MiscData%EOM_RHS)
+   end if
+   if (allocated(MiscData%EOM_Sol)) then
+      deallocate(MiscData%EOM_Sol)
+   end if
+   if (allocated(MiscData%Y1)) then
+      deallocate(MiscData%Y1)
+   end if
+   if (allocated(MiscData%Y1_CB)) then
+      deallocate(MiscData%Y1_CB)
+   end if
+   if (allocated(MiscData%Y1_CB_L)) then
+      deallocate(MiscData%Y1_CB_L)
+   end if
+   if (allocated(MiscData%Y1_Guy_R)) then
+      deallocate(MiscData%Y1_Guy_R)
+   end if
+   if (allocated(MiscData%Y1_Guy_L)) then
+      deallocate(MiscData%Y1_Guy_L)
+   end if
+   if (allocated(MiscData%Y1_Utp)) then
+      deallocate(MiscData%Y1_Utp)
+   end if
+   if (allocated(MiscData%RAllg2b)) then
+      deallocate(MiscData%RAllg2b)
+   end if
+   if (allocated(MiscData%RAllb2g)) then
+      deallocate(MiscData%RAllb2g)
+   end if
+   if (allocated(MiscData%MBB)) then
+      deallocate(MiscData%MBB)
+   end if
+   if (allocated(MiscData%CBB)) then
+      deallocate(MiscData%CBB)
+   end if
+   if (allocated(MiscData%KBB)) then
+      deallocate(MiscData%KBB)
+   end if
    if (allocated(MiscData%F_L)) then
       deallocate(MiscData%F_L)
    end if
@@ -2540,9 +2867,24 @@ subroutine SD_PackMisc(RF, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackMisc'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%qmdotdot)
-   call RegPack(RF, InData%u_TP)
-   call RegPack(RF, InData%udot_TP)
-   call RegPack(RF, InData%udotdot_TP)
+   call RegPack(RF, InData%qRdotdot)
+   call RegPackAlloc(RF, InData%F_TP)
+   call RegPackAlloc(RF, InData%u_TP)
+   call RegPackAlloc(RF, InData%udot_TP)
+   call RegPackAlloc(RF, InData%udotdot_TP)
+   call RegPackAlloc(RF, InData%EOM_RHS)
+   call RegPackAlloc(RF, InData%EOM_Sol)
+   call RegPackAlloc(RF, InData%Y1)
+   call RegPackAlloc(RF, InData%Y1_CB)
+   call RegPackAlloc(RF, InData%Y1_CB_L)
+   call RegPackAlloc(RF, InData%Y1_Guy_R)
+   call RegPackAlloc(RF, InData%Y1_Guy_L)
+   call RegPackAlloc(RF, InData%Y1_Utp)
+   call RegPackAlloc(RF, InData%RAllg2b)
+   call RegPackAlloc(RF, InData%RAllb2g)
+   call RegPackAlloc(RF, InData%MBB)
+   call RegPackAlloc(RF, InData%CBB)
+   call RegPackAlloc(RF, InData%KBB)
    call RegPackAlloc(RF, InData%F_L)
    call RegPackAlloc(RF, InData%F_L2)
    call RegPackAlloc(RF, InData%UR_bar)
@@ -2576,14 +2918,29 @@ subroutine SD_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SD_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackMisc'
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%qmdotdot); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%u_TP); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%udot_TP); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%udotdot_TP); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%qRdotdot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%F_TP); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%u_TP); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%udot_TP); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%udotdot_TP); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_RHS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_Sol); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Y1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Y1_CB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Y1_CB_L); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Y1_Guy_R); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Y1_Guy_L); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Y1_Utp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RAllg2b); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RAllb2g); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MBB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%CBB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%KBB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_L); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_L2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%UR_bar); if (RegCheckErr(RF, RoutineName)) return
@@ -2718,6 +3075,18 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%rPG = SrcParamData%rPG
+   end if
+   if (allocated(SrcParamData%rTP0)) then
+      LB(1:2) = lbound(SrcParamData%rTP0)
+      UB(1:2) = ubound(SrcParamData%rTP0)
+      if (.not. allocated(DstParamData%rTP0)) then
+         allocate(DstParamData%rTP0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%rTP0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%rTP0 = SrcParamData%rTP0
    end if
    if (allocated(SrcParamData%NodeID2JointID)) then
       LB(1:1) = lbound(SrcParamData%NodeID2JointID)
@@ -2860,9 +3229,10 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%CtrlElem2Channel = SrcParamData%CtrlElem2Channel
    end if
+   DstParamData%RBRefPt = SrcParamData%RBRefPt
+   DstParamData%TP1IsRBRefPt = SrcParamData%TP1IsRBRefPt
    DstParamData%nDOFM = SrcParamData%nDOFM
    DstParamData%SttcSolve = SrcParamData%SttcSolve
-   DstParamData%GuyanLoadCorrection = SrcParamData%GuyanLoadCorrection
    DstParamData%Floating = SrcParamData%Floating
    if (allocated(SrcParamData%KMMDiag)) then
       LB(1:1) = lbound(SrcParamData%KMMDiag)
@@ -3176,6 +3546,43 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%TIreact = SrcParamData%TIreact
    end if
+   if (allocated(SrcParamData%GMat)) then
+      LB(1:2) = lbound(SrcParamData%GMat)
+      UB(1:2) = ubound(SrcParamData%GMat)
+      if (.not. allocated(DstParamData%GMat)) then
+         allocate(DstParamData%GMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%GMat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%GMat = SrcParamData%GMat
+   end if
+   if (allocated(SrcParamData%EOM_LHS)) then
+      LB(1:2) = lbound(SrcParamData%EOM_LHS)
+      UB(1:2) = ubound(SrcParamData%EOM_LHS)
+      if (.not. allocated(DstParamData%EOM_LHS)) then
+         allocate(DstParamData%EOM_LHS(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_LHS.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_LHS = SrcParamData%EOM_LHS
+   end if
+   DstParamData%nTP = SrcParamData%nTP
+   if (allocated(SrcParamData%TPIdx)) then
+      LB(1:1) = lbound(SrcParamData%TPIdx)
+      UB(1:1) = ubound(SrcParamData%TPIdx)
+      if (.not. allocated(DstParamData%TPIdx)) then
+         allocate(DstParamData%TPIdx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TPIdx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%TPIdx = SrcParamData%TPIdx
+   end if
    DstParamData%nNodes = SrcParamData%nNodes
    DstParamData%nNodes_I = SrcParamData%nNodes_I
    DstParamData%nNodes_L = SrcParamData%nNodes_L
@@ -3220,6 +3627,7 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%nDOFI_Rb = SrcParamData%nDOFI_Rb
    DstParamData%nDOFI_F = SrcParamData%nDOFI_F
    DstParamData%nDOFL_L = SrcParamData%nDOFL_L
+   DstParamData%nDOFL_TP = SrcParamData%nDOFL_TP
    DstParamData%nDOFC__ = SrcParamData%nDOFC__
    DstParamData%nDOFC_Rb = SrcParamData%nDOFC_Rb
    DstParamData%nDOFC_L = SrcParamData%nDOFC_L
@@ -3518,6 +3926,9 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%rPG)) then
       deallocate(ParamData%rPG)
    end if
+   if (allocated(ParamData%rTP0)) then
+      deallocate(ParamData%rTP0)
+   end if
    if (allocated(ParamData%NodeID2JointID)) then
       deallocate(ParamData%NodeID2JointID)
    end if
@@ -3641,6 +4052,15 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%TIreact)) then
       deallocate(ParamData%TIreact)
    end if
+   if (allocated(ParamData%GMat)) then
+      deallocate(ParamData%GMat)
+   end if
+   if (allocated(ParamData%EOM_LHS)) then
+      deallocate(ParamData%EOM_LHS)
+   end if
+   if (allocated(ParamData%TPIdx)) then
+      deallocate(ParamData%TPIdx)
+   end if
    if (allocated(ParamData%Nodes_I)) then
       deallocate(ParamData%Nodes_I)
    end if
@@ -3758,6 +4178,7 @@ subroutine SD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%FG)
    call RegPackAlloc(RF, InData%DP0)
    call RegPackAlloc(RF, InData%rPG)
+   call RegPackAlloc(RF, InData%rTP0)
    call RegPackAlloc(RF, InData%NodeID2JointID)
    call RegPackAlloc(RF, InData%CMassNode)
    call RegPackAlloc(RF, InData%CMassWeight)
@@ -3786,9 +4207,10 @@ subroutine SD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%ElemsDOF)
    call RegPackAlloc(RF, InData%DOFred2Nodes)
    call RegPackAlloc(RF, InData%CtrlElem2Channel)
+   call RegPack(RF, InData%RBRefPt)
+   call RegPack(RF, InData%TP1IsRBRefPt)
    call RegPack(RF, InData%nDOFM)
    call RegPack(RF, InData%SttcSolve)
-   call RegPack(RF, InData%GuyanLoadCorrection)
    call RegPack(RF, InData%Floating)
    call RegPackAlloc(RF, InData%KMMDiag)
    call RegPackAlloc(RF, InData%CMMDiag)
@@ -3816,6 +4238,10 @@ subroutine SD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%AM2JacPiv)
    call RegPackAlloc(RF, InData%TI)
    call RegPackAlloc(RF, InData%TIreact)
+   call RegPackAlloc(RF, InData%GMat)
+   call RegPackAlloc(RF, InData%EOM_LHS)
+   call RegPack(RF, InData%nTP)
+   call RegPackAlloc(RF, InData%TPIdx)
    call RegPack(RF, InData%nNodes)
    call RegPack(RF, InData%nNodes_I)
    call RegPack(RF, InData%nNodes_L)
@@ -3827,6 +4253,7 @@ subroutine SD_PackParam(RF, Indata)
    call RegPack(RF, InData%nDOFI_Rb)
    call RegPack(RF, InData%nDOFI_F)
    call RegPack(RF, InData%nDOFL_L)
+   call RegPack(RF, InData%nDOFL_TP)
    call RegPack(RF, InData%nDOFC__)
    call RegPack(RF, InData%nDOFC_Rb)
    call RegPack(RF, InData%nDOFC_L)
@@ -3940,6 +4367,7 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%FG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DP0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%rPG); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%rTP0); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%NodeID2JointID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CMassNode); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CMassWeight); if (RegCheckErr(RF, RoutineName)) return
@@ -3976,9 +4404,10 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%ElemsDOF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%DOFred2Nodes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CtrlElem2Channel); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RBRefPt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%TP1IsRBRefPt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nDOFM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SttcSolve); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%GuyanLoadCorrection); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Floating); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%KMMDiag); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CMMDiag); if (RegCheckErr(RF, RoutineName)) return
@@ -4006,6 +4435,10 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%AM2JacPiv); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TI); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TIreact); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%GMat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_LHS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nTP); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TPIdx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nNodes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nNodes_I); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nNodes_L); if (RegCheckErr(RF, RoutineName)) return
@@ -4017,6 +4450,7 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%nDOFI_Rb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nDOFI_F); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nDOFL_L); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nDOFL_TP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nDOFC__); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nDOFC_Rb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nDOFC_L); if (RegCheckErr(RF, RoutineName)) return

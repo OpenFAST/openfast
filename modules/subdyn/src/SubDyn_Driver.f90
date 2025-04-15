@@ -47,7 +47,8 @@ PROGRAM SubDyn_Driver
       CHARACTER(1024) :: OutRootName
       INTEGER         :: NSteps
       REAL(DbKi)      :: TimeInterval
-      REAL(ReKi)      :: TP_RefPoint(3)
+      INTEGER         :: nTP
+      REAL(ReKi),allocatable:: TP_RefPoint(:,:)
       REAL(ReKi)      :: SubRotateZ
       INTEGER         :: InputsMod
       CHARACTER(1024) :: InputsFile
@@ -147,6 +148,7 @@ PROGRAM SubDyn_Driver
       InitInData%g            = drvrInitInp%Gravity
       InitInData%SDInputFile  = drvrInitInp%SDInputFile
       InitInData%RootName     = drvrInitInp%OutRootName
+      InitInData%nTP          = drvrInitInp%nTP
       InitInData%TP_RefPoint  = drvrInitInp%TP_RefPoint
       InitInData%SubRotateZ   = drvrInitInp%SubRotateZ
       TimeInterval            = drvrInitInp%TimeInterval
@@ -287,6 +289,8 @@ PROGRAM SubDyn_Driver
    ! Write simulation times and stop
    CALL RunTimes( StrtTime, UsrTime1, StrtTime, UsrTime1, Time )
    
+   CALL CleanUp()
+
 CONTAINS
    SUBROUTINE AbortIfFailed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SubDyn_Driver') 
@@ -312,6 +316,7 @@ CONTAINS
       if(UnEcho>0) CLOSE(UnEcho)
       if(UnEcho>0) CLOSE( UnIn)
       if(allocated(SDin)) deallocate(SDin)
+      if(allocated(drvrInitInp%TP_RefPoint)) deallocate(drvrInitInp%TP_RefPoint)
    END SUBROUTINE CleanUp
 
    !-------------------------------------------------------------------------------------------------------------------------------
@@ -368,7 +373,11 @@ CONTAINS
       CALL ReadVar( UnIn, FileName, InitInp%OutRootName, 'OutRootName', 'SubDyn output root filename', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%NSteps     , 'NSteps', 'Number of time steps in the SubDyn simulation', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%TimeInterval, 'TimeInterval', 'Time interval for any SubDyn inputs', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      CALL ReadAry( UnIn, FileName, InitInp%TP_RefPoint, 3, 'TP reference point', 'TP reference point', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      CALL ReadVar( UnIn, FileName, InitInp%nTP, 'nTP', 'Number of transition pieces', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      allocate(InitInp%TP_RefPoint(3,InitInp%nTP), stat=ErrStat2); ErrMsg2='Allocating TP reference points'; call AbortIfFailed()
+      CALL ReadAry( UnIn, FileName, InitInp%TP_RefPoint(1,1:InitInp%nTP), InitInp%nTP, 'TP reference point x-coordinates', 'TP reference point x-coordinates', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      CALL ReadAry( UnIn, FileName, InitInp%TP_RefPoint(2,1:InitInp%nTP), InitInp%nTP, 'TP reference point y-coordinates', 'TP reference point y-coordinates', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      CALL ReadAry( UnIn, FileName, InitInp%TP_RefPoint(3,1:InitInp%nTP), InitInp%nTP, 'TP reference point z-coordinates', 'TP reference point z-coordinates', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%SubRotateZ, 'SubRotateZ', 'Rotation angle in degrees about Z axis.', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       !---------------------- INPUTS -------------------------------------------------------------------
       CALL ReadCom( UnIn, FileName, 'INPUTS header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()

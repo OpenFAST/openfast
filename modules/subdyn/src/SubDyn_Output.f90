@@ -193,7 +193,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
       ! Compute p%TIreact, rigid transf. matrix from reaction DOFs to base structure point (0,0,-WD)
       CALL AllocAry(p%TIreact, 6, p%nDOFC__, 'TIReact  ', ErrStat2, ErrMsg2); if(Failed()) return
       CALL AllocAry(T_TIreact, p%nDOFC__, 6, 'TIReact_T', ErrStat2, ErrMsg2); if(Failed()) return
-      call RigidTrnsf(Init, p, (/0.0_Reki, 0.0_ReKi, -WtrDpth /), p%IDC__, p%nDOFC__, T_TIreact, ErrStat2, ErrMsg2); if(Failed()) return
+      call RigidTrnsf(Init, p, (/0.0_Reki, 0.0_ReKi, -WtrDpth /), p%IDC__, p%nDOFC__, 1_IntKi, T_TIreact, ErrStat2, ErrMsg2); if(Failed()) return
       p%TIreact=transpose(T_TIreact)
       deallocate(T_TIreact)
    ENDIF
@@ -294,9 +294,13 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    ErrMsg  = ""
 
    if ( p%Floating ) then
-      ! For floating, m%U_full_dotdot is currently in the earth-fixed frame.
-      ! Need to transform back to the Guyan frame when computing MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze.
-      Rg2b = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
+      if ( p%TP1IsRBRefPt ) then
+         Rg2b = EulerConstructZYX(x%qR(4:6))
+      else
+         ! For floating, m%U_full_dotdot is currently in the earth-fixed frame.
+         ! Need to transform back to the Guyan frame when computing MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze.
+         Rg2b = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
+      endif
    else
       call Eye(Rg2b, ErrStat2, ErrMsg2)
    end if
