@@ -450,6 +450,7 @@ typedef   ^       ^                    DbKi                cv             -     
 typedef   ^       ^                    IntKi        inertialF             -     0    -   "Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 0: no, 1: yes, 2: yes with ramp to inertialF_rampT" - 
 typedef   ^       ^                    R8Ki         inertialF_rampT       -    30    -   "Ramp time for inertial forces" - 
 typedef   ^       ^                    IntKi               OutSwitch      -     1    -   "Switch to disable outputs when running with full OF. 0: no MD main outfile, 1: write MD main outfile" "(-)"
+typedef   ^       ^                    IntKi             disableOutTime   -     0    -   "Disables the printing of the fairtens and timestep in init to the console, useful for the MATLAB wrapper" "(-)"
 # --- parameters for wave and current ---
 typedef   ^       ^                    IntKi        nxWave             -            -  -   "number of x wave grid points"            -
 typedef   ^       ^                    IntKi        nyWave             -            -  -   "number of y wave grid points"            -
