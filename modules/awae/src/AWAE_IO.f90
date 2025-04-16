@@ -513,7 +513,9 @@ SUBROUTINE AWAE_PrintSum(  p, u, y, ErrStat, ErrMsg )
 
  
 
+   !$OMP critical(fileopen_critical)
    CLOSE(UnSu)
+   !$OMP end critical(fileopen_critical)
 
 RETURN
 END SUBROUTINE AWAE_PrintSum

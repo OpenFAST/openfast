@@ -5697,6 +5697,7 @@ end function Rad2M180to180Deg
 
       REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi          ! Number of seconds per day
 
+      REAL(SiKi)                   :: DaysRemain                           ! Days remaining (decimal)
       INTEGER(4)                   :: EndHour                              ! The hour when the simulations is expected to complete.
       INTEGER(4)                   :: EndMin                               ! The minute when the simulations is expected to complete.
       INTEGER(4)                   :: EndSec                               ! The second when the simulations is expected to complete.
@@ -5704,6 +5705,7 @@ end function Rad2M180to180Deg
 
       CHARACTER(MaxWrScrLen)       :: BlankLine
       CHARACTER( 8)                :: ETimeStr                             ! String containing the end time.
+      CHARACTER( 10)               :: DaysRemainStr                        !< decimal format of number of days left
       CHARACTER( 10)               :: DescStr                              !< optional additional string to print for SimStatus
       CHARACTER(200)               :: StatInfo                             !< optional additional string to print for SimStatus
 
@@ -5744,18 +5746,20 @@ end function Rad2M180to180Deg
          ! Estimate the end time in hours, minutes, and seconds
 
       SimTimeLeft = REAL( ( TMax - ZTime )*DeltTime/( ZTime - PrevSimTime ), ReKi )          ! DeltTime/( ZTime - PrevSimTime ) is the delta_ClockTime divided by the delta_SimulationTime
+      DaysRemain  = real((SimTimeLeft) / real(SecPerDay,ReKi),SiKi)
       EndTime  =  MOD( CurrClockTime+SimTimeLeft, SecPerDay )
       EndHour  =  INT(   EndTime*InSecHr )
       EndMin   =  INT( ( EndTime - REAL( 3600*EndHour ) )*InSecMn )
       EndSec   = NINT(   EndTime - REAL( 3600*EndHour + 60*EndMin ) ) !bjj: this NINT can make the seconds say "60"
 
       WRITE (ETimeStr,"(I2.2,2(':',I2.2))")  EndHour, EndMin, EndSec
+      WRITE (DaysRemainStr,"(f10.3)") DaysRemain
 
       BlankLine = ""
       CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
       CALL WrOver ( trim(DescStr)//' Time: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )// &
                     ' seconds. '//trim(StatInfo)// &
-                    ' Estimated final completion at '//ETimeStr//'.')
+                    ' Estimated final completion at '//ETimeStr//' (in '//trim(adjustl(DaysRemainStr))//' days).')
 
          ! Let's save this time as the previous time for the next call to the routine
       PrevClockTime = CurrClockTime

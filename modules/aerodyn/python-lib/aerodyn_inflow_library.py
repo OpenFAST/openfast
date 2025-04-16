@@ -1,8 +1,9 @@
-#**********************************************************************************************************************************
+#-------------------------------------------------------------------------------
 # LICENSING
-# Copyright (C) 2021 National Renewable Energy Laboratory
+#-------------------------------------------------------------------------------
+# Copyright (C) 2021-present by National Renewable Energy Lab (NREL)
 #
-# This file is part of AeroDyn.
+# This file is part of AeroDyn
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,36 +16,146 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-#**********************************************************************************************************************************
-#
-# This is the Python-C interface library for AeroDyn with InflowWind.  This may
-# be used directly with Python based codes to call and run AeroDyn and
-# InflowWind together.  An example of using this library from Python is given
-# in the accompanying Python driver program.  Additional notes and information
-# on the interfacing is included there.
-#
-#
-from ctypes import (
-    CDLL,
-    POINTER,
-    create_string_buffer,
-    byref,
-    c_byte,
-    c_int,
-    c_double,
-    c_float,
-    c_char,
-    c_char_p,
-    c_wchar,
-    c_wchar_p,
-)
-import numpy as np
-import datetime
 
+#-------------------------------------------------------------------------------
+# Overview
+#-------------------------------------------------------------------------------
+# This is the Python-C interface library for AeroDyn with InflowWind. This may
+# be used directly with Python based codes to call and run AeroDyn and
+# InflowWind together.
+
+#--------------------------------------
+# Key Features
+#--------------------------------------
+# - AeroDyn: Blade element momentum (BEM) theory for aerodynamic force
+#   calculations (dynamic stall, unsteady aerodynamics, tower shadow, wind shear,
+#   tip/hub losses)
+# - InflowWind: Simulates complex inflow conditions (turbulence, wind shear,
+#   gusts)
+
+#--------------------------------------
+# Usage
+#--------------------------------------
+# 1. Instantiate AeroDynInflowLib with shared library path
+# 2. Initialize: adi_preinit() -> adi_setuprotor() -> adi_init()
+# 3. Simulate: adi_setrotormotion() -> adi_updateStates() ->
+#    adi_calcOutput() -> adi_getrotorloads()
+# 4. adi_end() and handle errors via check_error()
+
+# An example of using this library from Python is given in the accompanying
+# Python driver program(s) in reg_tests/r-test/modules/aerodyn directory.
+# Additional notes and information on the interfacing is included there.
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
+import os
+from ctypes import (CDLL, POINTER, byref, c_char, c_char_p, c_double, c_float,
+                    c_int, create_string_buffer)
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import numpy as np
+import numpy.typing as npt
+
+#-------------------------------------------------------------------------------
+# Helper functions and classes
+#-------------------------------------------------------------------------------
+def flatten_array(
+    initial_count: int,
+    current_count: int,
+    array: npt.NDArray,
+    array_name: str,
+    elements_per_item: int,
+    c_type: Any = c_float
+) -> Any:
+    """Flattens arrays for passing to C.
+
+    This is a helper function to flatten arrays for passing to C. It is used to flatten
+    positions, orientations, and velocities/accelerations.
+
+    Args:
+        initial_count: Initial number of items from setup
+        current_count: Current number of items being processed
+        array: Numpy array to flatten
+        array_name: Descriptive name for error messages
+        elements_per_item: Number of elements per item (e.g. 3 for positions, 9 for orientations)
+        c_type: C type to convert to (default: c_float)
+
+    Returns:
+        Array: Flattened C array of size (elements_per_item * current_count)
+
+    Raises:
+        RuntimeError: If current_count differs from initial_count
+    """
+    if initial_count != current_count:
+        error_msg = (
+            f"The number of {array_name} points changed from initial value of"
+            f" {initial_count}. This is not permitted during the simulation."
+        )
+        raise RuntimeError(f"Error in calling AeroDyn/InflowWind library: {error_msg}")
+
+    c_array = (c_type * (elements_per_item * current_count))(*array.flatten())
+    return c_array
+
+def to_c_array(array: npt.NDArray, c_type: Any = c_float) -> Any:
+    """Converts numpy array to C array of specified type.
+
+    Args:
+        array: Input numpy array
+        c_type: C type to convert to (default: c_float)
+
+    Returns:
+        C-compatible array of the specified type
+    """
+    try:
+        if isinstance(array, np.ndarray):
+            flat_array = array.flatten()
+            return (c_type * len(flat_array))(*flat_array)
+        # If list/tuple, convert directly to C array
+        return (c_type * len(array))(*array)
+    except Exception as e:
+        raise TypeError(f"Failed to convert to C array: {e}")
+
+def to_c_string(input_array: List[str]) -> Tuple[bytes, int]:
+    """Converts input string array into a null-separated byte string for use in C.
+
+    Args:
+        input_array: List of strings to join with null characters
+
+    Returns:
+        Tuple containing:
+            - The encoded byte string
+            - Length of the encoded string
+    """
+    encoded_string = '\x00'.join(input_array).encode('utf-8')
+    return encoded_string, len(encoded_string)
+
+@dataclass
+class MotionData:
+    """POD-style container for motion-related data i.e. state of a node."""
+    position: npt.NDArray[np.float32]
+    orientation: npt.NDArray[np.float64]
+    velocity: npt.NDArray[np.float32]
+    acceleration: npt.NDArray[np.float32]
+
+#-------------------------------------------------------------------------------
+# C-interface library class for AeroDyn x InflowWind
+#-------------------------------------------------------------------------------
 class AeroDynInflowLib(CDLL):
-    # Human readable error levels from IfW.
-    error_levels = {
+    """A Python interface to the AeroDyn/InflowWind library.
+
+    This class provides a modern Python interface for calling and running AeroDyn
+    and InflowWind together. It handles initialization, runtime operations, and cleanup
+    of the underlying Fortran library.
+    """
+
+    #--------------------------------------
+    # Error levels (from IfW)
+    #--------------------------------------
+    error_levels: Dict[int, str] = {
         0: "None",
         1: "Info",
         2: "Warning",
@@ -52,116 +163,534 @@ class AeroDynInflowLib(CDLL):
         4: "Fatal Error"
     }
 
-    #   NOTE:   the error message length in Fortran is controlled by the
-    #           ErrMsgLen variable in the NWTC_Base.f90 file.  If that ever
-    #           changes, it may be necessary to update the corresponding size
-    #           here.
-    error_msg_c_len = 1025
+    #--------------------------------------
+    # Constants
+    #--------------------------------------
+    # NOTE: The length of the error message in Fortran is determined by the
+    #       ErrMsgLen variable in the NWTC_Base.f90 file. If ErrMsgLen is modified,
+    #       the corresponding size here must also be updated to match.
+    ERROR_MESSAGE_LENGTH: int = 1025
+    DEFAULT_STRING_LENGTH: int = 1025
+    CHANNEL_NAME_LENGTH: int = 20
+    MAX_CHANNELS: int = 8000
 
-    #   NOTE:   the length of the name used for any output file written by the
-    #           HD Fortran code is 1025.
-    default_str_c_len = 1025
+    def __init__(self, library_path: Union[str, Path]) -> None:
+        """Initializes the AeroDyn/InflowWind interface.
 
-    def __init__(self, library_path):
-        super().__init__(library_path)
+        Args:
+            library_path: Path to the compiled library file (.dll, .so, or .dylib)
+
+        Raises:
+            FileNotFoundError: If the library file cannot be found
+            OSError: If the library cannot be loaded
+        """
+        library_path = Path(library_path)
+        if not library_path.exists():
+            raise FileNotFoundError(f"Library not found at: {library_path}")
+
+        super().__init__(str(library_path))
         self.library_path = library_path
 
+        # Initialize the library interface
         self._initialize_routines()
-        self.ended = False                  # For error handling at end
+        self.ended = False
 
-        # Input file handling
-        self.ADinputPass  = 1               # Assume passing of input file as a string
-        self.IfWinputPass = 1               # Assume passing of input file as a string
+        # Input file handling configuration
+        self.aerodyn_inputs_passed_as_string: bool = True  # Pass input file as string
+        self.inflow_inputs_passed_as_string: bool = True   # Pass input file as string
 
-        # Create buffers for class data
+        # Error handling setup
         self.abort_error_level = 4
         self.error_status_c = c_int(0)
-        self.error_message_c = create_string_buffer(self.error_msg_c_len)
+        self.error_message_c = create_string_buffer(self.ERROR_MESSAGE_LENGTH)
 
-        # This is not sufficient for AD
-        #FIXME: ChanLen may not always be 20 -- could be as much as 256
-        #       Possible fix is to pass this length over to Fortran side.
-        #       Also may want to convert this at some point to C_NULL_CHAR
-        #       delimeter instead of fixed width.  Future problem though.
-        # Number of channel names may exceeed 5000
-        self._channel_names_c = create_string_buffer(20 * 8000)
-        self._channel_units_c = create_string_buffer(20 * 8000)
+        # Channel information buffers
+        self._channel_names_c = create_string_buffer(
+            self.CHANNEL_NAME_LENGTH * self.MAX_CHANNELS
+        )
+        self._channel_units_c = create_string_buffer(
+            self.CHANNEL_NAME_LENGTH * self.MAX_CHANNELS
+        )
 
-        # Initial environmental conditions
-        #self.MHK = false    #  MHK turbine type switch -- disabled for now
-        self.gravity     =   9.80665  # Gravitational acceleration (m/s^2)
-        self.defFldDens  =     1.225  # Air density (kg/m^3)
-        self.defKinVisc  = 1.464E-05  # Kinematic viscosity of working fluid (m^2/s)
-        self.defSpdSound =     335.0  # Speed of sound in working fluid (m/s)
-        self.defPatm     =  103500.0  # Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
-        self.defPvap     =    1700.0  # Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
-        self.WtrDpth     =       0.0  # Water depth (m)
-        self.MSL2SWL     =       0.0  # Offset between still-water level and mean sea level (m) [positive upward]
+        #--------------------------------------
+        # Flags
+        #--------------------------------------
+        # For flags: 0->false, 1->true
+        self.store_hub_height_velocity = 1
+        self.transpose_dcm = 1
+        self.point_load_output = 1
 
-        # flags
-        self.storeHHVel  = 1          # 0=false, 1=true
-        self.transposeDCM= 1          # 0=false, 1=true
-        self.pointLoadOut= 1          # 0=false, 1=true
-        self.debuglevel  = 0          # 0-4 levels
+        # 0->None, 1->Info, 2->Warning, 3->Severe Error, 4->Fatal Error
+        self.debug_level = 0
 
-        # VTK
-        self.WrVTK       = 0          # default of no vtk output
-        self.WrVTK_Type  = 1          # default of surface meshes
-        self.WrVTK_DT    = 0.0        # default to all
-        self.VTKNacDim   = np.array([-2.5,-2.5,0,10,5,5], dtype="float32")        # default nacelle dimension for VTK surface rendering [x0,y0,z0,Lx,Ly,Lz] (m)
-        self.VTKHubRad   = 1.5        # default hub radius for VTK surface rendering
+        #--------------------------------------
+        # VTK settings
+        #--------------------------------------
+        self.write_vtk = 0         # Default -> no vtk output
+        self.vtk_type = 1          # Default -> surface meshes
+        self.vtk_dt = 0.           # Default -> all
+        self.vtk_nacelle_dimension = np.array(
+            # Default nacelle dimension [x0, y0, z0, Lx, Ly, Lz] (m)
+            [-2.5, -2.5, 0., 10., 5., 5.], dtype="float32"
+        )
+        self.vtk_hub_radius = 1.5  # Default hub radius for VTK surface rendering
 
-        # Output file
-        self.wrOuts      = 0          # wrOuts -- file format for writing outputs
-        self.DT_Outs     = 0.0        # DT_Outs -- timestep for outputs to file
+        #--------------------------------------
+        # Output file settings
+        #--------------------------------------
+        self.write_outputs = 0               # File format for writing outputs
+        self.output_timestep = 0.            # Timestep for outputs to file
+        self.output_root_name = "Output_ADIlib_default"
+        self.output_vtk_dir = ""             # Set to specify a directory relative to input files
 
-        # Interpolation order (must be 1: linear, or 2: quadratic)
-        self.InterpOrder = 1          # default of linear interpolation
+        #--------------------------------------
+        # Interpolation settings
+        #--------------------------------------
+        # Options: 1 -> linear, 2 -> quadratic
+        self.interpolation_order = 1         # Default -> linear interpolation
 
-        # Initial time related variables
-        self.dt          = 0.1        # typical default for HD
-        self.tmax        = 600.0      # typical default for HD waves FFT
-        #FIXME: check tmax/total_time and note exactly what is different between them.
-        self.total_time  = 0.0        # may be longer than tmax
-        self.numTimeSteps= 0
+        #--------------------------------------
+        # Time settings
+        #--------------------------------------
+        self.dt = 0.1               # Typical default for HD
+        self.t_max = 600.           # Typical default for HD waves FFT
+        self.total_time = 0.        # May be longer than t_max
+        self.num_time_steps = 0
 
-        # number of output channels
-        self.numChannels = 0          # Number of channels returned
+        #--------------------------------------
+        # Channels and turbines
+        #--------------------------------------
+        self.num_channels = 0         # Number of channels returned
+        self.num_turbines = 1
 
-        # Number of turbines
-        self.numTurbines = 1
+        #--------------------------------------
+        # Initial position setup
+        #--------------------------------------
+        self.init_hub_pos = np.zeros(shape=(3), dtype=c_float)
+        self.init_hub_orient = np.zeros(shape=(9), dtype=c_double)
+        self.init_nacelle_pos = np.zeros(shape=(3), dtype=c_float)
+        self.init_nacelle_orient = np.zeros(shape=(9), dtype=c_double)
+        self.num_blades = 3
+        self.init_root_pos = np.zeros(shape=(self.num_blades,3), dtype=c_float)
+        self.init_root_orient = np.zeros(shape=(self.num_blades,9), dtype=c_double)
 
-#FIXME: some assumptions about a single turbine here.
-        # Initial position of hub and blades
-        #   used for setup of AD, not used after init.
-        self.initHubPos         = np.zeros(shape=(3),dtype=c_float)
-        self.initHubOrient      = np.zeros(shape=(9),dtype=c_double)
-        self.initNacellePos     = np.zeros(shape=(3),dtype=c_float)
-        self.initNacelleOrient  = np.zeros(shape=(9),dtype=c_double)
-        self.numBlades          = 3
-        self.initRootPos        = np.zeros(shape=(self.numBlades,3),dtype=c_float)
-        self.initRootOrient     = np.zeros(shape=(self.numBlades,9),dtype=c_double)
-
+        #--------------------------------------
         # Structural Mesh
-        #   The number of nodes must be constant throughout simulation.  The
-        #   initial position is given in the initMeshPos array (resize as
-        #   needed, should be Nx6).
-        #   Rotations are given in radians assuming small angles.  See note at
-        #   top of this file.
-        self.numMeshPts     = 1
-        self.initMeshPos    = np.zeros(shape=(self.numMeshPts,3),dtype=c_float )    # Nx3 array [x,y,z]
-        self.initMeshOrient = np.zeros(shape=(self.numMeshPts,9),dtype=c_double)    # Nx9 array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
-        self.meshPtToBladeNum = np.zeros(shape=(self.numMeshPts),dtype=c_int)       # Nx1 array [blade number]
+        #--------------------------------------
+        self.num_mesh_pts = 1
+        self.init_mesh_pos = np.zeros(shape=(self.num_mesh_pts,3), dtype=c_float)
+        self.init_mesh_orient = np.zeros(shape=(self.num_mesh_pts,9), dtype=c_double)
+        self.mesh_pt_to_blade_num = np.zeros(shape=(self.num_mesh_pts), dtype=c_int)
 
-        # OutRootName
-        #   If HD writes a file (echo, summary, or other), use this for the
-        #   root of the file name.
-        self.outRootName = "Output_ADIlib_default"
-        self.outVTKdir   = ""       # Set to specify a directory relative to the input files (created if doesn't exist)
+        #--------------------------------------
+        # Environmental conditions
+        #--------------------------------------
+        self.gravity: float = 9.80665                # Gravitational acceleration (m/s^2)
+        self.fluid_density: float = 1.225            # Air/fluid density (kg/m^3)
+        self.kinematic_viscosity: float = 1.464E-05  # Kinematic viscosity (m^2/s)
+        self.sound_speed: float = 335.               # Speed of sound (m/s)
+        self.atmospheric_pressure: float = 103500.   # Atmospheric pressure (Pa)
+        self.vapor_pressure: float = 1700.           # Vapor pressure (Pa)
+        self.water_depth: float = 0.                 # Water depth (m)
+        self.mean_sea_level_offset: float = 0.       # Mean sea level to still water level offset (m)
 
-    # _initialize_routines() ------------------------------------------------------------------------------------------------------------
-    def _initialize_routines(self):
-        # initialize data storage in library for multiple turbines
+    def check_error(self) -> None:
+        """Checks for and handles any errors from the Fortran library.
+
+        Raises:
+            RuntimeError: If a fatal error occurs in the Fortran code
+        """
+        # If the error status is 0, return
+        if self.error_status_c.value == 0:
+            return
+
+        # Get the error level and error message
+        error_level = self.error_levels.get(
+            self.error_status_c.value,
+            f"Unknown Error Level: {self.error_status_c.value}"
+        )
+        error_msg = self.error_message_c.value.decode('utf-8').strip()
+        message = f"AeroDyn/InflowWind {error_level}: {error_msg}"
+
+        # If the error level is fatal, call adi_end() and raise an error
+        if self.error_status_c.value >= self.abort_error_level:
+            try:
+                self.adi_end()
+            except Exception as e:
+                message += f"\nAdditional error during cleanup: {e}"
+            raise RuntimeError(message)
+        else:
+            print(message)
+
+    def adi_preinit(self) -> None:
+        """Pre-initializes the AeroDyn/InflowWind interface.
+
+        Sets up initial arrays based on number of turbines.
+
+        Raises:
+            RuntimeError: If pre-initialization fails
+        """
+        self.ADI_C_PreInit(
+            byref(c_int(self.num_turbines)),        # IN -> number of turbines
+            byref(c_int(self.transpose_dcm)),       # IN -> transpose_dcm flag (0=false, 1=true)
+            byref(c_int(self.point_load_output)),   # IN -> point_load_output flag (0=false, 1=true)
+            byref(c_int(self.debug_level)),         # IN -> debug level (0=None to 4=Fatal)
+            byref(self.error_status_c),             # OUT <- error status code
+            self.error_message_c                    # OUT <- error message buffer
+        )
+        self.check_error()
+
+    def adi_setuprotor(
+        self,
+        i_turbine: int,
+        is_HAWT: int,
+        turb_ref_pos: npt.NDArray[np.float32]
+    ) -> None:
+        """Sets up a single rotor with initial root/mesh information.
+
+        Args:
+            i_turbine: Turbine number
+            is_HAWT: Flag indicating if turbine is horizontal axis (1) or not (0)
+            turb_ref_pos: Reference position for the turbine [x, y, z]
+
+        Raises:
+            ValueError: If input arrays have incorrect dimensions
+            RuntimeError: If rotor setup fails
+        """
+        self._init_num_mesh_pts = self.num_mesh_pts
+        self._init_num_blades = self.num_blades
+        turb_ref_pos_c = to_c_array(turb_ref_pos, c_float)
+
+        # Validate the inputs
+        self._validate_hub_root()
+        self._validate_mesh()
+
+        # Convert numpy arrays to C arrays with proper flattening
+        init_arrays = self._prepare_init_arrays()
+
+        self.ADI_C_SetupRotor(
+            c_int(i_turbine),                     # IN -> current turbine number (0-based)
+            c_int(is_HAWT),                       # IN -> 1: HAWT, 0: VAWT or cross-flow
+            turb_ref_pos_c,                       # IN -> turbine reference position [x,y,z]
+            init_arrays['hub_position_c'],        # IN -> initial hub position [x,y,z]
+            init_arrays['hub_orientation_c'],     # IN -> initial hub orientation (DCM, flattened 3x3 matrix)
+            init_arrays['nacelle_position_c'],    # IN -> initial nacelle position [x,y,z]
+            init_arrays['nacelle_orientation_c'], # IN -> initial nacelle orientation (DCM, flattened 3x3 matrix)
+            byref(c_int(self.num_blades)),        # IN -> number of blades
+            init_arrays['root_position_c'],       # IN -> initial blade root positions (flattened array)
+            init_arrays['root_orientation_c'],    # IN -> initial blade root orientations (flattened array)
+            byref(c_int(self.num_mesh_pts)),      # IN -> number of structural mesh points
+            init_arrays['mesh_position_c'],       # IN -> initial mesh point positions (flattened array)
+            init_arrays['mesh_orientation_c'],    # IN -> initial mesh point orientations (flattened array)
+            init_arrays['mesh_blade_num_c'],      # IN -> mapping of mesh points to blade numbers
+            byref(self.error_status_c),           # OUT <- error status code
+            self.error_message_c                  # OUT <- error message buffer
+        )
+        self.check_error()
+
+    def adi_init(
+        self,
+        ad_input_string_array: List[str],
+        ifw_input_string_array: List[str]
+    ) -> None:
+        """Initializes the AeroDyn/InflowWind simulation.
+
+        Args:
+            ad_input_string_array: List of strings containing AeroDyn input
+            ifw_input_string_array: List of strings containing InflowWind input
+
+        Raises:
+            RuntimeError: If initialization fails
+        """
+        # Initialize channel counter
+        self._num_channels_c = c_int(0)
+
+        # Join input strings with null character separator
+        ad_input_string, ad_input_string_length = to_c_string(ad_input_string_array)
+        ifw_input_string, ifw_input_string_length = to_c_string(ifw_input_string_array)
+
+        # Prepare output file paths
+        output_file_root_name_c = create_string_buffer(
+            self.output_root_name.ljust(self.DEFAULT_STRING_LENGTH).encode('utf-8')
+        )
+        vtk_output_dir_c = create_string_buffer(
+            self.output_vtk_dir.ljust(self.DEFAULT_STRING_LENGTH).encode('utf-8')
+        )
+
+        # Convert VTK nacelle dimensions to C array
+        vtk_nac_dimension_c = to_c_array(self.vtk_nacelle_dimension, c_float)
+
+        self.ADI_C_Init(
+            byref(c_int(self.aerodyn_inputs_passed_as_string)),  # IN -> AD input file is passed as string
+            c_char_p(ad_input_string),                           # IN -> AD input file as string
+            byref(c_int(ad_input_string_length)),                # IN -> AD input file string length
+            byref(c_int(self.inflow_inputs_passed_as_string)),   # IN -> IfW input file is passed as string
+            c_char_p(ifw_input_string),                          # IN -> IfW input file as string
+            byref(c_int(ifw_input_string_length)),               # IN -> IfW input file string length
+            output_file_root_name_c,                             # IN -> rootname for ADI file writing
+            vtk_output_dir_c,                                    # IN -> directory for vtk output files
+            byref(c_float(self.gravity)),                        # IN -> gravity
+            byref(c_float(self.fluid_density)),                  # IN -> fluid density
+            byref(c_float(self.kinematic_viscosity)),            # IN -> kinematic viscosity
+            byref(c_float(self.sound_speed)),                    # IN -> speed of sound
+            byref(c_float(self.atmospheric_pressure)),           # IN -> atmospheric pressure
+            byref(c_float(self.vapor_pressure)),                 # IN -> vapor pressure
+            byref(c_float(self.water_depth)),                    # IN -> water depth
+            byref(c_float(self.mean_sea_level_offset)),          # IN -> MSL to SWL offset
+            byref(c_int(self.interpolation_order)),              # IN -> interpolation order (1: linear, 2: quadratic)
+            byref(c_double(self.dt)),                            # IN -> time step
+            byref(c_double(self.t_max)),                         # IN -> maximum simulation time
+            byref(c_int(self.store_hub_height_velocity)),        # IN -> store hub height velocity flag
+            byref(c_int(self.write_vtk)),                        # IN -> write VTK flag
+            byref(c_int(self.vtk_type)),                         # IN -> VTK write type
+            byref(c_double(self.vtk_dt)),                        # IN -> VTK output time step
+            vtk_nac_dimension_c,                                 # IN -> VTK nacelle dimensions
+            byref(c_float(self.vtk_hub_radius)),                 # IN -> VTK hub radius
+            byref(c_int(self.write_outputs)),                    # IN -> write outputs flag
+            byref(c_double(self.output_timestep)),               # IN -> output time step
+            byref(self._num_channels_c),                         # OUT <- number of channels
+            self._channel_names_c,                               # OUT <- output channel names
+            self._channel_units_c,                               # OUT <- output channel units
+            byref(self.error_status_c),                          # OUT <- error status
+            self.error_message_c                                 # OUT <- error message
+        )
+        self.check_error()
+
+        # Store number of output channels
+        self.num_channels = self._num_channels_c.value
+
+    def adi_setrotormotion(
+        self,
+        i_turbine: int,
+        hub: MotionData,
+        nacelle: MotionData,
+        root: MotionData,
+        mesh: MotionData
+    ) -> None:
+        """Sets the rotor motion for simulation.
+        Args:
+            i_turbine: Turbine number
+            hub: Hub motion data
+            nacelle: Nacelle motion data
+            root: Root motion data
+            mesh: Mesh motion data
+
+        Raises:
+            ValueError: If motion data has incorrect dimensions
+            RuntimeError: If setting rotor motion fails
+        """
+        # Validate inputs
+        self._validate_motion_data(hub, "hub", single_pt=True)
+        self._validate_motion_data(nacelle, "nacelle", single_pt=True)
+        self._validate_motion_data(root, "root", num_pts=self._init_num_blades)
+        self._validate_motion_data(mesh, "mesh", num_pts=self._init_num_mesh_pts)
+
+        # Convert data to C arrays
+        motion_arrays = self._prepare_motion_arrays(hub, nacelle, root, mesh)
+
+        self.ADI_C_SetRotorMotion(
+            c_int(i_turbine),                             # IN -> current turbine number (0-based)
+            motion_arrays['hub_position_c'],              # IN -> hub positions
+            motion_arrays['hub_orientation_c'],           # IN -> hub orientations
+            motion_arrays['hub_velocity_c'],              # IN -> hub velocity [TVx, TVy, TVz, RVx, RVy, RVz]
+            motion_arrays['hub_acceleration_c'],          # IN -> hub accelerations [TAx, TAy, TAz, RAx, RAy, RAz]
+            motion_arrays['nacelle_position_c'],          # IN -> nacelle positions
+            motion_arrays['nacelle_orientation_c'],       # IN -> nacelle orientations
+            motion_arrays['nacelle_velocity_c'],          # IN -> nacelle velocity [TVx, TVy, TVz, RVx, RVy, RVz]
+            motion_arrays['nacelle_acceleration_c'],      # IN -> nacelle accelerations [TAx, TAy, TAz, RAx, RAy, RAz]
+            motion_arrays['root_position_c'],             # IN -> root positions
+            motion_arrays['root_orientation_c'],          # IN -> root orientations (DCM)
+            motion_arrays['root_velocity_c'],             # IN -> root velocities at desired positions
+            motion_arrays['root_acceleration_c'],         # IN -> root accelerations at desired positions
+            byref(c_int(self.num_mesh_pts)),              # IN -> number of attachment points expected (where motions are transferred into HD)
+            motion_arrays['mesh_position_c'],             # IN -> mesh positions
+            motion_arrays['mesh_orientation_c'],          # IN -> mesh orientations (DCM)
+            motion_arrays['mesh_velocity_c'],             # IN -> mesh velocities at desired positions
+            motion_arrays['mesh_acceleration_c'],         # IN -> mesh accelerations at desired positions
+            byref(self.error_status_c),                   # OUT <- error status
+            self.error_message_c                          # OUT <- error message
+        )
+        self.check_error()
+
+    def adi_getrotorloads(
+        self,
+        i_turbine: int,
+        mesh_forces_moments: npt.NDArray[np.float32],
+        hub_height_velocity: Optional[npt.NDArray[np.float32]] = None
+    ) -> None:
+        """Get the rotor loads from the simulation.
+
+        Args:
+            i_turbine: Turbine number
+            mesh_forces_moments: Array of mesh forces/moments [N, N-m]
+            hub_height_velocity: Array of hub height velocity [m/s] (if storeHHVel is True)
+
+        Raises:
+            RuntimeError: If getting rotor loads fails
+        """
+        # Initialize C arrays for forces/moments and hub height velocity
+        mesh_forces_moments_c = (c_float * (6 * self.num_mesh_pts))(0.)
+        hub_height_velocity_c = (c_float * 3)(0.)
+
+        # Call the C function to get rotor loads
+        self.ADI_C_GetRotorLoads(
+            c_int(i_turbine),                           # IN -> current turbine number
+            byref(c_int(self.num_mesh_pts)),            # IN -> number of attachment points expected
+            mesh_forces_moments_c,                      # OUT <- resulting forces/moments array
+            hub_height_velocity_c,                      # OUT <- hub height velocity [Vx, Vy, Vz]
+            byref(self.error_status_c),                 # OUT <- error status
+            self.error_message_c                        # OUT <- error message
+        )
+        self.check_error()
+
+        # Convert C arrays back to numpy arrays
+        mesh_forces_moments[:, :] = np.reshape(mesh_forces_moments_c, (self.num_mesh_pts, 6))
+        if hub_height_velocity is not None:
+            hub_height_velocity[:] = np.reshape(hub_height_velocity_c, (3))
+
+    def adi_getdiskavgvel(self, i_turbine: int, disk_avg_velocity: npt.NDArray[np.float32]) -> None:
+        """Get the disk-averaged velocity.
+
+        Args:
+            i_turbine: Turbine number
+            disk_avg_velocity: Array of disk-averaged velocities [m/s]
+
+        Raises:
+            RuntimeError: If getting disk average velocity fails
+        """
+        disk_avg_velocity_c = (c_float * 3)(0.)
+
+        self.ADI_C_GetDiskAvgVel(
+            c_int(i_turbine),                # IN -> current turbine number
+            disk_avg_velocity_c,             # OUT <- disk-averaged velocity [Vx, Vy, Vz]
+            byref(self.error_status_c),      # OUT <- error status
+            self.error_message_c             # OUT <- error message
+        )
+        self.check_error()
+
+        disk_avg_velocity[:] = np.reshape(disk_avg_velocity_c, (3))
+
+    def adi_calcOutput(self, time: float, output_channel_values: npt.NDArray[np.float32]) -> None:
+        """Calculate output values at the given time.
+
+        Args:
+            time: Current simulation time
+            output_channel_values: Array to store calculated output values
+
+        Raises:
+            ValueError: If output_channel_values array has wrong size
+            RuntimeError: If calculation fails
+        """
+        if output_channel_values.size != self.num_channels:
+            raise ValueError(
+                f"Output array must have size {self.num_channels}, "
+                f"got {output_channel_values.size}"
+            )
+
+        output_channel_values_c = (c_float * self.num_channels)(0.)
+
+        self.ADI_C_CalcOutput(
+            byref(c_double(time)),           # IN -> current simulation time
+            output_channel_values_c,         # OUT <- calculated output channel values
+            byref(self.error_status_c),      # OUT <- error status
+            self.error_message_c             # OUT <- error message
+        )
+        self.check_error()
+
+        # Copy results back to numpy array
+        output_channel_values[:] = np.reshape(output_channel_values_c, (self.num_channels))
+
+    def adi_updateStates(self, time: float, time_next: float) -> None:
+        """Update states from current time to next time step.
+
+        Args:
+            time: Current simulation time
+            time_next: Next simulation time
+
+        Raises:
+            RuntimeError: If state update fails
+        """
+        self.ADI_C_UpdateStates(
+            byref(c_double(time)),             # IN -> current simulation time, t
+            byref(c_double(time_next)),        # IN -> next simulation time, t + dt
+            byref(self.error_status_c),        # OUT <- error status
+            self.error_message_c               # OUT <- error message
+        )
+        self.check_error()
+
+    def adi_end(self) -> None:
+        """Clean up and end the AeroDyn/InflowWind simulation.
+
+        This method should be called when finishing the simulation to ensure
+        proper cleanup of resources.
+
+        Raises:
+            RuntimeError: If cleanup fails
+        """
+        if not self.ended:
+            self.ended = True
+            self.ADI_C_End(
+                byref(self.error_status_c),      # OUT <- error status
+                self.error_message_c             # OUT <- error message
+            )
+            self.check_error()
+
+    def get_output_info(self) -> Dict[str, List[str]]:
+        """Get information about available output channels.
+
+        Returns:
+            Dictionary containing:
+                - 'names': List of output channel names
+                - 'units': List of corresponding units
+        """
+        return {
+            'names': self.output_channel_names_c,
+            'units': self.output_channel_units_c
+        }
+
+    @property
+    def output_channel_names(self) -> List[str]:
+        """Get the names of available output channels."""
+        if not self._channel_names_c.value:
+            return []
+        names = self._channel_names_c.value.split()
+        return [name.decode('utf-8') for name in names]
+
+    @property
+    def output_channel_units(self) -> List[str]:
+        """Get the units of available output channels."""
+        if not self._channel_units_c.value:
+            return []
+        units = self._channel_units_c.value.split()
+        return [unit.decode('utf-8') for unit in units]
+
+    def __enter__(self) -> 'AeroDynInflowLib':
+        """Context manager entry.
+
+        Returns:
+            Self for use in with statement
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Context manager exit.
+
+        Ensures proper cleanup when used in a with statement.
+        """
+        self.adi_end()
+
+    #-------------------------------------------------------------------------------
+    # Private/internal methods
+    #-------------------------------------------------------------------------------
+    def _initialize_routines(self) -> None:
+        """Initializes the Fortran routines i.e. the C-binding interfaces.
+
+        Sets up the argument types and return types for all Fortran routines
+        that will be called through the ctypes interface.
+        """
+        #--------------------------------------
+        # ADI_C_PreInit
+        #--------------------------------------
         self.ADI_C_PreInit.argtypes = [
             POINTER(c_int),                     # numTurbines
             POINTER(c_int),                     # transposeDCM
@@ -172,7 +701,9 @@ class AeroDynInflowLib(CDLL):
         ]
         self.ADI_C_PreInit.restype = c_int
 
-        # setup one rotor
+        #--------------------------------------
+        # ADI_C_SetupRotor
+        #--------------------------------------
         self.ADI_C_SetupRotor.argtypes = [
             POINTER(c_int),                     # iturb
             POINTER(c_int),                     # isHAWT
@@ -191,8 +722,11 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
+        self.ADI_C_SetupRotor.restype = c_int
 
-        # initialize ADI with data set by PreInit and SetupRotor
+        #--------------------------------------
+        # ADI_C_Init
+        #--------------------------------------
         self.ADI_C_Init.argtypes = [
             POINTER(c_int),                     # AD input file passed as string
             POINTER(c_char_p),                  # AD input file as string
@@ -229,15 +763,9 @@ class AeroDynInflowLib(CDLL):
         ]
         self.ADI_C_Init.restype = c_int
 
-        #self.ADI_C_ReInit.argtypes = [
-        #    POINTER(c_double),                  # t_initial
-        #    POINTER(c_double),                  # dt
-        #    POINTER(c_double),                  # tmax
-        #    POINTER(c_int),                     # ErrStat_C
-        #    POINTER(c_char)                     # ErrMsg_C
-        #]
-        #self.ADI_C_ReInit.restype = c_int
-
+        #--------------------------------------
+        # ADI_C_SetRotorMotion
+        #--------------------------------------
         self.ADI_C_SetRotorMotion.argtypes = [
             POINTER(c_int),                     # iturb
             POINTER(c_float),                   # HubPos
@@ -258,8 +786,11 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_float),                   # MeshVel
             POINTER(c_float),                   # MeshAcc
         ]
+        self.ADI_C_SetRotorMotion.restype = c_int
 
-
+        #--------------------------------------
+        # ADI_C_GetRotorLoads
+        #--------------------------------------
         self.ADI_C_GetRotorLoads.argtypes = [
             POINTER(c_int),                     # iturb
             POINTER(c_int),                     # numMeshPts
@@ -270,7 +801,9 @@ class AeroDynInflowLib(CDLL):
         ]
         self.ADI_C_GetRotorLoads.restype = c_int
 
-
+        #--------------------------------------
+        # ADI_C_GetDiskAvgVel
+        #--------------------------------------
         self.ADI_C_GetDiskAvgVel.argtypes = [
             POINTER(c_int),                     # iturb
             POINTER(c_float),                   # Disk average vel vector
@@ -279,7 +812,9 @@ class AeroDynInflowLib(CDLL):
         ]
         self.ADI_C_GetDiskAvgVel.restype = c_int
 
-
+        #--------------------------------------
+        # ADI_C_CalcOutput
+        #--------------------------------------
         self.ADI_C_CalcOutput.argtypes = [
             POINTER(c_double),                  # Time_C
             POINTER(c_float),                   # Output Channel Values
@@ -288,7 +823,9 @@ class AeroDynInflowLib(CDLL):
         ]
         self.ADI_C_CalcOutput.restype = c_int
 
-
+        #--------------------------------------
+        # ADI_C_UpdateStates
+        #--------------------------------------
         self.ADI_C_UpdateStates.argtypes = [
             POINTER(c_double),                  # Time_C
             POINTER(c_double),                  # TimeNext_C
@@ -297,751 +834,433 @@ class AeroDynInflowLib(CDLL):
         ]
         self.ADI_C_UpdateStates.restype = c_int
 
+        #--------------------------------------
+        # ADI_C_End
+        #--------------------------------------
         self.ADI_C_End.argtypes = [
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
         self.ADI_C_End.restype = c_int
 
-    # adi_init ------------------------------------------------------------------------------------------------------------
-    def adi_preinit(self):
-        # Pass number of turbines over to setup arrays.
+    def _prepare_init_arrays(self) -> Dict[str, Any]:
+        """Prepares C-compatible arrays for initialization.
 
-        # call ADI_C_PreInit
-        self.ADI_C_PreInit(
-            byref(c_int(self.numTurbines)),         # IN: numTurbines
-            byref(c_int(self.transposeDCM)),        # IN: transposeDCM
-            byref(c_int(self.pointLoadOut)),        # IN: pointLoadOut
-            byref(c_int(self.debuglevel)),          # IN: debuglevel
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
-         )
+        Returns:
+            Dictionary containing all prepared C arrays
+        """
+        return {
+            # Hub data
+            'hub_position_c': to_c_array(self.init_hub_pos, c_float),
+            'hub_orientation_c': to_c_array(self.init_hub_orient, c_double),
+            # Nacelle data
+            'nacelle_position_c': to_c_array(self.init_nacelle_pos, c_float),
+            'nacelle_orientation_c': to_c_array(self.init_nacelle_orient, c_double),
+            # Root data (per blade)
+            'root_position_c': flatten_array(
+                self._init_num_blades,
+                self.num_blades,
+                self.init_root_pos,
+                'RootPos',
+                elements_per_item=3,
+                c_type=c_float
+            ),
+            'root_orientation_c': flatten_array(
+                self._init_num_blades,
+                self.num_blades,
+                self.init_root_orient,
+                'RootOrient',
+                elements_per_item=9,
+                c_type=c_double
+            ),
+            # Mesh data (structural points)
+            'mesh_position_c': flatten_array(
+                self._init_num_mesh_pts,
+                self.num_mesh_pts,
+                self.init_mesh_pos,
+                'MeshPos',
+                elements_per_item=3,
+                c_type=c_float
+            ),
+            'mesh_orientation_c': flatten_array(
+                self._init_num_mesh_pts,
+                self.num_mesh_pts,
+                self.init_mesh_orient,
+                'MeshOrient',
+                elements_per_item=9,
+                c_type=c_double
+            ),
+            # Blade mapping for mesh points
+            'mesh_blade_num_c': to_c_array(self.mesh_pt_to_blade_num, c_int)
+        }
 
-        self.check_error()
+    def _validate_hub_root(self) -> None:
+        """Validates hub and root configurations.
 
-    def adi_setuprotor(self,iturb,isHAWT,turbRefPos):
-        # setup one rotor with initial root/mesh info
-        self._initNumMeshPts = self.numMeshPts
-        self._initNumBlades  = self.numBlades
-        _turbRefPos = (c_float  * len(turbRefPos))(*turbRefPos)
-
-        # check hub and root points for initialization
-        self.check_init_hubroot()
-
-        # Check initial mesh positions
-        self.check_init_mesh()
-
-        #   Flatten arrays to pass
-        #       [x2,y1,z1, x2,y2,z2 ...]
-        initHubPos_c            = (c_float  * len(self.initHubPos       ))(*self.initHubPos       )
-        initHubOrient_c         = (c_double * len(self.initHubOrient    ))(*self.initHubOrient    )
-        initNacellePos_c        = (c_float  * len(self.initNacellePos   ))(*self.initNacellePos   )
-        initNacelleOrient_c     = (c_double * len(self.initNacelleOrient))(*self.initNacelleOrient)
-        initRootPos_flat_c      = self.flatPosArr(   self._initNumBlades, self.numBlades,self.initRootPos,    'RootPos')
-        initRootOrient_flat_c   = self.flatOrientArr(self._initNumBlades, self.numBlades,self.initRootOrient, 'RootOrient')
-        initMeshPos_flat_c      = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,self.initMeshPos,   'MeshPos')
-        initMeshOrient_flat_c   = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,self.initMeshOrient,'MeshOrient')
-        initMeshPtToBladeNum_flat_c = (c_int * len(self.meshPtToBladeNum))(*self.meshPtToBladeNum)
-
-        self.ADI_C_SetupRotor(
-            c_int(iturb),                           # IN: iturb -- current turbine number
-            c_int(isHAWT),                          # IN: 1: is HAWT, 0: VAWT or cross-flow
-            _turbRefPos,                            # IN: turbine reference position
-            initHubPos_c,                           # IN: initHubPos -- initial hub position
-            initHubOrient_c,                        # IN: initHubOrient -- initial hub orientation DCM in flat array of 9 elements
-            initNacellePos_c,                       # IN: initNacellePos -- initial hub position
-            initNacelleOrient_c,                    # IN: initNacelleOrient -- initial hub orientation DCM in flat array of 9 elements
-            byref(c_int(self.numBlades)),           # IN: number of blades (matches number of blade root positions)
-            initRootPos_flat_c,                     # IN: initBladeRootPos -- initial node positions in flat array of 3*numBlades
-            initRootOrient_flat_c,                  # IN: initBladeRootOrient -- initial blade root orientation DCMs in flat array of 9*numBlades
-            byref(c_int(self.numMeshPts)),          # IN: number of mesh points expected
-            initMeshPos_flat_c,                     # IN: initMeshPos -- initial node positions in flat array of 3*numMeshPts
-            initMeshOrient_flat_c,                  # IN: initMeshOrient -- initial node orientation DCMs in flat array of 9*numMeshPts
-            initMeshPtToBladeNum_flat_c,            # IN: initMeshPtToBladeNum -- initial mesh point to blade number mapping
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
-        )
-
-        self.check_error()
-
-
-    def adi_init(self, AD_input_string_array, IfW_input_string_array):
-        # some bookkeeping initialization
-        self._numChannels_c = c_int(0)
-
-        # Primary input file will be passed as a single string joined by
-        # C_NULL_CHAR.
-        AD_input_string = '\x00'.join(AD_input_string_array)
-        AD_input_string = AD_input_string.encode('utf-8')
-        AD_input_string_length = len(AD_input_string)
-
-        # Primary input file will be passed as a single string joined by
-        # C_NULL_CHAR.
-        IfW_input_string = '\x00'.join(IfW_input_string_array)
-        IfW_input_string = IfW_input_string.encode('utf-8')
-        IfW_input_string_length = len(IfW_input_string)
-
-        # Rootname for ADI output files (echo etc).
-        _outRootName_c = create_string_buffer((self.outRootName.ljust(self.default_str_c_len)).encode('utf-8'))
-        _outVTKdir_c   = create_string_buffer((self.outVTKdir.ljust(self.default_str_c_len)).encode('utf-8'))
-
-        #   Flatten arrays to pass
-        #       [x2,y1,z1, x2,y2,z2 ...]
-        VTKNacDim_c             = (c_float  * len(self.VTKNacDim        ))(*self.VTKNacDim        )
-
-        # call ADI_C_Init
-        self.ADI_C_Init(
-            byref(c_int(self.ADinputPass)),         # IN: AD input file is passed
-            c_char_p(AD_input_string),              # IN: AD input file as string (or filename if ADinputPass is false)
-            byref(c_int(AD_input_string_length)),   # IN: AD input file string length
-            byref(c_int(self.IfWinputPass)),        # IN: IfW input file is passed
-            c_char_p(IfW_input_string),             # IN: IfW input file as string (or filename if IfWinputPass is false)
-            byref(c_int(IfW_input_string_length)),  # IN: IfW input file string length
-            _outRootName_c,                         # IN: rootname for ADI file writing
-            _outVTKdir_c,                           # IN: directory for vtk output files (relative to input file)
-            byref(c_float(self.gravity)),           # IN: gravity
-            byref(c_float(self.defFldDens)),        # IN: defFldDens
-            byref(c_float(self.defKinVisc)),        # IN: defKinVisc
-            byref(c_float(self.defSpdSound)),       # IN: defSpdSound
-            byref(c_float(self.defPatm)),           # IN: defPatm
-            byref(c_float(self.defPvap)),           # IN: defPvap
-            byref(c_float(self.WtrDpth)),           # IN: WtrDpth
-            byref(c_float(self.MSL2SWL)),           # IN: MSL2SWL
-            byref(c_int(self.InterpOrder)),         # IN: InterpOrder (1: linear, 2: quadratic)
-            byref(c_double(self.dt)),               # IN: time step (dt)
-            byref(c_double(self.tmax)),             # IN: tmax
-            byref(c_int(self.storeHHVel)),          # IN: storeHHVel
-            byref(c_int(self.WrVTK)),               # IN: WrVTK
-            byref(c_int(self.WrVTK_Type)),          # IN: WrVTK_Type
-            byref(c_double(self.WrVTK_DT)),         # IN: WrVTK_DT
-            VTKNacDim_c,                            # IN: VTKNacDim
-            byref(c_float(self.VTKHubRad)),         # IN: VTKHubRad
-            byref(c_int(self.wrOuts)),              # IN: wrOuts -- file format for writing outputs
-            byref(c_double(self.DT_Outs)),          # IN: DT_Outs -- timestep for outputs to file
-            byref(self._numChannels_c),             # OUT: number of channels
-            self._channel_names_c,                  # OUT: output channel names
-            self._channel_units_c,                  # OUT: output channel units
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
-        )
-
-        self.check_error()
-
-        # Initialize output channels
-        self.numChannels = self._numChannels_c.value
-
-
-    ## adi_reinit ------------------------------------------------------------------------------------------------------------
-    #FIXME: this routine is not setup
-    #def adi_reinit(self):
-    #
-    #    # call ADI_C_ReInit
-    #    self.ADI_C_ReInit(
-    #        byref(c_double(self.dt)),               # IN: time step (dt)
-    #        byref(c_double(self.tmax)),             # IN: tmax
-    #        byref(self.error_status_c),             # OUT: ErrStat_C
-    #        self.error_message_c                    # OUT: ErrMsg_C
-    #    )
-    #
-    #    self.check_error()
-
-
-    # adi_setrotormotion ------------------------------------------------------------------------------------------------------------
-    def adi_setrotormotion(self, iturb, \
-                            hubPos, hubOrient, hubVel, hubAcc, \
-                            nacPos, nacOrient, nacVel, nacAcc, \
-                            rootPos, rootOrient, rootVel, rootAcc, \
-                            meshPos, meshOrient, meshVel, meshAcc):
-
-        # Check input motion info
-        self.check_input_motions_hubNac(hubPos,hubOrient,hubVel,hubAcc,'hub')
-        self.check_input_motions_hubNac(nacPos,nacOrient,nacVel,nacAcc,'nacelle')
-        self.check_input_motions_root(rootPos,rootOrient,rootVel,rootAcc)
-        self.check_input_motions_mesh(meshPos,meshOrient,meshVel,meshAcc)
-
-        _hubPos_c    = (c_float  * len(np.squeeze(hubPos)   ))(*np.squeeze(hubPos)   )
-        _hubOrient_c = (c_double * len(np.squeeze(hubOrient)))(*np.squeeze(hubOrient))
-        _hubVel_c    = (c_float  * len(np.squeeze(hubVel)   ))(*np.squeeze(hubVel)   )
-        _hubAcc_c    = (c_float  * len(np.squeeze(hubAcc)   ))(*np.squeeze(hubAcc)   )
-        _nacPos_c    = (c_float  * len(np.squeeze(nacPos)   ))(*np.squeeze(nacPos)   )
-        _nacOrient_c = (c_double * len(np.squeeze(nacOrient)))(*np.squeeze(nacOrient))
-        _nacVel_c    = (c_float  * len(np.squeeze(nacVel)   ))(*np.squeeze(nacVel)   )
-        _nacAcc_c    = (c_float  * len(np.squeeze(nacAcc)   ))(*np.squeeze(nacAcc)   )
-        #   Make a flat 1D arrays of motion info:
-        #       [x2,y1,z1, x2,y2,z2 ...]
-        _rootPos_flat_c    = self.flatPosArr(   self._initNumBlades,self.numBlades,rootPos,   'MeshPos')
-        _rootOrient_flat_c = self.flatOrientArr(self._initNumBlades,self.numBlades,rootOrient,'MeshOrient')
-        _rootVel_flat_c    = self.flatVelAccArr(self._initNumBlades,self.numBlades,rootVel,   'MeshVel')
-        _rootAcc_flat_c    = self.flatVelAccArr(self._initNumBlades,self.numBlades,rootAcc,   'MeshAcc')
-        #   Make a flat 1D arrays of motion info:
-        #       [x2,y1,z1, x2,y2,z2 ...]
-        _meshPos_flat_c    = self.flatPosArr(   self._initNumMeshPts,self.numMeshPts,meshPos,   'MeshPos')
-        _meshOrient_flat_c = self.flatOrientArr(self._initNumMeshPts,self.numMeshPts,meshOrient,'MeshOrient')
-        _meshVel_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshVel,   'MeshVel')
-        _meshAcc_flat_c    = self.flatVelAccArr(self._initNumMeshPts,self.numMeshPts,meshAcc,   'MeshAcc')
-
-        self.ADI_C_SetRotorMotion(
-            c_int(iturb),                           # IN: iturb -- current turbine number
-            _hubPos_c,                              # IN: hub positions
-            _hubOrient_c,                           # IN: hub orientations
-            _hubVel_c,                              # IN: hub velocity [TVx,TVy,TVz,RVx,RVy,RVz]
-            _hubAcc_c,                              # IN: hub acclerations [TAx,TAy,TAz,RAx,RAy,RAz]
-            _nacPos_c,                              # IN: nac positions
-            _nacOrient_c,                           # IN: nac orientations
-            _nacVel_c,                              # IN: nac velocity [TVx,TVy,TVz,RVx,RVy,RVz]
-            _nacAcc_c,                              # IN: nac acclerations [TAx,TAy,TAz,RAx,RAy,RAz]
-            _rootPos_flat_c,                        # IN: positions
-            _rootOrient_flat_c,                     # IN: Orientations (DCM)
-            _rootVel_flat_c,                        # IN: velocities at desired positions
-            _rootAcc_flat_c,                        # IN: accelerations at desired positions
-            byref(c_int(self.numMeshPts)),          # IN: number of attachment points expected (where motions are transferred into HD)
-            _meshPos_flat_c,                        # IN: positions
-            _meshOrient_flat_c,                     # IN: Orientations (DCM)
-            _meshVel_flat_c,                        # IN: velocities at desired positions
-            _meshAcc_flat_c,                        # IN: accelerations at desired positions
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
-        )
-
-        self.check_error()
-
-
-    # adi_getrotorloads ---------------------------------------------------------------------------------------------------------
-    def adi_getrotorloads(self, iturb, meshFrcMom, hhVel=None):
-        # Resulting Forces/moments --  [Fx1,Fy1,Fz1,Mx1,My1,Mz1, Fx2,Fy2,Fz2,Mx2,My2,Mz2 ...]
-        _meshFrc_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
-        _hhVel_flat_c = (c_float * 3)(0.0,)
-
-        # Run ADI_C_GetRotorLoads
-        self.ADI_C_GetRotorLoads(
-            c_int(iturb),                           # IN: iturb -- current turbine number
-            byref(c_int(self.numMeshPts)),          # IN: number of attachment points expected (where motions are transferred into HD)
-            _meshFrc_flat_c,                        # OUT: resulting forces/moments array
-            _hhVel_flat_c,                          # OUT: hub height velocity [Vx, Vy, Vz]
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
-        )
-
-        self.check_error()
-
-        ## Reshape Force/Moment into [N,6]
-        count = 0
-        for j in range(0,self.numMeshPts):
-            meshFrcMom[j,0] = _meshFrc_flat_c[count]
-            meshFrcMom[j,1] = _meshFrc_flat_c[count+1]
-            meshFrcMom[j,2] = _meshFrc_flat_c[count+2]
-            meshFrcMom[j,3] = _meshFrc_flat_c[count+3]
-            meshFrcMom[j,4] = _meshFrc_flat_c[count+4]
-            meshFrcMom[j,5] = _meshFrc_flat_c[count+5]
-            count = count + 6
-
-        ## Hub height wind speed
-        if self.storeHHVel and hhVel != None:
-            hhVel[0] = _hhVel_flat_c[0]
-            hhVel[1] = _hhVel_flat_c[1]
-            hhVel[2] = _hhVel_flat_c[2]
-
-
-    # adi_getdiskavgvel ---------------------------------------------------------------------------------------------------------
-    def adi_getdiskavgvel(self, iturb, diskAvgVel):
-        # Resulting disk average velocity [Vx,Vy,Vz]
-        _diskAvgVel_flat_c = (c_float * 3)(0.0,)
-
-        # Run ADI_GetDiskAvgVel
-        self.ADI_C_GetDiskAvgVel(
-            c_int(iturb),                           # IN: iturb -- current turbine number
-            _diskAvgVel_flat_c,                     # OUT: disk average velocity [Vx, Vy, Vz]
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
-        )
-
-        self.check_error()
-
-        ## Disk average wind speed
-        diskAvgVel[0] = _diskAvgVel_flat_c[0]
-        diskAvgVel[1] = _diskAvgVel_flat_c[1]
-        diskAvgVel[2] = _diskAvgVel_flat_c[2]
-
-
-    # adi_calcOutput ------------------------------------------------------------------------------------------------------------
-    def adi_calcOutput(self, time, outputChannelValues):
-
-        # Set up output channels
-        outputChannelValues_c = (c_float * self.numChannels)(0.0,)
-
-        # Run ADI_C_CalcOutput
-        self.ADI_C_CalcOutput(
-            byref(c_double(time)),                  # IN: time at which to calculate output forces
-            outputChannelValues_c,                  # OUT: output channel values as described in input file
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
-        )
-
-        self.check_error()
-
-        # Convert output channel values back into python
-        for k in range(0,self.numChannels):
-            outputChannelValues[k] = float(outputChannelValues_c[k])
-
-    # adi_updateStates ------------------------------------------------------------------------------------------------------------
-    def adi_updateStates(self, time, timeNext):
-
-        # Run AeroDyn_Inflow_UpdateStates_c
-        self.ADI_C_UpdateStates(
-            byref(c_double(time)),                  # IN: time at which to calculate output forces
-            byref(c_double(timeNext)),              # IN: time T+dt we are stepping to
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
-        )
-
-        self.check_error()
-
-    # adi_end ------------------------------------------------------------------------------------------------------------
-    def adi_end(self):
-        if not self.ended:
-            self.ended = True
-            # Run ADI_C_End
-            self.ADI_C_End(
-                byref(self.error_status_c),
-                self.error_message_c
+        Raises:
+            ValueError: If any validation fails
+        """
+        if self.num_blades < 1:
+            raise ValueError("Number of blades must be at least 1")
+        if self.init_root_pos.shape != (self.num_blades, 3):
+            raise ValueError(
+                f"Root positions must have shape ({self.num_blades}, 3), "
+                f"got {self.init_root_pos.shape}"
+            )
+        if self.init_root_orient.shape != (self.num_blades, 9):
+            raise ValueError(
+                f"Root orientations must have shape ({self.num_blades}, 9), "
+                f"got {self.init_root_orient.shape}"
+            )
+        if self.init_hub_pos.shape != (3,):
+            raise ValueError(
+                f"Hub position must have shape (3,), got {self.init_hub_pos.shape}"
+            )
+        if self.init_hub_orient.shape != (9,):
+            raise ValueError(
+                f"Hub orientation must have shape (9,), got {self.init_hub_orient.shape}"
             )
 
-            self.check_error()
+    def _validate_mesh(self) -> None:
+        """Validates mesh configurations.
 
-    # other functions ----------------------------------------------------------------------------------------------------------
-    def check_error(self):
-        if self.error_status_c.value == 0:
-            return
-        elif self.error_status_c.value < self.abort_error_level:
-            print(f"AeroDyn/InflowWind error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
-        else:
-            print(f"AeroDyn/InflowWind error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
-            self.adi_end()
-            raise Exception("\nAeroDyn/InflowWind terminated prematurely.")
+        Raises:
+            ValueError: If any validation fails
+        """
+        if self.init_mesh_pos.shape != (self.num_mesh_pts, 3):
+            raise ValueError(
+                f"Mesh positions must have shape ({self.num_mesh_pts}, 3), "
+                f"got {self.init_mesh_pos.shape}"
+            )
+        if self.init_mesh_orient.shape != (self.num_mesh_pts, 9):
+            raise ValueError(
+                f"Mesh orientations must have shape ({self.num_mesh_pts}, 9), "
+                f"got {self.init_mesh_orient.shape}"
+            )
+        if self.init_mesh_pos.shape[0] != self.init_mesh_orient.shape[0]:
+            raise ValueError(
+                "Inconsistent number of mesh points between position and orientation arrays"
+            )
 
+    def _validate_motion_data(
+        self,
+        motion: MotionData,
+        name: str,
+        *,
+        single_pt: bool = False,
+        num_pts: Optional[int] = None
+    ) -> None:
+        """Validates motion data dimensions.
 
-    def flatPosArr(self,initNumMeshPts,numPts,MeshPosArr,name):
-        if initNumMeshPts != numPts:
-            print(f"The number of {name} points changed from initial value of {initNumMeshPts}.  This is not permitted during the simulation.")
-            self.adi_end()
-            raise Exception("\nError in calling AeroDyn/InflowWind library.")
-        meshPos_flat = [pp for p in MeshPosArr for pp in p]
-        meshPos_flat_c = (c_float * (3 * numPts))(0.0,)
-        for i, p in enumerate(meshPos_flat):
-            meshPos_flat_c[i] = c_float(p)
-        return meshPos_flat_c
+        Args:
+            motion: Motion data to validate
+            name: Name of the component for error messages
+            single_pt: Whether this is single-point data
+            num_pts: Number of points expected (if not single_pt)
 
+        Raises:
+            ValueError: If dimensions are incorrect
+        """
+        expected_shape = (1,3) if single_pt else (num_pts, 3)
+        expected_orient_shape = (1,9) if single_pt else (num_pts, 9)
+        expected_vel_shape = (1,6) if single_pt else (num_pts, 6)
 
-    def flatOrientArr(self,initNumMeshPts,numPts,MeshOrientArr,name):
-        if initNumMeshPts != numPts:
-            print(f"The number of {name} points changed from initial value of {initNumMeshPts}.  This is not permitted during the simulation.")
-            self.adi_end()
-            raise Exception("\nError in calling AeroDyn/InflowWind library.")
-        meshOrient_flat = [pp for p in MeshOrientArr for pp in p]
-        meshOrient_flat_c = (c_double * (9 * numPts))(0.0,)
-        for i, p in enumerate(meshOrient_flat):
-            meshOrient_flat_c[i] = c_double(p)
-        return meshOrient_flat_c
+        if motion.position.shape != expected_shape:
+            raise ValueError(
+                f"{name} position must have shape {expected_shape}, "
+                f"got {motion.position.shape}"
+            )
 
+        if motion.orientation.shape != expected_orient_shape:
+            raise ValueError(
+                f"{name} orientation must have shape {expected_orient_shape}, "
+                f"got {motion.orientation.shape}"
+            )
 
-    def flatVelAccArr(self,initNumMeshPts,numPts,MeshArr,name):
-        if initNumMeshPts != numPts:
-            print(f"The number of {name} points changed from initial value of {initNumMeshPts}.  This is not permitted during the simulation.")
-            self.adi_end()
-            raise Exception("\nError in calling AeroDyn/InflowWind library.")
-        #   Velocity -- [Vx2,Vy1,Vz1,RVx1,RVy1,RVz1, Vx2,Vy2,Vz2,RVx2,RVy2,RVz2 ...]
-        meshVel_flat = [pp for p in MeshArr for pp in p]
-        meshVel_flat_c = (c_float * (6 * self.numMeshPts))(0.0,)
-        for i, p in enumerate(meshVel_flat):
-            meshVel_flat_c[i] = c_float(p)
-        return meshVel_flat_c
+        if motion.velocity.shape != expected_vel_shape:
+            raise ValueError(
+                f"{name} velocity must have shape {expected_vel_shape}, "
+                f"got {motion.velocity.shape}"
+            )
 
+        if motion.acceleration.shape != expected_vel_shape:
+            raise ValueError(
+                f"{name} acceleration must have shape {expected_vel_shape}, "
+                f"got {motion.acceleration.shape}"
+            )
 
-    def check_init_hubroot(self):
-        #print("shape of initRootPos       ",   self.initRootPos.shape)
-        #print("               ndim        ",   np.squeeze(self.initRootPos.ndim))
-        #print("               size 0      ",   self.initRootPos.shape[0])
-        #print("               size 1      ",   self.initRootPos.shape[1])
-        #print("shape of initRootOrient    ",   self.initRootOrient.shape)
-        #print("               ndim        ",   np.squeeze(self.initRootPos.ndim))
-        #print("               size 0      ",   self.initRootOrient.shape[0])
-        #print("               size 1      ",   self.initRootOrient.shape[1])
-        #print("               float       ",   type(self.initRootOrient[0,0]))
-        #print("shape of initHubPos        ",   self.initHubPos.shape)
-        #print("               ndim        ",   np.squeeze(self.initHubPos.ndim))
-        #print("               size 0      ",   self.initHubPos.shape[0])
-        #print("shape of initHubOrient     ",   self.initHubOrient.shape)
-        #print("               ndim        ",   np.squeeze(self.initHubOrient.ndim))
-        #print("               size 0      ",   self.initHubOrient.shape[0])
-        #print("shape of initNacellePos    ",   self.initNacellePos.shape)
-        #print("               ndim        ",   np.squeeze(self.initNacellePos.ndim))
-        #print("               size 0      ",   self.initNacellePos.shape[0])
-        #print("shape of initNacelleOrient ",   self.initNacelleOrient.shape)
-        #print("               ndim        ",   np.squeeze(self.initNacelleOrient.ndim))
-        #print("               size 0      ",   self.initNacelleOrient.shape[0])
-        if self.numBlades < 1:
-            print("No blades.  Set numBlades to number of AD blades in the model")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initRootPos.shape[1] != 3:
-            print("Expecting a Nx3 array of blade root positions (initRootPos) with second index for [x,y,z]")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initRootPos.shape[0] != self.numBlades:
-            print("Expecting a Nx3 array of blade root positions (initRootPos) with first index for blade number")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initRootOrient.shape[1] != 9:
-            print("Expecting a Nx9 array of blade root orientations as DCMs (initRootOrient) with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initRootOrient.shape[0] != self.numBlades:
-            print("Expecting a Nx3 array of blade root orientations (initRootOrient) with first index for blade number")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if np.squeeze(self.initHubPos.ndim) > 1 or self.initHubPos.shape[0] != 3:
-            print("Expecting a 3 element array for initHubPos [x,y,z]")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if np.squeeze(self.initHubOrient.ndim) > 1 or self.initHubOrient.shape[0] != 9:
-            print("Expecting a 9 element array for initHubOrient DCM [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if np.squeeze(self.initNacellePos.ndim) > 1 or self.initNacellePos.shape[0] != 3:
-            print("Expecting a 3 element array for initNacellePos [x,y,z]")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if np.squeeze(self.initNacelleOrient.ndim) > 1 or self.initNacelleOrient.shape[0] != 9:
-            print("Expecting a 9 element array for initNacelleOrient DCM [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
+    def _prepare_motion_arrays(
+        self,
+        hub: MotionData,
+        nacelle: MotionData,
+        root: MotionData,
+        mesh: MotionData
+    ) -> Dict[str, Any]:
+        """Prepares C-compatible arrays for motion data.
 
+        Args:
+            hub: Hub motion data
+            nacelle: Nacelle motion data
+            root: Root motion data
+            mesh: Mesh motion data
 
-    def check_init_mesh(self):
-        #print("shape of initMeshPos       ",   self.initMeshPos.shape)
-        #print("               size 0      ",   self.initMeshPos.shape[0])
-        #print("               size 1      ",   self.initMeshPos.shape[1])
-        #print("shape of initMeshOrient    ",   self.initMeshOrient.shape)
-        #print("               size 0      ",   self.initMeshOrient.shape[0])
-        #print("               size 1      ",   self.initMeshOrient.shape[1])
-        #print("               float       ",   type(self.initMeshOrient[0,0]))
-        # initMeshPos
-        #   Verify that the shape of initMeshPos is correct
-        if self.initMeshPos.shape[0] != self.initMeshOrient.shape[0]:
-            print("Different number of meshs in inital position and orientation arrays")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initMeshPos.shape[1] != 3:
-            print("Expecting a Nx3 array of initial mesh positions (initMeshPos) with second index for [x,y,z]")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initMeshPos.shape[0] != self.numMeshPts:
-            print("Expecting a Nx3 array of initial mesh positions (initMeshPos) with first index for mesh number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initMeshOrient.shape[1] != 9:
-            print("Expecting a Nx9 array of initial mesh orientations as DCMs (initMeshOrient) with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
-        if self.initMeshOrient.shape[0] != self.numMeshPts:
-            print("Expecting a Nx3 array of initial mesh orientations (initMeshOrient) with first index for mesh number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn terminated prematurely.")
+        Returns:
+            Dictionary containing all prepared C arrays
+        """
+        return {
+            # Hub data
+            'hub_position_c': to_c_array(hub.position, c_float),
+            'hub_orientation_c': to_c_array(hub.orientation, c_double),
+            'hub_velocity_c': to_c_array(hub.velocity, c_float),
+            'hub_acceleration_c': to_c_array(hub.acceleration, c_float),
+            # Nacelle data
+            'nacelle_position_c': to_c_array(nacelle.position, c_float),
+            'nacelle_orientation_c': to_c_array(nacelle.orientation, c_double),
+            'nacelle_velocity_c': to_c_array(nacelle.velocity, c_float),
+            'nacelle_acceleration_c': to_c_array(nacelle.acceleration, c_float),
+            # Root data (per blade)
+            'root_position_c': flatten_array(
+                self._init_num_blades,
+                self.num_blades,
+                root.position,
+                'RootPos',
+                elements_per_item=3,
+                c_type=c_float
+            ),
+            'root_orientation_c': flatten_array(
+                self._init_num_blades,
+                self.num_blades,
+                root.orientation,
+                'RootOrient',
+                elements_per_item=9,
+                c_type=c_double
+            ),
+            'root_velocity_c': flatten_array(
+                self._init_num_blades,
+                self.num_blades,
+                root.velocity,
+                'RootVel',
+                elements_per_item=6,
+                c_type=c_float
+            ),
+            'root_acceleration_c': flatten_array(
+                self._init_num_blades,
+                self.num_blades,
+                root.acceleration,
+                'RootAcc',
+                elements_per_item=6,
+                c_type=c_float
+            ),
+            # Mesh data (structural points)
+            'mesh_position_c': flatten_array(
+                self._init_num_mesh_pts,
+                self.num_mesh_pts,
+                mesh.position,
+                'MeshPos',
+                elements_per_item=3,
+                c_type=c_float
+            ),
+            'mesh_orientation_c': flatten_array(
+                self._init_num_mesh_pts,
+                self.num_mesh_pts,
+                mesh.orientation,
+                'MeshOrient',
+                elements_per_item=9,
+                c_type=c_double
+            ),
+            'mesh_velocity_c': flatten_array(
+                self._init_num_mesh_pts,
+                self.num_mesh_pts,
+                mesh.velocity,
+                'MeshVel',
+                elements_per_item=6,
+                c_type=c_float
+            ),
+            'mesh_acceleration_c': flatten_array(
+                self._init_num_mesh_pts,
+                self.num_mesh_pts,
+                mesh.acceleration,
+                'MeshAcc',
+                elements_per_item=6,
+                c_type=c_float
+            )
+        }
 
+#-------------------------------------------------------------------------------
+# Write output channels to a file
+#-------------------------------------------------------------------------------
+class WriteOutChans:
+    """A helper class for writing output channels to file.
 
-    def check_input_motions_hubNac(self,nodePos,nodeOrient,nodeVel,nodeAcc,_name):
-        #   Verify that the shape of positions array is correct
-        if nodePos.size != 3:
-            print("Expecting a Nx3 array of "+_name+" positions with second index for [x,y,z]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
+    This class writes simulation output channels to a text file in a tabular format.
+    It's used for regression testing to mirror the output from AD15 and InflowWind
+    from an OpenFAST simulation, and is valuable for debugging interfaces to the
+    ADI_C_Binding library.
 
-        #   Verify that the shape of orientations array is correct
-        if nodeOrient.size != 9:
-            print("Expecting a Nx9 array of "+_name+" orientations with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
+    When coupled to another code, this data would typically be passed back for inclusion
+    in any output files there.
 
-        #   Verify that the shape of velocities array is correct
-        if nodeVel.size != 6:
-            print("Expecting a Nx6 array of "+_name+" velocities with second index for [x,y,z,Rx,Ry,Rz]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-        #   Verify that the shape of accelerations array is correct
-        if nodeAcc.size != 6:
-            print("Expecting a Nx6 array of "+_name+" accelerations with second index for [x,y,z,Rx,Ry,Rz]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-    def check_input_motions_root(self,rootPos,rootOrient,rootVel,rootAcc):
-        # make sure number of roots didn't change for some reason
-        if self._initNumBlades != self.numBlades:
-            print(f"At time {time}, the number of root points changed from initial value of {self._initNumBlades}.  This is not permitted during the simulation.")
-            self.adi_end()
-            raise Exception("\nError in calling AeroDyn/AeroDyn library.")
-
-        #   Verify that the shape of positions array is correct
-        if rootPos.shape[1] != 3:
-            print("Expecting a Nx3 array of root positions (rootOrient) with second index for [x,y,z]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-        if rootPos.shape[0] != self.numBlades:
-            print("Expecting a Nx3 array of root positions (rootOrient) with first index for root number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-        #   Verify that the shape of orientations array is correct
-        if rootOrient.shape[1] != 9:
-            print("Expecting a Nx9 array of root orientations (rootPos) with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-        if rootOrient.shape[0] != self.numBlades:
-            print("Expecting a Nx9 array of root orientations (rootPos) with first index for root number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-        #   Verify that the shape of velocities array is correct
-        if rootVel.shape[1] != 6:
-            print("Expecting a Nx6 array of root velocities (rootVel) with second index for [x,y,z,Rx,Ry,Rz]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-        if rootVel.shape[0] != self.numBlades:
-            print("Expecting a Nx6 array of root velocities (rootVel) with first index for root number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-        #   Verify that the shape of accelerations array is correct
-        if rootAcc.shape[1] != 6:
-            print("Expecting a Nx6 array of root accelerations (rootAcc) with second index for [x,y,z,Rx,Ry,Rz]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-        if rootAcc.shape[0] != self.numBlades:
-            print("Expecting a Nx6 array of root accelerations (rootAcc) with first index for root number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-
-    def check_input_motions_mesh(self,meshPos,meshOrient,meshVel,meshAcc):
-        # make sure number of meshs didn't change for some reason
-        if self._initNumMeshPts != self.numMeshPts:
-            print(f"At time {time}, the number of mesh points changed from initial value of {self._initNumMeshPts}.  This is not permitted during the simulation.")
-            self.adi_end()
-            raise Exception("\nError in calling AeroDyn/AeroDyn library.")
-
-        #   Verify that the shape of positions array is correct
-        if meshPos.shape[1] != 3:
-            print("Expecting a Nx3 array of mesh positions (meshOrient) with second index for [x,y,z]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-        if meshPos.shape[0] != self.numMeshPts:
-            print("Expecting a Nx3 array of mesh positions (meshOrient) with first index for mesh number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-        #   Verify that the shape of orientations array is correct
-        if meshOrient.shape[1] != 9:
-            print("Expecting a Nx9 array of mesh orientations (meshPos) with second index for [r11,r12,r13,r21,r22,r23,r31,r32,r33]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-        if meshOrient.shape[0] != self.numMeshPts:
-            print("Expecting a Nx9 array of mesh orientations (meshPos) with first index for mesh number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-        #   Verify that the shape of velocities array is correct
-        if meshVel.shape[1] != 6:
-            print("Expecting a Nx6 array of mesh velocities (meshVel) with second index for [x,y,z,Rx,Ry,Rz]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-        if meshVel.shape[0] != self.numMeshPts:
-            print("Expecting a Nx6 array of mesh velocities (meshVel) with first index for mesh number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-        #   Verify that the shape of accelerations array is correct
-        if meshAcc.shape[1] != 6:
-            print("Expecting a Nx6 array of mesh accelerations (meshAcc) with second index for [x,y,z,Rx,Ry,Rz]")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-        if meshAcc.shape[0] != self.numMeshPts:
-            print("Expecting a Nx6 array of mesh accelerations (meshAcc) with first index for mesh number.")
-            self.adi_end()
-            raise Exception("\nAeroDyn/AeroDyn terminated prematurely.")
-
-
-
-    @property
-    def output_channel_names(self):
-        if len(self._channel_names_c.value.split()) == 0:
-             return []
-        output_channel_names = self._channel_names_c.value.split()
-        output_channel_names = [n.decode('UTF-8') for n in output_channel_names]
-        return output_channel_names
-
-    @property
-    def output_channel_units(self):
-        if len(self._channel_units_c.value.split()) == 0:
-            return []
-        output_channel_units = self._channel_units_c.value.split()
-        output_channel_units = [n.decode('UTF-8') for n in output_channel_units]
-        return output_channel_units
-
-
-#===============================================================================
-#   Helper class for debugging the interface.  This will write out all the
-#   input position/orientation, velocities, accelerations, and the resulting
-#   forces and moments at each input mesh point.  If all is functioning
-#   correctly, this will be identical to the corresponding values in the
-#   AeroDyn/InflowWind output channels.
-
-#FIXME: this may not output everything in the interface (updates have been made
-# since writing this, but this routine was not updated accordingly
-class DriverDbg():
+    Attributes:
+        filename: Name of the output file
+        opened: Boolean flag indicating if the output file is currently open
     """
-    This is only for debugging purposes only.  The input motions and resulting
-    forces can be written to file with this class to verify the data I/O to the
-    Fortran library.
-    When coupled to another code, the force/moment array would be passed back
-    to the calling code for use in the structural solver.
-    """
-    def __init__(self,filename,numMeshPts):
-        self.DbgFile=open(filename,'wt')        # open output file and write header info
-        self.numMeshPts=numMeshPts
+
+    def __init__(self, filename: str, channel_names: List[str], channel_units: List[str]) -> None:
+        channel_names.insert(0, 'Time')             # add time index header
+        channel_units.insert(0, '(s)')              # add time index unit
+        self.out_file = open(filename, 'wt')        # open output file and write header info
         # write file header
-        t_string=datetime.datetime.now()
-        dt_string=datetime.date.today()
-        self.DbgFile.write(f"## This file was generated by adi_c_lib on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
-        self.DbgFile.write(f"## This file contains the resulting forces/moments at each of {self.numMeshPts} mesh points passed into the adi_c_lib\n")
-        self.DbgFile.write("#\n")
-        self.DbgFile.write("#\n")
-        self.DbgFile.write("#\n")
-        self.DbgFile.write("#\n")
-        f_string = "{:^25s}"
-        self.DbgFile.write("       Time    ")
-        for i in range(1,self.numMeshPts+1):
-            f_num = "N{0:04d}_".format(i)
-            self.DbgFile.write(f_string.format(f_num+"x"  ))
-            self.DbgFile.write(f_string.format(f_num+"y"  ))
-            self.DbgFile.write(f_string.format(f_num+"z"  ))
-            #self.DbgFile.write(f_string.format(f_num+"Rx" ))
-            #self.DbgFile.write(f_string.format(f_num+"Ry" ))
-            #self.DbgFile.write(f_string.format(f_num+"Rz" ))
-            self.DbgFile.write(f_string.format(f_num+"Vx" ))
-            self.DbgFile.write(f_string.format(f_num+"Vy" ))
-            self.DbgFile.write(f_string.format(f_num+"Vz" ))
-            self.DbgFile.write(f_string.format(f_num+"RVx"))
-            self.DbgFile.write(f_string.format(f_num+"RVy"))
-            self.DbgFile.write(f_string.format(f_num+"RVz"))
-            self.DbgFile.write(f_string.format(f_num+"Ax" ))
-            self.DbgFile.write(f_string.format(f_num+"Ay" ))
-            self.DbgFile.write(f_string.format(f_num+"Az" ))
-            self.DbgFile.write(f_string.format(f_num+"RAx"))
-            self.DbgFile.write(f_string.format(f_num+"RAy"))
-            self.DbgFile.write(f_string.format(f_num+"RAz"))
-            self.DbgFile.write(f_string.format(f_num+"Fx" ))
-            self.DbgFile.write(f_string.format(f_num+"Fy" ))
-            self.DbgFile.write(f_string.format(f_num+"Fz" ))
-            self.DbgFile.write(f_string.format(f_num+"Mx" ))
-            self.DbgFile.write(f_string.format(f_num+"My" ))
-            self.DbgFile.write(f_string.format(f_num+"Mz" ))
-        self.DbgFile.write(f_string.format(f_num+"DskAvgVx" ))
-        self.DbgFile.write(f_string.format(f_num+"DskAvgVy" ))
-        self.DbgFile.write(f_string.format(f_num+"DskAvgVz" ))
-        self.DbgFile.write("\n")
-        self.DbgFile.write("       (s)     ")
-        for i in range(1,self.numMeshPts+1):
-            self.DbgFile.write(f_string.format("(m)"      ))
-            self.DbgFile.write(f_string.format("(m)"      ))
-            self.DbgFile.write(f_string.format("(m)"      ))
-            #self.DbgFile.write(f_string.format("(rad)"    ))
-            #self.DbgFile.write(f_string.format("(rad)"    ))
-            #self.DbgFile.write(f_string.format("(rad)"    ))
-            self.DbgFile.write(f_string.format("(m/s)"    ))
-            self.DbgFile.write(f_string.format("(m/s)"    ))
-            self.DbgFile.write(f_string.format("(m/s)"    ))
-            self.DbgFile.write(f_string.format("(rad/s)"  ))
-            self.DbgFile.write(f_string.format("(rad/s)"  ))
-            self.DbgFile.write(f_string.format("(rad/s)"  ))
-            self.DbgFile.write(f_string.format("(m/s^2)"  ))
-            self.DbgFile.write(f_string.format("(m/s^2)"  ))
-            self.DbgFile.write(f_string.format("(m/s^2)"  ))
-            self.DbgFile.write(f_string.format("(rad/s^2)"))
-            self.DbgFile.write(f_string.format("(rad/s^2)"))
-            self.DbgFile.write(f_string.format("(rad/s^2)"))
-            self.DbgFile.write(f_string.format("(N)"      ))
-            self.DbgFile.write(f_string.format("(N)"      ))
-            self.DbgFile.write(f_string.format("(N)"      ))
-            self.DbgFile.write(f_string.format("(N-m)"    ))
-            self.DbgFile.write(f_string.format("(N-m)"    ))
-            self.DbgFile.write(f_string.format("(N-m)"    ))
-        self.DbgFile.write(f_string.format("(m/s)"    ))
-        self.DbgFile.write(f_string.format("(m/s)"    ))
-        self.DbgFile.write(f_string.format("(m/s)"    ))
-        self.DbgFile.write("\n")
+        t_string = datetime.now()
+        dt_string = datetime.today()
+        self.out_file.write(f"## This file was generated by AeroDyn_Inflow_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
+        self.out_file.write(f"## This file contains output channels requested from the OutList section of the AD15 and IfW input files")
+        self.out_file.write(f"{filename}\n")
+        self.out_file.write("#\n")
+        self.out_file.write("#\n")
+        self.out_file.write("#\n")
+        self.out_file.write("#\n")
+        l = len(channel_names)
+        f_string = "{:^15s}"+"   {:^20s}  "*(l-1)
+        self.out_file.write(f_string.format(*channel_names) + '\n')
+        self.out_file.write(f_string.format(*channel_units) + '\n')
         self.opened = True
 
-    def write(self,t,meshPos,meshVel,meshAcc,meshFrc,DiskAvgVel):
-        t_string  = "{:10.4f}"
-        f_string3 = "{:25.7e}"*3
-        f_string6 = "{:25.7e}"*6
-        self.DbgFile.write(t_string.format(t))
-        for i in range(0,self.numMeshPts):
-            self.DbgFile.write(f_string3.format(*meshPos[i,:]))
-            self.DbgFile.write(f_string6.format(*meshVel[i,:]))
-            self.DbgFile.write(f_string6.format(*meshAcc[i,:]))
-            self.DbgFile.write(f_string6.format(*meshFrc[i,:]))
-        self.DbgFile.write(f_string3.format(*DiskAvgVel[:]))
-        self.DbgFile.write("\n")
+    def write(self, channel_data: npt.NDArray) -> None:
+        """Write the channel data to the output file.
 
-    def end(self):
+        Args:
+            channel_data: Array of channel data with shape (n_timesteps, n_channels)
+                          First column should be time values
+        """
+        time_format = "{:10.4f}"
+        data_format = "{:25.7f}" * (channel_data.shape[1] - 1)
+        format_str = time_format + data_format
+
+        rows = [format_str.format(*row) for row in channel_data]
+        self.out_file.write("\n".join(rows) + "\n")
+        self.out_file.flush()
+
+    def end(self) -> None:
+        """Close the output file."""
         if self.opened:
-            self.DbgFile.close()
+            self.out_file.close()
             self.opened = False
 
+    def __enter__(self) -> 'WriteOutChans':
+        """Support for context manager protocol."""
+        return self
 
-#===============================================================================
-#   Helper class for writing channels to file.
-#   for the regression testing to mirror the output from the AD15 and InfowWind
-#   from an OpenFAST simulation.  This may also have value for debugging
-#   interfacing to the ADI_C_Binding library
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Ensure file is closed when exiting context."""
+        self.end()
 
-class WriteOutChans():
+#-------------------------------------------------------------------------------
+# Generate a debug file
+#-------------------------------------------------------------------------------
+class DriverDbg:
     """
-    This is only for testing purposes. Since we are not returning the
-    output channels to anything, we will write them to file.  When coupled to
-    another code, this data would be passed back for inclusion the any output
-    file there.
+    A helper class for debugging the ADI interface. This class writes out all the
+    input positions/orientations, velocities, accelerations, and the resulting
+    forces and moments at each input mesh point. If functioning correctly, this
+    will be identical to the corresponding values in the AeroDyn/InflowWind output
+    channels.
+
+    NOTE: This may not output everything in the interface as updates have been made
+    since writing this, but this routine was not updated accordingly.
     """
-    def __init__(self,filename,chan_names,chan_units):
-        chan_names.insert(0,'Time')             # add time index header
-        chan_units.insert(0,'(s)')              # add time index unit
-        self.OutFile=open(filename,'wt')        # open output file and write header info
-        # write file header
-        t_string=datetime.datetime.now()
-        dt_string=datetime.date.today()
-        self.OutFile.write(f"## This file was generated by AeroDyn_Inflow_Driver on {dt_string.strftime('%b-%d-%Y')} at {t_string.strftime('%H:%M:%S')}\n")
-        self.OutFile.write(f"## This file contains output channels requested from the OutList section of the AD15 and IfW input files")
-        self.OutFile.write(f"{filename}\n")
-        self.OutFile.write("#\n")
-        self.OutFile.write("#\n")
-        self.OutFile.write("#\n")
-        self.OutFile.write("#\n")
-        l = len(chan_names)
-        f_string = "{:^15s}"+"   {:^20s}  "*(l-1)
-        self.OutFile.write(f_string.format(*chan_names) + '\n')
-        self.OutFile.write(f_string.format(*chan_units) + '\n')
+
+    def __init__(self, filename: str, num_mesh_pts: int) -> None:
+        """Initializes the debugging class and open the output file."""
+        self.filename = filename
+        self.num_mesh_pts = num_mesh_pts
         self.opened = True
 
-    def write(self,chan_data):
-        l = chan_data.shape[1]
-        f_string = "{:10.4f}"+"{:25.7f}"*(l-1)
-        for i in range(0,chan_data.shape[0]):
-            self.OutFile.write(f_string.format(*chan_data[i,:]) + '\n')
-            #if i==0:
-            #    print(f"{chan_data[i,:]}")
+        with open(filename, 'wt') as self.debug_file:
+            self._write_header()
 
-    def end(self):
+        self.debug_file = open(filename, 'at') # switch to append mode
+
+    def _write_header(self) -> None:
+        """Writes the header information to the debug file."""
+        # Build header components
+        timestamp = datetime.now().strftime('%b-%d-%Y %H:%M:%S')
+        header_lines = [
+            f"## This file was generated by adi_c_lib on {timestamp}",
+            f"## This file contains the resulting forces/moments at each of {self.num_mesh_pts} mesh points passed into the adi_c_lib",
+            "#",
+            "#",
+            "#",
+            "#"
+        ]
+
+        # Write column headers
+        column_names = ["Time"]
+        column_units = ["(s)"]
+        for i in range(1, self.num_mesh_pts + 1):
+            prefix = f"N{i:04d}_"
+            # Position columns
+            for suffix in ["x", "y", "z"]:
+                column_names.append(f"{prefix}{suffix}")
+                column_units.append("(m)")
+            # Velocity columns
+            for suffix in ["Vx", "Vy", "Vz"]:
+                column_names.append(f"{prefix}{suffix}")
+                column_units.append("(m/s)")
+            # Angular velocity columns
+            for suffix in ["RVx", "RVy", "RVz"]:
+                column_names.append(f"{prefix}{suffix}")
+                column_units.append("(rad/s)")
+            # Acceleration columns
+            for suffix in ["Ax", "Ay", "Az"]:
+                column_names.append(f"{prefix}{suffix}")
+                column_units.append("(m/s^2)")
+            # Angular acceleration columns
+            for suffix in ["RAx", "RAy", "RAz"]:
+                column_names.append(f"{prefix}{suffix}")
+                column_units.append("(rad/s^2)")
+            # Force columns
+            for suffix in ["Fx", "Fy", "Fz"]:
+                column_names.append(f"{prefix}{suffix}")
+                column_units.append("(N)")
+            # Moment columns
+            for suffix in ["Mx", "My", "Mz"]:
+                column_names.append(f"{prefix}{suffix}")
+                column_units.append("(N-m)")
+        # Disk average velocity columns
+        for suffix in ["DskAvgVx", "DskAvgVy", "DskAvgVz"]:
+            column_names.append(suffix)
+            column_units.append("(m/s)")
+
+        f_string = "{:^25s}"
+        header_lines.append("".join([f_string.format(name) for name in column_names]))
+        header_lines.append("".join([f_string.format(unit) for name, unit in zip(column_names, column_units)]))
+
+        self.debug_file.write("\n".join(header_lines) + "\n")
+
+    def write(
+        self,
+        t: float,
+        mesh_position: npt.NDArray,
+        mesh_velocity: npt.NDArray,
+        mesh_acceleration: npt.NDArray,
+        mesh_forces_moments: npt.NDArray,
+        disk_avg_velocity: npt.NDArray
+    ) -> None:
+        """Writes the current state to the debug file."""
+        row_data = [f"{t:10.4f}"]
+
+        for i in range(self.num_mesh_pts):
+            row_data.extend([f"{val:25.7e}" for val in mesh_position[i, :]])
+            row_data.extend([f"{val:25.7e}" for val in mesh_velocity[i, :]])
+            row_data.extend([f"{val:25.7e}" for val in mesh_acceleration[i, :]])
+            row_data.extend([f"{val:25.7e}" for val in mesh_forces_moments[i, :]])
+        row_data.extend([f"{val:25.7e}" for val in disk_avg_velocity[:]])
+
+        self.debug_file.write("".join(row_data) + "\n")
+        self.debug_file.flush()
+
+    def end(self) -> None:
+        """Closes the debug file."""
         if self.opened:
-            self.OutFile.close()
+            self.debug_file.close()
             self.opened = False
