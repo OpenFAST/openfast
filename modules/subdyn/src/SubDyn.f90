@@ -526,8 +526,8 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       REAL(ReKi)                   :: F_I(6*p%nNodes_I), F_TP1(6)   
-      real(R8Ki), dimension(3,3)   :: Rg2b, Rb2g
-      real(ReKi), dimension(3,3)   :: tmp
+      REAL(R8Ki), dimension(3,3)   :: Rg2b, Rb2g
+      REAL(ReKi), dimension(3,3)   :: tmp
       REAL(ReKi)                   :: qRR, qRP, qRY, qRRdot, qRPdot, qRYdot
       REAL(ReKi), ALLOCATABLE      :: tmpInv(:,:)
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
@@ -540,14 +540,16 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       Rg2b = EulerConstructZYX(x%qR(4:6))
       Rb2g = transpose(Rg2b)
 
-      call GetUTP(u,p,x,m,.true.,ErrStat2,ErrMsg2); if(Failed()) return
+      call GetUTP(u,p,x,m,ErrStat2,ErrMsg2,bPrime=(.true.)); if(Failed()) return
       call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(.not.p%Floating), RotateLoads=(p%Floating)); if(Failed()) return
       
-      if (p%Floating) then
-         if (p%TP1IsRBRefPt) then
+      if (p%Floating) then ! Floating structure: everything is in the rigid-body frame
+
+         if (p%TP1IsRBRefPt) then ! More than one transition piece
+
             call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
             F_TP1 =   matmul(            F_I, p%TI(:,1:6) ) &
-                    - matmul(p%D1_142(1:6,:),      m%F_L  )
+                    - matmul(p%D1_142(1:6,:),      m%F_L  )      ! p%D1_142 is -matmul( T_I^T, Phi_Rb^T )
 
             m%EOM_RHS(1:p%nDOFL_TP) = - MATMUL( p%MBB(:,7:p%nDOFL_TP) , m%Udotdot_TP(7:p%nDOFL_TP) )
             m%EOM_RHS(1:6)          =   m%EOM_RHS(1:6) + F_TP1
@@ -558,18 +560,25 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
                m%EOM_RHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)) = - MATMUL( p%MMB(:,7:p%nDOFL_TP) , m%Udotdot_TP(7:p%nDOFL_TP) ) &
                                                                 - p%CMMDiag * x%qmdot                                          &
                                                                 - p%KMMDiag * x%qm                                             &
-                                                                + matmul( transpose(p%PhiM), m%F_L )
+                                                                + matmul( m%F_L, p%PhiM )  ! F_M = PhiM^T * F_L
             endif
-         else
-            m%EOM_RHS(1:p%nDOFL_TP) = 0.0_ReKi
+
+         else ! Should have only one transition piece in this cases
+
+            m%EOM_RHS(1:p%nDOFL_TP) = - matmul( p%MBB, m%Udotdot_TP )
             if (p%nDOFM>0) then
-               m%EOM_RHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)) = - p%CMMDiag * x%qmdot &
-                                                                - p%KMMDiag * x%qm
+               m%EOM_RHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)) = - matmul( p%MMB, m%Udotdot_TP ) &
+                                                                - p%CMMDiag * x%qmdot           &
+                                                                - p%KMMDiag * x%qm              &
+                                                                + matmul( m%F_L, p%PhiM )  ! F_M = PhiM^T * F_L
             endif
+
          end if
          m%EOM_RHS(1:3) = m%EOM_RHS(1:3) - p%MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),p%rPG))
          m%EOM_RHS(4:6) = m%EOM_RHS(4:6) -            cross_product(m%udot_TP(4:6),matmul(p%MBB(4:6,4:6),m%udot_TP(4:6)))
-     else
+
+     else ! Fixed-bottom structure: everything is in the global earth-fixed frame
+
          m%EOM_RHS(1:p%nDOFL_TP) = - MATMUL( p%MBB , m%Udotdot_TP )  &
                                    - MATMUL( p%CBB , m%Udot_TP    )  &
                                    - MATMUL( p%KBB , m%U_TP       )
@@ -577,15 +586,38 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
             m%EOM_RHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)) = - MATMUL( p%MMB , m%Udotdot_TP ) &
                                                              - p%CMMDiag * x%qmdot            &
                                                              - p%KMMDiag * x%qm               &
-                                                             + matmul( transpose(p%PhiM), m%F_L )
+                                                             + matmul( m%F_L, p%PhiM )  ! F_M = PhiM^T * F_L
          endif
+
      endif
+
+     ! The solution vector of the combined equations of motion contains
+     !
+     ! * Case 1 - p%Floating and p%TP1IsRBRefPt:
+     !      Rigid-body (first dummy transition piece) acceleration
+     !      Total loads on the remaining transition pieces coupled to ElastoDyn
+     !      Second time derivatives of Craig-Bampton mode amplitudes if NModes > 0
+     !
+     ! * Case 2 - p%Floating and .not.p%TP1IsRBRefPt:
+     !      Total loads on the only transition piece coupled to ElastoDyn
+     !      Second time derivatives of Craig-Bampton mode amplitudes if NModes > 0
+     !
+     ! * Case 3 - .not.p%Floating
+     !      Total loads on all transition pieces coupled to ElastoDyn
+     !      Second time derivatives of Craig-Bampton mode amplitudes if NModes > 0
+     !
+     ! If floating, all quantities are in the rigid-body frame. If not floating, all quantities in earth-fixed frame.
 
      m%EOM_Sol = matmul( p%EOM_LHS, m%EOM_RHS )
 
      if (p%TP1IsRBRefPt) then
-        m%Udotdot_TP(1:6)    = m%EOM_Sol(1:6)
-        m%qRdotdot(1:3)      = matmul(Rb2g,m%EOM_Sol(1:3))
+
+        ! Rigid-body translational and angular acceleration in rigid-body frame
+        m%Udotdot_TP(1:6) = m%EOM_Sol(1:6)
+
+        ! Second time derivatives of rigid-body states
+        m%qRdotdot(1:3)   = matmul(Rb2g,m%EOM_Sol(1:3)) ! Translational acceleration in earth-fixed frame
+        ! Second time derivatives for Tait-Bryan angles
         qRR = x%qR(4)
         qRP = x%qR(5)
         qRY = x%qR(6)
@@ -599,14 +631,20 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
         m%qRdotdot(4:6) = matmul( tmpInv, matmul(Rb2g,m%EOM_Sol(4:6)) - &
                      (/ -qRPdot*qRYdot*cos(qRY) - qRRdot*(qRPdot*sin(qRP)*cos(qRY)+qRYdot*cos(qRP)*sin(qRY)), &
                         -qRPdot*qRYdot*sin(qRY) - qRRdot*(qRPdot*sin(qRP)*sin(qRY)-qRYdot*cos(qRP)*cos(qRY)), &
-                        -qRRdot*qRPdot*cos(qRP)  /)   )
+                        -qRPdot*qRRdot*cos(qRP)  /)   )
         if (allocated(tmpInv)) deallocate(tmpInv)
         m%F_TP(7:p%nDOFL_TP) = m%EOM_Sol(7:p%nDOFL_TP)
+
      else
+
         m%F_TP               = m%EOM_Sol(1:p%nDOFL_TP)
+
      end if
+
      if (p%nDOFM>0) then
+
         m%qmdotdot = m%EOM_Sol( (p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM) )
+
      end if
 
 CONTAINS
@@ -692,7 +730,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          CALL Eye( m%RAllb2g, ErrStat2, ErrMsg2 )
          CALL Eye( m%RAllg2b, ErrStat2, ErrMsg2 )
       END IF      
-      CALL GetUTP(u,p,x,m,.false.,ErrStat2,ErrMsg2); if(Failed()) return
+      CALL GetUTP(u,p,x,m,ErrStat2,ErrMsg2,bPrime=(.false.)); if(Failed()) return
 
       ! --------------------------------------------------------------------------------
       ! --- Output Meshes 2&3
@@ -1028,7 +1066,6 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
 
       ! Compute F_L, force on internal DOF
       ! CALL GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(.not.p%Floating), RotateLoads=(p%Floating))
-      ! CALL GetUTP(u, p, x, m, .false., ErrStat, ErrMsg)    
 
       ! State equation
       call SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 ); if (Failed()) return
@@ -3068,6 +3105,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       p%D1_142 = - MATMUL(TI_transpose, TRANSPOSE(PhiRb)) 
    END IF
 
+   ! Build the left-hand side of the combined equations of motion and compute the inverse
    EOM_LHS = 0.0_ReKi
    if (p%TP1IsRBRefPt) then
       EOM_LHS(1:6,1:6) = p%MBB(1:6,1:6) - matmul( p%MBB(1:6,7:p%nDOFL_TP), p%GMat(7:p%nDOFL_TP, 1:6) )
@@ -3491,40 +3529,53 @@ END SUBROUTINE ReducedToFull
 
 !> Computes the (relative) displacement, velocity, and acceleration of the transition pieces
 !! 
-SUBROUTINE GetUTP(u, p, x, m, bPrime, ErrStat, ErrMsg)
+SUBROUTINE GetUTP(u, p, x, m, ErrStat, ErrMsg, bPrime)
    TYPE(SD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(SD_ParameterType),target,INTENT(IN   )  :: p           !< Parameters
    TYPE(SD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at operating point
    TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
-   LOGICAL,                      INTENT(IN   )  :: bPrime
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg
+   LOGICAL,                      INTENT(IN   )  :: bPrime      !< Flag to remove the contributions from rigid-body acceleration to m%udotdot_TP (set to true when constructing the EOM RHS) (floating only)
 
    ! Local variables
    INTEGER(IntKi)             :: iTP, Idx
-   REAL(ReKi)                 :: rotations(3), omega(3), omega_dot(3)
-   REAL(ReKi)                 :: qRR, qRP, qRY, qRRdot, qRPdot, qRYdot, qRRdotdot, qRPdotdot, qRYdotdot
-   real(ReKi), dimension(3)   :: rIP  ! Vector from the ith TP to the first TP
-   real(ReKi), dimension(3)   :: rIP0 ! Vector from the ith TP to the first TP (undeflected)
-   real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix body 2 global coordinates
-   real(ReKi), dimension(6,6) :: RRg2b
-   INTEGER(IntKi)             :: ErrStat2    ! Error status of the operation (occurs after initial error)
-   CHARACTER(ErrMsgLen)       :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+   REAL(ReKi)                 :: rotations(3)                          ! Small rotation vector for transition pieces (fixed-bottom only)
+   REAL(ReKi)                 :: omega(3), omega_dot(3)  ! Rigid-body  ! Rigid-body angular velocity and acceleration resolved in the global earth-fixed coordinate system
+   REAL(ReKi)                 :: qRR, qRP, qRY                         ! Rigid-body roll, pitch, yaw Tait-Bryan angles
+   REAL(ReKi)                 :: qRRdot, qRPdot, qRYdot                ! Time derivatives of rigid-body Tait-Bryan angles
+   REAL(ReKi)                 :: qRRdotdot, qRPdotdot, qRYdotdot       ! Second time derivatives of rigid-body Tait-Bryan angles
+   real(ReKi), dimension(3)   :: rIP                                   ! Vector from the ith TP to the first TP
+   real(ReKi), dimension(3)   :: rIP0                                  ! Vector from the ith TP to the first TP (undeflected/undisplaced)
+   real(R8Ki), dimension(3,3) :: Rg2b                                  ! Rotation matrix from global earth-fixed coordinate system to rigid-body coordinate system
+   real(ReKi), dimension(6,6) :: RRg2b                                 ! 6-by-6 rotation matrix build from Rg2b
+   INTEGER(IntKi)             :: ErrStat2                              ! Error status of the operation (occurs after initial error)
+   CHARACTER(ErrMsgLen)       :: ErrMsg2                               ! Error message if ErrStat2 /= ErrID_None
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   ! If floating, 
+   ! the outputs m%u_TP, m%udot_TP, and m%udotdot_TP contain the absolute motion of the first (possibly dummy) transition piece used to track
+   ! possibly large rigid-body motion. The rest of the entries contain the apparent/relative motion of the second to last transition pieces as
+   ! observed in the rigid-body attached frame of reference, i.e., Delta U_TP and its time derivatives. All except the displacement of the first 
+   ! transition piece are resolved in the rigid-body frame of reference. 
+
+   ! If fixed bottom,
+   ! the outputs contain the absolute but small motion of all transition pieces resolved in the earth-fixed coordinate system.
+
    IF ( p%Floating ) THEN
-      ! For a floating structure, u_TP(1:6) contains the absolute displacements and the Tait-Bryan angles of the first transition piece 
+      ! For a floating structure, u_TP(1:6) contains the absolute displacements and the Tait-Bryan angles of the first (possibly dummy) transition piece 
       ! measured in the earth-fixed coordinate system used to represent the potentially large rigid-body motion of the platform.
 
-      ! udot_TP(1:6) and udotdot_TP(1:6) contains the absolute velocity and acceleration of the first transition piece resolved in the
-      ! rigid-body frame of reference that rotates with the first-transition piece.
+      ! udot_TP(1:6) and udotdot_TP(1:6) contains the absolute velocity and acceleration of the first (possibly dummy) transition piece resolved in the
+      ! rigid-body frame of reference that rotates with the first transition piece.
 
-      ! The rest of the entries of u_TP, udot_TP, and udotdot_TP all contains the relative/apparent motion of the rest of the transition pieces
-      ! relative to the rigid-body/1st-transition-piece motion.
+      ! The rest of the entries of u_TP, udot_TP, and udotdot_TP (if more than one transition piece is present) all contains the relative/apparent motion 
+      ! of the rest of the transition pieces relative to the rigid-body/1st-transition-piece motion.
 
       if (p%TP1IsRBRefPt) then
+         ! The first transition piece is a dummy one internal to SD and not coupled with ElastoDyn
          
          ! Rigid-body rotation matrices for floating only - based on the first transition piece
          Rg2b(1:3,1:3)  = EulerConstructZYX(x%qR(4:6))  ! global to rigid-body coordinates
@@ -3532,39 +3583,44 @@ SUBROUTINE GetUTP(u, p, x, m, bPrime, ErrStat, ErrMsg)
          RRg2b(1:3,1:3) = Rg2b
          RRg2b(4:6,4:6) = Rg2b
 
-         ! First transition piece used to represent the floater rigid-body motion is special
-         m%u_TP(1:6)    = x%qR
-         qRR = x%qR(4)
-         qRP = x%qR(5)
-         qRY = x%qR(6)
+         ! First transition piece used to represent the floater rigid-body motion is handled differently
+         m%u_TP(1:6) = x%qR
+         qRR    = x%qR(4)   ! Rigid-body roll
+         qRP    = x%qR(5)   ! Rigid-body pitch
+         qRY    = x%qR(6)   ! Rigid-body yaw
          qRRdot = x%qRdot(4)
          qRPdot = x%qRdot(5)
          qRYdot = x%qRdot(6)
-         omega  = (/ cos(qRP)*cos(qRY)*qRRdot - sin(qRY)*qRPdot, &
-                     cos(qRP)*sin(qRY)*qRRdot + cos(qRY)*qRPdot, &
-                    -sin(qRP)*qRRdot + qRYdot /)
+
+         ! Rigid-body angular velocity in the global earth-fixed system
+         omega  = (/ cos(qRP)*cos(qRY)*qRRdot - sin(qRY)*qRPdot         , &
+                     cos(qRP)*sin(qRY)*qRRdot + cos(qRY)*qRPdot         , &
+                    -sin(qRP)         *qRRdot                   + qRYdot /)
+         ! Rigid-body translational and angular velocity in the rigid-body frame of reference
          m%udot_TP(1:6) = MATMUL( RRg2b , (/x%qRdot(1:3), omega/) )
 
          if (bPrime) then
             m%udotdot_TP(1:6) = 0.0
          else
+            ! Compute rigid-body angular acceleration in the global earth-fixed system
             qRRdotdot = m%qRdotdot(4)
             qRPdotdot = m%qRdotdot(5)
             qRYdotdot = m%qRdotdot(6)
-            omega_dot = (/ cos(qRP)*cos(qRY)*qRRdotdot - sin(qRY)*qRPdotdot, &
-                           cos(qRP)*sin(qRY)*qRRdotdot + cos(qRY)*qRPdotdot, &
-                          -sin(qRP)*qRRdotdot + qRYdotdot /) &
+            omega_dot = (/ cos(qRP)*cos(qRY)*qRRdotdot - sin(qRY)*qRPdotdot            ,   &
+                           cos(qRP)*sin(qRY)*qRRdotdot + cos(qRY)*qRPdotdot            ,   &
+                          -sin(qRP)         *qRRdotdot                      + qRYdotdot /) &
                        +(/ -qRPdot*qRYdot*cos(qRY) - qRRdot*(qRPdot*sin(qRP)*cos(qRY)+qRYdot*cos(qRP)*sin(qRY)), &
                            -qRPdot*qRYdot*sin(qRY) - qRRdot*(qRPdot*sin(qRP)*sin(qRY)-qRYdot*cos(qRP)*cos(qRY)), &
-                           -qRRdot*qRPdot*cos(qRP)  /)
+                           -qRPdot*qRRdot*cos(qRP)  /)
+            ! Rigid-body translational and angular acceleration in the rigid-body frame of reference
             m%udotdot_TP(1:6) = MATMUL( RRg2b , (/m%qRdotdot(1:3), omega_dot/) )
          endif
 
+         ! Additional transition pieces coupled to ElastoDyn instances
          DO iTP = 2,p%nTP
             Idx = 6*iTP-5
-            ! rIP0 = u%TPMesh%Position(:,iTP-1) - x%qR(1:3)         
-            ! rIP  = rIP0 + u%TPMesh%TranslationDisp(:,iTP-1)-u%TPMesh%TranslationDisp(:,1)
-            rIP = ( u%TPMesh%Position(:,iTP-1) + u%TPMesh%TranslationDisp(:,iTP-1) ) - (p%RBRefPt + x%qR(1:3)) 
+            ! Instantaneous vector from rigid-body reference point (dummy TP1) to the current TP in global earth-fixed system (X_TPj-XTP1)
+            rIP = ( u%TPMesh%Position(:,iTP-1) + u%TPMesh%TranslationDisp(:,iTP-1) ) - (p%RBRefPt + x%qR(1:3))
             m%u_TP(Idx:(Idx+2))        = matmul(Rg2b,rIP)-p%rTP0(:,iTP-1)
             m%u_TP((Idx+3):(Idx+5))    = GetSmllRotAngs(matmul(u%TPMesh%Orientation(:,:,iTP-1),transpose(Rg2b)), ErrStat2, ErrMsg2); if(Failed()) return
             m%udot_TP(Idx:(Idx+2))     = matmul(Rg2b,(u%TPMesh%TranslationVel(:,iTP-1)-x%qRdot(1:3))-CROSS_PRODUCT( omega, rIP ))
@@ -3588,19 +3644,22 @@ SUBROUTINE GetUTP(u, p, x, m, bPrime, ErrStat, ErrMsg)
          ENDDO
 
       else ! Only one transition piece
+
          ! Rigid-body rotation matrices for floating only - based on the first transition piece
          Rg2b(1:3,1:3)  = u%TPMesh%Orientation(:,:,1)  ! global to rigid-body coordinates
          RRg2b(:,:)     = 0.0_R8Ki
          RRg2b(1:3,1:3) = Rg2b
          RRg2b(4:6,4:6) = Rg2b
 
-         ! First transition piece used to represent the floater rigid-body motion is special
+         ! First transition piece used to represent the floater rigid-body motion is handled separately
          m%u_TP(1:6)       = (/u%TPMesh%TranslationDisp(:,1),EulerExtractZYX(u%TPMesh%Orientation(:,:,1))/)
          m%udot_TP(1:6)    = MATMUL( RRg2b , (/u%TPMesh%TranslationVel(:,1), u%TPMesh%RotationVel(:,1)/) )
          m%udotdot_TP(1:6) = MATMUL( RRg2b , (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/) )
+
       end if
 
    ELSE
+
       ! For a fixed-bottom structure, we only need the small absolute motion of all transition pieces in the earth-fixed coordinate system.
       DO iTP = 1,p%nTP
          Idx = 6*iTP-5
@@ -3610,6 +3669,7 @@ SUBROUTINE GetUTP(u, p, x, m, bPrime, ErrStat, ErrMsg)
          m%udot_TP(Idx:(Idx+5))    = (/u%TPMesh%TranslationVel(:,iTP), u%TPMesh%RotationVel(:,iTP)/)
          m%udotdot_TP(Idx:(Idx+5)) = (/u%TPMesh%TranslationAcc(:,iTP), u%TPMesh%RotationAcc(:,iTP)/)
       ENDDO
+
    END IF      
 
 Contains
@@ -3651,8 +3711,6 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bCB)
    else
       m%UL = 0.0_ReKi
    end if
-
-   CALL GetUTP(u,p,x,m,.false.,ErrStat2,ErrMsg2)
 
    ! --- Adding Guyan contribution to R and L DOFs
    if (bGuyan .and. .not.p%Floating) then
