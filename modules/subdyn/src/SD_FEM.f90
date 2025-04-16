@@ -78,8 +78,8 @@ MODULE SD_FEM
   ! Types of Guyan Damping
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_None     = 0
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Rayleigh = 1
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_66       = 2 
-  INTEGER(IntKi)               :: idGuyanDamp_Valid(3) = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
+  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Matrix   = 2 
+  INTEGER(IntKi)               :: idGuyanDamp_Valid(3) = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_Matrix /)
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCCol,PropSetsBRCol,PropSetsXCol,PropSetsSCol,COSMsCol,CMassCol)
 
@@ -1404,6 +1404,12 @@ SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
          return
       end if
    ENDDO
+
+   if (p%Floating .and. (p%nTP>1)) then
+      p%TP1IsRBRefPt = .true.
+   else
+      p%TP1IsRBRefPt = .false.
+   end if
 
    TP1NodeFound = .false.
    if (p%TP1IsRBRefPt) then

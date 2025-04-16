@@ -167,7 +167,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: JDampings      !< Damping coefficients for internal modes [-]
     INTEGER(IntKi)  :: GuyanDampMod = 0_IntKi      !< Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix] [-]
     REAL(ReKi) , DIMENSION(1:2)  :: RayleighDamp = 0.0_ReKi      !< Mass and stiffness proportional damping coefficients (Rayleigh Damping) [only if GuyanDampMod=1] [-]
-    REAL(ReKi) , DIMENSION(1:6,1:6)  :: GuyanDampMat = 0.0_ReKi      !< Guyan Damping Matrix, see also CBB [-]
+    INTEGER(IntKi)  :: GuyanDampSize = 0_IntKi      !< Size of Guyan damping matrix [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GuyanDampMat      !< Guyan Damping Matrix, see also CBB [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Members      !< Member joints connection           [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MemberSpin      !< Member spin angle about its axis - for rectangular members  [rad]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: SSOutList      !< List of Output Channels            [-]
@@ -1434,7 +1435,19 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    end if
    DstInitTypeData%GuyanDampMod = SrcInitTypeData%GuyanDampMod
    DstInitTypeData%RayleighDamp = SrcInitTypeData%RayleighDamp
-   DstInitTypeData%GuyanDampMat = SrcInitTypeData%GuyanDampMat
+   DstInitTypeData%GuyanDampSize = SrcInitTypeData%GuyanDampSize
+   if (allocated(SrcInitTypeData%GuyanDampMat)) then
+      LB(1:2) = lbound(SrcInitTypeData%GuyanDampMat)
+      UB(1:2) = ubound(SrcInitTypeData%GuyanDampMat)
+      if (.not. allocated(DstInitTypeData%GuyanDampMat)) then
+         allocate(DstInitTypeData%GuyanDampMat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%GuyanDampMat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%GuyanDampMat = SrcInitTypeData%GuyanDampMat
+   end if
    if (allocated(SrcInitTypeData%Members)) then
       LB(1:2) = lbound(SrcInitTypeData%Members)
       UB(1:2) = ubound(SrcInitTypeData%Members)
@@ -1740,6 +1753,9 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    if (allocated(InitTypeData%JDampings)) then
       deallocate(InitTypeData%JDampings)
    end if
+   if (allocated(InitTypeData%GuyanDampMat)) then
+      deallocate(InitTypeData%GuyanDampMat)
+   end if
    if (allocated(InitTypeData%Members)) then
       deallocate(InitTypeData%Members)
    end if
@@ -1841,7 +1857,8 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPackAlloc(RF, InData%JDampings)
    call RegPack(RF, InData%GuyanDampMod)
    call RegPack(RF, InData%RayleighDamp)
-   call RegPack(RF, InData%GuyanDampMat)
+   call RegPack(RF, InData%GuyanDampSize)
+   call RegPackAlloc(RF, InData%GuyanDampMat)
    call RegPackAlloc(RF, InData%Members)
    call RegPackAlloc(RF, InData%MemberSpin)
    call RegPackAlloc(RF, InData%SSOutList)
@@ -1916,7 +1933,8 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%JDampings); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GuyanDampMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RayleighDamp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%GuyanDampMat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%GuyanDampSize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%GuyanDampMat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Members); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MemberSpin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%SSOutList); if (RegCheckErr(RF, RoutineName)) return

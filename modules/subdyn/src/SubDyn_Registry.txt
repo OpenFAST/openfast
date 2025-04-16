@@ -127,7 +127,8 @@ typedef  ^  SD_InitType   ReKi               CMass {:}{:} - -         "Concentra
 typedef  ^  SD_InitType   ReKi               JDampings {:} - -        "Damping coefficients for internal modes" 
 typedef  ^  SD_InitType   IntKi              GuyanDampMod  -  -  -    "Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix]" 
 typedef  ^  SD_InitType   ReKi               RayleighDamp  {2} -  -   "Mass and stiffness proportional damping coefficients (Rayleigh Damping) [only if GuyanDampMod=1]" 
-typedef  ^  SD_InitType   ReKi               GuyanDampMat  {6}{6} - - "Guyan Damping Matrix, see also CBB" 
+typedef  ^  SD_InitType   IntKi              GuyanDampSize  - - -     "Size of Guyan damping matrix"
+typedef  ^  SD_InitType   ReKi               GuyanDampMat  {:}{:} - - "Guyan Damping Matrix, see also CBB" 
 typedef  ^  SD_InitType   INTEGER            Members {:}{:} - -       "Member joints connection          " 
 typedef  ^  SD_InitType   ReKi               MemberSpin {:} - -       "Member spin angle about its axis - for rectangular members " rad
 typedef  ^  SD_InitType   CHARACTER(ChanLen) SSOutList {:} - -        "List of Output Channels           " 

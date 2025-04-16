@@ -1043,7 +1043,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
       TYPE(SD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
       TYPE(SD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-      TYPE(SD_ContinuousStateType), INTENT(IN)     :: x           !< Continuous states at t -WHY IS THIS INOUT and not JUST IN? RRD, changed to IN on2/19/14 check with Greg
+      TYPE(SD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
       TYPE(SD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
       TYPE(SD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
       TYPE(SD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
@@ -1064,24 +1064,20 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       IF ( ErrStat >= AbortErrLev ) RETURN
       IF ( p%nDOFM == 0 .and. .not.p%TP1IsRBRefPt) RETURN
 
-      ! Compute F_L, force on internal DOF
-      ! CALL GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(.not.p%Floating), RotateLoads=(p%Floating))
-
       ! State equation
       call SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 ); if (Failed()) return
 
+      ! Craig-Bampton states
       if (p%nDOFM > 0) then
-         dxdt%qm = x%qmdot
+         dxdt%qm    = x%qmdot
          dxdt%qmdot = m%qmdotdot
       endif
 
+      ! Rigid-body states
       if (p%TP1IsRBRefPt) then
-         dxdt%qR = x%qRdot
+         dxdt%qR    = x%qRdot
          dxdt%qRdot = m%qRdotdot
       endif
-
-      ! NOTE: matmul( TRANSPOSE(p%PhiM), m%F_L ) = matmul( m%F_L, p%PhiM ) because F_L is 1-D
-      ! dxdt%qmdot = -p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB,m%udotdot_TP)  + matmul(m%F_L, p%PhiM)
 
 CONTAINS
    LOGICAL FUNCTION Failed()
@@ -1255,20 +1251,17 @@ CALL ReadVar (UnIn, SDInputFile, Dummy_Str, 'GuyanDampMod', 'Guyan damping', Err
 if (is_numeric(Dummy_Str, DummyFloat)) then
    Init%GuyanDampMod=int(DummyFloat)
    CALL ReadAry( UnIn, SDInputFile, Init%RayleighDamp, 2, "RayleighDamp", "", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadVar (UnIn, SDInputFile, Dummy_Int, 'GuyanDampSize', 'Guyan damping matrix size', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-   IF (Check(Dummy_Int/=6, 'Invalid value entered for GuyanDampSize, value should be 6 for now.')) return
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(1,:), 6, "GuyanDampMat1", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(2,:), 6, "GuyanDampMat2", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(3,:), 6, "GuyanDampMat3", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(4,:), 6, "GuyanDampMat4", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(5,:), 6, "GuyanDampMat5", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
-   CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(6,:), 6, "GuyanDampMat6", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar (UnIn, SDInputFile, Init%GuyanDampSize, 'GuyanDampSize', 'Guyan damping matrix size', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+   CALL AllocAry(Init%GuyanDampMat, Init%GuyanDampSize, Init%GuyanDampSize, 'GuyanDampMat', ErrStat2, ErrMsg2 ); if(Failed()) return
+   do i = 1,Init%GuyanDampSize
+      CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(i,:), Init%GuyanDampSize, "GuyanDampMat", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
+   end do
    CALL ReadCom  ( UnIn, SDInputFile,               'STRUCTURE JOINTS'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 else
    call LegacyWarning('GuyanDampMod and following lines missing from input file. Assuming 0 Guyan damping.')
    Init%GuyanDampMod = idGuyanDamp_None
    Init%RayleighDamp = 0.0_ReKi
-   Init%GuyanDampMat = 0.0_ReKi
+   ! Init%GuyanDampMat = 0.0_ReKi
 endif
 IF (Check(.not.(any(idGuyanDamp_Valid==Init%GuyanDampMod)), 'Invalid value entered for GuyanDampMod')) return
 
@@ -1365,10 +1358,6 @@ DO I = 1, p%nNodes_C
 enddo
 ! Trigger: determine if floating/fixed  based on BCs and SSI file
 p%Floating  = isFloating(Init,p)
-
-if (p%Floating) then
-   p%TP1IsRBRefPt = .true.
-end if
 
 !------- INTERFACE JOINTS: T/F for Locked (to the TP)/Free DOF @each Interface Joint (only Locked-to-TP implemented thus far (=rigid TP)) ---------
 ! Joints with reaction forces, joint number and locked/free dof
@@ -2001,14 +1990,18 @@ SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
          endif
          CALL SD_CopyContState( xdot, OtherState%xdot ( 1 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
          !OtherState%xdot ( 1 )     = xdot  ! make sure this is most up to date
-         x%qm    = x%qm    + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qm - 59.*OtherState%xdot(2)%qm    + 37.*OtherState%xdot(3)%qm  &
-                                       - 9. * OtherState%xdot(4)%qm )
-         x%qmdot = x%qmdot + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qmdot - 59.*OtherState%xdot(2)%qmdot  &
+         if (p%nDOFM>0) then  
+            x%qm    = x%qm    + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qm - 59.*OtherState%xdot(2)%qm    + 37.*OtherState%xdot(3)%qm  &
+                                          - 9. * OtherState%xdot(4)%qm )
+            x%qmdot = x%qmdot + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qmdot - 59.*OtherState%xdot(2)%qmdot  &
                                           + 37.*OtherState%xdot(3)%qmdot  - 9.*OtherState%xdot(4)%qmdot )
-         x%qR    = x%qR    + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qR - 59.*OtherState%xdot(2)%qR    + 37.*OtherState%xdot(3)%qR  &
-                                       - 9. * OtherState%xdot(4)%qR )
-         x%qRdot = x%qRdot + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qRdot - 59.*OtherState%xdot(2)%qRdot  &
+         end if
+         if (p%TP1IsRBRefPt) then
+            x%qR    = x%qR    + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qR - 59.*OtherState%xdot(2)%qR    + 37.*OtherState%xdot(3)%qR  &
+                                          - 9. * OtherState%xdot(4)%qR )
+            x%qRdot = x%qRdot + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qRdot - 59.*OtherState%xdot(2)%qRdot  &
                                           + 37.*OtherState%xdot(3)%qRdot  - 9.*OtherState%xdot(4)%qRdot )
+         end if
       endif
       CALL SD_DestroyContState(xdot, ErrStat, ErrMsg)
       CALL SD_DestroyInput(u_interp, ErrStat, ErrMsg)
@@ -2060,24 +2053,35 @@ SUBROUTINE SD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
          CALL SD_CalcContStateDeriv(t + p%SDDeltaT, u_interp, p, x_pred, xd, z, OtherState, m, xdot_pred, ErrStat, ErrMsg ) ! initializes xdot_pred
          CALL SD_DestroyInput( u_interp, ErrStat, ErrMsg) ! local copy no longer needed
 
-         x%qm    = x%qm    + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qm +  19. * OtherState%xdot(1)%qm - 5. * OtherState%xdot(2)%qm &
-                                          + 1. * OtherState%xdot(3)%qm )
+         if (p%nDOFM>0) then
+            x%qm    = x%qm    + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qm +  19. * OtherState%xdot(1)%qm - 5. * OtherState%xdot(2)%qm &
+                                             + 1. * OtherState%xdot(3)%qm )
    
-         x%qmdot = x%qmdot + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qmdot + 19. * OtherState%xdot(1)%qmdot - 5. * OtherState%xdot(2)%qmdot &
-                                          + 1. * OtherState%xdot(3)%qmdot )
+            x%qmdot = x%qmdot + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qmdot + 19. * OtherState%xdot(1)%qmdot - 5. * OtherState%xdot(2)%qmdot &
+                                             + 1. * OtherState%xdot(3)%qmdot )
+         endif
 
-         x%qR    = x%qR    + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qR +  19. * OtherState%xdot(1)%qR - 5. * OtherState%xdot(2)%qR &
-                                          + 1. * OtherState%xdot(3)%qR )
+         if (p%TP1IsRBRefPt) then
+            x%qR    = x%qR    + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qR +  19. * OtherState%xdot(1)%qR - 5. * OtherState%xdot(2)%qR &
+                                             + 1. * OtherState%xdot(3)%qR )
    
-         x%qRdot = x%qRdot + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qRdot + 19. * OtherState%xdot(1)%qRdot - 5. * OtherState%xdot(2)%qRdot &
-                                          + 1. * OtherState%xdot(3)%qRdot )
+            x%qRdot = x%qRdot + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qRdot + 19. * OtherState%xdot(1)%qRdot - 5. * OtherState%xdot(2)%qRdot &
+                                             + 1. * OtherState%xdot(3)%qRdot )
+         endif
 
          CALL SD_DestroyContState( xdot_pred, ErrStat, ErrMsg) ! local copy no longer needed
       else
-         x%qm    = x_pred%qm
-         x%qmdot = x_pred%qmdot
-         x%qR    = x_pred%qR
-         x%qRdot = x_pred%qRdot
+
+         if (p%nDOFM>0) then
+            x%qm    = x_pred%qm
+            x%qmdot = x_pred%qmdot
+         endif
+
+         if (p%TP1IsRBRefPt) then
+            x%qR    = x_pred%qR
+            x%qRdot = x_pred%qRdot
+         endif
+
       endif
 
       CALL SD_DestroyContState( x_pred, ErrStat, ErrMsg) ! local copy no longer needed
@@ -2139,52 +2143,77 @@ SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
 
       ! find xdot at t
       CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg ) !initializes xdot
-      k1%qm       = p%SDDeltaT * xdot%qm
-      k1%qmdot    = p%SDDeltaT * xdot%qmdot
-      k1%qR       = p%SDDeltaT * xdot%qR
-      k1%qRdot    = p%SDDeltaT * xdot%qRdot
-      x_tmp%qm    = x%qm    + 0.5 * k1%qm
-      x_tmp%qmdot = x%qmdot + 0.5 * k1%qmdot
-      x_tmp%qR    = x%qR    + 0.5 * k1%qR
-      x_tmp%qRdot = x%qRdot + 0.5 * k1%qRdot
+
+      if (p%nDOFM>0) then
+         k1%qm       = p%SDDeltaT * xdot%qm
+         k1%qmdot    = p%SDDeltaT * xdot%qmdot
+         x_tmp%qm    = x%qm    + 0.5 * k1%qm
+         x_tmp%qmdot = x%qmdot + 0.5 * k1%qmdot
+      endif
+
+      if (p%TP1IsRBRefPt) then
+         k1%qR       = p%SDDeltaT * xdot%qR
+         k1%qRdot    = p%SDDeltaT * xdot%qRdot
+         x_tmp%qR    = x%qR    + 0.5 * k1%qR
+         x_tmp%qRdot = x%qRdot + 0.5 * k1%qRdot
+      endif
 
       ! interpolate u to find u_interp = u(t + dt/2)
       CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%SDDeltaT, ErrStat, ErrMsg)
 
       ! find xdot at t + dt/2
       CALL SD_CalcContStateDeriv( t + 0.5*p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
-      k2%qm    = p%SDDeltaT * xdot%qm
-      k2%qmdot = p%SDDeltaT * xdot%qmdot
-      k2%qR    = p%SDDeltaT * xdot%qR
-      k2%qRdot = p%SDDeltaT * xdot%qRdot
-      x_tmp%qm    = x%qm    + 0.5 * k2%qm
-      x_tmp%qmdot = x%qmdot + 0.5 * k2%qmdot
-      x_tmp%qR    = x%qR    + 0.5 * k2%qR
-      x_tmp%qRdot = x%qRdot + 0.5 * k2%qRdot
+
+      if (p%nDOFM>0) then
+         k2%qm    = p%SDDeltaT * xdot%qm
+         k2%qmdot = p%SDDeltaT * xdot%qmdot
+         x_tmp%qm    = x%qm    + 0.5 * k2%qm
+         x_tmp%qmdot = x%qmdot + 0.5 * k2%qmdot
+      endif
+
+      if (p%TP1IsRBRefPt) then
+         k2%qR    = p%SDDeltaT * xdot%qR
+         k2%qRdot = p%SDDeltaT * xdot%qRdot
+         x_tmp%qR    = x%qR    + 0.5 * k2%qR
+         x_tmp%qRdot = x%qRdot + 0.5 * k2%qRdot
+      endif
 
       ! find xdot at t + dt/2
       CALL SD_CalcContStateDeriv( t + 0.5*p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
-      k3%qm       = p%SDDeltaT * xdot%qm
-      k3%qmdot    = p%SDDeltaT * xdot%qmdot
-      k3%qR       = p%SDDeltaT * xdot%qR
-      k3%qRdot    = p%SDDeltaT * xdot%qRdot
-      x_tmp%qm    = x%qm    + k3%qm
-      x_tmp%qmdot = x%qmdot + k3%qmdot
-      x_tmp%qR    = x%qR    + k3%qR
-      x_tmp%qRdot = x%qRdot + k3%qRdot
+
+      if (p%nDOFM>0) then
+         k3%qm       = p%SDDeltaT * xdot%qm
+         k3%qmdot    = p%SDDeltaT * xdot%qmdot
+         x_tmp%qm    = x%qm    + k3%qm
+         x_tmp%qmdot = x%qmdot + k3%qmdot
+      endif
+
+      if (p%TP1IsRBRefPt) then
+         k3%qR       = p%SDDeltaT * xdot%qR
+         k3%qRdot    = p%SDDeltaT * xdot%qRdot
+         x_tmp%qR    = x%qR    + k3%qR
+         x_tmp%qRdot = x%qRdot + k3%qRdot
+      endif
+
       ! interpolate u to find u_interp = u(t + dt)
       CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t + p%SDDeltaT, ErrStat, ErrMsg)
 
       ! find xdot at t + dt
       CALL SD_CalcContStateDeriv( t + p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
-      k4%qm    = p%SDDeltaT * xdot%qm
-      k4%qmdot = p%SDDeltaT * xdot%qmdot
-      k4%qR    = p%SDDeltaT * xdot%qR
-      k4%qRdot = p%SDDeltaT * xdot%qRdot
-      x%qm     = x%qm    +  ( k1%qm    + 2. * k2%qm    + 2. * k3%qm    + k4%qm    ) / 6.
-      x%qmdot  = x%qmdot +  ( k1%qmdot + 2. * k2%qmdot + 2. * k3%qmdot + k4%qmdot ) / 6.
-      x%qR     = x%qR    +  ( k1%qR    + 2. * k2%qR    + 2. * k3%qR    + k4%qR    ) / 6.
-      x%qRdot  = x%qRdot +  ( k1%qRdot + 2. * k2%qRdot + 2. * k3%qRdot + k4%qRdot ) / 6.
+
+      if (p%nDOFM>0) then
+         k4%qm    = p%SDDeltaT * xdot%qm
+         k4%qmdot = p%SDDeltaT * xdot%qmdot
+         x%qm     = x%qm    +  ( k1%qm    + 2. * k2%qm    + 2. * k3%qm    + k4%qm    ) / 6.
+         x%qmdot  = x%qmdot +  ( k1%qmdot + 2. * k2%qmdot + 2. * k3%qmdot + k4%qmdot ) / 6.
+      endif
+
+      if (p%TP1IsRBRefPt) then
+         k4%qR    = p%SDDeltaT * xdot%qR
+         k4%qRdot = p%SDDeltaT * xdot%qRdot
+         x%qR     = x%qR    +  ( k1%qR    + 2. * k2%qR    + 2. * k3%qR    + k4%qR    ) / 6.
+         x%qRdot  = x%qRdot +  ( k1%qRdot + 2. * k2%qRdot + 2. * k3%qRdot + k4%qRdot ) / 6.
+      endif
 
       CALL CleanUp()
       
@@ -2951,7 +2980,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    ! Set TI, transformation matrix from interface DOFs to TP ref point (Note: TI allocated in AllocParameters)
    CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI__, p%nDOFI__, p%nTP, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
    TI_transpose =  TRANSPOSE(p%TI) 
-   p%RBRefPt = Init%TP_RefPoint(:,1)
+   p%RBRefPt = Init%TP_RefPoint(:,1) ! Undisplaced position of the rigid-body reference point (1st dummy transition piece)
    if (p%Floating) then
       ! Set G, transformation matrix to reconstruct rigid-body modes to replace the first 6 Guyan modes (Note: G allocated in AllocParameters)
       CALL Eye(p%GMat, ErrStat2, ErrMsg2); if(Failed()) return
@@ -2996,32 +3025,52 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    !...............................
    p%MBB = MATMUL( MATMUL( TI_transpose, MBBb ), p%TI) != MBBt
    p%KBB = MATMUL( MATMUL( TI_transpose, KBBb ), p%TI) != KBBt
-   if (p%floating) then
+   if (p%TP1IsRBRefPt) then
+      ! Transfom MBB and KBB to MGG and KGG
       p%MBB = MATMUL( MATMUL( GMat_transpose, p%MBB ), p%GMat )
       p%KBB = MATMUL( MATMUL( GMat_transpose, p%KBB ), p%GMat )
    endif
 
-   ! 6x6 Guyan Damping matrix TODO: Need to update this for multiple transition pieces (LW) 
+   ! Full user Guyan Damping matrix
    if     (Init%GuyanDampMod == idGuyanDamp_None) then
       ! No Damping
       p%CBB = 0.0_ReKi
    elseif (Init%GuyanDampMod == idGuyanDamp_Rayleigh) then
       ! Rayleigh Damping
-      p%CBB = Init%RayleighDamp(1) * p%MBB + Init%RayleighDamp(2) * p%KBB
-   elseif (Init%GuyanDampMod == idGuyanDamp_66) then
-      ! User 6x6 matrix
-      if (size(p%CBB,1)/=6) then
-         ErrMsg='Cannot use 6x6 Guyan Damping matrix, number of interface DOFs is'//num2lstr(size(p%CBB,1)); ErrStat=ErrID_Fatal;
-         return
+      if (p%floating) then ! No damping for rigid-body motion
+         p%CBB = 0.0_ReKi
+         if (p%TP1IsRBRefPt) then
+            ! Rayleigh damping for elastic Guyan modes only
+            p%CBB(7:p%nDOFL_TP,7:p%nDOFL_TP) = Init%RayleighDamp(1) * p%MBB(7:p%nDOFL_TP,7:p%nDOFL_TP) + Init%RayleighDamp(2) * p%KBB(7:p%nDOFL_TP,7:p%nDOFL_TP)
+         end if
+      else
+         p%CBB = Init%RayleighDamp(1) * p%MBB + Init%RayleighDamp(2) * p%KBB
       endif
-      p%CBB = Init%GuyanDampMat
+   elseif (Init%GuyanDampMod == idGuyanDamp_Matrix) then
+      ! User full user-defined Guyan damping matrix
+      if (p%floating) then
+         ! No damping for rigid-body modes
+         p%CBB = 0.0_ReKi
+         if ( Init%GuyanDampSize /= (p%nDOFL_TP-6) ) then
+            ErrMsg='Guyan damping matrix should have a size of '//trim(num2lstr(p%nDOFL_TP-6))//'. '; ErrStat=ErrID_Fatal; return
+         end if
+         if (p%TP1IsRBRefPt) then
+            p%CBB(7:p%nDOFL_TP,7:p%nDOFL_TP) = Init%GuyanDampMat
+         end if
+      else
+         if ( Init%GuyanDampSize /= p%nDOFL_TP ) then
+            ErrMsg='Guyan damping matrix should have a size of '//trim(num2lstr(p%nDOFL_TP))//'. '; ErrStat=ErrID_Fatal; return
+         end if
+         p%CBB = Init%GuyanDampMat
+      end if
    endif
 
    !p%D1_15=-TI_transpose  !this is 6x6NIN
    IF ( p%nDOFM > 0 ) THEN ! These values don't exist for nDOFM=0; i.e., p%nDOFM == 0
       ! TODO cant use LAPACK due to type conversions FEKi->ReKi
       p%MBM = MATMUL( TI_transpose, MBmb )  ! NOTE: type conversion
-      if (p%floating) then
+      if (p%TP1IsRBRefPt) then
+         ! Transform MBM to MGM
          p%MBM = MATMUL( GMat_transpose, p%MBM )
       endif
       !CALL LAPACK_gemm( 'T', 'N', 1.0_ReKi, p%TI, MBmb, 0.0_ReKi, p%MBM, ErrStat2, ErrMsg2); if(Failed()) return
@@ -3066,7 +3115,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       !p%D2_64 = MATMUL( p%PhiM, p%PhiM_T )
       CALL LAPACK_GEMM( 'N', 'T', 1.0_ReKi, p%PhiM, p%PhiM, 0.0_ReKi, p%D2_64, ErrStat2, ErrMsg2 ); if(Failed()) return;
                               
-     !Now calculate a Jacobian used when AM2 is called and store in parameters    
+      !Now calculate a Jacobian used when AM2 is called and store in parameters    
       IF (p%IntMethod .EQ. 4) THEN       ! Allocate Jacobian if AM2 is requested & if there are states (p%nDOFM > 0)
          n=2*p%nDOFM
          CALL AllocAry( p%AM2Jac, n, n, 'p%AM2InvJac', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -3803,8 +3852,12 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
 
    ! --- Build vector of external forces (including gravity) (Moment done below)  
    m%Fext= 0.0_ReKi
-   if (RotateLoads) then ! Forces in body coordinates 
-      Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 rigid-body coordinates
+   if (RotateLoads) then ! Forces in rigid-body coordinates
+      if (p%TP1IsRBRefPt) then
+         Rg2b(1:3,1:3) = EulerConstructZYX(x%qR(4:6))
+      else
+         Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 rigid-body coordinates
+      end if
       do iNode = 1,p%nNodes
          m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  matmul(Rg2b, u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3)) ) + p%FC(p%NodesDOF(iNode)%List(1:3))
       enddo
@@ -3825,11 +3878,11 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
       do iCC = 1, size(p%CtrlElem2Channel,1)  ! Loop on controllable cables
          iElem    = p%CtrlElem2Channel(iCC,1)
          iChannel = p%CtrlElem2Channel(iCC,2)
-         IDOF = p%ElemsDOF(1:12, iElem)
+         IDOF     = p%ElemsDOF(1:12, iElem)
          ! DeltaL = DeltaL0 + DeltaL_control = - Le T0/(EA+T0) + DeltaL_control
-         DeltaL = - p%ElemProps(iElem)%Length * p%ElemProps(iElem)%T0  / (p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area   +  p%ElemProps(iElem)%T0)
-         DeltaL = DeltaL + u%CableDeltaL(iChannel) 
-         ! T(t) = - EA * DeltaL(t) /(Le + Delta L(t)) ! NOTE DeltaL<0
+         DeltaL   = - p%ElemProps(iElem)%Length * p%ElemProps(iElem)%T0  / (p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area   +  p%ElemProps(iElem)%T0)
+         DeltaL   = DeltaL + u%CableDeltaL(iChannel) 
+         ! T(t)   = - EA * DeltaL(t) /(Le + Delta L(t)) ! NOTE DeltaL<0
          CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * DeltaL / (p%ElemProps(iElem)%Length + DeltaL)
          if (RotateLoads) then ! in body coordinate
             ! We only rotate the loads, moments are rotated below
@@ -3930,7 +3983,7 @@ END SUBROUTINE GetExtForceOnInternalDOF
 
 !------------------------------------------------------------------------------------------------------
 !> Construct force vector on interface DOF (I) 
-!! NOTE: This function should only be called after GetExtForceOnInternalDOF 
+!! NOTE: This function should only be called after GetExtForceOnInternalDOF, which populates Fext
 SUBROUTINE GetExtForceOnInterfaceDOF(  p, Fext, F_I)
    type(SD_ParameterType),   intent(in  ) :: p ! Parameters
    real(ReKi), dimension(:), intent(in  ) :: Fext !< Vector of external forces on un-reduced DOF
