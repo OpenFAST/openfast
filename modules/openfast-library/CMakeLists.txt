@@ -61,7 +61,6 @@ target_link_libraries(openfast_prelib
   mappplib
   moordynlib
   orcaflexlib
-  sctypeslib
   seastlib
   sedlib
   servodynlib
@@ -77,7 +76,7 @@ add_library(openfast_postlib STATIC
   src/FAST_AeroMap.f90
   src/FAST_SolverTC.f90
 )
-target_link_libraries(openfast_postlib openfast_prelib extinflowlib scfastlib)
+target_link_libraries(openfast_postlib openfast_prelib extinflowlib)
 target_include_directories(openfast_postlib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )

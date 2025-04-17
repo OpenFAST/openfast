@@ -10,7 +10,6 @@ use BeamDyn
 use SubDyn
 use AeroDyn
 use ServoDyn
-use SC_DataEx
 
 implicit none
 

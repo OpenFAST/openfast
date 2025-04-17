@@ -28,7 +28,6 @@ MODULE FAST_Subs
    USE FAST_Funcs
    USE FAST_SolverTC
    USE FAST_Mapping, only: FAST_InitMappings
-   USE SC_DataEx
    USE ServoDyn
 
    IMPLICIT NONE
@@ -54,7 +53,7 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
    Turbine%TurbID = TurbID
 
    CALL FAST_InitializeAll( t_initial, Turbine%m_Glue, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-               Turbine%ED, Turbine%SED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%ADsk, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, Turbine%SC_DX,&
+               Turbine%ED, Turbine%SED, Turbine%BD, Turbine%SrvD, Turbine%AD, Turbine%ADsk, Turbine%ExtLd, Turbine%IfW, Turbine%ExtInfw, &
                Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                Turbine%IceF, Turbine%IceD, CompAeroMaps, ErrStat, ErrMsg, InFile, ExternInitData )
    if(ErrStat >= AbortErrLev) return
@@ -83,7 +82,7 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
 END SUBROUTINE FAST_InitializeAll_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to call Init routine for each module. This routine sets all of the init input data for each module.
-SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SED, BD, SrvD, AD, ADsk, ExtLd, IfW, ExtInfw, SC_DX, SeaSt, HD, SD, ExtPtfm, &
+SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SED, BD, SrvD, AD, ADsk, ExtLd, IfW, ExtInfw, SeaSt, HD, SD, ExtPtfm, &
                                MAPp, FEAM, MD, Orca, IceF, IceD, CompAeroMaps, ErrStat, ErrMsg, InFile, ExternInitData )
 
    use ElastoDyn_Parameters, only: Method_RK4
@@ -103,7 +102,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    TYPE(ExtLoads_Data),      INTENT(INOUT) :: ExtLd               !< ExtLoads data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(ExternalInflow_Data),INTENT(INOUT) :: ExtInfw             !< ExternalInflow data
-   TYPE(SCDataEx_Data),      INTENT(INOUT) :: SC_DX               !< SuperController exchange data
    TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
@@ -212,14 +210,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
    ! ... Open and read input files ...
    ! also, set applicable farm paramters and turbine reference position also for graphics output
-   p_FAST%UseSC = .FALSE.
    if (PRESENT(ExternInitData)) then
       p_FAST%FarmIntegration = ExternInitData%FarmIntegration
       p_FAST%TurbinePos = ExternInitData%TurbinePos
       p_FAST%WaveFieldMod = ExternInitData%WaveFieldMod
-      if( (ExternInitData%NumSC2CtrlGlob .gt. 0) .or. (ExternInitData%NumSC2Ctrl .gt. 0) .or. (ExternInitData%NumCtrl2SC .gt. 0)) then
-         p_FAST%UseSC = .TRUE.
-      end if
 
       if (ExternInitData%FarmIntegration) then ! we're integrating with FAST.Farm
          CALL FAST_Init( p_FAST, m_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, OverrideAbortLev=.false., RootName=ExternInitData%RootName )
@@ -333,6 +327,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
       NumBl = Init%OutData_ED(iED)%NumBl
       p_FAST%GearBox_index = Init%OutData_ED(iED)%GearBox_index
+
+      ! Assign the inital positions for use by MoorDyn initalization
+      p_FAST%PlatformPosInit = Init%OutData_ED(iED)%PlatformPos
    
       if (p_FAST%CalcSteady) then
          if ( EqualRealNos(Init%OutData_ED(iED)%RotSpeed, 0.0_ReKi) ) then
@@ -787,25 +784,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_ExtInfw%FlowField
    endif
 
-
-   !----------------------------------------------------------------------------
-   ! Initialize SuperController
-   !----------------------------------------------------------------------------
-
-   if (present(ExternInitData)) then
-      if (p_FAST%UseSC) then
-         call SC_DX_Init(ExternInitData%NumSC2CtrlGlob, ExternInitData%NumSC2Ctrl, ExternInitData%NumCtrl2SC, SC_DX, ErrStat2, ErrMsg2)
-         if (Failed()) return
-      else
-         SC_DX%u%c_obj%toSC_Len       = 0
-         SC_DX%u%c_obj%toSC           = C_NULL_PTR
-         SC_DX%y%c_obj%fromSC_Len     = 0
-         SC_DX%y%c_obj%fromSC         = C_NULL_PTR
-         SC_DX%y%c_obj%fromSCglob_Len = 0
-         SC_DX%y%c_obj%fromSCglob     = C_NULL_PTR
-      end if
-   end if
-
    !----------------------------------------------------------------------------
    ! CompHydro (HydroDyn)
    !----------------------------------------------------------------------------
@@ -981,7 +959,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_MD%FileName  = p_FAST%MooringFile         ! This needs to be set according to what is in the FAST input file.
       Init%InData_MD%RootName  = p_FAST%OutFileRoot
 
-      Init%InData_MD%PtfmInit(:,1)  = Init%OutData_ED(iED)%PlatformPos ! initial position of the platform (when a FAST module, MoorDyn just takes one row in this matrix)
+      Init%InData_MD%PtfmInit(:,1)  = p_FAST%PlatformPosInit ! initial position of the platform (when a FAST module, MoorDyn just takes one row in this matrix)
       Init%InData_MD%FarmSize       = 0                           ! 0 here indicates normal FAST module use of MoorDyn, for a single turbine
       Init%InData_MD%TurbineRefPos(:,1) = 0.0_DbKi                ! for normal FAST use, the global reference frame is at 0,0,0
       Init%InData_MD%g         = p_FAST%Gravity                   ! This need to be according to g used in ElastoDyn
@@ -1228,35 +1206,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          enddo
       endif
 
-      IF ( PRESENT(ExternInitData) ) THEN
-         Init%InData_SrvD%NumSC2CtrlGlob = ExternInitData%NumSC2CtrlGlob
-         IF ( (Init%InData_SrvD%NumSC2CtrlGlob > 0) ) THEN
-            CALL AllocAry( Init%InData_SrvD%fromSCGlob, Init%InData_SrvD%NumSC2CtrlGlob, 'Init%InData_SrvD%fromSCGlob', ErrStat2, ErrMsg2)
-            if (Failed()) return
-
-            do i=1,Init%InData_SrvD%NumSC2CtrlGlob
-               Init%InData_SrvD%fromSCGlob(i) = ExternInitData%fromSCGlob(i)
-            end do
-         END IF
-
-         Init%InData_SrvD%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
-         IF ( (Init%InData_SrvD%NumSC2Ctrl > 0) ) THEN
-            CALL AllocAry( Init%InData_SrvD%fromSC, Init%InData_SrvD%NumSC2Ctrl, 'Init%InData_SrvD%fromSC', ErrStat2, ErrMsg2)
-            if (Failed()) return
-
-            do i=1,Init%InData_SrvD%NumSC2Ctrl
-               Init%InData_SrvD%fromSC(i) = ExternInitData%fromSC(i)
-            end do
-         END IF
-
-         Init%InData_SrvD%NumCtrl2SC = ExternInitData%NumCtrl2SC
-
-      ELSE
-         Init%InData_SrvD%NumSC2CtrlGlob = 0
-         Init%InData_SrvD%NumSC2Ctrl = 0
-         Init%InData_SrvD%NumCtrl2SC = 0
-      END IF
-      
       IF ( p_FAST%CompInflow == Module_IfW ) THEN !assign the number of gates to ServD
          if (allocated(IfW%y%lidar%LidSpeed)) then    ! make sure we have the array allocated before setting it
             CALL AllocAry(Init%InData_SrvD%LidSpeed, size(IfW%y%lidar%LidSpeed), 'Init%InData_SrvD%LidSpeed',     errStat2, ErrMsg2)
@@ -4775,11 +4724,6 @@ SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   if (Turbine%p_FAST%UseSC ) then
-      call SC_DX_SetInputs(Turbine%p_FAST, Turbine%SrvD%y, Turbine%SC_DX, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end if
-
    !----------------------------------------------------------------------------
    ! Write output to file
    !----------------------------------------------------------------------------
@@ -5140,11 +5084,6 @@ SUBROUTINE FAST_Prework_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    ! the previous step before we extrapolate these inputs:
    if (Turbine%p_FAST%CompServo == Module_SrvD) call SrvD_SetExternalInputs(Turbine%p_FAST, Turbine%m_FAST, Turbine%SrvD%Input(1))
 
-   if (Turbine%p_FAST%UseSC) THEN
-      call SC_DX_SetOutputs(Turbine%p_FAST, Turbine%SrvD%Input(1), Turbine%SC_DX, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   END if
-
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    !! ## Step 1.a: Extrapolate Inputs
    !!
@@ -5194,16 +5133,6 @@ SUBROUTINE FAST_UpdateStates_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
                         Turbine%m_Glue%ModData, Turbine%m_Glue%Mappings, Turbine, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-
-      
-   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   !! SuperController
-   !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-   if (Turbine%p_FAST%UseSC) then
-      call SC_DX_SetInputs(Turbine%p_FAST, Turbine%SrvD%y, Turbine%SC_DX, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end if
 
 END SUBROUTINE FAST_UpdateStates_T
 

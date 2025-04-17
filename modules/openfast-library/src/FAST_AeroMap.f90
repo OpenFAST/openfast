@@ -114,7 +114,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    ! Standard Turbine initialization
    call FAST_InitializeAll(t_initial, T%m_Glue, T%p_FAST, T%y_FAST, T%m_FAST, &
                            T%ED, T%SED, T%BD, T%SrvD, T%AD, T%ADsk, &
-                           T%ExtLd, T%IfW, T%ExtInfw, T%SC_DX, &
+                           T%ExtLd, T%IfW, T%ExtInfw, &
                            T%SeaSt, T%HD, T%SD, T%ExtPtfm, T%MAP, &
                            T%FEAM, T%MD, T%Orca, T%IceF, T%IceD, &
                            CompAeroMaps, ErrStat2, ErrMsg2)
