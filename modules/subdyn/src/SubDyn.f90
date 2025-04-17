@@ -633,6 +633,7 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
                         -qRPdot*qRYdot*sin(qRY) - qRRdot*(qRPdot*sin(qRP)*sin(qRY)-qRYdot*cos(qRP)*cos(qRY)), &
                         -qRPdot*qRRdot*cos(qRP)  /)   )
         if (allocated(tmpInv)) deallocate(tmpInv)
+        m%F_TP(1:6)          = F_TP1  ! Likely not needed, but good for completeness
         m%F_TP(7:p%nDOFL_TP) = m%EOM_Sol(7:p%nDOFL_TP)
 
      else
@@ -679,29 +680,31 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: Y1_GuyanLoadCorrection(3) ! Lever arm moment contributions due to interface displacement
       INTEGER(IntKi), pointer      :: DOFList(:)
       REAL(ReKi)                   :: DCM(3,3)
-      REAL(ReKi)                   :: KBB(6,6), MBB(6,6), CBB(6,6)   ! Guyan mode inertia and damping matrices transformed to earth-fixed frame of reference
-      REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
-      TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
+      REAL(ReKi)                   :: KBB(6,6), MBB(6,6), CBB(6,6) ! Guyan mode inertia and damping matrices transformed to earth-fixed frame of reference
+      REAL(ReKi)                   :: F_I(6*p%nNodes_I)            ! Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
+      TYPE(SD_ContinuousStateType) :: dxdt                         ! Continuous state derivatives at t- for output file qmdotdot purposes only
       ! Variables for Guyan rigid body motion
-      real(ReKi), dimension(3) :: RBVel, RBAcc, Om, OmD ! Omega, OmegaDot (body rotational speed and acceleration)
-      real(ReKi), dimension(3) ::  rIP  ! Vector from TP to rotated Node
-      real(ReKi), dimension(3) ::  rIP0 ! Vector from TP to Node (undeflected)
-      real(ReKi), dimension(3) ::  Om_X_r ! Crossproduct of Omega and r
-      real(ReKi), dimension(3) ::  duP  ! Displacement of node due to rigid rotation
-      real(ReKi), dimension(3) ::  vP   ! Rigid-body velocity of node
-      real(ReKi), dimension(3) ::  aP   ! Rigid-body acceleration of node
-      real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
-      real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global coordinates
-      real(R8Ki), dimension(6,6) :: RRb2g ! Rotation matrix body 2 global coordinates, acts on a 6-vector
-      real(R8Ki), dimension(6,6) :: RRg2b ! Rotation matrix body 2 global coordinates, acts on a 6-vector
-      INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
-      CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+      real(ReKi), dimension(3)     :: RBVel, RBAcc ! Rigid-body translational velocity and acceleration
+      real(ReKi), dimension(3)     :: Om, OmD      ! Rigid-body rotational velocity and acceleration (Omega, OmegaDot)
+      real(ReKi), dimension(3)     :: rIP          ! Vector from TP to rotated Node
+      real(ReKi), dimension(3)     :: rIP0         ! Vector from TP to Node (undeflected)
+      real(ReKi), dimension(3)     :: Om_X_r       ! Crossproduct of Omega and r
+      real(ReKi), dimension(3)     :: duP          ! Displacement of node due to rigid rotation
+      real(ReKi), dimension(3)     :: vP           ! Rigid-body velocity of node
+      real(ReKi), dimension(3)     :: aP           ! Rigid-body acceleration of node
+      real(R8Ki), dimension(3,3)   :: Rg2b         ! Rotation matrix global 2 body coordinates
+      real(R8Ki), dimension(3,3)   :: Rb2g         ! Rotation matrix body 2 global coordinates
+      real(R8Ki), dimension(6,6)   :: RRb2g        ! Rotation matrix body 2 global coordinates, acts on a 6-vector
+      real(R8Ki), dimension(6,6)   :: RRg2b        ! Rotation matrix body 2 global coordinates, acts on a 6-vector
+      INTEGER(IntKi)               :: ErrStat2     ! Error status of the operation (occurs after initial error)
+      CHARACTER(ErrMsgLen)         :: ErrMsg2      ! Error message if ErrStat2 /= ErrID_None
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      ! test call
-      call SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      call SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 ); if(Failed()) return
+      call GetUTP(u,p,x,m,ErrStat2,ErrMsg2,bPrime=(.false.));                  if(Failed()) return
+      ! call GetUFull();                                                         if(Failed()) return
 
       ! --- Convert inputs to FEM DOFs and convenient 6-vector storage
       ! Compute the roll, pitch, and yaw angles given the input direction cosine matrix
@@ -730,7 +733,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          CALL Eye( m%RAllb2g, ErrStat2, ErrMsg2 )
          CALL Eye( m%RAllg2b, ErrStat2, ErrMsg2 )
       END IF      
-      CALL GetUTP(u,p,x,m,ErrStat2,ErrMsg2,bPrime=(.false.)); if(Failed()) return
+
 
       ! --------------------------------------------------------------------------------
       ! --- Output Meshes 2&3
@@ -885,41 +888,41 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------
       ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
       ! --------------------------------------------------------------------------------
-      ! Contribution from Craig-Bampton modes qm and qdot_m
-      if ( p%nDOFM > 0) then
-         m%Y1_CB = -( matmul(p%C1_11, x%qm) + matmul(p%C1_12, x%qmdot) )  ! - ( [-M_Bm K_mm]q_m + [-M_Bm C_mm] qdot_m )
-         if (p%Floating) then
-            m%Y1_CB = matmul(m%RAllb2g, m%Y1_CB) !>>> Rotate All
-         endif
-      else
-         m%Y1_CB = 0.0_ReKi
-      endif
+      ! ! Contribution from Craig-Bampton modes qm and qdot_m
+      ! if ( p%nDOFM > 0) then
+      !    m%Y1_CB = -( matmul(p%C1_11, x%qm) + matmul(p%C1_12, x%qmdot) )  ! - ( [-M_Bm K_mm]q_m + [-M_Bm C_mm] qdot_m )
+      !    if (p%Floating) then
+      !       m%Y1_CB = matmul(m%RAllb2g, m%Y1_CB) !>>> Rotate All
+      !    endif
+      ! else
+      !    m%Y1_CB = 0.0_ReKi
+      ! endif
 
-      ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP
-      if (p%Floating) then
-          ! Transform the body-frame Guyan mode (rigid-body) inertia and damping matrix to global frame
-          m%KBB = matmul(m%RAllb2g, p%KBB)
-          m%MBB = matmul(m%RAllb2g, p%MBB)
-          m%CBB = matmul(m%RAllb2g, p%CBB)
-          m%Y1_Utp  = - (matmul(m%KBB, m%u_TP) + matmul(m%CBB,m%udot_TP) + matmul(m%MBB,m%udotdot_TP) )
-          ! Add back the nonlinear terms of the Guyan mode equation of motion
-          m%Y1_Utp(1:3) = m%Y1_Utp(1:3) - matmul(Rb2g, p%MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),p%rPG)) )
-          m%Y1_Utp(4:6) = m%Y1_Utp(4:6) - matmul(Rb2g, cross_product(m%udot_TP(4:6),matmul(p%MBB(4:6,4:6),m%udot_TP(4:6))) )
-      else
-          m%Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB,m%udotdot_TP) )
-      end if
+      ! ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP
+      ! if (p%Floating) then
+      !     ! Transform the body-frame Guyan mode (rigid-body) inertia and damping matrix to global frame
+      !     m%KBB = matmul(m%RAllb2g, p%KBB)
+      !     m%MBB = matmul(m%RAllb2g, p%MBB)
+      !     m%CBB = matmul(m%RAllb2g, p%CBB)
+      !     m%Y1_Utp  = - (matmul(m%KBB, m%u_TP) + matmul(m%CBB,m%udot_TP) + matmul(m%MBB,m%udotdot_TP) )
+      !     ! Add back the nonlinear terms of the Guyan mode equation of motion
+      !     m%Y1_Utp(1:3) = m%Y1_Utp(1:3) - matmul(Rb2g, p%MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),p%rPG)) )
+      !     m%Y1_Utp(4:6) = m%Y1_Utp(4:6) - matmul(Rb2g, cross_product(m%udot_TP(4:6),matmul(p%MBB(4:6,4:6),m%udot_TP(4:6))) )
+      ! else
+      !     m%Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB,m%udotdot_TP) )
+      ! end if
 
-      if (p%nDOFM>0) then
-         !>>> Rotate All
-         ! NOTE: this introduces some hysteresis
-         if (p%Floating) then
-            ! udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
-            ! udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
-            m%Y1_Utp  = m%Y1_Utp + matmul(m%RAllb2g, matmul(p%MBmmB, m%udotdot_TP))
-         else
-            m%Y1_Utp  = m%Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)
-         endif
-      endif
+      ! if (p%nDOFM>0) then
+      !    !>>> Rotate All
+      !    ! NOTE: this introduces some hysteresis
+      !    if (p%Floating) then
+      !       ! udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
+      !       ! udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
+      !       m%Y1_Utp  = m%Y1_Utp + matmul(m%RAllb2g, matmul(p%MBmmB, m%udotdot_TP))
+      !    else
+      !       m%Y1_Utp  = m%Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)
+      !    endif
+      ! endif
 
       if (p%Floating) then
          ! --- Special case for floating without extra moment, we use "rotated loads" m%F_L previously computed
@@ -929,8 +932,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%Y1_Guy_R =   matmul(m%RAllb2g, m%Y1_Guy_R)
          m%Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, rotated loads
          m%Y1_Guy_L =   matmul(m%RAllb2g, m%Y1_Guy_L)
-         m%Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
-         m%Y1_CB_L  =   matmul(m%RAllb2g, m%Y1_CB_L)  ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
+         ! m%Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
+         ! m%Y1_CB_L  =   matmul(m%RAllb2g, m%Y1_CB_L)  ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
       else
          ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
          call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(.TRUE.), RotateLoads=.False.); if(Failed()) return
@@ -938,11 +941,13 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! Contributions from external forces
          m%Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
          m%Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
-         m%Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
+         ! m%Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
       endif
 
       ! Total contribution
-      m%Y1 = matmul( matmul( m%RAllb2g , matmul( p%GMat , m%RAllg2b ) )  ,  m%Y1_CB + m%Y1_Utp + m%Y1_CB_L )  + m%Y1_Guy_L + m%Y1_Guy_R 
+      ! m%Y1 = matmul( matmul( m%RAllb2g , matmul( p%GMat , m%RAllg2b ) )  ,  m%Y1_CB + m%Y1_Utp + m%Y1_CB_L )  + m%Y1_Guy_L + m%Y1_Guy_R 
+      m%Y1 = m%Y1_Guy_R + m%Y1_Guy_L - matmul( m%RAllb2g , m%F_TP )
+      ! When p%TP1IsRBRefPt, confirmed m%Y1(1:6) = 0, i.e., no reaction load from the dummy transition piece
 
       ! KEEP ME
       !if ( p%nDOFM > 0) then
@@ -956,25 +961,30 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Computing extra moments due to lever arm introduced by interface displacement
       ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancellation of signs
-      ! if (.not.p%floating) then ! if Fixed, transfer from non deflected TP to u_TP 
-      if (p%TP1IsRBRefPt) then
-         firstTP = 2
-      else
-         firstTP = 1
+      if (p%floating .and. p%TP1IsRBRefPt) then
+
+         do i = 2,p%nTP
+            Y1_GuyanLoadCorrection = -cross_product( matmul( Rb2g , m%u_TP((6*(i-1)+1):(6*(i-1)+3)) ) , m%Y1((6*(i-1)+1):(6*(i-1)+3)) )
+            m%Y1((6*(i-1)+4):(6*(i-1)+6)) = m%Y1((6*(i-1)+4):(6*(i-1)+6)) + Y1_GuyanLoadCorrection
+            y%Y1Mesh%Force (:,i-1) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
+            y%Y1Mesh%Moment(:,i-1) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
+         enddo
+
+      else if (.not.p%floating) then
+
+         do i = 1,p%nTP
+            Y1_GuyanLoadCorrection = -cross_product( m%u_TP((6*(i-1)+1):(6*(i-1)+3)) , m%Y1((6*(i-1)+1):(6*(i-1)+3)) )
+            m%Y1((6*(i-1)+4):(6*(i-1)+6)) = m%Y1((6*(i-1)+4):(6*(i-1)+6)) + Y1_GuyanLoadCorrection
+            y%Y1Mesh%Force (:,i) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
+            y%Y1Mesh%Moment(:,i) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
+         enddo
+
+      ! else ! floating with only one transition piece -> no extra moment
+
       end if
-      do i = firstTP,p%nTP
-         Y1_GuyanLoadCorrection(1) = - m%u_TP(6*(i-1)+2) * m%Y1(6*(i-1)+3) + m%u_TP(6*(i-1)+3) * m%Y1(6*(i-1)+2)
-         Y1_GuyanLoadCorrection(2) = - m%u_TP(6*(i-1)+3) * m%Y1(6*(i-1)+1) + m%u_TP(6*(i-1)+1) * m%Y1(6*(i-1)+3)
-         Y1_GuyanLoadCorrection(3) = - m%u_TP(6*(i-1)+1) * m%Y1(6*(i-1)+2) + m%u_TP(6*(i-1)+2) * m%Y1(6*(i-1)+1)
-         m%Y1((6*(i-1)+4):(6*(i-1)+6)) = m%Y1((6*(i-1)+4):(6*(i-1)+6)) + Y1_GuyanLoadCorrection 
-         y%Y1Mesh%Force (:,i-(firstTP-1)) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
-         y%Y1Mesh%Moment(:,i-(firstTP-1)) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
-      enddo
-      ! endif
+
       ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
-       
-      
-       
+
      !________________________________________
      ! CALCULATE OUTPUT TO BE WRITTEN TO FILE 
      !________________________________________
@@ -2229,7 +2239,7 @@ CONTAINS
       CALL SD_DestroyContState( k4,       ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( x_tmp,    ErrStat3, ErrMsg3 )
       CALL SD_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
-   END SUBROUTINE CleanUp            
+   END SUBROUTINE CleanUp
       
 END SUBROUTINE SD_RK4
 
