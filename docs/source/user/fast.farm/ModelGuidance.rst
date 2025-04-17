@@ -5,8 +5,8 @@ Modeling Guidance
 
 This chapter includes modeling guidance for setting up and running a
 FAST.Farm simulation. This includes guidance on inflow wind generation;
-low- and high-resolution grid discretization; parameter selection; super
-controller use; and solutions for commonly encountered errors.
+low- and high-resolution grid discretization; parameter selection; 
+and solutions for commonly encountered errors.
 
 .. _FF:sec:setup:
 
@@ -912,125 +912,13 @@ user.
 
 .. _FF:sec:SupCon:
 
-Super Controller
-----------------
+Farm Level Control
+------------------
 
-When **UseSC** is set to TRUE, the super controller is enabled. The
-super controller code must be compiled as a dynamic library file -- a
-*.dll* file in Windows or a *.so* file in Linux or Mac OS. This super
-controller dynamic library is essentially identical to the super
-controller available in `SOWFA <https://nwtc.nrel.gov/SOWFA>`__. The
-super controller is used in conjunction with individual wind turbine
-controllers defined in the style of the DISCON dynamic library of the
-DNV GL’s Bladed wind turbine software package, with minor modification.
-
-The inputs to the super controller are commands or measurements from
-individual turbine controllers. [3]_ The outputs of super controller
-module are the global controller commands and individual turbine
-controller commands.
-
-The super controller dynamic library must be compiled with five
-procedures, whose arguments are outlined in :numref:`FF:tab:SC_DLL`.
-
-
-.. table:: Arguments for Each Procedure of the Super Controller Dynamic Library
-   :name: FF:tab:SC_DLL
-
-   +---------------------+---------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
-   | **Procedure**       | **Inputs**                                        | **Outputs**                                       | **Comments**                                                |
-   +=====================+===================================================+===================================================+=============================================================+
-   | ``sc_init``         | - ``nTurbines``                                   | - ``nInpGlobal``                                  | -  Set numbers of inputs, outputs, states, and  parameters  |
-   |                     |                                                   | - ``NumCtrl2SC``                                  | - ``nInpGlobal`` must currently be set to zero in FAST.Farm |
-   |                     |                                                   | - ``NumParamGlobal``                              |                                                             |
-   |                     |                                                   | - ``NumParamTurbine``                             |                                                             |
-   |                     |                                                   | - ``NumStatesGlobal``                             |                                                             |
-   |                     |                                                   | - ``NumStatesTurbine``                            |                                                             |
-   |                     |                                                   | - ``NumSC2CtrlGlob``                              |                                                             |
-   |                     |                                                   | - ``NumSC2Ctrl``                                  |                                                             |
-   |                     |                                                   | - ``errStat``                                     |                                                             |
-   |                     |                                                   | - ``errMsg``                                      |                                                             |
-   +---------------------+---------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
-   | ``sc_getinitData``  | - ``nTurbines``                                   | - ``ParamGlobal(1:NumParamGlobal)``               | - Set parameters                                            |
-   |                     | - ``NumParamGlobal``                              | - ``ParamTurbine(1:NumParamTurbine*nTurbines)``   | - Initialize states at time zero                            |
-   |                     | - ``Num ParamTurbine``                            | - ``from_SCglob(1:NumSC2CtrlGlob)``               | - Initial outputs are not currently used by FAST.Farm       |
-   |                     | - ``NumSC2CtrlGlob``                              | - ``from_SC(1:NumSC2Ctrl*nTurbines)``             |                                                             |
-   |                     | - ``NumSC2Ctrl``                                  | - ``from_SCglob(1:NumSC2CtrlGlob)``               |                                                             |
-   |                     | - ``NumStatesGlobal``                             | - ``from_SC(1:NumSC2Ctrl*nTurbines)``             |                                                             |
-   |                     | - ``NumStatesTurbine``                            | - ``StatesGlob(1:NumStatesGlobal)``               |                                                             |
-   |                     |                                                   | - ``StatesTurbine(1:NumStatesTurbine*nTurbines)`` |                                                             |
-   |                     |                                                   | - ``errStat``                                     |                                                             |
-   |                     |                                                   | - ``errMsg``                                      |                                                             |
-   +---------------------+---------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
-   | ``sc_calcOutputs``  | - ``nTurbines``                                   | - ``from_SCglob(1:NumSC2CtrlGlob)``               | -  Calculate outputs at the current time step               |
-   |                     | - ``NumParamGlobal``                              | - ``from_SC(1:NumSC2Ctrl*nTurbines)``             | - ``nInpGlobal`` is currently zero in FAST.Farm             |
-   |                     | - ``ParamGlobal(1:NumParamGlobal)``               | -  ``errStat``                                    | - ``to_SCglob`` is currently null in FAST.Farm              |
-   |                     | - ``NumParamTurbine``                             | -  ``errMsg``                                     |                                                             |
-   |                     | - ``ParamTurbine(1:NumParamTurbine*nTurbines)``   |                                                   |                                                             |                                      
-   |                     | - ``nInpGlobal``                                  |                                                   |                                                             |
-   |                     | - ``to_SCglob(1:nInpGlobal)``                     |                                                   |                                                             |
-   |                     | - ``NumCtrl2SC``                                  |                                                   |                                                             |
-   |                     | - ``to_ SC(1:NumCtrl2SC*nTurbines)``              |                                                   |                                                             |
-   |                     | - ``NumStatesGlobal``                             |                                                   |                                                             |
-   |                     | - ``StatesGlob(1:NumStatesGlobal)``               |                                                   |                                                             |
-   |                     | - ``NumStatesTurbine``                            |                                                   |                                                             |
-   |                     | - ``StatesTurbine(1:NumStatesTurbine*nTurbines)`` |                                                   |                                                             |
-   |                     | -  ``NumSC2CtrlGlob``                             |                                                   |                                                             |
-   |                     | - ``NumSC2Ctrl``                                  |                                                   |                                                             |
-   +---------------------+---------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
-   | ``sc_updateStates`` | - ``nTurbines``                                   | - ``StatesGlob(1:NumStatesGlobal)``               | -  Update states from one time step to the next             |
-   |                     | - ``NumParamGlobal``                              | - ``StatesTurbine(1:NumStatesTurbine*nTurbines)`` | - ``nInpGlobal`` Is currently zero in FAST.Farm             |
-   |                     | - ``ParamGlobal(1:NumParamGlobal)``               | - ``errStat``                                     | - ``to_SCglob`` Is currently null in FAST.Farm              |
-   |                     | - ``NumParamTurbine``                             | - ``errMsg``                                      |                                                             |
-   |                     | - ``ParamTurbine(1:NumParamTurbine*nTurbines)``   |                                                   |                                                             |
-   |                     | - ``nInpGlobal``                                  |                                                   |                                                             |
-   |                     | - ``to_SCglob(1:nInpGlobal)``                     |                                                   |                                                             |
-   |                     | - ``NumCtrl2SC``                                  |                                                   |                                                             |
-   |                     | - ``to_SC(1:NumCtrl2SC*nTurbines)``               |                                                   |                                                             |
-   |                     | - ``NumStatesGlobal``                             |                                                   |                                                             |
-   |                     | - ``NumStatesTurbine``                            |                                                   |                                                             |
-   +---------------------+---------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
-   | ``sc_end``          |                                                   | - ``errStat``                                     | - Release memory                                            |
-   |                     |                                                   | - ``errMsg``                                      | - Close files                                               |
-   +---------------------+---------------------------------------------------+---------------------------------------------------+-------------------------------------------------------------+
-
-
-To interact with the super controller, the individual turbine
-controllers within each instance of OpenFAST must also be compiled as a
-dynamic library. The single procedure, ``DISCON``, is unchanged from the
-standard ``DISCON`` interface for the Bladed wind turbine software
-package, as defined by DNV GL, but with three extra arguments, as
-outlined in :numref:`FF:tab:DISCON`.
-
-.. table:: Arguments of the ``DISCON`` Procedure for Individual Turbine Controller Dynamic Library, Updated for the Super Controller
-   :name: FF:tab:DISCON
-
-   +---------------+--------------------------------------+---------------------------+--------------------------------+
-   | **Procedure** | **Inputs**                           | **Outputs**               | **Comments**                   |
-   +===============+======================================+===========================+================================+
-   | ``DISCON``    | -  ``avrSWAP(*)``                    | - ``avrSWAP(*)``          | - New inputs: ``from_SCglob``  |
-   |               | -  ``from_SCglob(1:NumSC2CtrlGlob)`` | - ``to_SC(1:NumCtrl2SC)`` |    and ``from_SC``             |
-   |               | -  ``from_SC(1:NumSC2Ctrl)``         | - ``aviFAIL``             | -  New output: ``to_SC``       |
-   |               | - ``accInFILE``                      | - ``avcMSG``              |                                |
-   |               | - ``avcOUTNAME``                     |                           |                                |
-   +---------------+--------------------------------------+---------------------------+--------------------------------+
-
-
-Note that at time zero, the super controller output calculation
-(``sc_calcOutputs``) is called before the call to the individual turbine
-controllers (``DISCON``). So, the initial outputs from the super
-controller (``from_SC``, ``from_SCglob``) are sent as inputs to the
-individual turbine controllers, but the initial inputs to the super
-controller from the individual turbine controller outputs (``to_SC``) at
-time zero are always zero. At subsequent time steps, the individual
-turbine controllers (``DISCON``) are called before the output
-calculation of the super controller (``sc_calcOutputs``). As a result,
-at each time step other than time zero, the outputs from the super
-controller (``from_SC``, ``from_SCglob``) are extrapolated in time based
-on past values within *OF* before being sent as input to the individual
-turbine controllers. Thus, care should be taken to ensure that the
-outputs from the super controller (``from_SC``, ``from_SCglob``) vary
-smoothly over time (without steps). See
-Figure :numref:`FF:Parallel` for more information.
+FAST.Farm does not include a module for farm level control.
+Users are advised to utilize the wind farm control capability of 
+the `Reference Open Source Controller` (`ROSCO <https://github.com/NREL/ROSCO>`_)
+to implement farm level controller.
 
 Commonly Encountered Errors
 ---------------------------
@@ -1113,11 +1001,5 @@ along which axis the error has occurred, aiding in debugging.
 .. [2]
    When HAWC format is used (**WindType** = 5), `_u`,
    `_v`, `_w` must be appended to the file names.
-
-.. [3]
-   The super controller also has as input a placeholder for future
-   global (e.g., wind) measurements in addition to commands or
-   measurements from the individual turbine controllers. But the global
-   inputs are currently null.
 
 

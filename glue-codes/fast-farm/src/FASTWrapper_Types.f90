@@ -53,12 +53,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: dZ_high = 0.0_ReKi      !< Z-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
     INTEGER(IntKi)  :: TurbNum = 0_IntKi      !< Turbine ID number (start with 1; end with number of turbines) [-]
     CHARACTER(1024)  :: RootName      !< The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number] [-]
-    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< Number of turbine-specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< Number of global controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< Number of turbine-specific controller outputs [to supercontroller] [-]
-    LOGICAL  :: UseSC = .false.      !< Use the SuperController? (flag) [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCGlob      !< Global outputs from SuperController [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Turbine-specific outputs from SuperController [-]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vdist_High => NULL()      !< Pointer to UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step [(m/s)]
   END TYPE FWrap_InitInputType
 ! =======================
@@ -107,13 +101,11 @@ IMPLICIT NONE
 ! =======================
 ! =========  FWrap_InputType  =======
   TYPE, PUBLIC :: FWrap_InputType
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCglob      !< Global (turbine-independent) commands from the super controller [(various units)]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Turbine-dependent commands from the super controller from the super controller [(various units)]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !< Remove this variable if you have InputType [-]
   END TYPE FWrap_InputType
 ! =======================
 ! =========  FWrap_OutputType  =======
   TYPE, PUBLIC :: FWrap_OutputType
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: toSC      !< Turbine-dependent commands to the super controller [(various units)]
     REAL(ReKi) , DIMENSION(1:3)  :: xHat_Disk = 0.0_ReKi      !< Orientation of rotor centerline, normal to disk [-]
     REAL(ReKi)  :: YawErr = 0.0_ReKi      !< Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane [rad]
     REAL(ReKi)  :: psi_skew = 0.0_ReKi      !< Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined [rad]
@@ -155,34 +147,6 @@ subroutine FWrap_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%dZ_high = SrcInitInputData%dZ_high
    DstInitInputData%TurbNum = SrcInitInputData%TurbNum
    DstInitInputData%RootName = SrcInitInputData%RootName
-   DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
-   DstInitInputData%NumSC2CtrlGlob = SrcInitInputData%NumSC2CtrlGlob
-   DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
-   DstInitInputData%UseSC = SrcInitInputData%UseSC
-   if (allocated(SrcInitInputData%fromSCGlob)) then
-      LB(1:1) = lbound(SrcInitInputData%fromSCGlob)
-      UB(1:1) = ubound(SrcInitInputData%fromSCGlob)
-      if (.not. allocated(DstInitInputData%fromSCGlob)) then
-         allocate(DstInitInputData%fromSCGlob(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%fromSCGlob.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%fromSCGlob = SrcInitInputData%fromSCGlob
-   end if
-   if (allocated(SrcInitInputData%fromSC)) then
-      LB(1:1) = lbound(SrcInitInputData%fromSC)
-      UB(1:1) = ubound(SrcInitInputData%fromSC)
-      if (.not. allocated(DstInitInputData%fromSC)) then
-         allocate(DstInitInputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%fromSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%fromSC = SrcInitInputData%fromSC
-   end if
    DstInitInputData%Vdist_High => SrcInitInputData%Vdist_High
 end subroutine
 
@@ -193,12 +157,6 @@ subroutine FWrap_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FWrap_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(InitInputData%fromSCGlob)) then
-      deallocate(InitInputData%fromSCGlob)
-   end if
-   if (allocated(InitInputData%fromSC)) then
-      deallocate(InitInputData%fromSC)
-   end if
    nullify(InitInputData%Vdist_High)
 end subroutine
 
@@ -225,12 +183,6 @@ subroutine FWrap_PackInitInput(RF, Indata)
    call RegPack(RF, InData%dZ_high)
    call RegPack(RF, InData%TurbNum)
    call RegPack(RF, InData%RootName)
-   call RegPack(RF, InData%NumSC2Ctrl)
-   call RegPack(RF, InData%NumSC2CtrlGlob)
-   call RegPack(RF, InData%NumCtrl2SC)
-   call RegPack(RF, InData%UseSC)
-   call RegPackAlloc(RF, InData%fromSCGlob)
-   call RegPackAlloc(RF, InData%fromSC)
    call RegPackPtr(RF, InData%Vdist_High)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -262,12 +214,6 @@ subroutine FWrap_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%dZ_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2Ctrl); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2CtrlGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumCtrl2SC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UseSC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSCGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackPtr(RF, OutData%Vdist_High, LB, UB); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -788,35 +734,10 @@ subroutine FWrap_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FWrap_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcInputData%fromSCglob)) then
-      LB(1:1) = lbound(SrcInputData%fromSCglob)
-      UB(1:1) = ubound(SrcInputData%fromSCglob)
-      if (.not. allocated(DstInputData%fromSCglob)) then
-         allocate(DstInputData%fromSCglob(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%fromSCglob.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInputData%fromSCglob = SrcInputData%fromSCglob
-   end if
-   if (allocated(SrcInputData%fromSC)) then
-      LB(1:1) = lbound(SrcInputData%fromSC)
-      UB(1:1) = ubound(SrcInputData%fromSC)
-      if (.not. allocated(DstInputData%fromSC)) then
-         allocate(DstInputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%fromSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInputData%fromSC = SrcInputData%fromSC
-   end if
+   DstInputData%dummy = SrcInputData%dummy
 end subroutine
 
 subroutine FWrap_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -826,12 +747,6 @@ subroutine FWrap_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FWrap_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(InputData%fromSCglob)) then
-      deallocate(InputData%fromSCglob)
-   end if
-   if (allocated(InputData%fromSC)) then
-      deallocate(InputData%fromSC)
-   end if
 end subroutine
 
 subroutine FWrap_PackInput(RF, Indata)
@@ -839,8 +754,7 @@ subroutine FWrap_PackInput(RF, Indata)
    type(FWrap_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackInput'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPackAlloc(RF, InData%fromSCglob)
-   call RegPackAlloc(RF, InData%fromSC)
+   call RegPack(RF, InData%dummy)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -848,12 +762,8 @@ subroutine FWrap_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FWrap_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackInput'
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackAlloc(RF, OutData%fromSCglob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dummy); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -867,18 +777,6 @@ subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    character(*), parameter        :: RoutineName = 'FWrap_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcOutputData%toSC)) then
-      LB(1:1) = lbound(SrcOutputData%toSC)
-      UB(1:1) = ubound(SrcOutputData%toSC)
-      if (.not. allocated(DstOutputData%toSC)) then
-         allocate(DstOutputData%toSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%toSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstOutputData%toSC = SrcOutputData%toSC
-   end if
    DstOutputData%xHat_Disk = SrcOutputData%xHat_Disk
    DstOutputData%YawErr = SrcOutputData%YawErr
    DstOutputData%psi_skew = SrcOutputData%psi_skew
@@ -919,9 +817,6 @@ subroutine FWrap_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FWrap_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(OutputData%toSC)) then
-      deallocate(OutputData%toSC)
-   end if
    if (allocated(OutputData%AzimAvg_Ct)) then
       deallocate(OutputData%AzimAvg_Ct)
    end if
@@ -935,7 +830,6 @@ subroutine FWrap_PackOutput(RF, Indata)
    type(FWrap_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackOutput'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPackAlloc(RF, InData%toSC)
    call RegPack(RF, InData%xHat_Disk)
    call RegPack(RF, InData%YawErr)
    call RegPack(RF, InData%psi_skew)
@@ -956,7 +850,6 @@ subroutine FWrap_UnPackOutput(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackAlloc(RF, OutData%toSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%xHat_Disk); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%YawErr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%psi_skew); if (RegCheckErr(RF, RoutineName)) return

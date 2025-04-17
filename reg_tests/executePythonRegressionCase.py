@@ -36,7 +36,7 @@ import rtestlib as rtl
 import openfastDrivers
 import pass_fail
 from errorPlotting import exportCaseSummary
-from OpynFAST import fast
+from pyOpenFAST import fast
 
 ##### Helper functions
 excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
