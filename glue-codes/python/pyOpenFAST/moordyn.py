@@ -63,6 +63,7 @@ class MoorDynLib(OpenFASTInterfaceType):
     # Initialize routines ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
         self.MD_C_Init.argtypes = [
+            POINTER(c_int),                       # IN: input file passed
             POINTER(c_char_p),                    # IN: input file string
             POINTER(c_int),                       # IN: input file string length
             POINTER(c_double),                    # IN: dt
@@ -109,7 +110,7 @@ class MoorDynLib(OpenFASTInterfaceType):
         self.MD_C_End.restype = c_int
 
     # md_init ------------------------------------------------------------------------------------------------------------
-    def md_init(self, input_string_array, g, rho_water, depth_water, platform_init_pos, interpOrder):
+    def md_init(self, input_file_passed, input_string_array, g, rho_water, depth_water, platform_init_pos, interpOrder):
 
         # Convert the string into a c_char byte array
         input_string = '\x00'.join(input_string_array)
@@ -124,6 +125,7 @@ class MoorDynLib(OpenFASTInterfaceType):
         self._numChannels = c_int(0)
 
         self.MD_C_Init(
+            byref(c_int(input_file_passed)),       # IN: input file passed
             c_char_p(input_string),                # IN: input file string
             byref(c_int(input_string_length)),     # IN: input file string length
             byref(c_double(self.dt)),              # IN: time step (dt)
