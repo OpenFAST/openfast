@@ -22,6 +22,7 @@ MODULE MoorDyn_Misc
 
    USE MoorDyn_Types
    USE SeaSt_WaveField
+   USE Current
    USE NWTC_Library
    USE NWTC_FFTPACK
    
@@ -1050,6 +1051,7 @@ CONTAINS
       REAL(SiKi), ALLOCATABLE          :: pzCurrentTemp(:)   ! current depth increments read in from input file (positive-down at this stage)
       REAL(SiKi)                       :: uxCurrentTemp(100)
       REAL(SiKi)                       :: uyCurrentTemp(100)
+      TYPE(Current_InitOutputType)     :: Current_InitOutput     ! Current outputs from SS subroutine Current_Init (for current mod = 2)
       
       CHARACTER(120)                   :: tmpString   
       CHARACTER(120)                   :: WaveKinFile   
@@ -1147,17 +1149,17 @@ CONTAINS
          ! Warning check to make sure SeaState and MoorDyn have the same water depth
          IF (p%WaveField%WtrDpth /= p%WtrDpth) THEN
             IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "   WARNING SeaState water depth does not match MoorDyn water depth.Using SeaState values for water kinematics."
+               WRITE(p%UnLog, '(A)'        ) "   WARNING SeaState water depth does not match MoorDyn water depth. Using SeaState values for water kinematics."
             ENDIF
-            CALL SetErrStat(ErrID_Warn, "SeaState water depth does not match MoorDyn water depth.Using SeaState values for water kinematics.", ErrStat, ErrMsg, RoutineName)
+            CALL SetErrStat(ErrID_Warn, "SeaState water depth does not match MoorDyn water depth. Using SeaState values for water kinematics.", ErrStat, ErrMsg, RoutineName)
          END IF
 
-         ! Warning check to make sure SeaState and MoorDyn have the same water density and gravity
-         IF (p%WaveField%RhoXg /= (p%rhoW * p%g)) THEN
+         ! Error check to make sure SeaState and MoorDyn have the same water density and gravity. This also checks that the pointer is valid
+         IF (p%WaveField%RhoXg /= REAL((p%rhoW * p%g), SiKi)) THEN
             IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "   WARNING SeaState (water density * gravity) does not match MoorDyn (water density * gravity). Using SeaState values for water kinematics."
+               WRITE(p%UnLog, '(A)'        ) "   ERROR SeaState (water density * gravity) ["//trim(num2lstr(p%WaveField%RhoXg))//"] does not match MoorDyn water (density * gravity) ["//trim(num2lstr(REAL((p%rhoW * p%g), SiKi)))//"]. The SeaState pointer may be corrupted."
             ENDIF
-            CALL SetErrStat(ErrID_Warn, "SeaState (water density * gravity) does not match MoorDyn (water density * gravity). Using SeaState values for water kinematics.", ErrStat, ErrMsg, RoutineName)
+            CALL SetErrStat(ErrID_Fatal, "   ERROR SeaState (water density * gravity) ["//trim(num2lstr(p%WaveField%RhoXg))//"] does not match MoorDyn water (density * gravity) ["//trim(num2lstr(REAL((p%rhoW * p%g), SiKi)))//"]. The SeaState pointer may be corrupted.", ErrStat, ErrMsg, RoutineName)
          END IF
 
          ! Check for if SeaState grid does not match water depth
@@ -1202,20 +1204,33 @@ CONTAINS
          ! ----- waves -----
          CALL ReadCom( UnIn, FileName,                               'waves header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
          CALL ReadVar( UnIn, FileName, p%WaveKin  , 'WaveKinMod' ,  'WaveKinMod'   , ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
+         ! log the method being used
+         IF (p%writeLog > 0) THEN
+            IF (p%WaveKin == 2) THEN
+               WRITE(p%UnLog, '(A)'        ) "    WaveKinMod = 2. Reading in the user provided wave grid and using SeaState for frequency calculation."
+            ELSE IF (p%WaveKin == 1) THEN
+               WRITE(p%UnLog, '(A)'        ) "    WaveKinMod = 1. Reading in the user provided wave grid and frequency information."
+            ELSE IF (p%WaveKin == 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "    WaveKinMod = 0. No wave kinematics enabled."
+            ELSE 
+               WRITE(p%UnLog, '(A)'        ) "    Invalid value for WaveKinMod"
+               Call SetErrStat(ErrID_Fatal, "Invalid value for WaveKinMod", ErrStat, ErrMsg, RoutineName); RETURN
+            ENDIF
+         ENDIF
          CALL ReadVar( UnIn, FileName, WaveKinFile, 'WaveKinFile',  'WaveKinFile'  , ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
          CALL ReadVar( UnIn, FileName, p%dtWave   , 'dtWave', 'time step for waves', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
          CALL ReadVar( UnIn, FileName, WaveDir    , 'WaveDir'    , 'wave direction', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
          ! X grid points
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
-         CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
+         READ(UnIn, '(A)', IOSTAT=ErrStat2) entries2; IF(ErrStat2 /= ErrID_None) ErrMsg2 = "There was an error reading in the grid description"; IF(Failed()) RETURN ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pxWave, p%nxWave); IF(Failed()) RETURN 
          ! Y grid points
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
-         CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
+         READ(UnIn, '(A)', IOSTAT=ErrStat2) entries2; IF(ErrStat2 /= ErrID_None) ErrMsg2 = "There was an error reading in the grid description"; IF(Failed()) RETURN ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pyWave, p%nyWave); IF(Failed()) RETURN 
          ! Z grid points
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
-         CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get entries as string to be processed
+         READ(UnIn, '(A)', IOSTAT=ErrStat2) entries2; IF(ErrStat2 /= ErrID_None) ErrMsg2 = "There was an error reading in the grid description"; IF(Failed()) RETURN ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave); IF(Failed()) RETURN 
          ! TODO: log what is read in for waves
          ! ----- current -----
@@ -1231,27 +1246,38 @@ CONTAINS
 
             ! Z grid points
             CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN         ! get the entry type
-            CALL ReadVar( UnIn, FileName, entries2    , 'entries2'    , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN         ! get entries as string to be processed
+            READ(UnIn, '(A)', IOSTAT=ErrStat2) entries2; IF(ErrStat2 /= ErrID_None) ErrMsg2 = "There was an error reading in the grid description"; IF(Failed()) RETURN ! get entries as string to be processed
             CALL gridAxisCoords(coordtype, entries2, pzCurrentTemp, p%nzCurrent); IF(Failed()) RETURN  ! max size of 100 because gridAxisCoords has a 100 element temporary array used for processing entries2 
             uxCurrentTemp = 0.0 ! set these to zero to avoid unitialized values. This will be set later in this routine by SeaState
             uyCurrentTemp = 0.0 ! set these to zero to avoid unitialized values. This will be set later in this routine by SeaState
 
          ELSE IF (p%Current == 1) THEN 
 
+            ! read two header lines. Old file format has 2 header lines, new file format has four (two info lines for CurrentMod = 2 and then the two headers).
+            CALL ReadCom( UnIn, FileName,                'current profile header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
+            CALL ReadCom( UnIn, FileName,                'current profile header', ErrStat2, ErrMsg2, UnEcho); if(Failed()) return
+            
             CALL AllocAry(pzCurrentTemp, 100, 'pzCurrentTemp', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN ! allocate pzCurrentTemp if reading in user provided current table
             
-            DO I=1,4 ! ignore lines until table is found, or exit after four lines. Old file format has 2 header lines, new file format has four (two info lines for CurrentMod = 2 and then the two headers).
+            DO I=1,4 ! ignore lines until table is found, or exit after 3 lines. Old file format has 2 header lines, new file format has four (two info lines for CurrentMod = 2 and then the two headers).
                READ(UnIn, *, IOSTAT=ErrStat2) pzCurrentTemp(1), uxCurrentTemp(1), uyCurrentTemp(1)     ! try to read into a line to first elements in the array     
                IF (ErrStat2 == 0) THEN
                   EXIT      ! break out of the loop if successfully reads first table line
                END IF
             ENDDO
 
+            IF (I == 4) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR: Could not read the current profile table from the input file. Check the file format."
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "Could not read the current profile table from the input file. Check the file format.", ErrStat, ErrMsg, RoutineName); RETURN
+            ENDIF
+
             ! log the first line read
             IF (p%writeLog > 0) THEN
                WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 1. Reading in the user provided current profile."
                IF (p%writeLog > 1) THEN
-                  WRITE(p%UnLog, '(A)'        ) "     The first line read from the table is:"
+                  WRITE(p%UnLog, '(A)'        ) "     The first line read from the current table is:"
                   WRITE(p%UnLog, '(A)'        ) "     "//trim(num2lstr(pzCurrentTemp(1)))//"     "//trim(num2lstr(uxCurrentTemp(1)))//"     "//trim(num2lstr(uyCurrentTemp(1)))
                ENDIF
             ENDIF
@@ -1259,18 +1285,67 @@ CONTAINS
             ! current profile table... (read until no more rows in table)
             DO I=2,100 ! start at second row because first is already read
                READ(UnIn, *, IOSTAT=ErrStat2) pzCurrentTemp(i), uxCurrentTemp(i), uyCurrentTemp(i)     ! read into a line      
-               IF (ErrStat2 /= 0) THEN
+               IF (ErrStat2 /= ErrID_None) THEN
                   p%nzCurrent = i-1 ! save number of valid current depth points in profile
                   EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
                END IF
                IF (i == 100) THEN
                   CALL WrScr("WARNING: MD can handle a maximum of 100 current profile points")
                   IF (p%writeLog > 0) THEN
-                     WRITE(p%UnLog, '(A)'        ) "   WARNING: MD can handle a maximum of 100 current profile points"
+                     WRITE(p%UnLog, '(A)'        ) "    WARNING: MD can handle a maximum of 100 current profile points"
                   ENDIF      
                   EXIT
                END IF
             END DO
+
+            ! Check that all z values are below the water line
+            DO I=1,p%nzCurrent
+               IF (pzCurrentTemp(I) > 0) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "    Warning: MoorDyn current profile z values are above the water line."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Warn, "Mooring current profile z values are above the water line.", ErrStat, ErrMsg, RoutineName)
+               END IF
+            END DO
+
+            ! Check that order is valid (deepest to shallowest depths), flip array if necessary 
+            IF (pzCurrentTemp(1) > pzCurrentTemp(p%nzCurrent)) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "    INFO: Current profile is decreasing depths. MoorDyn needs increasing depths. Flipping arrays"
+               ENDIF
+               DO I=1,p%nzCurrent/2
+                  tmpReal = pzCurrentTemp(I)
+                  pzCurrentTemp(I) = pzCurrentTemp(p%nzCurrent-I+1)
+                  pzCurrentTemp(p%nzCurrent-I+1) = tmpReal
+                  tmpReal = uxCurrentTemp(I)
+                  uxCurrentTemp(I) = uxCurrentTemp(p%nzCurrent-I+1)
+                  uxCurrentTemp(p%nzCurrent-I+1) = tmpReal
+                  tmpReal = uyCurrentTemp(I)
+                  uyCurrentTemp(I) = uyCurrentTemp(p%nzCurrent-I+1)
+                  uyCurrentTemp(p%nzCurrent-I+1) = tmpReal
+               END DO
+            END IF
+
+            ! Check for valid array (strictly increasing z values)
+            DO I=1,p%nzCurrent-1
+               IF (pzCurrentTemp(I) > pzCurrentTemp(I+1)) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR: Current profile z values are not strictly increasing. Check the file format."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "Current profile z values are not strictly increasing. Check the file format.", ErrStat, ErrMsg, RoutineName); RETURN
+               END IF
+            END DO
+
+         ELSE IF (p%Current == 0) THEN
+            ! log the method being used
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "    CurrentMod = 0. No currents will be simulated."
+            ENDIF
+         ELSE 
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "    Invalid value for CurrentMod"
+            ENDIF
+            CALL SetErrStat(ErrID_Fatal, "Invalid value for CurrentMod", ErrStat, ErrMsg, RoutineName); RETURN
          ENDIF ! if p%Current != 1 or 2, then no current
          
 
@@ -1286,21 +1361,13 @@ CONTAINS
             p%WaterKin = p%WaveKin
          ELSEIF (p%Current == 0) THEN ! if one is zero, use the other for water kin
             p%WaterKin = p%WaveKin
-            CALL WrScr("     CurrentMod = 0, no currents will be simulated")
-            IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "     CurrentMod = 0, no currents will be simulated"
-            ENDIF  
          ELSEIF (p%WaveKin == 0) THEN ! if one is zero, use the other for water kin
             p%WaterKin = p%Current
-            CALL WrScr("     WaveKinMod = 0, no waves will be simulated")
-            IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "     WaveKinMod = 0, no waves will be simulated"
-            ENDIF  
          ELSE
             IF (p%writeLog > 0) THEN
                WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKinMod and CurrentMod must be equal or one must be zero"
             ENDIF
-            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN 
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN ! TODO: can't we find a way to enable wave mod = 2 and current mod = 1?
          ENDIF
             
          ! ------------------- start with wave kinematics -----------------------
@@ -1317,7 +1384,6 @@ CONTAINS
                   CALL SetErrStat(ErrID_Fatal, "WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files.", ErrStat, ErrMsg, RoutineName); RETURN
                END IF
       
-               ! TODO: are the below assumptions correct? As in are there issues with using the MD inputs over the SeaState inputs? <-- not likely becasue routine for wave elevation time series doesn't, but need to double check
                ! Warning check to make sure SeaState and MoorDyn have the same water depth
                IF (p%WaveField%WtrDpth /= p%WtrDpth) THEN
                   IF (p%writeLog > 0) THEN
@@ -1326,12 +1392,12 @@ CONTAINS
                   CALL SetErrStat(ErrID_Warn, "SeaState water depth does not match MoorDyn water depth. Using MoorDyn values for interpolating SeaState data to MoorDyn grid.", ErrStat, ErrMsg, RoutineName)
                END IF
       
-               ! Warning check to make sure SeaState and MoorDyn have the same water density and gravity
-               IF (p%WaveField%RhoXg /= (p%rhoW * p%g)) THEN
+               ! Error check to make sure SeaState and MoorDyn have the same water density and gravity. This also checks the pointer is valid.
+               IF (p%WaveField%RhoXg /= REAL((p%rhoW * p%g), SiKi)) THEN
                   IF (p%writeLog > 0) THEN
-                     WRITE(p%UnLog, '(A)'        ) "   WARNING SeaState (water density * gravity) does not match MoorDyn (water density * gravity). Using MoorDyn values for interpolating SeaState data to MoorDyn grid."
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR SeaState (water density * gravity) ["//trim(num2lstr(p%WaveField%RhoXg))//"] does not match MoorDyn water (density * gravity) ["//trim(num2lstr(REAL((p%rhoW * p%g), SiKi)))//"]. The SeaState pointer may be corrupted."
                   ENDIF
-                  CALL SetErrStat(ErrID_Warn, "SeaState (water density * gravity) does not match MoorDyn (water density * gravity).Using MoorDyn values for interpolating SeaState data to MoorDyn grid.", ErrStat, ErrMsg, RoutineName)
+                  CALL SetErrStat(ErrID_Fatal, "   ERROR SeaState (water density * gravity) ["//trim(num2lstr(p%WaveField%RhoXg))//"] does not match MoorDyn water (density * gravity) ["//trim(num2lstr(REAL((p%rhoW * p%g), SiKi)))//"]. The SeaState pointer may be corrupted.", ErrStat, ErrMsg, RoutineName)
                END IF
 
                ! Warning check to make sure SeaState and MoorDyn have the same wave dir. For now, no wave spreading. This can be updated
@@ -1542,7 +1608,7 @@ CONTAINS
                IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStatTmp)
                IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStatTmp)
 
-            ENDIF ! End getting frequency data either from time series. The below needs to happen for both old and hybrid approach
+            ENDIF ! End getting frequency data either from time series or WaveField. The below needs to happen for both old and hybrid approach
             
             ! allocate all the wave kinematics FFT arrays  
             ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveNmbr.  ',ErrStat,ErrMsg,RoutineName)
@@ -1623,25 +1689,40 @@ CONTAINS
          IF (p%Current > 0) THEN
          
             IF (p%Current == 2) THEN
-               ! TODO: SeaState coupling
-               !     If wave elevation not SeaState throw fatal error, that would be mixing the old method and the hybrid method and is not allowed
-               !     Call 189-217 in Current.f90 to get current ux and uy data for the user specIFed z discretization 
-               !     pzCurrentTemp set when reading the input file
-               !     uxCurrentTemp = ?
-               !     uyCurrentTemp = ?
+
+               ! Overwrite the SeaState current grid to use the MoorDyn grid
+               p%WaveField%Current_InitInput%WaveKinGridzi = pzCurrentTemp
+               p%WaveField%Current_InitInput%NGridPts = p%nzCurrent
+
+               ! Calculate the current profile in the MD grid with SS inputs
+               CALL Current_Init(p%WaveField%Current_InitInput, Current_InitOutput, ErrStat2, ErrMsg2); IF(Failed()) RETURN
+
+               ! Check output current arrays are the right size
+               IF (SIZE(Current_InitOutput%CurrVxi) /= p%nzCurrent) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR Current_Init output size does not match the MoorDyn grid size. "//trim(num2lstr(SIZE(Current_InitOutput%CurrVxi)))//" vs "//trim(num2lstr(REAL(p%nzCurrent, SiKi)))
+                  ENDIF
+                  CALL SetErrStat( ErrID_Fatal,'Current_Init output size does not match the MoorDyn grid size.',ErrStat, ErrMsg, RoutineName); RETURN
+               ENDIF
+
+               ! extract the currents from outputs
+               DO I = 1, p%nzCurrent
+                  uxCurrentTemp(I) = Current_InitOutput%CurrVxi(I)
+                  uyCurrentTemp(I) = Current_InitOutput%CurrVyi(I)
+               END DO
+
             ENDIF
-            ! TODO: if SeaState also has currents throw warning or error so currents aren't double counted -- dont think we need to do this becasue we wont be using seasate grid with old or hybrid methods
 
             ! allocate current profile arrays to correct size
             CALL AllocAry( p%pzCurrent, p%nzCurrent, 'pzCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
             CALL AllocAry( p%uxCurrent, p%nzCurrent, 'uxCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
             CALL AllocAry( p%uyCurrent, p%nzCurrent, 'uyCurrent', ErrStat2, ErrMsg2 ); IF(Failed()) RETURN
             
-            ! copy over data, flipping sign of depth values (to be positive-up) and reversing order
+            ! copy over data
             DO i = 1,p%nzCurrent
-               p%pzCurrent(i) = -pzCurrentTemp(p%nzCurrent + 1 - i)  ! flip sign so depth is positive-up
-               p%uxCurrent(i) =  uxCurrentTemp(p%nzCurrent + 1 - i) 
-               p%uyCurrent(i) =  uyCurrentTemp(p%nzCurrent + 1 - i)
+               p%pzCurrent(i) = pzCurrentTemp(i)
+               p%uxCurrent(i) = uxCurrentTemp(i)
+               p%uyCurrent(i) = uyCurrentTemp(i)
             END DO
 
          ENDIF ! p%Current >0
