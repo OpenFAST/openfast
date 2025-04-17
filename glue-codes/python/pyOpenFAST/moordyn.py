@@ -230,7 +230,7 @@ class MoorDynLib(OpenFASTInterfaceType):
     def check_error(self):
         if self.error_status_c.value == 0:
             return
-        elif self.error_status_c.value < self.abort_error_level:
+        elif self.error_status_c.value < self.abort_error_level.value:
             print(f"MoorDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
         else:
             print(f"MoorDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")

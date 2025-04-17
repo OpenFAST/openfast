@@ -701,6 +701,13 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    ! NOTE: loop here is different from low res grid, doing: turbines > grid > turbines(nt/=nt2) > planes
    ! instead of grid > turbines > planes
    ! TODO explain 
+   !
+   ! WARNING: the way this is setup can use a lot of memory, and may run out of OMP stack.  If that happens,
+   !           use `export OMP_STACKSIZE="32 M"` (default is 4 M).
+   !     Rough calculation of memory expected:
+   !           maxN_wake * 13 * OMP_NUM_THREADS * <precision> = size in bytes
+   !     HOWEVER, real world testing shows that for 103 threads with 114 turbines and maxN_wake=101346 is more like
+   !           maxN_wake * 40 * <precision> = size in bytes
    NumGrid_high  = p%nX_high*p%nY_high*p%nZ_high
 
    do nt = 1,p%NumTurbines
@@ -779,7 +786,7 @@ end subroutine HighResGridCalcOutput
 subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, errStat, errMsg )
    type(AWAE_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
    type(AWAE_InputType),           intent(  out) :: u             !< An initial guess for the input; input mesh must be defined
-   type(AWAE_ParameterType),target,intent(  out) :: p             !< Parameters
+   type(AWAE_ParameterType),       intent(  out) :: p             !< Parameters
    type(AWAE_ContinuousStateType), intent(  out) :: x             !< Initial continuous states
    type(AWAE_DiscreteStateType),   intent(  out) :: xd            !< Initial discrete states
    type(AWAE_ConstraintStateType), intent(  out) :: z             !< Initial guess of the constraint states
@@ -799,7 +806,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    character(ErrMsgLen)                          :: errMsg2       ! temporary error message
    character(*), parameter                       :: RoutineName = 'AWAE_Init'
    type(InflowWind_InitInputType)                :: IfW_InitInp
-   type(InflowWind_InitOutputType), target       :: IfW_InitOut
+   type(InflowWind_InitOutputType)               :: IfW_InitOut
 
       ! Initialize variables for this routine
    errStat = ErrID_None
@@ -1112,12 +1119,9 @@ contains
       real(ReKi)                       :: ff_lim(2)
       real(ReKi)                       :: hr_lim(2)
       real(ReKi),          parameter   :: GridTol = 1.0E-3  ! Tolerance from IfW for checking the high-res grid (Mod_AmbWind=3 only).
-      type(FlowFieldType), pointer     :: ff                ! alias to shorten notation to fullfield
-      type(WindFileDat),   pointer     :: wfi               ! alias to shorten notation to WindFileInfo
       character(1024)                  :: tmpMsg
 
-      ff  => p%IfW(nt)%FlowField 
-      wfi => IfW_InitOut%WindFileInfo
+      associate(ff => p%IfW(nt)%FlowField, wfi => IfW_InitOut%WindFileInfo)
 
       tmpMsg = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires the FAST.Farm high-res grid '// &
                'is entirely contained within the flow-field from InflowWind. '//NewLine//' Try setting:'//NewLine
@@ -1192,6 +1196,7 @@ contains
             ErrMsg2  = NewLine//NewLine//'Turbine '//trim(Num2LStr(nt))//' -- Mod_AmbWind=3 requires InflowWind propagation direction alignment with X or Y (0, 90, 180, 270 degrees).'
          endif
       endif
+      end associate
    end subroutine CheckModAmb3Boundaries
 
    logical function Failed()
@@ -1288,9 +1293,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    errMsg  = ""
    
    ! Read the ambient wind data that is needed for t+dt, i.e., n+1
-!#ifdef _OPENMP
-!   t1 = omp_get_wtime()  
-!#endif 
    
    if ( (n+1) == (p%NumDT-1) ) then
       n_high_low = 0
@@ -1301,10 +1303,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    if ( p%Mod_AmbWind == 1 ) then
          ! read from file the ambient flow for the n+1 time step
       call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat2, errMsg2);   if (Failed()) return;
-   !#ifdef _OPENMP
-   !   t2 = omp_get_wtime()      
-   !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
-   !#endif   
       
       !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, i_hl, errStat2, errMsg2) !Private(nt,tm2,tm3)
       do nt = 1,p%NumTurbines
@@ -1399,11 +1397,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       ! add mean velocity * dt to the tracer for the position of the WAT box
       xd%WAT_B_Box(1:3) = xd%WAT_B_Box(1:3) + xd%Ufarm(1:3)*real(p%dt_low,ReKi)
    endif
-
-!#ifdef _OPENMP
-!   t1 = omp_get_wtime()      
-!   write(*,*) '        AWAE_UpdateStates: Time spent reading High Res data : '//trim(num2lstr(t1-t2))//' seconds'             
-!#endif
 
 contains
    logical function Failed()

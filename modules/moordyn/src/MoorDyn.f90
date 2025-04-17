@@ -484,6 +484,8 @@ CONTAINS
                      read (OptValue,*) p%inertialF_rampT
                   else if ( OptString == 'OUTSWITCH') then
                      read (OptValue,*) p%OutSwitch
+                  else if ( OptString == 'DISABLEOUTTIME') then
+                     read (OptValue,*) p%disableOutTime
                   else
                      CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
                   end if
@@ -2789,10 +2791,12 @@ CONTAINS
 
 
             ! provide status message
-            ! bjj: putting this in a string so we get blanks to cover up previous values (if current string is shorter than previous one)
-            Message = '   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
-                           ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))) 
-            CALL WrOver( Message )
+            IF (p%disableOutTime == 0) THEN ! option to turn this off if users want (helpful for matlab)
+               ! bjj: putting this in a string so we get blanks to cover up previous values (if current string is shorter than previous one)
+               Message = '   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
+                              ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))) 
+               CALL WrOver( Message )
+            ENDIF
 
             ! check for convergence (compare current tension at each fairlead with previous 9 values)
             IF (I > 9) THEN
