@@ -69,10 +69,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumCableControl = 0_IntKi      !< Number of cable control channels requested [-]
     CHARACTER(64) , DIMENSION(:), ALLOCATABLE  :: CableControlRequestor      !< Array with text info about which module requested the cable control channel (size of NumCableControl).  This is just for diagnostics. [-]
     INTEGER(IntKi)  :: InterpOrder = 0_IntKi      !< Interpolation order from glue code -- required to set m%u_xStC sizes [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed      !< Number of Lidar measurement distances [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsZ      !< Lidar Z direction measurement points [m]
     INTEGER(IntKi)  :: SensorType = 0_IntKi      !< Lidar sensor type [-]
     INTEGER(IntKi)  :: NumBeam = 0_IntKi      !< Number of beams [-]
     INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< Number of pulse gates [-]
@@ -676,54 +672,6 @@ subroutine SrvD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
       DstInitInputData%CableControlRequestor = SrcInitInputData%CableControlRequestor
    end if
    DstInitInputData%InterpOrder = SrcInitInputData%InterpOrder
-   if (allocated(SrcInitInputData%LidSpeed)) then
-      LB(1:1) = lbound(SrcInitInputData%LidSpeed)
-      UB(1:1) = ubound(SrcInitInputData%LidSpeed)
-      if (.not. allocated(DstInitInputData%LidSpeed)) then
-         allocate(DstInitInputData%LidSpeed(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%LidSpeed.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%LidSpeed = SrcInitInputData%LidSpeed
-   end if
-   if (allocated(SrcInitInputData%MsrPositionsX)) then
-      LB(1:1) = lbound(SrcInitInputData%MsrPositionsX)
-      UB(1:1) = ubound(SrcInitInputData%MsrPositionsX)
-      if (.not. allocated(DstInitInputData%MsrPositionsX)) then
-         allocate(DstInitInputData%MsrPositionsX(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%MsrPositionsX.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%MsrPositionsX = SrcInitInputData%MsrPositionsX
-   end if
-   if (allocated(SrcInitInputData%MsrPositionsY)) then
-      LB(1:1) = lbound(SrcInitInputData%MsrPositionsY)
-      UB(1:1) = ubound(SrcInitInputData%MsrPositionsY)
-      if (.not. allocated(DstInitInputData%MsrPositionsY)) then
-         allocate(DstInitInputData%MsrPositionsY(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%MsrPositionsY.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%MsrPositionsY = SrcInitInputData%MsrPositionsY
-   end if
-   if (allocated(SrcInitInputData%MsrPositionsZ)) then
-      LB(1:1) = lbound(SrcInitInputData%MsrPositionsZ)
-      UB(1:1) = ubound(SrcInitInputData%MsrPositionsZ)
-      if (.not. allocated(DstInitInputData%MsrPositionsZ)) then
-         allocate(DstInitInputData%MsrPositionsZ(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%MsrPositionsZ.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%MsrPositionsZ = SrcInitInputData%MsrPositionsZ
-   end if
    DstInitInputData%SensorType = SrcInitInputData%SensorType
    DstInitInputData%NumBeam = SrcInitInputData%NumBeam
    DstInitInputData%NumPulseGate = SrcInitInputData%NumPulseGate
@@ -757,18 +705,6 @@ subroutine SrvD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitInputData%CableControlRequestor)) then
       deallocate(InitInputData%CableControlRequestor)
-   end if
-   if (allocated(InitInputData%LidSpeed)) then
-      deallocate(InitInputData%LidSpeed)
-   end if
-   if (allocated(InitInputData%MsrPositionsX)) then
-      deallocate(InitInputData%MsrPositionsX)
-   end if
-   if (allocated(InitInputData%MsrPositionsY)) then
-      deallocate(InitInputData%MsrPositionsY)
-   end if
-   if (allocated(InitInputData%MsrPositionsZ)) then
-      deallocate(InitInputData%MsrPositionsZ)
    end if
 end subroutine
 
@@ -810,10 +746,6 @@ subroutine SrvD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%NumCableControl)
    call RegPackAlloc(RF, InData%CableControlRequestor)
    call RegPack(RF, InData%InterpOrder)
-   call RegPackAlloc(RF, InData%LidSpeed)
-   call RegPackAlloc(RF, InData%MsrPositionsX)
-   call RegPackAlloc(RF, InData%MsrPositionsY)
-   call RegPackAlloc(RF, InData%MsrPositionsZ)
    call RegPack(RF, InData%SensorType)
    call RegPack(RF, InData%NumBeam)
    call RegPack(RF, InData%NumPulseGate)
@@ -861,10 +793,6 @@ subroutine SrvD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%NumCableControl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CableControlRequestor); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InterpOrder); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LidSpeed); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%MsrPositionsX); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%MsrPositionsY); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%MsrPositionsZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SensorType); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBeam); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumPulseGate); if (RegCheckErr(RF, RoutineName)) return
