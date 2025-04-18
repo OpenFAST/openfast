@@ -21,6 +21,7 @@ env:
   C_COMPILER: gcc-14
   GCOV_EXE: gcov-14
   CMAKE_BUILD_PARALLEL_LEVEL: 8
+  CTEST_PARALLEL_LEVEL: 4
 
 jobs:
 
@@ -37,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -329,7 +330,7 @@ jobs:
       - name: Run Interface / API tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 \
+          ctest -VV \
               -L "cpp|python|fastlib" \
               -LE "openfast_io"
       - name: Failing test artifacts
@@ -379,7 +380,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 \
+          ctest -VV \
           -L openfast \
           -LE "cpp|linear|python|fastlib|offshore"
       - name: Failing test artifacts
@@ -429,7 +430,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 \
+          ctest -VV \
           -L openfast -L offshore \
           -LE "cpp|linear|python|fastlib"
       - name: Failing test artifacts
@@ -478,7 +479,7 @@ jobs:
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 -L linear
+          ctest -VV -L linear
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
@@ -524,7 +525,7 @@ jobs:
       - name: Run aero map tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 -L aeromap -LE "cpp|linear|python"
+          ctest -VV -L aeromap -LE "cpp|linear|python"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
@@ -576,7 +577,7 @@ jobs:
       - name: Run openfast_io tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 -L openfast_io 
+          ctest -VV -L openfast_io 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
@@ -620,7 +621,7 @@ jobs:
         shell: bash
         run: |
           set OMP_NUM_THREADS=2
-          ctest -VV -j2 -L fastfarm --verbose
+          ctest -VV -L fastfarm --verbose
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
