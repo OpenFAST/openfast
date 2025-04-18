@@ -21,7 +21,7 @@ env:
   C_COMPILER: gcc-14
   GCOV_EXE: gcov-14
   CMAKE_BUILD_PARALLEL_LEVEL: 8
-  CTEST_PARALLEL_LEVEL: 2
+  CTEST_PARALLEL_LEVEL: 1
 
 
 jobs:
@@ -560,8 +560,6 @@ jobs:
   rtest-OF:
     runs-on: ubuntu-24.04
     needs: build-openfast-release
-    env:
-        CTEST_PARALLEL_LEVEL: 1
     steps:
       - name: Cache the workspace
         uses: actions/cache@v4
