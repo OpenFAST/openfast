@@ -888,42 +888,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------
       ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
       ! --------------------------------------------------------------------------------
-      ! ! Contribution from Craig-Bampton modes qm and qdot_m
-      ! if ( p%nDOFM > 0) then
-      !    m%Y1_CB = -( matmul(p%C1_11, x%qm) + matmul(p%C1_12, x%qmdot) )  ! - ( [-M_Bm K_mm]q_m + [-M_Bm C_mm] qdot_m )
-      !    if (p%Floating) then
-      !       m%Y1_CB = matmul(m%RAllb2g, m%Y1_CB) !>>> Rotate All
-      !    endif
-      ! else
-      !    m%Y1_CB = 0.0_ReKi
-      ! endif
-
-      ! ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP
-      ! if (p%Floating) then
-      !     ! Transform the body-frame Guyan mode (rigid-body) inertia and damping matrix to global frame
-      !     m%KBB = matmul(m%RAllb2g, p%KBB)
-      !     m%MBB = matmul(m%RAllb2g, p%MBB)
-      !     m%CBB = matmul(m%RAllb2g, p%CBB)
-      !     m%Y1_Utp  = - (matmul(m%KBB, m%u_TP) + matmul(m%CBB,m%udot_TP) + matmul(m%MBB,m%udotdot_TP) )
-      !     ! Add back the nonlinear terms of the Guyan mode equation of motion
-      !     m%Y1_Utp(1:3) = m%Y1_Utp(1:3) - matmul(Rb2g, p%MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),p%rPG)) )
-      !     m%Y1_Utp(4:6) = m%Y1_Utp(4:6) - matmul(Rb2g, cross_product(m%udot_TP(4:6),matmul(p%MBB(4:6,4:6),m%udot_TP(4:6))) )
-      ! else
-      !     m%Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB,m%udotdot_TP) )
-      ! end if
-
-      ! if (p%nDOFM>0) then
-      !    !>>> Rotate All
-      !    ! NOTE: this introduces some hysteresis
-      !    if (p%Floating) then
-      !       ! udotdot_TP(1:3) = matmul(Rg2b, u%TPMesh%TranslationAcc( :,1))
-      !       ! udotdot_TP(4:6) = matmul(Rg2b, u%TPMesh%RotationAcc(:,1)    )
-      !       m%Y1_Utp  = m%Y1_Utp + matmul(m%RAllb2g, matmul(p%MBmmB, m%udotdot_TP))
-      !    else
-      !       m%Y1_Utp  = m%Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)
-      !    endif
-      ! endif
-
       if (p%Floating) then
          ! --- Special case for floating without extra moment, we use "rotated loads" m%F_L previously computed
          ! Contributions from external forces - Note: T_I is in the rotated frame
@@ -932,8 +896,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%Y1_Guy_R =   matmul(m%RAllb2g, m%Y1_Guy_R)
          m%Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, rotated loads
          m%Y1_Guy_L =   matmul(m%RAllb2g, m%Y1_Guy_L)
-         ! m%Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
-         ! m%Y1_CB_L  =   matmul(m%RAllb2g, m%Y1_CB_L)  ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
       else
          ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
          call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(.TRUE.), RotateLoads=.False.); if(Failed()) return
@@ -941,23 +903,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! Contributions from external forces
          m%Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
          m%Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
-         ! m%Y1_CB_L  = - matmul(p%D1_141, m%F_L) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
       endif
 
       ! Total contribution
-      ! m%Y1 = matmul( matmul( m%RAllb2g , matmul( p%GMat , m%RAllg2b ) )  ,  m%Y1_CB + m%Y1_Utp + m%Y1_CB_L )  + m%Y1_Guy_L + m%Y1_Guy_R 
       m%Y1 = m%Y1_Guy_R + m%Y1_Guy_L - matmul( m%RAllb2g , m%F_TP )
       ! When p%TP1IsRBRefPt, confirmed m%Y1(1:6) = 0, i.e., no reaction load from the dummy transition piece
-
-      ! KEEP ME
-      !if ( p%nDOFM > 0) then
-      !   Y1 = -(   matmul(p%C1_11, x%qm)   + matmul(p%C1_12,x%qmdot)                                    &
-      !           + matmul(p%KBB,   m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB - p%MBmmB, m%udotdot_TP) &
-      !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) )                                                                          
-      !else ! No retained modes, so there are no states
-      !   Y1 = -(   matmul(p%KBB,   m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB - p%MBmmB, m%udotdot_TP) &
-      !           + matmul(p%D1_141, m%F_L) + matmul(p%D1_142, m%F_L)  - matmul( F_I, p%TI ) ) 
-      !end if
 
       ! Computing extra moments due to lever arm introduced by interface displacement
       ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancellation of signs
