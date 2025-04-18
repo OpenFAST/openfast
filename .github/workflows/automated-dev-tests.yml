@@ -96,7 +96,7 @@ jobs:
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
-      - name: Build module drivers
+      - name: Build all
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target all
@@ -224,6 +224,7 @@ jobs:
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DGENERATE_TYPES:BOOL=ON \
             -DVARIABLE_TRACKING:BOOL=OFF \
+            -DBUILD_OPENFAST_SIMULINK_API:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build FAST_SFunc
         working-directory: ${{runner.workspace}}/openfast/build
