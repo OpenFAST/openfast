@@ -36,15 +36,15 @@ USE WakeDynamics_Types
 USE AWAE_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumFFModules = 5      ! The number of modules available in FAST.Farm [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_None = 0      ! No module selected [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_FWrap = 2      ! FAST Wrapper [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_WD = 3      ! Wake Dynamics [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_AWAE = 4      ! Ambient Wind and Array Effects [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_MD = 5      ! Farm-level MoorDyn [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_None = 0      ! WAT: off [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_PreDef = 1      ! WAT: predefined turbulence boxes [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_UserDef = 2      ! WAT: user defined turbulence boxes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: NumFFModules                     = 5      ! The number of modules available in FAST.Farm [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_None                    = 0      ! No module selected [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_FWrap                   = 2      ! FAST Wrapper [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_WD                      = 3      ! Wake Dynamics [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_AWAE                    = 4      ! Ambient Wind and Array Effects [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_MD                      = 5      ! Farm-level MoorDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_None                     = 0      ! WAT: off [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_PreDef                   = 1      ! WAT: predefined turbulence boxes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_UserDef                  = 2      ! WAT: user defined turbulence boxes [-]
 ! =========  Farm_ParameterType  =======
   TYPE, PUBLIC :: Farm_ParameterType
     REAL(DbKi)  :: DT_low = 0.0_R8Ki      !< Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step [seconds]

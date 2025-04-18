@@ -118,18 +118,16 @@ IMPLICIT NONE
   END TYPE FWrap_OutputType
 ! =======================
    integer(IntKi), public, parameter :: FWrap_x_dummy                    =   1 ! FWrap%dummy
-   integer(IntKi), public, parameter :: FWrap_u_fromSCglob               =   2 ! FWrap%fromSCglob
-   integer(IntKi), public, parameter :: FWrap_u_fromSC                   =   3 ! FWrap%fromSC
-   integer(IntKi), public, parameter :: FWrap_y_toSC                     =   4 ! FWrap%toSC
-   integer(IntKi), public, parameter :: FWrap_y_xHat_Disk                =   5 ! FWrap%xHat_Disk
-   integer(IntKi), public, parameter :: FWrap_y_YawErr                   =   6 ! FWrap%YawErr
-   integer(IntKi), public, parameter :: FWrap_y_psi_skew                 =   7 ! FWrap%psi_skew
-   integer(IntKi), public, parameter :: FWrap_y_chi_skew                 =   8 ! FWrap%chi_skew
-   integer(IntKi), public, parameter :: FWrap_y_p_hub                    =   9 ! FWrap%p_hub
-   integer(IntKi), public, parameter :: FWrap_y_D_rotor                  =  10 ! FWrap%D_rotor
-   integer(IntKi), public, parameter :: FWrap_y_DiskAvg_Vx_Rel           =  11 ! FWrap%DiskAvg_Vx_Rel
-   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Ct               =  12 ! FWrap%AzimAvg_Ct
-   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Cq               =  13 ! FWrap%AzimAvg_Cq
+   integer(IntKi), public, parameter :: FWrap_u_dummy                    =   2 ! FWrap%dummy
+   integer(IntKi), public, parameter :: FWrap_y_xHat_Disk                =   3 ! FWrap%xHat_Disk
+   integer(IntKi), public, parameter :: FWrap_y_YawErr                   =   4 ! FWrap%YawErr
+   integer(IntKi), public, parameter :: FWrap_y_psi_skew                 =   5 ! FWrap%psi_skew
+   integer(IntKi), public, parameter :: FWrap_y_chi_skew                 =   6 ! FWrap%chi_skew
+   integer(IntKi), public, parameter :: FWrap_y_p_hub                    =   7 ! FWrap%p_hub
+   integer(IntKi), public, parameter :: FWrap_y_D_rotor                  =   8 ! FWrap%D_rotor
+   integer(IntKi), public, parameter :: FWrap_y_DiskAvg_Vx_Rel           =   9 ! FWrap%DiskAvg_Vx_Rel
+   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Ct               =  10 ! FWrap%AzimAvg_Ct
+   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Cq               =  11 ! FWrap%AzimAvg_Cq
 
 contains
 
@@ -990,10 +988,8 @@ subroutine FWrap_VarPackInput(V, u, ValAry)
    real(R8Ki), intent(inout)               :: ValAry(:)
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
-      case (FWrap_u_fromSCglob)
-         VarVals = u%fromSCglob(V%iLB:V%iUB)                                  ! Rank 1 Array
-      case (FWrap_u_fromSC)
-         VarVals = u%fromSC(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (FWrap_u_dummy)
+         VarVals(1) = u%dummy                                                 ! Scalar
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -1016,10 +1012,8 @@ subroutine FWrap_VarUnpackInput(V, ValAry, u)
    type(FWrap_InputType), intent(inout)    :: u
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
-      case (FWrap_u_fromSCglob)
-         u%fromSCglob(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
-      case (FWrap_u_fromSC)
-         u%fromSC(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (FWrap_u_dummy)
+         u%dummy = VarVals(1)                                                 ! Scalar
       end select
    end associate
 end subroutine
@@ -1028,10 +1022,8 @@ function FWrap_InputFieldName(DL) result(Name)
    type(DatLoc), intent(in)      :: DL
    character(32)                 :: Name
    select case (DL%Num)
-   case (FWrap_u_fromSCglob)
-       Name = "u%fromSCglob"
-   case (FWrap_u_fromSC)
-       Name = "u%fromSC"
+   case (FWrap_u_dummy)
+       Name = "u%dummy"
    case default
        Name = "Unknown Field"
    end select
@@ -1053,8 +1045,6 @@ subroutine FWrap_VarPackOutput(V, y, ValAry)
    real(R8Ki), intent(inout)               :: ValAry(:)
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
-      case (FWrap_y_toSC)
-         VarVals = y%toSC(V%iLB:V%iUB)                                        ! Rank 1 Array
       case (FWrap_y_xHat_Disk)
          VarVals = y%xHat_Disk(V%iLB:V%iUB)                                   ! Rank 1 Array
       case (FWrap_y_YawErr)
@@ -1095,8 +1085,6 @@ subroutine FWrap_VarUnpackOutput(V, ValAry, y)
    type(FWrap_OutputType), intent(inout)   :: y
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
-      case (FWrap_y_toSC)
-         y%toSC(V%iLB:V%iUB) = VarVals                                        ! Rank 1 Array
       case (FWrap_y_xHat_Disk)
          y%xHat_Disk(V%iLB:V%iUB) = VarVals                                   ! Rank 1 Array
       case (FWrap_y_YawErr)
@@ -1123,8 +1111,6 @@ function FWrap_OutputFieldName(DL) result(Name)
    type(DatLoc), intent(in)      :: DL
    character(32)                 :: Name
    select case (DL%Num)
-   case (FWrap_y_toSC)
-       Name = "y%toSC"
    case (FWrap_y_xHat_Disk)
        Name = "y%xHat_Disk"
    case (FWrap_y_YawErr)
