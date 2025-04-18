@@ -1028,8 +1028,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
       !Ini%tInData_SD%UseInputFile = .TRUE.
       Init%InData_SD%SDInputFile   = p_FAST%SubFile
       Init%InData_SD%RootName      = p_FAST%OutFileRoot
-      Init%InData_SD%TP_RefPoint(:,1)   = ED%y%PlatformPtMesh%Position(:,1)  ! "Interface point" where loads will be transferred to
-      Init%InData_SD%SubRotateZ    = 0.0                                        ! Used by driver to rotate structure around z
+      Init%InData_SD%SubRotateZ    = 0.0   ! Used by driver to rotate structure around z
+
+      ! TODO: Below is only a temporary patch to keep things working as before. Need to be updated to support multirotor capability.
+      Init%InData_SD%nTP           = 1
+      allocate(Init%InData_SD%TP_RefPoint(3,Init%InData_SD%nTP), stat=ErrStat2)
+         CALL SetErrStat(ErrStat2,'Allocating TP reference points',ErrStat,ErrMsg,RoutineName)
+      Init%InData_SD%TP_RefPoint(:,1) = ED%y%PlatformPtMesh%Position(:,1)  ! "Interface points" where loads and motion will be transferred to and from
 
 
       CALL SD_Init( Init%InData_SD, SD%Input(1), SD%p,  SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR),  &
