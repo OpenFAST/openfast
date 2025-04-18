@@ -340,7 +340,7 @@ of_regression("5MW_OC3Spar_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerod
 of_regression("5MW_OC4Semi_WSt_WavesWN"                "openfast;elastodyn;aerodyn;servodyn;hydrodyn;moordyn;offshore")
 of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn;servodyn")
 of_regression("5MW_Land_BD_Init"                       "openfast;beamdyn;aerodyn;servodyn")
-of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extptfm")
+of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extptfm;offshore")
 of_regression("HelicalWake_OLAF"                       "openfast;aerodyn;olaf")
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn;olaf")
 of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
