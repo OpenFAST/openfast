@@ -961,26 +961,27 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Computing extra moments due to lever arm introduced by interface displacement
       ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancellation of signs
-      if (p%floating .and. p%TP1IsRBRefPt) then
-
-         do i = 2,p%nTP
-            Y1_GuyanLoadCorrection = -cross_product( matmul( Rb2g , m%u_TP((6*(i-1)+1):(6*(i-1)+3)) ) , m%Y1((6*(i-1)+1):(6*(i-1)+3)) )
-            m%Y1((6*(i-1)+4):(6*(i-1)+6)) = m%Y1((6*(i-1)+4):(6*(i-1)+6)) + Y1_GuyanLoadCorrection
-            y%Y1Mesh%Force (:,i-1) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
-            y%Y1Mesh%Moment(:,i-1) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
-         enddo
-
+      if (p%floating) then
+         if (p%TP1IsRBRefPt) then
+            do i = 2,p%nTP
+               Y1_GuyanLoadCorrection = -cross_product( matmul( Rb2g , m%u_TP((6*(i-1)+1):(6*(i-1)+3)) ) , m%Y1((6*(i-1)+1):(6*(i-1)+3)) )
+               m%Y1((6*(i-1)+4):(6*(i-1)+6)) = m%Y1((6*(i-1)+4):(6*(i-1)+6)) + Y1_GuyanLoadCorrection
+               y%Y1Mesh%Force (:,i-1) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
+               y%Y1Mesh%Moment(:,i-1) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
+            enddo
+         else
+            do i = 1,p%nTP
+               y%Y1Mesh%Force (:,i) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
+               y%Y1Mesh%Moment(:,i) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
+            enddo
+         end if
       else if (.not.p%floating) then
-
          do i = 1,p%nTP
             Y1_GuyanLoadCorrection = -cross_product( m%u_TP((6*(i-1)+1):(6*(i-1)+3)) , m%Y1((6*(i-1)+1):(6*(i-1)+3)) )
             m%Y1((6*(i-1)+4):(6*(i-1)+6)) = m%Y1((6*(i-1)+4):(6*(i-1)+6)) + Y1_GuyanLoadCorrection
             y%Y1Mesh%Force (:,i) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
             y%Y1Mesh%Moment(:,i) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
          enddo
-
-      ! else ! floating with only one transition piece -> no extra moment
-
       end if
 
       ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
