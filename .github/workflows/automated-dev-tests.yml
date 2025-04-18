@@ -16,10 +16,10 @@ on:
     # paths-ignore:
 
 env:
-  FORTRAN_COMPILER: gfortran-12
-  CXX_COMPILER: g++-12
-  C_COMPILER: gcc-12
-  GCOV_EXE: gcov-12
+  FORTRAN_COMPILER: gfortran-14
+  CXX_COMPILER: g++-14
+  C_COMPILER: gcc-14
+  GCOV_EXE: gcov-14
   CMAKE_BUILD_PARALLEL_LEVEL: 8
   CTEST_PARALLEL_LEVEL: 2
 
@@ -33,7 +33,7 @@ jobs:
     # Tests compiling in debug mode.
     # Also compiles the Registry and generates new types files.
     # Debug more speeds up the build.
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -88,7 +88,7 @@ jobs:
     # Tests compiling in debug mode with single precision.
     # This workspace is not used by any other subtests, it checks type errors of the type ReKi/R8Ki
     # Debug speeds up the build.
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -123,7 +123,7 @@ jobs:
 
 
   build-drivers-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -167,7 +167,7 @@ jobs:
 
 
   build-postlib-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -223,7 +223,7 @@ jobs:
 
 
   build-interfaces-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
@@ -259,7 +259,7 @@ jobs:
 
 
   build-openfast-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
@@ -295,7 +295,7 @@ jobs:
 
 
   build-fastfarm-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
@@ -335,7 +335,7 @@ jobs:
 
   build-test-uadriver-debug:
     # UA driver used to require -DUA_OUTS
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -393,7 +393,7 @@ jobs:
   ### TEST JOBS
 
   rtest-module-drivers:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-drivers-release
     steps:
       - name: Cache the workspace
@@ -411,7 +411,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -450,7 +449,7 @@ jobs:
 
 
   rtest-modules-debug:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-all-debug
     steps:
       - name: Cache the workspace
@@ -468,7 +467,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -510,7 +508,7 @@ jobs:
 
 
   rtest-interfaces:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-interfaces-release
     steps:
       - name: Cache the workspace
@@ -558,8 +556,10 @@ jobs:
 
 
   rtest-OF:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
+    env:
+        CTEST_PARALLEL_LEVEL: 1
     steps:
       - name: Cache the workspace
         uses: actions/cache@v4
@@ -576,7 +576,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -609,7 +608,7 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
   rtest-openfast_io:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -656,7 +655,7 @@ jobs:
 
 
   rtest-OF-simulink:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -688,7 +687,7 @@ jobs:
 
 
   rtest-OF-5MW_Land_AeroMap:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -707,7 +706,6 @@ jobs:
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -737,7 +735,7 @@ jobs:
 
 
   rtest-OF-5MW_OC4Semi_WSt_WavesWN:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -755,7 +753,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -786,7 +783,7 @@ jobs:
 
 
   rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -804,7 +801,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -835,7 +831,7 @@ jobs:
 
 
   rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -853,7 +849,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -884,7 +879,7 @@ jobs:
 
 
   rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -902,7 +897,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -933,7 +927,7 @@ jobs:
 
 
   rtest-OF-5MW_Land_BD_DLL_WTurb:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -951,7 +945,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -982,7 +975,7 @@ jobs:
 
 
   rtest-OF-linearization:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -1000,7 +993,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -1030,7 +1022,7 @@ jobs:
 
 
   rtest-FF:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build-fastfarm-release
     steps:
       - name: Cache the workspace
@@ -1048,7 +1040,6 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
