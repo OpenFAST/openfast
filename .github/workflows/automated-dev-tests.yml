@@ -124,10 +124,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v2
-        with:
-          products: Simulink
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -147,12 +143,10 @@ jobs:
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
             -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
-            -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DGENERATE_TYPES:BOOL=ON \
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DBUILD_OPENFAST_SIMULINK_API:BOOL=OFF \
             ${GITHUB_WORKSPACE}
             # -DDOUBLE_PRECISION=OFF \
       - name: Build all
@@ -200,6 +194,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install dependencies
         run: |
           sudo apt-get update -y
