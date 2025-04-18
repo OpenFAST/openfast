@@ -905,7 +905,7 @@ CONTAINS
    
    
    ! master function to get wave/water kinematics at a given point -- called by each object 
-   SUBROUTINE getWaterKin(p, m, x, y, z, t, U, Ud, zeta, PDyn, ErrStat, ErrMsg) ! TODO: objects to handle errors returned here
+   SUBROUTINE getWaterKin(p, m, x, y, z, t, U, Ud, zeta, PDyn, ErrStat, ErrMsg)
    
       ! This whole approach assuems that px, py, and pz are in increasing order.
       ! Wheeler stretching is built in for WaterKin 1 and 2.
@@ -1228,7 +1228,6 @@ CONTAINS
          CALL ReadVar( UnIn, FileName, coordtype   , 'coordtype'   , '', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN        ! get the entry type
          READ(UnIn, '(A)', IOSTAT=ErrStat2) entries2; IF(ErrStat2 /= ErrID_None) ErrMsg2 = "There was an error reading in the grid description"; IF(Failed()) RETURN ! get entries as string to be processed
          CALL gridAxisCoords(coordtype, entries2, p%pzWave, p%nzWave); IF(Failed()) RETURN 
-         ! TODO: log what is read in for waves
          ! ----- current -----
          CALL ReadCom( UnIn, FileName,                        'current header', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
          CALL ReadVar( UnIn, FileName, p%Current,   'CurrentMod', 'CurrentMod', ErrStat2, ErrMsg2, UnEcho); IF(Failed()) RETURN
@@ -1363,7 +1362,7 @@ CONTAINS
             IF (p%writeLog > 0) THEN
                WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKinMod and CurrentMod must be equal or one must be zero"
             ENDIF
-            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN ! TODO: can't we find a way to enable wave mod = 2 and current mod = 1?
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN ! TODO: can we find a way to enable wave mod = 2 and current mod = 1?
          ENDIF
             
          ! ------------------- start with wave kinematics -----------------------
@@ -1421,7 +1420,21 @@ CONTAINS
                   ENDIF
                END IF
 
-               ! TODO: check that SS wave configuration is valid with MD structure  
+               ! check SS only is being run w/ no wave spreading, because MoorDyn is not compatiable with those(for now)
+               IF (p%WaveField%WaveMultiDir) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR MoorDyn WaveKinMod2 does not support wave spreading. Please use WaveDirMod = 0 in SeaState."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "MoorDyn WaveKinMod2 does not support wave spreading. Please use WaveDirMod = 0 in SeaState.", ErrStat, ErrMsg, RoutineName); RETURN
+               END IF
+
+               ! check SS only is being run w/ first order waves, because MoorDyn is not compatiable with those(for now)
+               IF (ALLOCATED(p%WaveField%WaveElev2)) THEN 
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR MoorDyn WaveKinMod2 does not support second order waves. Please use disable in SeaState."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "MoorDyn WaveKinMod2 does not support second order waves. Please use disable in SeaState.", ErrStat, ErrMsg, RoutineName); RETURN
+               END IF
 
                ! set dtWave to WaveField dtWave (for interpolation use in getWaterKin)
                p%dtWave = p%WaveField%WaveTime(2)-p%WaveField%WaveTime(1) ! from Waves.f90 (line 1040),  DO I = 0,WaveField%NStepWave; WaveField%WaveTime(I) = I*REAL(InitInp%WaveDT,SiKi)
