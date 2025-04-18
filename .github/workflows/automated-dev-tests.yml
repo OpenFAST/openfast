@@ -119,7 +119,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target all
-          
+
 
   build-all-release:
     runs-on: ubuntu-24.04
@@ -157,7 +157,7 @@ jobs:
       - name: Build module drivers
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_module_drivers
+          cmake --build . --target all
       - name: Cache the workspace
         uses: actions/cache@v4
         with:
@@ -424,7 +424,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 \
+          ctest -VV \
           -L openfast \
           -LE "cpp|linear|python|fastlib|fastfarm"
       - name: Failing test artifacts
@@ -479,7 +479,7 @@ jobs:
       - name: Run openfast_io tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j4 \
+          ctest -VV \
           -L openfast_io 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
