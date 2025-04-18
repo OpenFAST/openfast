@@ -527,9 +527,9 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       REAL(ReKi)                   :: F_I(6*p%nNodes_I), F_TP1(6)   
       REAL(R8Ki), dimension(3,3)   :: Rg2b, Rb2g
-      REAL(ReKi), dimension(3,3)   :: tmp
+      REAL(R8Ki), dimension(3,3)   :: tmp
       REAL(ReKi)                   :: qRR, qRP, qRY, qRRdot, qRPdot, qRYdot
-      REAL(ReKi), ALLOCATABLE      :: tmpInv(:,:)
+      REAL(R8Ki), ALLOCATABLE      :: tmpInv(:,:)
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
 
@@ -2967,10 +2967,10 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    CHARACTER(*),             INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
    real(FEKi), allocatable                   :: Temp(:,:)
-   real(FEKi)                                :: dx,dy,dz
+   real(ReKi)                                :: dx,dy,dz
    real(ReKi)                                :: TI_transpose(p%nDOFL_TP,p%nDOFI__) !bjj: added this so we don't have to take the transpose 5+ times
    real(ReKi)                                :: GMat_transpose(p%nDOFL_TP,p%nDOFL_TP)
-   real(ReKi)                                :: EOM_LHS(p%nDOF__Rb+p%nDOFM,p%nDOF__Rb+p%nDOFM)
+   real(R8Ki)                                :: EOM_LHS(p%nDOF__Rb+p%nDOFM,p%nDOF__Rb+p%nDOFM)
    integer(IntKi)                            :: I,J
    integer(IntKi)                            :: n                          ! size of jacobian in AM2 calculation
    INTEGER(IntKi)                            :: ErrStat2
@@ -3601,14 +3601,14 @@ SUBROUTINE GetUTP(u, p, x, m, ErrStat, ErrMsg, bPrime)
    ! Local variables
    INTEGER(IntKi)             :: iTP, Idx
    REAL(ReKi)                 :: rotations(3)                          ! Small rotation vector for transition pieces (fixed-bottom only)
-   REAL(ReKi)                 :: omega(3), omega_dot(3)  ! Rigid-body  ! Rigid-body angular velocity and acceleration resolved in the global earth-fixed coordinate system
-   REAL(ReKi)                 :: qRR, qRP, qRY                         ! Rigid-body roll, pitch, yaw Tait-Bryan angles
-   REAL(ReKi)                 :: qRRdot, qRPdot, qRYdot                ! Time derivatives of rigid-body Tait-Bryan angles
-   REAL(ReKi)                 :: qRRdotdot, qRPdotdot, qRYdotdot       ! Second time derivatives of rigid-body Tait-Bryan angles
+   REAL(R8Ki)                 :: omega(3), omega_dot(3)  ! Rigid-body  ! Rigid-body angular velocity and acceleration resolved in the global earth-fixed coordinate system
+   REAL(R8Ki)                 :: qRR, qRP, qRY                         ! Rigid-body roll, pitch, yaw Tait-Bryan angles
+   REAL(R8Ki)                 :: qRRdot, qRPdot, qRYdot                ! Time derivatives of rigid-body Tait-Bryan angles
+   REAL(R8Ki)                 :: qRRdotdot, qRPdotdot, qRYdotdot       ! Second time derivatives of rigid-body Tait-Bryan angles
    real(ReKi), dimension(3)   :: rIP                                   ! Vector from the ith TP to the first TP
    real(ReKi), dimension(3)   :: rIP0                                  ! Vector from the ith TP to the first TP (undeflected/undisplaced)
    real(R8Ki), dimension(3,3) :: Rg2b                                  ! Rotation matrix from global earth-fixed coordinate system to rigid-body coordinate system
-   real(ReKi), dimension(6,6) :: RRg2b                                 ! 6-by-6 rotation matrix build from Rg2b
+   real(R8Ki), dimension(6,6) :: RRg2b                                 ! 6-by-6 rotation matrix build from Rg2b
    INTEGER(IntKi)             :: ErrStat2                              ! Error status of the operation (occurs after initial error)
    CHARACTER(ErrMsgLen)       :: ErrMsg2                               ! Error message if ErrStat2 /= ErrID_None
 

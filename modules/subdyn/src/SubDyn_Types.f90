@@ -229,8 +229,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_MiscVarType  =======
   TYPE, PUBLIC :: SD_MiscVarType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qmdotdot      !< 2nd derivative of states, used only for output-file purposes [-]
-    REAL(ReKi) , DIMENSION(1:6)  :: qRdotdot = 0.0_ReKi      !< 2nd derivative of rigid-body states (floating only) [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qmdotdot      !< 2nd derivative of states, used only for output-file purposes [-]
+    REAL(R8Ki) , DIMENSION(1:6)  :: qRdotdot = 0.0_R8Ki      !< 2nd derivative of rigid-body states (floating only) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_TP 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: u_TP 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: udot_TP 
@@ -336,7 +336,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI      !< Matrix to calculate TP reference point reaction at top of structure [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TIreact      !< Matrix to calculate single point reaction at base of structure [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GMat      !< Matrix to convert the first 6 Guyan modes to rigid-body modes [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: EOM_LHS      !< (Inverse of) the left-hand side matrix of the combined equations of motion [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_LHS      !< (Inverse of) the left-hand side matrix of the combined equations of motion [-]
     INTEGER(IntKi)  :: nTP = 0_IntKi      !< Total number of transition pieces [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: TPIdx      !< Transition piece index associated with each interface node [-]
     INTEGER(IntKi)  :: nNodes = 0_IntKi      !< Total number of nodes [-]
