@@ -675,21 +675,22 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
       !locals
-      INTEGER(IntKi)               :: I, idx, iSDNode             ! Counters
-      REAL(ReKi)                   :: Y1_GuyanLoadCorrection(3)   ! Lever arm moment contributions due to interface displacement
-      INTEGER(IntKi), pointer      :: DOFList(:)
-      REAL(ReKi)                   :: DCM(3,3)
-      REAL(ReKi)                   :: F_I(6*p%nNodes_I)           ! Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
-      TYPE(SD_ContinuousStateType) :: dxdt                        ! Continuous state derivatives at t- for output file qmdotdot purposes only
+      INTEGER(IntKi)                               :: I, idx, iSDNode             ! Counters
+      REAL(ReKi)                                   :: Y1_GuyanLoadCorrection(3)   ! Lever arm moment contributions due to interface displacement
+      INTEGER(IntKi), pointer                      :: DOFList(:)
+      REAL(ReKi)                                   :: DCM(3,3)
+      REAL(ReKi)                                   :: F_I(6*p%nNodes_I)           ! Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       ! Variables for rigid body motion
-      real(ReKi), dimension(3)     :: rIP          ! Vector from TP to rotated Node
-      real(ReKi), dimension(3)     :: rIP0         ! Vector from TP to Node (undeflected)
-      real(ReKi), dimension(3)     :: duP          ! Displacement of node due to rigid rotation
-      real(R8Ki), dimension(3,3)   :: Rg2b         ! Rotation matrix global 2 body coordinates
-      real(R8Ki), dimension(3,3)   :: Rb2g         ! Rotation matrix body 2 global coordinates
-      INTEGER(IntKi)               :: ErrStat2     ! Error status of the operation (occurs after initial error)
-      CHARACTER(ErrMsgLen)         :: ErrMsg2      ! Error message if ErrStat2 /= ErrID_None
+      real(ReKi), dimension(3)                     :: rIP          ! Vector from TP to rotated Node
+      real(ReKi), dimension(3)                     :: rIP0         ! Vector from TP to Node (undeflected)
+      real(ReKi), dimension(3)                     :: duP          ! Displacement of node due to rigid rotation
+      real(R8Ki), dimension(3,3)                   :: Rg2b         ! Rotation matrix global 2 body coordinates
+      real(R8Ki), dimension(3,3)                   :: Rb2g         ! Rotation matrix body 2 global coordinates
+      INTEGER(IntKi)                               :: ErrStat2     ! Error status of the operation (occurs after initial error)
+      CHARACTER(ErrMsgLen)                         :: ErrMsg2      ! Error message if ErrStat2 /= ErrID_None
+
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -799,33 +800,15 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          enddo
       end if
 
-      ! values on the interface mesh are Y1 (SubDyn forces) + Hydrodynamic forces
-
-     !________________________________________
-     ! CALCULATE OUTPUT TO BE WRITTEN TO FILE 
-     !________________________________________
-     ! OutSwtch determines whether or not to actually output results via the WriteOutput array
-     !    0 = No one needs the SubDyn outputs provided via the WriteOutput array.
-     !    1 = SubDyn will generate an output file of its own.  
-     !    2 = the caller will handle the outputs, but SubDyn needs to provide them.
-     !    3 = Both 1 and 2
+      !________________________________________
+      ! CALCULATE OUTPUT TO BE WRITTEN TO FILE
+      !________________________________________
+      ! OutSwtch determines whether or not to actually output results via the WriteOutput array
+      !    0 = No one needs the SubDyn outputs provided via the WriteOutput array.
+      !    1 = SubDyn will generate an output file of its own.
+      !    2 = the caller will handle the outputs, but SubDyn needs to provide them.
+      !    3 = Both 1 and 2
       IF ( p%OutSwtch > 0 ) THEN
-         ! call CalcContStateDeriv one more time to store these qmdotdot for debugging purposes in the output file
-         !find xdot at t
-         IF ( p%nDOFM > 0 ) THEN
-            ! note that this re-sets m%udotdot_TP and m%F_L, but they are the same values as earlier in this routine so it doesn't change results in SDOut_MapOutputs()
-            CALL SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); if(Failed()) return
-            !Assign the acceleration to the x variable since it will be used for output file purposes for SSqmdd01-99, and dxdt will disappear
-            m%qmdotdot=dxdt%qmdot
-            ! Destroy dxdt because it is not necessary for the rest of the subroutine
-            CALL SD_DestroyContState( dxdt, ErrStat2, ErrMsg2); if(Failed()) return
-         END IF
-         ! 6-vectors (making sure they are up to date for outputs TODO: Update this part for multiple TPs (LW)
-         ! do i = 1,p%nTP
-         !    m%udot_TP((6*i-5):(6*i))    = (/u%TPMesh%TranslationVel(:,i),u%TPMesh%RotationVel(:,i)/)
-         !    m%udotdot_TP((6*i-5):(6*i)) = (/u%TPMesh%TranslationAcc(:,i),u%TPMesh%RotationAcc(:,i)/)
-         ! enddo
-          
          ! Write the previous output data into the output file           
          IF ( ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) .AND. ( t > m%LastOutTime ) ) THEN
             IF ((m%Decimat .EQ. p%OutDec) .OR. (m%Decimat .EQ. 0))  THEN
@@ -853,12 +836,7 @@ CONTAINS
    LOGICAL FUNCTION Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput') 
         Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp()
    END FUNCTION Failed
-   
-   SUBROUTINE CleanUp
-       CALL SD_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-   END SUBROUTINE CleanUp
 
 END SUBROUTINE SD_CalcOutput
 
