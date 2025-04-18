@@ -22,6 +22,7 @@ env:
   GCOV_EXE: gcov-14
   CMAKE_BUILD_PARALLEL_LEVEL: 8
   CTEST_PARALLEL_LEVEL: 4
+  OMP_NUM_THREADS: 1
 
 jobs:
 
@@ -620,8 +621,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         shell: bash
         run: |
-          set OMP_NUM_THREADS=2
-          ctest -VV -L fastfarm --verbose
+          OMP_NUM_THREADS=2 ctest -VV -j1 -L fastfarm --verbose
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
