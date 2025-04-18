@@ -411,6 +411,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -467,6 +468,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -576,6 +578,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -706,6 +709,7 @@ jobs:
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -753,6 +757,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -801,6 +806,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -849,6 +855,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -897,6 +904,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -945,6 +953,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -993,6 +1002,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -1040,6 +1050,7 @@ jobs:
           pip install glue-codes/python/.   # Installs the interface library
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
