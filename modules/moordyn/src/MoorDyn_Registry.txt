@@ -293,7 +293,6 @@ typedef  ^            ^                IntKi              LineUnOut     -       
 typedef  ^            ^                DbKi               LineWrOutput {:}       -  -   "one row of output data for this line"
 # NOTE: Below are vars used in the line VIV model
 typedef  ^            ^                DbKi               phi          {:}       -  -   "phase of lift force" 
-typedef  ^            ^                LOGICAL            IC_gen        -   .FALSE. -   "boolean to indicate dynamic relaxation occuring"  "-"
 typedef  ^            ^                DbKi               n_m           -       500 -   "Num timesteps for rolling RMS of crossflow velocity phase"  "-"
 typedef  ^            ^                DbKi               phi_yd        -        -  -   "The crossflow motion phase"  "-"
 typedef  ^            ^                DbKi               t_old         -        -  -   "old t"  "s"
@@ -399,6 +398,7 @@ typedef   ^       ^                    DbKi                BathGrid_Xs      {:} 
 typedef   ^       ^                    DbKi                BathGrid_Ys      {:}  -  -   "array of y-coordinates in the bathymetry grid"
 typedef   ^       ^                    IntKi               BathGrid_npoints {:}  -  -   "number of grid points to describe the bathymetry grid"
 typedef   ^       ^          SeaSt_WaveField_MiscVarType   WaveField_m       -   -  -   "misc var information from the SeaState Interpolation module"   -
+typedef  ^        ^                    LOGICAL             IC_gen           - .FALSE. -   "boolean to indicate dynamic relaxation occuring"  "-"
 
 
 ## ============================== Parameters ============================================================================================================================================

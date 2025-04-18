@@ -315,7 +315,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: LineUnOut = 0_IntKi      !< unit number of line output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: LineWrOutput      !< one row of output data for this line [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: phi      !< phase of lift force [-]
-    LOGICAL  :: IC_gen = .FALSE.      !< boolean to indicate dynamic relaxation occuring [-]
     REAL(DbKi)  :: n_m = 500      !< Num timesteps for rolling RMS of crossflow velocity phase [-]
     REAL(DbKi)  :: phi_yd = 0.0_R8Ki      !< The crossflow motion phase [-]
     REAL(DbKi)  :: t_old = 0.0_R8Ki      !< old t [s]
@@ -437,6 +436,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_Ys      !< array of y-coordinates in the bathymetry grid [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_npoints      !< number of grid points to describe the bathymetry grid [-]
     TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
+    LOGICAL  :: IC_gen = .FALSE.      !< boolean to indicate dynamic relaxation occuring [-]
   END TYPE MD_MiscVarType
 ! =======================
 ! =========  MD_ParameterType  =======
@@ -2148,7 +2148,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstLineData%phi = SrcLineData%phi
    end if
-   DstLineData%IC_gen = SrcLineData%IC_gen
    DstLineData%n_m = SrcLineData%n_m
    DstLineData%phi_yd = SrcLineData%phi_yd
    DstLineData%t_old = SrcLineData%t_old
@@ -2377,7 +2376,6 @@ subroutine MD_PackLine(RF, Indata)
    call RegPack(RF, InData%LineUnOut)
    call RegPackAlloc(RF, InData%LineWrOutput)
    call RegPackAlloc(RF, InData%phi)
-   call RegPack(RF, InData%IC_gen)
    call RegPack(RF, InData%n_m)
    call RegPack(RF, InData%phi_yd)
    call RegPack(RF, InData%t_old)
@@ -2466,7 +2464,6 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpack(RF, OutData%LineUnOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LineWrOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%phi); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%IC_gen); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_m); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%phi_yd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%t_old); if (RegCheckErr(RF, RoutineName)) return
@@ -3495,6 +3492,7 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstMiscData%IC_gen = SrcMiscData%IC_gen
 end subroutine
 
 subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -3758,6 +3756,7 @@ subroutine MD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%BathGrid_Ys)
    call RegPackAlloc(RF, InData%BathGrid_npoints)
    call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
+   call RegPack(RF, InData%IC_gen)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3904,6 +3903,7 @@ subroutine MD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%BathGrid_Ys); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BathGrid_npoints); if (RegCheckErr(RF, RoutineName)) return
    call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
+   call RegUnpack(RF, OutData%IC_gen); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)

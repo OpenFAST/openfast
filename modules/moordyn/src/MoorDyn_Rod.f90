@@ -588,7 +588,7 @@ CONTAINS
       Real(DbKi)                 :: nvec(3)        ! local seabed surface normal vector (positive out)
 
       INTEGER(IntKi)                   :: ErrStat2
-      CHARACTER(120)                   :: ErrMsg2   
+      CHARACTER(1024)                   :: ErrMsg2   
 
 
       N = Rod%N
@@ -622,7 +622,7 @@ CONTAINS
       ! apply wave kinematics (if there are any)
 
       DO i=0,N
-         CALL getWaterKin(p, m%WaveField_m, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, m%WaveTi, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i), ErrStat2, ErrMsg2)
+         CALL getWaterKin(p, m, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i), ErrStat2, ErrMsg2)
          ! TODO: Handle error messages. Roads broadly needs error flags to be supported
          
          !F(i) = 1.0 ! set VOF value to one for now (everything submerged - eventually this should be element-based!!!) <<<<

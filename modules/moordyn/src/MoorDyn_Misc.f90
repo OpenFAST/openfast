@@ -905,18 +905,17 @@ CONTAINS
    
    
    ! master function to get wave/water kinematics at a given point -- called by each object 
-   SUBROUTINE getWaterKin(p, WaveField_m, x, y, z, t, tindex, U, Ud, zeta, PDyn, ErrStat, ErrMsg) ! TODO: objects to handle errors returned here
+   SUBROUTINE getWaterKin(p, m, x, y, z, t, U, Ud, zeta, PDyn, ErrStat, ErrMsg) ! TODO: objects to handle errors returned here
    
       ! This whole approach assuems that px, py, and pz are in increasing order.
       ! Wheeler stretching is built in for WaterKin 1 and 2.
    
       TYPE(MD_ParameterType),           INTENT (IN   )       :: p           ! MoorDyn parameters
-      type(SeaSt_WaveField_MiscVarType),INTENT(INOUT)        :: WaveField_m ! WaveField misc variables. This is needed to hold some interpolation information for WaterKin = 3
+      TYPE(MD_MiscVarType),             INTENT (INOUT)       :: m           ! MoorDyn misc data
       Real(DbKi),                       INTENT (IN   )       :: x           ! node position
       Real(DbKi),                       INTENT (IN   )       :: y           ! node position
       Real(DbKi),                       INTENT (IN   )       :: z           ! node position
       Real(DbKi),                       INTENT (IN   )       :: t           ! time
-      INTEGER(IntKi),                   INTENT (INOUT)       :: tindex      ! pass time index to try starting from, returns identified time index
       Real(DbKi),                       INTENT (INOUT)       :: U(3)        ! fluid speed
       Real(DbKi),                       INTENT (INOUT)       :: Ud(3)       ! fluid acceleration 
       Real(DbKi),                       INTENT (INOUT)       :: zeta        ! water height above node 
@@ -935,7 +934,7 @@ CONTAINS
       Real(SiKi)                 :: PDyn_sp  ! single precision
       INTEGER(IntKi)             :: nodeInWater ! Unused by MD
       INTEGER(IntKi)             :: ErrStat2
-      CHARACTER(120)             :: ErrMsg2   
+      CHARACTER(1024)             :: ErrMsg2   
       
       ! interpolation variables for Waterkin = 1, 2
       INTEGER(IntKi)             :: ix, iy, iz, it        ! indices for interpolation      
@@ -949,7 +948,7 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      IF (p%WaterKin == 3) THEN
+      IF (p%WaterKin == 3 .AND. (.NOT. m%IC_gen)) THEN ! disable wavekin 3 during IC_gen, otherwise will never find stead state (becasue of waves)
          
          ! SeaState throws warning when queried location is out of bounds from the SeaState grid, so no need to handle here
 
@@ -958,7 +957,7 @@ CONTAINS
          xyz_sp = REAL((/ x, y, z /),SiKi)
 
          ! for now we will force the node to be in the water (forceNodeInWater = True). Rods handle partial submergence seperately so they need to get information from SeaState 
-         CALL WaveField_GetNodeWaveKin(p%WaveField, WaveField_m, t, xyz_sp, .TRUE., nodeInWater, WaveElev1, WaveElev2, zeta_sp, PDyn_sp, U_sp, Ud_sp, FAMCF, ErrStat2, ErrMsg2 ) ! outputs: nodeInWater, WaveElev1, WaveElev2, FAMCF all unused
+         CALL WaveField_GetNodeWaveKin(p%WaveField, m%WaveField_m, t, xyz_sp, .TRUE., nodeInWater, WaveElev1, WaveElev2, zeta_sp, PDyn_sp, U_sp, Ud_sp, FAMCF, ErrStat2, ErrMsg2 ) ! outputs: nodeInWater, WaveElev1, WaveElev2, FAMCF all unused
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
          ! Unpack all WaveGrid outputs to MD output data types (single to double)
@@ -976,7 +975,7 @@ CONTAINS
             !CALL getInterpNums(p%tWave, t, tindex, it, ft)
             it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
             ft = (t - (it-1)*p%dtWave)/p%dtWave
-            tindex = it                  
+            m%WaveTi = it                  
          
             ! find x-y interpolation indices and coefficients
             CALL getInterpNumsSiKi(p%pxWave   , REAL(x,SiKi),  1, ix, fx) ! wave grid
@@ -1095,13 +1094,10 @@ CONTAINS
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCV( :)        ! Discrete Fourier transform of the instantaneous vertical   velocity      of incident waves before applying stretching at the zi-coordinates for points (m/s)
 !      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the Realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
 
-      INTEGER(IntKi)                   :: ErrStatTmp
       INTEGER(IntKi)                   :: ErrStat2
       CHARACTER(120)                   :: ErrMsg2   
       CHARACTER(120)                   :: RoutineName = 'SetupWaveKin'   
 
-
-      ErrStatTmp = ErrID_None  ! TODO: get rid of redundancy <<<
       ErrStat2 = ErrID_None
       ErrMsg2  = ""
 
@@ -1373,6 +1369,16 @@ CONTAINS
          ! ------------------- start with wave kinematics -----------------------
          
          IF (p%WaveKin > 0) THEN 
+
+            ! Check that all wave grid z values are below the water line, otherwise COSHNumOvrCOSHDen calcs will nan
+            DO I=1,p%nzWave
+               IF (p%pzWave(I) > 0) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "    ERROR: MoorDyn wave grid z values are above the water line. The wave grid cannot contain values greater than 0. This may be caused by interpolation over integer z-grid spacing."
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "Mooring wave grid z values are above the water line. The wave grid cannot contain values greater than 0.", ErrStat, ErrMsg, RoutineName); RETURN
+               END IF
+            END DO
             
             IF (p%WaveKin == 2) THEN ! must be using the hybrid approach
 
@@ -1415,14 +1421,17 @@ CONTAINS
                   ENDIF
                END IF
 
+               ! TODO: check that SS wave configuration is valid with MD structure  
+
                ! set dtWave to WaveField dtWave (for interpolation use in getWaterKin)
                p%dtWave = p%WaveField%WaveTime(2)-p%WaveField%WaveTime(1) ! from Waves.f90 (line 1040),  DO I = 0,WaveField%NStepWave; WaveField%WaveTime(I) = I*REAL(InitInp%WaveDT,SiKi)
 
                ! Interpolations need the following from SeaState: WaveElevC0, NStepWave2, NStepWave, WaveDOmega. In p%WaveKin = 1, these values are extracted from the wave elevation time series
                WaveElevC0 = p%WaveField%WaveElevC0
+               WaveDOmega = p%WaveField%WaveDOmega
                NStepWave2 = p%WaveField%NStepWave2
                NStepWave  = p%WaveField%NStepWave
-               WaveDOmega = p%WaveField%WaveDOmega
+               p%ntWave = NStepWave ! set ntWave to NStepWave
 
             ELSEIF (p%WaveKin == 1) THEN ! must be a filepath therefore read wave elevations from timeseries
 
@@ -1464,8 +1473,8 @@ CONTAINS
                   READ(UnElev,'(A)',IOSTAT=ErrStat2) Line     !read into a line
                   IF (ErrStat2 /= 0) EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
                   i = i+1
-                  READ(Line,*,IOSTAT=ErrStatTmp) tmpReal
-                  IF (ErrStatTmp/=0) THEN  ! Not a number
+                  READ(Line,*,IOSTAT=ErrStat2) tmpReal
+                  IF (ErrStat2/=0) THEN  ! Not a number
                      IF (dataBegin) THEN
                         IF (p%writeLog > 0) THEN
                            WRITE(p%UnLog, '(A)'        ) "   ERROR Non-data line detected in WaveKinFile past the header lines."
@@ -1526,8 +1535,7 @@ CONTAINS
 
                
                ! allocate space for processed reference wave elevation time series
-               ALLOCATE ( WaveElev0( 0:p%ntWave ), STAT=ErrStatTmp )  ! this has an extra entry of zero in case it needs to be padded to be even
-               IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',ErrStat,ErrMsg,RoutineName)
+               ALLOCATE ( WaveElev0( 0:p%ntWave ), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate array WaveElev0.'; IF(Failed()) RETURN  ! this has an extra entry of zero in case it needs to be padded to be even
                WaveElev0 = 0.0_SiKi
                
                ! go through and interpolate (should replace with standard function)
@@ -1562,12 +1570,10 @@ CONTAINS
                
 
                ! Allocate array to hold the wave elevations for calculation of FFT.
-               ALLOCATE ( TmpFFTWaveElev( 0:NStepWave-1 ), STAT=ErrStatTmp )
-               IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpFFTWaveElev.',ErrStat,ErrMsg,RoutineName)
+               ALLOCATE ( TmpFFTWaveElev( 0:NStepWave-1), STAT=ErrStat2 ); ErrMsg2 = 'Cannot allocate array TmpFFTWaveElev.'; IF (Failed()) RETURN
 
                ! Allocate frequency array for the wave elevation information in frequency space
-               ALLOCATE ( WaveElevC0(2, 0:NStepWave2                ), STAT=ErrStatTmp )
-               IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0.',ErrStat,ErrMsg,RoutineName)
+               ALLOCATE ( WaveElevC0(2, 0:NStepWave2), STAT=ErrStat2 ); ErrMsg2 = 'Cannot allocate array WaveElevC0.'; IF (Failed()) RETURN
                
 
                ! Now check if all the allocations worked properly
@@ -1587,12 +1593,10 @@ CONTAINS
                ENDDO
 
                ! Initialize the FFT
-               CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName); IF(Failed()) RETURN
+               CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStat2 ); ErrMsg2 = 'Error occured while initializing the FFT.'; IF(Failed()) RETURN
 
                ! Apply the forward FFT on the wave elevation timeseries to get the Real and imaginary parts of the frequency information.      
-               CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStatTmp )    ! Note that the TmpFFTWaveElev now contains the Real and imaginary bits.
-               CALL SetErrStat(ErrStatTmp,'Error occured while applying the forwards FFT to TmpFFTWaveElev array.',ErrStat,ErrMsg,RoutineName); IF(Failed()) RETURN
+               CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStat2 ); ErrMsg2 = 'Error occured while applying the forwards FFT to TmpFFTWaveElev array.'; IF(Failed()) RETURN  ! Note that the TmpFFTWaveElev now contains the Real and imaginary bits.
 
                ! Copy the resulting TmpFFTWaveElev(:) data over to the WaveElevC0 array
                DO I=1,NStepWave2-1
@@ -1601,26 +1605,24 @@ CONTAINS
                ENDDO
                WaveElevC0(:,NStepWave2) = 0.0_SiKi
 
-               CALL  ExitFFT(FFT_Data, ErrStatTmp)
-               CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName); IF(Failed()) RETURN
+               CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occured while cleaning up after the FFTs.'; IF(Failed()) RETURN
 
-
-               IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStatTmp)
-               IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStatTmp)
+               IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate WaveElev0.'     ; IF (Failed()) RETURN  
+               IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate TmpFFTWaveElev.'; IF (Failed()) RETURN
 
             ENDIF ! End getting frequency data either from time series or WaveField. The below needs to happen for both old and hybrid approach
             
             ! allocate all the wave kinematics FFT arrays  
-            ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveNmbr.  ',ErrStat,ErrMsg,RoutineName)
-            ALLOCATE( tmpComplex(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate tmpComplex.',ErrStat,ErrMsg,RoutineName)
-            ALLOCATE( WaveElevC (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveElevC .',ErrStat,ErrMsg,RoutineName)
-            ALLOCATE( WaveDynPC (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveDynPC .',ErrStat,ErrMsg,RoutineName)
-            ALLOCATE( WaveVelCHx(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveVelCHx.',ErrStat,ErrMsg,RoutineName)
-            ALLOCATE( WaveVelCHy(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveVelCHy.',ErrStat,ErrMsg,RoutineName)
-            ALLOCATE( WaveVelCV (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveVelCV .',ErrStat,ErrMsg,RoutineName)
-            ALLOCATE( WaveAccCHx(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveAccCHx.',ErrStat,ErrMsg,RoutineName)
-            ALLOCATE( WaveAccCHy(0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveAccCHy.',ErrStat,ErrMsg,RoutineName)
-            ALLOCATE( WaveAccCV (0:NStepWave2), STAT=ErrStatTmp); CALL SetErrStat(ErrStatTmp,'Cannot allocate WaveAccCV .',ErrStat,ErrMsg,RoutineName)
+            ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveNmbr.'  ; IF (Failed()) RETURN
+            ALLOCATE( tmpComplex(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate tmpComplex.'; IF (Failed()) RETURN
+            ALLOCATE( WaveElevC (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveElevC.' ; IF (Failed()) RETURN
+            ALLOCATE( WaveDynPC (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveDynPC.' ; IF (Failed()) RETURN
+            ALLOCATE( WaveVelCHx(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCHx.'; IF (Failed()) RETURN
+            ALLOCATE( WaveVelCHy(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCHy.'; IF (Failed()) RETURN
+            ALLOCATE( WaveVelCV (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCV.' ; IF (Failed()) RETURN
+            ALLOCATE( WaveAccCHx(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCHx.'; IF (Failed()) RETURN
+            ALLOCATE( WaveAccCHy(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCHy.'; IF (Failed()) RETURN
+            ALLOCATE( WaveAccCV (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCV .'; IF (Failed()) RETURN
             
             ! allocate time series grid data arrays (now that we know the number of time steps coming from the IFFTs)
             CALL allocateKinematicsArrays() 
@@ -1636,8 +1638,7 @@ CONTAINS
             END DO    
             
             ! set up FFTer for doing IFFTs
-            CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.', ErrStat, ErrMsg, routineName); IF(Failed()) RETURN
+            CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStat2 ); ErrMsg2 = 'Error occured while initializing the FFT.'; IF(Failed()) RETURN
 
             ! Loop through all points where the incident wave kinematics will be computed      
             DO ix = 1,p%nxWave 
@@ -1661,25 +1662,24 @@ CONTAINS
                      END DO  ! I, frequencies
                      
                      ! now IFFT all the wave kinematics except surface elevation and save it into the grid of data
-                     CALL ApplyFFT_cx( p%PDyn  (:,iz,iy,ix), WaveDynPC , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveDynP.', ErrStat,ErrMsg,RoutineName)
-                     CALL ApplyFFT_cx( p%uxWave(:,iz,iy,ix), WaveVelCHx, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelHx.',ErrStat,ErrMsg,RoutineName)
-                     CALL ApplyFFT_cx( p%uyWave(:,iz,iy,ix), WaveVelCHy, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelHy.',ErrStat,ErrMsg,RoutineName)
-                     CALL ApplyFFT_cx( p%uzWave(:,iz,iy,ix), WaveVelCV , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveVelV.', ErrStat,ErrMsg,RoutineName)
-                     CALL ApplyFFT_cx( p%axWave(:,iz,iy,ix), WaveAccCHx, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveAccHx.',ErrStat,ErrMsg,RoutineName)
-                     CALL ApplyFFT_cx( p%ayWave(:,iz,iy,ix), WaveAccCHy, FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveAccHy.',ErrStat,ErrMsg,RoutineName)
-                     CALL ApplyFFT_cx( p%azWave(:,iz,iy,ix), WaveAccCV , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveAccV.', ErrStat,ErrMsg,RoutineName)
+                     CALL ApplyFFT_cx( p%PDyn  (:,iz,iy,ix), WaveDynPC , FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveDynPC.'; IF (Failed()) RETURN 
+                     CALL ApplyFFT_cx( p%uxWave(:,iz,iy,ix), WaveVelCHx, FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveVelHx.'; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%uyWave(:,iz,iy,ix), WaveVelCHy, FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveVelHy.'; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%uzWave(:,iz,iy,ix), WaveVelCV , FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveVelV.' ; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%axWave(:,iz,iy,ix), WaveAccCHx, FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveAccHx.'; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%ayWave(:,iz,iy,ix), WaveAccCHy, FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveAccHy.'; IF (Failed()) RETURN
+                     CALL ApplyFFT_cx( p%azWave(:,iz,iy,ix), WaveAccCV , FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveAccV.' ; IF (Failed()) RETURN
 
                   END DO ! iz
                   
                   ! IFFT wave elevation here because it's only at the surface
-                  CALL ApplyFFT_cx( p%zeta(:,iy,ix) , WaveElevC , FFT_Data, ErrStatTmp ); CALL SetErrStat(ErrStatTmp,'Error IFFTing WaveElev.', ErrStat,ErrMsg,RoutineName)
+                  CALL ApplyFFT_cx( p%zeta(:,iy,ix) , WaveElevC , FFT_Data, ErrStat2 ); ErrMsg2 = 'Error IFFTing WaveElev.'; IF (Failed()) RETURN
                END DO ! iy
             END DO ! ix
 
             ! could also reproduce the wave elevation at 0,0,0 on a separate channel for verIFication...
             
-            CALL  ExitFFT(FFT_Data, ErrStatTmp)
-            CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the IFFTs.', ErrStat,ErrMsg,RoutineName); IF(Failed()) RETURN
+            CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occured while cleaning up after the IFFTs.'; IF(Failed()) RETURN
          
          END IF ! p%WaveKin > 0
 
@@ -1746,9 +1746,9 @@ CONTAINS
             WRITE(p%UnLog, '(A)'        ) "    Water kinematics will be simulated using the hybrid method (user provided grid with SeaState water kinematics data)"
          ENDIF
       ELSEIF (p%WaterKin == 3) THEN
-         CALL WrScr("    Water kinematics will be simulated using the SeaState method (SeaState provided grid and water kinematics data)")
+         CALL WrScr("    Water kinematics will be simulated using the SeaState method (SeaState provided grid and water kinematics data). These will be disabled during IC solve.")
          IF (p%writeLog > 0) THEN
-            WRITE(p%UnLog, '(A)'        ) "    Water kinematics will be simulated using the SeaState method (SeaState provided grid and water kinematics data)"
+            WRITE(p%UnLog, '(A)'        ) "    Water kinematics will be simulated using the SeaState method (SeaState provided grid and water kinematics data). These will be disabled during IC solve."
          ENDIF
       ELSE
          CALL SetErrStat( ErrID_Fatal,"Invalid value for WaterKin",ErrStat, ErrMsg, RoutineName); RETURN
@@ -1774,14 +1774,17 @@ CONTAINS
          INTEGER(IntKi)                   :: nEntries, I
 
          IF (len(trim(entries)) == len(entries)) THEN
-            CALL SetErrStat(ErrID_Warn, "Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates", ErrStat, ErrMsg, RoutineName)
             IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "   Warning: Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates"
+               WRITE(p%UnLog, '(A)'        ) "   WARNING in gridAxisCoords: Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates"
             ENDIF
+            CALL SetErrStat(ErrID_Warn, "Only "//trim(num2lstr(len(entries)))//" characters read from wave grid coordinates", ErrStat, ErrMsg, RoutineName)
          END IF
 
          IF (entries(len(entries):len(entries)) == ',') THEN
-            CALL SetErrStat(ErrID_Fatal, "Error in gridAxisCoords: Last character of wave grid coordinate list cannot be comma", ErrStat, ErrMsg, RoutineName); RETURN
+            IF (p%writeLog > 0) THEN
+               WRITE(p%UnLog, '(A)'        ) "   ERROR in gridAxisCoords: Last character of wave grid coordinate list cannot be comma"
+            ENDIF
+            CALL SetErrStat(ErrID_Fatal, "Last character of wave grid coordinate list cannot be comma", ErrStat, ErrMsg, RoutineName); RETURN
          ELSE
             ! get array of coordinate entries 
             CALL stringToArray(entries, nEntries, tempArray); IF(Failed()) RETURN 
@@ -1793,11 +1796,19 @@ CONTAINS
                n = nEntries
             ELSE IF (coordtype==2) THEN   ! 2: uniform specified by -xlim, xlim, num
                n = int(tempArray(3))
+
+               ! Check that tmpArray range / n is not an integer value, warn in log file if so
+               IF (MOD((tempArray(2)-tempArray(1)),REAL(n,ReKi)) == 0.0_ReKi) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   WARNING in gridAxisCoords: grid range / num grid points is an integer. This may cause interpolation issues. For integer grid spacing, add 1 to num grid points."
+                  ENDIF
+               ENDIF
+               
             ELSE
                IF (p%writeLog > 0) THEN
-                  WRITE(p%UnLog, '(A)'        ) "   Error: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines"
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR in gridAxisCoords: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines"
                ENDIF
-               CALL SetErrStat(ErrID_Fatal, "Error in gridAxisCoords: invalid coordinate type. Check WaterKin input file format for missing lines", ErrStat, ErrMsg, RoutineName); RETURN
+               CALL SetErrStat(ErrID_Fatal, "Invalid coordinate type. Check WaterKin input file format for missing lines", ErrStat, ErrMsg, RoutineName); RETURN
             END IF
             
             ! allocate coordinate array
@@ -1821,9 +1832,9 @@ CONTAINS
             
             ELSE
                IF (p%writeLog > 0) THEN
-                  WRITE(p%UnLog, '(A)'        ) "   Error: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines"
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR in gridAxisCoords: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines"
                ENDIF
-               CALL SetErrStat(ErrID_Fatal, "Error: invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines", ErrStat, ErrMsg, RoutineName); RETURN
+               CALL SetErrStat(ErrID_Fatal, "Invalid coordinate type specified to gridAxisCoords. Check WaterKin input file format for missing lines", ErrStat, ErrMsg, RoutineName); RETURN
             END IF
             
             ! print *, "Set water grid coordinates to :"
@@ -1854,22 +1865,28 @@ CONTAINS
             pos2 = INDEX(instring(pos1:), ",")  ! find index of next comma
             IF (pos2 == 0) THEN                 ! if there isn't another comma, read the last entry and call it done (this could be the only entry if no commas)
                n = n + 1
-               READ(instring(pos1:), *, IOSTAT=ErrStatTmp) outarray(n)
-               IF (ErrStatTmp /= ErrID_None) THEN
-                  CALL SetErrStat(ErrID_Fatal, "ERROR in stringToArray: invalid value in string", ErrStat, ErrMsg, RoutineName); RETURN
+               READ(instring(pos1:), *, IOSTAT=ErrStat2) outarray(n)
+               IF (ErrStat2 /= ErrID_None) THEN
+                  IF (p%writeLog > 0) THEN
+                     WRITE(p%UnLog, '(A)'        ) "   ERROR in stringToArray: invalid value in string"
+                  ENDIF
+                  CALL SetErrStat(ErrID_Fatal, "Invalid value in string", ErrStat, ErrMsg, RoutineName); RETURN
                ENDIF
                EXIT
             END IF
             n = n + 1
             IF (n > 100) THEN
                IF (p%writeLog > 0) THEN
-                  WRITE(p%UnLog, '(A)'        ) "   ERROR - stringToArray cannot do more than 100 entries"
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR in stringToArray: cannot do more than 100 entries"
                ENDIF
-               CALL SetErrStat(ErrID_Fatal, "ERROR in stringToArray: cannot do more than 100 entries", ErrStat, ErrMsg, RoutineName); RETURN
+               CALL SetErrStat(ErrID_Fatal, "Cannot do more than 100 entries", ErrStat, ErrMsg, RoutineName); RETURN
             END IF            
             READ(instring(pos1:pos1+pos2-2), *, IOSTAT=ErrStat2) outarray(n)
-            IF (ErrStatTmp /= ErrID_None) THEN
-               CALL SetErrStat(ErrID_Fatal, "ERROR in stringToArray: invalid value in string", ErrStat, ErrMsg, RoutineName); RETURN
+            IF (ErrStat2 /= ErrID_None) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR in stringToArray: invalid value in string"
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "Invalid value in string", ErrStat, ErrMsg, RoutineName); RETURN
             ENDIF
 
             pos1 = pos2+pos1
@@ -1882,14 +1899,14 @@ CONTAINS
       SUBROUTINE allocateKinematicsArrays()
         !  error check print *, "Error in Waves::makeGrid, a time or space array is size zero." << endl;
 
-        ALLOCATE ( p%uxWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%uyWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%uzWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%axWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%ayWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%azWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%PDyn  ( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStatTmp)
-        ALLOCATE ( p%zeta  ( p%ntWave,p%nyWave,p%nxWave), STAT = ErrStatTmp )    ! 2D grid over x and y only
+        ALLOCATE ( p%uxWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
+        ALLOCATE ( p%uyWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
+        ALLOCATE ( p%uzWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
+        ALLOCATE ( p%axWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
+        ALLOCATE ( p%ayWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
+        ALLOCATE ( p%azWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
+        ALLOCATE ( p%PDyn  ( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
+        ALLOCATE ( p%zeta  ( p%ntWave,p%nyWave,p%nxWave), STAT = ErrStat2 ); IF (Failed()) RETURN    ! 2D grid over x and y only
         
       END SUBROUTINE allocateKinematicsArrays
 
@@ -1899,28 +1916,29 @@ CONTAINS
            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetupWaterKin') 
            Failed =  ErrStat >= AbortErrLev
            IF (Failed) CALL CleanUp()
+           CALL SetErrStat(ErrStat2, 'Cleanup was not succcessful', ErrStat, ErrMsg, 'SetupWaterKin') ! check that deallocation was successful
       END FUNCTION Failed
    
 
       SUBROUTINE CleanUp
 
-         !IF (ALLOCATED( WaveElev   ))         DEALLOCATE( WaveElev,          STAT=ErrStatTmp)
-         !IF (ALLOCATED( WaveTime   ))         DEALLOCATE( WaveTime,          STAT=ErrStatTmp)
-         IF (ALLOCATED( TmpFFTWaveElev  ))    DEALLOCATE( TmpFFTWaveElev,    STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveElevC0      ))    DEALLOCATE( WaveElevC0,        STAT=ErrStatTmp)
+         !IF (ALLOCATED( WaveElev   ))         DEALLOCATE( WaveElev,          STAT=ErrStat2)
+         !IF (ALLOCATED( WaveTime   ))         DEALLOCATE( WaveTime,          STAT=ErrStat2)
+         IF (ALLOCATED( TmpFFTWaveElev  ))    DEALLOCATE( TmpFFTWaveElev,    STAT=ErrStat2)
+         IF (ALLOCATED( WaveElevC0      ))    DEALLOCATE( WaveElevC0,        STAT=ErrStat2)
          
          ! >>> missing some things <<<
          
-         IF (ALLOCATED( WaveNmbr   )) DEALLOCATE( WaveNmbr   , STAT=ErrStatTmp)
-         IF (ALLOCATED( tmpComplex )) DEALLOCATE( tmpComplex , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveElevC  )) DEALLOCATE( WaveElevC  , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveDynPC  )) DEALLOCATE( WaveDynPC  , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveVelCHx )) DEALLOCATE( WaveVelCHx , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveVelCHy )) DEALLOCATE( WaveVelCHy , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveVelCV  )) DEALLOCATE( WaveVelCV  , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveAccCHx )) DEALLOCATE( WaveAccCHx , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveAccCHy )) DEALLOCATE( WaveAccCHy , STAT=ErrStatTmp)
-         IF (ALLOCATED( WaveAccCV  )) DEALLOCATE( WaveAccCV  , STAT=ErrStatTmp)
+         IF (ALLOCATED( WaveNmbr   )) DEALLOCATE( WaveNmbr   , STAT=ErrStat2)
+         IF (ALLOCATED( tmpComplex )) DEALLOCATE( tmpComplex , STAT=ErrStat2)
+         IF (ALLOCATED( WaveElevC  )) DEALLOCATE( WaveElevC  , STAT=ErrStat2)
+         IF (ALLOCATED( WaveDynPC  )) DEALLOCATE( WaveDynPC  , STAT=ErrStat2)
+         IF (ALLOCATED( WaveVelCHx )) DEALLOCATE( WaveVelCHx , STAT=ErrStat2)
+         IF (ALLOCATED( WaveVelCHy )) DEALLOCATE( WaveVelCHy , STAT=ErrStat2)
+         IF (ALLOCATED( WaveVelCV  )) DEALLOCATE( WaveVelCV  , STAT=ErrStat2)
+         IF (ALLOCATED( WaveAccCHx )) DEALLOCATE( WaveAccCHx , STAT=ErrStat2)
+         IF (ALLOCATED( WaveAccCHy )) DEALLOCATE( WaveAccCHy , STAT=ErrStat2)
+         IF (ALLOCATED( WaveAccCV  )) DEALLOCATE( WaveAccCV  , STAT=ErrStat2)
 
       END SUBROUTINE CleanUp
       
