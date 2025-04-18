@@ -243,8 +243,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_Guy_R 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_Guy_L 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_Utp 
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: RAllg2b 
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: RAllb2g 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MBB 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CBB 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: KBB 
@@ -2392,30 +2390,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%Y1_Utp = SrcMiscData%Y1_Utp
    end if
-   if (allocated(SrcMiscData%RAllg2b)) then
-      LB(1:2) = lbound(SrcMiscData%RAllg2b)
-      UB(1:2) = ubound(SrcMiscData%RAllg2b)
-      if (.not. allocated(DstMiscData%RAllg2b)) then
-         allocate(DstMiscData%RAllg2b(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RAllg2b.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%RAllg2b = SrcMiscData%RAllg2b
-   end if
-   if (allocated(SrcMiscData%RAllb2g)) then
-      LB(1:2) = lbound(SrcMiscData%RAllb2g)
-      UB(1:2) = ubound(SrcMiscData%RAllb2g)
-      if (.not. allocated(DstMiscData%RAllb2g)) then
-         allocate(DstMiscData%RAllb2g(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RAllb2g.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%RAllb2g = SrcMiscData%RAllb2g
-   end if
    if (allocated(SrcMiscData%MBB)) then
       LB(1:2) = lbound(SrcMiscData%MBB)
       UB(1:2) = ubound(SrcMiscData%MBB)
@@ -2790,12 +2764,6 @@ subroutine SD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%Y1_Utp)) then
       deallocate(MiscData%Y1_Utp)
    end if
-   if (allocated(MiscData%RAllg2b)) then
-      deallocate(MiscData%RAllg2b)
-   end if
-   if (allocated(MiscData%RAllb2g)) then
-      deallocate(MiscData%RAllb2g)
-   end if
    if (allocated(MiscData%MBB)) then
       deallocate(MiscData%MBB)
    end if
@@ -2898,8 +2866,6 @@ subroutine SD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%Y1_Guy_R)
    call RegPackAlloc(RF, InData%Y1_Guy_L)
    call RegPackAlloc(RF, InData%Y1_Utp)
-   call RegPackAlloc(RF, InData%RAllg2b)
-   call RegPackAlloc(RF, InData%RAllb2g)
    call RegPackAlloc(RF, InData%MBB)
    call RegPackAlloc(RF, InData%CBB)
    call RegPackAlloc(RF, InData%KBB)
@@ -2954,8 +2920,6 @@ subroutine SD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Y1_Guy_R); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y1_Guy_L); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y1_Utp); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RAllg2b); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RAllb2g); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MBB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CBB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%KBB); if (RegCheckErr(RF, RoutineName)) return

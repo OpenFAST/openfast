@@ -191,8 +191,6 @@ typedef  ^    MiscVarType    ReKi           Y1_CB_L       {:}  -  -
 typedef  ^    MiscVarType    ReKi           Y1_Guy_R      {:}  -  -  
 typedef  ^    MiscVarType    ReKi           Y1_Guy_L      {:}  -  -  
 typedef  ^    MiscVarType    ReKi           Y1_Utp        {:}  -  -  
-typedef  ^    MiscVarType    R8Ki           RAllg2b       {:}{:}  -  -  
-typedef  ^    MiscVarType    R8Ki           RAllb2g       {:}{:}  -  -
 typedef  ^    MiscVarType    ReKi           MBB           {:}{:}  -  -  
 typedef  ^    MiscVarType    ReKi           CBB           {:}{:}  -  -  
 typedef  ^    MiscVarType    ReKi           KBB           {:}{:}  -  -  

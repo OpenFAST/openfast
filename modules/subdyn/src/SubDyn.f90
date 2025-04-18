@@ -676,29 +676,18 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       !locals
-      INTEGER(IntKi)               :: I, firstTP          ! Counters
-      INTEGER(IntKi)               :: iSDNode
-      REAL(ReKi)                   :: rotations(3)
-
-      REAL(ReKi)                   :: Y1_GuyanLoadCorrection(3) ! Lever arm moment contributions due to interface displacement
+      INTEGER(IntKi)               :: I, idx, iSDNode             ! Counters
+      REAL(ReKi)                   :: Y1_GuyanLoadCorrection(3)   ! Lever arm moment contributions due to interface displacement
       INTEGER(IntKi), pointer      :: DOFList(:)
       REAL(ReKi)                   :: DCM(3,3)
-      REAL(ReKi)                   :: KBB(6,6), MBB(6,6), CBB(6,6) ! Guyan mode inertia and damping matrices transformed to earth-fixed frame of reference
-      REAL(ReKi)                   :: F_I(6*p%nNodes_I)            ! Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
-      TYPE(SD_ContinuousStateType) :: dxdt                         ! Continuous state derivatives at t- for output file qmdotdot purposes only
-      ! Variables for Guyan rigid body motion
-      real(ReKi), dimension(3)     :: RBVel, RBAcc ! Rigid-body translational velocity and acceleration
-      real(ReKi), dimension(3)     :: Om, OmD      ! Rigid-body rotational velocity and acceleration (Omega, OmegaDot)
+      REAL(ReKi)                   :: F_I(6*p%nNodes_I)           ! Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
+      TYPE(SD_ContinuousStateType) :: dxdt                        ! Continuous state derivatives at t- for output file qmdotdot purposes only
+      ! Variables for rigid body motion
       real(ReKi), dimension(3)     :: rIP          ! Vector from TP to rotated Node
       real(ReKi), dimension(3)     :: rIP0         ! Vector from TP to Node (undeflected)
-      real(ReKi), dimension(3)     :: Om_X_r       ! Crossproduct of Omega and r
       real(ReKi), dimension(3)     :: duP          ! Displacement of node due to rigid rotation
-      real(ReKi), dimension(3)     :: vP           ! Rigid-body velocity of node
-      real(ReKi), dimension(3)     :: aP           ! Rigid-body acceleration of node
       real(R8Ki), dimension(3,3)   :: Rg2b         ! Rotation matrix global 2 body coordinates
       real(R8Ki), dimension(3,3)   :: Rb2g         ! Rotation matrix body 2 global coordinates
-      real(R8Ki), dimension(6,6)   :: RRb2g        ! Rotation matrix body 2 global coordinates, acts on a 6-vector
-      real(R8Ki), dimension(6,6)   :: RRg2b        ! Rotation matrix body 2 global coordinates, acts on a 6-vector
       INTEGER(IntKi)               :: ErrStat2     ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2      ! Error message if ErrStat2 /= ErrID_None
       ! Initialize ErrStat
@@ -711,21 +700,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --- Convert inputs to FEM DOFs and convenient 6-vector storage
       ! Compute the roll, pitch, and yaw angles given the input direction cosine matrix
       if ( p%Floating ) THEN
-         if ( p%TP1IsRBRefPt ) then
-            Rg2b = EulerConstructZYX(x%qR(4:6))
-         else
-            ! Rigid-body rotation matrices for floating only - based on the first transition piece
-            Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
-         endif
-         Rb2g(1:3,1:3) = transpose(Rg2b)
-         RRb2g(:,:) = 0.0_R8Ki
-         RRb2g(1:3,1:3) = Rb2g
-         RRb2g(4:6,4:6) = Rb2g
-         RRg2b = TRANSPOSE(RRb2g)
-         do i = 1,p%nTP
-            m%RAllb2g((6*i-5):(6*i),(6*i-5):(6*i)) = RRb2g
-            m%RAllg2b((6*i-5):(6*i),(6*i-5):(6*i)) = RRg2b
-         enddo
+         Rg2b = EulerConstructZYX(m%u_TP(4:6))
+         Rb2g = transpose(Rg2b)
       end if
 
       ! --------------------------------------------------------------------------------
@@ -790,7 +766,13 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, rotated loads
       ! Total contribution
       m%Y1 = m%Y1_Guy_R + m%Y1_Guy_L - m%F_TP
-      if (p%Floating) m%Y1 = matmul( m%RAllb2g , m%Y1 )
+      if (p%Floating) then
+         do i = 1,p%nTP
+            idx = 6*i-5
+            m%Y1(idx  :idx+2) = matmul( Rb2g , m%Y1(idx  :idx+2) )
+            m%Y1(idx+3:idx+5) = matmul( Rb2g , m%Y1(idx+3:idx+5) )
+         enddo
+      end if
 
       ! Computing extra moments due to lever arm introduced by interface displacement
       ! Y1_MExtra = - MExtra = -u_TP x Y1(1:3) ! NOTE: double cancellation of signs
@@ -3104,8 +3086,6 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%MBB,     p%nDOFL_TP, p%nDOFL_TP, 'MBB',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%CBB,     p%nDOFL_TP, p%nDOFL_TP, 'CBB',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%KBB,     p%nDOFL_TP, p%nDOFL_TP, 'KBB',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
-   CALL AllocAry( Misc%RAllb2g, p%nDOFL_TP, p%nDOFL_TP, 'RAllb2g', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
-   CALL AllocAry( Misc%RAllg2b, p%nDOFL_TP, p%nDOFL_TP, 'RAllg2b', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%F_L,          p%nDOF__L,   'F_L',           ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%F_L2,         p%nDOF__L,   'F_L2',          ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UR_bar,       p%nDOFI__,   'UR_bar',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
@@ -3630,11 +3610,11 @@ SUBROUTINE GetUFulls(u, p, x, m, ErrStat, ErrMsg)
       ! 1st TP (dummy or not) always represents rigid-body motion. Contributions from rigid-body motion are added later.
       if (p%nTP>1) then
          ! Add contributions from the elastic Guyan modes associated with the second to last TPs
-         m%UR_bar        =                matmul( p%TI(:,7:p%nDOFL_TP)      , m%u_TP(7:p%nDOFL_TP)       )
-         m%UR_bar_dot    =                matmul( p%TI(:,7:p%nDOFL_TP)      , m%udot_TP(7:p%nDOFL_TP)    )
-         m%UR_bar_dotdot =                matmul( p%TI(:,7:p%nDOFL_TP)      , m%udotdot_TP(7:p%nDOFL_TP) )
-         m%UL            = m%UL        +  matmul( p%PhiRb_TI(:,7:p%nDOFL_TP), m%u_TP(7:p%nDOFL_TP)       )
-         m%UL_dot        = m%UL_dot    +  matmul( p%PhiRb_TI(:,7:p%nDOFL_TP), m%udot_TP(7:p%nDOFL_TP)    )
+         m%UR_bar        =                matmul(       p%TI(:,7:p%nDOFL_TP), m%u_TP      (7:p%nDOFL_TP) )
+         m%UR_bar_dot    =                matmul(       p%TI(:,7:p%nDOFL_TP), m%udot_TP   (7:p%nDOFL_TP) )
+         m%UR_bar_dotdot =                matmul(       p%TI(:,7:p%nDOFL_TP), m%udotdot_TP(7:p%nDOFL_TP) )
+         m%UL            = m%UL        +  matmul( p%PhiRb_TI(:,7:p%nDOFL_TP), m%u_TP      (7:p%nDOFL_TP) )
+         m%UL_dot        = m%UL_dot    +  matmul( p%PhiRb_TI(:,7:p%nDOFL_TP), m%udot_TP   (7:p%nDOFL_TP) )
          m%UL_dotdot     = m%UL_dotdot +  matmul( p%PhiRb_TI(:,7:p%nDOFL_TP), m%udotdot_TP(7:p%nDOFL_TP) )
       else
          m%UR_bar        = 0.0_ReKi
