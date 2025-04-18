@@ -219,12 +219,11 @@ jobs:
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBLA_VENDOR:STRING=OpenBLAS \
-            -DBLA_STATIC:BOOL=ON \
+            -DBUILD_OPENFAST_SIMULINK_API:BOOL=ON \
+            -DUSE_LOCAL_STATIC_LAPACK:BOOL=ON
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DGENERATE_TYPES:BOOL=ON \
             -DVARIABLE_TRACKING:BOOL=OFF \
-            -DBUILD_OPENFAST_SIMULINK_API:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build FAST_SFunc
         working-directory: ${{runner.workspace}}/openfast/build
