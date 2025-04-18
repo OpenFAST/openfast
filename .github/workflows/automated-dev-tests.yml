@@ -74,10 +74,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v2
-        with:
-          products: Simulink
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -99,7 +95,6 @@ jobs:
             -DVARIABLE_TRACKING:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DBUILD_OPENFAST_SIMULINK_API:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build module drivers
         working-directory: ${{runner.workspace}}/openfast/build
@@ -199,6 +194,47 @@ jobs:
             ${{runner.workspace}}/openfast/build/reg_tests/modules
             ${{runner.workspace}}/openfast/build/unit_tests
 
+
+  build-test-OF-simulink:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          products: Simulink
+      - name: Setup workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DBLA_STATIC:BOOL=ON \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DGENERATE_TYPES:BOOL=ON \
+            -DVARIABLE_TRACKING:BOOL=OFF \
+            ${GITHUB_WORKSPACE}
+      - name: Build FAST_SFunc
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target FAST_SFunc
+      - name: Run MATLAB tests and generate artifacts
+        uses: matlab-actions/run-tests@v2
+        with:
+          source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
+          test-results-junit: test-results/results.xml
+          code-coverage-cobertura: code-coverage/coverage.xml
 
   ### TEST JOBS
 
@@ -307,7 +343,7 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
 
 
-  rtest-OF-land:
+  rtest-OF:
     runs-on: ubuntu-24.04
     needs: build-all-release
     steps:
@@ -348,7 +384,6 @@ jobs:
         with:
           name: rtest-OF
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
@@ -391,15 +426,14 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           ctest -VV \
-          -L "openfast|offshore" \
+          -L openfast -L offshore \
           -LE "cpp|linear|python|fastlib"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: rtest-OF
+          name: rtest-OF-offshore
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
@@ -407,6 +441,100 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+ 
+  rtest-OF-linearization:
+    runs-on: ubuntu-24.04
+    needs: build-all-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v4
+        with:
+          path: ${{runner.workspace}}
+          key: build-all-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Run OpenFAST linearization tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L linear
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rtest-OF-linearization
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+  rtest-OF-aeromap:
+    runs-on: ubuntu-24.04
+    needs: build-all-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v4
+        with:
+          path: ${{runner.workspace}}
+          key: build-all-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install glue-codes/python/.   # Installs the interface library
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Run aero map tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L aeromap -LE "cpp|linear|python"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rtest-OF-aeromap
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
 
   rtest-openfast_io:
     runs-on: ubuntu-24.04
@@ -453,79 +581,6 @@ jobs:
           name: rtest-openfast_io
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/openfast_io
-
-
-  rtest-OF-simulink:
-    runs-on: ubuntu-24.04
-    needs: build-all-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev libopenblas-dev libopenblas-openmp-dev
-      - name: Set up MATLAB
-        uses: matlab-actions/setup-matlab@v2
-        with:
-          products: Simulink
-      - name: Run MATLAB tests and generate artifacts
-        uses: matlab-actions/run-tests@v2
-        with:
-          source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
-          test-results-junit: test-results/results.xml
-          code-coverage-cobertura: code-coverage/coverage.xml
-
-
-  rtest-OF-linearization:
-    runs-on: ubuntu-24.04
-    needs: build-all-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v4
-        with:
-          path: ${{runner.workspace}}
-          key: build-all-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install glue-codes/python/.   # Installs the interface library
-          sudo apt-get update -y
-          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
-          sudo apt-get install -y libhdf5-dev libnetcdf-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake \
-            -DPython_ROOT_DIR:PATH=${{env.pythonLocation}} \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-      - name: Run OpenFAST linearization tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L linear
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: rtest-OF-linearization
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
 
   rtest-FF:
