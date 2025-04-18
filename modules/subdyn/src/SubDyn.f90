@@ -537,9 +537,6 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      Rg2b = EulerConstructZYX(x%qR(4:6))
-      Rb2g = transpose(Rg2b)
-
       call GetUTP(u,p,x,m,ErrStat2,ErrMsg2,bPrime=(.true.)); if(Failed()) return
       call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(.not.p%Floating), RotateLoads=(p%Floating)); if(Failed()) return
       
@@ -611,6 +608,9 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
      m%EOM_Sol = matmul( p%EOM_LHS, m%EOM_RHS )
 
      if (p%TP1IsRBRefPt) then
+
+        Rg2b = EulerConstructZYX(x%qR(4:6))
+        Rb2g = transpose(Rg2b)
 
         ! Rigid-body translational and angular acceleration in rigid-body frame
         m%Udotdot_TP(1:6) = m%EOM_Sol(1:6)
@@ -2970,7 +2970,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    real(ReKi)                                :: dx,dy,dz
    real(ReKi)                                :: TI_transpose(p%nDOFL_TP,p%nDOFI__) !bjj: added this so we don't have to take the transpose 5+ times
    real(ReKi)                                :: GMat_transpose(p%nDOFL_TP,p%nDOFL_TP)
-   real(R8Ki)                                :: EOM_LHS(p%nDOF__Rb+p%nDOFM,p%nDOF__Rb+p%nDOFM)
+   real(R8Ki)                                :: EOM_LHS(p%nDOFL_TP+p%nDOFM,p%nDOFL_TP+p%nDOFM)
    integer(IntKi)                            :: I,J
    integer(IntKi)                            :: n                          ! size of jacobian in AM2 calculation
    INTEGER(IntKi)                            :: ErrStat2
