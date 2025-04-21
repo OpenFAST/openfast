@@ -177,7 +177,7 @@ PROGRAM SubDyn_Driver
    ! Read Input time series data from a file
    CALL AllocAry(SDin, drvrInitInp%NSteps, 1+18*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
    SDin(:,:)=0.0_ReKi
-   IF ( drvrInitInp%InputsMod == 2 ) THEN
+   if ( drvrInitInp%InputsMod == 2 ) then
       ! Open the  inputs data file
       CALL GetNewUnit( UnIn ) 
       CALL OpenFInpFile ( UnIn, drvrInitInp%InputsFile, ErrStat2, ErrMsg2); Call AbortIfFailed()
@@ -189,7 +189,7 @@ PROGRAM SubDyn_Driver
          call AbortIfFailed()
       END DO  
       CLOSE ( UnIn ) 
-   else
+   else if ( drvrInitInp%InputsMod == 1 ) THEN
       ! We fill an array with constant values
       do n = 0,drvrInitInp%NSteps-1 ! Loop on time steps, starts at 0
          SDin(n+1,1)     = n*TimeInterval
@@ -202,6 +202,10 @@ PROGRAM SubDyn_Driver
             idx1 = idx1 + 6
             SDin(n+1,idx1:idx1+5) = drvrInitInp%uDotDotTPInSteady(idx2:idx2+5)  ! Accelerations
          end do
+      enddo
+   else ! InputMod = 0 -> all zeros
+      do n = 0,drvrInitInp%NSteps-1 ! Loop on time steps, starts at 0
+         SDin(n+1,1)     = n*TimeInterval
       enddo
    end if 
 
@@ -392,13 +396,13 @@ CONTAINS
       CALL ReadVar( UnIn, FileName, InitInp%InputsFile, 'InputsFile', 'Filename for the SubDyn inputs', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       !---------------------- STEADY INPUTS (for InputsMod = 1) ----------------------------------------
       CALL ReadCom( UnIn, FileName, 'STEADY STATE INPUTS header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      CALL AllocAry(InitInp%uTPInSteady,       6*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
-      CALL AllocAry(InitInp%uDotTPInSteady,    6*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
-      CALL AllocAry(InitInp%uDotDotTPInSteady, 6*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
+      allocate(InitInp%uTPInSteady(      6*InitInp%nTP), stat=ErrStat2); call AbortIfFailed()
+      allocate(InitInp%uDotTPInSteady(   6*InitInp%nTP), stat=ErrStat2); call AbortIfFailed()
+      allocate(InitInp%uDotDotTPInSteady(6*InitInp%nTP), stat=ErrStat2); call AbortIfFailed()
       IF ( InitInp%InputsMod == 1 ) THEN
-         CALL ReadAry ( UnIn, FileName, InitInp%uTPInSteady      , 6*InitInData%nTP, 'uInSteady',         'Steady-state TP displacements and rotations.',                ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
-         CALL ReadAry ( UnIn, FileName, InitInp%uDotTPInSteady   , 6*InitInData%nTP, 'uDotTPInSteady',    'Steady-state TP translational and rotational velocities.',    ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
-         CALL ReadAry ( UnIn, FileName, InitInp%uDotDotTPInSteady, 6*InitInData%nTP, 'uDotDotTPInSteady', 'Steady-state TP translational and rotational accelerations.', ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
+         CALL ReadAry ( UnIn, FileName, InitInp%uTPInSteady      , 6*InitInp%nTP, 'uInSteady',         'Steady-state TP displacements and rotations.',                ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
+         CALL ReadAry ( UnIn, FileName, InitInp%uDotTPInSteady   , 6*InitInp%nTP, 'uDotTPInSteady',    'Steady-state TP translational and rotational velocities.',    ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
+         CALL ReadAry ( UnIn, FileName, InitInp%uDotDotTPInSteady, 6*InitInp%nTP, 'uDotDotTPInSteady', 'Steady-state TP translational and rotational accelerations.', ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
       ELSE
          InitInp%uTPInSteady       = 0.0
          InitInp%uDotTPInSteady    = 0.0
