@@ -165,8 +165,8 @@ typedef  ^  SD_InitType   R8Ki               qR0        {6} - -       "Initial r
 # ============================== States ============================================================================================================================================
 typedef  ^  ContinuousStateType  R8Ki   qm    {:}   -   -   "Virtual states, Nmod elements"
 typedef  ^  ContinuousStateType  R8Ki   qmdot {:}   -   -   "Derivative of states, Nmod elements"
-typedef  ^  ContinuousStateType  R8Ki   qR    {6}   -   -   "Rigid-body displacement"
-typedef  ^  ContinuousStateType  R8Ki   qRdot {6}   -   -   "Derivative of rigid-body displacement"
+typedef  ^  ContinuousStateType  R8Ki   qR    {:}   -   -   "Rigid-body displacement"
+typedef  ^  ContinuousStateType  R8Ki   qRdot {:}   -   -   "Derivative of rigid-body displacement"
 
 
 typedef  ^  DiscreteStateType    ReKi DummyDiscState   - - - "Remove this variable if you have discrete states"
@@ -178,7 +178,7 @@ typedef  ^          ^      IntKi                   n           -  -  -  "tracks 
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef  ^    MiscVarType    R8Ki           qmdotdot      {:}  -  -  "2nd derivative of states, used only for output-file purposes"
-typedef  ^    MiscVarType    R8Ki           qRdotdot      {6}  -  -  "2nd derivative of rigid-body states (floating only)"
+typedef  ^    MiscVarType    R8Ki           qRdotdot      {:}  -  -  "2nd derivative of rigid-body states (floating only)"
 typedef  ^    MiscVarType    ReKi           F_TP          {:}  -  -
 typedef  ^    MiscVarType    ReKi           u_TP          {:}  -  -  
 typedef  ^    MiscVarType    ReKi           udot_TP       {:}  -  -  

@@ -207,8 +207,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SD_ContinuousStateType
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qm      !< Virtual states, Nmod elements [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qmdot      !< Derivative of states, Nmod elements [-]
-    REAL(R8Ki) , DIMENSION(1:6)  :: qR = 0.0_R8Ki      !< Rigid-body displacement [-]
-    REAL(R8Ki) , DIMENSION(1:6)  :: qRdot = 0.0_R8Ki      !< Derivative of rigid-body displacement [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qR      !< Rigid-body displacement [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qRdot      !< Derivative of rigid-body displacement [-]
   END TYPE SD_ContinuousStateType
 ! =======================
 ! =========  SD_DiscreteStateType  =======
@@ -230,7 +230,7 @@ IMPLICIT NONE
 ! =========  SD_MiscVarType  =======
   TYPE, PUBLIC :: SD_MiscVarType
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qmdotdot      !< 2nd derivative of states, used only for output-file purposes [-]
-    REAL(R8Ki) , DIMENSION(1:6)  :: qRdotdot = 0.0_R8Ki      !< 2nd derivative of rigid-body states (floating only) [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qRdotdot      !< 2nd derivative of rigid-body states (floating only) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_TP 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: u_TP 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: udot_TP 
@@ -2002,8 +2002,30 @@ subroutine SD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
       end if
       DstContStateData%qmdot = SrcContStateData%qmdot
    end if
-   DstContStateData%qR = SrcContStateData%qR
-   DstContStateData%qRdot = SrcContStateData%qRdot
+   if (allocated(SrcContStateData%qR)) then
+      LB(1:1) = lbound(SrcContStateData%qR)
+      UB(1:1) = ubound(SrcContStateData%qR)
+      if (.not. allocated(DstContStateData%qR)) then
+         allocate(DstContStateData%qR(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%qR.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstContStateData%qR = SrcContStateData%qR
+   end if
+   if (allocated(SrcContStateData%qRdot)) then
+      LB(1:1) = lbound(SrcContStateData%qRdot)
+      UB(1:1) = ubound(SrcContStateData%qRdot)
+      if (.not. allocated(DstContStateData%qRdot)) then
+         allocate(DstContStateData%qRdot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%qRdot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstContStateData%qRdot = SrcContStateData%qRdot
+   end if
 end subroutine
 
 subroutine SD_DestroyContState(ContStateData, ErrStat, ErrMsg)
@@ -2019,6 +2041,12 @@ subroutine SD_DestroyContState(ContStateData, ErrStat, ErrMsg)
    if (allocated(ContStateData%qmdot)) then
       deallocate(ContStateData%qmdot)
    end if
+   if (allocated(ContStateData%qR)) then
+      deallocate(ContStateData%qR)
+   end if
+   if (allocated(ContStateData%qRdot)) then
+      deallocate(ContStateData%qRdot)
+   end if
 end subroutine
 
 subroutine SD_PackContState(RF, Indata)
@@ -2028,8 +2056,8 @@ subroutine SD_PackContState(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%qm)
    call RegPackAlloc(RF, InData%qmdot)
-   call RegPack(RF, InData%qR)
-   call RegPack(RF, InData%qRdot)
+   call RegPackAlloc(RF, InData%qR)
+   call RegPackAlloc(RF, InData%qRdot)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2043,8 +2071,8 @@ subroutine SD_UnPackContState(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%qm); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%qmdot); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%qR); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%qRdot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%qR); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%qRdot); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
@@ -2245,7 +2273,18 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%qmdotdot = SrcMiscData%qmdotdot
    end if
-   DstMiscData%qRdotdot = SrcMiscData%qRdotdot
+   if (allocated(SrcMiscData%qRdotdot)) then
+      LB(1:1) = lbound(SrcMiscData%qRdotdot)
+      UB(1:1) = ubound(SrcMiscData%qRdotdot)
+      if (.not. allocated(DstMiscData%qRdotdot)) then
+         allocate(DstMiscData%qRdotdot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%qRdotdot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%qRdotdot = SrcMiscData%qRdotdot
+   end if
    if (allocated(SrcMiscData%F_TP)) then
       LB(1:1) = lbound(SrcMiscData%F_TP)
       UB(1:1) = ubound(SrcMiscData%F_TP)
@@ -2728,6 +2767,9 @@ subroutine SD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%qmdotdot)) then
       deallocate(MiscData%qmdotdot)
    end if
+   if (allocated(MiscData%qRdotdot)) then
+      deallocate(MiscData%qRdotdot)
+   end if
    if (allocated(MiscData%F_TP)) then
       deallocate(MiscData%F_TP)
    end if
@@ -2853,7 +2895,7 @@ subroutine SD_PackMisc(RF, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackMisc'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%qmdotdot)
-   call RegPack(RF, InData%qRdotdot)
+   call RegPackAlloc(RF, InData%qRdotdot)
    call RegPackAlloc(RF, InData%F_TP)
    call RegPackAlloc(RF, InData%u_TP)
    call RegPackAlloc(RF, InData%udot_TP)
@@ -2907,7 +2949,7 @@ subroutine SD_UnPackMisc(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%qmdotdot); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%qRdotdot); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%qRdotdot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_TP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%u_TP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%udot_TP); if (RegCheckErr(RF, RoutineName)) return

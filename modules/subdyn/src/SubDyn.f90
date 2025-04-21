@@ -349,6 +349,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       m%qmdotdot= 0.0_ReKi
    END IF
    IF ( p%Floating ) THEN
+      CALL AllocAry(x%qR,       6, 'x%qR',       ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL AllocAry(x%qRdot,    6, 'x%qRdot',    ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL AllocAry(m%qRdotdot, 6, 'm%qRdotdot', ErrStat2, ErrMsg2 ); if(Failed()) return
       x%qR      = 0.0_ReKi ! Replace with Init%qR0 later
       x%qRdot   = 0.0_ReKi
       m%qRdotdot= 0.0_ReKi
@@ -497,7 +500,7 @@ SUBROUTINE SD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m
       ErrStat   = ErrID_None           ! no error has occurred
       ErrMsg    = ""
             
-      IF ( p%nDOFM == 0) RETURN ! no retained modes = no states
+      IF ( p%nDOFM == 0 .and. (.not.p%TP1IsRBRefPt) ) RETURN ! no retained modes = no states
         
       IF (p%IntMethod .eq. 1) THEN
          CALL SD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
@@ -539,12 +542,13 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       call GetUTP(u,p,x,m,ErrStat2,ErrMsg2,bPrime=(.true.)); if(Failed()) return
       call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(.not.p%Floating), RotateLoads=(p%Floating)); if(Failed()) return
-      
+
       if (p%Floating) then ! Floating structure: everything is in the rigid-body frame
 
          if (p%TP1IsRBRefPt) then ! More than one transition piece
 
             call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+
             F_TP1 =   matmul(            F_I, p%TI(:,1:6) ) &
                     - matmul(p%D1_142(1:6,:),      m%F_L  )      ! p%D1_142 is -matmul( T_I^T, Phi_Rb^T )
 
@@ -861,10 +865,12 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
-          
+
       ! INTENT(OUT) automatically deallocates the arrays on entry, we have to allocate them here
       CALL AllocAry(dxdt%qm,    p%nDOFM, 'dxdt%qm',    ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcContStateDeriv' )
       CALL AllocAry(dxdt%qmdot, p%nDOFM, 'dxdt%qmdot', ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcContStateDeriv' )
+      CALL AllocAry(dxdt%qR,    6,       'dxdt%qR',    ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcContStateDeriv' )
+      CALL AllocAry(dxdt%qRdot, 6,       'dxdt%qRdot', ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcContStateDeriv' )
       IF ( ErrStat >= AbortErrLev ) RETURN
       IF ( p%nDOFM == 0 .and. .not.p%TP1IsRBRefPt) RETURN
 
