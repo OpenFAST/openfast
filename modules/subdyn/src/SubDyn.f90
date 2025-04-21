@@ -4023,7 +4023,7 @@ SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, Err
       U_Gy_red = 0.0_ReKi                 ! nDOF_red x nGY
       do i = 1, size(CBparams%PhiR,2)
          U_Gy_red(p%ID__Rb(i),i) = 1.0_ReKi
-         U_Gy_red(p%ID__L, i)       = CBparams%PhiR(:,i)
+         U_Gy_red(p%ID__L, i)    = CBparams%PhiR(:,i)
       enddo
       if(p%reduced) then
          U_Gy = matmul(p%T_red, U_Gy_red) ! nDOF x nGY
@@ -4031,9 +4031,10 @@ SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, Err
          U_Gy = U_Gy_red                  ! nDOF x nGY
       endif
       ! TI
-      U_Intf = matmul(U_Gy, p%TI)         ! nDOF x 6 (since TI is nGY x 6)
-      do i = 1, 6
-         call WriteOneMode(U_Intf(:,i), Omega_GY(i), 'GY', i, 6, reduced=.false.)
+      U_Intf = matmul(U_Gy, p%TI)         ! nDOF x nDOFL_TP (since TI is nGY x nDOFL_TP)
+      if (p%TP1IsRBRefPt) U_Intf = matmul(U_Intf, p%GMat)
+      do i = 1, p%nDOFL_TP
+         call WriteOneMode(U_Intf(:,i), Omega_GY(i), 'GY', i, p%nDOFL_TP, reduced=.false.)
       enddo
 
       ! --- CB Modes
