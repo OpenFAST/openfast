@@ -52,9 +52,9 @@ PROGRAM SubDyn_Driver
       REAL(ReKi)      :: SubRotateZ
       INTEGER         :: InputsMod
       CHARACTER(1024) :: InputsFile
-      REAL(ReKi)      :: uTPInSteady(6)
-      REAL(ReKi)      :: uDotTPInSteady(6)
-      REAL(ReKi)      :: uDotDotTPInSteady(6)
+      REAL(ReKi),allocatable :: uTPInSteady(:)
+      REAL(ReKi),allocatable :: uDotTPInSteady(:)
+      REAL(ReKi),allocatable :: uDotDotTPInSteady(:)
       type(ALoadType), allocatable :: AppliedLoads(:)  ! 7 x nSteadyForces: JointID, Fx, Fy, Fz, Mx, My, Mz
    END TYPE SD_dvr_InitInput
    
@@ -91,7 +91,7 @@ PROGRAM SubDyn_Driver
    INTEGER                         :: UnEcho          ! The local unit number for this module's echo file
    INTEGER(IntKi)                  :: UnSD_Out             ! Output file identifier
    REAL(ReKi), ALLOCATABLE         :: SDin(:,:)            ! Variable for storing time, forces, and body velocities, in m/s or rad/s for SubDyn inputs
-   INTEGER(IntKi)                  :: I,J                  ! Generic loop counter
+   INTEGER(IntKi)                  :: I,J,iTP,idx1,idx2    ! Generic loop counter and array entry index
    INTEGER(IntKi)                  :: iLoad                ! Index on loads             
    INTEGER(IntKi)                  :: iNode                ! Index on nodes
    INTEGER(IntKi)                  :: JointID              ! JointID
@@ -108,6 +108,7 @@ PROGRAM SubDyn_Driver
    INTEGER                         :: StrtTime (8)         ! Start time of simulation
    CHARACTER(200)                  :: git_commit           ! String containing the current git commit hash
    TYPE(ProgDesc), PARAMETER       :: version   = ProgDesc( 'SubDyn Driver', '', '' )  ! The version number of this program.
+
    !...............................................................................................................................
    ! Routines called in initialization
    !...............................................................................................................................
@@ -174,7 +175,7 @@ PROGRAM SubDyn_Driver
 
 
    ! Read Input time series data from a file
-   CALL AllocAry(SDin, drvrInitInp%NSteps, 19, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
+   CALL AllocAry(SDin, drvrInitInp%NSteps, 1+18*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
    SDin(:,:)=0.0_ReKi
    IF ( drvrInitInp%InputsMod == 2 ) THEN
       ! Open the  inputs data file
@@ -182,7 +183,8 @@ PROGRAM SubDyn_Driver
       CALL OpenFInpFile ( UnIn, drvrInitInp%InputsFile, ErrStat2, ErrMsg2); Call AbortIfFailed()
       DO n = 1,drvrInitInp%NSteps
          ! TODO Add safety for backward compatibility if only 13 columns
-         READ (UnIn,*,IOSTAT=ErrStat2) (SDin (n,J), J=1,19)
+         READ (UnIn,*,IOSTAT=ErrStat2) (SDin (n,J), J=1,1+18*InitInData%nTP)
+         if (ErrStat2 .NE. 0) ErrStat2 = ErrID_FATAL
          ErrMsg2 = ' Error reading line '//trim(Num2LStr(n))//' of file: '//trim(drvrInitInp%InputsFile)
          call AbortIfFailed()
       END DO  
@@ -190,10 +192,16 @@ PROGRAM SubDyn_Driver
    else
       ! We fill an array with constant values
       do n = 0,drvrInitInp%NSteps-1 ! Loop on time steps, starts at 0
-         SDin(n+1,1) = n*TimeInterval
-         SDin(n+1,2:7 ) = drvrInitInp%uTPInSteady(1:6)     ! Displacements
-         SDin(n+1,8:13) = drvrInitInp%uDotTPInSteady(1:6)  ! Velocities
-         !SDin(n+1,14:19) = drvrInitInp%uDotDotTPInSteady(1:6)  ! Accelerations
+         SDin(n+1,1)     = n*TimeInterval
+         do iTP = 1, InitInData%nTP
+            idx1 = (iTP-1)*18 + 2
+            idx2 = (iTP-1)* 6 + 1
+            SDin(n+1,idx1:idx1+5) = drvrInitInp%uTPInSteady(idx2:idx2+5)        ! Displacements
+            idx1 = idx1 + 6
+            SDin(n+1,idx1:idx1+5) = drvrInitInp%uDotTPInSteady(idx2:idx2+5)     ! Velocities
+            idx1 = idx1 + 6
+            SDin(n+1,idx1:idx1+5) = drvrInitInp%uDotDotTPInSteady(idx2:idx2+5)  ! Accelerations
+         end do
       enddo
    end if 
 
@@ -234,20 +242,16 @@ PROGRAM SubDyn_Driver
 
       ! Set module inputs u (likely from the outputs of another module or a set of test conditions) here:
       IF ( u(1)%TPMesh%Initialized ) THEN 
-         ! Input displacements, velocities and potentially accelerations
-         u(1)%TPMesh%TranslationDisp(:,1)   = SDin(n+1,2:4) 
-         CALL SmllRotTrans( 'InputRotation', REAL(SDin(n+1,5),reki), REAL(SDin(n+1,6),reki), REAL(SDin(n+1,7),reki), dcm, 'Junk', ErrStat, ErrMsg )            
-         u(1)%TPMesh%Orientation(:,:,1)     = dcm 
-         u(1)%TPMesh%TranslationVel(:,1)    = SDin(n+1,8:10)  
-         u(1)%TPMesh%RotationVel(:,1)       = SDin(n+1,11:13) 
-
-         IF ( drvrInitInp%InputsMod == 2 ) THEN
-            u(1)%TPMesh%TranslationAcc(:,1)    = SDin(n+1,14:16) 
-            u(1)%TPMesh%RotationAcc(:,1)       = SDin(n+1,17:19)
-         ELSE ! constant inputs
-            u(1)%TPMesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotTPInSteady(1:3)  
-            u(1)%TPMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotTPInSteady(4:6) 
-         END IF
+         do iTP = 1,InitInData%nTP
+            idx1 = (iTP-1)*18 + 2
+            ! Input displacements, velocities and potentially accelerations
+            u(1)%TPMesh%TranslationDisp(:,iTP) = SDin(n+1,idx1:idx1+2)
+            u(1)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDin(n+1,idx1+3:idx1+5),ReKi))
+            u(1)%TPMesh%TranslationVel(:,iTP)  = SDin(n+1,idx1+6 :idx1+8)
+            u(1)%TPMesh%RotationVel(:,iTP)     = SDin(n+1,idx1+9 :idx1+11)
+            u(1)%TPMesh%TranslationAcc(:,iTP)  = SDin(n+1,idx1+12:idx1+14)
+            u(1)%TPMesh%RotationAcc(:,iTP)     = SDin(n+1,idx1+15:idx1+17)
+         end do
       END IF   
       ! Set LMesh applied loads
       if ( u(1)%LMesh%Initialized ) then 
@@ -267,7 +271,6 @@ PROGRAM SubDyn_Driver
             endif
          enddo
       endif
-
 
       ! Calculate outputs at n
       CALL SD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2); call AbortIfFailed()
@@ -316,7 +319,11 @@ CONTAINS
       if(UnEcho>0) CLOSE(UnEcho)
       if(UnEcho>0) CLOSE( UnIn)
       if(allocated(SDin)) deallocate(SDin)
-      if(allocated(drvrInitInp%TP_RefPoint)) deallocate(drvrInitInp%TP_RefPoint)
+      if(allocated(drvrInitInp%AppliedLoads))      deallocate(drvrInitInp%AppliedLoads)
+      if(allocated(drvrInitInp%TP_RefPoint))       deallocate(drvrInitInp%TP_RefPoint)
+      if(allocated(drvrInitInp%uTPInSteady))       deallocate(drvrInitInp%uTPInSteady)
+      if(allocated(drvrInitInp%uDotTPInSteady))    deallocate(drvrInitInp%uDotTPInSteady)
+      if(allocated(drvrInitInp%uDotDotTPInSteady)) deallocate(drvrInitInp%uDotDotTPInSteady)
    END SUBROUTINE CleanUp
 
    !-------------------------------------------------------------------------------------------------------------------------------
@@ -385,10 +392,13 @@ CONTAINS
       CALL ReadVar( UnIn, FileName, InitInp%InputsFile, 'InputsFile', 'Filename for the SubDyn inputs', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       !---------------------- STEADY INPUTS (for InputsMod = 1) ----------------------------------------
       CALL ReadCom( UnIn, FileName, 'STEADY STATE INPUTS header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
+      CALL AllocAry(InitInp%uTPInSteady,       6*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
+      CALL AllocAry(InitInp%uDotTPInSteady,    6*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
+      CALL AllocAry(InitInp%uDotDotTPInSteady, 6*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
       IF ( InitInp%InputsMod == 1 ) THEN
-         CALL ReadAry ( UnIn, FileName, InitInp%uTPInSteady      , 6, 'uInSteady',         'Steady-state TP displacements and rotations.', ErrStat2,  ErrMsg2, UnEcho)         
-         CALL ReadAry ( UnIn, FileName, InitInp%uDotTPInSteady   , 6, 'uDotTPInSteady',    'Steady-state TP translational and rotational velocities.', ErrStat2,  ErrMsg2, UnEcho)         
-         CALL ReadAry ( UnIn, FileName, InitInp%uDotDotTPInSteady, 6, 'uDotDotTPInSteady', 'Steady-state TP translational and rotational accelerations.', ErrStat2,  ErrMsg2, UnEcho)         
+         CALL ReadAry ( UnIn, FileName, InitInp%uTPInSteady      , 6*InitInData%nTP, 'uInSteady',         'Steady-state TP displacements and rotations.',                ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
+         CALL ReadAry ( UnIn, FileName, InitInp%uDotTPInSteady   , 6*InitInData%nTP, 'uDotTPInSteady',    'Steady-state TP translational and rotational velocities.',    ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
+         CALL ReadAry ( UnIn, FileName, InitInp%uDotDotTPInSteady, 6*InitInData%nTP, 'uDotDotTPInSteady', 'Steady-state TP translational and rotational accelerations.', ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
       ELSE
          InitInp%uTPInSteady       = 0.0
          InitInp%uDotTPInSteady    = 0.0
