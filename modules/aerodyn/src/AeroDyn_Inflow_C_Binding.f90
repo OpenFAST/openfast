@@ -375,7 +375,10 @@ contains
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = ErrStat >= AbortErrLev
-      if(Failed0) call ClearTmpStorage()
+      if(Failed0) then
+         call ClearTmpStorage()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed0
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
@@ -1538,7 +1541,10 @@ contains
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = ErrStat >= AbortErrLev
-      if(Failed0) call ClearTmpStorage()
+      if(Failed0) then
+         call ClearTmpStorage()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed0
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
