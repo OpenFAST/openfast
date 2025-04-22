@@ -107,7 +107,7 @@ IMPLICIT NONE
 ! =========  FAST_VTK_ModeShapeType  =======
   TYPE, PUBLIC :: FAST_VTK_ModeShapeType
     CHARACTER(1024)  :: CheckpointRoot      !< name of the checkpoint file written by FAST when linearization data was produced [-]
-    CHARACTER(1024)  :: MatlabFileName      !< name of the file with eigenvectors written by Matlab [-]
+    CHARACTER(1024)  :: DataFileName      !< name of the file with eigenvectors written by Matlab [-]
     INTEGER(IntKi)  :: VTKLinModes = 0_IntKi      !< Number of modes to visualize [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: VTKModes      !< Which modes to visualize [-]
     INTEGER(IntKi)  :: VTKLinTim = 0_IntKi      !< Switch to make one animation for all LinTimes together (1) or separate animations for each LinTimes(2) [-]
@@ -214,7 +214,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: LinOutputs = 0_IntKi      !< Outputs included in linearization (switch) {0=none; 1=from OutList(s); 2=all module outputs (debug)} [unused if Linearize=False] [-]
     LOGICAL  :: LinOutJac = .false.      !< Include full Jacabians in linearization output (for debug) (flag) [unused if Linearize=False; used only if LinInputs=LinOutputs=2] [-]
     LOGICAL  :: LinOutMod = .false.      !< Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False] [-]
-    TYPE(FAST_VTK_ModeShapeType)  :: VTK_modes      !< Data for VTK mode-shape visualization [-]
     INTEGER(IntKi)  :: Lin_NumMods = 0_IntKi      !< number of modules in the linearization [-]
     INTEGER(IntKi) , DIMENSION(1:NumModules)  :: Lin_ModOrder = 0_IntKi      !< indices that determine which order the modules are in the glue-code linearization matrix [-]
     INTEGER(IntKi)  :: LinInterpOrder = 0_IntKi      !< Interpolation order for CalcSteady solution [-]
@@ -913,7 +912,7 @@ subroutine FAST_CopyVTK_ModeShapeType(SrcVTK_ModeShapeTypeData, DstVTK_ModeShape
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstVTK_ModeShapeTypeData%CheckpointRoot = SrcVTK_ModeShapeTypeData%CheckpointRoot
-   DstVTK_ModeShapeTypeData%MatlabFileName = SrcVTK_ModeShapeTypeData%MatlabFileName
+   DstVTK_ModeShapeTypeData%DataFileName = SrcVTK_ModeShapeTypeData%DataFileName
    DstVTK_ModeShapeTypeData%VTKLinModes = SrcVTK_ModeShapeTypeData%VTKLinModes
    if (allocated(SrcVTK_ModeShapeTypeData%VTKModes)) then
       LB(1:1) = lbound(SrcVTK_ModeShapeTypeData%VTKModes)
@@ -1026,7 +1025,7 @@ subroutine FAST_PackVTK_ModeShapeType(RF, Indata)
    character(*), parameter         :: RoutineName = 'FAST_PackVTK_ModeShapeType'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%CheckpointRoot)
-   call RegPack(RF, InData%MatlabFileName)
+   call RegPack(RF, InData%DataFileName)
    call RegPack(RF, InData%VTKLinModes)
    call RegPackAlloc(RF, InData%VTKModes)
    call RegPack(RF, InData%VTKLinTim)
@@ -1050,7 +1049,7 @@ subroutine FAST_UnPackVTK_ModeShapeType(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%CheckpointRoot); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%MatlabFileName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DataFileName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTKLinModes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%VTKModes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTKLinTim); if (RegCheckErr(RF, RoutineName)) return
@@ -1169,9 +1168,6 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%LinOutputs = SrcParamData%LinOutputs
    DstParamData%LinOutJac = SrcParamData%LinOutJac
    DstParamData%LinOutMod = SrcParamData%LinOutMod
-   call FAST_CopyVTK_ModeShapeType(SrcParamData%VTK_modes, DstParamData%VTK_modes, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    DstParamData%Lin_NumMods = SrcParamData%Lin_NumMods
    DstParamData%Lin_ModOrder = SrcParamData%Lin_ModOrder
    DstParamData%LinInterpOrder = SrcParamData%LinInterpOrder
@@ -1231,8 +1227,6 @@ subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ''
    call FAST_DestroyVTK_SurfaceType(ParamData%VTK_surface, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FAST_DestroyVTK_ModeShapeType(ParamData%VTK_modes, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%RotSpeed)) then
       deallocate(ParamData%RotSpeed)
@@ -1341,7 +1335,6 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%LinOutputs)
    call RegPack(RF, InData%LinOutJac)
    call RegPack(RF, InData%LinOutMod)
-   call FAST_PackVTK_ModeShapeType(RF, InData%VTK_modes) 
    call RegPack(RF, InData%Lin_NumMods)
    call RegPack(RF, InData%Lin_ModOrder)
    call RegPack(RF, InData%LinInterpOrder)
@@ -1458,7 +1451,6 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%LinOutputs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LinOutJac); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LinOutMod); if (RegCheckErr(RF, RoutineName)) return
-   call FAST_UnpackVTK_ModeShapeType(RF, OutData%VTK_modes) ! VTK_modes 
    call RegUnpack(RF, OutData%Lin_NumMods); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Lin_ModOrder); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LinInterpOrder); if (RegCheckErr(RF, RoutineName)) return

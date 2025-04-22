@@ -90,7 +90,7 @@ typedef	^	FAST_VTK_SurfaceType	SiKi	MorisonVisRad	{:}	-	-	"radius of each Moriso
 
 
 typedef   ^   FAST_VTK_ModeShapeType   CHARACTER(1024)  CheckpointRoot -   -  -  "name of the checkpoint file written by FAST when linearization data was produced"
-typedef   ^   FAST_VTK_ModeShapeType   CHARACTER(1024)  MatlabFileName -   -  -  "name of the file with eigenvectors written by Matlab"
+typedef   ^   FAST_VTK_ModeShapeType   CHARACTER(1024)  DataFileName -   -  -  "name of the file with eigenvectors written by Matlab"
 typedef   ^   FAST_VTK_ModeShapeType   IntKi    VTKLinModes         -      -  -  "Number of modes to visualize" -
 typedef   ^   FAST_VTK_ModeShapeType   IntKi    VTKModes          {:}      -  -  "Which modes to visualize" -
 typedef   ^   FAST_VTK_ModeShapeType   IntKi    VTKLinTim           -      -  -  "Switch to make one animation for all LinTimes together (1) or separate animations for each LinTimes(2)" -
@@ -206,7 +206,6 @@ typedef	^	FAST_ParameterType	IntKi	LinInputs	-	-	-	"Inputs included in lineariza
 typedef	^	FAST_ParameterType	IntKi	LinOutputs	-	-	-	"Outputs included in linearization (switch) {0=none; 1=from OutList(s); 2=all module outputs (debug)} [unused if Linearize=False]"	-
 typedef	^	FAST_ParameterType	LOGICAL	LinOutJac	-	-	-	"Include full Jacabians in linearization output (for debug) (flag) [unused if Linearize=False; used only if LinInputs=LinOutputs=2]"	-
 typedef	^	FAST_ParameterType	LOGICAL	LinOutMod	-	-	-	"Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False]"	-
-typedef	^	FAST_ParameterType	FAST_VTK_ModeShapeType	VTK_modes	-	-	-	"Data for VTK mode-shape visualization" -
 
 typedef	^	FAST_ParameterType	IntKi	Lin_NumMods	-	-	-	"number of modules in the linearization"
 typedef	^	FAST_ParameterType	IntKi	Lin_ModOrder	{NumModules}	-	-	"indices that determine which order the modules are in the glue-code linearization matrix"
