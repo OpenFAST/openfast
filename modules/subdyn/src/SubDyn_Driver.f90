@@ -30,7 +30,7 @@ PROGRAM SubDyn_Driver
 
    IMPLICIT NONE
 
-   INTEGER(IntKi), PARAMETER                          :: NumInp = 1           ! Number of inputs sent to SD_UpdateStates
+   INTEGER(IntKi), PARAMETER                          :: NumInp = 2           ! Number of inputs sent to SD_UpdateStates
    
    type ALoadType
       integer(IntKi)         :: NodeID            ! Joint and then Node ID where force is applied
@@ -160,6 +160,7 @@ PROGRAM SubDyn_Driver
    
    ! Initialize SubDyn module
    CALL SD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 ); call AbortIfFailed()
+   call SD_CopyInput(u(1), u(2), MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call AbortIfFailed()
 
    ! Sanity check for outputs
    if (p%NumOuts==0) then
@@ -242,21 +243,31 @@ PROGRAM SubDyn_Driver
    DO n = 0,drvrInitInp%NSteps-1 ! Loop on time steps, starts at 0
 
       Time = n*TimeInterval
-      InputTime(1) = Time
+      InputTime(1) = Time + TimeInterval
+      InputTime(2) = Time
 
       ! Set module inputs u (likely from the outputs of another module or a set of test conditions) here:
       IF ( u(1)%TPMesh%Initialized ) THEN 
          do iTP = 1,InitInData%nTP
             idx1 = (iTP-1)*18 + 2
-            ! Input displacements, velocities and potentially accelerations
-            u(1)%TPMesh%TranslationDisp(:,iTP) = SDin(n+1,idx1:idx1+2)
-            u(1)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDin(n+1,idx1+3:idx1+5),ReKi))
-            u(1)%TPMesh%TranslationVel(:,iTP)  = SDin(n+1,idx1+6 :idx1+8)
-            u(1)%TPMesh%RotationVel(:,iTP)     = SDin(n+1,idx1+9 :idx1+11)
-            u(1)%TPMesh%TranslationAcc(:,iTP)  = SDin(n+1,idx1+12:idx1+14)
-            u(1)%TPMesh%RotationAcc(:,iTP)     = SDin(n+1,idx1+15:idx1+17)
+            if (n<drvrInitInp%NSteps-1) then
+               ! Input displacements, velocities and potentially accelerations
+               u(1)%TPMesh%TranslationDisp(:,iTP) = SDin(n+2,idx1:idx1+2)
+               u(1)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDin(n+2,idx1+3:idx1+5),ReKi))
+               u(1)%TPMesh%TranslationVel(:,iTP)  = SDin(n+2,idx1+6 :idx1+8)
+               u(1)%TPMesh%RotationVel(:,iTP)     = SDin(n+2,idx1+9 :idx1+11)
+               u(1)%TPMesh%TranslationAcc(:,iTP)  = SDin(n+2,idx1+12:idx1+14)
+               u(1)%TPMesh%RotationAcc(:,iTP)     = SDin(n+2,idx1+15:idx1+17)
+            end if
+            u(2)%TPMesh%TranslationDisp(:,iTP) = SDin(n+1,idx1:idx1+2)
+            u(2)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDin(n+1,idx1+3:idx1+5),ReKi))
+            u(2)%TPMesh%TranslationVel(:,iTP)  = SDin(n+1,idx1+6 :idx1+8)
+            u(2)%TPMesh%RotationVel(:,iTP)     = SDin(n+1,idx1+9 :idx1+11)
+            u(2)%TPMesh%TranslationAcc(:,iTP)  = SDin(n+1,idx1+12:idx1+14)
+            u(2)%TPMesh%RotationAcc(:,iTP)     = SDin(n+1,idx1+15:idx1+17)
          end do
-      END IF   
+      END IF
+
       ! Set LMesh applied loads
       if ( u(1)%LMesh%Initialized ) then 
          ! Default, set all external load to 0.0
@@ -269,15 +280,30 @@ PROGRAM SubDyn_Driver
             u(1)%LMesh%Force(:,iNode)  = u(1)%LMesh%Force(:,iNode)  + AL%SteadyLoad(1:3)
             u(1)%LMesh%Moment(:,iNode) = u(1)%LMesh%Moment(:,iNode) + AL%SteadyLoad(4:6)
             if (allocated(AL%UnsteadyLoad)) then
-               call interpTimeValue(AL%UnsteadyLoad, Time, AL%iTS, UnsteadyLoad)
+               call interpTimeValue(AL%UnsteadyLoad, Time+TimeInterval, AL%iTS, UnsteadyLoad)
                u(1)%LMesh%Force(:,iNode)  = u(1)%LMesh%Force(:,iNode)  + UnsteadyLoad(1:3)
                u(1)%LMesh%Moment(:,iNode) = u(1)%LMesh%Moment(:,iNode) + UnsteadyLoad(4:6)
+            endif
+         enddo
+         ! Default, set all external load to 0.0
+         u(2)%LMesh%Force  (:,:) = 0.0
+         u(2)%LMesh%Moment (:,:) = 0.0
+         ! Add applied loads
+         do iLoad=1, size(drvrInitInp%AppliedLoads)
+            AL => drvrInitInp%AppliedLoads(iLoad)
+            iNode = AL%NodeID
+            u(2)%LMesh%Force(:,iNode)  = u(2)%LMesh%Force(:,iNode)  + AL%SteadyLoad(1:3)
+            u(2)%LMesh%Moment(:,iNode) = u(2)%LMesh%Moment(:,iNode) + AL%SteadyLoad(4:6)
+            if (allocated(AL%UnsteadyLoad)) then
+               call interpTimeValue(AL%UnsteadyLoad, Time, AL%iTS, UnsteadyLoad)
+               u(2)%LMesh%Force(:,iNode)  = u(2)%LMesh%Force(:,iNode)  + UnsteadyLoad(1:3)
+               u(2)%LMesh%Moment(:,iNode) = u(2)%LMesh%Moment(:,iNode) + UnsteadyLoad(4:6)
             endif
          enddo
       endif
 
       ! Calculate outputs at n
-      CALL SD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2); call AbortIfFailed()
+      CALL SD_CalcOutput( Time, u(2), p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2); call AbortIfFailed()
       ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
       CALL SD_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); call AbortIfFailed()
       ! Display simulation status every SttsTime-seconds:
@@ -289,6 +315,7 @@ PROGRAM SubDyn_Driver
 
    ! Routine to terminate program execution
    CALL SD_End( u(1), p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2)
+   CALL SD_DestroyInput( u(2), ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN
       CALL WrScr( ErrMsg )
    END IF
