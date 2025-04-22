@@ -1,6 +1,6 @@
 
 
-from OpynFAST.seastate import SeaStateLib
+from pyOpenFAST.seastate import SeaStateLib
 import matplotlib.pyplot as plt
 import numpy as np
 

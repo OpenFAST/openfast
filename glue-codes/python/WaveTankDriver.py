@@ -15,7 +15,7 @@ from ctypes import (
 import numpy as np
 from pathlib import Path
 
-from OpynFAST.interface_abc import OpenFASTInterfaceType
+from pyOpenFAST.interface_abc import OpenFASTInterfaceType
 
 project_root = '/Users/rmudafor/Development/openfast'
 library_path = project_root + '/build/glue-codes/labview/libwavetanktestinglib.dylib'
@@ -223,15 +223,15 @@ if __name__=="__main__":
             "MoorDyn": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_MoorDyn.dat",
             "SeaState": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/SeaState.dat",
             "AeroDyn": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_AeroDyn.dat",
-            "InflowWind": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_InflowWind.dat",           
+            "InflowWind": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_InflowWind.dat",
         },
     )
     n_camera_points=1
     wavetanklib.init(n_camera_points=n_camera_points)
 
-    positions_x = 1 * np.ones(1, dtype=np.float32)
-    positions_y = 2 * np.ones(1, dtype=np.float32)
-    positions_z = 3 * np.ones(1, dtype=np.float32)
+    positions_x = 1 * np.ones(n_camera_points, dtype=np.float32)
+    positions_y = 2 * np.ones(n_camera_points, dtype=np.float32)
+    positions_z = 3 * np.ones(n_camera_points, dtype=np.float32)
     rotation_matrix = 4 * np.ones(9, dtype=np.float32)
     loads = np.zeros((1,6), dtype=np.float32, order='C')
 
