@@ -384,13 +384,16 @@ contains
    logical function Failed0(txt)
    ! TODO: This does not move the error the C variables; this looks incorrect
       character(*), intent(in) :: txt
-      if (ErrStat_F /= 0) then
+      if (ErrStat_F2 /= 0) then
          ErrStat_F2 = ErrID_Fatal
          ErrMsg_F2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName)
       endif
       Failed0 = ErrStat_F >= AbortErrLev
-      if(Failed0) call ClearTmpStorage()
+      if(Failed0) then
+         call ClearTmpStorage()
+         call SetErr(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed0
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
@@ -1527,13 +1530,17 @@ contains
    logical function Failed0(txt)
    ! TODO: This does not move the error the C variables; this looks incorrect
       character(*), intent(in) :: txt
-      if (ErrStat_F /= 0) then
+
+      if (ErrStat_F2 /= 0) then
          ErrStat_F2 = ErrID_Fatal
          ErrMsg_F2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName)
       endif
       Failed0 = ErrStat_F >= AbortErrLev
-      if(Failed0) call ClearTmpStorage()
+      if(Failed0) then
+         call ClearTmpStorage()
+         call SetErr(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed0
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
