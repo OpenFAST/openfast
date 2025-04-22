@@ -441,6 +441,14 @@ freqFileClose(ff1,ff2)
 if len(Errors)>0:
     exitWithError('See errors below: \n'+'\n'.join(Errors))
 
+# If able to import openfast_toolbox, generate input file for visualization
+try:
+    import openfast_toolbox.linearization as lin
+    CDDOP, MBCOP = lin.getCampbellDataOP(caseInputFile, writeModes=True, verbose=True)
+    vizfile = lin.writeVizFile(caseInputFile, verbose=True, VTKLinModes=1, VTKLinScale=10, VTKModes="1", VTKLinTim=2)
+except ImportError as e:
+    pass
+
 # passing case
 sys.exit(0)
 
