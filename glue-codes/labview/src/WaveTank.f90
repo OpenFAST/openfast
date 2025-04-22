@@ -6,7 +6,7 @@ MODULE WaveTankTesting
     ! USE Precision
     USE SeaState_C_Binding, ONLY: SeaSt_C_Init, SeaSt_C_CalcOutput, SeaSt_C_End, MaxOutPts, SeaSt_GetWaveFieldPointer_C
     USE SeaSt_WaveField_Types, ONLY: SeaSt_WaveFieldType
-    USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_PreInit, ADI_C_SetupRotor, ADI_C_Init, ADI_C_End, MaxADIOutputs
+    USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_PreInit, ADI_C_SetupRotor, ADI_C_Init, ADI_C_End, MaxADIOutputs, ADI_C_SetRotorMotion, ADI_C_UpdateStates, ADI_C_CalcOutput
     USE MoorDyn_C, ONLY: MD_C_Init, MD_C_End, MD_C_SetWaveFieldData, MD_C_UpdateStates, MD_C_CalcOutput
     USE NWTC_C_Binding, ONLY: IntfStrLen, SetErrStat_C, ErrMsgLen_C, StringConvert_F2C
 
@@ -14,6 +14,12 @@ MODULE WaveTankTesting
     SAVE
 
     PUBLIC :: WaveTank_Init
+    PUBLIC :: WaveTank_CalcOutput
+    PUBLIC :: WaveTank_StepFunction
+    PUBLIC :: WaveTank_End
+    PUBLIC :: WaveTank_SetWaveFieldPointer
+    PUBLIC :: WaveTank_NoOp
+    PUBLIC :: WaveTank_Sizes
 
     REAL(C_DOUBLE) :: dt_c = 0.01_C_DOUBLE  ! 100 hertz
     REAL(C_FLOAT) :: g_c = 9.8065_C_FLOAT
@@ -233,7 +239,7 @@ IMPLICIT NONE
     TransposeDCM = 1
     PointLoadOutput = 1      ! TODO: Use point load or distributed load?; 0 - distributed load, 1 - point load
     MHK = MHK_Floating
-    DebugLevel = 1
+    DebugLevel = 2
 
     ! ADI SetupRotor
     iWT_c = 1
@@ -247,9 +253,9 @@ IMPLICIT NONE
     BldRootPos_C = (/ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 /)
     BldRootOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
     ! n_camera_points_c
-    InitMeshPos_C = (/ 0.0, 0.0, 0.0 /)
+    InitMeshPos_C = 0.0
     InitMeshOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
-    MeshPtToBladeNum_C = (/ 1, 2, 2 /)          ! TODO: Configure n mesh points and mapping correctly. Currently, mesh points are the camera points
+    MeshPtToBladeNum_C = (/ 1, 2 /)          ! TODO: Configure n mesh points and mapping correctly. Currently, mesh points are the camera points
 
     ! ADI Init
     AD_InputFilePassed = 0
@@ -364,9 +370,9 @@ SUBROUTINE WaveTank_CalcOutput( &
     positions_z,                &
     rotation_matrix,            &
     loads,                      &
-    ss_outputs,                    &
-    md_outputs,                    &
-    adi_outputs,                    &
+    ss_outputs,                 &
+    md_outputs,                 &
+    adi_outputs,                &
     ErrStat_C,                  &
     ErrMsg_C                    &
 ) BIND (C, NAME='WaveTank_CalcOutput')
@@ -382,7 +388,7 @@ IMPLICIT NONE
     REAL(C_FLOAT),          INTENT(IN   ) :: positions_y(n_camera_points)
     REAL(C_FLOAT),          INTENT(IN   ) :: positions_z(n_camera_points)
     REAL(C_FLOAT),          INTENT(IN   ) :: rotation_matrix(9)
-    REAL(C_FLOAT),          INTENT(  OUT) :: loads(n_camera_points)
+    REAL(C_FLOAT),          INTENT(  OUT) :: loads(n_camera_points,6)
     REAL(C_FLOAT),          INTENT(  OUT) :: ss_outputs(SS_NumChannels_C)
     REAL(C_FLOAT),          INTENT(  OUT) :: md_outputs(MD_NumChannels_C)
     REAL(C_FLOAT),          INTENT(  OUT) :: adi_outputs(ADI_NumChannels_C)
@@ -393,6 +399,30 @@ IMPLICIT NONE
     INTEGER :: i
     INTEGER(C_INT)                          :: ErrStat_C2
     CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
+
+
+    ! ! ADI
+    ! ! SetRotorMotion
+    integer(c_int)     :: ADI_iWT_c                         !< Wind turbine / rotor number
+    real(c_float)      :: ADI_HubPos_C( 3 )                 !< Hub position
+    real(c_double)     :: ADI_HubOri_C( 9 )                 !< Hub orientation
+    real(c_float)      :: ADI_HubVel_C( 6 )                 !< Hub velocity
+    real(c_float)      :: ADI_HubAcc_C( 6 )                 !< Hub acceleration
+    real(c_float)      :: ADI_NacPos_C( 3 )                 !< Nacelle position
+    real(c_double)     :: ADI_NacOri_C( 9 )                 !< Nacelle orientation
+    real(c_float)      :: ADI_NacVel_C( 6 )                 !< Nacelle velocity
+    real(c_float)      :: ADI_NacAcc_C( 6 )                 !< Nacelle acceleration
+    integer(c_int), parameter :: NumBlades_C = 2                        !< Number of blades
+    real(c_float)      :: ADI_BldRootPos_C( 3*NumBlades_C )   !< Blade root positions
+    real(c_double)     :: ADI_BldRootOri_C( 9*NumBlades_C )   !< Blade root orientations
+    real(c_float)      :: ADI_BldRootVel_C( 6*NumBlades_C )   !< Blade root velocities
+    real(c_float)      :: ADI_BldRootAcc_C( 6*NumBlades_C )   !< Blade root accelerations
+    ! Blade mesh nodes
+    integer(c_int)     :: ADI_NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
+    real(c_float)      :: ADI_MeshPos_C( 3*n_camera_points )   !< A 3xNumMeshPts_C array [x,y,z]
+    real(c_double)     :: ADI_MeshOri_C( 9*n_camera_points )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+    real(c_float)      :: ADI_MeshVel_C( 6*n_camera_points )   !< A 6xNumMeshPts_C array [x,y,z]
+    real(c_float)      :: ADI_MeshAcc_C( 6*n_camera_points )   !< A 6xNumMeshPts_C array [x,y,z]
 
 
     ! Initialize error handling
@@ -419,7 +449,7 @@ IMPLICIT NONE
         Positions(3,:),                     &
         Velocities(2,:),                    &
         Accelerations(1,:),                 &
-        ErrStat_C, ErrMsg_C                 &
+        ErrStat_C2, ErrMsg_C2               &
     )
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_UpdateStates')
     IF (ErrStat_C >= AbortErrLev) RETURN
@@ -431,29 +461,70 @@ IMPLICIT NONE
         Accelerations(1,:),                 &
         loads,                              &
         md_outputs,                         &
-        ErrStat_C, ErrMsg_C                 &
+        ErrStat_C2, ErrMsg_C2               &
     )
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_CalcOutput')
     IF (ErrStat_C >= AbortErrLev) RETURN
 
-    ! ! Get loads from ADI
-    ! CALL ADI_C_SetRotorMotion(              &
-    !     ErrStat_C, ErrMsg_C                 &
-    ! )
-    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
-    ! IF (ErrStat_C >= AbortErrLev) RETURN
+    ! Get loads from ADI
+    ADI_iWT_c = 1
+    ADI_HubPos_C = Positions(3,1:3)
+    ADI_HubOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
+    ADI_HubVel_C = Velocities(2,:)
+    ADI_HubAcc_C = Accelerations(1,:)
+    ADI_NacPos_C = Positions(3,1:3)
+    ADI_NacOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
+    ADI_NacVel_C = Velocities(2,:)
+    ADI_NacAcc_C = Accelerations(1,:)
+    ADI_BldRootPos_C = Positions(3,:)
+    ADI_BldRootOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
+    ADI_BldRootVel_C = (/ Velocities(2,1:6), Velocities(2,1:6) /)
+    ADI_BldRootAcc_C = (/ Accelerations(1,1:6), Accelerations(1,1:6) /)
+    ADI_NumMeshPts_C = n_camera_points
+    ADI_MeshPos_C = Positions(3,:)
+    ADI_MeshOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
+    ADI_MeshVel_C = Velocities(2,:)
+    ADI_MeshAcc_C = Accelerations(1,:)
 
-    ! CALL ADI_C_UpdateStates(                &
-    !     ErrStat_C, ErrMsg_C                 &
-    ! )
-    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
-    ! IF (ErrStat_C >= AbortErrLev) RETURN
+    CALL ADI_C_SetRotorMotion(              &
+        ADI_iWT_c,                          & ! integer(c_int),  intent(in   )  :: iWT_c                         !< Wind turbine / rotor number
+        ADI_HubPos_C,                       & ! real(c_float),   intent(in   )  :: HubPos_C( 3 )                 !< Hub position
+        ADI_HubOri_C,                       & ! real(c_double),  intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
+        ADI_HubVel_C,                       & ! real(c_float),   intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
+        ADI_HubAcc_C,                       & ! real(c_float),   intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
+        ADI_NacPos_C,                       & ! real(c_float),   intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
+        ADI_NacOri_C,                       & ! real(c_double),  intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
+        ADI_NacVel_C,                       & ! real(c_float),   intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
+        ADI_NacAcc_C,                       & ! real(c_float),   intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
+        ADI_BldRootPos_C,                   & ! real(c_float),   intent(in   )  :: BldRootPos_C( 3*Sim%WT(iWT_c)%NumBlades )   !< Blade root positions
+        ADI_BldRootOri_C,                   & ! real(c_double),  intent(in   )  :: BldRootOri_C( 9*Sim%WT(iWT_c)%NumBlades )   !< Blade root orientations
+        ADI_BldRootVel_C,                   & ! real(c_float),   intent(in   )  :: BldRootVel_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root velocities
+        ADI_BldRootAcc_C,                   & ! real(c_float),   intent(in   )  :: BldRootAcc_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root accelerations
+        ADI_NumMeshPts_C,                   & ! intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
+        ADI_MeshPos_C,                      & ! intent(in   )  :: MeshPos_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
+        ADI_MeshOri_C,                      & ! intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+        ADI_MeshVel_C,                      & ! intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
+        ADI_MeshAcc_C,                      & ! intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
+        ErrStat_C2, ErrMsg_C2               &
+    )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_SetRotorMotion')
+    IF (ErrStat_C >= AbortErrLev) RETURN
 
-    ! CALL ADI_C_CalcOutput(                  &
-    !     ErrStat_C, ErrMsg_C                 &
-    ! )
-    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
-    ! IF (ErrStat_C >= AbortErrLev) RETURN
+    CALL ADI_C_UpdateStates(                &
+        time,                               &
+        REAL(time + 0.1, C_DOUBLE),         &
+        ErrStat_C2, ErrMsg_C2               &
+    )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_UpdateStates')
+    IF (ErrStat_C >= AbortErrLev) RETURN
+
+    CALL ADI_C_CalcOutput(                  &
+        time,                               &
+        adi_outputs,                        &
+        ErrStat_C2, ErrMsg_C2               &
+    )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_CalcOutput')
+    IF (ErrStat_C >= AbortErrLev) RETURN
 
     ! CALL ADI_C_GetRotorLoads(               &
     !     ErrStat_C, ErrMsg_C                 &
