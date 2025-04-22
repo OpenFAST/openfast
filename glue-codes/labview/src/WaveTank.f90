@@ -196,12 +196,6 @@ IMPLICIT NONE
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'SeaSt_C_Init')
     IF (ErrStat_C >= AbortErrLev) RETURN
 
-    ! ! Set the SeaState FlowField pointer onto MoorDyn
-    ! CALL WaveTank_SetFlowFieldPointer(ErrStat_C2, ErrMsg_C2)
-    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'WaveTank_SetFlowFieldPointer')
-    ! IF (ErrStat_C >= AbortErrLev) RETURN
-    ! Moved to below MD_C_Init to enable validation on setting the pointer
-
     MD_InputFilePassed = 0
     MD_InputFileString_C = MD_InputFile_C
     MD_InputFileStringLength_C = IntfStrLen
@@ -620,13 +614,25 @@ IMPLICIT NONE
 
     ! Set the SeaState FlowField pointer onto MoorDyn
     TYPE(C_PTR) :: WaveFieldPointer
+    TYPE(SeaSt_WaveFieldType), POINTER :: WaveFieldPointer_F
 
     ! Initialize error handling
     ErrStat_C = ErrID_None
     ErrMsg_C  = " "//C_NULL_CHAR
 
     WaveFieldPointer = SeaSt_GetWaveFieldPointer_C()
-    call MD_C_SetWaveFieldData(WaveFieldPointer)
+
+    CALL C_F_POINTER(WaveFieldPointer, WaveFieldPointer_F)
+    ! Verify that the data in the WaveField pointer has been set
+    IF (WaveFieldPointer_F%WtrDpth == 0) THEN
+        ErrStat_C2 = ErrID_Fatal
+        ErrMsg_C2 = "SeaState WaveFieldPointer is WtrDpth is 0.0, so it it probably not initialized."
+        CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'WaveTank_SetWaveFieldPointer')
+        RETURN
+    END IF
+
+    CALL MD_C_SetWaveFieldData(WaveFieldPointer)
+
 END SUBROUTINE
 
 SUBROUTINE WaveTank_NoOp(ErrStat_C, ErrMsg_C) bind (C, NAME="WaveTank_NoOp")
