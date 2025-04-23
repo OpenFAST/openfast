@@ -220,6 +220,9 @@ class AeroDynInflowLib(CDLL):
         self.transpose_dcm = 1
         self.point_load_output = 1
 
+        # MHK flag: 0->not MHK, 1->fixed bottom, 2->floating
+        self.mhk = 0
+
         # 0->None, 1->Info, 2->Warning, 3->Severe Error, 4->Fatal Error
         self.debug_level = 0
 
@@ -342,6 +345,7 @@ class AeroDynInflowLib(CDLL):
             byref(c_float(self.vapor_pressure)),                 # IN -> vapor pressure
             byref(c_float(self.water_depth)),                    # IN -> water depth
             byref(c_float(self.mean_sea_level_offset)),          # IN -> MSL to SWL offset
+            byref(c_int(self.mhk)),                 # IN -> mhk flag (0=not MHK, 1=fixed bottom, 2=floating)
             byref(c_int(self.debug_level)),         # IN -> debug level (0=None to 4=Fatal)
             byref(self.error_status_c),             # OUT <- error status code
             self.error_message_c                    # OUT <- error message buffer
@@ -703,6 +707,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_float),                   # defPvap
             POINTER(c_float),                   # WtrDpth
             POINTER(c_float),                   # MSL2SWL
+            POINTER(c_int),                     # MHK
             POINTER(c_int),                     # debuglevel
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
