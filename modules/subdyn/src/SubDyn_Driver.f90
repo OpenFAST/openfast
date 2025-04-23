@@ -187,13 +187,13 @@ PROGRAM SubDyn_Driver
          u(1)%TPMesh%TranslationVel(:,iTP)  = drvrInitInp%uDotTPInSteady(idx:idx+2)
          u(1)%TPMesh%RotationVel(:,iTP)     = drvrInitInp%uDotTPInSteady(idx+3:idx+5)
          u(1)%TPMesh%TranslationAcc(:,iTP)  = drvrInitInp%uDotDotTPInSteady(idx:idx+2)
-         u(1)%TPMesh%RotationAcc(:,iTP)     = drvrInitInp%uDotDotTPInSteady(idx:idx+5)
+         u(1)%TPMesh%RotationAcc(:,iTP)     = drvrInitInp%uDotDotTPInSteady(idx+3:idx+5)
          u(2)%TPMesh%TranslationDisp(:,iTP) = drvrInitInp%uTPInSteady(idx:idx+2)
          u(2)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(drvrInitInp%uTPInSteady(idx+3:idx+5),ReKi))
          u(2)%TPMesh%TranslationVel(:,iTP)  = drvrInitInp%uDotTPInSteady(idx:idx+2)
          u(2)%TPMesh%RotationVel(:,iTP)     = drvrInitInp%uDotTPInSteady(idx+3:idx+5)
          u(2)%TPMesh%TranslationAcc(:,iTP)  = drvrInitInp%uDotDotTPInSteady(idx:idx+2)
-         u(2)%TPMesh%RotationAcc(:,iTP)     = drvrInitInp%uDotDotTPInSteady(idx:idx+5)
+         u(2)%TPMesh%RotationAcc(:,iTP)     = drvrInitInp%uDotDotTPInSteady(idx+3:idx+5)
      end do
    else
       ! Allocate array for time varying transition piece motion to be populated during time loop
