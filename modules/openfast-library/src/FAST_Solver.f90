@@ -1,4 +1,4 @@
-module Fast_Solver
+module FAST_Solver
 
 use NWTC_LAPACK
 use FAST_ModTypes

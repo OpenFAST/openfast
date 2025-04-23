@@ -26,7 +26,7 @@ MODULE FAST_Subs
    use FAST_ModGlue
    use VersionInfo
    use FAST_Funcs
-   use Fast_Solver
+   use FAST_Solver
    use FAST_Mapping, only: FAST_InitMappings
    use AeroDisk, only: ADsk_Init
    use AeroDyn, only: AD_Init
@@ -4730,7 +4730,7 @@ END SUBROUTINE FAST_WrSum
 !> Routine that calls FAST_Solution0 for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level.
 SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
-   USE Fast_Solver, only: FAST_SolverStep0
+   USE FAST_Solver, only: FAST_SolverStep0
 
    TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             !< all data for one instance of a turbine
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
@@ -7436,7 +7436,7 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, InputFileName, VTK_Modes, T,
 
 contains 
    subroutine CalcOutputModeShapeVTK(TimeVTK, Perturb)
-      use Fast_Solver, only : CalcOutputs_SolveForInputs
+      use FAST_Solver, only : CalcOutputs_SolveForInputs
       real(DbKi), intent(in)  :: TimeVTK
       real(DbKi), intent(in)  :: Perturb(:)
       integer(IntKi)          :: ConvIter

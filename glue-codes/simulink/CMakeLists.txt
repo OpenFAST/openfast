@@ -55,7 +55,7 @@ matlab_add_mex(
     src/FAST_SFunc.c
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Subs.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Mods.f90
-    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/Fast_Solver.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Solver.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Funcs.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_ModGlue.f90
