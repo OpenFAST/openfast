@@ -408,12 +408,12 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function
 
-   logical function FailedAlloc(name)
-      character(*), intent(in)   :: name
+   logical function FailedAlloc(NameLoc)
+      character(*), intent(in)   :: NameLoc
       if (ErrStat2 == 0) then
          FailedAlloc = .false.
       else
-         call SetErrStat(ErrID_Fatal, "Failed to allocate "//name, ErrStat, ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, "Failed to allocate "//NameLoc, ErrStat, ErrMsg, RoutineName)
          FailedAlloc = .true.
       end if
    end function
