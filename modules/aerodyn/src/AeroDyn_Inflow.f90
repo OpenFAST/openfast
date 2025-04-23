@@ -388,11 +388,11 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       endif
       InitInData%RootName         = trim(Root)//'.IfW'
       InitInData%MHK              = i_IW%MHK
-      InitInData%OutputAccel      = .TRUE.            ! TODO: Set via input file or c driver flag
       ! OLAF might be used in AD, in which case we need to allow out of bounds for some calcs. To do that
       ! the average values for the entire wind profile must be calculated and stored (we don't know if OLAF
       ! is used until after AD_Init below).
       InitInData%BoxExceedAllow = .true.
+      InitInData%OutputAccel = i_IW%OutputAccel
       CALL InflowWind_Init( InitInData, IW%u, IW%p, &
                      IW%x, IW%xd, IW%z, IW%OtherSt, &
                      IW%y, IW%m, dt,  InitOutData, errStat2, errMsg2 )

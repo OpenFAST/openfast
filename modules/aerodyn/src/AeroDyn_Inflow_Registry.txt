@@ -41,6 +41,8 @@ typedef    ^        ^                  IntKi                            FilePass
 typedef    ^        ^                  FileInfoType                     PassedFileInfo   -      -     -   "If we don't use the input file, pass everything through this as a FileInfo structure"       -
 typedef    ^        ^                  InflowWind_InputFile             PassedFileData   -      -     -   "If we don't use the input file, pass everything through this as an IfW InputFile structure" -
 typedef    ^        ^                  LOGICAL                          Linearize        -    .FALSE. -   "Flag that tells this module if the glue code wants to linearize." -
+typedef    ^        ^                  LOGICAL                          OutputAccel      -    .FALSE. -   "Flag to output wind acceleration" -
+
 
 
 # ..... InitIn ....................................................................................................................

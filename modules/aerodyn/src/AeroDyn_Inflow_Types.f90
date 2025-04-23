@@ -63,6 +63,7 @@ IMPLICIT NONE
     TYPE(FileInfoType)  :: PassedFileInfo      !< If we don't use the input file, pass everything through this as a FileInfo structure [-]
     TYPE(InflowWind_InputFile)  :: PassedFileData      !< If we don't use the input file, pass everything through this as an IfW InputFile structure [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    LOGICAL  :: OutputAccel = .FALSE.      !< Flag to output wind acceleration [-]
   END TYPE ADI_IW_InputData
 ! =======================
 ! =========  ADI_InitInputType  =======
@@ -309,6 +310,7 @@ subroutine ADI_CopyIW_InputData(SrcIW_InputDataData, DstIW_InputDataData, CtrlCo
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstIW_InputDataData%Linearize = SrcIW_InputDataData%Linearize
+   DstIW_InputDataData%OutputAccel = SrcIW_InputDataData%OutputAccel
 end subroutine
 
 subroutine ADI_DestroyIW_InputData(IW_InputDataData, ErrStat, ErrMsg)
@@ -341,6 +343,7 @@ subroutine ADI_PackIW_InputData(RF, Indata)
    call NWTC_Library_PackFileInfoType(RF, InData%PassedFileInfo) 
    call InflowWind_PackInputFile(RF, InData%PassedFileData) 
    call RegPack(RF, InData%Linearize)
+   call RegPack(RF, InData%OutputAccel)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -359,6 +362,7 @@ subroutine ADI_UnPackIW_InputData(RF, OutData)
    call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileInfo) ! PassedFileInfo 
    call InflowWind_UnpackInputFile(RF, OutData%PassedFileData) ! PassedFileData 
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%OutputAccel); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ADI_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)

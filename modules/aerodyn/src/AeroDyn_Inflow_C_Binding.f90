@@ -360,6 +360,7 @@ subroutine ADI_C_PreInit(                       &
    ! Set whether these are MHK turbines
    InitInp%AD%MHK = MHK_in
    InitInp%IW_InitInp%MHK = MHK_in
+   InitInp%IW_InitInp%OutputAccel      = MHK_in /= MHK_None
 
    ! Offset the origin to account for water depth for MHK turbines
    do iWT=1,Sim%NumTurbines
