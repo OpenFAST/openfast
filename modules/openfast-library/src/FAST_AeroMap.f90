@@ -25,8 +25,8 @@ use FAST_Types
 use FAST_Funcs
 use FAST_Mapping
 use FAST_ModGlue
-
 use FAST_Subs
+use NWTC_LAPACK
 
 implicit none
 
