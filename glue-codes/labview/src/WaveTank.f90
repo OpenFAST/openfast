@@ -25,6 +25,10 @@ MODULE WaveTankTesting
     INTEGER(C_INT) :: MD_NumChannels_C
     INTEGER(C_INT) :: ADI_NumChannels_C
 
+    INTEGER(C_INT) :: iWT_C
+    INTEGER(C_INT) :: NumBlades_C
+    INTEGER(C_INT) :: NumMeshPts_C
+
     REAL(C_FLOAT), DIMENSION(3,6) :: Positions = 0.0_C_FLOAT
     REAL(C_FLOAT), DIMENSION(2,6) :: Velocities = 0.0_C_FLOAT
     REAL(C_FLOAT), DIMENSION(1,6) :: Accelerations = 0.0_C_FLOAT
@@ -260,6 +264,11 @@ SUBROUTINE WaveTank_Init(   &
     CALL SetErrStat_F2C(ErrStat_F2, ErrMsg_F2, ErrStat_C, ErrMsg_C) !, 'WaveTank_Init')
     IF (ErrStat_C >= AbortErrLev) RETURN
 
+    ! Store to global variable for use in other routines
+    iWT_C = WT_InitInp%iWT_C
+    NumBlades_C = WT_InitInp%NumBlades_C
+    NumMeshPts_C = WT_InitInp%NumMeshPts_C
+
     CALL SeaSt_C_Init(                          &    
         SS_InputFile_C,                         &
         WT_InitInp%SS_OutRootName_C,            &
@@ -372,7 +381,6 @@ END SUBROUTINE WaveTank_Init
 
 SUBROUTINE WaveTank_CalcOutput( &
     time,                       &
-    n_camera_points,            &
     positions_x,                &
     positions_y,                &
     positions_z,                &
@@ -389,12 +397,11 @@ SUBROUTINE WaveTank_CalcOutput( &
 #endif
 
     REAL(C_DOUBLE),         INTENT(IN   ) :: time
-    INTEGER(C_INT),         INTENT(IN   ) :: n_camera_points
-    REAL(C_FLOAT),          INTENT(IN   ) :: positions_x(n_camera_points)
-    REAL(C_FLOAT),          INTENT(IN   ) :: positions_y(n_camera_points)
-    REAL(C_FLOAT),          INTENT(IN   ) :: positions_z(n_camera_points)
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_x
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_y
+    REAL(C_FLOAT),          INTENT(IN   ) :: positions_z
     REAL(C_FLOAT),          INTENT(IN   ) :: rotation_matrix(9)
-    REAL(C_FLOAT),          INTENT(  OUT) :: loads(n_camera_points,6)
+    REAL(C_FLOAT),          INTENT(  OUT) :: loads(1,6)
     REAL(C_FLOAT),          INTENT(  OUT) :: md_outputs(MD_NumChannels_C)
     REAL(C_FLOAT),          INTENT(  OUT) :: adi_outputs(ADI_NumChannels_C)
     INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
@@ -404,30 +411,25 @@ SUBROUTINE WaveTank_CalcOutput( &
     INTEGER(C_INT)                          :: ErrStat_C2
     CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
 
-
     ! ! ADI
     ! ! SetRotorMotion
-    integer(c_int)     :: ADI_iWT_c                         !< Wind turbine / rotor number
-    real(c_float)      :: ADI_HubPos_C( 3 )                 !< Hub position
-    real(c_double)     :: ADI_HubOri_C( 9 )                 !< Hub orientation
-    real(c_float)      :: ADI_HubVel_C( 6 )                 !< Hub velocity
-    real(c_float)      :: ADI_HubAcc_C( 6 )                 !< Hub acceleration
-    real(c_float)      :: ADI_NacPos_C( 3 )                 !< Nacelle position
-    real(c_double)     :: ADI_NacOri_C( 9 )                 !< Nacelle orientation
-    real(c_float)      :: ADI_NacVel_C( 6 )                 !< Nacelle velocity
-    real(c_float)      :: ADI_NacAcc_C( 6 )                 !< Nacelle acceleration
-    integer(c_int), parameter :: NumBlades_C = 2                        !< Number of blades
-    real(c_float)      :: ADI_BldRootPos_C( 3*NumBlades_C )   !< Blade root positions
-    real(c_double)     :: ADI_BldRootOri_C( 9*NumBlades_C )   !< Blade root orientations
-    real(c_float)      :: ADI_BldRootVel_C( 6*NumBlades_C )   !< Blade root velocities
-    real(c_float)      :: ADI_BldRootAcc_C( 6*NumBlades_C )   !< Blade root accelerations
+    REAL(C_FLOAT)      :: ADI_HubPos_C( 3 )                 !< Hub position
+    REAL(C_DOUBLE)     :: ADI_HubOri_C( 9 )                 !< Hub orientation
+    REAL(C_FLOAT)      :: ADI_HubVel_C( 6 )                 !< Hub velocity
+    REAL(C_FLOAT)      :: ADI_HubAcc_C( 6 )                 !< Hub acceleration
+    REAL(C_FLOAT)      :: ADI_NacPos_C( 3 )                 !< Nacelle position
+    REAL(C_DOUBLE)     :: ADI_NacOri_C( 9 )                 !< Nacelle orientation
+    REAL(C_FLOAT)      :: ADI_NacVel_C( 6 )                 !< Nacelle velocity
+    REAL(C_FLOAT)      :: ADI_NacAcc_C( 6 )                 !< Nacelle acceleration
+    REAL(C_FLOAT)      :: ADI_BldRootPos_C( 3*NumBlades_C ) !< Blade root positions
+    REAL(C_DOUBLE)     :: ADI_BldRootOri_C( 9*NumBlades_C ) !< Blade root orientations
+    REAL(C_FLOAT)      :: ADI_BldRootVel_C( 6*NumBlades_C ) !< Blade root velocities
+    REAL(C_FLOAT)      :: ADI_BldRootAcc_C( 6*NumBlades_C ) !< Blade root accelerations
     ! Blade mesh nodes
-    integer(c_int)     :: ADI_NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
-    real(c_float)      :: ADI_MeshPos_C( 3*n_camera_points )   !< A 3xNumMeshPts_C array [x,y,z]
-    real(c_double)     :: ADI_MeshOri_C( 9*n_camera_points )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
-    real(c_float)      :: ADI_MeshVel_C( 6*n_camera_points )   !< A 6xNumMeshPts_C array [x,y,z]
-    real(c_float)      :: ADI_MeshAcc_C( 6*n_camera_points )   !< A 6xNumMeshPts_C array [x,y,z]
-
+    REAL(C_FLOAT)      :: ADI_MeshPos_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
+    REAL(C_DOUBLE)     :: ADI_MeshOri_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+    REAL(C_FLOAT)      :: ADI_MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
+    REAL(C_FLOAT)      :: ADI_MeshAcc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
 
     ! Initialize error handling
     ErrStat_C = ErrID_None
@@ -471,7 +473,6 @@ SUBROUTINE WaveTank_CalcOutput( &
     IF (ErrStat_C >= AbortErrLev) RETURN
 
     ! Get loads from ADI
-    ADI_iWT_c = 1
     ADI_HubPos_C = Positions(3,1:3)
     ADI_HubOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
     ADI_HubVel_C = Velocities(2,:)
@@ -484,27 +485,26 @@ SUBROUTINE WaveTank_CalcOutput( &
     ADI_BldRootOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
     ADI_BldRootVel_C = (/ Velocities(2,1:6), Velocities(2,1:6) /)
     ADI_BldRootAcc_C = (/ Accelerations(1,1:6), Accelerations(1,1:6) /)
-    ADI_NumMeshPts_C = n_camera_points
     ADI_MeshPos_C = Positions(3,:)
     ADI_MeshOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
     ADI_MeshVel_C = Velocities(2,:)
     ADI_MeshAcc_C = Accelerations(1,:)
 
     CALL ADI_C_SetRotorMotion(              &
-        ADI_iWT_c,                          & ! integer(c_int),  intent(in   )  :: iWT_c                         !< Wind turbine / rotor number
-        ADI_HubPos_C,                       & ! real(c_float),   intent(in   )  :: HubPos_C( 3 )                 !< Hub position
-        ADI_HubOri_C,                       & ! real(c_double),  intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
-        ADI_HubVel_C,                       & ! real(c_float),   intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
-        ADI_HubAcc_C,                       & ! real(c_float),   intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
-        ADI_NacPos_C,                       & ! real(c_float),   intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
-        ADI_NacOri_C,                       & ! real(c_double),  intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
-        ADI_NacVel_C,                       & ! real(c_float),   intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
-        ADI_NacAcc_C,                       & ! real(c_float),   intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
-        ADI_BldRootPos_C,                   & ! real(c_float),   intent(in   )  :: BldRootPos_C( 3*Sim%WT(iWT_c)%NumBlades )   !< Blade root positions
-        ADI_BldRootOri_C,                   & ! real(c_double),  intent(in   )  :: BldRootOri_C( 9*Sim%WT(iWT_c)%NumBlades )   !< Blade root orientations
-        ADI_BldRootVel_C,                   & ! real(c_float),   intent(in   )  :: BldRootVel_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root velocities
-        ADI_BldRootAcc_C,                   & ! real(c_float),   intent(in   )  :: BldRootAcc_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root accelerations
-        ADI_NumMeshPts_C,                   & ! intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
+        iWT_c,                              & ! INTEGER(C_INT),  intent(in   )  :: iWT_c                         !< Wind turbine / rotor number
+        ADI_HubPos_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: HubPos_C( 3 )                 !< Hub position
+        ADI_HubOri_C,                       & ! REAL(C_DOUBLE),  intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
+        ADI_HubVel_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
+        ADI_HubAcc_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
+        ADI_NacPos_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
+        ADI_NacOri_C,                       & ! REAL(C_DOUBLE),  intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
+        ADI_NacVel_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
+        ADI_NacAcc_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
+        ADI_BldRootPos_C,                   & ! REAL(C_FLOAT),   intent(in   )  :: BldRootPos_C( 3*Sim%WT(iWT_c)%NumBlades )   !< Blade root positions
+        ADI_BldRootOri_C,                   & ! REAL(C_DOUBLE),  intent(in   )  :: BldRootOri_C( 9*Sim%WT(iWT_c)%NumBlades )   !< Blade root orientations
+        ADI_BldRootVel_C,                   & ! REAL(C_FLOAT),   intent(in   )  :: BldRootVel_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root velocities
+        ADI_BldRootAcc_C,                   & ! REAL(C_FLOAT),   intent(in   )  :: BldRootAcc_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root accelerations
+        NumMeshPts_C,                       & ! intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
         ADI_MeshPos_C,                      & ! intent(in   )  :: MeshPos_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
         ADI_MeshOri_C,                      & ! intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
         ADI_MeshVel_C,                      & ! intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]

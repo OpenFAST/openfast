@@ -74,12 +74,11 @@ class WaveTankLib(OpenFASTInterfaceType):
 
         self.WaveTank_CalcOutput.argtypes = [
             POINTER(c_double),      # real(c_double) :: time
-            POINTER(c_int),         # integer(c_int) :: n_camera_points
-            POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_x(N_CAMERA_POINTS)
-            POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_y(N_CAMERA_POINTS)
-            POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_z(N_CAMERA_POINTS)
+            POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_x
+            POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_y
+            POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_z
             POINTER(c_float),       # real(c_float),          intent(in   ) :: rotation_matrix(9)
-            POINTER(c_float),       # real(c_float),          intent(  out) :: loads(N_CAMERA_POINTS)
+            POINTER(c_float),       # real(c_float),          intent(  out) :: loads(1,6)
             # POINTER(c_float),       # real(c_float),          intent(  out) :: ss_outputs(SS_NumChannels_C)
             POINTER(c_float),       # real(c_float),          intent(  out) :: md_outputs(MD_NumChannels_C)
             POINTER(c_float),       # real(c_float),          intent(  out) :: adi_outputs(ADI_NumChannels_C)
@@ -137,10 +136,9 @@ class WaveTankLib(OpenFASTInterfaceType):
     def calc_output(
         self,
         time: float,
-        n_camera_points: int,
-        positions_x: np.ndarray,
-        positions_y: np.ndarray,
-        positions_z: np.ndarray,
+        positions_x: float,
+        positions_y: float,
+        positions_z: float,
         rotation_matrix: np.ndarray,
         loads: np.ndarray,
     ):
@@ -149,10 +147,9 @@ class WaveTankLib(OpenFASTInterfaceType):
 
         self.WaveTank_CalcOutput(
             byref(c_double(time)),
-            byref(c_int(n_camera_points)),
-            positions_x.ctypes.data_as(POINTER(c_float)),
-            positions_y.ctypes.data_as(POINTER(c_float)),
-            positions_z.ctypes.data_as(POINTER(c_float)),
+            byref(c_float(positions_x)),
+            byref(c_float(positions_y)),
+            byref(c_float(positions_z)),
             rotation_matrix.ctypes.data_as(POINTER(c_float)),
             loads.ctypes.data_as(POINTER(c_float)),
             # self.ss_output_values.ctypes.data_as(POINTER(c_float)),
@@ -161,6 +158,8 @@ class WaveTankLib(OpenFASTInterfaceType):
             byref(_error_status),
             _error_message,
         )
+        if self.print_messages(_error_status):
+            print(f"WaveTank_CalcOutput:\n{_error_status.value}:\n{_error_message.value.decode('cp437')}")
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
@@ -172,6 +171,8 @@ class WaveTankLib(OpenFASTInterfaceType):
             byref(_error_status),
             _error_message,
         )
+        if self.print_messages(_error_status):
+            print(f"WaveTank_End:\n{_error_status.value}:\n{_error_message.value.decode('cp437')}")
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
@@ -210,13 +211,12 @@ if __name__=="__main__":
             "InflowWind": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_InflowWind.dat",
         },
     )
-    n_camera_points=1
     wavetanklib.init()
 
-    positions_x = 1 * np.ones(n_camera_points, dtype=np.float32)
-    positions_y = 2 * np.ones(n_camera_points, dtype=np.float32)
-    positions_z = 3 * np.ones(n_camera_points, dtype=np.float32)
-    rotation_matrix = 4 * np.ones(9, dtype=np.float32)
+    positions_x = 0.0
+    positions_y = 0.0
+    positions_z = 0.0
+    rotation_matrix = np.eye(3, 3, dtype=np.float32)
     loads = np.zeros((1,6), dtype=np.float32, order='C')
 
     wavetanklib.allocate_outputs()
@@ -225,7 +225,6 @@ if __name__=="__main__":
     for i in range(2):
         wavetanklib.calc_output(
             time=i*dt,
-            n_camera_points=n_camera_points,
             positions_x=positions_x,
             positions_y=positions_y,
             positions_z=positions_z,
