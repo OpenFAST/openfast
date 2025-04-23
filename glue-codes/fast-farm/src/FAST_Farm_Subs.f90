@@ -32,6 +32,8 @@ MODULE FAST_Farm_Subs
    USE FAST_Farm_IO
    USE FAST_Subs
    USE FASTWrapper
+   USE InflowWind, only: InflowWind_End
+   USE MoorDyn, only: MD_UpdateStates, MD_CalcOutput, MD_End
    
 #ifdef _OPENMP
    USE OMP_LIB 

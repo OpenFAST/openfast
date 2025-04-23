@@ -1,5 +1,6 @@
 module FAST_Solver
 
+use FAST_Types
 use NWTC_LAPACK
 use FAST_ModTypes
 use FAST_Mapping
@@ -15,8 +16,10 @@ implicit none
 
 private
 
-! Public functions
-public FAST_SolverInit, FAST_SolverStep0, FAST_SolverStep, CalcOutputs_SolveForInputs
+public :: FAST_SolverInit, &
+          FAST_SolverStep0, &
+          FAST_SolverStep, &
+          FAST_CalcOutputsAndSolveForInputs
 
 ! Debugging
 logical, parameter         :: DebugSolver = .false.
@@ -149,7 +152,7 @@ subroutine FAST_SolverInit(p_FAST, p, m, GlueModData, GlueModMaps, Turbine, ErrS
    iMod = [p%iModTC, p%iModOpt1]
 
    ! Build tight coupling module using solve variables from TC and Option 1 modules
-   call Glue_CombineModules(m%Mod, GlueModData, GlueModMaps, iMod, &
+   call ModGlue_CombineModules(m%Mod, GlueModData, GlueModMaps, iMod, &
                             VF_Solve, .true., ErrStat2, ErrMsg2, Name='Solver')
    if (Failed()) return
 
@@ -881,7 +884,7 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
    ! Solve for inputs at initial time
    !----------------------------------------------------------------------------
 
-   call CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, Turbine, &
+   call FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, Turbine, &
                                    ConvIter, ConvError, IsConverged, ErrStat2, ErrMsg2, UpdateJacobian=.true.)
 
    ! Print warning if not converged
@@ -963,7 +966,7 @@ contains
 
       write(*,*) "CalcFiniteDifferenceJacobian6"
 
-      call CalcWriteLinearMatrices(m%Mod%Vars, m%Mod%Lin, Turbine%p_FAST, Turbine%y_FAST, t_initial, MatrixUn, 'lin', VF_None, ErrStat2, ErrMsg2, CalcGlue=.false., FullOutput=.true.)
+      call ModGlue_CalcWriteLinearMatrices(m%Mod%Vars, m%Mod%Lin, Turbine%p_FAST, Turbine%y_FAST, t_initial, MatrixUn, 'lin', VF_None, ErrStat2, ErrMsg2, CalcGlue=.false., FullOutput=.true.)
       if (Failed()) return
 
       write(*,*) "CalcFiniteDifferenceJacobian7"
@@ -1467,7 +1470,7 @@ contains
    end function
 end subroutine
 
-subroutine CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, iInput, iState, Turbine, &
+subroutine FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, iInput, iState, Turbine, &
                                       ConvIter, ConvError, IsConverged, ErrStat, ErrMsg, UpdateJacobian)
    type(Glue_TCParam), intent(in)         :: p              !< Parameters
    type(Glue_TCMisc), intent(inout)       :: m              !< Misc variables
@@ -1484,7 +1487,7 @@ subroutine CalcOutputs_SolveForInputs(p, m, GlueModData, GlueModMaps, ThisTime, 
    character(*), intent(out)              :: ErrMsg
    logical, optional, intent(in)          :: UpdateJacobian
 
-   character(*), parameter                :: RoutineName = 'CalcOutputs_SolveForInputs'
+   character(*), parameter                :: RoutineName = 'FAST_CalcOutputsAndSolveForInputs'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    integer(IntKi)                         :: i
@@ -1874,7 +1877,7 @@ contains
    end function
 end subroutine
 
-! Build Jacobian for Input-Output solve (CalcOutputs_SolveForInputs)
+! Build Jacobian for Input-Output solve (FAST_CalcOutputsAndSolveForInputs)
 subroutine BuildJacobianIO(p, m, GlueModMaps, ThisTime, iState, Turbine, ErrStat, ErrMsg)
    type(Glue_TCParam), intent(in)         :: p              !< Parameters
    type(Glue_TCMisc), intent(inout)       :: m              !< Misc variables
@@ -2184,14 +2187,14 @@ subroutine BuildJacobian_Debug(m, T, ErrStat, ErrMsg)
    ! Write module matrices to file
    do i = 1, size(m%Mod%ModData)
       associate (ModData => m%Mod%ModData(i))
-         call CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, T%p_FAST, T%y_FAST, 0.0_R8Ki, MatrixUn, "SolverTC", VF_None, ErrStat2, ErrMsg2, &
+         call ModGlue_CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, T%p_FAST, T%y_FAST, 0.0_R8Ki, MatrixUn, "SolverTC", VF_None, ErrStat2, ErrMsg2, &
                                       CalcGlue=.false., ModSuffix=ModData%Abbr, FullOutput=.true.)
          if (Failed()) return
       end associate
    end do
 
    ! Write glue code matrices to file
-   call CalcWriteLinearMatrices(m%Mod%Vars, m%Mod%Lin, T%p_FAST, T%y_FAST, 0.0_R8Ki, MatrixUn, "SolverTC", VF_None, ErrStat2, ErrMsg2, CalcGlue=.false., FullOutput=.true.)
+   call ModGlue_CalcWriteLinearMatrices(m%Mod%Vars, m%Mod%Lin, T%p_FAST, T%y_FAST, 0.0_R8Ki, MatrixUn, "SolverTC", VF_None, ErrStat2, ErrMsg2, CalcGlue=.false., FullOutput=.true.)
    if (Failed()) return
 
    ! call DumpMatrix(MatrixUn, "dUdu.bin", m%Mod%Lin%dUdu, ErrStat2, ErrMsg2); if (Failed()) return

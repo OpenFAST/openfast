@@ -165,7 +165,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Generate index for variables with AeroMap flag
-   call Glue_CombineModules(AM%Mod, m%ModData, m%Mappings, iModOrder, VF_AeroMap, &
+   call ModGlue_CombineModules(AM%Mod, m%ModData, m%Mappings, iModOrder, VF_AeroMap, &
                             .true., ErrStat2, ErrMsg2, Name="AeroMap")
    if (Failed()) return
 
@@ -757,7 +757,7 @@ subroutine SS_BuildJacobian(AM, caseData, Mappings, p_FAST, y_FAST, m_FAST, T, E
             if (Failed()) return
 
             ! Write linearization matrices
-            call CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, p_FAST, y_FAST, SS_t_global, Un, &
+            call ModGlue_CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, p_FAST, y_FAST, SS_t_global, Un, &
                                          LinRootName, VF_AeroMap, ErrStat2, ErrMsg2, ModData%Abbr, CalcGlue=.false.)
             if (Failed()) return
 
@@ -827,7 +827,7 @@ subroutine SS_BuildJacobian(AM, caseData, Mappings, p_FAST, y_FAST, m_FAST, T, E
 
    ! If output debugging is enabled, write combined matrices and Jacobian
    if (output_debugging) then
-      call CalcWriteLinearMatrices(AM%Mod%Vars, AM%Mod%Lin, p_FAST, y_FAST, SS_t_global, Un, &
+      call ModGlue_CalcWriteLinearMatrices(AM%Mod%Vars, AM%Mod%Lin, p_FAST, y_FAST, SS_t_global, Un, &
                                    LinRootName, VF_AeroMap, ErrStat2, ErrMsg2, CalcGlue=.false.)
       if (Failed()) return
    end if

@@ -32,16 +32,19 @@ implicit none
 
 private
 
-logical :: CalcSteadyDebug = .false.
+public :: ModGlue_Init, &
+          ModGlue_Linearize_OP, &
+          ModGlue_CalcSteady, &
+          ModGlue_SaveOperatingPoint, &
+          ModGlue_RestoreOperatingPoint, &
+          ModGlue_CalcWriteLinearMatrices, &
+          ModGlue_CombineModules
 
-public :: ModGlue_Init
-public :: ModGlue_Linearize_OP, ModGlue_CalcSteady
-public :: ModGlue_SaveOperatingPoint, ModGlue_RestoreOperatingPoint
-public :: CalcWriteLinearMatrices, Glue_CombineModules
+logical :: CalcSteadyDebug = .false.
 
 contains
 
-subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilter, Linearize, ErrStat, ErrMsg, Name)
+subroutine ModGlue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilter, Linearize, ErrStat, ErrMsg, Name)
    type(ModGlueType), intent(out)      :: ModGlue
    type(ModDataType), intent(in)       :: ModDataAry(:)
    integer(IntKi), intent(in)          :: iModAry(:)
@@ -52,7 +55,7 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
    character(ErrMsgLen), intent(out)   :: ErrMsg
    character(*), optional, intent(in)  :: Name
 
-   character(*), parameter             :: RoutineName = 'Glue_CombineModules'
+   character(*), parameter             :: RoutineName = 'ModGlue_CombineModules'
    integer(IntKi)                      :: ErrStat2
    character(ErrMsgLen)                :: ErrMsg2
    integer(IntKi)                      :: iGbl(2)
@@ -533,7 +536,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
 
    LinFlags = VF_Linearize + VF_Mapping
    ! LinFlags = VF_None
-   call Glue_CombineModules(m%ModGlue, m%ModData, m%Mappings, p%Lin%iMod, LinFlags, &
+   call ModGlue_CombineModules(m%ModGlue, m%ModData, m%Mappings, p%Lin%iMod, LinFlags, &
                             p_FAST%Linearize, ErrStat2, ErrMsg2, Name="Lin")
    if (Failed()) return
 
@@ -990,7 +993,7 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
 
          ! If requested, write the module linearization matrices was requested
          if (p_FAST%LinOutMod) then
-            call CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, p_FAST, y_FAST, t_global, Un, &
+            call ModGlue_CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, p_FAST, y_FAST, t_global, Un, &
                                          LinRootName, VF_Linearize, ErrStat2, ErrMsg2, ModSuffix=ModData%Abbr)
             if (Failed()) return
          end if
@@ -1007,7 +1010,7 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
    if (Failed()) return
 
    ! Write glue code matrices to file
-   call CalcWriteLinearMatrices(m%ModGlue%Vars, m%ModGlue%Lin, p_FAST, y_FAST, t_global, Un, LinRootName, VF_Linearize, ErrStat2, ErrMsg2)
+   call ModGlue_CalcWriteLinearMatrices(m%ModGlue%Vars, m%ModGlue%Lin, p_FAST, y_FAST, t_global, Un, LinRootName, VF_Linearize, ErrStat2, ErrMsg2)
    if (Failed()) return
 
    ! Update index for next linearization time
@@ -1318,7 +1321,7 @@ subroutine Postcondition(uVars, dUdu, dUdy, JacScaleFactor)
 
 end subroutine
 
-subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinRootName, FilterFlag, ErrStat, ErrMsg, ModSuffix, CalcGlue, FullOutput)
+subroutine ModGlue_CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinRootName, FilterFlag, ErrStat, ErrMsg, ModSuffix, CalcGlue, FullOutput)
    type(ModVarsType), intent(in)             :: Vars           !< Variable data
    type(ModLinType), intent(inout)           :: Lin            !< Linearization data
    type(FAST_ParameterType), intent(in)      :: p_FAST         !< Parameters
@@ -1492,7 +1495,7 @@ contains
       Failed = ErrStat >= AbortErrLev
       if (Failed) close (Un)
    end function Failed
-end subroutine CalcWriteLinearMatrices
+end subroutine ModGlue_CalcWriteLinearMatrices
 
 subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDeriv, ShowRot)
 

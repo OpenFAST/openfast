@@ -7436,7 +7436,7 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, InputFileName, VTK_Modes, T,
 
 contains 
    subroutine CalcOutputModeShapeVTK(TimeVTK, Perturb)
-      use FAST_Solver, only : CalcOutputs_SolveForInputs
+      use FAST_Solver, only : FAST_CalcOutputsAndSolveForInputs
       real(DbKi), intent(in)  :: TimeVTK
       real(DbKi), intent(in)  :: Perturb(:)
       integer(IntKi)          :: ConvIter
@@ -7473,7 +7473,7 @@ contains
       end do
 
       ! Calcualte outputs based on perturbed states
-      call CalcOutputs_SolveForInputs(T%p_Glue%TC, T%m_Glue%TC, T%m_Glue%ModData, T%m_Glue%Mappings, T%m_FAST%Lin%LinTimes(iLinTime), &
+      call FAST_CalcOutputsAndSolveForInputs(T%p_Glue%TC, T%m_Glue%TC, T%m_Glue%ModData, T%m_Glue%Mappings, T%m_FAST%Lin%LinTimes(iLinTime), &
                                       INPUT_CURR, STATE_CURR, T, ConvIter, ConvError, IsConverged, &
                                       ErrStat2, ErrMsg2, UpdateJacobian=.true.)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

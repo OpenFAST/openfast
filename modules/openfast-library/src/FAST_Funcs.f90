@@ -136,6 +136,20 @@ use SubDyn, only:       SD_JacobianPInput, &
 
 implicit none
 
+private
+
+public ::   FAST_InitInputStateArrays, &
+            FAST_GetOP, &
+            FAST_SetOP, &
+            FAST_CopyInput, &
+            FAST_CopyStates, &
+            FAST_UpdateStates, &
+            FAST_CalcOutput, &
+            FAST_ModEnd, &
+            FAST_ExtrapInterp, &
+            FAST_JacobianPContState, &
+            FAST_JacobianPInput
+
 contains
 
 subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
