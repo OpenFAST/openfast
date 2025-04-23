@@ -97,7 +97,7 @@
 			<File RelativePath="..\..\modules\openfast-library\src\FAST_Mapping.f90"/>
 			<File RelativePath="..\..\modules\openfast-library\src\FAST_ModGlue.f90"/>
 			<File RelativePath="..\..\modules\openfast-library\src\FAST_Mods.f90"/>
-			<File RelativePath="..\..\modules\openfast-library\src\FAST_SolverTC.f90"/>
+			<File RelativePath="..\..\modules\openfast-library\src\Fast_Solver.f90"/>
 			<File RelativePath="..\..\modules\openfast-library\src\FAST_Subs.f90"/>
 		</Filter>
 	</Files>
