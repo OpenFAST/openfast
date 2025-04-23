@@ -264,14 +264,37 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
    ! Module data arrays
    !----------------------------------------------------------------------------
 
+   ! The module data input arrays store the inputs structures used for data 
+   ! interpolation/extrapolation, those used for linearization, and
+   ! those used as backups for the CFD interface outer loop iteration. Each
+   ! input structure is at an index in a single array to facilitate copying
+   ! the data with the FAST_CopyInput routine in FAST_Funcs. The upper bound
+   ! is based on the interpolation order which stores order + 1 indices. The
+   ! linearization and backup inputs are stored at negative indices with the 
+   ! lower bound calculated as interpolation order + 1 + number of 
+   ! linearization times. For example, to backup all of the input history for
+   ! a CFD step, one would copy indices (1,InterpOrder+1) to (-1,-InterpOrder-1).
+   ! Index 0 (INPUT_TEMP) is used for temporary data storage and replaces `u` 
+   ! in the previous code. Index 1 (INPUT_CURR) holds the current input used
+   ! in the majority of the glue code. When performing linearization, the input
+   ! is copied from INPUT_CURR to the negative of (LinTime index + InterpOrder + 1).
+   !
+   ! To summarize, the memory layout looks like the following:
+   ! [NLinTime][InterpOrder + 1][0(INPUT_TEMP)][InterpOrder+1(INPUT_CURR, INPUT_PREV, ...)]
+
    ! Input array upper bound is interpolation order plus 1
    InputAryUB = p_FAST%InterpOrder + 1
 
    ! Input array lower bound is negative (sum of linearization times and upper bound)
    InputAryLB = -(InputAryUB + max(p_FAST%NLinTimes, 2))
 
-   ! Module data state arrays include data at linearization times after
-   ! STATE_CURR, STATE_PRED, STATE_SAVED_CURR, and STATE_SAVED_PRED
+   ! Module state data is handled in a similar fashion except linearization
+   ! data is stored after the four defined state times: STATE_CURR, STATE_PRED, 
+   ! STATE_SAVED_CURR, and STATE_SAVED_PRED. At least two linearization states
+   ! are saved so CalcSteady can use a minimum of 2 points for determining
+   ! if the system has reached a steady state.
+
+   ! Module data state arrays include data at linearization times after saved states
    StateAryLB = 1
    StateAryUB = NumStateTimes + max(p_FAST%NLinTimes, 2)
 
