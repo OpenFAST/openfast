@@ -21,8 +21,7 @@
 !**********************************************************************************************************************************
 MODULE FAST_ModTypes
 
-   USE NWTC_Library
-   USE FAST_Types
+   USE NWTC_Library_Types
 
    TYPE(ProgDesc) :: FAST_Ver  = ProgDesc( 'OpenFAST', '', '' ) !< The version number of this module
          
