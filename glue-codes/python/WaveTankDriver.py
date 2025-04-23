@@ -48,9 +48,9 @@ class WaveTankLib(OpenFASTInterfaceType):
 
         # Create buffers for class data
         # These will generally be overwritten by the Fortran code
-        self.ss_output_channel_names = []
-        self.ss_output_channel_units = []
-        self.ss_output_values = None
+        # self.ss_output_channel_names = []
+        # self.ss_output_channel_units = []
+        # self.ss_output_values = None
 
         self.md_output_channel_names = []
         self.md_output_channel_units = []
@@ -67,7 +67,6 @@ class WaveTankLib(OpenFASTInterfaceType):
             POINTER(c_char_p),      #  intent(in   ) :: SS_InputFile_c(IntfStrLen)
             POINTER(c_char_p),      #  intent(in   ) :: AD_InputFile_c(IntfStrLen)
             POINTER(c_char_p),      #  intent(in   ) :: IfW_InputFile_c(IntfStrLen)
-            POINTER(c_int),         #  intent(in   ) :: n_camera_points_c
             POINTER(c_int),         #  intent(  out) :: ErrStat_C
             POINTER(c_char),        #  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
         ]
@@ -81,7 +80,7 @@ class WaveTankLib(OpenFASTInterfaceType):
             POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_z(N_CAMERA_POINTS)
             POINTER(c_float),       # real(c_float),          intent(in   ) :: rotation_matrix(9)
             POINTER(c_float),       # real(c_float),          intent(  out) :: loads(N_CAMERA_POINTS)
-            POINTER(c_float),       # real(c_float),          intent(  out) :: ss_outputs(SS_NumChannels_C)
+            # POINTER(c_float),       # real(c_float),          intent(  out) :: ss_outputs(SS_NumChannels_C)
             POINTER(c_float),       # real(c_float),          intent(  out) :: md_outputs(MD_NumChannels_C)
             POINTER(c_float),       # real(c_float),          intent(  out) :: adi_outputs(ADI_NumChannels_C)
             POINTER(c_int),         # integer(c_int),         intent(  out) :: ErrStat_C
@@ -108,7 +107,7 @@ class WaveTankLib(OpenFASTInterfaceType):
         ]
         self.WaveTank_Sizes.restype = c_int
 
-    def init(self, n_camera_points):
+    def init(self):
         _error_status = c_int(0)
         _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
 
@@ -123,7 +122,6 @@ class WaveTankLib(OpenFASTInterfaceType):
             c_char_p(self.input_file_names["SeaState"]),
             c_char_p(self.input_file_names["AeroDyn"]),
             c_char_p(self.input_file_names["InflowWind"]),
-            byref(c_int(n_camera_points)),
             byref(_error_status),
             _error_message,
         )
@@ -157,7 +155,7 @@ class WaveTankLib(OpenFASTInterfaceType):
             positions_z.ctypes.data_as(POINTER(c_float)),
             rotation_matrix.ctypes.data_as(POINTER(c_float)),
             loads.ctypes.data_as(POINTER(c_float)),
-            self.ss_output_values.ctypes.data_as(POINTER(c_float)),
+            # self.ss_output_values.ctypes.data_as(POINTER(c_float)),
             self.md_output_values.ctypes.data_as(POINTER(c_float)),
             self.adi_output_values.ctypes.data_as(POINTER(c_float)),
             byref(_error_status),
@@ -187,7 +185,7 @@ class WaveTankLib(OpenFASTInterfaceType):
             byref(adi_numouts),
         )
 
-        self.ss_output_values = np.zeros(ss_numouts.value, dtype=np.float32, order='C')
+        # self.ss_output_values = np.zeros(ss_numouts.value, dtype=np.float32, order='C')
         self.md_output_values = np.zeros(md_numouts.value, dtype=np.float32, order='C')
         self.adi_output_values = np.zeros(adi_numouts.value, dtype=np.float32, order='C')
         # self.ss_output_channel_names = [b""] * ss_numouts.value
@@ -213,7 +211,7 @@ if __name__=="__main__":
         },
     )
     n_camera_points=1
-    wavetanklib.init(n_camera_points=n_camera_points)
+    wavetanklib.init()
 
     positions_x = 1 * np.ones(n_camera_points, dtype=np.float32)
     positions_y = 2 * np.ones(n_camera_points, dtype=np.float32)

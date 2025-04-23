@@ -210,20 +210,6 @@ SUBROUTINE ReadInput(InputFilePath, InitInp, ErrStat, ErrMsg)
     IF (ErrStat >= AbortErrLev) RETURN
 
     if(UnIn>0) CLOSE( UnIn )
-    ! ! --- Perform input checks and triggers
-    ! ! If no root is provided, use the SDInputFile
-    ! IF ( LEN_TRIM(InitInp%OutRootName) == 0 ) THEN
-    !    CALL GetRoot(InitInp%SDInputFile, InitInp%OutRootName)
-    ! END IF
-    ! IF ( PathIsRelative( InitInp%SDInputFile ) ) then
-    !    InitInp%SDInputFile = TRIM(PriPath)//TRIM(InitInp%SDInputFile)
-    ! END IF
-    ! IF ( PathIsRelative( InitInp%OutRootName ) ) then
-    !    InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
-    ! endif
-    ! IF ( PathIsRelative( InitInp%InputsFile ) ) then
-    !    InitInp%InputsFile = TRIM(PriPath)//TRIM(InitInp%InputsFile)
-    ! endif
 
 END SUBROUTINE
 
@@ -233,7 +219,6 @@ SUBROUTINE WaveTank_Init(   &
     SS_InputFile_C,         &
     AD_InputFile_C,         &
     IfW_InputFile_C,        &
-    n_camera_points_C,      & 
     ErrStat_C,              &
     ErrMsg_C                &
 ) BIND (C, NAME='WaveTank_Init')
@@ -247,7 +232,6 @@ SUBROUTINE WaveTank_Init(   &
     TYPE(C_PTR),        INTENT(IN   ) :: SS_InputFile_C
     TYPE(C_PTR),        INTENT(IN   ) :: AD_InputFile_C
     TYPE(C_PTR),        INTENT(IN   ) :: IfW_InputFile_C
-    INTEGER(C_INT),     INTENT(IN   ) :: n_camera_points_c
     INTEGER(C_INT),     INTENT(  OUT) :: ErrStat_C
     CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
@@ -259,15 +243,11 @@ SUBROUTINE WaveTank_Init(   &
     TYPE(WaveTank_InitInput)                :: WT_InitInp
     CHARACTER(1024), POINTER                :: WT_InputFilePath
 
-    ! SeaState variables
-    CHARACTER(KIND=C_CHAR) :: SS_OutputChannelNames_c(ChanLen*MaxOutPts+1)
-    CHARACTER(KIND=C_CHAR) :: SS_OutputChannelUnits_c(ChanLen*MaxOutPts+1)
-
-    ! MD variables
+    ! The length of these arrays much match what is set in the corresponding C binding modules
+    CHARACTER(KIND=C_CHAR) :: SS_OutputChannelNames_C(ChanLen*MaxOutPts+1)
+    CHARACTER(KIND=C_CHAR) :: SS_OutputChannelUnits_C(ChanLen*MaxOutPts+1)
     CHARACTER(KIND=C_CHAR) :: MD_OutputChannelNames_C(100000)
     CHARACTER(KIND=C_CHAR) :: MD_OutputChannelUnits_C(100000)
-
-    ! ADI variables
     CHARACTER(KIND=C_CHAR) :: ADI_OutputChannelNames_C(ChanLen*MaxADIOutputs+1)
     CHARACTER(KIND=C_CHAR) :: ADI_OutputChannelUnits_C(ChanLen*MaxADIOutputs+1)
 
@@ -398,7 +378,6 @@ SUBROUTINE WaveTank_CalcOutput( &
     positions_z,                &
     rotation_matrix,            &
     loads,                      &
-    ss_outputs,                 &
     md_outputs,                 &
     adi_outputs,                &
     ErrStat_C,                  &
@@ -416,14 +395,12 @@ SUBROUTINE WaveTank_CalcOutput( &
     REAL(C_FLOAT),          INTENT(IN   ) :: positions_z(n_camera_points)
     REAL(C_FLOAT),          INTENT(IN   ) :: rotation_matrix(9)
     REAL(C_FLOAT),          INTENT(  OUT) :: loads(n_camera_points,6)
-    REAL(C_FLOAT),          INTENT(  OUT) :: ss_outputs(SS_NumChannels_C)
     REAL(C_FLOAT),          INTENT(  OUT) :: md_outputs(MD_NumChannels_C)
     REAL(C_FLOAT),          INTENT(  OUT) :: adi_outputs(ADI_NumChannels_C)
     INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
     CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_C(ErrMsgLen_C)
 
     ! Local variables
-    INTEGER :: i
     INTEGER(C_INT)                          :: ErrStat_C2
     CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
 
