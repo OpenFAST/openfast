@@ -29,6 +29,7 @@ class WaveTankLib(OpenFASTInterfaceType):
         Args:
             library_path (str): Path to the compile wavetank interface shared library
             input_file_names (dict): Map of file names for each included module:
+                - WT_InputFile
                 - MD_InputFile
                 - SS_InputFile
                 - AD_InputFile
@@ -61,6 +62,7 @@ class WaveTankLib(OpenFASTInterfaceType):
 
     def _initialize_routines(self):
         self.WaveTank_Init.argtypes = [
+            POINTER(c_char_p),      #  intent(in   ) :: WT_InputFile_c(IntfStrLen)
             POINTER(c_char_p),      #  intent(in   ) :: MD_InputFile_c(IntfStrLen)
             POINTER(c_char_p),      #  intent(in   ) :: SS_InputFile_c(IntfStrLen)
             POINTER(c_char_p),      #  intent(in   ) :: AD_InputFile_c(IntfStrLen)
@@ -115,30 +117,13 @@ class WaveTankLib(OpenFASTInterfaceType):
         # for i, p in enumerate(platform_init_pos):
         #     init_positions_c[i] = c_float(p)
 
-        # gravity = c_float(9.80665)
-        # water_density = c_float(1025)
-        # water_depth = c_float(200)
-        # msl2swl = c_float(0)
-        # outrootname = "./seastate.SeaSt".encode('utf-8')
-        # wave_kinematics_mode = c_int(0)
-        # n_steps = c_int(801)
-        # time_interval = c_float(0.125)
-        # wave_elevation_series_flag = c_int(0)
         self.WaveTank_Init(
+            c_char_p(self.input_file_names["WaveTank"]),
             c_char_p(self.input_file_names["MoorDyn"]),
             c_char_p(self.input_file_names["SeaState"]),
             c_char_p(self.input_file_names["AeroDyn"]),
             c_char_p(self.input_file_names["InflowWind"]),
             byref(c_int(n_camera_points)),
-            # create_string_buffer(outrootname),
-            # byref(gravity),
-            # byref(water_density),
-            # byref(water_depth),
-            # byref(msl2swl),
-            # byref(n_steps),
-            # byref(time_interval),
-            # byref(wave_elevation_series_flag),
-            # byref(wave_kinematics_mode),
             byref(_error_status),
             _error_message,
         )
@@ -220,6 +205,7 @@ if __name__=="__main__":
     wavetanklib = WaveTankLib(
         library_path,
         {
+            "WaveTank": "/Users/rmudafor/Development/openfast/glue-codes/python/wavetankconfig.in",
             "MoorDyn": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_MoorDyn.dat",
             "SeaState": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/SeaState.dat",
             "AeroDyn": "/Users/rmudafor/Development/openfast/reg_tests/r-test/glue-codes/openfast/MHK_RM1_Floating/MHK_RM1_Floating_AeroDyn.dat",
