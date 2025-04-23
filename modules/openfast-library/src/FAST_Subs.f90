@@ -21,14 +21,38 @@
 !**********************************************************************************************************************************
 MODULE FAST_Subs
 
-   USE FAST_Types
-   USE FAST_ModTypes
-   USE FAST_ModGlue
-   USE VersionInfo
-   USE FAST_Funcs
-   USE FAST_SolverTC
-   USE FAST_Mapping, only: FAST_InitMappings
-   USE ServoDyn
+   use FAST_Types
+   use FAST_ModTypes
+   use FAST_ModGlue
+   use VersionInfo
+   use FAST_Funcs
+   use Fast_Solver
+   use FAST_Mapping, only: FAST_InitMappings
+   use AeroDisk, only: ADsk_Init
+   use AeroDyn, only: AD_Init
+   use BeamDyn, only: BD_Init
+   use ElastoDyn, only: ED_Init
+   use ExtLoads, only: ExtLd_Init
+   use ExtPtfm_MCKF, only: ExtPtfm_Init
+   use ExternalInflow, only: Init_ExtInfw
+   use HydroDyn, only: HydroDyn_Init
+   use InflowWind, only: InflowWind_Init
+   use MAP, only: MAP_Init, MAP_Restart
+   use SED, only: SED_Init
+   use MoorDyn, only: MD_Init
+   use FEAMooring, only: FEAM_Init
+   use OrcaFlexInterface, only: Orca_Init
+   use IceFloe, only: IceFloe_Init
+   use IceDyn, only: IceD_Init
+   use SeaState, only: SeaSt_Init
+   use SubDyn, only: SD_Init
+   use ServoDyn, only: SrvD_Init, &
+                       Cmpl4SFun, &
+                       Cmpl4LV, &
+                       TrimCase_none, &
+                       TrimCase_pitch, &
+                       TrimCase_torque, &
+                       TrimCase_yaw
 
    IMPLICIT NONE
 
@@ -4683,7 +4707,7 @@ END SUBROUTINE FAST_WrSum
 !> Routine that calls FAST_Solution0 for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level.
 SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
-   USE FAST_SolverTC, only: FAST_SolverStep0
+   USE Fast_Solver, only: FAST_SolverStep0
 
    TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             !< all data for one instance of a turbine
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
@@ -7389,7 +7413,7 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, InputFileName, VTK_Modes, T,
 
 contains 
    subroutine CalcOutputModeShapeVTK(TimeVTK, Perturb)
-      use FAST_SolverTC, only : CalcOutputs_SolveForInputs
+      use Fast_Solver, only : CalcOutputs_SolveForInputs
       real(DbKi), intent(in)  :: TimeVTK
       real(DbKi), intent(in)  :: Perturb(:)
       integer(IntKi)          :: ConvIter
