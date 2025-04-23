@@ -30,7 +30,7 @@ class OpenFASTInterfaceType(CDLL):
     #           ErrMsgLen variable in the NWTC_Base.f90 file.  If that ever
     #           changes, it may be necessary to update the corresponding size
     #           here.
-    ERROR_MSG_C_LEN = 1025
+    ERROR_MSG_C_LEN = 8196
 
     #   NOTE:   the length of the name used for any output file written by the
     #           HD Fortran code is 1025.

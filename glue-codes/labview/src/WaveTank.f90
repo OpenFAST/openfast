@@ -256,7 +256,7 @@ IMPLICIT NONE
     INTEGER(C_INT)                          :: ErrStat_C2
     CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C) :: ErrMsg_C2
     INTEGER(IntKi)                          :: ErrStat_F2
-    CHARACTER(1024)                         :: ErrMsg_F2
+    CHARACTER(ErrMsgLen)                    :: ErrMsg_F2
     TYPE(WaveTank_InitInput)                :: WT_InitInp
     CHARACTER(1024), POINTER                :: WT_InputFilePath
 
