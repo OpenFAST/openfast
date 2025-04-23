@@ -845,14 +845,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       call HydroDyn_InitVars(InitOut%Vars, u, p, x, y, m, InitOut, InputFileData, InitInp%Linearize, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      !............................................................................................
-      ! Initialize Jacobian:
-      !............................................................................................
-      ! if (InitInp%Linearize) then      
-      !    call HD_Init_Jacobian( p, u, y, InitOut, ErrStat2, ErrMsg2)
-      !    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      ! end if
-
       IF ( p%OutSwtch == 1 ) THEN ! Only HD-level output writing
          ! HACK  WE can tell FAST not to write any HD outputs by simply deallocating the WriteOutputHdr array!
          DEALLOCATE ( InitOut%WriteOutputHdr )
