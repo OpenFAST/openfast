@@ -382,7 +382,6 @@ contains
 
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
-   ! TODO: This does not move the error the C variables; this looks incorrect
       character(*), intent(in) :: txt
       if (ErrStat_F2 /= 0) then
          ErrStat_F2 = ErrID_Fatal
@@ -392,7 +391,7 @@ contains
       Failed0 = ErrStat_F >= AbortErrLev
       if(Failed0) then
          call ClearTmpStorage()
-         call SetErr(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
       endif
    end function Failed0
 
@@ -506,8 +505,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    endif
 
    do iWT=1,Sim%NumTurbines
-      ! TODO: error handling below should be _F2
-      if (Sim%WT(iWT)%NumBlades < 0)   call SetErrStat(ErrID_Fatal,"Rotor "//trim(Num2LStr(iWT))//" not initialized. Call ADI_C_SetupRotor prior to calling ADI_C_Init",ErrStat_F,ErrMsg_F,RoutineName)
+      if (Sim%WT(iWT)%NumBlades < 0)   call SetErrStat(ErrID_Fatal,"Rotor "//trim(Num2LStr(iWT))//" not initialized. Call ADI_C_SetupRotor prior to calling ADI_C_Init",ErrStat_F2,ErrMsg_F2,RoutineName)
    enddo
    if (Failed()) return
 
@@ -1162,7 +1160,10 @@ CONTAINS
    logical function Failed()
       CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
       Failed = ErrStat_F >= AbortErrLev
-      if (Failed)    call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      if (Failed) then
+         call ClearTmpStorage()
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed
 END SUBROUTINE ADI_C_CalcOutput
 
@@ -1296,7 +1297,10 @@ contains
    logical function Failed()
       CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
       Failed = ErrStat_F >= AbortErrLev
-      if (Failed)    call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      if (Failed) then
+         call ClearTmpStorage()
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed
 END SUBROUTINE ADI_C_UpdateStates
 
@@ -1355,7 +1359,6 @@ SUBROUTINE ADI_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_End')
    !     or AD_C_End got called before Init.  We don't want a segfault, so check
    !     for allocation.
    if (allocated(ADI%u)) then
-      ! TODO: @andrew-platt does the (:) need to be on u below? This slows down i/o
       call ADI_End( ADI%u(:), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat_F2, ErrMsg_F2 )
       call SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
    endif
@@ -1528,7 +1531,6 @@ contains
 
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
-   ! TODO: This does not move the error the C variables; this looks incorrect
       character(*), intent(in) :: txt
 
       if (ErrStat_F2 /= 0) then
@@ -1539,7 +1541,7 @@ contains
       Failed0 = ErrStat_F >= AbortErrLev
       if(Failed0) then
          call ClearTmpStorage()
-         call SetErr(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
       endif
    end function Failed0
 
@@ -1858,7 +1860,10 @@ CONTAINS
    logical function Failed()
       CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
       Failed = ErrStat_F >= AbortErrLev
-      if (Failed)    call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      if (Failed) then
+         call ClearTmpStorage()
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed
    !> This subroutine prints out all the variables that are passed in.  Use this only
    !! for debugging the interface on the Fortran side.
@@ -2013,7 +2018,10 @@ CONTAINS
    logical function Failed()
       CALL SetErrStat( ErrStat_F2, ErrMsg_F2, ErrStat_F, ErrMsg_F, RoutineName )
       Failed = ErrStat_F >= AbortErrLev
-      if (Failed)    call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      if (Failed) then
+         call ClearTmpStorage()
+         call SetErrStat_F2C(ErrStat_F,ErrMsg_F,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed
    !> This subroutine prints out all the variables that are passed in.  Use this only
    !! for debugging the interface on the Fortran side.
