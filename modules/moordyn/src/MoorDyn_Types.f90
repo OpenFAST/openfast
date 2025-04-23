@@ -458,13 +458,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: pzCurrent      !< z location of current grid points [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: uxCurrent      !< current velocities time series at each grid point [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: uyCurrent      !< current velocities time series at each grid point [-]
-    INTEGER(IntKi)  :: Nx0 = 0_IntKi      !< copy of initial size of system state vector, for linearization routines [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
-    INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
-    INTEGER(IntKi)  :: Jac_nx = 0_IntKi      !< number of continuous states in jacobian matrix [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: dxIdx_map2_xStateIdx      !< Mapping array from index of dX array to corresponding state index [-]
     LOGICAL  :: VisMeshes = .false.      !< Using visualization meshes as requested by glue code [-]
     TYPE(VisDiam) , DIMENSION(:), ALLOCATABLE  :: VisRodsDiam      !< Diameters for visualization of rods [-]
   END TYPE MD_ParameterType
@@ -3244,57 +3237,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%uyCurrent = SrcParamData%uyCurrent
    end if
-   DstParamData%Nx0 = SrcParamData%Nx0
-   if (allocated(SrcParamData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
-      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
-      if (.not. allocated(DstParamData%Jac_u_indx)) then
-         allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   end if
-   if (allocated(SrcParamData%du)) then
-      LB(1:1) = lbound(SrcParamData%du)
-      UB(1:1) = ubound(SrcParamData%du)
-      if (.not. allocated(DstParamData%du)) then
-         allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%du = SrcParamData%du
-   end if
-   if (allocated(SrcParamData%dx)) then
-      LB(1:1) = lbound(SrcParamData%dx)
-      UB(1:1) = ubound(SrcParamData%dx)
-      if (.not. allocated(DstParamData%dx)) then
-         allocate(DstParamData%dx(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%dx = SrcParamData%dx
-   end if
-   DstParamData%Jac_ny = SrcParamData%Jac_ny
-   DstParamData%Jac_nx = SrcParamData%Jac_nx
-   if (allocated(SrcParamData%dxIdx_map2_xStateIdx)) then
-      LB(1:1) = lbound(SrcParamData%dxIdx_map2_xStateIdx)
-      UB(1:1) = ubound(SrcParamData%dxIdx_map2_xStateIdx)
-      if (.not. allocated(DstParamData%dxIdx_map2_xStateIdx)) then
-         allocate(DstParamData%dxIdx_map2_xStateIdx(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dxIdx_map2_xStateIdx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%dxIdx_map2_xStateIdx = SrcParamData%dxIdx_map2_xStateIdx
-   end if
    DstParamData%VisMeshes = SrcParamData%VisMeshes
    if (allocated(SrcParamData%VisRodsDiam)) then
       LB(1:1) = lbound(SrcParamData%VisRodsDiam)
@@ -3387,18 +3329,6 @@ subroutine MD_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%uyCurrent)) then
       deallocate(ParamData%uyCurrent)
-   end if
-   if (allocated(ParamData%Jac_u_indx)) then
-      deallocate(ParamData%Jac_u_indx)
-   end if
-   if (allocated(ParamData%du)) then
-      deallocate(ParamData%du)
-   end if
-   if (allocated(ParamData%dx)) then
-      deallocate(ParamData%dx)
-   end if
-   if (allocated(ParamData%dxIdx_map2_xStateIdx)) then
-      deallocate(ParamData%dxIdx_map2_xStateIdx)
    end if
    if (allocated(ParamData%VisRodsDiam)) then
       LB(1:1) = lbound(ParamData%VisRodsDiam)
@@ -3494,13 +3424,6 @@ subroutine MD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%pzCurrent)
    call RegPackAlloc(RF, InData%uxCurrent)
    call RegPackAlloc(RF, InData%uyCurrent)
-   call RegPack(RF, InData%Nx0)
-   call RegPackAlloc(RF, InData%Jac_u_indx)
-   call RegPackAlloc(RF, InData%du)
-   call RegPackAlloc(RF, InData%dx)
-   call RegPack(RF, InData%Jac_ny)
-   call RegPack(RF, InData%Jac_nx)
-   call RegPackAlloc(RF, InData%dxIdx_map2_xStateIdx)
    call RegPack(RF, InData%VisMeshes)
    call RegPack(RF, allocated(InData%VisRodsDiam))
    if (allocated(InData%VisRodsDiam)) then
@@ -3603,13 +3526,6 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%pzCurrent); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%uxCurrent); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%uyCurrent); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Nx0); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_ny); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Jac_nx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%dxIdx_map2_xStateIdx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VisMeshes); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%VisRodsDiam)) deallocate(OutData%VisRodsDiam)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return

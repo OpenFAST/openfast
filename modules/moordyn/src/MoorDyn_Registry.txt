@@ -425,13 +425,6 @@ typedef   ^       ^                    SiKi         pzCurrent          {:}      
 typedef   ^       ^                    SiKi         uxCurrent          {:}          -  -   "current velocities time series at each grid point"            -
 typedef   ^       ^                    SiKi         uyCurrent          {:}          -  -   "current velocities time series at each grid point"            -
 # --- Parameters for linearization ---
-typedef   ^       ^                    Integer      Nx0                -            -  -   "copy of initial size of system state vector, for linearization routines" -
-typedef   ^       ^                    Integer      Jac_u_indx         {:}{:}       -  -   "matrix to help fill/pack the u vector in computing the jacobian" -
-typedef   ^       ^                    R8Ki         du                 {:}          -  -   "vector that determines size of perturbation for u (inputs)"
-typedef   ^       ^                    R8Ki         dx                 {:}          -  -   "vector that determines size of perturbation for x (continuous states)"
-typedef   ^       ^                    Integer      Jac_ny              -           -  -   "number of outputs in jacobian matrix" -
-typedef   ^       ^                    Integer      Jac_nx              -           -  -   "number of continuous states in jacobian matrix" -
-typedef   ^       ^                    Integer      dxIdx_map2_xStateIdx {:}        -  -   "Mapping array from index of dX array to corresponding state index" -
 typedef   ^       ^                    Logical      VisMeshes           -           -  -   "Using visualization meshes as requested by glue code" -
 typedef   ^       ^                    VisDiam      VisRodsDiam        {:}          -  -   "Diameters for visualization of rods" -
 
