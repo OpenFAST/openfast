@@ -36,7 +36,8 @@ PROGRAM SubDyn_Driver
       integer(IntKi)         :: NodeID            ! Joint and then Node ID where force is applied
       real(ReKi)             :: SteadyLoad(6)     ! Steady Load (Fx, Fy, Fz, Mx, My, Mz)
       real(ReKi),allocatable :: UnsteadyLoad(:,:) ! Unsteady Load nx7 : (Time, Fx, Fy, Fz, Mx, My, Mz)
-      integer(IntKi)         :: iTS               ! Optimization index to find closest time stamp in user defined time series of unsteady load
+      integer(IntKi)         :: iTS1              ! Optimization index to find closest time stamp in user defined time series of unsteady load
+      integer(IntKi)         :: iTS2              ! Optimization index to find closest time stamp in user defined time series of unsteady load
    end type ALoadType
    
    TYPE SD_dvr_InitInput
@@ -48,7 +49,8 @@ PROGRAM SubDyn_Driver
       INTEGER         :: NSteps
       REAL(DbKi)      :: TimeInterval
       INTEGER         :: nTP
-      REAL(ReKi),allocatable:: TP_RefPoint(:,:)
+      REAL(ReKi),allocatable :: TP_RefPoint(:,:)
+      REAL(ReKi),allocatable :: SDin(:,:)  ! Variable for storing time, forces, and body velocities, in m/s or rad/s for SubDyn inputs
       REAL(ReKi)      :: SubRotateZ
       INTEGER         :: InputsMod
       CHARACTER(1024) :: InputsFile
@@ -85,15 +87,16 @@ PROGRAM SubDyn_Driver
    CHARACTER(1024)                 :: ErrMsg, ErrMsg1, ErrMsg2, ErrMsg3              ! Error message if ErrStat /= ErrID_None
 
 
-   CHARACTER(1024)                 :: dvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
+   CHARACTER(1024)                 :: dvrFilename          ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    TYPE(SD_dvr_InitInput), target  :: drvrInitInp          ! Initialization data for the driver program
    INTEGER                         :: UnIn                 ! Unit number for the input file
-   INTEGER                         :: UnEcho          ! The local unit number for this module's echo file
+   INTEGER                         :: UnEcho               ! The local unit number for this module's echo file
    INTEGER(IntKi)                  :: UnSD_Out             ! Output file identifier
-   REAL(ReKi), ALLOCATABLE         :: SDin(:,:)            ! Variable for storing time, forces, and body velocities, in m/s or rad/s for SubDyn inputs
-   INTEGER(IntKi)                  :: I,J,iTP,idx1,idx2    ! Generic loop counter and array entry index
+   REAL(ReKi), ALLOCATABLE         :: SDinStep(:)          ! One step of user defined motion interpolated from SDin
+   INTEGER(IntKi)                  :: I,J,iTP,idx          ! Generic loop counter and array entry index
    INTEGER(IntKi)                  :: iLoad                ! Index on loads             
    INTEGER(IntKi)                  :: iNode                ! Index on nodes
+   INTEGER(IntKi)                  :: iLast1, iLast2       ! Last step counter to speed up motion input interpolation
    INTEGER(IntKi)                  :: JointID              ! JointID
    REAL(ReKi)                      :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
    CHARACTER(10)                   :: AngleMsg             ! For debugging, a string version of the largest rotation input
@@ -144,8 +147,7 @@ PROGRAM SubDyn_Driver
    ! Parse the driver input file and run the simulation based on that file
    IF ( command_argument_count() == 1 ) THEN
       CALL get_command_argument(1, dvrFilename)
-
-      CALL ReadDriverInputFile( dvrFilename, drvrInitInp);
+      CALL ReadDriverInputFile( dvrFilename, drvrInitInp)
       InitInData%g            = drvrInitInp%Gravity
       InitInData%SDInputFile  = drvrInitInp%SDInputFile
       InitInData%RootName     = drvrInitInp%OutRootName
@@ -174,40 +176,30 @@ PROGRAM SubDyn_Driver
       CALL SDOUT_OpenOutput( SD_ProgDesc, drvrInitInp%OutRootName, p, InitOutData, ErrStat2, ErrMsg2 ); 
    endif
 
-
    ! Read Input time series data from a file
-   CALL AllocAry(SDin, drvrInitInp%NSteps, 1+18*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
-   SDin(:,:)=0.0_ReKi
-   if ( drvrInitInp%InputsMod == 2 ) then
-      ! Open the  inputs data file
-      CALL GetNewUnit( UnIn ) 
-      CALL OpenFInpFile ( UnIn, drvrInitInp%InputsFile, ErrStat2, ErrMsg2); Call AbortIfFailed()
-      DO n = 1,drvrInitInp%NSteps
-         ! TODO Add safety for backward compatibility if only 13 columns
-         READ (UnIn,*,IOSTAT=ErrStat2) (SDin (n,J), J=1,1+18*InitInData%nTP)
-         if (ErrStat2 .NE. 0) ErrStat2 = ErrID_FATAL
-         ErrMsg2 = ' Error reading line '//trim(Num2LStr(n))//' of file: '//trim(drvrInitInp%InputsFile)
-         call AbortIfFailed()
-      END DO  
-      CLOSE ( UnIn ) 
-   else if ( drvrInitInp%InputsMod == 1 ) THEN
-      ! We fill an array with constant values
-      do n = 0,drvrInitInp%NSteps-1 ! Loop on time steps, starts at 0
-         SDin(n+1,1)     = n*TimeInterval
-         do iTP = 1, InitInData%nTP
-            idx1 = (iTP-1)*18 + 2
-            idx2 = (iTP-1)* 6 + 1
-            SDin(n+1,idx1:idx1+5) = drvrInitInp%uTPInSteady(idx2:idx2+5)        ! Displacements
-            idx1 = idx1 + 6
-            SDin(n+1,idx1:idx1+5) = drvrInitInp%uDotTPInSteady(idx2:idx2+5)     ! Velocities
-            idx1 = idx1 + 6
-            SDin(n+1,idx1:idx1+5) = drvrInitInp%uDotDotTPInSteady(idx2:idx2+5)  ! Accelerations
-         end do
-      enddo
-   else ! InputMod = 0 -> all zeros
-      do n = 0,drvrInitInp%NSteps-1 ! Loop on time steps, starts at 0
-         SDin(n+1,1)     = n*TimeInterval
-      enddo
+   if ( drvrInitInp%InputsMod /= 2 ) then
+      ! Assign constant transition piece motion here - no further update during time loop
+      do iTP = 1,InitInData%nTP
+         idx = (iTP-1)* 6 + 1
+         ! Input displacements, velocities and potentially accelerations
+         u(1)%TPMesh%TranslationDisp(:,iTP) = drvrInitInp%uTPInSteady(idx:idx+2)
+         u(1)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(drvrInitInp%uTPInSteady(idx+3:idx+5),ReKi))
+         u(1)%TPMesh%TranslationVel(:,iTP)  = drvrInitInp%uDotTPInSteady(idx:idx+2)
+         u(1)%TPMesh%RotationVel(:,iTP)     = drvrInitInp%uDotTPInSteady(idx+3:idx+5)
+         u(1)%TPMesh%TranslationAcc(:,iTP)  = drvrInitInp%uDotDotTPInSteady(idx:idx+2)
+         u(1)%TPMesh%RotationAcc(:,iTP)     = drvrInitInp%uDotDotTPInSteady(idx:idx+5)
+         u(2)%TPMesh%TranslationDisp(:,iTP) = drvrInitInp%uTPInSteady(idx:idx+2)
+         u(2)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(drvrInitInp%uTPInSteady(idx+3:idx+5),ReKi))
+         u(2)%TPMesh%TranslationVel(:,iTP)  = drvrInitInp%uDotTPInSteady(idx:idx+2)
+         u(2)%TPMesh%RotationVel(:,iTP)     = drvrInitInp%uDotTPInSteady(idx+3:idx+5)
+         u(2)%TPMesh%TranslationAcc(:,iTP)  = drvrInitInp%uDotDotTPInSteady(idx:idx+2)
+         u(2)%TPMesh%RotationAcc(:,iTP)     = drvrInitInp%uDotDotTPInSteady(idx:idx+5)
+     end do
+   else
+      ! Allocate array for time varying transition piece motion to be populated during time loop
+      CALL AllocAry(SDinStep, 18*InitInData%nTP, 'SDinput array', ErrStat2, ErrMsg2); call AbortIfFailed()
+      iLast1 = 1
+      iLast2 = 1
    end if 
 
    ! Setup Applied Loads 
@@ -220,10 +212,10 @@ PROGRAM SubDyn_Driver
          ErrMsg2  = 'Applied load JointID '//trim(num2lstr(JointID))//' is not found in SubDyn joint list.'
          call AbortIfFailed()
       endif
-      AL%iTS=1 ! important init
+      AL%iTS1=1 ! important init
+      AL%iTS2=1 ! important init
    enddo
 
-  
    ! Destroy initialization data
    CALL SD_DestroyInitInput(  InitInData,  ErrStat2, ErrMsg2 ); call AbortIfFailed()
    CALL SD_DestroyInitOutput( InitOutData, ErrStat2, ErrMsg2 ); call AbortIfFailed()
@@ -240,6 +232,7 @@ PROGRAM SubDyn_Driver
    !u(1)%CableDeltaL= 0.0e7_ReKi
 
    call WrScr('')
+
    DO n = 0,drvrInitInp%NSteps-1 ! Loop on time steps, starts at 0
 
       Time = n*TimeInterval
@@ -247,26 +240,30 @@ PROGRAM SubDyn_Driver
       InputTime(2) = Time
 
       ! Set module inputs u (likely from the outputs of another module or a set of test conditions) here:
-      IF ( u(1)%TPMesh%Initialized ) THEN 
+      if ( drvrInitInp%InputsMod == 2 ) then
+         call interpTimeValue(drvrInitInp%SDin,InputTime(1), iLast1 ,SDInStep)
          do iTP = 1,InitInData%nTP
-            idx1 = (iTP-1)*18 + 2
-            if (n<drvrInitInp%NSteps-1) then
-               ! Input displacements, velocities and potentially accelerations
-               u(1)%TPMesh%TranslationDisp(:,iTP) = SDin(n+2,idx1:idx1+2)
-               u(1)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDin(n+2,idx1+3:idx1+5),ReKi))
-               u(1)%TPMesh%TranslationVel(:,iTP)  = SDin(n+2,idx1+6 :idx1+8)
-               u(1)%TPMesh%RotationVel(:,iTP)     = SDin(n+2,idx1+9 :idx1+11)
-               u(1)%TPMesh%TranslationAcc(:,iTP)  = SDin(n+2,idx1+12:idx1+14)
-               u(1)%TPMesh%RotationAcc(:,iTP)     = SDin(n+2,idx1+15:idx1+17)
-            end if
-            u(2)%TPMesh%TranslationDisp(:,iTP) = SDin(n+1,idx1:idx1+2)
-            u(2)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDin(n+1,idx1+3:idx1+5),ReKi))
-            u(2)%TPMesh%TranslationVel(:,iTP)  = SDin(n+1,idx1+6 :idx1+8)
-            u(2)%TPMesh%RotationVel(:,iTP)     = SDin(n+1,idx1+9 :idx1+11)
-            u(2)%TPMesh%TranslationAcc(:,iTP)  = SDin(n+1,idx1+12:idx1+14)
-            u(2)%TPMesh%RotationAcc(:,iTP)     = SDin(n+1,idx1+15:idx1+17)
+            idx = (iTP-1)*18 + 1
+            ! Input displacements, velocities and potentially accelerations
+            u(1)%TPMesh%TranslationDisp(:,iTP) = SDinStep(idx:idx+2)
+            u(1)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDinStep(idx+3:idx+5),ReKi))
+            u(1)%TPMesh%TranslationVel(:,iTP)  = SDinStep(idx+6 :idx+8)
+            u(1)%TPMesh%RotationVel(:,iTP)     = SDinStep(idx+9 :idx+11)
+            u(1)%TPMesh%TranslationAcc(:,iTP)  = SDinStep(idx+12:idx+14)
+            u(1)%TPMesh%RotationAcc(:,iTP)     = SDinStep(idx+15:idx+17)
          end do
-      END IF
+         call interpTimeValue(drvrInitInp%SDin,InputTime(2), iLast2 ,SDInStep)
+         do iTP = 1,InitInData%nTP
+            idx = (iTP-1)*18 + 1
+            ! Input displacements, velocities and potentially accelerations
+            u(2)%TPMesh%TranslationDisp(:,iTP) = SDinStep(idx:idx+2)
+            u(2)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDinStep(idx+3:idx+5),ReKi))
+            u(2)%TPMesh%TranslationVel(:,iTP)  = SDinStep(idx+6 :idx+8)
+            u(2)%TPMesh%RotationVel(:,iTP)     = SDinStep(idx+9 :idx+11)
+            u(2)%TPMesh%TranslationAcc(:,iTP)  = SDinStep(idx+12:idx+14)
+            u(2)%TPMesh%RotationAcc(:,iTP)     = SDinStep(idx+15:idx+17)
+         end do
+      end if
 
       ! Set LMesh applied loads
       if ( u(1)%LMesh%Initialized ) then 
@@ -280,7 +277,7 @@ PROGRAM SubDyn_Driver
             u(1)%LMesh%Force(:,iNode)  = u(1)%LMesh%Force(:,iNode)  + AL%SteadyLoad(1:3)
             u(1)%LMesh%Moment(:,iNode) = u(1)%LMesh%Moment(:,iNode) + AL%SteadyLoad(4:6)
             if (allocated(AL%UnsteadyLoad)) then
-               call interpTimeValue(AL%UnsteadyLoad, Time+TimeInterval, AL%iTS, UnsteadyLoad)
+               call interpTimeValue(AL%UnsteadyLoad, Time+TimeInterval, AL%iTS1, UnsteadyLoad)
                u(1)%LMesh%Force(:,iNode)  = u(1)%LMesh%Force(:,iNode)  + UnsteadyLoad(1:3)
                u(1)%LMesh%Moment(:,iNode) = u(1)%LMesh%Moment(:,iNode) + UnsteadyLoad(4:6)
             endif
@@ -295,7 +292,7 @@ PROGRAM SubDyn_Driver
             u(2)%LMesh%Force(:,iNode)  = u(2)%LMesh%Force(:,iNode)  + AL%SteadyLoad(1:3)
             u(2)%LMesh%Moment(:,iNode) = u(2)%LMesh%Moment(:,iNode) + AL%SteadyLoad(4:6)
             if (allocated(AL%UnsteadyLoad)) then
-               call interpTimeValue(AL%UnsteadyLoad, Time, AL%iTS, UnsteadyLoad)
+               call interpTimeValue(AL%UnsteadyLoad, Time, AL%iTS2, UnsteadyLoad)
                u(2)%LMesh%Force(:,iNode)  = u(2)%LMesh%Force(:,iNode)  + UnsteadyLoad(1:3)
                u(2)%LMesh%Moment(:,iNode) = u(2)%LMesh%Moment(:,iNode) + UnsteadyLoad(4:6)
             endif
@@ -349,7 +346,8 @@ CONTAINS
        endif
       if(UnEcho>0) CLOSE(UnEcho)
       if(UnEcho>0) CLOSE( UnIn)
-      if(allocated(SDin)) deallocate(SDin)
+      if(allocated(SDinStep))                      deallocate(SDinStep)
+      if(allocated(drvrInitInp%SDin))              deallocate(drvrInitInp%SDin)
       if(allocated(drvrInitInp%AppliedLoads))      deallocate(drvrInitInp%AppliedLoads)
       if(allocated(drvrInitInp%TP_RefPoint))       deallocate(drvrInitInp%TP_RefPoint)
       if(allocated(drvrInitInp%uTPInSteady))       deallocate(drvrInitInp%uTPInSteady)
@@ -358,22 +356,23 @@ CONTAINS
    END SUBROUTINE CleanUp
 
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE ReadDriverInputFile( inputFile, InitInp)
+   SUBROUTINE ReadDriverInputFile( inputFile, InitInp )
       CHARACTER(*),                 INTENT( IN    )   :: inputFile
       TYPE(SD_dvr_InitInput),       INTENT(   OUT )   :: InitInp
+
       ! Local variables  
       INTEGER                                          :: I                    ! generic integer for counting
       INTEGER                                          :: J                    ! generic integer for counting
       INTEGER                                          :: iDummy               ! dummy integer
       CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
 
-      CHARACTER(1024)                                  :: EchoFile             ! Name of SubDyn echo file  
-      CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line   
+      CHARACTER(1024)                                  :: EchoFile             ! Name of SubDyn echo file
+      CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line
       CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
       CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
-      CHARACTER(1024)                                  :: FileName             ! Name of SubDyn input file  
-      CHARACTER(1024)                                  :: PriPath             ! Path Name of SubDyn input file  
-   
+      CHARACTER(1024)                                  :: FileName             ! Name of SubDyn input file
+      CHARACTER(1024)                                  :: PriPath              ! Path Name of SubDyn input file
+
       UnEcho=-1
       UnIn  =-1
    
@@ -386,11 +385,11 @@ CONTAINS
       call AbortIfFailed()
    
       CALL WrScr( 'Opening SubDyn Driver input file:  '//FileName )
-      
       ! Read until "echo"
       CALL ReadCom( UnIn, FileName, 'SubDyn Driver input file header line 1', ErrStat2, ErrMsg2); call AbortIfFailed()
       CALL ReadCom( UnIn, FileName, 'SubDyn Driver input file header line 2', ErrStat2, ErrMsg2); call AbortIfFailed()
       CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2); call AbortIfFailed()
+
       ! If we echo, we rewind
       IF ( InitInp%Echo ) THEN
          EchoFile = TRIM(FileName)//'.echo'
@@ -401,6 +400,7 @@ CONTAINS
          CALL ReadCom( UnIn, FileName, 'SubDyn Driver input file header line 2', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
          CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       END IF
+
       !---------------------- ENVIRONMENTAL CONDITIONS -------------------------------------------------
       CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       CALL ReadVar( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
@@ -438,11 +438,12 @@ CONTAINS
          CALL ReadCom( UnIn, FileName, '0.0   0.0   0.0   0.0   0.0   0.0   uDotTPInSteady  ', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
          CALL ReadCom( UnIn, FileName, '0.0   0.0   0.0   0.0   0.0   0.0   uDotTPInSteady  ', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
       END IF
-      CALL AbortIfFailed()
+      IF ( InitInp%InputsMod == 2 ) THEN
+         CALL ReadDelimFile(InitInp%InputsFile, 1+18*InitInp%nTP, InitInp%SDin, ErrStat2, ErrMsg2, 0, priPath); call AbortIfFailed()
+      END IF
       !---------------------- FORCES ----------------------------------------
       CALL ReadCom( UnIn, FileName, '--- FORCES INPUTS header', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
-      CALL ReadVar ( UnIn, FileName, iDummy,  'nApplied Forces', 'Number of applied forces', ErrStat2,  ErrMsg2, UnEcho); 
-      !call AbortIfFailed()
+      CALL ReadVar( UnIn, FileName, iDummy,  'nApplied Forces', 'Number of applied forces', ErrStat2,  ErrMsg2, UnEcho); call AbortIfFailed()
       if (ErrStat2/=ErrID_None) then
          ! TODO Temporary
          call LegacyWarning('Applied loads input missing.')
@@ -458,7 +459,6 @@ CONTAINS
          enddo
       endif
 
-   
       if(UnEcho>0) CLOSE( UnEcho )
       if(UnIn>0)   CLOSE( UnIn   )
       ! --- Perform input checks and triggers
