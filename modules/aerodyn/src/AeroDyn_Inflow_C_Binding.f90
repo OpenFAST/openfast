@@ -369,13 +369,16 @@ contains
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = ErrStat >= AbortErrLev
-      if(Failed0) call ClearTmpStorage()
+      if(Failed0) then
+         call ClearTmpStorage()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed0
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
@@ -787,7 +790,7 @@ CONTAINS
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat2 /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1532,13 +1535,16 @@ contains
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (ErrStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = ErrStat >= AbortErrLev
-      if(Failed0) call ClearTmpStorage()
+      if(Failed0) then
+         call ClearTmpStorage()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed0
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
