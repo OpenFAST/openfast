@@ -532,6 +532,7 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       REAL(R8Ki), dimension(3,3)   :: Rg2b, Rb2g
       REAL(R8Ki), dimension(3,3)   :: tmp
       REAL(ReKi)                   :: qRR, qRP, qRY, qRRdot, qRPdot, qRYdot
+      REAL(R8Ki), dimension(6)     :: EOM_RHS
       REAL(R8Ki), ALLOCATABLE      :: tmpInv(:,:)
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
@@ -552,108 +553,94 @@ SUBROUTINE SD_SolveEOM( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
             F_TP1 =   matmul(            F_I, p%TI(:,1:6) ) &
                     - matmul(p%D1_142(1:6,:),      m%F_L  )      ! p%D1_142 is -matmul( T_I^T, Phi_Rb^T )
 
-            m%EOM_RHS(1:p%nDOFL_TP) = - MATMUL( p%MBB(:,7:p%nDOFL_TP) , m%Udotdot_TP(7:p%nDOFL_TP) )
-            m%EOM_RHS(1:6)          =   m%EOM_RHS(1:6) + F_TP1
-            m%EOM_RHS(7:p%nDOFL_TP) =   m%EOM_RHS(7:p%nDOFL_TP)                                               &
-                                      - MATMUL( p%CBB(7:p%nDOFL_TP,7:p%nDOFL_TP) , m%Udot_TP(7:p%nDOFL_TP) )  &
-                                      - MATMUL( p%KBB(7:p%nDOFL_TP,7:p%nDOFL_TP) , m%U_TP(7:p%nDOFL_TP) )
+            EOM_RHS =   matmul( p%EOM_RHS1_1 , m%Udotdot_TP(7:p%nDOFL_TP) ) &
+                      + matmul( p%EOM_RHS1_2 , m%Udot_TP   (7:p%nDOFL_TP) ) &
+                      + matmul( p%EOM_RHS1_3 , m%U_TP      (7:p%nDOFL_TP) ) &
+                      + F_TP1
+            EOM_RHS(1:3) = EOM_RHS(1:3) - p%MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),p%rPG))
+            EOM_RHS(4:6) = EOM_RHS(4:6) -            cross_product(m%udot_TP(4:6),matmul(p%MBB(4:6,4:6),m%udot_TP(4:6)))
             if (p%nDOFM>0) then
-               m%EOM_RHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)) = - MATMUL( p%MMB(:,7:p%nDOFL_TP) , m%Udotdot_TP(7:p%nDOFL_TP) ) &
-                                                                - p%CMMDiag * x%qmdot                                          &
-                                                                - p%KMMDiag * x%qm                                             &
-                                                                + matmul( m%F_L, p%PhiM )  ! F_M = PhiM^T * F_L
-            endif
+               EOM_RHS =   EOM_RHS  &
+                         + matmul( p%EOM_RHS1_4, x%qmdot ) &
+                         + matmul( p%EOM_RHS1_5, x%qm    ) &
+                         + matmul( p%EOM_RHS1_6, matmul( m%F_L, p%PhiM ) )
+            end if
+
+            ! Rigid-body translational and angular acceleration in rigid-body frame
+            m%Udotdot_TP(1:6) = matmul( p%EOM_LHS1 , EOM_RHS )
+
+            m%F_TP(1:6)          = F_TP1  ! Likely not needed, but good for completeness
+            m%F_TP(7:p%nDOFL_TP) =   matmul( p%EOM_RHS3_1 , m%Udotdot_TP(1:6) )                              &
+                                   + matmul( p%MBB(7:p%nDOFL_TP,7:p%nDOFL_TP) , m%Udotdot_TP(7:p%nDOFL_TP) ) &
+                                   + matmul( p%CBB(7:p%nDOFL_TP,7:p%nDOFL_TP) , m%Udot_TP(7:p%nDOFL_TP) )    &
+                                   + matmul( p%KBB(7:p%nDOFL_TP,7:p%nDOFL_TP) , m%U_TP(7:p%nDOFL_TP) )
+
+            if (p%nDOFM>0) then
+               m%qmdotdot =   matmul( p%EOM_RHS2_1 , m%Udotdot_TP(1:6) )                   &
+                            - matmul( p%MmB(:,7:p%nDOFL_TP) , m%Udotdot_TP(7:p%nDOFL_TP) ) &
+                            - p%CMMDiag * x%qmdot                                          &
+                            - p%KMMDiag * x%qm                                             &
+                            + matmul( m%F_L, p%PhiM )
+               m%F_TP(7:p%nDOFL_TP) = m%F_TP(7:p%nDOFL_TP) + matmul( p%MBm(7:p%nDOFL_TP,:) , m%qmdotdot )
+            end if
+
+            ! Second time derivatives of rigid-body states
+            Rb2g = transpose(EulerConstructZYX(x%qR(4:6)))
+            m%qRdotdot(1:3)   = matmul(Rb2g,m%Udotdot_TP(1:3)) ! Translational acceleration in earth-fixed frame
+            ! Second time derivatives for Tait-Bryan angles
+            qRR    = x%qR(4)
+            qRP    = x%qR(5)
+            qRY    = x%qR(6)
+            qRRdot = x%qRdot(4)
+            qRPdot = x%qRdot(5)
+            qRYdot = x%qRdot(6)
+            tmp(1,1:3) = (/ cos(qRP)*cos(qRY), -sin(qRY), 0.0/)
+            tmp(2,1:3) = (/ cos(qRP)*sin(qRY),  cos(qRY), 0.0/)
+            tmp(3,1:3) = (/-sin(qRP)         ,       0.0, 1.0/)
+            call PseudoInverse(tmp, tmpInv, ErrStat2, ErrMsg2); if (Failed()) return
+            m%qRdotdot(4:6) = matmul( tmpInv, matmul(Rb2g,m%Udotdot_TP(4:6)) - &
+                         (/ -qRPdot*qRYdot*cos(qRY) - qRRdot*(qRPdot*sin(qRP)*cos(qRY)+qRYdot*cos(qRP)*sin(qRY)), &
+                            -qRPdot*qRYdot*sin(qRY) - qRRdot*(qRPdot*sin(qRP)*sin(qRY)-qRYdot*cos(qRP)*cos(qRY)), &
+                            -qRPdot*qRRdot*cos(qRP)  /)   )
+            if (allocated(tmpInv)) deallocate(tmpInv)
+
+            ! Call GetUTP again with bPrime=.false. to fully populate m%Udotdot_TP
+            call GetUTP(u,p,x,m,ErrStat2,ErrMsg2,bPrime=(.false.)); if(Failed()) return
 
          else ! Should have only one transition piece in this cases
 
-            m%EOM_RHS(1:p%nDOFL_TP) = - matmul( p%MBB, m%Udotdot_TP )
+            m%F_TP = matmul( p%MBB , m%Udotdot_TP )
+            m%F_TP(1:3) = m%F_TP(1:3) + p%MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),p%rPG))
+            m%F_TP(4:6) = m%F_TP(4:6) +            cross_product(m%udot_TP(4:6),matmul(p%MBB(4:6,4:6),m%udot_TP(4:6)))
+
             if (p%nDOFM>0) then
-               m%EOM_RHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)) = - matmul( p%MMB, m%Udotdot_TP ) &
-                                                                - p%CMMDiag * x%qmdot           &
-                                                                - p%KMMDiag * x%qm              &
-                                                                + matmul( m%F_L, p%PhiM )  ! F_M = PhiM^T * F_L
-            endif
-
-         end if
-         m%EOM_RHS(1:3) = m%EOM_RHS(1:3) - p%MBB(1,1)*cross_product(m%udot_TP(4:6),cross_product(m%udot_TP(4:6),p%rPG))
-         m%EOM_RHS(4:6) = m%EOM_RHS(4:6) -            cross_product(m%udot_TP(4:6),matmul(p%MBB(4:6,4:6),m%udot_TP(4:6)))
-
-     else ! Fixed-bottom structure: everything is in the global earth-fixed frame
-
-         m%EOM_RHS(1:p%nDOFL_TP) = - MATMUL( p%MBB , m%Udotdot_TP )  &
-                                   - MATMUL( p%CBB , m%Udot_TP    )  &
-                                   - MATMUL( p%KBB , m%U_TP       )
-         if (p%nDOFM>0) then
-            m%EOM_RHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)) = - MATMUL( p%MMB , m%Udotdot_TP ) &
-                                                             - p%CMMDiag * x%qmdot            &
-                                                             - p%KMMDiag * x%qm               &
-                                                             + matmul( m%F_L, p%PhiM )  ! F_M = PhiM^T * F_L
+               m%qmdotdot = - matmul( p%MmB , m%Udotdot_TP ) &
+                            - p%CMMDiag * x%qmdot            &
+                            - p%KMMDiag * x%qm               &
+                            + matmul( m%F_L, p%PhiM )
+               m%F_TP = m%F_TP + matmul( p%MBm , m%qmdotdot )
+            end if
+            
          endif
 
-     endif
+      else  ! Fixed-bottom structure: everything is in the global earth-fixed frame
 
-     ! The solution vector of the combined equations of motion contains
-     !
-     ! * Case 1 - p%Floating and p%TP1IsRBRefPt:
-     !      Rigid-body (first dummy transition piece) acceleration
-     !      Total loads on the remaining transition pieces coupled to ElastoDyn
-     !      Second time derivatives of Craig-Bampton mode amplitudes if NModes > 0
-     !
-     ! * Case 2 - p%Floating and .not.p%TP1IsRBRefPt:
-     !      Total loads on the only transition piece coupled to ElastoDyn
-     !      Second time derivatives of Craig-Bampton mode amplitudes if NModes > 0
-     !
-     ! * Case 3 - .not.p%Floating
-     !      Total loads on all transition pieces coupled to ElastoDyn
-     !      Second time derivatives of Craig-Bampton mode amplitudes if NModes > 0
-     !
-     ! If floating, all quantities are in the rigid-body frame. If not floating, all quantities in earth-fixed frame.
+         m%F_TP =   MATMUL( p%MBB , m%Udotdot_TP ) &
+                  + MATMUL( p%CBB , m%Udot_TP    ) &
+                  + MATMUL( p%KBB , m%U_TP       )
 
-     m%EOM_Sol = matmul( p%EOM_LHS, m%EOM_RHS )
+         if (p%nDOFM>0) then
 
-     if (p%TP1IsRBRefPt) then
+            m%qmdotdot = - MATMUL( p%MMB , m%Udotdot_TP ) &
+                         - p%CMMDiag * x%qmdot            &
+                         - p%KMMDiag * x%qm               &
+                         + matmul( m%F_L, p%PhiM )  ! F_M = PhiM^T * F_L
 
-        Rg2b = EulerConstructZYX(x%qR(4:6))
-        Rb2g = transpose(Rg2b)
+            m%F_TP = m%F_TP + MATMUL( p%MBm, m%qmdotdot )
 
-        ! Rigid-body translational and angular acceleration in rigid-body frame
-        m%Udotdot_TP(1:6) = m%EOM_Sol(1:6)
+         endif
 
-        ! Second time derivatives of rigid-body states
-        m%qRdotdot(1:3)   = matmul(Rb2g,m%EOM_Sol(1:3)) ! Translational acceleration in earth-fixed frame
-        ! Second time derivatives for Tait-Bryan angles
-        qRR = x%qR(4)
-        qRP = x%qR(5)
-        qRY = x%qR(6)
-        qRRdot = x%qRdot(4)
-        qRPdot = x%qRdot(5)
-        qRYdot = x%qRdot(6)
-        tmp(1,1:3) = (/ cos(qRP)*cos(qRY), -sin(qRY), 0.0/)
-        tmp(2,1:3) = (/ cos(qRP)*sin(qRY),  cos(qRY), 0.0/)
-        tmp(3,1:3) = (/-sin(qRP)         ,       0.0, 1.0/)
-        call PseudoInverse(tmp, tmpInv, ErrStat2, ErrMsg2); if (Failed()) return
-        m%qRdotdot(4:6) = matmul( tmpInv, matmul(Rb2g,m%EOM_Sol(4:6)) - &
-                     (/ -qRPdot*qRYdot*cos(qRY) - qRRdot*(qRPdot*sin(qRP)*cos(qRY)+qRYdot*cos(qRP)*sin(qRY)), &
-                        -qRPdot*qRYdot*sin(qRY) - qRRdot*(qRPdot*sin(qRP)*sin(qRY)-qRYdot*cos(qRP)*cos(qRY)), &
-                        -qRPdot*qRRdot*cos(qRP)  /)   )
-        if (allocated(tmpInv)) deallocate(tmpInv)
-        m%F_TP(1:6)          = F_TP1  ! Likely not needed, but good for completeness
-        m%F_TP(7:p%nDOFL_TP) = m%EOM_Sol(7:p%nDOFL_TP)
-
-        ! Call GetUTP again with bPrime=.false. to fully populate m%Udotdot_TP
-        call GetUTP(u,p,x,m,ErrStat2,ErrMsg2,bPrime=(.false.)); if(Failed()) return
-
-     else
-
-        m%F_TP               = m%EOM_Sol(1:p%nDOFL_TP)
-
-     end if
-
-     if (p%nDOFM>0) then
-
-        m%qmdotdot = m%EOM_Sol( (p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM) )
-
-     end if
+      endif
 
 CONTAINS
    LOGICAL FUNCTION Failed()
@@ -2769,7 +2756,9 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    real(ReKi)                                :: dx,dy,dz
    real(ReKi)                                :: TI_transpose(p%nDOFL_TP,p%nDOFI__) !bjj: added this so we don't have to take the transpose 5+ times
    real(ReKi)                                :: GMat_transpose(p%nDOFL_TP,p%nDOFL_TP)
-   real(R8Ki)                                :: EOM_LHS(p%nDOFL_TP+p%nDOFM,p%nDOFL_TP+p%nDOFM)
+   real(R8Ki)                                :: EOM_LHS1(6,6)
+   real(ReKi)                                :: Cmm(p%nDOFM,p%nDOFM), Kmm(p%nDOFM,p%nDOFM)
+
    integer(IntKi)                            :: I,J
    integer(IntKi)                            :: n                          ! size of jacobian in AM2 calculation
    INTEGER(IntKi)                            :: ErrStat2
@@ -2791,7 +2780,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
    CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI__, p%nDOFI__, p%nTP, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
    TI_transpose =  TRANSPOSE(p%TI) 
    p%RBRefPt = Init%TP_RefPoint(:,1) ! Undisplaced position of the rigid-body reference point (1st dummy transition piece)
-   if (p%Floating) then
+   if (p%TP1IsRBRefPt) then
       ! Set G, transformation matrix to reconstruct rigid-body modes to replace the first 6 Guyan modes (Note: G allocated in AllocParameters)
       CALL Eye(p%GMat, ErrStat2, ErrMsg2); if(Failed()) return
       do i = 2,p%nTP
@@ -2893,6 +2882,13 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       p%KMMDiag=             OmegaL(1:p%nDOFM) * OmegaL(1:p%nDOFM)          ! OmegaM is a one-dimensional array
       p%CMMDiag = 2.0_ReKi * OmegaL(1:p%nDOFM) * Init%JDampings(1:p%nDOFM)  ! Init%JDampings is also a one-dimensional array
 
+   CMM = 0.0
+   KMM = 0.0
+   do i = 1,p%nDOFM
+      CMM(i,i) = p%CMMDiag(i)
+      KMM(i,i) = p%KMMDiag(i)
+   enddo
+
       ! C1_11, C1_12  ( see eq 15 [multiply columns by diagonal matrix entries for diagonal multiply on the left])   
       DO I = 1, p%nDOFM ! if (p%nDOFM=p%nDOFM=nDOFM == 0), this loop is skipped
          p%C1_11(:, I) =  -p%MBM(:, I)*p%KMMDiag(I)              
@@ -2964,30 +2960,33 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       p%D1_142 = - MATMUL(TI_transpose, TRANSPOSE(PhiRb)) 
    END IF
 
-   ! Build the left-hand side of the combined equations of motion and compute the inverse
-   EOM_LHS = 0.0_ReKi
    if (p%TP1IsRBRefPt) then
-      EOM_LHS(1:6,1:6) = p%MBB(1:6,1:6) - matmul( p%MBB(1:6,7:p%nDOFL_TP), p%GMat(7:p%nDOFL_TP, 1:6) )
-      if (p%nTP > 1) then
-         EOM_LHS(1:6,7:p%nDOFL_TP) = -GMat_Transpose(1:6,7:p%nDOFL_TP)
-         EOM_LHS(7:p%nDOFL_TP,1:6) = p%MBB(7:p%nDOFL_TP,1:6) - matmul( p%MBB(7:p%nDOFL_TP,7:p%nDOFL_TP) , p%GMat(7:p%nDOFL_TP, 1:6) )
-         call Eye(EOM_LHS(7:p%nDOFL_TP,7:p%nDOFL_TP), ErrStat2, ErrMsg2); if(Failed()) return
-         EOM_LHS(7:p%nDOFL_TP,7:p%nDOFL_TP) = -EOM_LHS(7:p%nDOFL_TP,7:p%nDOFL_TP)
-      end if
+      ! Equations of motion left-hand-side matrix for rigid-body acceleration 
+      EOM_LHS1 = p%MBB(1:6,1:6)                                                                                                        &
+                 + matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , matmul( p%MBB(7:p%nDOFL_TP,7:p%nDOFL_TP) , p%GMat(7:p%nDOFL_TP, 1:6) ) ) &
+                 - matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , p%MBB(7:p%nDOFL_TP,1:6)   )                                              &
+                 - matmul( p%MBB(1:6,7:p%nDOFL_TP)          , p%GMat(7:p%nDOFL_TP, 1:6) )
+      p%EOM_RHS1_1 = matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , p%MBB(7:p%nDOFL_TP,7:p%nDOFL_TP) ) - p%MBB(1:6,7:p%nDOFL_TP)
+      p%EOM_RHS1_2 = matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , p%CBB(7:p%nDOFL_TP,7:p%nDOFL_TP) )
+      p%EOM_RHS1_3 = matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , p%KBB(7:p%nDOFL_TP,7:p%nDOFL_TP) )
+      p%EOM_RHS3_1 = p%MBB(7:p%nDOFL_TP,1:6) - matmul( p%MBB(7:p%nDOFL_TP,7:p%nDOFL_TP) , p%GMat(7:p%nDOFL_TP, 1:6) )
       if ( p%nDOFM > 0 ) then
-         EOM_LHS(1:p%nDOFL_TP,(p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)) = p%MBM
-         EOM_LHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM),1:6)          = p%MMB(:,1:6) - matmul( p%MMB(:,7:p%nDOFL_TP) , p%GMat(7:p%nDOFL_TP, 1:6) )
-         call Eye(EOM_LHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM),(p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)), ErrStat2, ErrMsg2); if(Failed()) return
+         EOM_LHS1 = EOM_LHS1                                                                                         &
+                    -  matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , matmul(                                            & 
+                          matmul( p%MBm(7:p%nDOFL_TP,:), p%MmB(:,7:p%nDOFL_TP) ) ,                                   &
+                       p%GMat(7:p%nDOFL_TP, 1:6) ) )                                                                 &
+                    + matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , matmul( p%MBm(7:p%nDOFL_TP,:) , p%MmB(:,1:6) ) )    & 
+                    + matmul( matmul( p%MBm(1:6,:) ,   p%MmB(:,7:p%nDOFL_TP) ) , p%GMat(7:p%nDOFL_TP, 1:6) )         &
+                    - matmul( p%MBm(1:6,:) , p%MmB(:,1:6) )
+         p%EOM_RHS1_1 = p%EOM_RHS1_1 + matmul(p%MBm(1:6,:),p%MmB(:,7:p%nDOFL_TP)) &
+                           -matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , matmul( p%MBm(7:p%nDOFL_TP,:) , p%MmB(:,7:p%nDOFL_TP) ) )
+         p%EOM_RHS1_4 = matmul( p%MBm(1:6,:) - matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , p%MBm(7:p%nDOFL_TP,:) ) , Cmm )
+         p%EOM_RHS1_5 = matmul( p%MBm(1:6,:) - matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , p%MBm(7:p%nDOFL_TP,:) ) , Kmm )
+         p%EOM_RHS1_6 = matmul( GMat_Transpose(1:6,7:p%nDOFL_TP) , p%MBm(7:p%nDOFL_TP,:) ) - p%MBm(1:6,:)
+         p%EOM_RHS2_1 = - p%MmB(:,1:6) + matmul( p%MmB(:,7:p%nDOFL_TP) , p%GMat(7:p%nDOFL_TP, 1:6) )
       end if
-   else
-      call Eye(EOM_LHS(1:p%nDOFL_TP,1:p%nDOFL_TP), ErrStat2, ErrMsg2); if(Failed()) return
-      EOM_LHS(1:p%nDOFL_TP,1:p%nDOFL_TP) = -EOM_LHS(1:p%nDOFL_TP,1:p%nDOFL_TP)
-      if ( p%nDOFM > 0 ) then
-         EOM_LHS(1:p%nDOFL_TP,(p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)) = p%MBM
-         call Eye(EOM_LHS((p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM),(p%nDOFL_TP+1):(p%nDOFL_TP+p%nDOFM)), ErrStat2, ErrMsg2); if(Failed()) return
-      end if
+      call PseudoInverse(EOM_LHS1, p%EOM_LHS1, ErrStat2, ErrMsg2); if (Failed()) return
    end if
-   call PseudoInverse(EOM_LHS, p%EOM_LHS, ErrStat2, ErrMsg2); if (Failed()) return
 
 CONTAINS
    LOGICAL FUNCTION Failed()
@@ -3019,27 +3018,35 @@ SUBROUTINE AllocParameters(p, nDOFM, ErrStat, ErrMsg)
    CALL AllocAry( p%D1_142,        p%nDOFL_TP, p%nDOF__L,  'p%D1_142',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
    CALL AllocAry( p%PhiRb_TI,      p%nDOF__L,  p%nDOFL_TP, 'p%PhiRb_TI',  ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
 
-if (p%floating) then
-   CALL AllocAry( p%GMat,          p%nDOFL_TP, p%nDOFL_TP, 'p%GMat',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
    if (p%TP1IsRBRefPt) then
       CALL AllocAry( p%rTP0,       3, p%nTP, 'p%rTP0',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      CALL AllocAry( p%GMat,          p%nDOFL_TP, p%nDOFL_TP, 'p%GMat',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      CALL AllocAry( p%EOM_RHS1_1,            6,  p%nDOFL_TP, 'p%EOM_RHS1_1',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      CALL AllocAry( p%EOM_RHS1_2,            6,  p%nDOFL_TP, 'p%EOM_RHS1_2',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      CALL AllocAry( p%EOM_RHS1_3,            6,  p%nDOFL_TP, 'p%EOM_RHS1_3',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      if (p%nDOFM>0) then
+         CALL AllocAry( p%EOM_RHS1_4,            6,  p%nDOFL_TP, 'p%EOM_RHS1_4',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+         CALL AllocAry( p%EOM_RHS1_5,            6,  p%nDOFL_TP, 'p%EOM_RHS1_5',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+         CALL AllocAry( p%EOM_RHS1_6,            6,  p%nDOFL_TP, 'p%EOM_RHS1_6',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+         CALL AllocAry( p%EOM_RHS2_1,      p%nDOFM,           6, 'p%EOM_RHS2_1',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+         CALL AllocAry( p%EOM_RHS3_1, p%nDOFL_TP-6,           6, 'p%EOM_RHS3_1',ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      endif
    endif
-endif   
 
-if (p%nDOFM > 0 ) THEN  
-   CALL AllocAry( p%MBM,           p%nDOFL_TP, nDOFM,      'p%MBM',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%MMB,           nDOFM,      p%nDOFL_TP, 'p%MMB',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%KMMDiag,       nDOFM,                  'p%KMMDiag',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%CMMDiag,       nDOFM,                  'p%CMMDiag',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
-   CALL AllocAry( p%C1_11,         p%nDOFL_TP, nDOFM,      'p%C1_11',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%C1_12,         p%nDOFL_TP, nDOFM,      'p%C1_12',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%PhiM,          p%nDOF__L,  nDOFM,      'p%PhiM',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%C2_61,         p%nDOF__L,  nDOFM,      'p%C2_61',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%C2_62,         p%nDOF__L,  nDOFM,      'p%C2_62',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%MBmmB,         p%nDOFL_TP, p%nDOFL_TP, 'p%MBmmB',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
-   CALL AllocAry( p%D2_63,         p%nDOF__L,  p%nDOFL_TP, 'p%D2_63',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%PhiRb_TI when p%nDOFM == 0       
-   CALL AllocAry( p%D2_64,         p%nDOF__L,  p%nDOF__L,  'p%D2_64',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0       
-end if
+   if (p%nDOFM > 0 ) THEN  
+      CALL AllocAry( p%MBM,           p%nDOFL_TP, nDOFM,      'p%MBM',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      CALL AllocAry( p%MMB,           nDOFM,      p%nDOFL_TP, 'p%MMB',       ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      CALL AllocAry( p%KMMDiag,       nDOFM,                  'p%KMMDiag',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      CALL AllocAry( p%CMMDiag,       nDOFM,                  'p%CMMDiag',   ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
+      CALL AllocAry( p%C1_11,         p%nDOFL_TP, nDOFM,      'p%C1_11',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+      CALL AllocAry( p%C1_12,         p%nDOFL_TP, nDOFM,      'p%C1_12',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+      CALL AllocAry( p%PhiM,          p%nDOF__L,  nDOFM,      'p%PhiM',      ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+      CALL AllocAry( p%C2_61,         p%nDOF__L,  nDOFM,      'p%C2_61',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+      CALL AllocAry( p%C2_62,         p%nDOF__L,  nDOFM,      'p%C2_62',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
+      CALL AllocAry( p%MBmmB,         p%nDOFL_TP, p%nDOFL_TP, 'p%MBmmB',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%MBB when p%nDOFM == 0        
+      CALL AllocAry( p%D2_63,         p%nDOF__L,  p%nDOFL_TP, 'p%D2_63',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is p%PhiRb_TI when p%nDOFM == 0       
+      CALL AllocAry( p%D2_64,         p%nDOF__L,  p%nDOF__L,  'p%D2_64',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%nDOFM == 0       
+   end if
            
 END SUBROUTINE AllocParameters
 
@@ -3093,8 +3100,6 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%FG,        p%nDOF     , 'm%FG      ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    
-   CALL AllocAry( Misc%EOM_RHS,   p%nDOFL_TP+p%nDOFM , 'm%EOM_RHS' , ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
-   CALL AllocAry( Misc%EOM_Sol,   p%nDOFL_TP+p%nDOFM , 'm%EOM_Sol' , ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%F_TP,      p%nDOFL_TP ,         'm%F_TP'    , ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
 
 END SUBROUTINE AllocMiscVars

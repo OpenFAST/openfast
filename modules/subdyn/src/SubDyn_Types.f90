@@ -235,8 +235,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: u_TP 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: udot_TP 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: udotdot_TP 
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: EOM_RHS      !< Right-hand-side vector of the combined equations of motion [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: EOM_Sol      !< Solution vector of the combined equations of motion [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_CB 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y1_CB_L 
@@ -335,6 +333,15 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TIreact      !< Matrix to calculate single point reaction at base of structure [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GMat      !< Matrix to convert the first 6 Guyan modes to rigid-body modes [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_LHS      !< (Inverse of) the left-hand side matrix of the combined equations of motion [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_LHS1      !< (Inverse of) the left-hand side matrix of the rigid-body equations of motion [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_RHS1_1 
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_RHS1_2 
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_RHS1_3 
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_RHS1_4 
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_RHS1_5 
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_RHS1_6 
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_RHS2_1 
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: EOM_RHS3_1 
     INTEGER(IntKi)  :: nTP = 0_IntKi      !< Total number of transition pieces [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: TPIdx      !< Transition piece index associated with each interface node [-]
     INTEGER(IntKi)  :: nNodes = 0_IntKi      !< Total number of nodes [-]
@@ -2333,30 +2340,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%udotdot_TP = SrcMiscData%udotdot_TP
    end if
-   if (allocated(SrcMiscData%EOM_RHS)) then
-      LB(1:1) = lbound(SrcMiscData%EOM_RHS)
-      UB(1:1) = ubound(SrcMiscData%EOM_RHS)
-      if (.not. allocated(DstMiscData%EOM_RHS)) then
-         allocate(DstMiscData%EOM_RHS(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%EOM_RHS.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%EOM_RHS = SrcMiscData%EOM_RHS
-   end if
-   if (allocated(SrcMiscData%EOM_Sol)) then
-      LB(1:1) = lbound(SrcMiscData%EOM_Sol)
-      UB(1:1) = ubound(SrcMiscData%EOM_Sol)
-      if (.not. allocated(DstMiscData%EOM_Sol)) then
-         allocate(DstMiscData%EOM_Sol(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%EOM_Sol.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstMiscData%EOM_Sol = SrcMiscData%EOM_Sol
-   end if
    if (allocated(SrcMiscData%Y1)) then
       LB(1:1) = lbound(SrcMiscData%Y1)
       UB(1:1) = ubound(SrcMiscData%Y1)
@@ -2782,12 +2765,6 @@ subroutine SD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%udotdot_TP)) then
       deallocate(MiscData%udotdot_TP)
    end if
-   if (allocated(MiscData%EOM_RHS)) then
-      deallocate(MiscData%EOM_RHS)
-   end if
-   if (allocated(MiscData%EOM_Sol)) then
-      deallocate(MiscData%EOM_Sol)
-   end if
    if (allocated(MiscData%Y1)) then
       deallocate(MiscData%Y1)
    end if
@@ -2900,8 +2877,6 @@ subroutine SD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%u_TP)
    call RegPackAlloc(RF, InData%udot_TP)
    call RegPackAlloc(RF, InData%udotdot_TP)
-   call RegPackAlloc(RF, InData%EOM_RHS)
-   call RegPackAlloc(RF, InData%EOM_Sol)
    call RegPackAlloc(RF, InData%Y1)
    call RegPackAlloc(RF, InData%Y1_CB)
    call RegPackAlloc(RF, InData%Y1_CB_L)
@@ -2954,8 +2929,6 @@ subroutine SD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%u_TP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%udot_TP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%udotdot_TP); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%EOM_RHS); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%EOM_Sol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y1_CB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Y1_CB_L); if (RegCheckErr(RF, RoutineName)) return
@@ -3594,6 +3567,114 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%EOM_LHS = SrcParamData%EOM_LHS
    end if
+   if (allocated(SrcParamData%EOM_LHS1)) then
+      LB(1:2) = lbound(SrcParamData%EOM_LHS1)
+      UB(1:2) = ubound(SrcParamData%EOM_LHS1)
+      if (.not. allocated(DstParamData%EOM_LHS1)) then
+         allocate(DstParamData%EOM_LHS1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_LHS1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_LHS1 = SrcParamData%EOM_LHS1
+   end if
+   if (allocated(SrcParamData%EOM_RHS1_1)) then
+      LB(1:2) = lbound(SrcParamData%EOM_RHS1_1)
+      UB(1:2) = ubound(SrcParamData%EOM_RHS1_1)
+      if (.not. allocated(DstParamData%EOM_RHS1_1)) then
+         allocate(DstParamData%EOM_RHS1_1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_RHS1_1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_RHS1_1 = SrcParamData%EOM_RHS1_1
+   end if
+   if (allocated(SrcParamData%EOM_RHS1_2)) then
+      LB(1:2) = lbound(SrcParamData%EOM_RHS1_2)
+      UB(1:2) = ubound(SrcParamData%EOM_RHS1_2)
+      if (.not. allocated(DstParamData%EOM_RHS1_2)) then
+         allocate(DstParamData%EOM_RHS1_2(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_RHS1_2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_RHS1_2 = SrcParamData%EOM_RHS1_2
+   end if
+   if (allocated(SrcParamData%EOM_RHS1_3)) then
+      LB(1:2) = lbound(SrcParamData%EOM_RHS1_3)
+      UB(1:2) = ubound(SrcParamData%EOM_RHS1_3)
+      if (.not. allocated(DstParamData%EOM_RHS1_3)) then
+         allocate(DstParamData%EOM_RHS1_3(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_RHS1_3.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_RHS1_3 = SrcParamData%EOM_RHS1_3
+   end if
+   if (allocated(SrcParamData%EOM_RHS1_4)) then
+      LB(1:2) = lbound(SrcParamData%EOM_RHS1_4)
+      UB(1:2) = ubound(SrcParamData%EOM_RHS1_4)
+      if (.not. allocated(DstParamData%EOM_RHS1_4)) then
+         allocate(DstParamData%EOM_RHS1_4(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_RHS1_4.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_RHS1_4 = SrcParamData%EOM_RHS1_4
+   end if
+   if (allocated(SrcParamData%EOM_RHS1_5)) then
+      LB(1:2) = lbound(SrcParamData%EOM_RHS1_5)
+      UB(1:2) = ubound(SrcParamData%EOM_RHS1_5)
+      if (.not. allocated(DstParamData%EOM_RHS1_5)) then
+         allocate(DstParamData%EOM_RHS1_5(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_RHS1_5.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_RHS1_5 = SrcParamData%EOM_RHS1_5
+   end if
+   if (allocated(SrcParamData%EOM_RHS1_6)) then
+      LB(1:2) = lbound(SrcParamData%EOM_RHS1_6)
+      UB(1:2) = ubound(SrcParamData%EOM_RHS1_6)
+      if (.not. allocated(DstParamData%EOM_RHS1_6)) then
+         allocate(DstParamData%EOM_RHS1_6(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_RHS1_6.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_RHS1_6 = SrcParamData%EOM_RHS1_6
+   end if
+   if (allocated(SrcParamData%EOM_RHS2_1)) then
+      LB(1:2) = lbound(SrcParamData%EOM_RHS2_1)
+      UB(1:2) = ubound(SrcParamData%EOM_RHS2_1)
+      if (.not. allocated(DstParamData%EOM_RHS2_1)) then
+         allocate(DstParamData%EOM_RHS2_1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_RHS2_1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_RHS2_1 = SrcParamData%EOM_RHS2_1
+   end if
+   if (allocated(SrcParamData%EOM_RHS3_1)) then
+      LB(1:2) = lbound(SrcParamData%EOM_RHS3_1)
+      UB(1:2) = ubound(SrcParamData%EOM_RHS3_1)
+      if (.not. allocated(DstParamData%EOM_RHS3_1)) then
+         allocate(DstParamData%EOM_RHS3_1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EOM_RHS3_1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EOM_RHS3_1 = SrcParamData%EOM_RHS3_1
+   end if
    DstParamData%nTP = SrcParamData%nTP
    if (allocated(SrcParamData%TPIdx)) then
       LB(1:1) = lbound(SrcParamData%TPIdx)
@@ -4082,6 +4163,33 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%EOM_LHS)) then
       deallocate(ParamData%EOM_LHS)
    end if
+   if (allocated(ParamData%EOM_LHS1)) then
+      deallocate(ParamData%EOM_LHS1)
+   end if
+   if (allocated(ParamData%EOM_RHS1_1)) then
+      deallocate(ParamData%EOM_RHS1_1)
+   end if
+   if (allocated(ParamData%EOM_RHS1_2)) then
+      deallocate(ParamData%EOM_RHS1_2)
+   end if
+   if (allocated(ParamData%EOM_RHS1_3)) then
+      deallocate(ParamData%EOM_RHS1_3)
+   end if
+   if (allocated(ParamData%EOM_RHS1_4)) then
+      deallocate(ParamData%EOM_RHS1_4)
+   end if
+   if (allocated(ParamData%EOM_RHS1_5)) then
+      deallocate(ParamData%EOM_RHS1_5)
+   end if
+   if (allocated(ParamData%EOM_RHS1_6)) then
+      deallocate(ParamData%EOM_RHS1_6)
+   end if
+   if (allocated(ParamData%EOM_RHS2_1)) then
+      deallocate(ParamData%EOM_RHS2_1)
+   end if
+   if (allocated(ParamData%EOM_RHS3_1)) then
+      deallocate(ParamData%EOM_RHS3_1)
+   end if
    if (allocated(ParamData%TPIdx)) then
       deallocate(ParamData%TPIdx)
    end if
@@ -4264,6 +4372,15 @@ subroutine SD_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%TIreact)
    call RegPackAlloc(RF, InData%GMat)
    call RegPackAlloc(RF, InData%EOM_LHS)
+   call RegPackAlloc(RF, InData%EOM_LHS1)
+   call RegPackAlloc(RF, InData%EOM_RHS1_1)
+   call RegPackAlloc(RF, InData%EOM_RHS1_2)
+   call RegPackAlloc(RF, InData%EOM_RHS1_3)
+   call RegPackAlloc(RF, InData%EOM_RHS1_4)
+   call RegPackAlloc(RF, InData%EOM_RHS1_5)
+   call RegPackAlloc(RF, InData%EOM_RHS1_6)
+   call RegPackAlloc(RF, InData%EOM_RHS2_1)
+   call RegPackAlloc(RF, InData%EOM_RHS3_1)
    call RegPack(RF, InData%nTP)
    call RegPackAlloc(RF, InData%TPIdx)
    call RegPack(RF, InData%nNodes)
@@ -4461,6 +4578,15 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%TIreact); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%GMat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%EOM_LHS); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_LHS1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_RHS1_1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_RHS1_2); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_RHS1_3); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_RHS1_4); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_RHS1_5); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_RHS1_6); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_RHS2_1); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EOM_RHS3_1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nTP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TPIdx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nNodes); if (RegCheckErr(RF, RoutineName)) return

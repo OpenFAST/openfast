@@ -183,8 +183,6 @@ typedef  ^    MiscVarType    ReKi           F_TP          {:}  -  -
 typedef  ^    MiscVarType    ReKi           u_TP          {:}  -  -  
 typedef  ^    MiscVarType    ReKi           udot_TP       {:}  -  -  
 typedef  ^    MiscVarType    ReKi           udotdot_TP    {:}  -  -  
-typedef  ^    MiscVarType    ReKi           EOM_RHS       {:}  -  -  "Right-hand-side vector of the combined equations of motion"
-typedef  ^    MiscVarType    ReKi           EOM_Sol       {:}  -  -  "Solution vector of the combined equations of motion"
 typedef  ^    MiscVarType    ReKi           Y1            {:}  -  -  
 typedef  ^    MiscVarType    ReKi           Y1_CB         {:}  -  -  
 typedef  ^    MiscVarType    ReKi           Y1_CB_L       {:}  -  -  
@@ -288,6 +286,15 @@ typedef  ^  ParameterType  ReKi    TI  {:}{:}      -  -  "Matrix to calculate TP
 typedef  ^  ParameterType  ReKi    TIreact  {:}{:} -  -  "Matrix to calculate single point reaction at base of structure"
 typedef  ^  ParameterType  ReKi    GMat {:}{:}     -  -  "Matrix to convert the first 6 Guyan modes to rigid-body modes"
 typedef  ^  ParameterType  R8Ki    EOM_LHS {:}{:}  -  -  "(Inverse of) the left-hand side matrix of the combined equations of motion"
+typedef  ^  ParameterType  R8Ki    EOM_LHS1 {:}{:}  -  -  "(Inverse of) the left-hand side matrix of the rigid-body equations of motion"
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_1 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_2 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_3 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_4 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_5 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_6 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS2_1 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS3_1 {:}{:}  -  -
 # --- Parameters - Partitioning I L C Y, R=[C I]
 typedef  ^  ParameterType  IntKi  nTP           -  -  -  "Total number of transition pieces"
 typedef  ^  ParameterType  IntKi  TPIdx  {:}       -  -  "Transition piece index associated with each interface node"
