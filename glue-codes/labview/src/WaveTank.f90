@@ -6,7 +6,7 @@ MODULE WaveTankTesting
     USE NWTC_IO
     USE SeaState_C_Binding, ONLY: SeaSt_C_Init, SeaSt_C_CalcOutput, SeaSt_C_End, MaxOutPts, SeaSt_GetWaveFieldPointer_C
     USE SeaSt_WaveField_Types, ONLY: SeaSt_WaveFieldType
-    USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_PreInit, ADI_C_SetupRotor, ADI_C_Init, ADI_C_End, MaxADIOutputs, ADI_C_SetRotorMotion, ADI_C_UpdateStates, ADI_C_CalcOutput
+    USE AeroDyn_Inflow_C_BINDING, ONLY: ADI_C_PreInit, ADI_C_SetupRotor, ADI_C_Init, ADI_C_End, MaxADIOutputs, ADI_C_SetRotorMotion, ADI_C_UpdateStates, ADI_C_CalcOutput, ADI_C_GetRotorLoads
     USE MoorDyn_C, ONLY: MD_C_Init, MD_C_End, MD_C_SetWaveFieldData, MD_C_UpdateStates, MD_C_CalcOutput
     USE NWTC_C_Binding, ONLY: IntfStrLen, SetErrStat_C, SetErrStat_F2C, ErrMsgLen_C, StringConvert_F2C, FileNameFromCString
 
@@ -369,10 +369,10 @@ SUBROUTINE WaveTank_Init(   &
         WT_InitInp%ADI_VTKHubRad_in,            &   !< Hub radius for VTK surface rendering
         WT_InitInp%ADI_wrOuts_C,                &
         WT_InitInp%ADI_DT_Outs_C,               &
-        ADI_NumChannels_C,           &
-        ADI_OutputChannelNames_C,    &
-        ADI_OutputChannelUnits_C,    &
-        ErrStat_C2, ErrMsg_C2        &
+        ADI_NumChannels_C,                      &
+        ADI_OutputChannelNames_C,               &
+        ADI_OutputChannelUnits_C,               &
+        ErrStat_C2, ErrMsg_C2                   &
     )
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_Init')
     IF (ErrStat_C >= AbortErrLev) RETURN
@@ -385,7 +385,9 @@ SUBROUTINE WaveTank_CalcOutput( &
     positions_y,                &
     positions_z,                &
     rotation_matrix,            &
-    loads,                      &
+    MD_Forces_C,                &
+    ADI_MeshFrc_C,              &
+    ADI_HHVel_C,                &
     md_outputs,                 &
     adi_outputs,                &
     ErrStat_C,                  &
@@ -401,7 +403,10 @@ SUBROUTINE WaveTank_CalcOutput( &
     REAL(C_FLOAT),          INTENT(IN   ) :: positions_y
     REAL(C_FLOAT),          INTENT(IN   ) :: positions_z
     REAL(C_FLOAT),          INTENT(IN   ) :: rotation_matrix(9)
-    REAL(C_FLOAT),          INTENT(  OUT) :: loads(1,6)
+    ! Outputs
+    REAL(C_FLOAT),          INTENT(  OUT) :: MD_Forces_C( 6 )
+    REAL(C_FLOAT),          INTENT(  OUT) :: ADI_MeshFrc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
+    REAL(C_FLOAT),          INTENT(  OUT) :: ADI_HHVel_C(3)                    !< Wind speed array [Vx,Vy,Vz]                      -- (m/s) (global)
     REAL(C_FLOAT),          INTENT(  OUT) :: md_outputs(MD_NumChannels_C)
     REAL(C_FLOAT),          INTENT(  OUT) :: adi_outputs(ADI_NumChannels_C)
     INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_C
@@ -465,7 +470,7 @@ SUBROUTINE WaveTank_CalcOutput( &
         Positions(3,:),                     &
         Velocities(2,:),                    &
         Accelerations(1,:),                 &
-        loads,                              &
+        MD_Forces_C,                          &
         md_outputs,                         &
         ErrStat_C2, ErrMsg_C2               &
     )
@@ -491,24 +496,24 @@ SUBROUTINE WaveTank_CalcOutput( &
     ADI_MeshAcc_C = Accelerations(1,:)
 
     CALL ADI_C_SetRotorMotion(              &
-        iWT_c,                              & ! INTEGER(C_INT),  intent(in   )  :: iWT_c                         !< Wind turbine / rotor number
-        ADI_HubPos_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: HubPos_C( 3 )                 !< Hub position
-        ADI_HubOri_C,                       & ! REAL(C_DOUBLE),  intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
-        ADI_HubVel_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
-        ADI_HubAcc_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
-        ADI_NacPos_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
-        ADI_NacOri_C,                       & ! REAL(C_DOUBLE),  intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
-        ADI_NacVel_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
-        ADI_NacAcc_C,                       & ! REAL(C_FLOAT),   intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
-        ADI_BldRootPos_C,                   & ! REAL(C_FLOAT),   intent(in   )  :: BldRootPos_C( 3*Sim%WT(iWT_c)%NumBlades )   !< Blade root positions
-        ADI_BldRootOri_C,                   & ! REAL(C_DOUBLE),  intent(in   )  :: BldRootOri_C( 9*Sim%WT(iWT_c)%NumBlades )   !< Blade root orientations
-        ADI_BldRootVel_C,                   & ! REAL(C_FLOAT),   intent(in   )  :: BldRootVel_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root velocities
-        ADI_BldRootAcc_C,                   & ! REAL(C_FLOAT),   intent(in   )  :: BldRootAcc_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root accelerations
-        NumMeshPts_C,                       & ! intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
-        ADI_MeshPos_C,                      & ! intent(in   )  :: MeshPos_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
-        ADI_MeshOri_C,                      & ! intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
-        ADI_MeshVel_C,                      & ! intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
-        ADI_MeshAcc_C,                      & ! intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
+        iWT_c,                              & !< Wind turbine / rotor number
+        ADI_HubPos_C,                       & !< Hub position
+        ADI_HubOri_C,                       & !< Hub orientation
+        ADI_HubVel_C,                       & !< Hub velocity
+        ADI_HubAcc_C,                       & !< Hub acceleration
+        ADI_NacPos_C,                       & !< Nacelle position
+        ADI_NacOri_C,                       & !< Nacelle orientation
+        ADI_NacVel_C,                       & !< Nacelle velocity
+        ADI_NacAcc_C,                       & !< Nacelle acceleration
+        ADI_BldRootPos_C,                   & !< Blade root positions
+        ADI_BldRootOri_C,                   & !< Blade root orientations
+        ADI_BldRootVel_C,                   & !< Blade root velocities
+        ADI_BldRootAcc_C,                   & !< Blade root accelerations
+        NumMeshPts_C,                       & !< Number of mesh points we are transfering motions to and output loads to
+        ADI_MeshPos_C,                      & !< A 3xNumMeshPts_C array [x,y,z]
+        ADI_MeshOri_C,                      & !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+        ADI_MeshVel_C,                      & !< A 6xNumMeshPts_C array [x,y,z]
+        ADI_MeshAcc_C,                      & !< A 6xNumMeshPts_C array [x,y,z]
         ErrStat_C2, ErrMsg_C2               &
     )
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_SetRotorMotion')
@@ -530,11 +535,15 @@ SUBROUTINE WaveTank_CalcOutput( &
     CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_CalcOutput')
     IF (ErrStat_C >= AbortErrLev) RETURN
 
-    ! CALL ADI_C_GetRotorLoads(               &
-    !     ErrStat_C, ErrMsg_C                 &
-    ! )
-    ! CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'MD_C_Init')
-    ! IF (ErrStat_C >= AbortErrLev) RETURN
+    CALL ADI_C_GetRotorLoads(               &
+        iWT_c,                              & !< Wind turbine / rotor number
+        NumMeshPts_C,                       & !< Number of mesh points we are transfering motions to and output loads to
+        ADI_MeshFrc_C,                      & !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
+        ADI_HHVel_C,                        & !< Wind speed array [Vx,Vy,Vz]                      -- (m/s) (global)
+        ErrStat_C2, ErrMsg_C2               &
+    )
+    CALL SetErrStat_C(ErrStat_C2, ErrMsg_C2, ErrStat_C, ErrMsg_C, 'ADI_C_GetRotorLoads')
+    IF (ErrStat_C >= AbortErrLev) RETURN
 
 END SUBROUTINE
 

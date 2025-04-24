@@ -78,8 +78,9 @@ class WaveTankLib(OpenFASTInterfaceType):
             POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_y
             POINTER(c_float),       # real(c_float),          intent(in   ) :: positions_z
             POINTER(c_float),       # real(c_float),          intent(in   ) :: rotation_matrix(9)
-            POINTER(c_float),       # real(c_float),          intent(  out) :: loads(1,6)
-            # POINTER(c_float),       # real(c_float),          intent(  out) :: ss_outputs(SS_NumChannels_C)
+            POINTER(c_float),       # real(c_float),          intent(  out) :: MD_Forces_C(1,6)
+            POINTER(c_float),       # real(c_float),          intent(  out) :: ADI_MeshFrc_C(NumMeshPts,6)
+            POINTER(c_float),       # real(c_float),          intent(  out) :: ADI_HHVel_C(3)
             POINTER(c_float),       # real(c_float),          intent(  out) :: md_outputs(MD_NumChannels_C)
             POINTER(c_float),       # real(c_float),          intent(  out) :: adi_outputs(ADI_NumChannels_C)
             POINTER(c_int),         # integer(c_int),         intent(  out) :: ErrStat_C
@@ -140,7 +141,9 @@ class WaveTankLib(OpenFASTInterfaceType):
         positions_y: float,
         positions_z: float,
         rotation_matrix: np.ndarray,
-        loads: np.ndarray,
+        md_loads: np.ndarray,
+        ad_loads: np.ndarray,
+        hub_height_velocities: np.ndarray,
     ):
         _error_status = c_int(0)
         _error_message = create_string_buffer(self.ERROR_MSG_C_LEN)
@@ -151,8 +154,9 @@ class WaveTankLib(OpenFASTInterfaceType):
             byref(c_float(positions_y)),
             byref(c_float(positions_z)),
             rotation_matrix.ctypes.data_as(POINTER(c_float)),
-            loads.ctypes.data_as(POINTER(c_float)),
-            # self.ss_output_values.ctypes.data_as(POINTER(c_float)),
+            md_loads.ctypes.data_as(POINTER(c_float)),
+            ad_loads.ctypes.data_as(POINTER(c_float)),
+            hub_height_velocities.ctypes.data_as(POINTER(c_float)),
             self.md_output_values.ctypes.data_as(POINTER(c_float)),
             self.adi_output_values.ctypes.data_as(POINTER(c_float)),
             byref(_error_status),
@@ -217,7 +221,9 @@ if __name__=="__main__":
     positions_y = 0.0
     positions_z = 0.0
     rotation_matrix = np.eye(3, 3, dtype=np.float32)
-    loads = np.zeros((1,6), dtype=np.float32, order='C')
+    md_loads = np.zeros((1,6), dtype=np.float32, order='C')
+    ad_loads = np.zeros((2,6), dtype=np.float32, order='C')
+    hub_height_velocities = np.zeros((3,1), dtype=np.float32, order='C')
 
     wavetanklib.allocate_outputs()
 
@@ -229,11 +235,13 @@ if __name__=="__main__":
             positions_y=positions_y,
             positions_z=positions_z,
             rotation_matrix=rotation_matrix,
-            loads=loads,
+            md_loads=md_loads,
+            ad_loads=ad_loads,
+            hub_height_velocities=hub_height_velocities
         )
-        # print(loads)
+        print(hub_height_velocities)
 
         # print(wavetanklib.md_output_values)
-    print(wavetanklib.md_output_values)
+    # print(wavetanklib.md_output_values)
 
     wavetanklib.end()
