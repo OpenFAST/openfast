@@ -1632,7 +1632,7 @@ CONTAINS
 !!
 !! Note that the numbers are added together in this routine, so overflow can result if comparing two "huge" numbers. \n
 !! Use EqualRealNos (nwtc_num::equalrealnos) instead of directly calling a specific routine in the generic interface. 
-   FUNCTION EqualRealNos4 ( ReNum1, ReNum2 )
+   PURE FUNCTION EqualRealNos4 ( ReNum1, ReNum2 )
 
       ! passed variables
 
@@ -1666,7 +1666,7 @@ CONTAINS
    END FUNCTION EqualRealNos4
 !=======================================================================
 !> \copydoc nwtc_num::equalrealnos4
-   FUNCTION EqualRealNos8 ( ReNum1, ReNum2 )
+   PURE FUNCTION EqualRealNos8 ( ReNum1, ReNum2 )
 
       ! passed variables
 
@@ -6159,7 +6159,7 @@ end function Rad2M180to180Deg
 !! \end{bmatrix}
 !! \f}   
 !> Use SkewSymMat (nwtc_num::skewsymmat) instead of directly calling a specific routine in the generic interface.
-   FUNCTION SkewSymMatR4 ( x ) RESULT(M)
+   pure FUNCTION SkewSymMatR4 ( x ) RESULT(M)
 
       ! Function arguments
 
@@ -6182,7 +6182,7 @@ end function Rad2M180to180Deg
    END FUNCTION SkewSymMatR4 
 !=======================================================================
 !> \copydoc nwtc_num::skewsymmatr4
-   FUNCTION SkewSymMatR8 ( x ) RESULT(M)
+   pure FUNCTION SkewSymMatR8 ( x ) RESULT(M)
 
       ! Function arguments
 

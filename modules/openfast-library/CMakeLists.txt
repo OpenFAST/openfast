@@ -15,6 +15,7 @@
 #
 
 if (GENERATE_TYPES)
+  generate_f90_types(src/Glue_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/Glue_Types.f90 -noextrap)
   generate_f90_types(src/FAST_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FAST_Types.f90 -noextrap)
 endif()
 
@@ -39,6 +40,7 @@ if (${_build_type} STREQUAL "RELEASE" AND NOT WIN32)
 endif()
 
 add_library(openfast_prelib STATIC
+  src/Glue_Types.f90
   src/FAST_Types.f90
 )
 target_link_libraries(openfast_prelib 
@@ -66,12 +68,13 @@ target_link_libraries(openfast_prelib
 )
 
 add_library(openfast_postlib STATIC
-  src/FAST_Lin.f90
   src/FAST_Mods.f90
   src/FAST_Subs.f90
+  src/FAST_Funcs.f90
+  src/FAST_ModGlue.f90
+  src/FAST_Mapping.f90
+  src/FAST_AeroMap.f90
   src/FAST_Solver.f90
-  src/FAST_SS_Subs.f90
-  src/FAST_SS_Solver.f90
 )
 target_link_libraries(openfast_postlib openfast_prelib extinflowlib)
 target_include_directories(openfast_postlib PUBLIC 

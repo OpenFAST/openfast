@@ -98,7 +98,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutWindX      !< X coordinates of YZ planes for output [1 to NOutWindYZ] [unused for NOutWindYZ=0] [(m)]
   END TYPE IfWDriver_Settings
 ! =======================
-CONTAINS
+
+contains
 
 subroutine InflowWind_Driver_CopyOutputFile(SrcOutputFileData, DstOutputFileData, CtrlCode, ErrStat, ErrMsg)
    type(OutputFile), intent(in) :: SrcOutputFileData
@@ -429,5 +430,7 @@ subroutine InflowWind_Driver_UnPackIfWDriver_Settings(RF, OutData)
    call RegUnpack(RF, OutData%NOutWindYZ); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%OutWindX); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE InflowWind_Driver_Types
+
 !ENDOFREGISTRYGENERATEDFILE

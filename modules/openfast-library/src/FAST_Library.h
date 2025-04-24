@@ -69,7 +69,7 @@ EXTERNAL_ROUTINE void FAST_CreateCheckpoint(int * iTurb, const char *CheckpointR
 #define CHANNEL_LENGTH 20
 #define MAXInitINPUTS 53
 
-#define NumFixedInputs  2 + 2 + MAXIMUM_BLADES + 1 + MAXIMUM_AFCTRL + MAXIMUM_CABLE_DELTAL + MAXIMUM_CABLE_DELTALDOT
+#define NumFixedInputs  (2 + 2 + MAXIMUM_BLADES + 1 + MAXIMUM_AFCTRL + MAXIMUM_CABLE_DELTAL + MAXIMUM_CABLE_DELTALDOT)
 /* Fixed inputs list:
     1       Generator Torque (N-m)
     2       Electrical Power (W)

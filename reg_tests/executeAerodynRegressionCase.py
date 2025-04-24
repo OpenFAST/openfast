@@ -102,7 +102,6 @@ except:
 
 # create the local output directory and initialize it with input files 
 rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'ad_driver.outb':'ad_driver_ref.outb'})
-       # , excludeExt=['.out','.outb'])
 
 ### Run aerodyn on the test case
 if not noExec:

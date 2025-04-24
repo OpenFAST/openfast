@@ -338,14 +338,7 @@ typedef   ^            ^               CHARACTER(ChanLen)  writeOutputUnt  {:} "
 typedef   ^            ^               ProgDesc            Ver              -  ""  -   "this module's name, version, and date"
 typedef   ^            ^               LOGICAL             CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for drive line active tensioning is requested"   -
 # --- InitOutputs for linearization ---
-typedef   ^            ^               CHARACTER(LinChanLen)  LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
-typedef   ^            ^               CHARACTER(LinChanLen)  LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -
-typedef   ^            ^               CHARACTER(LinChanLen)  LinNames_u   {:}  -   -   "Names of the inputs used in linearization" -
-typedef   ^            ^               LOGICAL                RotFrame_y   {:}  -   -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
-typedef   ^            ^               LOGICAL                RotFrame_x   {:}  -   -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)" -
-typedef   ^            ^               LOGICAL                RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
-typedef   ^            ^               LOGICAL                IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
-typedef   ^            ^               IntKi                  DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
+typedef   ^            ^               ModVarsType            Vars          -   -   -   "Module Variables"  -
 
 
 ## ============================== Define Continuous states here: =====================================================================================================================================
@@ -359,47 +352,6 @@ typedef   ^       ConstraintStateType  SiKi                dummy            -   
 
 ## ============================== Define Other states here: =====================================================================================================================================
 typedef   ^       OtherStateType       SiKi                dummy             -  -  -   "Remove this variable if you have other states" -
-
-
-## ============================== Define Misc variables here: =====================================================================================================================================
-typedef   ^       MiscVarType          MD_LineProp         LineTypeList     {:}  -  -   "array of properties for each line type"   -
-typedef   ^       ^                    MD_RodProp          RodTypeList      {:}  -  -   "array of properties for each rod type"   -
-typedef   ^       ^                    MD_Body             GroundBody        -   -  -   "the single ground body which is the parent of all stationary points"   -
-typedef   ^       ^                    MD_Body             BodyList         {:}  -  -   "array of body objects"   -
-typedef   ^       ^                    MD_Rod              RodList          {:}  -  -   "array of rod objects"   -
-typedef   ^       ^                    MD_Point            PointList        {:}  -  -   "array of point objects"   -
-typedef   ^       ^                    MD_Line             LineList         {:}  -  -   "array of line objects"   -
-typedef   ^       ^                    MD_ExtLd            ExtLdList        {:}  -  -   "array of external load objects" - 
-typedef   ^       ^                    MD_Fail             FailList         {:}  -  -   "array of line objects"   -
-typedef   ^       ^                    IntKi               FreePointIs      {:}  -  -   "array of free point indices in PointList vector"         ""
-typedef   ^       ^                    IntKi               CpldPointIs   {:}{:}  -  -   "array of coupled/fairlead point indices in PointList vector"         ""
-typedef   ^       ^                    IntKi               FreeRodIs        {:}  -  -   "array of free rod indices in RodList vector"         ""
-typedef   ^       ^                    IntKi               CpldRodIs     {:}{:}  -  -   "array of coupled/fairlead rod indices in RodList vector"         ""
-typedef   ^       ^                    IntKi               FreeBodyIs       {:}  -  -   "array of free body indices in BodyList vector"         ""
-typedef   ^       ^                    IntKi               CpldBodyIs    {:}{:}  -  -   "array of coupled body indices in BodyList vector"         ""
-typedef   ^       ^                    IntKi               LineStateIs1     {:}  -  -   "starting index of each line's states in state vector"                 ""
-typedef   ^       ^                    IntKi               LineStateIsN     {:}  -  -   "ending index of each line's states in state vector"                 ""
-typedef   ^       ^                    IntKi               PointStateIs1    {:}  -  -   "starting index of each point's states in state vector"                 ""
-typedef   ^       ^                    IntKi               PointStateIsN    {:}  -  -   "ending index of each point's states in state vector"                 ""
-typedef   ^       ^                    IntKi               RodStateIs1      {:}  -  -   "starting index of each rod's states in state vector"                 ""
-typedef   ^       ^                    IntKi               RodStateIsN      {:}  -  -   "ending index of each rod's states in state vector"                ""
-typedef   ^       ^                    IntKi               BodyStateIs1     {:}  -  -   "starting index of each body's states in state vector"                 ""
-typedef   ^       ^                    IntKi               BodyStateIsN     {:}  -  -   "ending index of each body's states in state vector"                 ""
-typedef   ^       ^                    IntKi               Nx                -   -  -   "number of states and size of state vector"                 ""
-typedef   ^       ^                    IntKi               Nxtra             -   -  -   "number of states and size of state vector including points for potential line failures"                 ""
-typedef   ^       ^                    IntKi               WaveTi            -   -  -   "current interpolation index for wave time series data"                 ""
-typedef   ^       ^           MD_ContinuousStateType       xTemp             -   -  -   "contains temporary state vector used in integration (put here so it's only allocated once)"
-typedef   ^       ^           MD_ContinuousStateType       xdTemp            -   -  -   "contains temporary state derivative vector used in integration (put here so it's only allocated once)"
-typedef   ^       ^           MD_ContinuousStateType       kSum              -   -  -   "Sum of RK4 slope estimates: k0 + 2*k1 + 2*k2 + k3"
-typedef   ^       ^                    DbKi                zeros6           {6}  -  -   "array of zeros for convenience"
-typedef   ^       ^                    DbKi                MDWrOutput       {:}  -  -   "Data from time step to be written to a MoorDyn output file"
-typedef   ^       ^                    DbKi                LastOutTime       -   -  -   "Time of last writing to MD output files"
-typedef   ^           ^                ReKi               PtfmInit          {6}  -  -   "initial position of platform for an individual (non-farm) MD instance"     -
-typedef   ^       ^                    DbKi             BathymetryGrid   {:}{:}  -  -   "matrix describing the bathymetry in a grid of x's and y's"
-typedef   ^       ^                    DbKi                BathGrid_Xs      {:}  -  -   "array of x-coordinates in the bathymetry grid"
-typedef   ^       ^                    DbKi                BathGrid_Ys      {:}  -  -   "array of y-coordinates in the bathymetry grid"
-typedef   ^       ^                    IntKi               BathGrid_npoints {:}  -  -   "number of grid points to describe the bathymetry grid"
-
 
 ## ============================== Parameters ============================================================================================================================================
 typedef   ^       ParameterType        IntKi               nLineTypes     -     0    -   "number of line types"                       ""
@@ -473,13 +425,6 @@ typedef   ^       ^                    SiKi         pzCurrent          {:}      
 typedef   ^       ^                    SiKi         uxCurrent          {:}          -  -   "current velocities time series at each grid point"            -
 typedef   ^       ^                    SiKi         uyCurrent          {:}          -  -   "current velocities time series at each grid point"            -
 # --- Parameters for linearization ---
-typedef   ^       ^                    Integer      Nx0                -            -  -   "copy of initial size of system state vector, for linearization routines" -
-typedef   ^       ^                    Integer      Jac_u_indx         {:}{:}       -  -   "matrix to help fill/pack the u vector in computing the jacobian" -
-typedef   ^       ^                    R8Ki         du                 {:}          -  -   "vector that determines size of perturbation for u (inputs)"
-typedef   ^       ^                    R8Ki         dx                 {:}          -  -   "vector that determines size of perturbation for x (continuous states)"
-typedef   ^       ^                    Integer      Jac_ny              -           -  -   "number of outputs in jacobian matrix" -
-typedef   ^       ^                    Integer      Jac_nx              -           -  -   "number of continuous states in jacobian matrix" -
-typedef   ^       ^                    Integer      dxIdx_map2_xStateIdx {:}        -  -   "Mapping array from index of dX array to corresponding state index" -
 typedef   ^       ^                    Logical      VisMeshes           -           -  -   "Using visualization meshes as requested by glue code" -
 typedef   ^       ^                    VisDiam      VisRodsDiam        {:}          -  -   "Diameters for visualization of rods" -
 
@@ -503,3 +448,48 @@ typedef   ^       ^                    MeshType     VisLinesMesh          {:}   
 typedef   ^       ^                    MeshType     VisRodsMesh           {:}   -    -   "Line2 mesh for visualizing mooring rods" -
 typedef   ^       ^                    MeshType     VisBodiesMesh         {:}   -    -   "Point mesh for visualizing mooring bodies" -
 typedef   ^       ^                    MeshType     VisAnchsMesh          {:}   -    -   "Point mesh for visualizing mooring anchors" -
+
+
+## ============================== Define Misc variables here: =====================================================================================================================================
+typedef   ^       MiscVarType          ModJacType          Jac               -   -  -   "Jacobian values corresponding to module variables"   -
+typedef   ^       ^                    MD_ContinuousStateType   x_perturb    -   -  -   "States for calculating Jacobians"   -
+typedef   ^       ^                    MD_ContinuousStateType   dxdt_lin     -   -  -   "States for calculating Jacobians"   -
+typedef   ^       ^                    MD_InputType        u_perturb         -   -  -   "Inputs for calculating Jacobians"   -
+typedef   ^       ^                    MD_OutputType       y_lin             -   -  -   "Outputs for calculating Jacobians"  -
+typedef   ^       ^                    MD_LineProp         LineTypeList     {:}  -  -   "array of properties for each line type"   -
+typedef   ^       ^                    MD_RodProp          RodTypeList      {:}  -  -   "array of properties for each rod type"   -
+typedef   ^       ^                    MD_Body             GroundBody        -   -  -   "the single ground body which is the parent of all stationary points"   -
+typedef   ^       ^                    MD_Body             BodyList         {:}  -  -   "array of body objects"   -
+typedef   ^       ^                    MD_Rod              RodList          {:}  -  -   "array of rod objects"   -
+typedef   ^       ^                    MD_Point            PointList        {:}  -  -   "array of point objects"   -
+typedef   ^       ^                    MD_Line             LineList         {:}  -  -   "array of line objects"   -
+typedef   ^       ^                    MD_ExtLd            ExtLdList        {:}  -  -   "array of external load objects" - 
+typedef   ^       ^                    MD_Fail             FailList         {:}  -  -   "array of line objects"   -
+typedef   ^       ^                    IntKi               FreePointIs      {:}  -  -   "array of free point indices in PointList vector"         ""
+typedef   ^       ^                    IntKi               CpldPointIs   {:}{:}  -  -   "array of coupled/fairlead point indices in PointList vector"         ""
+typedef   ^       ^                    IntKi               FreeRodIs        {:}  -  -   "array of free rod indices in RodList vector"         ""
+typedef   ^       ^                    IntKi               CpldRodIs     {:}{:}  -  -   "array of coupled/fairlead rod indices in RodList vector"         ""
+typedef   ^       ^                    IntKi               FreeBodyIs       {:}  -  -   "array of free body indices in BodyList vector"         ""
+typedef   ^       ^                    IntKi               CpldBodyIs    {:}{:}  -  -   "array of coupled body indices in BodyList vector"         ""
+typedef   ^       ^                    IntKi               LineStateIs1     {:}  -  -   "starting index of each line's states in state vector"                 ""
+typedef   ^       ^                    IntKi               LineStateIsN     {:}  -  -   "ending index of each line's states in state vector"                 ""
+typedef   ^       ^                    IntKi               PointStateIs1    {:}  -  -   "starting index of each point's states in state vector"                 ""
+typedef   ^       ^                    IntKi               PointStateIsN    {:}  -  -   "ending index of each point's states in state vector"                 ""
+typedef   ^       ^                    IntKi               RodStateIs1      {:}  -  -   "starting index of each rod's states in state vector"                 ""
+typedef   ^       ^                    IntKi               RodStateIsN      {:}  -  -   "ending index of each rod's states in state vector"                ""
+typedef   ^       ^                    IntKi               BodyStateIs1     {:}  -  -   "starting index of each body's states in state vector"                 ""
+typedef   ^       ^                    IntKi               BodyStateIsN     {:}  -  -   "ending index of each body's states in state vector"                 ""
+typedef   ^       ^                    IntKi               Nx                -   -  -   "number of states and size of state vector"                 ""
+typedef   ^       ^                    IntKi               Nxtra             -   -  -   "number of states and size of state vector including points for potential line failures"                 ""
+typedef   ^       ^                    IntKi               WaveTi            -   -  -   "current interpolation index for wave time series data"                 ""
+typedef   ^       ^           MD_ContinuousStateType       xTemp             -   -  -   "contains temporary state vector used in integration (put here so it's only allocated once)"
+typedef   ^       ^           MD_ContinuousStateType       xdTemp            -   -  -   "contains temporary state derivative vector used in integration (put here so it's only allocated once)"
+typedef   ^       ^           MD_ContinuousStateType       kSum              -   -  -   "Sum of RK4 slope estimates: k0 + 2*k1 + 2*k2 + k3"
+typedef   ^       ^                    DbKi                zeros6           {6}  -  -   "array of zeros for convenience"
+typedef   ^       ^                    DbKi                MDWrOutput       {:}  -  -   "Data from time step to be written to a MoorDyn output file"
+typedef   ^       ^                    DbKi                LastOutTime       -   -  -   "Time of last writing to MD output files"
+typedef   ^           ^                ReKi               PtfmInit          {6}  -  -   "initial position of platform for an individual (non-farm) MD instance"     -
+typedef   ^       ^                    DbKi             BathymetryGrid   {:}{:}  -  -   "matrix describing the bathymetry in a grid of x's and y's"
+typedef   ^       ^                    DbKi                BathGrid_Xs      {:}  -  -   "array of x-coordinates in the bathymetry grid"
+typedef   ^       ^                    DbKi                BathGrid_Ys      {:}  -  -   "array of y-coordinates in the bathymetry grid"
+typedef   ^       ^                    IntKi               BathGrid_npoints {:}  -  -   "number of grid points to describe the bathymetry grid"

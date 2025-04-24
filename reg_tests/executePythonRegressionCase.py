@@ -141,12 +141,21 @@ if not noExec:
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
+rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
-testInfo = {
-    "attribute_names": output_channel_names
-}
+testInfo = {"attribute_names": output_channel_names}
 testData = openfastlib.output_values
+
+# Remove columns that shouldn't be compared
+for col in 'ConvIter ConvError NumUJac'.split():
+    try:
+        i = testInfo['attribute_names'].index(col)
+        del testInfo['attribute_names'][i]
+        testData = np.delete(testData, i, axis=1)
+    except ValueError as e:
+        continue
+
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
 
 passing_channels = pass_fail.passing_channels(testData.T, baselineData.T, rtol, atol)

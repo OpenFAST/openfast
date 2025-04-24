@@ -11,6 +11,7 @@
 ###################################################################################################################################
 # ...... Include files (definitions from NWTC Library and module components) ............................................................................
 include	Registry_NWTC_Library.txt
+usefrom Glue_Registry.txt
 usefrom	ElastoDyn_Registry.txt
 usefrom	SED_Registry.txt
 usefrom	Registry_BeamDyn.txt
@@ -89,7 +90,7 @@ typedef	^	FAST_VTK_SurfaceType	SiKi	MorisonVisRad	{:}	-	-	"radius of each Moriso
 
 
 typedef   ^   FAST_VTK_ModeShapeType   CHARACTER(1024)  CheckpointRoot -   -  -  "name of the checkpoint file written by FAST when linearization data was produced"
-typedef   ^   FAST_VTK_ModeShapeType   CHARACTER(1024)  MatlabFileName -   -  -  "name of the file with eigenvectors written by Matlab"
+typedef   ^   FAST_VTK_ModeShapeType   CHARACTER(1024)  DataFileName -   -  -  "name of the file with eigenvectors written by Matlab"
 typedef   ^   FAST_VTK_ModeShapeType   IntKi    VTKLinModes         -      -  -  "Number of modes to visualize" -
 typedef   ^   FAST_VTK_ModeShapeType   IntKi    VTKModes          {:}      -  -  "Which modes to visualize" -
 typedef   ^   FAST_VTK_ModeShapeType   IntKi    VTKLinTim           -      -  -  "Switch to make one animation for all LinTimes together (1) or separate animations for each LinTimes(2)" -
@@ -101,12 +102,6 @@ typedef   ^   FAST_VTK_ModeShapeType   R8Ki     NaturalFreq_Hz  {:}        -  - 
 typedef   ^   FAST_VTK_ModeShapeType   R8Ki     DampedFreq_Hz   {:}        -  -  "damped frequency from mbc3 analysis" -
 typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_magnitude {:}{:}{:}  -  -  "magnitude of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode)" -
 typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_phase     {:}{:}{:}  -  -  "phase of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode)" -
-
-
-typedef	^	FAST_SS_CaseType	ReKi	RotSpeed	-	-	-	"Rotor speed for this case of the steady-state solve [>0]"	"(rad/s)"
-typedef	^	FAST_SS_CaseType	ReKi	TSR	-	-	-	"TSR for this case of the steady-state solve [>0]"	"(-)"
-typedef	^	FAST_SS_CaseType	ReKi	WindSpeed	-	-	-	"Windspeed for this case of the steady-state solve [>0]"	"(m/s)"
-typedef	^	FAST_SS_CaseType	ReKi	Pitch	-	-	-	"Pitch angle for this case of the steady-state solve"	"(rad)"
 
 # ..... FAST_ParameterType data .......................................................................................................
 # Misc data for coupling:
@@ -121,7 +116,10 @@ typedef	^	FAST_ParameterType	IntKi	KMax	-	-	-	"Maximum number of input-output-so
 typedef	^	FAST_ParameterType	IntKi	numIceLegs	-	-	-	"number of suport-structure legs in contact with ice (IceDyn coupling)"	-
 typedef	^	FAST_ParameterType	IntKi	nBeams	-	-	-	"number of BeamDyn instances"	-
 typedef	^	FAST_ParameterType	LOGICAL	BD_OutputSibling	-	-	-	"flag to determine if BD input is sibling of output mesh"	-
-typedef	^	FAST_ParameterType	LOGICAL	ModuleInitialized	{NumModules}	-	-	"An array determining if the module has been initialized"	-
+# Data for TC Solver:
+typedef	^	FAST_ParameterType	DbKi	RhoInf	-	-	-	"Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]"	-
+typedef	^	FAST_ParameterType	DbKi	ConvTol	-	-	-	"Convergence iteration error tolerance for tight coupling generalized alpha integrator (-)"	-
+typedef	^	FAST_ParameterType	IntKi	MaxConvIter	-	-	-	"Maximum number of convergence iterations for tight coupling generalized alpha integrator (-)"	-
 # Data for Jacobians:
 typedef	^	FAST_ParameterType	DbKi	DT_Ujac	-	-	-	"Time between when we need to re-calculate these Jacobians"	s
 typedef	^	FAST_ParameterType	Reki	UJacSclFact	-	-	-	"Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians"	-
@@ -208,7 +206,6 @@ typedef	^	FAST_ParameterType	IntKi	LinInputs	-	-	-	"Inputs included in lineariza
 typedef	^	FAST_ParameterType	IntKi	LinOutputs	-	-	-	"Outputs included in linearization (switch) {0=none; 1=from OutList(s); 2=all module outputs (debug)} [unused if Linearize=False]"	-
 typedef	^	FAST_ParameterType	LOGICAL	LinOutJac	-	-	-	"Include full Jacabians in linearization output (for debug) (flag) [unused if Linearize=False; used only if LinInputs=LinOutputs=2]"	-
 typedef	^	FAST_ParameterType	LOGICAL	LinOutMod	-	-	-	"Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False]"	-
-typedef	^	FAST_ParameterType	FAST_VTK_ModeShapeType	VTK_modes	-	-	-	"Data for VTK mode-shape visualization" -
 
 typedef	^	FAST_ParameterType	IntKi	Lin_NumMods	-	-	-	"number of modules in the linearization"
 typedef	^	FAST_ParameterType	IntKi	Lin_ModOrder	{NumModules}	-	-	"indices that determine which order the modules are in the glue-code linearization matrix"
@@ -228,140 +225,10 @@ typedef	^	FAST_ParameterType	ReKi	WS_TSR	{:}	-	-	"List of WindSpeed or TSRs (dep
 typedef	^	FAST_ParameterType	ReKi	Pitch	{:}	-	-	"List of pitch angles for aeromap generation"	"(rad)"
 typedef	^	FAST_ParameterType	IntKi	GearBox_index	-	-	-	"Index to gearbox rotation in state array (for steady-state calculations)"   -
 
-
-# SAVED OPERATING POINT DATA FOR VTKLIN (visualization of mode shapes from linearization analysis)
-# ..... IceDyn OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   IceD_ContinuousStateType               x_IceD    {:}{:} -   -   "Continuous states"
-typedef   ^      ^                   IceD_DiscreteStateType                xd_IceD    {:}{:} -   -   "Discrete states"
-typedef   ^      ^                   IceD_ConstraintStateType               z_IceD    {:}{:} -   -   "Constraint states"
-typedef   ^      ^                   IceD_OtherStateType              OtherSt_IceD    {:}{:} -   -   "Other states"
-typedef   ^      ^                   IceD_InputType                         u_IceD    {:}{:} -   -   "System inputs"
-# ..... BeamDyn OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   BD_ContinuousStateType                 x_BD      {:}{:} -   -   "Continuous states"
-typedef   ^      ^                   BD_DiscreteStateType                  xd_BD      {:}{:} -   -   "Discrete states"
-typedef   ^      ^                   BD_ConstraintStateType                 z_BD      {:}{:} -   -   "Constraint states"
-typedef   ^      ^                   BD_OtherStateType                OtherSt_BD      {:}{:} -   -   "Other states"
-typedef   ^      ^                   BD_InputType                           u_BD      {:}{:} -   -   "System inputs"
-# ..... ElastoDyn OP data .....................................................................................................
-typedef   FAST   FAST_LinStateSave   ED_ContinuousStateType                 x_ED      {:}    -   -   "Continuous states"
-typedef   ^      ^                   ED_DiscreteStateType                  xd_ED      {:}    -   -   "Discrete states"
-typedef   ^      ^                   ED_ConstraintStateType                 z_ED      {:}    -   -   "Constraint states"
-typedef   ^      ^                   ED_OtherStateType                OtherSt_ED      {:}    -   -   "Other states"
-typedef   ^      ^                   ED_InputType                           u_ED      {:}    -   -   "System inputs"
-# ..... No Simplified-ElastoDyn data ...........................................................................................
-# ..... ServoDyn OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   SrvD_ContinuousStateType               x_SrvD    {:}    -   -   "Continuous states"
-typedef   ^      ^                   SrvD_DiscreteStateType                xd_SrvD    {:}    -   -   "Discrete states"
-typedef   ^      ^                   SrvD_ConstraintStateType               z_SrvD    {:}    -   -   "Constraint states"
-typedef   ^      ^                   SrvD_OtherStateType              OtherSt_SrvD    {:}    -   -   "Other states"
-typedef   ^      ^                   SrvD_InputType                         u_SrvD    {:}    -   -   "System inputs"
-# ..... AeroDyn OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   AD_ContinuousStateType                 x_AD      {:}    -   -   "Continuous states"
-typedef   ^      ^                   AD_DiscreteStateType                  xd_AD      {:}    -   -   "Discrete states"
-typedef   ^      ^                   AD_ConstraintStateType                 z_AD      {:}    -   -   "Constraint states"
-typedef   ^      ^                   AD_OtherStateType                OtherSt_AD      {:}    -   -   "Other states"
-typedef   ^      ^                   AD_InputType                           u_AD      {:}    -   -   "System inputs"
-# ..... No AeroDisk data ......................................................................................................
-# ..... InflowWind OP data ....................................................................................................
-typedef   FAST   FAST_LinStateSave   InflowWind_ContinuousStateType         x_IfW     {:}    -   -   "Continuous states"
-typedef   ^      ^                   InflowWind_DiscreteStateType          xd_IfW     {:}    -   -   "Discrete states"
-typedef   ^      ^                   InflowWind_ConstraintStateType         z_IfW     {:}    -   -   "Constraint states"
-typedef   ^      ^                   InflowWind_OtherStateType        OtherSt_IfW     {:}    -   -   "Other states"
-typedef   ^      ^                   InflowWind_InputType                   u_IfW     {:}    -   -   "System inputs"
-# ..... No ExternalInflow integration data .......................................................................................................
-# ..... SubDyn OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   SD_ContinuousStateType                 x_SD      {:}    -   -   "Continuous states"
-typedef   ^      ^                   SD_DiscreteStateType                  xd_SD      {:}    -   -   "Discrete states"
-typedef   ^      ^                   SD_ConstraintStateType                 z_SD      {:}    -   -   "Constraint states"
-typedef   ^      ^                   SD_OtherStateType                OtherSt_SD      {:}    -   -   "Other states"
-typedef   ^      ^                   SD_InputType                           u_SD      {:}    -   -   "System inputs"
-# ..... ExtPtfm OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   ExtPtfm_ContinuousStateType            x_ExtPtfm {:}    -   -   "Continuous states"
-typedef   ^      ^                   ExtPtfm_DiscreteStateType             xd_ExtPtfm {:}    -   -   "Discrete states"
-typedef   ^      ^                   ExtPtfm_ConstraintStateType            z_ExtPtfm {:}    -   -   "Constraint states"
-typedef   ^      ^                   ExtPtfm_OtherStateType           OtherSt_ExtPtfm {:}    -   -   "Other states"
-typedef   ^      ^                   ExtPtfm_InputType                      u_ExtPtfm {:}    -   -   "System inputs"
-# ..... HydroDyn OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   HydroDyn_ContinuousStateType           x_HD      {:}    -   -   "Continuous states"
-typedef   ^      ^                   HydroDyn_DiscreteStateType            xd_HD      {:}    -   -   "Discrete states"
-typedef   ^      ^                   HydroDyn_ConstraintStateType           z_HD      {:}    -   -   "Constraint states"
-typedef   ^      ^                   HydroDyn_OtherStateType          OtherSt_HD      {:}    -   -   "Other states"
-typedef   ^      ^                   HydroDyn_InputType                     u_HD      {:}    -   -   "System inputs"
-# ..... SeaSt OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   SeaSt_ContinuousStateType             x_SeaSt    {:}    -   -   "Continuous states"
-typedef   ^      ^                   SeaSt_DiscreteStateType              xd_SeaSt    {:}    -   -   "Discrete states"
-typedef   ^      ^                   SeaSt_ConstraintStateType             z_SeaSt    {:}    -   -   "Constraint states"
-typedef   ^      ^                   SeaSt_OtherStateType            OtherSt_SeaSt    {:}    -   -   "Other states"
-typedef   ^      ^                   SeaSt_InputType                       u_SeaSt    {:}    -   -   "System inputs"
-# ..... IceFloe OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   IceFloe_ContinuousStateType            x_IceF    {:}    -   -   "Continuous states"
-typedef   ^      ^                   IceFloe_DiscreteStateType             xd_IceF    {:}    -   -   "Discrete states"
-typedef   ^      ^                   IceFloe_ConstraintStateType            z_IceF    {:}    -   -   "Constraint states"
-typedef   ^      ^                   IceFloe_OtherStateType           OtherSt_IceF    {:}    -   -   "Other states"
-typedef   ^      ^                   IceFloe_InputType                      u_IceF    {:}    -   -   "System inputs"
-# ..... MAP OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   MAP_ContinuousStateType                x_MAP     {:}    -   -   "Continuous states"
-typedef   ^      ^                   MAP_DiscreteStateType                 xd_MAP     {:}    -   -   "Discrete states"
-typedef   ^      ^                   MAP_ConstraintStateType                z_MAP     {:}    -   -   "Constraint states"
-#typedef   ^      ^                   MAP_OtherStateType               OtherSt_MAP     {:}    -   -   "Other states"
-typedef   ^      ^                   MAP_InputType                          u_MAP     {:}    -   -   "System inputs"
-# ..... FEAMooring OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   FEAM_ContinuousStateType               x_FEAM    {:}    -   -   "Continuous states"
-typedef   ^      ^                   FEAM_DiscreteStateType                xd_FEAM    {:}    -   -   "Discrete states"
-typedef   ^      ^                   FEAM_ConstraintStateType               z_FEAM    {:}    -   -   "Constraint states"
-typedef   ^      ^                   FEAM_OtherStateType              OtherSt_FEAM    {:}    -   -   "Other states"
-typedef   ^      ^                   FEAM_InputType                         u_FEAM    {:}    -   -   "System inputs"
-# ..... MoorDyn OP data .......................................................................................................
-typedef   FAST   FAST_LinStateSave   MD_ContinuousStateType                 x_MD      {:}    -   -   "Continuous states"
-typedef   ^      ^                   MD_DiscreteStateType                  xd_MD      {:}    -   -   "Discrete states"
-typedef   ^      ^                   MD_ConstraintStateType                 z_MD      {:}    -   -   "Constraint states"
-typedef   ^      ^                   MD_OtherStateType                OtherSt_MD      {:}    -   -   "Other states"
-typedef   ^      ^                   MD_InputType                           u_MD      {:}    -   -   "System inputs"
-# ..... NO OrcaFlex OP data .......................................................................................................
-
-# ..... FAST_LinType data .......................................................................................................
-typedef	FAST	FAST_LinType	CHARACTER(LinChanLen)	Names_u	{:}	-	-	"Names of the linearized inputs"
-typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_y	{:}	-	-	"Names of the linearized outputs"
-typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_x	{:}	-	-	"Names of the linearized continuous states"
-typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_xd	{:}	-	-	"Names of the linearized discrete states"
-typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_z	{:}	-	-	"Names of the linearized constraint states"
-typedef	^	FAST_LinType	ReKi	op_u	{:}	-	-	"input operating point"
-typedef	^	FAST_LinType	ReKi	op_y	{:}	-	-	"output operating point"
-typedef	^	FAST_LinType	ReKi	op_x	{:}	-	-	"continuous state operating point"
-typedef	^	FAST_LinType	ReKi	op_dx	{:}	-	-	"1st time derivative of continuous state operating point"
-typedef	^	FAST_LinType	ReKi	op_xd	{:}	-	-	"discrete state operating point"
-typedef	^	FAST_LinType	ReKi	op_z	{:}	-	-	"constraint state operating point"
-typedef	^	FAST_LinType	R8Ki	op_x_eig_mag	{:}	-	-	"continuous state eigenvector magnitude"
-typedef	^	FAST_LinType	R8Ki	op_x_eig_phase	{:}	-	-	"continuous state eigenvector phase"
-typedef	^	FAST_LinType	Logical	Use_u	{:}	-	-	"array same size as names_u, which indicates if this input is used in linearization output file"
-typedef	^	FAST_LinType	Logical	Use_y	{:}	-	-	"array same size as names_y, which indicates if this output is used in linearization output file"
-typedef	^	FAST_LinType	R8Ki	A	{:}{:}	-	-	"A matrix"
-typedef	^	FAST_LinType	R8Ki	B	{:}{:}	-	-	"B matrix"
-typedef	^	FAST_LinType	R8Ki	C	{:}{:}	-	-	"C matrix"
-typedef	^	FAST_LinType	R8Ki	D	{:}{:}	-	-	"D matrix"
-typedef	^	FAST_LinType	R8Ki	StateRotation	{:}{:}	-	-	"Matrix that rotates the continuous states"
-typedef	^	FAST_LinType	R8Ki	StateRel_x	{:}{:}	-	-	"Matrix that defines the continuous states relative to root motion"
-typedef	^	FAST_LinType	R8Ki	StateRel_xdot	{:}{:}	-	-	"Matrix that defines the continuous states relative to root motion"
-typedef	^	FAST_LinType	Logical	IsLoad_u	{:}	-	-	"Whether the input is a load (used for scaling for potentially ill-conditioned G matrix)"
-typedef	^	FAST_LinType	Logical	RotFrame_u	{:}	-	-	"Whether corresponding input is in rotating frame"
-typedef	^	FAST_LinType	Logical	RotFrame_y	{:}	-	-	"Whether corresponding output is in rotating frame"
-typedef	^	FAST_LinType	Logical	RotFrame_x	{:}	-	-	"Whether corresponding continuous state is in rotating frame"
-typedef	^	FAST_LinType	Logical	RotFrame_z	{:}	-	-	"Whether corresponding constraint state is in rotating frame"
-typedef	^	FAST_LinType	IntKi 	DerivOrder_x	{:}	-	-	"Derivative order for continuous states"
-typedef	^	FAST_LinType	IntKi	SizeLin	{3}	-	-	"sizes of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states"	-
-typedef	^	FAST_LinType	IntKi	LinStartIndx	{3}	-	-	"the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states"	-
-typedef	^	FAST_LinType	IntKi	NumOutputs	-	-	-	"number of WriteOutputs in each linearized module"	-
-
-# ..... FAST_ModLinType data (for output) ...........................................................................................
-typedef	^	FAST_ModLinType	FAST_LinType	Instance	{:}	-	-	"Linearization data for each module instance (e.g., 3 blades for BD)"
-
 # ..... FAST_LinFileType data .......................................................................................................
-typedef	FAST	FAST_LinFileType	FAST_ModLinType	Modules	{NumModules}	-	-	"Linearization data for each module"
-typedef	^	FAST_LinFileType	FAST_LinType	Glue	-	-	-	"Linearization data for the glue code (coupled system)"
 typedef	^	FAST_LinFileType	ReKi	RotSpeed	-	-	-	"Rotor azimuth angular speed"	rad/s
 typedef	^	FAST_LinFileType	ReKi	Azimuth	-	-	-	"Rotor azimuth position"	rad
 typedef	^	FAST_LinFileType	ReKi	WindSpeed	-	-	-	"Wind speed at reference height"	m/s
-
 
 # ..... FAST_MiscLinType data .......................................................................................................
 typedef  ^  FAST_MiscLinType  DbKi     LinTimes       {:} -  -  "List of times at which to linearize" s
@@ -399,10 +266,9 @@ typedef	^	FAST_OutputFileType	IntKi	VTK_count	-	-	-	"Number of VTK files written
 typedef	^	FAST_OutputFileType	IntKi	VTK_LastWaveIndx	-	-	-	"last index into wave array"	-
 typedef	^	FAST_OutputFileType	FAST_LinFileType	Lin	-	-	-	"linearization data for output"
 typedef	^	FAST_OutputFileType	IntKi	ActualChanLen	-	-	-	"width of the column headers output in the text and/or binary file"	-
-typedef   ^   FAST_OutputFileType   FAST_LinStateSave   op   -   -   -   "operating points of states and inputs for VTK output of mode shapes"
 typedef	^	FAST_OutputFileType	ReKi	DriverWriteOutput	{6}	-	-	"pitch and tsr for current aero map case, plus error, number of iterations, wind speed, rotor speed"
 #typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputHdr	{:}	-	-	"headers of data output from the driver"
-#typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputUnit	{:}	-	-	"units of data output from the driver"
+#typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputUnt	{:}	-	-	"units of data output from the driver"
 
 
 # ..... IceDyn data .......................................................................................................
@@ -413,13 +279,10 @@ typedef	^	^	IceD_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
 typedef	^	^	IceD_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
 typedef	^	^	IceD_OtherStateType	OtherSt	{:}{:}	-	-	"Other states"
 typedef	^	^	IceD_ParameterType	p	{:}	-	-	"Parameters"
-typedef	^	^	IceD_InputType	u	{:}	-	-	"System inputs"
 typedef	^	^	IceD_OutputType	y	{:}	-	-	"System outputs"
 typedef	^	^	IceD_MiscVarType	m	{:}	-	-	"Misc/optimization variables"
 typedef	^	^	IceD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	IceD_InputType	Input_Saved	{:}{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... BeamDyn data .......................................................................................................
 # [ the last dimension of each allocatable array is for the instance of BeamDyn being used ]
@@ -429,81 +292,56 @@ typedef	^	^	BD_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
 typedef	^	^	BD_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
 typedef	^	^	BD_OtherStateType	OtherSt	{:}{:}	-	-	"Other states"
 typedef	^	^	BD_ParameterType	p	{:}	-	-	"Parameters"
-typedef	^	^	BD_InputType	u	{:}	-	-	"System inputs"
 typedef	^	^	BD_OutputType	y	{:}	-	-	"System outputs"
 typedef	^	^	BD_MiscVarType	m	{:}	-	-	"Misc/optimization variables"
-typedef	^	^	BD_OutputType	Output	{:}{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	BD_OutputType	y_interp	{:}	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	BD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	BD_InputType	Input_Saved	{:}{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... ElastoDyn data .......................................................................................................
-typedef	FAST	ElastoDyn_Data	ED_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	ED_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	ED_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	ED_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
-typedef	^	^	ED_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	ED_InputType	u	-	-	-	"System inputs"
-typedef	^	^	ED_OutputType	y	-	-	-	"System outputs"
-typedef	^	^	ED_MiscVarType	m	-	-	-	"Misc (optimization) variables not associated with time"
-typedef	^	^	ED_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	ED_OutputType	Output_bak	{:}	-	-	"Backup Array of outputs associated with InputTimes"
-typedef	^	^	ED_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
-typedef	^	^	ED_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	ED_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
-typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
+typedef	FAST	ElastoDyn_Data	ED_ContinuousStateType	x	{:}{:}	-	-	"Continuous states"
+typedef	^	^	ED_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
+typedef	^	^	ED_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
+typedef	^	^	ED_OtherStateType	OtherSt	{:}{:}	-	-	"Other states"
+typedef	^	^	ED_ParameterType	p	{:}	-	-	"Parameters"
+typedef	^	^	ED_OutputType	y	{:}	-	-	"System outputs"
+typedef	^	^	ED_MiscVarType	m	{:}	-	-	"Misc (optimization) variables not associated with time"
+typedef	^	^	ED_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
 
 
 # ..... Simplified-ElastoDyn data ............................................................................................
-typedef	FAST	SED_Data	SED_ContinuousStateType	x	{2}	-	-	"Continuous states"
-typedef	^	^	SED_DiscreteStateType	xd	{2}	-	-	"Discrete states"
-typedef	^	^	SED_ConstraintStateType	z	{2}	-	-	"Constraint states"
-typedef	^	^	SED_OtherStateType	OtherSt	{2}	-	-	"Other states"
+typedef	FAST	SED_Data	SED_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	SED_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	SED_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	SED_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	SED_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	SED_InputType	u	-	-	-	"System inputs"
 typedef	^	^	SED_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	SED_MiscVarType	m	-	-	-	"Misc (optimization) variables not associated with time"
-typedef	^	^	SED_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	SED_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	SED_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 
 # ..... ServoDyn data .......................................................................................................
-typedef	FAST	ServoDyn_Data	SrvD_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	SrvD_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	SrvD_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	SrvD_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	ServoDyn_Data	SrvD_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	SrvD_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	SrvD_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	SrvD_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	SrvD_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	SrvD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	SrvD_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	SrvD_MiscVarType	m	-	-	-	"Misc (optimization) variables not associated with time"
-typedef	^	^	SrvD_MiscVarType	m_bak	-	-	-	"Backup Misc (optimization) variables not associated with time"
-typedef	^	^	SrvD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	SrvD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	SrvD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	SrvD_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... AeroDyn data .......................................................................................................
-typedef	FAST	AeroDyn_Data	AD_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	AD_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	AD_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	AD_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	AeroDyn_Data	AD_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	AD_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	AD_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	AD_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	AD_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	AD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	AD_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	AD_MiscVarType	m	-	-	-	"Misc/optimization variables"
-typedef	^	^	AD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	AD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	AD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	AD_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... ExtLoads data .......................................................................................................
 typedef	FAST	ExtLoads_Data	ExtLd_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
@@ -517,34 +355,26 @@ typedef	^	^	ExtLd_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 # ..... AeroDisk data .......................................................................................................
-typedef	FAST	AeroDisk_Data	ADsk_ContinuousStateType	x	{2}	-	-	"Continuous states"
-typedef	^	^	ADsk_DiscreteStateType	xd	{2}	-	-	"Discrete states"
-typedef	^	^	ADsk_ConstraintStateType	z	{2}	-	-	"Constraint states"
-typedef	^	^	ADsk_OtherStateType	OtherSt	{2}	-	-	"Other states"
+typedef	FAST	AeroDisk_Data	ADsk_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	ADsk_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	ADsk_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	ADsk_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	ADsk_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	ADsk_InputType	u	-	-	-	"System inputs"
 typedef	^	^	ADsk_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	ADsk_MiscVarType	m	-	-	-	"Misc/optimization variables"
-typedef	^	^	ADsk_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	ADsk_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	ADsk_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 # ..... InflowWind data .......................................................................................................
-typedef	FAST	InflowWind_Data	InflowWind_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	InflowWind_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	InflowWind_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	InflowWind_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	InflowWind_Data	InflowWind_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	InflowWind_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	InflowWind_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	InflowWind_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	InflowWind_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	InflowWind_InputType	u	-	-	-	"System inputs"
 typedef	^	^	InflowWind_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	InflowWind_MiscVarType	m	-	-	-	"Misc/optimization variables"
-typedef	^	^	InflowWind_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	InflowWind_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	InflowWind_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	InflowWind_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... ExternalInflow integration data .......................................................................................................
 typedef	FAST	ExternalInflow_Data	ExtInfw_InputType	u	-	-	-	"System inputs"
@@ -553,245 +383,106 @@ typedef	^	^	ExtInfw_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	ExtInfw_MiscVarType	m	-	-	-	"Parameters"
 
 # ..... SubDyn data .......................................................................................................
-typedef	FAST	SubDyn_Data	SD_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	SD_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	SD_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	SD_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	SubDyn_Data	SD_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	SD_ContinuousStateType	dxdt	-	-	-	"Continuous state derivatives"
+typedef	^	^	SD_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	SD_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	SD_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	SD_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	SD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	SD_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	SD_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	SD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	SD_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
-typedef	^	^	SD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	SD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... ExtPtfm data .......................................................................................................
-typedef	FAST	ExtPtfm_Data	ExtPtfm_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	ExtPtfm_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	ExtPtfm_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	ExtPtfm_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	ExtPtfm_Data	ExtPtfm_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	ExtPtfm_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	ExtPtfm_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	ExtPtfm_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	ExtPtfm_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	ExtPtfm_InputType	u	-	-	-	"System inputs"
 typedef	^	^	ExtPtfm_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	ExtPtfm_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	ExtPtfm_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	ExtPtfm_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... SeaState data .......................................................................................................
-typedef	FAST	SeaState_Data	SeaSt_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	SeaSt_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	SeaSt_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	SeaSt_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	SeaState_Data	SeaSt_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	SeaSt_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	SeaSt_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	SeaSt_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	SeaSt_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	SeaSt_InputType	u	-	-	-	"System inputs"
 typedef	^	^	SeaSt_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	SeaSt_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	SeaSt_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	SeaSt_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
-typedef	^	^	SeaSt_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	SeaSt_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... HydroDyn data .......................................................................................................
-typedef	FAST	HydroDyn_Data	HydroDyn_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	HydroDyn_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	HydroDyn_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	HydroDyn_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	HydroDyn_Data	HydroDyn_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	FAST	HydroDyn_Data	HydroDyn_ContinuousStateType	dxdt	-	-	-	"Continuous state derivatives"
+typedef	^	^	HydroDyn_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	HydroDyn_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	HydroDyn_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	HydroDyn_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	HydroDyn_InputType	u	-	-	-	"System inputs"
 typedef	^	^	HydroDyn_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	HydroDyn_MiscVarType	m	-	-	-	"Misc/optimization variables"
-typedef	^	^	HydroDyn_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	HydroDyn_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	HydroDyn_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	HydroDyn_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... IceFloe data .......................................................................................................
-typedef	FAST	IceFloe_Data	IceFloe_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	IceFloe_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	IceFloe_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	IceFloe_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	IceFloe_Data	IceFloe_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	IceFloe_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	IceFloe_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	IceFloe_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	IceFloe_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	IceFloe_InputType	u	-	-	-	"System inputs"
 typedef	^	^	IceFloe_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	IceFloe_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	IceFloe_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	IceFloe_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... MAP data .......................................................................................................
-typedef	FAST	MAP_Data	MAP_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	MAP_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	MAP_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
+typedef	FAST	MAP_Data	MAP_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	MAP_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	MAP_ConstraintStateType	z	{:}	-	-	"Constraint states"
 typedef	^	^	MAP_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	MAP_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	MAP_InputType	u	-	-	-	"System inputs"
 typedef	^	^	MAP_OutputType	y	-	-	-	"System outputs"
+typedef	^	^	MAP_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	MAP_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
-typedef	^	^	MAP_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	MAP_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	MAP_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	MAP_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... FEAMooring data .......................................................................................................
-typedef	FAST	FEAMooring_Data	FEAM_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	FEAM_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	FEAM_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	FEAM_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	FEAMooring_Data	FEAM_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	FEAM_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	FEAM_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	FEAM_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	FEAM_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	FEAM_InputType	u	-	-	-	"System inputs"
 typedef	^	^	FEAM_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	FEAM_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	FEAM_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	FEAM_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... MoorDyn data .......................................................................................................
-typedef	FAST	MoorDyn_Data	MD_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	MD_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	MD_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	MD_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	MoorDyn_Data	MD_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	MD_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	MD_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	MD_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	MD_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	MD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	MD_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	MD_MiscVarType	m	-	-	-	"Misc/optimization variables"
-typedef	^	^	MD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcSteady Azimuths"
-typedef	^	^	MD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	MD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	MD_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
 
 # ..... OrcaFlex data .......................................................................................................
-typedef	FAST	OrcaFlex_Data	Orca_ContinuousStateType	x	{NumStateTimes}	-	-	"Continuous states"
-typedef	^	^	Orca_DiscreteStateType	xd	{NumStateTimes}	-	-	"Discrete states"
-typedef	^	^	Orca_ConstraintStateType	z	{NumStateTimes}	-	-	"Constraint states"
-typedef	^	^	Orca_OtherStateType	OtherSt	{NumStateTimes}	-	-	"Other states"
+typedef	FAST	OrcaFlex_Data	Orca_ContinuousStateType	x	{:}	-	-	"Continuous states"
+typedef	^	^	Orca_DiscreteStateType	xd	{:}	-	-	"Discrete states"
+typedef	^	^	Orca_ConstraintStateType	z	{:}	-	-	"Constraint states"
+typedef	^	^	Orca_OtherStateType	OtherSt	{:}	-	-	"Other states"
 typedef	^	^	Orca_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	Orca_InputType	u	-	-	-	"System inputs"
 typedef	^	^	Orca_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	Orca_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	Orca_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	Orca_InputType	Input_Saved	{:}	-	-	"Backup Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	DbKi	InputTimes_Saved	{:}	-	-	"Backup Array of times associated with Input Array"
-
-# ..... FAST_ModuleMapType data .......................................................................................................
-# ! Data structures for mapping and coupling the various modules together
-# ED <-> BD
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_BD_P	{:}	-	-	"Map ElastoDyn BladeRootMotion meshes to BeamDyn RootMotion point meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	BD_P_2_ED_P	{:}	-	-	"Map BeamDyn ReactionForce loads point meshes to ElastoDyn HubPtLoad point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_BD_P_Hub	{:}	-	-	"ElastoDyn hub to BeamDyn for hub orientation necessary for pitch actuator"
-# ED/SD <-> HD
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_HD_PRP_P	-	-	-	"Map ElastoDyn PlatformPtMesh to HydroDyn platform reference Point"
-typedef	^	FAST_ModuleMapType	MeshMapType	SubStructure_2_HD_W_P	-	-	-	"Map ElastoDyn PlatformPtMesh or SubDyn y2Mesh to HydroDyn WAMIT Point"
-typedef	^	FAST_ModuleMapType	MeshMapType	HD_W_P_2_SubStructure	-	-	-	"Map HydroDyn WAMIT Point from y%WAMITMesh to ElastoDyn PlatformPtMesh or SD LMesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SubStructure_2_HD_M_P	-	-	-	"Map ElastoDyn PlatformPtMesh or SubDyn y2Mesh to HydroDyn Morison Point"
-typedef	^	FAST_ModuleMapType	MeshMapType	HD_M_P_2_SubStructure	-	-	-	"Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh or SD LMesh"
-# Structure (ED, SD, ExtPtfm) <-> Mooring (MAP, FEAM, MoorDyn, OrcaFlex)
-typedef	^	FAST_ModuleMapType	MeshMapType	Structure_2_Mooring	-	-	-	"Map structural SD (y3Mesh)/ED to MAP/FEAM/MoorDyn/OrcaFlex point mesh" "Motions"
-typedef	^	FAST_ModuleMapType	MeshMapType	Mooring_2_Structure	-	-	-	"Map FEAM/MAP/MoorDyn/OrcaFlex mesh to SD (LMesh)/ED (PlatformPtMesh)/ExtPtfm mesh" "Loads"
-# ED <-> SD or User-Platform (ExtPtfm_MCKF)
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SD_TP	-	-	-	"Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SD_TP_2_ED_P	-	-	-	"Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh"
-# ED/BD <-> SrvD/StC
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_NStC_P_N	{:}	-	-	"Map ElastoDyn      nacelle point mesh to ServoDyn/NStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	NStC_P_2_ED_P_N	{:}	-	-	"Map ServoDyn/NStC  nacelle point mesh to ElastoDyn     point mesh on the nacelle"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_TStC_P_T	{:}	-	-	"Map ElastoDyn      tower   line2 mesh to ServoDyn/TStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	TStC_P_2_ED_P_T	{:}	-	-	"Map ServoDyn/TStC  tower   point mesh to ElastoDyn     point load mesh on the tower"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_BStC_P_B 	{:}{:}	-	-	"Map ElastoDyn blade line2 mesh to ServoDyn/BStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_ED_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to ElastoDyn point load mesh on the blade"
-typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BStC_P_B 	{:}{:}	-	-	"Map BeamDyn blade line2 mesh to ServoDyn/BStC point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	BStC_P_2_BD_P_B 	{:}{:}	-	-	"Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade"
-# ED/SD <-> SrvD/StC -- Platform TMD
-typedef	^	FAST_ModuleMapType	MeshMapType	SStC_P_P_2_SubStructure	{:}	-	-	"Map ServoDyn/SStC platform point mesh load   to SubDyn/ElastoDyn  point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SubStructure_2_SStC_P_P	{:}	-	-	"Map SubDyn y3mesh or ED platform mesh motion to ServoDyn/SStC point mesh"
-# ED --> SrvD -- PlatformPtMesh motion to SrvD%PtfmMotionMesh for passing to DLL
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_P	-   	-	-	"Map ElastoDyn/Simplified-ElastoDyn platform point mesh motion to ServoDyn      point mesh -- for passing to controller"
-# ED/BD/SED <-> AD (blades)
-typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_BDED_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BD_L	{:}	-	-	"Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_L_B	{:}	-	-	"Map Simplified-ElastoDyn BladeRoot point meshes to rigid AeroDyn BladeMotion line2 meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_R	{:}	-	-	"Map Simplified-ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_SED_P	{:}	-	-	"Map AeroDyn blade load output mesh to Simplified-ElastoDyn Hub point mesh"
-# ED <-> AD (nacelle, tower, hub, blade root, tailfin)
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_N	-	-	-	"Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_TF	-	-	-	"Map ElastoDyn TailFin CM point motion mesh to AeroDyn TailFin ref point motion mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_TF	-	-	-	"Map AeroDyn TailFin ref point load mesh to ElastoDyn TailFin CM point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_P_T	-	-	-	"Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
-# ED <-> ADsk (hub)
-typedef	^	FAST_ModuleMapType	MeshMapType	ADsk_P_2_ED_P_H	-	-	-	"Map AeroDisk point load mesh to ElastoDyn hub point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_ADsk_P_H	-	-	-	"Map ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh"
-# SED <-> AD (nacelle, tower, hub, blade root)
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_N	-	-	-	"Map Simplified-ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_L_2_AD_L_T	-	-	-	"Map Simplified-ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn TowerMotion line2 mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_H	-	-	-	"Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
-# SED <-> ADsk (hub)
-typedef	^	FAST_ModuleMapType	MeshMapType	ADsk_P_2_SED_P_H	-	-	-	"Map AeroDisk point load mesh to Simplfied-ElastoDyn hub point load mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_ADsk_P_H	-	-	-	"Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_H	-	-	-	"Map AeroDyn HubLoad point mesh to ElastoDyn HubPtLoad point mesh"
-# ED/BD <-> ExtLd (blades)
-typedef  ^  FAST_ModuleMapType   MeshMapType BDED_L_2_ExtLd_P_B  {:}  -  -  "Map ElastoDyn/BeamDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to ExtLoads point meshes"
-typedef  ^  FAST_ModuleMapType   MeshMapType ExtLd_P_2_BDED_B    {:}  -  -  "Map ExtLoads at points to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes"
-# ED <-> ExtLd (tower, hub, blade root)
-typedef  ^  FAST_ModuleMapType   MeshMapType ED_L_2_ExtLd_P_T   -   -  -  "Map ElastoDyn TowerLn2Mesh line2 mesh to ExtLoads point mesh"
-typedef  ^  FAST_ModuleMapType   MeshMapType ExtLd_P_2_ED_P_T   -   -  -  "Map ExtLoads TowerLoad point mesh to ElastoDyn TowerPtLoads point mesh"
-typedef  ^  FAST_ModuleMapType   MeshMapType ED_P_2_ExtLd_P_R  {:}  -  -  "Map ElastoDyn BladeRootMotion point meshes to ExtLoads BladeRootMotion point meshes"
-typedef  ^  FAST_ModuleMapType   MeshMapType ED_P_2_ExtLd_P_H   -   -  -  "Map ElastoDyn HubPtMotion point mesh to ExtLoads HubMotion point mesh"
-typedef  ^  FAST_ModuleMapType   MeshMapType AD_L_2_ExtLd_B    {:}  -  -  "Map AeroDyn line loads on blades to ExtLoads point loads"
-typedef  ^  FAST_ModuleMapType   MeshMapType AD_L_2_ExtLd_T     -   -  -  "Map AeroDyn line loads on tower to ExtKoads point loads"
-# IceF <-> SD
-typedef	^	FAST_ModuleMapType	MeshMapType	IceF_P_2_SD_P	-	-	-	"Map IceFloe point mesh to SubDyn LMesh point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceF_P	-	-	-	"Map SubDyn y3Mesh point mesh to IceFloe point mesh"
-# IceD <-> SD
-typedef	^	FAST_ModuleMapType	MeshMapType	IceD_P_2_SD_P	{:}	-	-	"Map IceDyn point mesh to SubDyn LMesh point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceD_P	{:}	-	-	"Map SubDyn y3Mesh point mesh to IceDyn point mesh"
-# Stored Jacobians:
-typedef	^	FAST_ModuleMapType	ReKi	Jacobian_Opt1	{:}{:}	-	-	"Stored Jacobian in ED_HD_InputOutputSolve or FullOpt1_InputOutputSolve"
-typedef	^	FAST_ModuleMapType	Integer	Jacobian_pivot	{:}	-	-	"Pivot array used for LU decomposition of Jacobian_Opt1"
-typedef	^	FAST_ModuleMapType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"
-# Temporary copies of input meshes (stored here so we don't have to keep allocating/destroying them)
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_NacelleLoads	-	-	-	"copy of ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	SubstructureLoads_Tmp	-	-	-	"copy of substructure loads input mesh (ED or SD)"
-typedef	^	FAST_ModuleMapType	MeshType	SubstructureLoads_Tmp2	-	-	-	"copy of substructure loads input mesh (ED or SD, used only for temporary storage)"
-typedef	^	FAST_ModuleMapType	MeshType	PlatformLoads_Tmp	-	-	-	"copy of platform loads input mesh (ED)"
-typedef	^	FAST_ModuleMapType	MeshType	PlatformLoads_Tmp2	-	-	-	"copy of platform loads input mesh (ED, used only for temporary storage)"
-typedef	^	FAST_ModuleMapType	MeshType	SubstructureLoads_Tmp_Farm	-	-	-	"copy of substructure mesh used to store loads from farm-level MD"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_TowerPtloads	-	-	-	"copy of ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_BladePtLoads	{:}	-	-	"copy of ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_SD_TPMesh	-	-	-	"copy of SD input mesh"
-#typedef	^	FAST_ModuleMapType	MeshType	u_HD_M_LumpedMesh	-	-	-	"copy of HD input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_HD_M_Mesh	-	-	-	"copy of HD morison input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_HD_W_Mesh	-	-	-	"copy of HD wamit input mesh"
-#typedef	^	FAST_ModuleMapType	MeshType	u_HD_PRP_Mesh	-	-	-	"copy of HD PRP input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_HubPtLoad	-	-	-	"copy of  ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_ED_HubPtLoad_2	-	-	-	"copy of  ED input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_BD_RootMotion	{:}	-	-	"copy of  BD input meshes"
-typedef	^	FAST_ModuleMapType	MeshType	y_BD_BldMotion_4Loads	{:}	-	-	"BD blade motion output at locations on DistrLoad input meshes"
-typedef	^	FAST_ModuleMapType	MeshType	u_BD_Distrload	{:}	-	-	"copy of BD DistrLoad input meshes"
-typedef	^	FAST_ModuleMapType	MeshType	u_Orca_PtfmMesh	-	-	-	"copy of Orca PtfmMesh input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_ExtPtfm_PtfmMesh	-	-	-	"copy of ExtPtfm_MCKF PtfmMesh input mesh"
-typedef	^	FAST_ModuleMapType	MeshType	u_SED_HubPtLoad	-	-	-	"copy of  SED input mesh"
-#typedef	^	FAST_ModuleMapType	MeshType	u_FarmMD_CoupledLoads -	-	-	"FAST-internal copy of MoorDyn's CoupledLoads output mesh for use with shared moorings in FAST.Farm"
-# for steady-state solve (convert 1 blade to all blades)
-typedef	^	FAST_ModuleMapType	R8Ki	HubOrient	{:}{:}{:}	-	-	"Orientation matrix to translate results from blade 1 to remaining blades in aeromaps"	"(-)"
 
 # ..... FAST_ExternalInput data .......................................................................................................
 typedef	FAST	FAST_ExternInputType	ReKi	GenTrq	-	-	-	"generator torque input from Simulink/Labview"
@@ -822,7 +513,7 @@ typedef	^	FAST_MiscVarType	FAST_MiscLinType	Lin	-	-	-	"misc data for linearizati
 
 # ..... FAST_InitData data .......................................................................................................
 typedef   ^   FAST_InitData    ED_InitInputType             InData_ED       -  -  -  "ED Initialization input data"
-typedef   ^   FAST_InitData    ED_InitOutputType           OutData_ED       -  -  -  "ED Initialization output data"
+typedef   ^   FAST_InitData    ED_InitOutputType           OutData_ED       :  -  -  "ED Initialization output data"
 typedef   ^   FAST_InitData    SED_InitInputType            InData_SED      -  -  -  "SED Initialization input data"
 typedef   ^   FAST_InitData    SED_InitOutputType          OutData_SED      -  -  -  "SED Initialization output data"
 typedef   ^   FAST_InitData    BD_InitInputType             InData_BD       -  -  -  "BD Initialization input data"
@@ -885,7 +576,9 @@ typedef	^	FAST_TurbineType	IntKi	TurbID	-	1	-	"Turbine ID Number"	-
 typedef	^	FAST_TurbineType	FAST_ParameterType	p_FAST	-	-	-	"Parameters for the glue code"	-
 typedef	^	FAST_TurbineType	FAST_OutputFileType	y_FAST	-	-	-	"Output variables for the glue code"	-
 typedef	^	FAST_TurbineType	FAST_MiscVarType	m_FAST	-	-	-	"Miscellaneous variables"	-
-typedef	^	FAST_TurbineType	FAST_ModuleMapType	MeshMapData	-	-	-	"Data for mapping between modules"	-
+typedef	^	FAST_TurbineType	Glue_ParameterType	p_Glue	-	-	-	"Parameters for the glue code"	-
+typedef	^	FAST_TurbineType	Glue_OutputFileType	y_Glue	-	-	-	"Output variables for the glue code"	-
+typedef	^	FAST_TurbineType	Glue_MiscVarType	m_Glue	-	-	-	"Miscellaneous variables"	-
 typedef	^	FAST_TurbineType	ElastoDyn_Data	ED	-	-	-	"Data for the ElastoDyn module"	-
 typedef	^	FAST_TurbineType	SED_Data	SED	-	-	-	"Data for the Simplified-ElastoDyn module"	-
 typedef	^	FAST_TurbineType	BeamDyn_Data	BD	-	-	-	"Data for the BeamDyn module"	-

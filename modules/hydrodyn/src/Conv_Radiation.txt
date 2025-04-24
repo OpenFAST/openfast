@@ -43,7 +43,7 @@ typedef   ^                            ContinuousStateType           SiKi       
 #
 # Define discrete (nondifferentiable) states here:
 #
-typedef   ^                            DiscreteStateType             ReKi             XDHistory                {:}{:}      -         -         ""        -
+typedef   ^                            DiscreteStateType             SiKi             XDHistory                {:}{:}      -         -         ""        -
 typedef   ^                            ^                             DbKi             LastTime                 -           -         -         ""        -
 #
 #

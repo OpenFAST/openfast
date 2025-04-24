@@ -198,7 +198,8 @@ IMPLICIT NONE
     LOGICAL  :: initialized = .false.      !<  [-]
   END TYPE AllData
 ! =======================
-CONTAINS
+
+contains
 
 subroutine AD_Dvr_CopyDvr_Case(SrcDvr_CaseData, DstDvr_CaseData, CtrlCode, ErrStat, ErrMsg)
    type(Dvr_Case), intent(in) :: SrcDvr_CaseData
@@ -1415,5 +1416,7 @@ subroutine AD_Dvr_UnPackAllData(RF, OutData)
    call RegUnpack(RF, OutData%errMsg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%initialized); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
 END MODULE AeroDyn_Driver_Types
+
 !ENDOFREGISTRYGENERATEDFILE

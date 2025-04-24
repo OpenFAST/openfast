@@ -36,14 +36,14 @@ USE UnsteadyAero_Types
 USE DBEMT_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_Orthogonal = -1      ! Inflow orthogonal to rotor [-] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_None = 0      ! No skew model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_Active = 1      ! Skew model active [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_PittPeters_Cont = 4      ! Pitt/Peters continuous formulation [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_None = 0      ! No redistribution [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_PittPeters = 1      ! Pitt/Peters/Glauert redistribution [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_2D = 1      ! 2D BEM assuming Cx, Cy, phi, L, D are in the same plane [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_3D = 2      ! 3D BEM assuming a momentum balance system, and an airfoil system [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_Orthogonal              = -1      ! Inflow orthogonal to rotor [-] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_None                    = 0      ! No skew model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_Active                  = 1      ! Skew model active [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_PittPeters_Cont         = 4      ! Pitt/Peters continuous formulation [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_None              = 0      ! No redistribution [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_PittPeters        = 1      ! Pitt/Peters/Glauert redistribution [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_2D                        = 1      ! 2D BEM assuming Cx, Cy, phi, L, D are in the same plane [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_3D                        = 2      ! 3D BEM assuming a momentum balance system, and an airfoil system [-]
 ! =========  BEMT_InitInputType  =======
   TYPE, PUBLIC :: BEMT_InitInputType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: chord      !< Chord length at node [m]
@@ -226,7 +226,53 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Cpmin      !< min Cpressure [-]
   END TYPE BEMT_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: BEMT_x_UA_element_x              =   1 ! BEMT%UA%element(DL%i1, DL%i2)%x
+   integer(IntKi), public, parameter :: BEMT_x_DBEMT_element_vind        =   2 ! BEMT%DBEMT%element(DL%i1, DL%i2)%vind
+   integer(IntKi), public, parameter :: BEMT_x_DBEMT_element_vind_1      =   3 ! BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1
+   integer(IntKi), public, parameter :: BEMT_x_V_w                       =   4 ! BEMT%V_w
+   integer(IntKi), public, parameter :: BEMT_u_theta                     =   5 ! BEMT%theta
+   integer(IntKi), public, parameter :: BEMT_u_chi0                      =   6 ! BEMT%chi0
+   integer(IntKi), public, parameter :: BEMT_u_psiSkewOffset             =   7 ! BEMT%psiSkewOffset
+   integer(IntKi), public, parameter :: BEMT_u_psi_s                     =   8 ! BEMT%psi_s
+   integer(IntKi), public, parameter :: BEMT_u_omega                     =   9 ! BEMT%omega
+   integer(IntKi), public, parameter :: BEMT_u_TSR                       =  10 ! BEMT%TSR
+   integer(IntKi), public, parameter :: BEMT_u_Vx                        =  11 ! BEMT%Vx
+   integer(IntKi), public, parameter :: BEMT_u_Vy                        =  12 ! BEMT%Vy
+   integer(IntKi), public, parameter :: BEMT_u_Vz                        =  13 ! BEMT%Vz
+   integer(IntKi), public, parameter :: BEMT_u_omega_z                   =  14 ! BEMT%omega_z
+   integer(IntKi), public, parameter :: BEMT_u_xVelCorr                  =  15 ! BEMT%xVelCorr
+   integer(IntKi), public, parameter :: BEMT_u_rLocal                    =  16 ! BEMT%rLocal
+   integer(IntKi), public, parameter :: BEMT_u_Un_disk                   =  17 ! BEMT%Un_disk
+   integer(IntKi), public, parameter :: BEMT_u_V0                        =  18 ! BEMT%V0
+   integer(IntKi), public, parameter :: BEMT_u_x_hat_disk                =  19 ! BEMT%x_hat_disk
+   integer(IntKi), public, parameter :: BEMT_u_UserProp                  =  20 ! BEMT%UserProp
+   integer(IntKi), public, parameter :: BEMT_u_CantAngle                 =  21 ! BEMT%CantAngle
+   integer(IntKi), public, parameter :: BEMT_u_drdz                      =  22 ! BEMT%drdz
+   integer(IntKi), public, parameter :: BEMT_u_toeAngle                  =  23 ! BEMT%toeAngle
+   integer(IntKi), public, parameter :: BEMT_y_Vrel                      =  24 ! BEMT%Vrel
+   integer(IntKi), public, parameter :: BEMT_y_phi                       =  25 ! BEMT%phi
+   integer(IntKi), public, parameter :: BEMT_y_axInduction               =  26 ! BEMT%axInduction
+   integer(IntKi), public, parameter :: BEMT_y_tanInduction              =  27 ! BEMT%tanInduction
+   integer(IntKi), public, parameter :: BEMT_y_axInduction_qs            =  28 ! BEMT%axInduction_qs
+   integer(IntKi), public, parameter :: BEMT_y_tanInduction_qs           =  29 ! BEMT%tanInduction_qs
+   integer(IntKi), public, parameter :: BEMT_y_k                         =  30 ! BEMT%k
+   integer(IntKi), public, parameter :: BEMT_y_k_p                       =  31 ! BEMT%k_p
+   integer(IntKi), public, parameter :: BEMT_y_F                         =  32 ! BEMT%F
+   integer(IntKi), public, parameter :: BEMT_y_Re                        =  33 ! BEMT%Re
+   integer(IntKi), public, parameter :: BEMT_y_AOA                       =  34 ! BEMT%AOA
+   integer(IntKi), public, parameter :: BEMT_y_Cx                        =  35 ! BEMT%Cx
+   integer(IntKi), public, parameter :: BEMT_y_Cy                        =  36 ! BEMT%Cy
+   integer(IntKi), public, parameter :: BEMT_y_Cz                        =  37 ! BEMT%Cz
+   integer(IntKi), public, parameter :: BEMT_y_Cmx                       =  38 ! BEMT%Cmx
+   integer(IntKi), public, parameter :: BEMT_y_Cmy                       =  39 ! BEMT%Cmy
+   integer(IntKi), public, parameter :: BEMT_y_Cmz                       =  40 ! BEMT%Cmz
+   integer(IntKi), public, parameter :: BEMT_y_Cm                        =  41 ! BEMT%Cm
+   integer(IntKi), public, parameter :: BEMT_y_Cl                        =  42 ! BEMT%Cl
+   integer(IntKi), public, parameter :: BEMT_y_Cd                        =  43 ! BEMT%Cd
+   integer(IntKi), public, parameter :: BEMT_y_chi                       =  44 ! BEMT%chi
+   integer(IntKi), public, parameter :: BEMT_y_Cpmin                     =  45 ! BEMT%Cpmin
+
+contains
 
 subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(BEMT_InitInputType), intent(in) :: SrcInitInputData
@@ -2615,5 +2661,478 @@ SUBROUTINE BEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
       y_out%Cpmin = a1*y1%Cpmin + a2*y2%Cpmin + a3*y3%Cpmin
    END IF ! check if allocated
 END SUBROUTINE
+
+function BEMT_InputMeshPointer(u, DL) result(Mesh)
+   type(BEMT_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function BEMT_OutputMeshPointer(y, DL) result(Mesh)
+   type(BEMT_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine BEMT_VarsPackContState(Vars, x, ValAry)
+   type(BEMT_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call BEMT_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine BEMT_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(BEMT_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BEMT_x_UA_element_x)
+         VarVals = x%UA%element(DL%i1, DL%i2)%x(V%iLB:V%iUB)                  ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind)
+         VarVals = x%DBEMT%element(DL%i1, DL%i2)%vind(V%iLB:V%iUB)            ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind_1)
+         VarVals = x%DBEMT%element(DL%i1, DL%i2)%vind_1(V%iLB:V%iUB)          ! Rank 1 Array
+      case (BEMT_x_V_w)
+         VarVals = x%V_w(V%iLB:V%iUB)                                         ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine BEMT_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(BEMT_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call BEMT_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine BEMT_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(BEMT_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BEMT_x_UA_element_x)
+         x%UA%element(DL%i1, DL%i2)%x(V%iLB:V%iUB) = VarVals                  ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind)
+         x%DBEMT%element(DL%i1, DL%i2)%vind(V%iLB:V%iUB) = VarVals            ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind_1)
+         x%DBEMT%element(DL%i1, DL%i2)%vind_1(V%iLB:V%iUB) = VarVals          ! Rank 1 Array
+      case (BEMT_x_V_w)
+         x%V_w(V%iLB:V%iUB) = VarVals                                         ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function BEMT_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BEMT_x_UA_element_x)
+       Name = "x%UA%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%x"
+   case (BEMT_x_DBEMT_element_vind)
+       Name = "x%DBEMT%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind"
+   case (BEMT_x_DBEMT_element_vind_1)
+       Name = "x%DBEMT%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind_1"
+   case (BEMT_x_V_w)
+       Name = "x%V_w"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine BEMT_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(BEMT_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call BEMT_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine BEMT_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(BEMT_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BEMT_x_UA_element_x)
+         VarVals = x%UA%element(DL%i1, DL%i2)%x(V%iLB:V%iUB)                  ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind)
+         VarVals = x%DBEMT%element(DL%i1, DL%i2)%vind(V%iLB:V%iUB)            ! Rank 1 Array
+      case (BEMT_x_DBEMT_element_vind_1)
+         VarVals = x%DBEMT%element(DL%i1, DL%i2)%vind_1(V%iLB:V%iUB)          ! Rank 1 Array
+      case (BEMT_x_V_w)
+         VarVals = x%V_w(V%iLB:V%iUB)                                         ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine BEMT_VarsPackInput(Vars, u, ValAry)
+   type(BEMT_InputType), intent(in)        :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call BEMT_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine BEMT_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(BEMT_InputType), intent(in)        :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BEMT_u_theta)
+         VarVals = u%theta(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case (BEMT_u_chi0)
+         VarVals(1) = u%chi0                                                  ! Scalar
+      case (BEMT_u_psiSkewOffset)
+         VarVals(1) = u%psiSkewOffset                                         ! Scalar
+      case (BEMT_u_psi_s)
+         VarVals = u%psi_s(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case (BEMT_u_omega)
+         VarVals(1) = u%omega                                                 ! Scalar
+      case (BEMT_u_TSR)
+         VarVals(1) = u%TSR                                                   ! Scalar
+      case (BEMT_u_Vx)
+         VarVals = u%Vx(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_u_Vy)
+         VarVals = u%Vy(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_u_Vz)
+         VarVals = u%Vz(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_u_omega_z)
+         VarVals = u%omega_z(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case (BEMT_u_xVelCorr)
+         VarVals = u%xVelCorr(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (BEMT_u_rLocal)
+         VarVals = u%rLocal(V%iLB:V%iUB,V%j)                                  ! Rank 2 Array
+      case (BEMT_u_Un_disk)
+         VarVals(1) = u%Un_disk                                               ! Scalar
+      case (BEMT_u_V0)
+         VarVals = u%V0(V%iLB:V%iUB)                                          ! Rank 1 Array
+      case (BEMT_u_x_hat_disk)
+         VarVals = u%x_hat_disk(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case (BEMT_u_UserProp)
+         VarVals = u%UserProp(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (BEMT_u_CantAngle)
+         VarVals = u%CantAngle(V%iLB:V%iUB,V%j)                               ! Rank 2 Array
+      case (BEMT_u_drdz)
+         VarVals = u%drdz(V%iLB:V%iUB,V%j)                                    ! Rank 2 Array
+      case (BEMT_u_toeAngle)
+         VarVals = u%toeAngle(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine BEMT_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(BEMT_InputType), intent(inout)     :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call BEMT_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine BEMT_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(BEMT_InputType), intent(inout)     :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BEMT_u_theta)
+         u%theta(V%iLB:V%iUB, V%j) = VarVals                                  ! Rank 2 Array
+      case (BEMT_u_chi0)
+         u%chi0 = VarVals(1)                                                  ! Scalar
+      case (BEMT_u_psiSkewOffset)
+         u%psiSkewOffset = VarVals(1)                                         ! Scalar
+      case (BEMT_u_psi_s)
+         u%psi_s(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      case (BEMT_u_omega)
+         u%omega = VarVals(1)                                                 ! Scalar
+      case (BEMT_u_TSR)
+         u%TSR = VarVals(1)                                                   ! Scalar
+      case (BEMT_u_Vx)
+         u%Vx(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_u_Vy)
+         u%Vy(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_u_Vz)
+         u%Vz(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_u_omega_z)
+         u%omega_z(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      case (BEMT_u_xVelCorr)
+         u%xVelCorr(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (BEMT_u_rLocal)
+         u%rLocal(V%iLB:V%iUB, V%j) = VarVals                                 ! Rank 2 Array
+      case (BEMT_u_Un_disk)
+         u%Un_disk = VarVals(1)                                               ! Scalar
+      case (BEMT_u_V0)
+         u%V0(V%iLB:V%iUB) = VarVals                                          ! Rank 1 Array
+      case (BEMT_u_x_hat_disk)
+         u%x_hat_disk(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      case (BEMT_u_UserProp)
+         u%UserProp(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (BEMT_u_CantAngle)
+         u%CantAngle(V%iLB:V%iUB, V%j) = VarVals                              ! Rank 2 Array
+      case (BEMT_u_drdz)
+         u%drdz(V%iLB:V%iUB, V%j) = VarVals                                   ! Rank 2 Array
+      case (BEMT_u_toeAngle)
+         u%toeAngle(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function BEMT_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BEMT_u_theta)
+       Name = "u%theta"
+   case (BEMT_u_chi0)
+       Name = "u%chi0"
+   case (BEMT_u_psiSkewOffset)
+       Name = "u%psiSkewOffset"
+   case (BEMT_u_psi_s)
+       Name = "u%psi_s"
+   case (BEMT_u_omega)
+       Name = "u%omega"
+   case (BEMT_u_TSR)
+       Name = "u%TSR"
+   case (BEMT_u_Vx)
+       Name = "u%Vx"
+   case (BEMT_u_Vy)
+       Name = "u%Vy"
+   case (BEMT_u_Vz)
+       Name = "u%Vz"
+   case (BEMT_u_omega_z)
+       Name = "u%omega_z"
+   case (BEMT_u_xVelCorr)
+       Name = "u%xVelCorr"
+   case (BEMT_u_rLocal)
+       Name = "u%rLocal"
+   case (BEMT_u_Un_disk)
+       Name = "u%Un_disk"
+   case (BEMT_u_V0)
+       Name = "u%V0"
+   case (BEMT_u_x_hat_disk)
+       Name = "u%x_hat_disk"
+   case (BEMT_u_UserProp)
+       Name = "u%UserProp"
+   case (BEMT_u_CantAngle)
+       Name = "u%CantAngle"
+   case (BEMT_u_drdz)
+       Name = "u%drdz"
+   case (BEMT_u_toeAngle)
+       Name = "u%toeAngle"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine BEMT_VarsPackOutput(Vars, y, ValAry)
+   type(BEMT_OutputType), intent(in)       :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call BEMT_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine BEMT_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(BEMT_OutputType), intent(in)       :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BEMT_y_Vrel)
+         VarVals = y%Vrel(V%iLB:V%iUB,V%j)                                    ! Rank 2 Array
+      case (BEMT_y_phi)
+         VarVals = y%phi(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (BEMT_y_axInduction)
+         VarVals = y%axInduction(V%iLB:V%iUB,V%j)                             ! Rank 2 Array
+      case (BEMT_y_tanInduction)
+         VarVals = y%tanInduction(V%iLB:V%iUB,V%j)                            ! Rank 2 Array
+      case (BEMT_y_axInduction_qs)
+         VarVals = y%axInduction_qs(V%iLB:V%iUB,V%j)                          ! Rank 2 Array
+      case (BEMT_y_tanInduction_qs)
+         VarVals = y%tanInduction_qs(V%iLB:V%iUB,V%j)                         ! Rank 2 Array
+      case (BEMT_y_k)
+         VarVals = y%k(V%iLB:V%iUB,V%j)                                       ! Rank 2 Array
+      case (BEMT_y_k_p)
+         VarVals = y%k_p(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (BEMT_y_F)
+         VarVals = y%F(V%iLB:V%iUB,V%j)                                       ! Rank 2 Array
+      case (BEMT_y_Re)
+         VarVals = y%Re(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_y_AOA)
+         VarVals = y%AOA(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (BEMT_y_Cx)
+         VarVals = y%Cx(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_y_Cy)
+         VarVals = y%Cy(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_y_Cz)
+         VarVals = y%Cz(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_y_Cmx)
+         VarVals = y%Cmx(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (BEMT_y_Cmy)
+         VarVals = y%Cmy(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (BEMT_y_Cmz)
+         VarVals = y%Cmz(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (BEMT_y_Cm)
+         VarVals = y%Cm(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_y_Cl)
+         VarVals = y%Cl(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_y_Cd)
+         VarVals = y%Cd(V%iLB:V%iUB,V%j)                                      ! Rank 2 Array
+      case (BEMT_y_chi)
+         VarVals = y%chi(V%iLB:V%iUB,V%j)                                     ! Rank 2 Array
+      case (BEMT_y_Cpmin)
+         VarVals = y%Cpmin(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine BEMT_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(BEMT_OutputType), intent(inout)    :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call BEMT_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine BEMT_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(BEMT_OutputType), intent(inout)    :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (BEMT_y_Vrel)
+         y%Vrel(V%iLB:V%iUB, V%j) = VarVals                                   ! Rank 2 Array
+      case (BEMT_y_phi)
+         y%phi(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (BEMT_y_axInduction)
+         y%axInduction(V%iLB:V%iUB, V%j) = VarVals                            ! Rank 2 Array
+      case (BEMT_y_tanInduction)
+         y%tanInduction(V%iLB:V%iUB, V%j) = VarVals                           ! Rank 2 Array
+      case (BEMT_y_axInduction_qs)
+         y%axInduction_qs(V%iLB:V%iUB, V%j) = VarVals                         ! Rank 2 Array
+      case (BEMT_y_tanInduction_qs)
+         y%tanInduction_qs(V%iLB:V%iUB, V%j) = VarVals                        ! Rank 2 Array
+      case (BEMT_y_k)
+         y%k(V%iLB:V%iUB, V%j) = VarVals                                      ! Rank 2 Array
+      case (BEMT_y_k_p)
+         y%k_p(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (BEMT_y_F)
+         y%F(V%iLB:V%iUB, V%j) = VarVals                                      ! Rank 2 Array
+      case (BEMT_y_Re)
+         y%Re(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_y_AOA)
+         y%AOA(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (BEMT_y_Cx)
+         y%Cx(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_y_Cy)
+         y%Cy(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_y_Cz)
+         y%Cz(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_y_Cmx)
+         y%Cmx(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (BEMT_y_Cmy)
+         y%Cmy(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (BEMT_y_Cmz)
+         y%Cmz(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (BEMT_y_Cm)
+         y%Cm(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_y_Cl)
+         y%Cl(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_y_Cd)
+         y%Cd(V%iLB:V%iUB, V%j) = VarVals                                     ! Rank 2 Array
+      case (BEMT_y_chi)
+         y%chi(V%iLB:V%iUB, V%j) = VarVals                                    ! Rank 2 Array
+      case (BEMT_y_Cpmin)
+         y%Cpmin(V%iLB:V%iUB, V%j) = VarVals                                  ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function BEMT_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (BEMT_y_Vrel)
+       Name = "y%Vrel"
+   case (BEMT_y_phi)
+       Name = "y%phi"
+   case (BEMT_y_axInduction)
+       Name = "y%axInduction"
+   case (BEMT_y_tanInduction)
+       Name = "y%tanInduction"
+   case (BEMT_y_axInduction_qs)
+       Name = "y%axInduction_qs"
+   case (BEMT_y_tanInduction_qs)
+       Name = "y%tanInduction_qs"
+   case (BEMT_y_k)
+       Name = "y%k"
+   case (BEMT_y_k_p)
+       Name = "y%k_p"
+   case (BEMT_y_F)
+       Name = "y%F"
+   case (BEMT_y_Re)
+       Name = "y%Re"
+   case (BEMT_y_AOA)
+       Name = "y%AOA"
+   case (BEMT_y_Cx)
+       Name = "y%Cx"
+   case (BEMT_y_Cy)
+       Name = "y%Cy"
+   case (BEMT_y_Cz)
+       Name = "y%Cz"
+   case (BEMT_y_Cmx)
+       Name = "y%Cmx"
+   case (BEMT_y_Cmy)
+       Name = "y%Cmy"
+   case (BEMT_y_Cmz)
+       Name = "y%Cmz"
+   case (BEMT_y_Cm)
+       Name = "y%Cm"
+   case (BEMT_y_Cl)
+       Name = "y%Cl"
+   case (BEMT_y_Cd)
+       Name = "y%Cd"
+   case (BEMT_y_chi)
+       Name = "y%chi"
+   case (BEMT_y_Cpmin)
+       Name = "y%Cpmin"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE BEMT_Types
+
 !ENDOFREGISTRYGENERATEDFILE

@@ -92,7 +92,6 @@ MODULE ServoDyn
    PUBLIC :: SrvD_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
                                                  !   (Xd), and constraint-state (Z) equations all with respect to the constraint
                                                  !   states (z)
-   PUBLIC :: SrvD_GetOP                          ! Routine to pack the operating point values (for linearization) into arrays
 
 
 CONTAINS
@@ -558,6 +557,11 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       InitOut%CouplingScheme = ExplicitLoose
    END IF
 
+      !............................................................................................
+      ! Initialize module variables
+      !............................................................................................
+   call SrvD_InitVars( InitInp, u, p, x, y, m, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2 )
+   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       !............................................................................................
       ! Close summary file:
@@ -587,6 +591,236 @@ contains
       CALL StC_DestroyCtrlChanInitInfoType(StC_CtrlChanInitInfo, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 END SUBROUTINE SrvD_Init
+
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This routine initializes module variables for use by the solver and linearization.
+subroutine SrvD_InitVars(InitInp, u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+   type(SrvD_InitInputType),        intent(in)     :: InitInp     !< Initialization input
+   type(SrvD_InputType),            intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
+   type(SrvD_ParameterType),        intent(inout)  :: p           !< Parameters
+   type(SrvD_ContinuousStateType),  intent(inout)  :: x           !< Continuous state
+   type(SrvD_OutputType),           intent(inout)  :: y           !< Initial system outputs (outputs are not calculated;
+   type(SrvD_MiscVarType),          intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+   type(SrvD_InitOutputType),       intent(inout)  :: InitOut     !< Output for initialization routine
+   logical,                         intent(in)     :: Linearize   !< Flag to initialize linearization variables
+   integer(IntKi),                  intent(out)    :: ErrStat     !< Error status of the operation
+   character(*),                    intent(out)    :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter    :: RoutineName = 'SrvD_InitVars'
+   integer(IntKi)             :: ErrStat2                     ! Temporary Error status
+   character(ErrMsgLen)       :: ErrMsg2                      ! Temporary Error message
+   character(ChanLen)         :: Desc
+   integer(IntKi)             :: i, j, k
+   character(36), parameter   :: StCLabels(*) = [&
+                                    ' local displacement state X  m      ', &
+                                    ' local displacement state dX/dt  m/s', &
+                                    ' local displacement state Y  m      ', &
+                                    ' local displacement state dY/dt  m/s', &
+                                    ' local displacement state Z  m      ', &
+                                    ' local displacement state dZ/dt  m/s']
+   integer(IntKi), parameter  :: StCInds(*) = [1, 3, 5, 2, 4, 6]
+   real(R8Ki)                 :: xPerturb, uPerturbTrans, uPerturbAng, uPerturbs(6)
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   ! Calculate perturbations
+   xPerturb = 0.2_R8Ki*Pi/180.0_R8Ki * max(real(TwoNorm(InitInp%NacRefPos - InitInp%TwrBaseRefPos), R8Ki), 1.0_R8Ki)
+
+   ! Blade Structural Controller
+   do j = 1, p%NumBStC
+      do i = 1, p%NumBl
+         Desc = 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j)
+         do k = 1, size(StCInds)
+            call MV_AddVar(InitOut%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_BStC_StC_x, j), &
+                           iAry=StCInds(k), jAry=i, &
+                           Flags=VF_DerivOrder2+VF_RotFrame, &
+                           LinNames=[trim(Desc)//StCLabels(StCInds(k))], &
+                           Perturb=xPerturb)
+         end do
+      end do
+   end do
+
+   ! Nacelle Structural Controller
+   do j = 1, p%NumNStC
+      Desc = 'Nacelle StC '//Num2LStr(j)
+      do k = 1, size(StCInds)
+         call MV_AddVar(InitOut%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_NStC_StC_x, j), &
+                        iAry=StCInds(k), jAry=1, &
+                        Flags=VF_DerivOrder2, &
+                        LinNames=[trim(Desc)//StCLabels(StCInds(k))], &
+                        Perturb=xPerturb)
+      end do
+   enddo
+
+   ! Tower Structural Controller
+   do j = 1, p%NumTStC
+      Desc = 'Tower StC '//Num2LStr(j)
+      do k = 1, size(StCInds)
+         call MV_AddVar(InitOut%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_TStC_StC_x, j), &
+                        iAry=StCInds(k), jAry=1, &
+                        Flags=VF_DerivOrder2, &
+                        LinNames=[trim(Desc)//StCLabels(StCInds(k))], &
+                        Perturb=xPerturb)
+      end do
+   enddo
+
+   ! Substructure Structural Controller
+   do j = 1, p%NumSStC
+      Desc = 'Substructure StC '//Num2LStr(j)
+      do k = 1, size(StCInds)
+         call MV_AddVar(InitOut%Vars%x, Desc, FieldScalar, DatLoc(SrvD_x_SStC_StC_x, j), &
+                        iAry=StCInds(k), jAry=1, &
+                        Flags=VF_DerivOrder2, &
+                        LinNames=[trim(Desc)//StCLabels(StCInds(k))], &
+                        Perturb=xPerturb)
+      end do
+   enddo
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   uPerturbTrans = 0.2_R8Ki*Pi_R8/180.0_R8Ki * max(real(TwoNorm(InitInp%NacRefPos - InitInp%TwrBaseRefPos),R8Ki), 1.0_R8Ki)
+   uPerturbAng = 0.2_R8Ki * Pi_R8 / 180.0_R8Ki
+   uPerturbs = [uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng, uPerturbTrans, uPerturbAng]
+
+   call MV_AddVar(InitOut%Vars%u, "Yaw", FieldScalar, DatLoc(SrvD_u_Yaw), Flags=VF_2PI, LinNames=['Yaw, rad'])
+
+   call MV_AddVar(InitOut%Vars%u, "YawRate", FieldScalar, DatLoc(SrvD_u_YawRate), LinNames=['YawRate, rad/s'])
+
+   call MV_AddVar(InitOut%Vars%u, "HSS_Spd", FieldScalar, DatLoc(SrvD_u_HSS_Spd), LinNames=['HSS_Spd, rad/s'])
+
+   ! Structural controllers
+   do j = 1, p%NumBStC
+      do i = 1, p%NumBl
+         call MV_AddMeshVar(InitOut%Vars%u, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), MotionFields, &
+                              DatLoc(SrvD_u_BStCMotionMesh, i, j), &
+                              Mesh=u%BStCMotionMesh(i, j), &
+                              Perturbs=uPerturbs)
+      end do
+   end do
+
+   do j = 1, p%NumNStC
+      call MV_AddMeshVar(InitOut%Vars%u, 'Nacelle StC '//Num2LStr(j), MotionFields, &
+                           DatLoc(SrvD_u_NStCMotionMesh, j), &
+                           Mesh=u%NStCMotionMesh(j), &
+                           Perturbs=uPerturbs)
+   enddo
+
+   do j = 1, p%NumTStC
+      call MV_AddMeshVar(InitOut%Vars%u, 'Tower StC '//Num2LStr(j), MotionFields, &
+                           DatLoc(SrvD_u_TStCMotionMesh, j), &
+                           Mesh=u%TStCMotionMesh(j), &
+                           Perturbs=uPerturbs)
+   enddo
+
+   do j = 1, p%NumSStC
+      call MV_AddMeshVar(InitOut%Vars%u, 'Substructure StC '//Num2LStr(j), MotionFields, &
+                           DatLoc(SrvD_u_SStCMotionMesh, j), &
+                           Mesh=u%SStCMotionMesh(j), &
+                           Perturbs=uPerturbs)
+   enddo
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   call MV_AddVar(InitOut%Vars%y, "BlPitchCom", FieldScalar, &
+                  DatLoc(SrvD_y_BlPitchCom), &
+                  Flags=VF_RotFrame + VF_2PI, &
+                  Num=size(y%BlPitchCom), &
+                  LinNames=[('BlPitchCom('//trim(Num2LStr(i))//'), rad', i = 1, size(y%BlPitchCom))])
+
+   call MV_AddVar(InitOut%Vars%y, "YawMom", FieldScalar, &
+                  DatLoc(SrvD_y_YawMom), &
+                  LinNames=['YawMom, Nm'])
+
+   call MV_AddVar(InitOut%Vars%y, "GenTrq", FieldScalar, &
+                  DatLoc(SrvD_y_GenTrq), &
+                  LinNames=['GenTrq, Nm'])
+
+   call MV_AddVar(InitOut%Vars%y, "ElecPwr", FieldScalar, &
+                  DatLoc(SrvD_y_ElecPwr), &
+                  LinNames=['ElecPwr, W'])
+
+   ! Structural controllers
+   if (p%NumBStC > 0) then
+      do j = 1, p%NumBStC
+         do i = 1, p%NumBl
+            call MV_AddMeshVar(InitOut%Vars%y, 'Blade '//trim(Num2LStr(i))//' StC '//Num2LStr(j), LoadFields, &
+                               DatLoc(SrvD_y_BStCLoadMesh, i, j), &
+                               Mesh=y%BStCLoadMesh(i,j))
+         end do
+      end do
+   end if
+
+   if (p%NumNStC > 0) then
+      do j = 1, p%NumNStC
+         call MV_AddMeshVar(InitOut%Vars%y, 'Nacelle StC '//Num2LStr(j), LoadFields, &
+                            DatLoc(SrvD_y_NStCLoadMesh, j), &
+                            Mesh=y%NStCLoadMesh(j))
+      enddo
+   end if
+
+   if (p%NumTStC > 0) then
+      do j = 1, p%NumTStC
+         call MV_AddMeshVar(InitOut%Vars%y, 'Tower StC '//Num2LStr(j), LoadFields, &
+                            DatLoc(SrvD_y_TStCLoadMesh, j), &
+                            Mesh=y%TStCLoadMesh(j))
+      enddo
+   end if
+
+   if (p%NumSStC > 0) then
+      do j = 1, p%NumSStC
+         call MV_AddMeshVar(InitOut%Vars%y, 'Substructure StC '//Num2LStr(j), LoadFields, &
+                            DatLoc(SrvD_y_SStCLoadMesh, j), &
+                            Mesh=y%SStCLoadMesh(j))
+      enddo
+   end if
+
+   ! Write Outputs
+   do i = 1, p%NumOuts
+      call MV_AddVar(InitOut%Vars%y, p%OutParam(i)%Name, FieldScalar, &
+                     DatLoc(SrvD_y_WriteOutput), iAry=i, &
+                     Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
+                     LinNames=[trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units], &
+                     Active=(p%OutParam(i)%Indx > 0))
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Jacobian data
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsJac(InitOut%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call SrvD_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call SrvD_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call SrvD_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call SrvD_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   function OutParamFlags(indx) result(flagsRes)
+      integer(IntKi), intent(in) :: indx
+      integer(IntKi)             :: flagsRes
+      integer(IntKi), parameter  :: RotatingFrameIndices(*) = [&
+      BlPitchC, BStC_XQ, BStC_XQD, BStC_YQ, BStC_YQD, BStC_ZQ, BStC_ZQD, &
+      BStC_Fxl, BStC_Fyl, BStC_Fzl, BStC_Mxl, BStC_Myl, BStC_Mzl]
+      if (any(indx == RotatingFrameIndices)) then
+         flagsRes = VF_RotFrame
+      else
+         flagsRes = VF_None
+      end if
+   end function
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Initialize everything needed for linearization
@@ -2420,6 +2654,7 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       INTEGER(IntKi)                                 :: ErrStat2
       CHARACTER(ErrMsgLen)                           :: ErrMsg2
       integer(IntKi)                                 :: j           ! Index to instance of StC for location
+      real(ReKi)                                     :: speedErr
 
          ! Initialize ErrStat
 
@@ -2428,9 +2663,13 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
 
       select case (p%TrimCase)
       case (TrimCase_yaw)
-         xd%CtrlOffset = xd%CtrlOffset + (u%RotSpeed - p%RotSpeedRef) * sign(p%TrimGain, p%YawNeut + xd%CtrlOffset)
+         speedErr = (u%RotSpeed - p%RotSpeedRef) * sign(p%TrimGain, p%YawNeut + xd%CtrlOffset)
+         xd%CtrlIntegral = xd%CtrlIntegral + speedErr
+         xd%CtrlOffset = xd%CtrlIntegral + speedErr * 100.0_ReKi
       case (TrimCase_torque, TrimCase_pitch)
-         xd%CtrlOffset = xd%CtrlOffset + (u%RotSpeed - p%RotSpeedRef) * p%TrimGain
+         speedErr = (u%RotSpeed - p%RotSpeedRef) * p%TrimGain
+         xd%CtrlIntegral = xd%CtrlIntegral + speedErr
+         xd%CtrlOffset = xd%CtrlIntegral + speedErr * 1000.0_ReKi
 !     case default
 !        xd%CtrlOffset = 0.0_ReKi ! same as initialized value
       end select
@@ -4207,256 +4446,7 @@ SUBROUTINE SrvD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrSt
       if (allocated(dZdz)) deallocate(dZdz)
    END IF
 END SUBROUTINE SrvD_JacobianPConstrState
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
-   REAL(DbKi),                         INTENT(IN   )  :: t          !< Time in seconds at operating point
-   TYPE(SrvD_InputType),               INTENT(IN   )  :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(SrvD_ParameterType),           INTENT(IN   )  :: p          !< Parameters
-   TYPE(SrvD_ContinuousStateType),     INTENT(IN   )  :: x          !< Continuous states at operating point
-   TYPE(SrvD_DiscreteStateType),       INTENT(IN   )  :: xd         !< Discrete states at operating point
-   TYPE(SrvD_ConstraintStateType),     INTENT(IN   )  :: z          !< Constraint states at operating point
-   TYPE(SrvD_OtherStateType),          INTENT(IN   )  :: OtherState !< Other states at operating point
-   TYPE(SrvD_OutputType),              INTENT(IN   )  :: y          !< Output at operating point
-   TYPE(SrvD_MiscVarType),             INTENT(INOUT)  :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: u_op(:)    !< values of linearized inputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: y_op(:)    !< values of linearized outputs
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: x_op(:)    !< values of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: xd_op(:)   !< values of linearized discrete states
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT)  :: z_op(:)    !< values of linearized constraint states
 
-   INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (occurs after initial error)
-   CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
-   CHARACTER(*), PARAMETER                            :: RoutineName = 'SrvD_GetOP'
-
-      ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   !..........................................
-   IF ( PRESENT( u_op ) ) THEN
-      call Get_u_op()
-      if (ErrStat >= AbortErrLev)   return
-   END IF
-   !..........................................
-   IF ( PRESENT( y_op ) ) THEN
-      call Get_y_op()
-      if (ErrStat >= AbortErrLev)   return
-   END IF
-   !..........................................
-   IF ( PRESENT( x_op ) ) THEN
-      call Get_x_op()
-      if (ErrStat >= AbortErrLev)   return
-   END IF
-   !..........................................
-   IF ( PRESENT( dx_op ) ) THEN
-      call Get_dx_op()
-      if (ErrStat >= AbortErrLev)   return
-   END IF
-   !..........................................
-   IF ( PRESENT( xd_op ) ) THEN
-   END IF
-   !..........................................
-   IF ( PRESENT( z_op ) ) THEN
-   END IF
-CONTAINS
-   logical function Failed()
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function Failed
-
-   !> Get the operating point inputs and pack
-   subroutine Get_u_op()
-      integer(IntKi)    :: nu,i,j,index_next
-
-      if (.not. allocated(u_op)) then
-            ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
-         nu = p%Jac_nu                 &
-            + p%NumBStC  * 6 * p%NumBl &  ! Jac_nu has 3 for Orientation, but we need 9 at each BStC instance on each blade
-            + p%NumNStC  * 6           &  ! Jac_nu has 3 for Orientation, but we need 9 at each NStC instance
-            + p%NumTStC  * 6           &  ! Jac_nu has 3 for Orientation, but we need 9 at each TStC instance
-            + p%NumSStC  * 6              ! Jac_nu has 3 for Orientation, but we need 9 at each SStC instance
-         CALL AllocAry( u_op, nu, 'u_op', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-      end if
-
-      index_next=1
-      ! Fixed inputs
-      u_op(index_next) = u%Yaw;        index_next = index_next + 1
-      u_op(index_next) = u%YawRate;    index_next = index_next + 1
-      u_op(index_next) = u%HSS_Spd;    index_next = index_next + 1
-
-      ! StC related inputs
-      do j=1,p%NumBStC     ! Blade
-         do i=1,p%NumBl
-            call PackMotionMesh( u%BStCMotionMesh(i,j), u_op, index_next )
-         enddo
-      enddo
-      do j=1,p%NumNStC     ! Nacelle
-         call PackMotionMesh( u%NStCMotionMesh(j), u_op, index_next )
-      enddo
-      do j=1,p%NumTStC     ! Tower
-         call PackMotionMesh( u%TStCMotionMesh(j), u_op, index_next )
-      enddo
-      do j=1,p%NumSStC     ! Sub-structure
-         call PackMotionMesh( u%SStCMotionMesh(j), u_op, index_next )
-      enddo
-   end subroutine Get_u_op
-
-   !> Get the operating point outputs and pack
-   subroutine Get_y_op()
-      integer(IntKi)    :: i,j,index_next
-
-      if (.not. allocated(y_op)) then
-         CALL AllocAry( y_op, p%Jac_ny, 'y_op', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-      end if
-
-      index_next=1
-      do i=1,size(y%BlPitchCom)
-         y_op(index_next) = y%BlPitchCom(i)
-         index_next = index_next + 1
-      end do
-
-      y_op(index_next) = y%YawMom;     index_next = index_next + 1
-      y_op(index_next) = y%GenTrq;     index_next = index_next + 1
-      y_op(index_next) = y%ElecPwr;    index_next = index_next + 1
-
-      ! StC related outputs
-      do j=1,p%NumBStC     ! Blade
-         do i=1,p%NumBl
-            call PackLoadMesh( y%BStCLoadMesh(i,j), y_op, index_next )
-         enddo
-      enddo
-      do j=1,p%NumNStC     ! Nacelle
-         call PackLoadMesh( y%NStCLoadMesh(j), y_op, index_next )
-      enddo
-      do j=1,p%NumTStC     ! Tower
-         call PackLoadMesh( y%TStCLoadMesh(j), y_op, index_next )
-      enddo
-      do j=1,p%NumSStC     ! Sub-structure
-         call PackLoadMesh( y%SStCLoadMesh(j), y_op, index_next )
-      enddo
-
-      ! y%outputs
-      do i=1,p%NumOuts
-         y_op(index_next) = y%WriteOutput(i)
-         index_next = index_next + 1
-      end do
-   end subroutine Get_y_op
-
-   !> Get the operating point continuous states and pack
-   subroutine Get_x_op()
-      integer(IntKi)    :: i,j,k,idx
-
-      if (.not. allocated(x_op)) then
-         CALL AllocAry( x_op, p%Jac_nx, 'x_op', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-      end if
-      idx = 0
-      do j=1,p%NumBStC     ! Blade StC -- displacement and velocity state
-         do k=1,p%NumBl
-            x_op(idx+1) = x%BStC(j)%StC_x(1,k)    !  x     --> x%BStC(j)%StC_x(1,k)
-            x_op(idx+2) = x%BStC(j)%StC_x(3,k)    !  y     --> x%BStC(j)%StC_x(3,k)
-            x_op(idx+3) = x%BStC(j)%StC_x(5,k)    !  z     --> x%BStC(j)%StC_x(5,k)
-            x_op(idx+4) = x%BStC(j)%StC_x(2,k)    !  dx/dt --> x%BStC(j)%StC_x(2,k)
-            x_op(idx+5) = x%BStC(j)%StC_x(4,k)    !  dy/dt --> x%BStC(j)%StC_x(4,k)
-            x_op(idx+6) = x%BStC(j)%StC_x(6,k)    !  dz/dt --> x%BStC(j)%StC_x(6,k)
-            idx = idx + 6
-         enddo
-      enddo
-      do j=1,p%NumNStC     ! Nacelle StC -- displacement and velocity state
-         x_op(idx+1) = x%NStC(j)%StC_x(1,1)       !  x     --> x%NStC(j)%StC_x(1,1)
-         x_op(idx+2) = x%NStC(j)%StC_x(3,1)       !  y     --> x%NStC(j)%StC_x(3,1)
-         x_op(idx+3) = x%NStC(j)%StC_x(5,1)       !  z     --> x%NStC(j)%StC_x(5,1)
-         x_op(idx+4) = x%NStC(j)%StC_x(2,1)       !  dx/dt --> x%NStC(j)%StC_x(2,1)
-         x_op(idx+5) = x%NStC(j)%StC_x(4,1)       !  dy/dt --> x%NStC(j)%StC_x(4,1)
-         x_op(idx+6) = x%NStC(j)%StC_x(6,1)       !  dz/dt --> x%NStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      do j=1,p%NumTStC     ! Tower StC -- displacement and velocity state
-         x_op(idx+1) = x%TStC(j)%StC_x(1,1)       !  x     --> x%TStC(j)%StC_x(1,1)
-         x_op(idx+2) = x%TStC(j)%StC_x(3,1)       !  y     --> x%TStC(j)%StC_x(3,1)
-         x_op(idx+3) = x%TStC(j)%StC_x(5,1)       !  z     --> x%TStC(j)%StC_x(5,1)
-         x_op(idx+4) = x%TStC(j)%StC_x(2,1)       !  dx/dt --> x%TStC(j)%StC_x(2,1)
-         x_op(idx+5) = x%TStC(j)%StC_x(4,1)       !  dy/dt --> x%TStC(j)%StC_x(4,1)
-         x_op(idx+6) = x%TStC(j)%StC_x(6,1)       !  dz/dt --> x%TStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      do j=1,p%NumSStC     ! Substructure StC -- displacement and velocity state
-         x_op(idx+1) = x%SStC(j)%StC_x(1,1)       !  x     --> x%SStC(j)%StC_x(1,1)
-         x_op(idx+2) = x%SStC(j)%StC_x(3,1)       !  y     --> x%SStC(j)%StC_x(3,1)
-         x_op(idx+3) = x%SStC(j)%StC_x(5,1)       !  z     --> x%SStC(j)%StC_x(5,1)
-         x_op(idx+4) = x%SStC(j)%StC_x(2,1)       !  dx/dt --> x%SStC(j)%StC_x(2,1)
-         x_op(idx+5) = x%SStC(j)%StC_x(4,1)       !  dy/dt --> x%SStC(j)%StC_x(4,1)
-         x_op(idx+6) = x%SStC(j)%StC_x(6,1)       !  dz/dt --> x%SStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-   end subroutine Get_x_op
-
-   !> Get the operating point continuous states derivatives and pack
-   !!    rather than copy the logic in CalcContStateDeriv for the StCs, we'll just
-   !!    call it directly
-   subroutine Get_dx_op()
-      integer(IntKi)                   :: i,j,k,idx
-      type(SrvD_ContinuousStateType)   :: dx          !< derivative of continuous states at operating point
-
-      if (.not. allocated(dx_op)) then
-         CALL AllocAry( dx_op, p%Jac_nx, 'dx_op', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
-      end if
-      call SrvD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 )
-      if (Failed()) then
-         call SrvD_DestroyContState( dx, ErrStat2, ErrMsg2)
-         return
-      end if
-      idx = 0
-      do j=1,p%NumBStC     ! Blade StC -- displacement and velocity state
-         do k=1,p%NumBl
-            dx_op(idx+1) = dx%BStC(j)%StC_x(1,k)   !  x     --> dx%BStC(j)%StC_x(1,k)
-            dx_op(idx+2) = dx%BStC(j)%StC_x(3,k)   !  y     --> dx%BStC(j)%StC_x(3,k)
-            dx_op(idx+3) = dx%BStC(j)%StC_x(5,k)   !  z     --> dx%BStC(j)%StC_x(5,k)
-            dx_op(idx+4) = dx%BStC(j)%StC_x(2,k)   !  dx/dt --> dx%BStC(j)%StC_x(2,k)
-            dx_op(idx+5) = dx%BStC(j)%StC_x(4,k)   !  dy/dt --> dx%BStC(j)%StC_x(4,k)
-            dx_op(idx+6) = dx%BStC(j)%StC_x(6,k)   !  dz/dt --> dx%BStC(j)%StC_x(6,k)
-            idx = idx + 6
-         enddo
-      enddo
-      do j=1,p%NumNStC     ! Nacelle StC -- displacement and velocity state
-         dx_op(idx+1) = dx%NStC(j)%StC_x(1,1)      !  x     --> dx%NStC(j)%StC_x(1,1)
-         dx_op(idx+2) = dx%NStC(j)%StC_x(3,1)      !  y     --> dx%NStC(j)%StC_x(3,1)
-         dx_op(idx+3) = dx%NStC(j)%StC_x(5,1)      !  z     --> dx%NStC(j)%StC_x(5,1)
-         dx_op(idx+4) = dx%NStC(j)%StC_x(2,1)      !  dx/dt --> dx%NStC(j)%StC_x(2,1)
-         dx_op(idx+5) = dx%NStC(j)%StC_x(4,1)      !  dy/dt --> dx%NStC(j)%StC_x(4,1)
-         dx_op(idx+6) = dx%NStC(j)%StC_x(6,1)      !  dz/dt --> dx%NStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      do j=1,p%NumTStC     ! Tower StC -- displacement and velocity state
-         dx_op(idx+1) = dx%TStC(j)%StC_x(1,1)      !  x     --> dx%TStC(j)%StC_x(1,1)
-         dx_op(idx+2) = dx%TStC(j)%StC_x(3,1)      !  y     --> dx%TStC(j)%StC_x(3,1)
-         dx_op(idx+3) = dx%TStC(j)%StC_x(5,1)      !  z     --> dx%TStC(j)%StC_x(5,1)
-         dx_op(idx+4) = dx%TStC(j)%StC_x(2,1)      !  dx/dt --> dx%TStC(j)%StC_x(2,1)
-         dx_op(idx+5) = dx%TStC(j)%StC_x(4,1)      !  dy/dt --> dx%TStC(j)%StC_x(4,1)
-         dx_op(idx+6) = dx%TStC(j)%StC_x(6,1)      !  dz/dt --> dx%TStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      do j=1,p%NumSStC     ! Substructure StC -- displacement and velocity state
-         dx_op(idx+1) = dx%SStC(j)%StC_x(1,1)      !  x     --> dx%SStC(j)%StC_x(1,1)
-         dx_op(idx+2) = dx%SStC(j)%StC_x(3,1)      !  y     --> dx%SStC(j)%StC_x(3,1)
-         dx_op(idx+3) = dx%SStC(j)%StC_x(5,1)      !  z     --> dx%SStC(j)%StC_x(5,1)
-         dx_op(idx+4) = dx%SStC(j)%StC_x(2,1)      !  dx/dt --> dx%SStC(j)%StC_x(2,1)
-         dx_op(idx+5) = dx%SStC(j)%StC_x(4,1)      !  dy/dt --> dx%SStC(j)%StC_x(4,1)
-         dx_op(idx+6) = dx%SStC(j)%StC_x(6,1)      !  dz/dt --> dx%SStC(j)%StC_x(6,1)
-         idx = idx + 6
-      enddo
-      ! clean up
-      call SrvD_DestroyContState( dx, ErrStat2, ErrMsg2)
-   end subroutine Get_dx_op
-
-END SUBROUTINE SrvD_GetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4727,6 +4717,11 @@ CONTAINS
    !-------------------------------------------------------------------------------------------------------------------------------
    !> This routine performs the checks on inputs for the high-speed shaft brake.
    SUBROUTINE HSSBr_ValidateData( )
+
+      ! TODO: Implement brake in tight-coupling scheme
+      IF (InputFileData%HSSBrMode /= ControlMode_NONE) then
+         CALL SetErrStat( ErrID_Fatal, 'HSSBrMode must be 0 for tight-coupling.', ErrStat, ErrMsg, RoutineName )
+      end if
 
             ! Some special checks based on whether inputs will come from external source (e.g., Simulink, LabVIEW)
       IF ( .NOT. Cmpl4SFun .AND. .NOT. Cmpl4LV ) THEN

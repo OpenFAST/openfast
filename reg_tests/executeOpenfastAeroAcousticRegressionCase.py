@@ -37,7 +37,7 @@ import pass_fail
 from errorPlotting import exportCaseSummary
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
+excludeExt=['.ech','.yaml','.sum','.log']
 
 ##### Main program
 
@@ -96,7 +96,8 @@ if not os.path.isdir(inputsDirectory):
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
 if not os.path.isdir(testBuildDirectory):
-    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, 
+                 renameExtDict={'.out':'.ref.out', '.outb':'.ref.outb'})
 
 ### Run openfast on the test case
 if not noExec:

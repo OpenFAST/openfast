@@ -89,7 +89,7 @@ contains
    !!  and has the ability to provide a sort of traceback message of called
    !!  routines (if this is called consistently).
    !!  Modules in the FAST framework are recommended to use it.
-   subroutine SetErrStat (ErrStatLcl, ErrMessLcl, ErrStat, ErrMess, RoutineName)
+   pure subroutine SetErrStat (ErrStatLcl, ErrMessLcl, ErrStat, ErrMess, RoutineName)
       
       INTEGER(IntKi), INTENT(IN   )  :: ErrStatLcl   ! Error status of the operation
       CHARACTER(*),   INTENT(IN   )  :: ErrMessLcl   ! Error message if ErrStat /= ErrID_None

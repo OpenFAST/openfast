@@ -66,6 +66,7 @@ typedef	^	InitInputType	ReKi	URefLid      	 -   -	-	"Reference average wind spee
 typedef  ^  InitOutputType    CHARACTER(ChanLen)      WriteOutputHdr    {:} - -  "Names of the output-to-file channels"   -
 typedef  ^  InitOutputType    CHARACTER(ChanLen)      WriteOutputUnt    {:} - -  "Units of the output-to-file channels"   -
 typedef  ^  InitOutputType    ProgDesc                Ver               -   - -  "This module's name, version, and date"   -
+typedef  ^  InitOutputType    ModVarsType             Vars              -   - -  "Module Variables"   -
 typedef  ^  InitOutputType    IntKi                   CouplingScheme    -   - -  "Switch that indicates if a particular coupling scheme is required"   -
 typedef  ^  InitOutputType    Logical                 UseHSSBrake       -   - -  "flag to determine if high-speed shaft brake is potentially used (true=yes)"   -
 # Linearization
@@ -288,6 +289,7 @@ typedef	^	ContinuousStateType	StC_ContinuousStateType	SStC	{:}	-	-	"StC module i
 
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	ReKi	CtrlOffset	-	-	-	"Controller offset parameter" N-m
+typedef	^	DiscreteStateType	ReKi	CtrlIntegral	-	0	-	"Controller integral parameter" N-m
 #typedef	^	DiscreteStateType	ReKi	BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	DiscreteStateType	StC_DiscreteStateType	BStC	{:}	-	-	"StC module states - blade"	-
 typedef	^	DiscreteStateType	StC_DiscreteStateType	NStC	{:}	-	-	"StC module states - nacelle"	-
@@ -333,27 +335,6 @@ typedef	^	SrvD_ModuleMapType	MeshMapType	BStC_Frc2_y_BStC	{:}{:}	-	-	"Map loads:
 typedef	^	SrvD_ModuleMapType	MeshMapType	NStC_Frc2_y_NStC	{:}	-	-	"Map loads: m%y_NStCLoadMesh to y%NStC%LoadMesh"
 typedef	^	SrvD_ModuleMapType	MeshMapType	TStC_Frc2_y_TStC	{:}	-	-	"Map loads: m%y_TStCLoadMesh to y%TStC%LoadMesh"
 typedef	^	SrvD_ModuleMapType	MeshMapType	SStC_Frc2_y_SStC	{:}	-	-	"Map loads: m%y_SStCLoadMesh to y%SStC%LoadMesh"
-
-# ..... Misc Variables ................................................................................................................
-typedef	^	MiscVarType	DbKi	LastTimeCalled	-	-	-	"last time the CalcOutput/Bladed DLL was called"	s
-typedef	^	MiscVarType	BladedDLLType	dll_data	-	-	-	"data used for Bladed DLL"	-
-typedef	^	MiscVarType	logical	FirstWarn	-	-	-	"Whether or not this is the first warning about the DLL being called without Explicit-Loose coupling."	-
-typedef	^	MiscVarType	DbKi	LastTimeFiltered	-	-	-	"last time the CalcOutput/Bladed DLL was filtered"	s
-typedef	^	MiscVarType	ReKi	xd_BlPitchFilter	{:}	-	-	"blade pitch filter"	-
-typedef	^	MiscVarType	StC_MiscVarType	BStC	{:}	-	-	"StC module misc vars - blade"	-
-typedef	^	MiscVarType	StC_MiscVarType	NStC	{:}	-	-	"StC module misc vars - nacelle"	-
-typedef	^	MiscVarType	StC_MiscVarType	TStC	{:}	-	-	"StC module misc vars - tower"	-
-typedef	^	MiscVarType	StC_MiscVarType	SStC	{:}	-	-	"StC module misc vars - substructure"	-
-typedef	^	MiscVarType	StC_InputType	u_BStC	{:}{:}	-	-	"StC module inputs - blade          size:(interpOrder,NumBStC)"	-
-typedef	^	MiscVarType	StC_InputType	u_NStC	{:}{:}	-	-	"StC module inputs - nacelle        size:(interpOrder,NumNStC)"	-
-typedef	^	MiscVarType	StC_InputType	u_TStC	{:}{:}	-	-	"StC module inputs - tower          size:(interpOrder,NumTStC)"	-
-typedef	^	MiscVarType	StC_InputType	u_SStC	{:}{:}	-	-	"StC module inputs - substructure   size:(interpOrder,NumSStC)"	-
-typedef	^	MiscVarType	StC_OutputType	y_BStC	{:}	-	-	"StC module outputs - blade"	-
-typedef	^	MiscVarType	StC_OutputType	y_NStC	{:}	-	-	"StC module outputs - nacelle"	-
-typedef	^	MiscVarType	StC_OutputType	y_TStC	{:}	-	-	"StC module outputs - tower"	-
-typedef	^	MiscVarType	StC_OutputType	y_SStC	{:}	-	-	"StC module outputs - substructure"	-
-typedef	^	MiscVarType	SrvD_ModuleMapType	SrvD_MeshMap	-	-	-	"Mesh mapping from inputs/output meshes to StC input/output meshes"	-
-typedef	^	MiscVarType	IntKi	PrevTstepNcall	-	-1	-	"Previous timestep N for tracking when in predictor/corrector loop for setting StC u values"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -489,7 +470,6 @@ typedef	^	ParameterType	ReKi	PulseSpacing	 -   -	-	"Distance between range gates
 typedef	^	ParameterType	ReKi	URefLid     	 -   -	-	"Reference average wind speed for the lidar"  m/s
 
 
-
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
 typedef	^	InputType	ReKi	BlPitch	{:}	-	2pi	"Current blade pitch angles"	radians
@@ -564,3 +544,30 @@ typedef	^	OutputType	MeshType	BStCLoadMesh	{:}{:}	-	-	"StC module blade        o
 typedef	^	OutputType	MeshType	NStCLoadMesh	{:}	-	-	"StC module nacelle      output load mesh" -
 typedef	^	OutputType	MeshType	TStCLoadMesh	{:}	-	-	"StC module tower        output load mesh" -
 typedef	^	OutputType	MeshType	SStCLoadMesh	{:}	-	-	"StC module substructure output load mesh" -
+
+
+# ..... Misc Variables ................................................................................................................
+typedef	^	MiscVarType	DbKi	LastTimeCalled	-	-	-	"last time the CalcOutput/Bladed DLL was called"	s
+typedef	^	MiscVarType	BladedDLLType	dll_data	-	-	-	"data used for Bladed DLL"	-
+typedef	^	MiscVarType	logical	FirstWarn	-	-	-	"Whether or not this is the first warning about the DLL being called without Explicit-Loose coupling."	-
+typedef	^	MiscVarType	DbKi	LastTimeFiltered	-	-	-	"last time the CalcOutput/Bladed DLL was filtered"	s
+typedef	^	MiscVarType	ReKi	xd_BlPitchFilter	{:}	-	-	"blade pitch filter"	-
+typedef	^	MiscVarType	StC_MiscVarType	BStC	{:}	-	-	"StC module misc vars - blade"	-
+typedef	^	MiscVarType	StC_MiscVarType	NStC	{:}	-	-	"StC module misc vars - nacelle"	-
+typedef	^	MiscVarType	StC_MiscVarType	TStC	{:}	-	-	"StC module misc vars - tower"	-
+typedef	^	MiscVarType	StC_MiscVarType	SStC	{:}	-	-	"StC module misc vars - substructure"	-
+typedef	^	MiscVarType	StC_InputType	u_BStC	{:}{:}	-	-	"StC module inputs - blade          size:(interpOrder,NumBStC)"	-
+typedef	^	MiscVarType	StC_InputType	u_NStC	{:}{:}	-	-	"StC module inputs - nacelle        size:(interpOrder,NumNStC)"	-
+typedef	^	MiscVarType	StC_InputType	u_TStC	{:}{:}	-	-	"StC module inputs - tower          size:(interpOrder,NumTStC)"	-
+typedef	^	MiscVarType	StC_InputType	u_SStC	{:}{:}	-	-	"StC module inputs - substructure   size:(interpOrder,NumSStC)"	-
+typedef	^	MiscVarType	StC_OutputType	y_BStC	{:}	-	-	"StC module outputs - blade"	-
+typedef	^	MiscVarType	StC_OutputType	y_NStC	{:}	-	-	"StC module outputs - nacelle"	-
+typedef	^	MiscVarType	StC_OutputType	y_TStC	{:}	-	-	"StC module outputs - tower"	-
+typedef	^	MiscVarType	StC_OutputType	y_SStC	{:}	-	-	"StC module outputs - substructure"	-
+typedef	^	MiscVarType	SrvD_ModuleMapType	SrvD_MeshMap	-	-	-	"Mesh mapping from inputs/output meshes to StC input/output meshes"	-
+typedef	^	MiscVarType	IntKi	PrevTstepNcall	-	-1	-	"Previous timestep N for tracking when in predictor/corrector loop for setting StC u values"	-
+typedef ^   MiscVarType ModJacType  Jac -   -   -   "Jacobian matrices and arrays corresponding to module variables"
+typedef	^	MiscVarType	SrvD_ContinuousStateType	x_perturb	-	-	-	"Continuous state for perturbation in Jacobian routines"	-
+typedef	^	MiscVarType	SrvD_ContinuousStateType	dxdt_lin	-	-	-	"Continuous state derivative for output in Jacobian routines"	-
+typedef	^	MiscVarType	SrvD_InputType	u_perturb	-	-	-	"Input for perturbation in Jacobian routines"	-
+typedef	^	MiscVarType	SrvD_OutputType	y_lin	-	-	-	"Output for output in Jacobian routines"	-

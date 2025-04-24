@@ -148,22 +148,8 @@ jobs:
       - name: Install Intel oneAPI BaseKit (Windows)
         shell: cmd
         env:
-          URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/7dff44ba-e3af-4448-841c-0d616c8da6e7/w_BaseKit_p_2024.1.0.595_offline.exe
-          COMPONENTS: intel.oneapi.win.mkl.devel
-        run: |
-          curl.exe --output %TEMP%\webimage.exe --url %URL% --retry 5 --retry-delay 5
-          start /b /wait %TEMP%\webimage.exe -s -x -f webimage_extracted --log extract.log
-          del %TEMP%\webimage.exe
-          webimage_extracted\bootstrapper.exe -s --action install --components=%COMPONENTS% --eula=accept -p=NEED_VS2017_INTEGRATION=0 -p=NEED_VS2019_INTEGRATION=0 -p=NEED_VS2022_INTEGRATION=1 --log-dir=.
-          set installer_exit_code=%ERRORLEVEL%
-          rd /s/q "webimage_extracted"
-          exit /b %installer_exit_code%
-
-      - name: Install Intel oneAPI HPCKit (Windows)
-        shell: cmd
-        env:
-          URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95a3b26-fc45-496c-833b-df08b10297b9/w_HPCKit_p_2024.1.0.561_offline.exe
-          COMPONENTS: intel.oneapi.win.ifort-compiler
+          URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/0ba263f5-de00-4e91-a780-fdb9e131c1e8/intel-oneapi-hpc-toolkit-2025.1.0.665_offline.exe
+          COMPONENTS: intel.oneapi.win.ifort-compiler:intel.oneapi.win.mkl.devel
         run: |
           curl.exe --output %TEMP%\webimage.exe --url %URL% --retry 5 --retry-delay 5
           start /b /wait %TEMP%\webimage.exe -s -x -f webimage_extracted --log extract.log
