@@ -449,7 +449,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
        CALL SDOUT_OpenOutput( SD_ProgDesc, Init%RootName, p, InitOut, ErrStat2, ErrMsg2 ); if(Failed()) return
    END IF
       
-   if (InitInput%Linearize) then
+   if (InitInput%Linearize .or. (p%IntMethod .eq. 4) ) then
      call SD_Init_Jacobian(Init, p, u, y, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
    endif
    
@@ -2047,7 +2047,7 @@ END SUBROUTINE SD_RK4
 !!   Thus x_n+1 = x_n - J^-1 *dt/2 * (2*A*x_n + B *(u_n + u_n+1) +2*Fx)
 !!  or    J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)
 SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-   USE NWTC_LAPACK, only: LAPACK_getrs
+   USE NWTC_LAPACK, only: LAPACK_gels
    REAL(DbKi),                     INTENT(IN   )   :: t              !< Current simulation time in seconds
    INTEGER(IntKi),                 INTENT(IN   )   :: n              !< time step number
    TYPE(SD_InputType),             INTENT(INOUT)   :: u(:)           !< Inputs at t
@@ -2062,13 +2062,17 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    ! local variables
    TYPE(SD_InputType)                              :: u_interp       ! interpolated value of inputs 
-   REAL(ReKi)                                      :: xq(2*p%nDOFM) !temporary states (qm and qmdot only)
-   REAL(ReKi)                                      :: udotdot_TP2(6) ! temporary copy of udotdot_TP
+   TYPE(SD_ContinuousStateType)                    :: dxdt, dxdt_1
+   TYPE(SD_OutputType)                             :: y
+   REAL(R8Ki)                                      :: xq(2*p%Jac_nx,1) !temporary states (qm and qmdot only)
+   REAL(R8Ki), ALLOCATABLE                         :: dxdotdx(:,:)
+   REAL(R8Ki)                                      :: AM2Jac(2*p%Jac_nx,2*p%Jac_nx)
+   INTEGER(IntKi)                                  :: idx, i, k
    INTEGER(IntKi)                                  :: ErrStat2
    CHARACTER(ErrMsgLen)                            :: ErrMsg2
 
    ErrStat = ErrID_None
-   ErrMsg  = "" 
+   ErrMsg  = ""
 
    ! Initialize interim vars
    CALL SD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2,ErrMsg2);CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
@@ -2076,46 +2080,79 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    !Start by getting u_n and u_n+1 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, m%F_L, ErrStat2, ErrMsg2, ExtraMoment=(.not.p%Floating), RotateLoads=(p%Floating))
-   m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   if (p%Floating) then
-      ! >>> Rotate All - udotdot_TP to body coordinates
-      m%udotdot_TP(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(1:3)) 
-      m%udotdot_TP(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), m%udotdot_TP(4:6)) 
-   endif
-                
-   ! extrapolate u to find u_interp = u(t + dt)=u_n+1
+
+   ! Estimate the Jacobian matrix of dx_dot/dx numerically
+   CALL SD_JacobianPContState( t, u_interp, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dXdx=dxdotdx)
+
+   ! Get the left-hand-side matrix AM2Jac = I - 0.5 * dt * dx_dot/dx
+   AM2Jac = - 0.5 * p%SDDeltaT * dxdotdx
+   do i = 1,2*p%Jac_nx
+      AM2Jac(i,i) = AM2Jac(i,i) + 1
+   end do
+
+   ! Compute the right-hand side xq = dt * ( x_dot(u_n,x_n) + x_dot(u_n+1,x_n) ) / 2
+   CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, m%F_L2, ErrStat2, ErrMsg2, ExtraMoment=(.not.p%Floating), RotateLoads=(p%Floating))
-   udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   if (p%Floating) then
-      ! >>> Rotate All - udotdot_TP to body coordinates
-      udotdot_TP2(1:3) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(1:3)) 
-      udotdot_TP2(4:6) = matmul(u_interp%TPMesh%Orientation(:,:,1), udotdot_TP2(4:6)) 
-   endif
-   
-   ! calculate (u_n + u_n+1)/2
-   udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
-   m%F_L2      = 0.5_ReKi * ( m%F_L2      + m%F_L        )
-          
-   ! set xq = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
-   xq(        1:  p%nDOFM)=p%SDDeltaT * x%qmdot                                                                                     !upper portion of array
-   xq(1+p%nDOFM:2*p%nDOFM)=p%SDDeltaT * (-p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(m%F_L2,p%PhiM ))  !lower portion of array
-   ! note: matmul(F_L2,p%PhiM  ) = matmul(p%PhiM_T,F_L2) because F_L2 is 1-D
-             
+   CALL SD_CalcContStateDeriv( t+p%SDDeltaT, u_interp, p, x, xd, z, OtherState, m, dxdt_1, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
+   if (p%TP1IsRBRefPt) then
+      do i = 1,6
+         xq(i,1) = 0.5 * ( dxdt%qR(i  ) + dxdt_1%qR(i  ) )
+      end do
+      do i = 7,p%Jac_nx
+         xq(i,1) = 0.5 * ( dxdt%qm(i-6) + dxdt_1%qm(i-6) )
+      end do
+      do i = 1,6
+         xq(i+p%Jac_nx,1) = 0.5 * ( dxdt%qRdot(i  ) + dxdt_1%qRdot(i  ) )
+      end do
+      do i = 7,p%Jac_nx
+         xq(i+p%Jac_nx,1) = 0.5 * ( dxdt%qmdot(i-6) + dxdt_1%qmdot(i-6) )
+      end do
+   else
+      do i = 1,p%Jac_nx
+         xq(i,1) = 0.5 * ( dxdt%qm(i) + dxdt_1%qm(i) )
+      end do
+      do i = 1,p%Jac_nx
+         xq(i+p%Jac_nx,1) = 0.5 * ( dxdt%qmdot(i) + dxdt_1%qmdot(i) )
+      end do
+   end if
+   xq = p%SDDeltaT * xq
+
    !....................................................
    ! Solve for xq: (equivalent to xq= matmul(p%AM2InvJac,xq)
-   ! J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)
-   !....................................................   
-   CALL LAPACK_getrs( TRANS='N',N=SIZE(p%AM2Jac,1),A=p%AM2Jac,IPIV=p%AM2JacPiv, B=xq, ErrStat=ErrStat2, ErrMsg=ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-      
-   ! after the LAPACK solve, xq = ( x_n - x_n+1 ); so now we can solve for x_n+1:
-   x%qm    = x%qm    - xq(        1:  p%nDOFM)
-   x%qmdot = x%qmdot - xq(p%nDOFM+1:2*p%nDOFM)
+   ! J*( x_n - x_n+1 ) = dt * ( x_dot(u_n,x_n) + x_dot(u_n+1,x_n) )/2
+   ! J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx) <- if linear but no longer the case
+   !....................................................
+   CALL LAPACK_gels( 'N', AM2Jac, xq, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
+
+   if (p%TP1IsRBRefPt) then
+      do i = 1,6
+         x%qR(i) = x%qR(i) + xq(i,1)
+      end do
+      do i = 7,p%Jac_nx
+         x%qm(i-6) = x%qm(i-6) + xq(i,1)
+      end do
+      do i = 1,6
+         x%qRdot(i) = x%qRdot(i) + xq(i+p%Jac_nx,1)
+      end do
+      do i = 7,p%Jac_nx
+         x%qmdot(i-6) = x%qmdot(i-6) + xq(i+p%Jac_nx,1)
+      end do
+   else
+      do i = 1,p%Jac_nx
+         x%qm(i) = x%qm(i) + xq(i,1)
+      end do
+      do i = 1,p%Jac_nx
+         x%qmdot(i) = x%qmdot(i) + xq(i+p%Jac_nx,1)
+      end do
+   end if
      
    ! clean up temporary variable(s)
-   CALL SD_DestroyInput(  u_interp, ErrStat, ErrMsg )
-   
+   CALL SD_DestroyInput(   u_interp, ErrStat, ErrMsg )
+   CALL SD_DestroyOutput(         y, ErrStat, ErrMsg )
+   CALL SD_DestroyContState(   dxdt, ErrStat, ErrMsg )
+   CALL SD_DestroyContState( dxdt_1, ErrStat, ErrMsg )
+   if (allocated(dxdotdx)) deallocate(dxdotdx)
+
 END SUBROUTINE SD_AM2
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2972,7 +3009,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
          ENDDO
          ! Now need to factor it:        
          !I think it could be improved and made more efficient if we can say the matrix is positive definite
-         CALL LAPACK_getrf( n, n, p%AM2Jac, p%AM2JacPiv, ErrStat2, ErrMsg2); if(Failed()) return
+         ! CALL LAPACK_getrf( n, n, p%AM2Jac, p%AM2JacPiv, ErrStat2, ErrMsg2); if(Failed()) return
       END IF
       
       freq_max =maxval(OmegaL(1:p%nDOFM))/TwoPi
