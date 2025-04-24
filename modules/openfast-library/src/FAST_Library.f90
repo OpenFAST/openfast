@@ -12,26 +12,41 @@
 MODULE FAST_Data
 
    USE, INTRINSIC :: ISO_C_Binding
-   USE FAST_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_Subs
+   USE NWTC_Library_Types
+   USE FAST_Types
+   USE FAST_Subs, only: ExitThisProgram_T, &
+                        FAST_AdvanceToNextTimeStep_T, &
+                        FAST_CreateCheckpoint_T, &
+                        FAST_InitIOarrays_SubStep_T, &
+                        FAST_InitializeAll_T, &
+                        FAST_Linearize_T, &
+                        FAST_Prework_T, &
+                        FAST_Reset_SubStep_T, &
+                        FAST_RestoreFromCheckpoint_T, &
+                        FAST_Solution0_T, &
+                        FAST_Solution_T, &
+                        FAST_Store_SubStep_T, &
+                        FAST_UpdateStates_T, &
+                        FAST_WriteOutput_T, &
+                        FillOutputAry_T
 
    IMPLICIT  NONE
    SAVE
 
       ! Local parameters:
    REAL(DbKi),     PARAMETER             :: t_initial = 0.0_DbKi     ! Initial time
-   INTEGER(IntKi)                        :: NumTurbines
    INTEGER,        PARAMETER             :: IntfStrLen  = 1025       ! length of strings through the C interface
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 4000        ! Maximum number of outputs
    INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 53       ! Maximum number of initialization values from Simulink
    INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 51
    integer(IntKi), parameter, private    :: iED = 1
-
-
+   
       ! Global (static) data:
-   TYPE(FAST_TurbineType), ALLOCATABLE   :: Turbine(:)               ! Data for each turbine
-   INTEGER(IntKi)                        :: n_t_global               ! simulation time step, loop counter for global (FAST) simulation
-   INTEGER(IntKi)                        :: ErrStat                  ! Error status
-   CHARACTER(IntfStrLen-1)               :: ErrMsg                   ! Error message  (this needs to be static so that it will print in Matlab's mex library)
+   TYPE(FAST_TurbineType), ALLOCATABLE, private :: Turbine(:)               ! Data for each turbine
+   INTEGER(IntKi), private                      :: NumTurbines
+   INTEGER(IntKi), private                      :: n_t_global               ! simulation time step, loop counter for global (FAST) simulation
+   INTEGER(IntKi), private                      :: ErrStat                  ! Error status
+   CHARACTER(IntfStrLen-1), private             :: ErrMsg                   ! Error message  (this needs to be static so that it will print in Matlab's mex library)
 
 contains
 !==================================================================================================================================
