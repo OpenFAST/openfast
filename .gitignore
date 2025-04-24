@@ -35,7 +35,7 @@ __pycache__/*
 build*/
 _build*/
 install/
-vs-build/
+vs-build-old/
 
 # OS and IDE specific files
 .DS_Store

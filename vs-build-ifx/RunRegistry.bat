@@ -148,6 +148,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap  -O "%Output_Loc%"
 GOTO checkError
 
+:InflowWind_Driver
+SET CURR_LOC=%IfW_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap  -O "%Output_Loc%"
+GOTO checkError
+
 :ExternalInflow
 SET CURR_LOC=%ExtInfw_Loc%
 SET Output_Loc=%CURR_LOC%
@@ -199,7 +205,7 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\UnsteadyAero_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
 GOTO checkError
 
-:LD
+:LinDyn
 SET CURR_LOC=%LD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\LinDyn_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
