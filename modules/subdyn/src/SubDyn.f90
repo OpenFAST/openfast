@@ -2277,7 +2277,7 @@ SUBROUTINE SD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       call SD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
       idx = 1
       do k=1,2 ! 1=disp, 2=veloc
-         do i=1,p%Jac_nx ! CB mode
+         do i=1,p%Jac_nx ! CB mode and rigid-body motion
             ! get x_op + delta x
             call SD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             call SD_perturb_x(p, k, i, 1, x_perturb, delta )
@@ -2503,25 +2503,55 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       if (.not. allocated(x_op)) then
          call AllocAry(x_op, p%Jac_nx*2,'x_op',ErrStat2,ErrMsg2); if (Failed()) return
       end if
-      do i=1, p%Jac_nx
-         x_op(i) = x%qm(i)
-      end do
-      do i=1, p%Jac_nx
-         x_op(i+p%nDOFM) = x%qmdot(i)
-      end do
+
+      if (p%TP1IsRBRefPt) then
+         do i=1,6
+            x_op(i) = x%qR(i)
+         end do
+         do i=7,p%Jac_nx
+            x_op(i) = x%qm(i-6)
+         end do
+         do i=1,6
+            x_op(i+p%Jac_nx) = x%qRdot(i)
+         end do
+         do i=7,p%Jac_nx
+            x_op(i+p%Jac_nx) = x%qmdot(i-6)
+         end do
+      else
+         do i=1, p%Jac_nx
+            x_op(i) = x%qm(i)
+         end do
+         do i=1, p%Jac_nx
+            x_op(i+p%Jac_nx) = x%qmdot(i)
+         end do
+      end if
    END IF
    IF ( PRESENT( dx_op ) ) THEN
       if (.not. allocated(dx_op)) then
          call AllocAry(dx_op, p%Jac_nx * 2,'dx_op',ErrStat2,ErrMsg2); if(failed()) return
       end if
       call SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) ; if(Failed()) return
-      idx = 1
-      do i=1, p%Jac_nx
-         dx_op(i) = dx%qm(i)
-      end do
-      do i=1, p%Jac_nx
-         dx_op(i+p%nDOFM) = dx%qmdot(i)
-      end do
+      if (p%TP1IsRBRefPt) then
+         do i=1,6
+            dx_op(i) = dx%qR(i)
+         end do
+         do i=7,p%Jac_nx
+            dx_op(i) = dx%qm(i-6)
+         end do
+         do i=1,6
+            dx_op(i+p%Jac_nx) = dx%qRdot(i)
+         end do
+         do i=7,p%Jac_nx
+            dx_op(i+p%Jac_nx) = dx%qmdot(i-6)
+         end do
+      else
+         do i=1, p%Jac_nx
+            dx_op(i) = dx%qm(i)
+         end do
+         do i=1, p%Jac_nx
+            dx_op(i+p%Jac_nx) = dx%qmdot(i)
+         end do
+      end if
    END IF
    IF ( PRESENT( xd_op ) ) THEN
       ! pass

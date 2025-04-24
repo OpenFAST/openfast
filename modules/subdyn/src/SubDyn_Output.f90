@@ -964,8 +964,13 @@ contains
 
    !> This routine initializes the Jacobian parameters and initialization outputs for the linearized continuous states.
    SUBROUTINE Init_Jacobian_x()
-      INTEGER(IntKi) :: i
-      p%Jac_nx = p%nDOFM ! qm 
+      INTEGER(IntKi) :: i,j
+
+      if (p%TP1IsRBRefPt) then
+         p%Jac_nx = 6   ! qR
+      end if
+      p%Jac_nx = p%Jac_nx + p%nDOFM ! qm
+
       ! allocate space for the row/column names and for perturbation sizes
       CALL AllocAry(InitOut%LinNames_x  , 2*p%Jac_nx, 'LinNames_x'  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
       CALL AllocAry(InitOut%RotFrame_x  , 2*p%Jac_nx, 'RotFrame_x'  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
@@ -976,12 +981,23 @@ contains
       InitOut%RotFrame_x   = .false.
       InitOut%DerivOrder_x = 2
       ! set linearization output names:
-      do i=1,p%Jac_nx
-         InitOut%LinNames_x(i) = 'Craig-Bampton mode '//trim(num2lstr(i))//' amplitude, -'; 
+      i=0
+      if (p%TP1IsRBRefPt) then
+            i = 1; InitOut%LinNames_x(i) = 'Rigid-body surge, m'
+            i = 2; InitOut%LinNames_x(i) = 'Rigid-body sway, m'
+            i = 3; InitOut%LinNames_x(i) = 'Rigid-body heave, m'
+            i = 4; InitOut%LinNames_x(i) = 'Rigid-body roll, rad'
+            i = 5; InitOut%LinNames_x(i) = 'Rigid-body pitch, rad'
+            i = 6; InitOut%LinNames_x(i) = 'Rigid-body yaw, rad'
+      end if
+      do j = 1,p%nDOFM
+         i = i + 1
+         InitOut%LinNames_x(i) = 'Craig-Bampton mode '//trim(num2lstr(j))//' amplitude, -';
       end do
-      do i=1,p%Jac_nx
-         InitOut%LinNames_x(i+p%Jac_nx) = 'First time derivative of '//trim(InitOut%LinNames_x(i))//'/s'
-         InitOut%RotFrame_x(i+p%Jac_nx) = InitOut%RotFrame_x(i)
+      do j=1,p%Jac_nx
+         i = i + 1
+         InitOut%LinNames_x(i) = 'First time derivative of '//trim(InitOut%LinNames_x(i-p%Jac_nx))//'/s'
+         ! InitOut%RotFrame_x(i) = InitOut%RotFrame_x(i-p%Jac_nx)
       end do
    END SUBROUTINE Init_Jacobian_x
 
@@ -1120,10 +1136,26 @@ SUBROUTINE SD_Perturb_x( p, fieldIndx, mode, perturb_sign, x, dx )
    REAL( R8Ki )                , INTENT(  OUT) :: dx           !< amount that specific state was perturbed
    if (fieldIndx==1) then
       dx=p%dx(1)
-      x%qm(mode)    = x%qm(mode)    + dx * perturb_sign
+      if (p%TP1IsRBRefPt) then
+         if (mode > 6) then
+            x%qm(mode-6)    = x%qm(mode-6)    + dx * perturb_sign
+         else
+            x%qR(mode  )    = x%qR(mode  )    + dx * perturb_sign
+         end if
+      else
+         x%qm(mode)    = x%qm(mode)    + dx * perturb_sign
+      end if
    else
       dx=p%dx(2)
-      x%qmdot(mode) = x%qmdot(mode) + dx * perturb_sign
+      if (p%TP1IsRBRefPt) then
+         if (mode > 6) then
+            x%qmdot(mode-6) = x%qmdot(mode-6) + dx * perturb_sign
+         else
+            x%qRdot(mode  ) = x%qRdot(mode  ) + dx * perturb_sign
+         end if
+      else
+         x%qmdot(mode) = x%qmdot(mode) + dx * perturb_sign
+      end if
    end if
 END SUBROUTINE SD_Perturb_x
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1136,13 +1168,30 @@ SUBROUTINE SD_Compute_dX(p, x_p, x_m, delta, dX)
    REAL(R8Ki)                  , INTENT(IN   ) :: delta                            !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
    REAL(R8Ki)                  , INTENT(INOUT) :: dX(:)                            !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
    INTEGER(IntKi) :: i ! loop over modes
-   do i=1,p%Jac_nx
-      dX(i) = x_p%qm(i) - x_m%qm(i)
-   end do
-   do i=1,p%Jac_nx
-      dX(p%Jac_nx+i) = x_p%qmdot(i) - x_m%qmdot(i)
-   end do
+
+   if (p%TP1IsRBRefPt) then
+      do i=1,6
+         dX(i) = x_p%qR(i) - x_m%qR(i)
+      end do
+      do i=7,p%Jac_nx
+         dX(i) = x_p%qm(i-6) - x_m%qm(i-6)
+      end do
+      do i=1,6
+         dX(i+p%Jac_nx) = x_p%qRdot(i) - x_m%qRdot(i)
+      end do
+      do i=7,p%Jac_nx
+         dX(i+p%Jac_nx) = x_p%qmdot(i-6) - x_m%qmdot(i-6)
+      end do
+   else
+      do i=1,p%Jac_nx
+         dX(i) = x_p%qm(i) - x_m%qm(i)
+      end do
+      do i=1,p%Jac_nx
+         dX(p%Jac_nx+i) = x_p%qmdot(i) - x_m%qmdot(i)
+      end do
+   end if
    dX = dX / (2.0_R8Ki*delta)
+
 END SUBROUTINE SD_Compute_dX
 
 END MODULE SubDyn_Output

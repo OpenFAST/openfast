@@ -91,7 +91,7 @@ MODULE SD_FEM
   ! Implementation Flags
   LOGICAL, PARAMETER :: DEV_VERSION    = .false.
   LOGICAL, PARAMETER :: BC_Before_CB   = .true.
-  LOGICAL, PARAMETER :: ANALYTICAL_LIN = .true.
+  LOGICAL, PARAMETER :: ANALYTICAL_LIN = .false.   ! Analytical linearization is no longer valid in general
   LOGICAL, PARAMETER :: GUYAN_RIGID_FLOATING = .true.
 
 
