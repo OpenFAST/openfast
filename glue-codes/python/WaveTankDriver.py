@@ -228,10 +228,10 @@ if __name__=="__main__":
     wavetanklib.allocate_outputs()
 
     dt = 0.1
-    for i in range(2):
+    for i in range(200):
         wavetanklib.calc_output(
             time=i*dt,
-            positions_x=positions_x,
+            positions_x=i*dt, #positions_x,
             positions_y=positions_y,
             positions_z=positions_z,
             rotation_matrix=rotation_matrix,

@@ -486,14 +486,14 @@ SUBROUTINE WaveTank_CalcOutput( &
     ADI_NacOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
     ADI_NacVel_C = Velocities(2,:)
     ADI_NacAcc_C = Accelerations(1,:)
-    ADI_BldRootPos_C = Positions(3,:)
+    ADI_BldRootPos_C = (/ Positions(3,1:3), Positions(3,1:3) /)
     ADI_BldRootOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
     ADI_BldRootVel_C = (/ Velocities(2,1:6), Velocities(2,1:6) /)
     ADI_BldRootAcc_C = (/ Accelerations(1,1:6), Accelerations(1,1:6) /)
-    ADI_MeshPos_C = Positions(3,:)
-    ADI_MeshOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
-    ADI_MeshVel_C = Velocities(2,:)
-    ADI_MeshAcc_C = Accelerations(1,:)
+    ADI_MeshPos_C = (/ Positions(3,1:3), Positions(3,1:3) /)
+    ADI_MeshOri_C = (/ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /)
+    ADI_MeshVel_C = (/ Velocities(2,1:6), Velocities(2,1:6) /)
+    ADI_MeshAcc_C = (/ Accelerations(1,1:6), Accelerations(1,1:6) /)
 
     CALL ADI_C_SetRotorMotion(              &
         iWT_c,                              & !< Wind turbine / rotor number
