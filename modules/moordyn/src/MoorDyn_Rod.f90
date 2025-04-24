@@ -588,7 +588,7 @@ CONTAINS
       Real(DbKi)                 :: nvec(3)        ! local seabed surface normal vector (positive out)
 
       INTEGER(IntKi)                   :: ErrStat2
-      CHARACTER(1024)                   :: ErrMsg2   
+      CHARACTER(ErrMsgLen)             :: ErrMsg2   
 
 
       N = Rod%N

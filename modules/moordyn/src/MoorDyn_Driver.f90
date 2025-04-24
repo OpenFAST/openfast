@@ -51,10 +51,10 @@ PROGRAM MoorDyn_Driver
 
 
    INTEGER(IntKi)                        :: ErrStat          ! Status of error message   
-   CHARACTER(1024)                       :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                  :: ErrMsg           ! Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)                        :: ErrStat2          ! Status of error message   
-   CHARACTER(1024)                       :: ErrMsg2           ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2           ! Error message if ErrStat /= ErrID_None
 
    CHARACTER(1024)                       :: drvrFilename     ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    TYPE(MD_Drvr_InitInput)               :: drvrInitInp      ! Initialization data for the driver program

@@ -934,7 +934,7 @@ CONTAINS
       Real(SiKi)                 :: PDyn_sp  ! single precision
       INTEGER(IntKi)             :: nodeInWater ! Unused by MD
       INTEGER(IntKi)             :: ErrStat2
-      CHARACTER(1024)             :: ErrMsg2   
+      CHARACTER(ErrMsgLen)       :: ErrMsg2   
       
       ! interpolation variables for Waterkin = 1, 2
       INTEGER(IntKi)             :: ix, iy, iz, it        ! indices for interpolation      
@@ -1095,7 +1095,7 @@ CONTAINS
 !      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the Realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
 
       INTEGER(IntKi)                   :: ErrStat2
-      CHARACTER(120)                   :: ErrMsg2   
+      CHARACTER(ErrMsgLen)             :: ErrMsg2
       CHARACTER(120)                   :: RoutineName = 'SetupWaveKin'   
 
       ErrStat2 = ErrID_None
@@ -1448,6 +1448,9 @@ CONTAINS
 
             ELSEIF (p%WaveKin == 1) THEN ! must be a filepath therefore read wave elevations from timeseries
 
+               ! NOTE: there is a decent ammount of code duplication (intentional for now) with what is in SeaState that eventually 
+               ! we will want to synchronize with a standard library at some point
+
                ! --------------------- set from inputted wave elevation time series, grid approach -------------------
                CALL WrScr( '    WaveKinMod = 1. Reading wave elevation time series from file' )
                IF (p%writeLog > 0) THEN
@@ -1625,6 +1628,9 @@ CONTAINS
 
             ENDIF ! End getting frequency data either from time series or WaveField. The below needs to happen for both old and hybrid approach
             
+            ! NOTE: there is a decent ammount of code duplication (intentional for now) with what is in SeaState that eventually 
+            ! we will want to synchronize with a standard library at some point
+
             ! allocate all the wave kinematics FFT arrays  
             ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveNmbr.'  ; IF (Failed()) RETURN
             ALLOCATE( tmpComplex(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate tmpComplex.'; IF (Failed()) RETURN
@@ -2237,7 +2243,7 @@ CONTAINS
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
   
       INTEGER(IntKi)                   :: ErrStat2
-  !    CHARACTER(120)                   :: ErrMsg2   
+  !    CHARACTER(ErrMsgLen)             :: ErrMsg2   
    
       CHARACTER(120)                   :: Frmt       
       INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
@@ -2287,7 +2293,7 @@ CONTAINS
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
   
       INTEGER(IntKi)                   :: ErrStat2
-  !    CHARACTER(120)                   :: ErrMsg2   
+  !    CHARACTER(ErrMsgLen)             :: ErrMsg2   
       
       INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
       INTEGER(IntKi)   :: I,J,K, l, Itemp

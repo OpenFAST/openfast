@@ -1169,7 +1169,7 @@ CONTAINS
       Real(DbKi)                       :: f_hat         ! non-dimensional frequency 
 
       INTEGER(IntKi)                   :: ErrStat2
-      CHARACTER(1024)                  :: ErrMsg2   
+      CHARACTER(ErrMsgLen)             :: ErrMsg2   
       CHARACTER(120)                   :: RoutineName = 'Line_GetStateDeriv'   
 
       ErrStat = ErrID_None
