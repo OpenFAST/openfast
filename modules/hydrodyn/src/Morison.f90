@@ -642,14 +642,12 @@ SUBROUTINE FloodedBallastPartSegmentCyl(R1, R2, L, rho, V, m, h_c, Il, Ir)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    REAL(ReKi),                     INTENT    ( IN    )  :: L   ! distance positive along axis to end of part-element
-   REAL(ReKi),                     INTENT    ( OUT   )  :: V   ! volume from inner radius
    REAL(ReKi),                     INTENT    ( IN    )  :: rho ! density of ballast
+   REAL(ReKi),                     INTENT    ( OUT   )  :: V   ! volume from inner radius
    REAL(ReKi),                     INTENT    ( OUT   )  :: m   ! mass of material
    REAL(ReKi),                     INTENT    ( OUT   )  :: h_c  ! center of mass offset from first node
    REAL(ReKi),                     INTENT    ( OUT   )  :: Il   ! moment of inertia about axis
    REAL(ReKi),                     INTENT    ( OUT   )  :: Ir   ! moment of inertia about radial axis from first node
-   
-
    
    ! get V and CV for flooded part of part-element
    call CylTaperCalc(R1, R2, L, V, h_c) 
@@ -666,14 +664,13 @@ SUBROUTINE FloodedBallastPartSegmentRec(a1, a2, b1, b2, L, rho, V, m, h_c, Ize, 
    REAL(ReKi),                     INTENT    ( IN    )  :: b1  ! interior length of side B at node 1
    REAL(ReKi),                     INTENT    ( IN    )  :: b2  ! interior length of side B at node 2
    REAL(ReKi),                     INTENT    ( IN    )  :: L   ! distance positive along axis to end of part-element
-   REAL(ReKi),                     INTENT    ( OUT   )  :: V   ! volume from inner radius
    REAL(ReKi),                     INTENT    ( IN    )  :: rho ! density of ballast
+   REAL(ReKi),                     INTENT    ( OUT   )  :: V   ! volume from inner radius
    REAL(ReKi),                     INTENT    ( OUT   )  :: m   ! mass of material
    REAL(ReKi),                     INTENT    ( OUT   )  :: h_c    ! center of mass offset from first node
    REAL(ReKi),                     INTENT    ( OUT   )  :: Ize   ! moment of inertia about element local z-axis
    REAL(ReKi),                     INTENT    ( OUT   )  :: Ixe   ! moment of inertia about element local x-axis at first node
    REAL(ReKi),                     INTENT    ( OUT   )  :: Iye   ! moment of inertia about element local y-axis at first node   
-
    
    ! get V and CV for flooded part of part-element
    call RecTaperCalc(a1, a2, b1, b2, L, V, h_c) 
@@ -726,11 +723,12 @@ SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, memb
    CHARACTER(ChanLen)                          :: tmpName
    REAL(ReKi)                                  :: totalFillMass, mass_fill, memberVol
    REAL(ReKi)                                  :: totalMGMass
-   TYPE(Morison_NodeType)                      ::  node1, node2
+   TYPE(Morison_NodeType)                      :: node1, node2
    real(ReKi)                                  :: ptLoad(6)
    logical                                     :: fillFlag
    type(Morison_MemberType)                    :: mem
-   REAL(ReKi)                                  :: Cd1, CdA1, CdB1, Cd2, CdA2, CdB2, Ca1, CaA1, CaB1, Ca2, CaA2, CaB2, Cp1, Cp2, AxCd1, AxCd2, AxCa1, AxCa2, AxCp1, AxCp2, Cb1, Cb2, JAxCd1, JAxCd2, JAxCa1, JAxCa2, JAxCp1, JAxCp2 ! tmp coefs
+   REAL(ReKi)                                  :: Cd1, CdA1, CdB1, Cd2, CdA2, CdB2, Ca1, CaA1, CaB1, Ca2, CaA2, CaB2, Cp1, Cp2, Cb1, Cb2
+   REAL(ReKi)                                  :: AxCd1, AxCd2, AxCa1, AxCa2, AxCp1, AxCp2, JAxCd1, JAxCd2, JAxCa1, JAxCa2, JAxCp1, JAxCp2
    real(ReKi)                                  :: F_B(6, numNodes), F_BF(6, numNodes), F_WMG(6, numNodes)
    
    INTEGER                                     :: ErrStat2
@@ -961,15 +959,24 @@ SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, memb
       WRITE( UnSum,  '(//)' ) 
       WRITE( UnSum,  '(A14,I4,A44)' ) 'Nodes (first [',numJoints,'] are joints, remainder are internal nodes)'
       WRITE( UnSum,  '(/)' ) 
-      WRITE( UnSum, '(1X,A5,31(2X,A10))' ) '  i  ', '  MbrIndx ', '   Nxi    ', '   Nyi    ', '   Nzi    ', '  Shape   ', '     R    ', '    SA    ', '    SB    ', '    t     ', '   tMG    ', '  MGDens  ', ' PropPot  ', 'FilledFlag', 'FilledMass', '    Cd    ', '    CdA   ', '    CdB   ', '    Ca    ', '    CaA   ', '    CaB   ', '    Cp    ', '    Cb    ', '   AxCd   ',  '   AxCa   ', '   AxCp   ', '   JAxCd  ', '   JAxCa  ', '   JAxCp  ', ' JAxFDMod ', 'JAxVnCOff ', 'JAxFDLoFSc'
-      WRITE( UnSum, '(1X,A5,31(2X,A10))' ) ' (-) ', '    (-)   ', '   (m)    ', '   (m)    ', '   (m)    ', '   (-)    ', '    (m)   ', '    (m)   ', '    (m)   ', '   (m)    ', '   (m)    ', ' (kg/m^3) ', '   (-)    ', '   (-)    ', '  (kg)    ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ',  '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   '
+      WRITE( UnSum, '(1X,A5,31(2X,A10))' ) &
+         '  i  '     , '  MbrIndx ', '   Nxi    ', '   Nyi    ', '   Nzi    ', '  Shape   ', '     R    ', '    SA    ', '    SB    ', '    t     ', '   tMG    ', '  MGDens  ', &
+         ' PropPot  ', 'FilledFlag', 'FilledMass', '    Cd    ', '    CdA   ', '    CdB   ', '    Ca    ', '    CaA   ', '    CaB   ', '    Cp    ', '    Cb    ', &
+         '   AxCd   ', '   AxCa   ', '   AxCp   ', '   JAxCd  ', '   JAxCa  ', '   JAxCp  ', ' JAxFDMod ', 'JAxVnCOff ', 'JAxFDLoFSc'
+      WRITE( UnSum, '(1X,A5,31(2X,A10))' ) &
+         ' (-) '     , '    (-)   ', '    (m)   ', '    (m)   ', '    (m)   ', '    (-)   ', '    (m)   ', '    (m)   ', '    (m)   ', '   (m)    ', '   (m)    ', ' (kg/m^3) ', &
+         '    (-)   ', '    (-)   ', '   (kg)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '   (-)    ', '   (-)    ', &
+         '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   '
       
          ! Write the node data
       do I = 1,numJoints   
          ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
          pos = nodes(i)%Position
          pos(3) = pos(3) + p%WaveField%MSL2SWL
-         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),5(2X,A10),2(2X,ES10.3),14(2X,A10),3(2X,ES10.3),1X,I10,2(2X,ES10.3))' ) i,'    -     ', pos, '    -     ', '    -     ', '    -     ', '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ',  '    -     ', '    -     ', '    -     ', '    -     ',  '    -     ', '    -     ', '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp, nodes(i)%JAxFDMod, nodes(i)%JAxVnCOff, nodes(i)%JAxFDLoFSc
+         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),5(2X,A10),2(2X,ES10.3),14(2X,A10),3(2X,ES10.3),1X,I10,2(2X,ES10.3))' ) &
+            i,         '     -    ', pos,                                      '     -    ', '     -    ', '     -    ', '     -    ', '     -    ', nodes(i)%tMG, nodes(i)%MGdensity, &
+         '     -    ', '     -    ', '     -    ', '     -    ', '     -    ', '     -    ', '     -    ', '     -    ', '     -    ', '     -    ', '     -    ', &
+         '     -    ', '     -    ', '     -    ',nodes(i)%JAxCd,nodes(i)%JAxCa,nodes(i)%JAxCp,nodes(i)%JAxFDMod,nodes(i)%JAxVnCOff,nodes(i)%JAxFDLoFSc
       end do
       c = numJoints
       do j= 1, numMembers
@@ -989,22 +996,36 @@ SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, memb
                II=I
             endif
             if ( members(j)%MSecGeom == MSecGeom_Cyl ) then
-               write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),(2X,A10),(2X,ES10.3),2(2X,A10),3(2X,ES10.3),2(6X,L6),2(2X,ES10.3),2(2X,A10),(2X,ES10.3),2(2X,A10),5(2X,ES10.3),6(7x,A5))' ) c, members(j)%MemberID, pos, '    C     ', members(j)%R(ii),      '    -     ',      '    -     ',        members(j)%R(ii)-members(j)%Rin(ii),    members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),  members(j)%Cd(ii),        '    -     ',        '    -     ',  members(j)%Ca(ii),         '    -     ',       '    -     ',  members(j)%Cp(ii),  members(j)%Cb(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  ', '  -  ',  '  -  ',  '  -  '
+               write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),(2X,A10),(2X,ES10.3),2(2X,A10),3(2X,ES10.3),2(6X,L6),2(2X,ES10.3),2(2X,A10),(2X,ES10.3),2(2X,A10),5(2X,ES10.3),6(7x,A5))' ) &
+                  c, members(j)%MemberID, pos, '    C     ', members(j)%R(ii),      '    -     ',      '    -     ',         members(j)%R(ii)-members(j)%Rin(ii), members(j)%tMG(ii), members(j)%MGdensity(ii), &
+                  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii), members(j)%Cd(ii),       '    -     ',       '    -     ', members(j)%Ca(ii), &
+                  '    -     ',       '    -     ',       members(j)%Cp(ii), members(j)%Cb(ii), members(j)%AxCd(ii), members(j)%AxCa(ii), members(j)%AxCp(ii), &
+                  '  -  ', '  -  ', '  -  ', '  -  ', '  -  ', '  -  '
             else if ( members(j)%MSecGeom == MSecGeom_Rec ) then
-               write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),(2X,A10),(2X,A10),5(2X,ES10.3),2(6X,L6),(2X,ES10.3),(2X,A10),2(2X,ES10.3),(2X,A10),7(2X,ES10.3),6(7x,A5))' )                 c, members(j)%MemberID, pos, '    R     ',     '    -     ', members(j)%Sa(ii), members(j)%Sb(ii),  0.5*(members(j)%Sa(ii)-members(j)%Sain(ii)),  members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),       '    -     ',  members(j)%CdA(ii),  members(j)%CdB(ii),       '    -     ',   members(j)%CaA(ii), members(j)%CaB(ii),  members(j)%Cp(ii),  members(j)%Cb(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  ', '  -  ',  '  -  ',  '  -  '
+               write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),(2X,A10),(2X,A10),5(2X,ES10.3),2(6X,L6),(2X,ES10.3),(2X,A10),2(2X,ES10.3),(2X,A10),7(2X,ES10.3),6(7x,A5))' ) &
+                  c, members(j)%MemberID, pos, '    R     ',     '    -     ', members(j)%Sa(ii), members(j)%Sb(ii), 0.5*(members(j)%Sa(ii)-members(j)%Sain(ii)), members(j)%tMG(ii), members(j)%MGdensity(ii), &
+                  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),      '    -     ', members(j)%CdA(ii), members(j)%CdB(ii),      '    -     ', &
+                  members(j)%CaA(ii), members(j)%CaB(ii), members(j)%Cp(ii), members(j)%Cb(ii), members(j)%AxCd(ii), members(j)%AxCa(ii), members(j)%AxCp(ii), &
+                  '  -  ', '  -  ', '  -  ', '  -  ', '  -  ', '  -  '
             end if
          end do
       end do
       
-      
       write( UnSum,  '(//)' ) 
       write( UnSum,  '(A8)' ) 'Members'
       write( UnSum,  '(/)' ) 
-      write( UnSum, '(1X,A8,2X,A6,2X,A6,45(2X,A12))' ) 'MemberID', 'joint1','joint2','  Length  ', '   NElem    ', '   Volume   ', '  MGVolume  ', '      R1    ', '     SA1    ', '     SB1    ', '     t1     ', '      R2    ', '     SA2    ', '     SB2    ', '     t2     ', ' PropPot  ', 'FilledFlag', 'FillDensity', '  FillFSLoc ', '  FillMass  ', '     Cd1    ', '    CdA1    ', '    CdB1    ', '     Ca1    ', '    CaA1    ', '    CaB1   ', '     Cp1    ', '     Cb1    ', '    AxCd1   ', '    AxCa1   ', '    AxCp1   ', '   JAxCd1   ', '  JAxCa1    ', '   JAxCp1   ', '     Cd2    ', '    CdA2    ', '    CdB2    ', '     Ca2    ', '    CaA2    ', '    CaB2    ', '     Cp2    ', '     Cb2    ', '    AxCd2   ', '    AxCa2   ', '    AxCp2   ', '   JAxCd2   ', '   JAxCa2   ', '   JAxCp2   '
-      write( UnSum, '(1X,A8,2X,A6,2X,A6,45(2X,A12))' ) '  (-)   ', ' (-)  ',' (-)  ','   (m)    ', '    (-)     ', '   (m^3)    ', '   (m^3)    ', '      (m)   ', '     (m)    ', '     (m)    ', '     (m)    ', '      (m)   ', '     (m)    ', '     (m)    ', '     (m)    ', '   (-)    ', '   (-)    ', ' (kg/m^3)  ', '     (-)    ', '    (kg)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)   ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '    (-)     ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    '
-      
-      
-      
+      write( UnSum, '(1X,A8,2X,A6,2X,A6,45(2X,A12))' ) &
+         'MemberID'    , 'joint1'      , 'joint2'      , '  Length  '  , '   NElem    ', '   Volume   ', '  MGVolume  ', '      R1    ', '     SA1    ', '     SB1    ', '     t1     ', &
+         '      R2    ', '     SA2    ', '     SB2    ', '     t2     ', ' PropPot  '  , 'FilledFlag'  , 'FillDensity' , '  FillFSLoc ', '  FillMass  ', '     Cd1    ', '    CdA1    ', '    CdB1    ', &
+         '     Ca1    ', '    CaA1    ', '    CaB1   ' , '     Cp1    ', '     Cb1    ', '    AxCd1   ', '    AxCa1   ', '    AxCp1   ', '   JAxCd1   ', '  JAxCa1    ', '   JAxCp1   ', &
+         '     Cd2    ', '    CdA2    ', '    CdB2    ', '     Ca2    ', '    CaA2    ', '    CaB2    ', '     Cp2    ', '     Cb2    ', '    AxCd2   ', '    AxCa2   ', '    AxCp2   ', &
+         '   JAxCd2   ', '   JAxCa2   ', '   JAxCp2   '
+      write( UnSum, '(1X,A8,2X,A6,2X,A6,45(2X,A12))' ) &
+         '  (-)   '    , ' (-)  '      , ' (-)  '      , '   (m)    '  , '    (-)     ', '   (m^3)    ', '   (m^3)    ', '      (m)   ', '     (m)    ', '     (m)    ', '     (m)    ', &
+         '      (m)   ', '     (m)    ', '     (m)    ', '     (m)    ', '   (-)    '  , '   (-)    '  , ' (kg/m^3)  ' , '     (-)    ', '    (kg)    ', '     (-)    ', '     (-)    ', '     (-)    ', &
+         '     (-)    ', '     (-)    ', '     (-)   ' , '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', &
+         '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', &
+         '     (-)    ', '     (-)    ', '     (-)    '
       
       do i = 1,numMembers
          N = members(i)%NElements
@@ -1683,10 +1704,6 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry(member%h_cmg_u      , member%NElements,   'member%h_cmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%I_lmg_l      , member%NElements,   'member%I_lmg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%I_lmg_u      , member%NElements,   'member%I_lmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   ! call AllocAry(member%Cfl_fb       , member%NElements,   'member%Cfl_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   ! call AllocAry(member%CM0_fb       , member%NElements,   'member%CM0_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName) 
-   ! call AllocAry(member%NodeWBallast  , member%NElements+1,'member%NodeWBallast '  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   ! call AllocAry(member%NodeWhcBallast, member%NElements+1,'member%NodeWhcBallast ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%tMG          , member%NElements+1, 'member%tMG          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%MGdensity    , member%NElements+1, 'member%MGdensity    ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%Cp           , member%NElements+1, 'member%Cp           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1694,14 +1711,14 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry(member%AxCa         , member%NElements+1, 'member%AxCa         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%AxCp         , member%NElements+1, 'member%AxCp         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%Cb           , member%NElements+1, 'member%Cb           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( memberLoads%F_D    , 6, member%NElements+1, 'memberLoads%F_D'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( memberLoads%F_A    , 6, member%NElements+1, 'memberLoads%F_A'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( memberLoads%F_B    , 6, member%NElements+1, 'memberLoads%F_B'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( memberLoads%F_BF   , 6, member%NElements+1, 'memberLoads%F_BF'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( memberLoads%F_I    , 6, member%NElements+1, 'memberLoads%F_I'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( memberLoads%F_If   , 6, member%NElements+1, 'memberLoads%F_If'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( memberLoads%F_WMG  , 6, member%NElements+1, 'memberLoads%F_WMG' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( memberLoads%F_IMG  , 6, member%NElements+1, 'memberLoads%F_IMG' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( memberLoads%F_D    , 6, member%NElements+1, 'memberLoads%F_D'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( memberLoads%F_A    , 6, member%NElements+1, 'memberLoads%F_A'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( memberLoads%F_B    , 6, member%NElements+1, 'memberLoads%F_B'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( memberLoads%F_BF   , 6, member%NElements+1, 'memberLoads%F_BF' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( memberLoads%F_I    , 6, member%NElements+1, 'memberLoads%F_I'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( memberLoads%F_If   , 6, member%NElements+1, 'memberLoads%F_If' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( memberLoads%F_WMG  , 6, member%NElements+1, 'memberLoads%F_WMG', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( memberLoads%F_IMG  , 6, member%NElements+1, 'memberLoads%F_IMG', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
 
    ! Shape dependent variables
    if (member%MSecGeom == MSecGeom_Cyl) then
@@ -1712,7 +1729,6 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
       call AllocAry(member%I_rfb_u      , member%NElements,   'member%I_rfb_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%I_rmg_l      , member%NElements,   'member%I_rmg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%I_rmg_u      , member%NElements,   'member%I_rmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-      ! call AllocAry(member%Cfr_fb       , member%NElements,   'member%Cfr_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%R            , member%NElements+1, 'member%R            ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%RMG          , member%NElements+1, 'member%RMG          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%RMGB         , member%NElements+1, 'member%RMGB         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1734,8 +1750,6 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
       call AllocAry(member%I_xmg_u      , member%NElements,   'member%I_xmg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%I_ymg_l      , member%NElements,   'member%I_ymg_l      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%I_ymg_u      , member%NElements,   'member%I_ymg_u      ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-      ! call AllocAry(member%Cfx_fb       , member%NElements,   'member%Cfx_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-      ! call AllocAry(member%Cfy_fb       , member%NElements,   'member%Cfy_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%Sa           , member%NElements+1, 'member%Sa           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%SaMG         , member%NElements+1, 'member%SaMG         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
       call AllocAry(member%SaMGB        , member%NElements+1, 'member%SaMGB        ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1770,10 +1784,6 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    member%h_cmg_u       = 0.0_ReKi
    member%I_lmg_l       = 0.0_ReKi
    member%I_lmg_u       = 0.0_ReKi
-   ! member%Cfl_fb        = 0.0_ReKi
-   ! member%CM0_fb        = 0.0_ReKi
-   ! member%NodeWBallast   = 0.0_ReKi
-   ! member%NodeWhcBallast = 0.0_ReKi
 
    member%tMG           = 0.0_ReKi
    member%MGdensity     = 0.0_ReKi
@@ -1799,7 +1809,6 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
       member%I_rfb_u       = 0.0_ReKi
       member%I_rmg_l       = 0.0_ReKi
       member%I_rmg_u       = 0.0_ReKi
-      ! member%Cfr_fb        = 0.0_ReKi
       member%R             = 0.0_ReKi
       member%RMG           = 0.0_ReKi
       member%RMGB          = 0.0_ReKi
@@ -1821,8 +1830,6 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
       member%I_xmg_u       = 0.0_ReKi
       member%I_ymg_l       = 0.0_ReKi
       member%I_ymg_u       = 0.0_ReKi
-      ! member%Cfx_fb        = 0.0_ReKi
-      ! member%Cfy_fb        = 0.0_ReKi
       member%Sa            = 0.0_ReKi
       member%SaMG          = 0.0_ReKi
       member%SaMGB         = 0.0_ReKi

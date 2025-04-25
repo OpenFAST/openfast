@@ -31,6 +31,22 @@ def readline_filterComments(f):
                 read = False
     return line
 
+def readline_ignoreComments(f, char = '#'): # see line 64 in NWTC_IO.f90
+    """
+    returns line before comment character
+
+    Args:
+    f: file handle
+    char: comment character
+
+    Returns:
+    line: content of next line in the file before comment character
+    """
+
+    line = f.readline().strip().split(char)
+
+    return line[0]
+
 def read_array(f,len,split_val=None,array_type=str):
     """
     Read an array of values from a line in a file
@@ -3100,13 +3116,8 @@ class InputReader_OpenFAST(object):
         self.fst_vt['MoorDyn']['Rod_Name'] = []
         self.fst_vt['MoorDyn']['Body_ID'] = []
         self.fst_vt['MoorDyn']['Rod_ID'] = []
-        self.fst_vt['MoorDyn']['ChannelID'] = []
-
 
         # MoorDyn
-        f.readline()
-        f.readline()
-        self.fst_vt['MoorDyn']['Echo']     = bool_read(f.readline().split()[0])
         data_line = f.readline()
         while data_line:
 
@@ -3124,25 +3135,48 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['MoorDyn']['Diam']     = []
                 self.fst_vt['MoorDyn']['MassDen']  = []
                 self.fst_vt['MoorDyn']['EA']       = []
+                self.fst_vt['MoorDyn']['NonLinearEA']       = []
                 self.fst_vt['MoorDyn']['BA_zeta']  = []
                 self.fst_vt['MoorDyn']['EI']  = []
                 self.fst_vt['MoorDyn']['Cd']      = []
                 self.fst_vt['MoorDyn']['Ca']      = []
                 self.fst_vt['MoorDyn']['CdAx']      = []
                 self.fst_vt['MoorDyn']['CaAx']      = []
-                data_line = f.readline().strip().split()
-                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+                self.fst_vt['MoorDyn']['Cl']      = []
+                self.fst_vt['MoorDyn']['dF']      = []
+                self.fst_vt['MoorDyn']['cF']      = []
+                data_line = readline_filterComments(f).split()
+                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same.
                     self.fst_vt['MoorDyn']['Name'].append(str(data_line[0]))
                     self.fst_vt['MoorDyn']['Diam'].append(float(data_line[1]))
                     self.fst_vt['MoorDyn']['MassDen'].append(float(data_line[2]))
-                    self.fst_vt['MoorDyn']['EA'].append(float(data_line[3]))
-                    self.fst_vt['MoorDyn']['BA_zeta'].append(float(data_line[4]))
+                    self.fst_vt['MoorDyn']['EA'].append([float_read(dl) for dl in data_line[3].split('|')])
+                    self.fst_vt['MoorDyn']['BA_zeta'].append([float(dl) for dl in data_line[4].split('|')])
                     self.fst_vt['MoorDyn']['EI'].append(float(data_line[5]))
                     self.fst_vt['MoorDyn']['Cd'].append(float(data_line[6]))
                     self.fst_vt['MoorDyn']['Ca'].append(float(data_line[7]))
                     self.fst_vt['MoorDyn']['CdAx'].append(float(data_line[8]))
                     self.fst_vt['MoorDyn']['CaAx'].append(float(data_line[9]))
-                    data_line = f.readline().strip().split()
+                    if len(data_line) == 10:
+                        self.fst_vt['MoorDyn']['Cl'].append(None)
+                        self.fst_vt['MoorDyn']['dF'].append(None)
+                        self.fst_vt['MoorDyn']['cF'].append(None)
+                    elif (len(data_line) == 11):
+                        self.fst_vt['MoorDyn']['Cl'].append(float(data_line[10]))
+                        self.fst_vt['MoorDyn']['dF'].append(None)
+                        self.fst_vt['MoorDyn']['cF'].append(None)
+                    elif (len(data_line) == 13):
+                        self.fst_vt['MoorDyn']['Cl'].append(float(data_line[10]))
+                        self.fst_vt['MoorDyn']['dF'].append(float(data_line[11]))
+                        self.fst_vt['MoorDyn']['cF'].append(float(data_line[12]))
+
+                    if type(self.fst_vt['MoorDyn']['EA'][0]) is str:
+                        EA_file = os.path.normpath(os.path.join(os.path.dirname(moordyn_file), self.fst_vt['MoorDyn']['EA'][0]))
+                        self.fst_vt['MoorDyn']['NonLinearEA'].append(self.read_NonLinearEA(EA_file))
+                    else:
+                        self.fst_vt['MoorDyn']['NonLinearEA'].append(None) # Empty to keep track of which non-linear EA files go with what line
+
+                    data_line = readline_filterComments(f).split()
                 data_line = ''.join(data_line)  # re-join
 
             elif 'rodtypes' in data_line or 'roddictionary' in data_line: 
@@ -3156,7 +3190,7 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['MoorDyn']['Rod_CdEnd'] = []
                 self.fst_vt['MoorDyn']['Rod_CaEnd'] = []
 
-                data_line = f.readline().strip().split()
+                data_line = readline_filterComments(f).split()
                 while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
                     self.fst_vt['MoorDyn']['Rod_Name'].append(data_line[0]) 
                     self.fst_vt['MoorDyn']['Rod_Diam'].append(float(data_line[1]))
@@ -3165,7 +3199,7 @@ class InputReader_OpenFAST(object):
                     self.fst_vt['MoorDyn']['Rod_Ca'].append(float(data_line[4]))
                     self.fst_vt['MoorDyn']['Rod_CdEnd'].append(float(data_line[5]))
                     self.fst_vt['MoorDyn']['Rod_CaEnd'].append(float(data_line[6]))
-                    data_line = f.readline().strip().split()
+                    data_line = readline_filterComments(f).split()
                 data_line = ''.join(data_line)  # re-join for reading next section uniformly        
 
             
@@ -3188,7 +3222,7 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['MoorDyn']['Body_CdA']   = []
                 self.fst_vt['MoorDyn']['Body_Ca']   = []
 
-                data_line = f.readline().strip().split()
+                data_line = readline_filterComments(f).split()
                 while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
                     self.fst_vt['MoorDyn']['Body_ID'].append(int(data_line[0]))
                     self.fst_vt['MoorDyn']['Body_Attachment'].append(data_line[1])
@@ -3204,7 +3238,7 @@ class InputReader_OpenFAST(object):
                     self.fst_vt['MoorDyn']['Body_Volume'].append(float(data_line[11]))
                     self.fst_vt['MoorDyn']['Body_CdA'].append([float(dl) for dl in data_line[12].split('|')])
                     self.fst_vt['MoorDyn']['Body_Ca'].append([float(dl) for dl in data_line[13].split('|')])
-                    data_line = f.readline().strip().split()
+                    data_line = readline_filterComments(f).split()
                 data_line = ''.join(data_line)  # re-join for reading next section uniformly        
 
 
@@ -3223,7 +3257,7 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['MoorDyn']['Rod_NumSegs']    = []
                 self.fst_vt['MoorDyn']['RodOutputs']    = []
 
-                data_line = f.readline().strip().split()
+                data_line = readline_filterComments(f).split()
                 while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
                     self.fst_vt['MoorDyn']['Rod_ID'].append(data_line[0])
                     self.fst_vt['MoorDyn']['Rod_Type'].append(data_line[1])
@@ -3236,7 +3270,7 @@ class InputReader_OpenFAST(object):
                     self.fst_vt['MoorDyn']['Zb'].append(float(data_line[8]))
                     self.fst_vt['MoorDyn']['Rod_NumSegs'].append(int(data_line[9]))
                     self.fst_vt['MoorDyn']['RodOutputs'].append(data_line[10])
-                    data_line = f.readline().strip().split()
+                    data_line = readline_filterComments(f).split()
                 data_line = ''.join(data_line)  # re-join for reading next section uniformly     
 
             elif 'points' in data_line or 'connectionproperties' in data_line or \
@@ -3254,7 +3288,7 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['MoorDyn']['V']    = []
                 self.fst_vt['MoorDyn']['CdA']  = []
                 self.fst_vt['MoorDyn']['CA']   = []
-                data_line = f.readline().strip().split()
+                data_line = readline_filterComments(f).split()
                 while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
                     self.fst_vt['MoorDyn']['Point_ID'].append(int(data_line[0]))
                     self.fst_vt['MoorDyn']['Attachment'].append(str(data_line[1]))
@@ -3265,7 +3299,7 @@ class InputReader_OpenFAST(object):
                     self.fst_vt['MoorDyn']['V'].append(float(data_line[6]))
                     self.fst_vt['MoorDyn']['CdA'].append(float(data_line[7]))
                     self.fst_vt['MoorDyn']['CA'].append(float(data_line[8]))
-                    data_line = f.readline().strip().split()
+                    data_line = readline_filterComments(f).split()
                 data_line = ''.join(data_line)  # re-join for reading next section uniformly     
 
             elif 'lines' in data_line or 'lineproperties' in data_line or 'linelist' in data_line: 
@@ -3280,7 +3314,7 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['MoorDyn']['UnstrLen']    = []
                 self.fst_vt['MoorDyn']['NumSegs']     = []
                 self.fst_vt['MoorDyn']['Outputs']     = []
-                data_line = f.readline().strip().split()
+                data_line = readline_filterComments(f).split()
                 while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
                     self.fst_vt['MoorDyn']['Line_ID'].append(int(data_line[0]))
                     self.fst_vt['MoorDyn']['LineType'].append(str(data_line[1]))
@@ -3289,8 +3323,27 @@ class InputReader_OpenFAST(object):
                     self.fst_vt['MoorDyn']['UnstrLen'].append(float(data_line[4]))
                     self.fst_vt['MoorDyn']['NumSegs'].append(int(data_line[5]))
                     self.fst_vt['MoorDyn']['Outputs'].append(str(data_line[6]))
-                    data_line = f.readline().strip().split()
-                data_line = ''.join(data_line)  # re-join for reading next section uniformly     
+                    data_line = readline_filterComments(f).split()
+                data_line = ''.join(data_line)  # re-join for reading next section uniformly
+
+            elif 'failure' in data_line.lower(): 
+                f.readline()
+                f.readline()
+
+                self.fst_vt['MoorDyn']['Failure_ID'] = []
+                self.fst_vt['MoorDyn']['Failure_Point'] = []
+                self.fst_vt['MoorDyn']['Failure_Line(s)'] = []
+                self.fst_vt['MoorDyn']['FailTime'] = []
+                self.fst_vt['MoorDyn']['FailTen'] = []
+                data_line = readline_filterComments(f).split()
+                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+                    self.fst_vt['MoorDyn']['Failure_ID'].append(int(data_line[0]))
+                    self.fst_vt['MoorDyn']['Failure_Point'].append(data_line[1])
+                    self.fst_vt['MoorDyn']['Failure_Line(s)'].append([int(dl) for dl in data_line[2].split(',')])
+                    self.fst_vt['MoorDyn']['FailTime'].append(float(data_line[3]))
+                    self.fst_vt['MoorDyn']['FailTen'].append(float(data_line[4]))
+                    data_line = readline_filterComments(f).split()
+                data_line = ''.join(data_line)  # re-join for reading next section uniformly 
 
             elif 'control' in data_line.lower():
                 f.readline()
@@ -3300,7 +3353,7 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['MoorDyn']['ChannelID'] = []
                 self.fst_vt['MoorDyn']['Lines_Control'] = []
 
-                data_line = f.readline().strip().split()
+                data_line = readline_filterComments(f).split()
                 while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
                     self.fst_vt['MoorDyn']['ChannelID'].append(int(data_line[0]))
                     # Line(s) is a list of mooring lines, spaces are allowed between commas
@@ -3314,46 +3367,87 @@ class InputReader_OpenFAST(object):
                         control_lines.remove('')
 
                     self.fst_vt['MoorDyn']['Lines_Control'].append(control_lines)
-                    data_line = f.readline().strip().split()
+                    data_line = readline_filterComments(f).split()
                 data_line = ''.join(data_line)  # re-join for reading next section uniformly     
 
+            elif 'external' in data_line.lower(): 
+                f.readline()
+                f.readline()
+
+                self.fst_vt['MoorDyn']['External_ID'] = []
+                self.fst_vt['MoorDyn']['Object'] = []
+                self.fst_vt['MoorDyn']['Fext'] = []
+                self.fst_vt['MoorDyn']['Blin'] = []
+                self.fst_vt['MoorDyn']['Bquad'] = []
+                self.fst_vt['MoorDyn']['CSys'] = []
+                data_line = readline_filterComments(f).split()
+                while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+                    self.fst_vt['MoorDyn']['External_ID'].append(int(data_line[0]))
+                    self.fst_vt['MoorDyn']['Object'].append(data_line[1])
+                    self.fst_vt['MoorDyn']['Fext'].append([float(dl) for dl in data_line[2].split('|')])
+                    self.fst_vt['MoorDyn']['Blin'].append([float(dl) for dl in data_line[3].split('|')])
+                    self.fst_vt['MoorDyn']['Bquad'].append([float(dl) for dl in data_line[4].split('|')])
+                    self.fst_vt['MoorDyn']['CSys'].append(data_line[5])
+                    data_line = readline_filterComments(f).split()
+                data_line = ''.join(data_line)  # re-join for reading next section uniformly     
 
             elif 'options' in data_line:
 
                 # MoorDyn lets options be written in any order
                 # Solver options
-                self.fst_vt['MoorDyn']['options'] = []  # keep list of MoorDyn options
+                self.fst_vt['MoorDyn']['option_values'] = [] 
+                self.fst_vt['MoorDyn']['option_names'] = []  # keep list of MoorDyn options
+                self.fst_vt['MoorDyn']['option_descriptions'] = []  
 
-                string_options = ['WaterKin']
-
-                data_line = f.readline().strip().split()
+                data_line = readline_filterComments(f).split()
                 while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
 
-                    raw_value = data_line[0]
-                    option_name = data_line[1]
-
-                    self.fst_vt['MoorDyn']['options'].append(option_name)
-                    if option_name in string_options:
-                        self.fst_vt['MoorDyn'][option_name] = raw_value.strip('"')
+                    option_value = data_line[0].upper() # MD is case insensitive
+                    option_name = data_line[1].upper() # MD is case insensitive
+                    if len(data_line) > 2:
+                        option_description = ' '.join(data_line[2:])
                     else:
-                        self.fst_vt['MoorDyn'][option_name] = float(raw_value)
+                        option_description = '-'
 
-                    data_line = f.readline().strip().split()
+                    if option_name.upper() == 'WATERKIN':
+                        self.fst_vt['MoorDyn']['WaterKin'] = option_value.strip('"')
+                        WaterKin_file = os.path.normpath(os.path.join(os.path.dirname(moordyn_file), self.fst_vt['MoorDyn']['WaterKin']))
+                        self.read_WaterKin(WaterKin_file)
+
+                    self.fst_vt['MoorDyn']['option_values'].append(float_read(option_value.strip('"'))) # some options values can be strings or floats
+                    self.fst_vt['MoorDyn']['option_names'].append(option_name)
+                    self.fst_vt['MoorDyn']['option_descriptions'].append(option_description)
+
+                    data_line = readline_filterComments(f).split()
                 data_line = ''.join(data_line)  # re-join for reading next section uniformly   
 
             elif 'outputs' in data_line:
 
-                self.read_outlist_freeForm(f,'MoorDyn')
+                data_line = readline_filterComments(f)
+
+                while (data_line[0] and data_line[0][:3] != '---') and not ('END' in data_line): # OpenFAST searches for --- and END, so we'll do the same
+
+                    if '"' in data_line:
+                        pattern = r'"?(.*?)"?'    # grab only the text between quotes
+                        data_line = re.findall(pattern, data_line)[0]
+
+                    channels = data_line.split(',')  # split on commas
+                    channels = [c.strip() for c in channels]  # strip whitespace
+                    for c in channels:
+                        self.fst_vt['outlist']['MoorDyn'][c] = True
+                    data_line = readline_filterComments(f)
 
                 f.close()
                 break
 
-        if 'WaterKin' in self.fst_vt['MoorDyn']['options']:
-            WaterKin_file = os.path.normpath(os.path.join(os.path.dirname(moordyn_file), self.fst_vt['MoorDyn']['WaterKin']))
-            self.read_WaterKin(WaterKin_file)
+            else: # we must be in the header section, unlimited lines of text allowed here so skip until we hit the first line w/ keywords 'Line Types' or 'Line Dictionary'
+                data_line = f.readline()
 
     def read_WaterKin(self,WaterKin_file):
-        print('here')
+
+        self.fst_vt['WaterKin']['z-depth'] = []
+        self.fst_vt['WaterKin']['x-current'] = []
+        self.fst_vt['WaterKin']['y-current'] = []
 
         f = open(WaterKin_file)
         f.readline()
@@ -3373,7 +3467,30 @@ class InputReader_OpenFAST(object):
         self.fst_vt['WaterKin']['Z_Grid']  = read_array(f,None,split_val='-',array_type=float)
         f.readline()
         self.fst_vt['WaterKin']['CurrentMod']  = int_read(f.readline().split()[0])
+        f.readline()
+        f.readline()
+        data_line = readline_filterComments(f).split()
+        while data_line[0] and data_line[0][:3] != '---': # OpenFAST searches for ---, so we'll do the same
+            self.fst_vt['WaterKin']['z-depth'].append(float(data_line[0]))     
+            self.fst_vt['WaterKin']['x-current'].append(float(data_line[1]))      
+            self.fst_vt['WaterKin']['y-current'].append(float(data_line[2]))
+            data_line = readline_filterComments(f).split()   
         f.close()
+
+    def read_NonLinearEA(self,Stiffness_file): # read and return the nonlinear line stiffness lookup table for a given line
+        
+        f = open(Stiffness_file)
+        f.readline()
+        f.readline()
+        f.readline()
+        NonLinearEA = {"Strain" : [], "Tension" : []}
+        data_line = readline_filterComments(f).split()
+        while data_line:
+            NonLinearEA['Strain'].append([float(data_line[0])])
+            NonLinearEA['Tension'].append([float(data_line[1])])
+            data_line = readline_filterComments(f).split()
+        f.close()
+        return NonLinearEA
 
     def execute(self):
           

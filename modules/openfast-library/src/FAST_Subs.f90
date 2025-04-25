@@ -9620,12 +9620,16 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SED, BD, SrvD, AD, ADsk,
 
 
       SimMsg = TRIM(FAST_Ver%Name)//' encountered an error '//TRIM(SimMsg)//'.'//NewLine//' Simulation error level: '//TRIM(GetErrStr(ErrorLevel))
+#if (defined COMPILE_SIMULINK || defined COMPILE_LABVIEW)
+   ! When built as a shared library/dll, don't end the program.
+     CALL WrScr(trim(SimMsg))
+#else
       if (StopTheProgram) then
          CALL ProgAbort( trim(SimMsg), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
       else
          CALL WrScr(trim(SimMsg))
       end if
-
+#endif
    END IF
 
    !............................................................................................................................
