@@ -2528,7 +2528,20 @@ class InputReader_OpenFAST(object):
         self.fst_vt['SubDyn']['GuyanDampMod'] = int_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['RayleighDamp'] = read_array(f,2,array_type=float)
         self.fst_vt['SubDyn']['GuyanDampSize'] = int_read(f.readline().split()[0])
-        self.fst_vt['SubDyn']['GuyanDamp'] = np.array([[float(idx) for idx in f.readline().strip().split()[:6]] for i in range(self.fst_vt['SubDyn']['GuyanDampSize'])])
+        self.fst_vt['SubDyn']['GuyanDamp'] = np.array([[float(idx) for idx in f.readline().strip().split()[:self.fst_vt['SubDyn']['GuyanDampSize']]] for i in range(self.fst_vt['SubDyn']['GuyanDampSize'])])
+
+        f.readline()
+        f.readline()
+        f.readline()
+        # INITIAL RIGID-BODY POSITION
+        ln = f.readline().split()
+        self.fst_vt['SubDyn']['RBSurge'] = float(ln[0])
+        self.fst_vt['SubDyn']['RBSway']  = float(ln[1])
+        self.fst_vt['SubDyn']['RBHeave'] = float(ln[2])
+        self.fst_vt['SubDyn']['RBRoll']  = float(ln[3])
+        self.fst_vt['SubDyn']['RBPitch'] = float(ln[4])
+        self.fst_vt['SubDyn']['RBYaw']   = float(ln[5])
+
         f.readline()
         # STRUCTURE JOINTS
         self.fst_vt['SubDyn']['NJoints']   = int_read(f.readline().split()[0])
@@ -2582,8 +2595,9 @@ class InputReader_OpenFAST(object):
                 self.fst_vt['SubDyn']['Rct_SoilFile'][i] = 'None'
         f.readline()
         # INTERFACE JOINTS
-        self.fst_vt['SubDyn']['NInterf']   = int_read(f.readline().split()[0])
+        self.fst_vt['SubDyn']['NInterf']  = int_read(f.readline().split()[0])
         self.fst_vt['SubDyn']['IJointID'] = [None]*self.fst_vt['SubDyn']['NInterf']
+        self.fst_vt['SubDyn']['TPID']     = [None]*self.fst_vt['SubDyn']['NInterf']
         self.fst_vt['SubDyn']['ItfTDXss'] = [None]*self.fst_vt['SubDyn']['NInterf']
         self.fst_vt['SubDyn']['ItfTDYss'] = [None]*self.fst_vt['SubDyn']['NInterf']
         self.fst_vt['SubDyn']['ItfTDZss'] = [None]*self.fst_vt['SubDyn']['NInterf']
@@ -2595,12 +2609,13 @@ class InputReader_OpenFAST(object):
         for i in range(self.fst_vt['SubDyn']['NInterf']):
             ln = f.readline().split()
             self.fst_vt['SubDyn']['IJointID'][i] = int(ln[0])
-            self.fst_vt['SubDyn']['ItfTDXss'][i] = int(ln[1])
-            self.fst_vt['SubDyn']['ItfTDYss'][i] = int(ln[2])
-            self.fst_vt['SubDyn']['ItfTDZss'][i] = int(ln[3])
-            self.fst_vt['SubDyn']['ItfRDXss'][i] = int(ln[4])
-            self.fst_vt['SubDyn']['ItfRDYss'][i] = int(ln[5])
-            self.fst_vt['SubDyn']['ItfRDZss'][i] = int(ln[6])
+            self.fst_vt['SubDyn']['TPID'][i]     = int(ln[1])
+            self.fst_vt['SubDyn']['ItfTDXss'][i] = int(ln[2])
+            self.fst_vt['SubDyn']['ItfTDYss'][i] = int(ln[3])
+            self.fst_vt['SubDyn']['ItfTDZss'][i] = int(ln[4])
+            self.fst_vt['SubDyn']['ItfRDXss'][i] = int(ln[5])
+            self.fst_vt['SubDyn']['ItfRDYss'][i] = int(ln[6])
+            self.fst_vt['SubDyn']['ItfRDZss'][i] = int(ln[7])
         f.readline()
         # MEMBERS
         self.fst_vt['SubDyn']['NMembers']    = int_read(f.readline().split()[0])
