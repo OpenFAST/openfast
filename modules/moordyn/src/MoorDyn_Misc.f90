@@ -943,7 +943,7 @@ CONTAINS
       Real(DbKi)                 :: zp                    ! zprime coordinate used for Wheeler stretching
 
       ! local 
-      CHARACTER(120)             :: RoutineName = 'getWaveKin'   
+      CHARACTER(120)             :: RoutineName = 'getWaterKin'   
    
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -1076,7 +1076,7 @@ CONTAINS
       REAL(SiKi),  ALLOCATABLE         :: TmpFFTWaveElev(:)     ! Data for the FFT calculation
       TYPE(FFT_DataType)               :: FFT_Data              ! the instance of the FFT module we're using
       
-      REAL(SiKi)                       :: tmpReal            ! A temporary Real number
+      REAL(SiKi)                       :: tmpReal            ! A temporary real number
       COMPLEX(SiKi),ALLOCATABLE        :: tmpComplex(:)      ! A temporary array (0:NStepWave2-1) for FFT use. 
    
       REAL(SiKi)                       :: Omega                 ! Wave frequency (rad/s)
@@ -1092,7 +1092,7 @@ CONTAINS
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHx(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity  in x-direction    of incident waves before applying stretching at the zi-coordinates for points (m/s)
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHy(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCV( :)        ! Discrete Fourier transform of the instantaneous vertical   velocity      of incident waves before applying stretching at the zi-coordinates for points (m/s)
-!      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the Realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
+!      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
 
       INTEGER(IntKi)                   :: ErrStat2
       CHARACTER(ErrMsgLen)             :: ErrMsg2
@@ -1611,12 +1611,12 @@ CONTAINS
                ! Initialize the FFT
                CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStat2 ); ErrMsg2 = 'Error occured while initializing the FFT.'; IF(Failed()) RETURN
 
-               ! Apply the forward FFT on the wave elevation timeseries to get the Real and imaginary parts of the frequency information.      
-               CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStat2 ); ErrMsg2 = 'Error occured while applying the forwards FFT to TmpFFTWaveElev array.'; IF(Failed()) RETURN  ! Note that the TmpFFTWaveElev now contains the Real and imaginary bits.
+               ! Apply the forward FFT on the wave elevation timeseries to get the real and imaginary parts of the frequency information.      
+               CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStat2 ); ErrMsg2 = 'Error occured while applying the forwards FFT to TmpFFTWaveElev array.'; IF(Failed()) RETURN  ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
 
                ! Copy the resulting TmpFFTWaveElev(:) data over to the WaveElevC0 array
                DO I=1,NStepWave2-1
-                  WaveElevC0     (1,I) = TmpFFTWaveElev(2*I-1) ! all the odd indicies in array (Real part ?)
+                  WaveElevC0     (1,I) = TmpFFTWaveElev(2*I-1) ! all the odd indicies in array (real part ?)
                   WaveElevC0     (2,I) = TmpFFTWaveElev(2*I) ! all the even indicies in array (imaginary part ?)
                ENDDO
                WaveElevC0(:,NStepWave2) = 0.0_SiKi
@@ -1653,7 +1653,7 @@ CONTAINS
             ! get wave number array once
             DO I = 0, NStepWave2 
                WaveNmbr(i)   = WaveNumber ( REAL(I*WaveDOmega, R8Ki), p%g, p%WtrDpth )
-               tmpComplex(I)    =  CMPLX(WaveElevC0(1,I), WaveElevC0(2,I)) ! 1 are Real, 2 are imaginary 
+               tmpComplex(I)    =  CMPLX(WaveElevC0(1,I), WaveElevC0(2,I)) ! 1 are real, 2 are imaginary 
             END DO    
             
             ! set up FFTer for doing IFFTs
