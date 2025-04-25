@@ -3254,7 +3254,7 @@ class InputReader_OpenFAST(object):
         bd_file1 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(1)']))
         bd_file2 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(2)']))
         bd_file3 = os.path.normpath(os.path.join(self.FAST_directory, self.fst_vt['Fst']['BDBldFile(3)']))
-        if os.path.exists(bd_file1):
+        if os.path.isfile(bd_file1):
             # if the files are the same then we only need to read it once, need to handle the cases where we have a 2 or 1 bladed rotor
             # Check unique BeamDyn blade files and read only once if identical
             if bd_file1 == bd_file2 and bd_file1 == bd_file3:
