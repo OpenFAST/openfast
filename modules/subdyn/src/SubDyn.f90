@@ -352,7 +352,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       CALL AllocAry(x%qR,       6, 'x%qR',       ErrStat2, ErrMsg2 ); if(Failed()) return
       CALL AllocAry(x%qRdot,    6, 'x%qRdot',    ErrStat2, ErrMsg2 ); if(Failed()) return
       CALL AllocAry(m%qRdotdot, 6, 'm%qRdotdot', ErrStat2, ErrMsg2 ); if(Failed()) return
-      x%qR      = 0.0_ReKi ! Replace with Init%qR0 later
+      x%qR      = Init%qR0
       x%qRdot   = 0.0_ReKi
       m%qRdotdot= 0.0_ReKi
    END IF
@@ -1051,9 +1051,9 @@ if (is_numeric(Dummy_Str, DummyFloat)) then
    CALL ReadVar (UnIn, SDInputFile, Init%GuyanDampSize, 'GuyanDampSize', 'Guyan damping matrix size', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
    CALL AllocAry(Init%GuyanDampMat, Init%GuyanDampSize, Init%GuyanDampSize, 'GuyanDampMat', ErrStat2, ErrMsg2 ); if(Failed()) return
    do i = 1,Init%GuyanDampSize
-      CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(i,:), Init%GuyanDampSize, "GuyanDampMat", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc)
+      CALL ReadAry( UnIn, SDInputFile, Init%GuyanDampMat(i,:), Init%GuyanDampSize, "GuyanDampMat", "Guyan Damping matrix ", ErrStat2, ErrMsg2, UnEc); if(Failed()) return
    end do
-   CALL ReadCom  ( UnIn, SDInputFile,               'STRUCTURE JOINTS'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom( UnIn, SDInputFile, 'Initial Rigid-Body Position'        ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 else
    call LegacyWarning('GuyanDampMod and following lines missing from input file. Assuming 0 Guyan damping.')
    Init%GuyanDampMod = idGuyanDamp_None
@@ -1062,7 +1062,14 @@ else
 endif
 IF (Check(.not.(any(idGuyanDamp_Valid==Init%GuyanDampMod)), 'Invalid value entered for GuyanDampMod')) return
 
+!------- Initial rigid-body position [used only for floating structures with more than one transition pieces] -------
+CALL ReadCom( UnIn, SDInputFile, 'Initial Rigid-Body Position Headers',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadCom( UnIn, SDInputFile, 'Initial Rigid-Body Position Units'  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadAry( UnIn, SDInputFile, Init%qR0, 6, "qR0", "initial rigid-body position ", ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+Init%qR0(4:6) = Init%qR0(4:6) * D2R
+
 !--------------------- STRUCTURE JOINTS: joints connect structure members -------------------------------
+CALL ReadCom  ( UnIn, SDInputFile,               'STRUCTURE JOINTS'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NJoints, 'NJoints', 'Number of joints',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,               'Joint Coordinates Headers'  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,               'Joint Coordinates Units'    ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
