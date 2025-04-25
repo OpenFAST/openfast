@@ -88,7 +88,7 @@ CONTAINS
      
       ! allocate segment scalar quantities
       if (Rod%N == 0) then                                ! special case of zero-length Rod
-         ALLOCATE(Rod%l(1), Rod%V(N), STAT=ErrStat2);  if(AllocateFailed("Rod: l and V")) return
+         ALLOCATE(Rod%l(1), Rod%V(1), STAT=ErrStat2);  if(AllocateFailed("Rod: l and V")) return
       else                                                ! normal case
          ALLOCATE(Rod%l(N), Rod%V(N), STAT=ErrStat2);  if(AllocateFailed("Rod: l and V")) return
       end if

@@ -114,7 +114,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0_IntKi      !< list of IdNums of points attached to this body [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR = 0_IntKi      !< list of IdNums of rods attached to this body [-]
-    INTEGER(IntKi)  :: nAttachedC = 0_IntKi      !< number of attached points [-]
+    INTEGER(IntKi)  :: nAttachedP = 0_IntKi      !< number of attached points [-]
     INTEGER(IntKi)  :: nAttachedR = 0_IntKi      !< number of attached rods [-]
     REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel = 0.0_R8Ki      !< relative position of point on body [-]
     REAL(DbKi) , DIMENSION(1:6,1:30)  :: r6RodRel = 0.0_R8Ki      !< relative position and orientation of rod on body [-]
@@ -949,7 +949,7 @@ subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
    DstBodyData%typeNum = SrcBodyData%typeNum
    DstBodyData%AttachedC = SrcBodyData%AttachedC
    DstBodyData%AttachedR = SrcBodyData%AttachedR
-   DstBodyData%nAttachedC = SrcBodyData%nAttachedC
+   DstBodyData%nAttachedP = SrcBodyData%nAttachedP
    DstBodyData%nAttachedR = SrcBodyData%nAttachedR
    DstBodyData%rPointRel = SrcBodyData%rPointRel
    DstBodyData%r6RodRel = SrcBodyData%r6RodRel
@@ -997,7 +997,7 @@ subroutine MD_PackBody(RF, Indata)
    call RegPack(RF, InData%typeNum)
    call RegPack(RF, InData%AttachedC)
    call RegPack(RF, InData%AttachedR)
-   call RegPack(RF, InData%nAttachedC)
+   call RegPack(RF, InData%nAttachedP)
    call RegPack(RF, InData%nAttachedR)
    call RegPack(RF, InData%rPointRel)
    call RegPack(RF, InData%r6RodRel)
@@ -1037,7 +1037,7 @@ subroutine MD_UnPackBody(RF, OutData)
    call RegUnpack(RF, OutData%typeNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AttachedC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AttachedR); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%nAttachedC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nAttachedP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nAttachedR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rPointRel); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%r6RodRel); if (RegCheckErr(RF, RoutineName)) return

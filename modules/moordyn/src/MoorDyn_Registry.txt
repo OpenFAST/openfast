@@ -94,7 +94,7 @@ typedef  ^            MD_Body          IntKi              IdNum          -      
 typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned"
 typedef  ^            ^                IntKi              AttachedC      {30}    -  -   "list of IdNums of points attached to this body"
 typedef  ^            ^                IntKi              AttachedR      {30}    -  -   "list of IdNums of rods attached to this body"
-typedef  ^            ^                IntKi              nAttachedC     -       -  -   "number of attached points"
+typedef  ^            ^                IntKi              nAttachedP     -       -  -   "number of attached points"
 typedef  ^            ^                IntKi              nAttachedR     -       -  -   "number of attached rods"
 typedef  ^            ^                DbKi               rPointRel    {3}{30}   -  -   "relative position of point on body"
 typedef  ^            ^                DbKi               r6RodRel     {6}{30}   -  -   "relative position and orientation of rod on body"

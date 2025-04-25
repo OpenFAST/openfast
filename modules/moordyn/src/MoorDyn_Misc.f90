@@ -1285,6 +1285,7 @@ CONTAINS
                   EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
                END IF
                IF (i == 100) THEN
+                  p%nzCurrent = 100
                   CALL WrScr("WARNING: MD can handle a maximum of 100 current profile points")
                   IF (p%writeLog > 0) THEN
                      WRITE(p%UnLog, '(A)'        ) "    WARNING: MD can handle a maximum of 100 current profile points"
@@ -1297,7 +1298,7 @@ CONTAINS
             DO I=1,p%nzCurrent
                IF (pzCurrentTemp(I) > 0) THEN
                   IF (p%writeLog > 0) THEN
-                     WRITE(p%UnLog, '(A)'        ) "    Warning: MoorDyn current profile z values are above the water line."
+                     WRITE(p%UnLog, '(A)'        ) "    WARNING: MoorDyn current profile z values are above the water line."
                   ENDIF
                   CALL SetErrStat(ErrID_Warn, "Mooring current profile z values are above the water line.", ErrStat, ErrMsg, RoutineName)
                END IF
