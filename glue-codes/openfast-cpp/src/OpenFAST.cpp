@@ -642,7 +642,6 @@ void fast::OpenFAST::init() {
                         tmpRstFileRoot,
                         &AbortErrLev,
                         &turbineData[iTurb].dt,
-                        &turbineData[iTurb].inflowType,
                         &turbineData[iTurb].numBlades,
                         &turbineData[iTurb].numVelPtsBlade,
                         &turbineData[iTurb].numVelPtsTwr,
