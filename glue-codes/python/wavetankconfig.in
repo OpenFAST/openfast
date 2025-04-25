@@ -26,34 +26,34 @@ seastate                    SS_OutRootName_C
 1500                        ADI_defSpdSound_C
 101325                      ADI_defPatm_C
 2500                        ADI_defPvap_C
-200                         ADI_WtrDpth_C
+50                          ADI_WtrDpth_C
 0.0                         ADI_MSL2SWL_C
 2                           MHK
 2                           DebugLevel
 1                           iWT_c
 1                           TurbineIsHAWT_c
-20.0 0.0 0.0                TurbOrigin_C
-0.0 0.0 0.0                 HubPos_C
+0.0 0.0 -24.0               TurbOrigin_C
+-5.0 0.0 -24.0              HubPos_C
 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0     HubOri_C
-0.0 0.0 0.0                 NacPos_C
+0.0 0.0 -24.0               NacPos_C
 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0     NacOri_C
 2                           NumBlades_C
-0.0 0.0 0.0 0.0 0.0 0.0     BldRootPos_C
-1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0     BldRootOri_C            
-1                           NumMeshPts_C
-0.0 0.0 0.0                 InitMeshPos_C
-1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0     InitMeshOri_C
+-5.0 0.0 -24.0 -5.0 0.0 -24.0 BldRootPos_C
+1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.0 -1.0 0.0 0.0 0.0 -1.0     BldRootOri_C
+2                           NumMeshPts_C
+0.0 0.0 -24.0 0.0 0.0 -24.0 InitMeshPos_C
+1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0     InitMeshOri_C
 1 2                         MeshPtToBladeNum_C
 adi                         ADI_OutRootName_C
 vtk                         ADI_OutVTKDir_C
-1                           ADI_InterpOrder_C
-0.125                       ADI_DT_C
-100.0                       ADI_TMax_C
+2                           ADI_InterpOrder_C
+0.003                       ADI_DT_C
+6.0                         ADI_TMax_C
 1                           ADI_storeHHVel
-0                           ADI_WrVTK_in
-3                           ADI_WrVTK_inType
-0.125                       ADI_WrVTK_inDT
+2                           ADI_WrVTK_in
+2                           ADI_WrVTK_inType
+0.012                       ADI_WrVTK_inDT
 0.0 0.0 0.0 0.0 0.0 0.0     ADI_VTKNacDim_in
 12.0                        ADI_VTKHubrad_in
-0                           ADI_wrOuts_C
-0.125                       ADI_DT_Outs_C
+1                           ADI_wrOuts_C
+0.1                         ADI_DT_Outs_C
