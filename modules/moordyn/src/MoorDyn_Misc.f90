@@ -1551,7 +1551,7 @@ CONTAINS
 
                
                ! allocate space for processed reference wave elevation time series
-               ALLOCATE ( WaveElev0( 0:p%ntWave ), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate array WaveElev0.'; IF(Failed()) RETURN  ! this has an extra entry of zero in case it needs to be padded to be even
+               ALLOCATE ( WaveElev0( 0:p%ntWave ), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate array WaveElev0.'; IF(Failed0()) RETURN  ! this has an extra entry of zero in case it needs to be padded to be even
                WaveElev0 = 0.0_SiKi
                
                ! go through and interpolate (should replace with standard function)
@@ -1586,10 +1586,10 @@ CONTAINS
                
 
                ! Allocate array to hold the wave elevations for calculation of FFT.
-               ALLOCATE ( TmpFFTWaveElev( 0:NStepWave-1), STAT=ErrStat2 ); ErrMsg2 = 'Cannot allocate array TmpFFTWaveElev.'; IF (Failed()) RETURN
+               ALLOCATE ( TmpFFTWaveElev( 0:NStepWave-1), STAT=ErrStat2 ); ErrMsg2 = 'Cannot allocate array TmpFFTWaveElev.'; IF (Failed0()) RETURN
 
                ! Allocate frequency array for the wave elevation information in frequency space
-               ALLOCATE ( WaveElevC0(2, 0:NStepWave2), STAT=ErrStat2 ); ErrMsg2 = 'Cannot allocate array WaveElevC0.'; IF (Failed()) RETURN
+               ALLOCATE ( WaveElevC0(2, 0:NStepWave2), STAT=ErrStat2 ); ErrMsg2 = 'Cannot allocate array WaveElevC0.'; IF (Failed0()) RETURN
                
 
                ! Now check if all the allocations worked properly
@@ -1623,8 +1623,8 @@ CONTAINS
 
                CALL  ExitFFT(FFT_Data, ErrStat2); ErrMsg2 = 'Error occured while cleaning up after the FFTs.'; IF(Failed()) RETURN
 
-               IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate WaveElev0.'     ; IF (Failed()) RETURN  
-               IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate TmpFFTWaveElev.'; IF (Failed()) RETURN
+               IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate WaveElev0.'     ; IF (Failed0()) RETURN  
+               IF (ALLOCATED( TmpFFTWaveElev )) DEALLOCATE( TmpFFTWaveElev, STAT=ErrStat2); ErrMsg2 = 'Cannot deallocate TmpFFTWaveElev.'; IF (Failed0()) RETURN
 
             ENDIF ! End getting frequency data either from time series or WaveField. The below needs to happen for both old and hybrid approach
             
@@ -1632,16 +1632,16 @@ CONTAINS
             ! we will want to synchronize with a standard library at some point
 
             ! allocate all the wave kinematics FFT arrays  
-            ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveNmbr.'  ; IF (Failed()) RETURN
-            ALLOCATE( tmpComplex(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate tmpComplex.'; IF (Failed()) RETURN
-            ALLOCATE( WaveElevC (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveElevC.' ; IF (Failed()) RETURN
-            ALLOCATE( WaveDynPC (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveDynPC.' ; IF (Failed()) RETURN
-            ALLOCATE( WaveVelCHx(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCHx.'; IF (Failed()) RETURN
-            ALLOCATE( WaveVelCHy(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCHy.'; IF (Failed()) RETURN
-            ALLOCATE( WaveVelCV (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCV.' ; IF (Failed()) RETURN
-            ALLOCATE( WaveAccCHx(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCHx.'; IF (Failed()) RETURN
-            ALLOCATE( WaveAccCHy(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCHy.'; IF (Failed()) RETURN
-            ALLOCATE( WaveAccCV (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCV .'; IF (Failed()) RETURN
+            ALLOCATE( WaveNmbr  (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveNmbr.'  ; IF (Failed0()) RETURN
+            ALLOCATE( tmpComplex(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate tmpComplex.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveElevC (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveElevC.' ; IF (Failed0()) RETURN
+            ALLOCATE( WaveDynPC (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveDynPC.' ; IF (Failed0()) RETURN
+            ALLOCATE( WaveVelCHx(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCHx.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveVelCHy(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCHy.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveVelCV (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveVelCV.' ; IF (Failed0()) RETURN
+            ALLOCATE( WaveAccCHx(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCHx.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveAccCHy(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCHy.'; IF (Failed0()) RETURN
+            ALLOCATE( WaveAccCV (0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate WaveAccCV .'; IF (Failed0()) RETURN
             
             ! allocate time series grid data arrays (now that we know the number of time steps coming from the IFFTs)
             CALL allocateKinematicsArrays() 
@@ -1918,14 +1918,14 @@ CONTAINS
       SUBROUTINE allocateKinematicsArrays()
         !  error check print *, "Error in Waves::makeGrid, a time or space array is size zero." << endl;
 
-        ALLOCATE ( p%uxWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
-        ALLOCATE ( p%uyWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
-        ALLOCATE ( p%uzWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
-        ALLOCATE ( p%axWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
-        ALLOCATE ( p%ayWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
-        ALLOCATE ( p%azWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
-        ALLOCATE ( p%PDyn  ( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); IF (Failed()) RETURN
-        ALLOCATE ( p%zeta  ( p%ntWave,p%nyWave,p%nxWave), STAT = ErrStat2 ); IF (Failed()) RETURN    ! 2D grid over x and y only
+        ALLOCATE ( p%uxWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate uxWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%uyWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate uyWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%uzWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate uzWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%axWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate axWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%ayWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate ayWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%azWave( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate azWave'; IF (Failed0()) RETURN
+        ALLOCATE ( p%PDyn  ( p%ntWave,p%nzWave,p%nyWave,p%nxWave), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate PDyn'  ; IF (Failed0()) RETURN
+        ALLOCATE ( p%zeta  ( p%ntWave,p%nyWave,p%nxWave)         , STAT=ErrStat2); ErrMsg2 = 'Cannot allocate zeta'  ; IF (Failed0()) RETURN    ! 2D grid over x and y only
         
       END SUBROUTINE allocateKinematicsArrays
 
@@ -1937,6 +1937,17 @@ CONTAINS
            IF (Failed) CALL CleanUp()
            CALL SetErrStat(ErrStat2, 'Cleanup was not succcessful', ErrStat, ErrMsg, 'SetupWaterKin') ! check that deallocation was successful
       END FUNCTION Failed
+
+      ! check for failed where /= 0 is fatal
+      LOGICAL FUNCTION Failed0()
+         IF (ErrStat2 /= ErrID_None) THEN
+            ErrStat2 = ErrID_Fatal
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         ENDIF
+         Failed0 = ErrStat >= AbortErrLev
+         IF (Failed0) CALL CleanUp()
+         CALL SetErrStat(ErrStat2, 'Cleanup was not succcessful', ErrStat, ErrMsg, 'SetupWaterKin') ! check that deallocation was successful
+      END FUNCTION Failed0
    
 
       SUBROUTINE CleanUp
