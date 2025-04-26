@@ -1359,12 +1359,13 @@ END SUBROUTINE CheckBCs
 !> Check interface inputs, and remap 0s and 1s 
 SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
    TYPE(SD_ParameterType),INTENT(INOUT) :: p
-   INTEGER(IntKi),        INTENT(IN   ) :: TPIdxInput(:)
+   INTEGER(IntKi),        INTENT(INOUT) :: TPIdxInput(:)
    INTEGER(IntKi),        INTENT(  OUT) :: RB_RefJoint
    INTEGER(IntKi),        INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),          INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi)                       :: I, J, iNode, iFound
-   LOGICAL, ALLOCATABLE                 :: TPExist(:), TP1NodeFound
+   INTEGER(IntKi)                       :: I, J, iNode, iFound, TPIDOffset
+   LOGICAL, ALLOCATABLE                 :: TPExist(:)
+   LOGICAL                              :: TP1NodeFound
    ErrMsg  = ""
    ErrStat = ErrID_None
 
@@ -1386,9 +1387,22 @@ SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
             ErrMsg  = 'Wrong boundary condition input for interface node'//trim(Num2LStr(iNode))
          endif
       ENDDO
+   ENDDO
+
+   TPIDOffset = 0
+   DO I = 1, p%nNodes_I
+      IF ( TPIdxInput(I) == 0 ) THEN
+         TPIDOffset = 1
+         EXIT
+      END IF
+   ENDDO
+   TPIdxInput = TPIdxInput + TPIDOffset
+
+   DO I = 1, p%nNodes_I
+      iNode = p%Nodes_I(I,1) ! Node index
       if ( (TPIdxInput(I)<=0) .or. (TPIdxInput(I)>p%nNodes_I) ) then
          ErrStat = ErrID_Fatal
-         ErrMsg  = 'Transition-piece index must be sequential starting from 1, check interface node:'//trim(Num2LStr(iNode))
+         ErrMsg  = 'Transition-piece index must be sequential starting from 0 (floating with multiple transition pieces) or 1 (all other cases), check interface node:'//trim(Num2LStr(iNode))
          return
       else
          if (TPIdxInput(I)>p%nTP) p%nTP = TPIdxInput(I)
@@ -1400,13 +1414,18 @@ SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
    DO I = 1,p%nTP
       if (.not.TPExist(I)) then
          ErrStat = ErrID_Fatal
-         ErrMsg  = 'Transition-piece index must be sequential starting from 1, missing reference to transition piece '//trim(Num2LStr(I))
+         ErrMsg  = 'Transition-piece index must be sequential starting from 0 (floating with multiple transition pieces) or 1 (all other cases), missing reference to transition piece '//trim(Num2LStr(I-TPIDOffset))
          return
       end if
    ENDDO
 
    if (p%Floating .and. (p%nTP>1)) then
       p%TP1IsRBRefPt = .true.
+      if (TPIDOffset == 0) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'For a floating structure with more than one transition pieces, must have one and only one interface joint assigned to the dummy transition piece (TPID=0) used to represent rigid-body motion. '
+         return
+      end if
    else
       p%TP1IsRBRefPt = .false.
    end if
@@ -1420,7 +1439,7 @@ SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
                RB_RefJoint  = p%Nodes_I(I,1)
             else
                ErrStat = ErrID_Fatal
-               ErrMsg  = ' The first transition piece is serving as the rigid-body reference point for the floating structure. Only one joint can be assigned to the first transition piece. '
+               ErrMsg  = ' Only one joint can be assigned to the dummy transition piece (TPID=0) serving as the rigid-body reference point for the floating structure. '
                return
             end if
          end if
