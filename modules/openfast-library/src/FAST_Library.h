@@ -16,7 +16,7 @@
 EXTERNAL_ROUTINE void FAST_AllocateTurbines(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_DeallocateTurbines(int *ErrStat, char *ErrMsg);
 
-EXTERNAL_ROUTINE void FAST_ExtInfw_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, double * dt, int * InflowType,
+EXTERNAL_ROUTINE void FAST_ExtInfw_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, double * dt,
                                            int * NumBl, int * NumBlElem, int * NumTwrElem, int * n_t_global,
                                            ExtInfw_InputType_t* ExtInfw_Input, ExtInfw_OutputType_t* ExtInfw_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output,
                                            int *ErrStat, char *ErrMsg);

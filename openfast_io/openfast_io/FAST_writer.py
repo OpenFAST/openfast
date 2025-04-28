@@ -30,35 +30,49 @@ def auto_format(f, var):
     elif isinstance(var, float):
         f.write('{: 2.15e}\n'.format(var))
 
-def float_default_out(val):
+def float_default_out(val, trim = False):
     """
     Formatted float output when 'default' is an option
 
     args:
     val: value to be formatted
+    trim: trim the whitespace from the returned value
 
     returns:
     formatted value
     """
     if type(val) is float:
-        return '{: 22f}'.format(val)
+        if trim:
+            return '{:.4f}'.format(val)
+        else:
+            return '{: 22f}'.format(val)
     else:
-        return '{:<22}'.format(val)
+        if trim:
+            return '{:}'.format(val)
+        else:
+            return '{:<22}'.format(val)
 
-def int_default_out(val):
+def int_default_out(val, trim = False):
     """
     Formatted int output when 'default' is an option
 
     args:
     val: value to be formatted
+    trim: trim the whitespace from the returned value
 
     returns:
     formatted value
     """
     if type(val) is float:
-        return '{:<22d}'.format(val)
+        if trim:
+            return '{:d}'.format(val)
+        else:
+            return '{:<22d}'.format(val)
     else:
-        return '{:<22}'.format(val)
+        if trim:
+            return '{:}'.format(val)
+        else:
+            return '{:<22}'.format(val)
 
 def get_dict(vartree, branch):
     """
@@ -236,7 +250,7 @@ class InputWriter_OpenFAST(object):
             self.write_MAP()
         elif self.fst_vt['Fst']['CompMooring'] == 3:
             self.write_MoorDyn()
-            if 'options' in self.fst_vt['MoorDyn'] and 'WaterKin' in self.fst_vt['MoorDyn']['options']:
+            if 'option_names' in self.fst_vt['MoorDyn'] and 'WATERKIN' in self.fst_vt['MoorDyn']['option_names']:
                 self.write_WaterKin(os.path.join(self.FAST_runDirectory,self.fst_vt['MoorDyn']['WaterKin_file']))
 
         #     # look at if the the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
@@ -2334,30 +2348,35 @@ class InputWriter_OpenFAST(object):
 
         f.write('--------------------- MoorDyn Input File ------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['Echo'], 'Echo', '- echo the input file data (flag)\n'))
+        f.write('Comments from seed file have been dropped. Output Channels are not yet fully supported\n')
+        f.write('NOTE: MoorDyn does not use ECHO, instead use WriteLog of 0, 1, 2, or 3 in the options list \n')
         f.write('----------------------- LINE TYPES ------------------------------------------\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['Name', 'Diam', 'MassDen', 'EA', 'BA/-zeta', 'EI', 'Cd', 'Ca', 'CdAx', 'CaAx']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(m)', '(kg/m)', '(N)', '(N-s/-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['Name', 'Diam', 'MassDen', 'EA', 'BA/-zeta', 'EI', 'Cd', 'Ca', 'CdAx', 'CaAx', 'Cl (optional)', 'dF (optional)', 'cF (optional)']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['(-)', '(m)', '(kg/m)', '(N)', '(N-s/-)', '(N-m^2)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
         for i in range(len(self.fst_vt['MoorDyn']['Name'])):
             ln = []
-            ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Name'][i]))
+            ln.append('{:<11}'.format(self.fst_vt['MoorDyn']['Name'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Diam'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['MassDen'][i]))
-            ln.append('{:^11.4e}'.format(self.fst_vt['MoorDyn']['EA'][i]))
-            ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['BA_zeta'][i]))
+            ln.append('|'.join([float_default_out(a, trim=True) for a in self.fst_vt['MoorDyn']['EA'][i]]))
+            ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['BA_zeta'][i]]))
             ln.append('{:^11.4e}'.format(self.fst_vt['MoorDyn']['EI'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Cd'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Ca'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CdAx'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CaAx'][i]))
             f.write(" ".join(ln) + '\n')
+
+            if self.fst_vt['MoorDyn']['NonLinearEA'][i] != None:
+                self.write_NonLinearEA(self.fst_vt['MoorDyn']['EA'][i][0], self.fst_vt['MoorDyn']['Name'][i], self.fst_vt['MoorDyn']['NonLinearEA'][i])
+
         if 'Rod_Name' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Rod_Name']:
             f.write('----------------------- ROD TYPES ------------------------------------------\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['TypeName', 'Diam', 'Mass/m', 'Cd', 'Ca', 'CdEnd', 'CaEnd']])+'\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['(name)', '(m)', '(kg/m)', '(-)', '(-)', '(-)', '(-)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['TypeName', 'Diam', 'Mass/m', 'Cd', 'Ca', 'CdEnd', 'CaEnd']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['(name)', '(m)', '(kg/m)', '(-)', '(-)', '(-)', '(-)']])+'\n')
             for i in range(len(self.fst_vt['MoorDyn']['Rod_Name'])):
                 ln = []
-                ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Rod_Name'][i]))
+                ln.append('{:<11}'.format(self.fst_vt['MoorDyn']['Rod_Name'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Rod_Diam'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Rod_MassDen'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Rod_Cd'][i]))
@@ -2369,11 +2388,11 @@ class InputWriter_OpenFAST(object):
 
         if 'Body_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Body_ID']:
             f.write('----------------------- BODIES ------------------------------------------\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['ID', 'Attachement', 'X0', 'Y0', 'Z0', 'r0',  'p0','y0','Mass','CG*','I*','Volume','CdA*','Ca*']])+'\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['(#)', '(word)', '(m)', '(m)', '(m)', '(deg)',  '(deg)','(deg)','(kg)','(m)','(kg-m^2)','(m^3)','m^2','(kg/m^3)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['ID', 'Attachement', 'X0', 'Y0', 'Z0', 'r0',  'p0','y0','Mass','CG*','I*','Volume','CdA*','Ca*']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['(#)', '(word)', '(m)', '(m)', '(m)', '(deg)',  '(deg)','(deg)','(kg)','(m)','(kg-m^2)','(m^3)','m^2','(kg/m^3)']])+'\n')
             for i in range(len(self.fst_vt['MoorDyn']['Body_ID'])):
                 ln = []
-                ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['Body_ID'][i]))
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Body_ID'][i]))
                 ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Body_Attachment'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['X0'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Y0'][i]))
@@ -2391,11 +2410,11 @@ class InputWriter_OpenFAST(object):
 
         if 'Rod_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Rod_ID']:
             f.write('----------------------- RODS ------------------------------------------\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['ID', 'RodType', 'Attachment', 'Xa', 'Ya', 'Za', 'Xb','Yb','Zb','NumSegs','RodOutputs']])+'\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['(#)', '(name)', '(word/ID)', '(m)', '(m)', '(m)', '(m)','(m)','(m)','(-)','(-)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['ID', 'RodType', 'Attachment', 'Xa', 'Ya', 'Za', 'Xb','Yb','Zb','NumSegs','RodOutputs']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['(#)', '(name)', '(word/ID)', '(m)', '(m)', '(m)', '(m)','(m)','(m)','(-)','(-)']])+'\n')
             for i in range(len(self.fst_vt['MoorDyn']['Rod_ID'])):
                 ln = []
-                ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Rod_ID'][i]))
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Rod_ID'][i]))
                 ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Rod_Type'][i]))
                 ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Rod_Attachment'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Xa'][i]))
@@ -2410,11 +2429,11 @@ class InputWriter_OpenFAST(object):
         
 
         f.write('---------------------- POINTS --------------------------------\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['ID', 'Attachment', 'X', 'Y', 'Z', 'M', 'V', 'CdA', 'CA']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(-)', '(m)', '(m)', '(m)', '(kg)', '(m^3)', '(m^2)', '(-)']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['ID', 'Attachment', 'X', 'Y', 'Z', 'M', 'V', 'CdA', 'CA']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['(-)', '(-)', '(m)', '(m)', '(m)', '(kg)', '(m^3)', '(m^2)', '(-)']])+'\n')
         for i in range(len(self.fst_vt['MoorDyn']['Point_ID'])):
             ln = []
-            ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['Point_ID'][i]))
+            ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Point_ID'][i]))
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Attachment'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['X'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Y'][i]))
@@ -2425,11 +2444,11 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CA'][i]))
             f.write(" ".join(ln) + '\n')
         f.write('---------------------- LINES --------------------------------------\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['Line', 'LineType', 'AttachA', 'AttachB', 'UnstrLen', 'NumSegs',  'Outputs']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(-)', '(-)', '(-)', '(m)', '(-)',  '(-)']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['Line', 'LineType', 'AttachA', 'AttachB', 'UnstrLen', 'NumSegs',  'Outputs']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['(-)', '(-)', '(-)', '(-)', '(m)', '(-)',  '(-)']])+'\n')
         for i in range(len(self.fst_vt['MoorDyn']['Line_ID'])):
             ln = []
-            ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['Line_ID'][i]))
+            ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Line_ID'][i]))
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['LineType'][i]))
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['AttachA'][i]))
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['AttachB'][i]))
@@ -2438,41 +2457,58 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Outputs'][i]))
             f.write(" ".join(ln) + '\n')
 
+        if 'Failure_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Failure_ID']: # there are failure inputs
+            f.write('---------------------- FAILURE ----------------------\n')
+            f.write('FailureID  Point    Line(s)   FailTime   FailTen\n')
+            f.write('()           ()       (,)      (s or 0)   (N or 0)\n')
+            for i_line in range(len(self.fst_vt['MoorDyn']['Failure_ID'])):
+                ln = []
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Failure_ID'][i_line]))
+                ln.append('{:^11s}'.format(self.fst_vt['MoorDyn']['Failure_Point'][i_line]))
+                ln.append('{:^11s}'.format(','.join(['{:^d}'.format(a) for a in self.fst_vt['MoorDyn']['Failure_Line(s)'][i_line]])))
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['FailTime'][i_line]))
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['FailTen'][i_line]))
+                f.write(" ".join(ln) + '\n')
+
         if 'ChannelID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['ChannelID']: # There are control inputs
             f.write('---------------------- CONTROL ---------------------------------------\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['ChannelID', 'Line(s)']])+'\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['()', '(,)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['ChannelID', 'Line(s)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['()', '(,)']])+'\n')
             for i_line in range(len(self.fst_vt['MoorDyn']['ChannelID'])):
                 ln = []
-                ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['ChannelID'][i_line]))
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['ChannelID'][i_line]))
                 ln.append(','.join(self.fst_vt['MoorDyn']['Lines_Control'][i_line]))
                 f.write(" ".join(ln) + '\n')
 
-        f.write('---------------------- SOLVER OPTIONS ---------------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['dtM'], 'dtM', '- time step to use in mooring integration (s)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['kbot'], 'kbot', '- bottom stiffness (Pa/m)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['cbot'], 'cbot', '- bottom damping (Pa-s/m)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['dtIC'], 'dtIC', '- time interval for analyzing convergence during IC gen (s)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['TmaxIC'], 'TmaxIC', '- max time for ic gen (s)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['CdScaleIC'], 'CdScaleIC', '- factor by which to scale drag coefficients during dynamic relaxation (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['threshIC'], 'threshIC', '- threshold for IC convergence (-)\n'))
-        if 'options' in self.fst_vt['MoorDyn']:
-            if 'inertialF' in self.fst_vt['MoorDyn']['options']:
-                f.write('{:<22d} {:<11} {:}'.format(int(self.fst_vt['MoorDyn']['inertialF']), 'inertialF', '- Compute the inertial forces (0: no, 1: yes). Switch to 0 if you get: Warning: extreme pitch moment from body-attached Rod.\n'))
+        if 'External_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['External_ID']: # there are external load outputs
+            f.write('---------------------- EXTERNAL LOADS --------------------------------\n')
+            f.write('ID    Object          Fext             Blin          Bquad         CSys\n')
+            f.write('(#)   (name)           (N)            (Ns/m)       (Ns^2/m^2)      (-)\n')
+            for i_line in range(len(self.fst_vt['MoorDyn']['External_ID'])):
+                ln = []
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['External_ID'][i_line]))
+                ln.append('{:^11s}'.format(self.fst_vt['MoorDyn']['Object'][i_line]))
+                ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['Fext'][i_line]]))
+                ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['Blin'][i_line]]))
+                ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['Bquad'][i_line]]))
+                ln.append('{:^11s}'.format(self.fst_vt['MoorDyn']['CSys'][i_line]))
+                f.write(" ".join(ln) + '\n')
 
-            if 'WaterKin' in self.fst_vt['MoorDyn']['options']:
+        f.write('---------------------- SOLVER OPTIONS ---------------------------------------\n') 
+        for i in range(len(self.fst_vt['MoorDyn']['option_values'])):
+
+            if 'WATERKIN' in self.fst_vt['MoorDyn']['option_names'][i]:
                 self.fst_vt['MoorDyn']['WaterKin_file'] = self.FAST_namingOut + '_WaterKin.dat'
-                f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['MoorDyn']['WaterKin_file']+'"', 'WaterKin', '- WaterKin input file\n'))
+                f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['MoorDyn']['WaterKin_file']+'"', self.fst_vt['MoorDyn']['option_names'][i], self.fst_vt['MoorDyn']['option_descriptions'][i]+'\n'))
+            else: # if not waterkin handle normally
+                f.write('{:<22} {:<11} {:}'.format(float_default_out(self.fst_vt['MoorDyn']['option_values'][i]), self.fst_vt['MoorDyn']['option_names'][i], self.fst_vt['MoorDyn']['option_descriptions'][i]+'\n'))
 
-        
-        # f.write('{:^11s} {:<11} {:}'.format(self.fst_vt['MoorDyn']['WaterKin'], 'WaterKin', 'Handling of water motion (0=off, 1=on)\n'))
         f.write('------------------------ OUTPUTS --------------------------------------------\n')
         outlist = self.get_outlist(self.fst_vt['outlist'], ['MoorDyn'])
         for channel_list in outlist:
             for i in range(len(channel_list)):
-                f.write('"' + channel_list[i] + '"\n')
-        f.write('END\n')
-        f.write('------------------------- need this line --------------------------------------\n')
+                f.write(channel_list[i] + '\n')
+        f.write('------------------------- END --------------------------------------\n')
 
         f.flush()
         os.fsync(f)
@@ -2481,8 +2517,8 @@ class InputWriter_OpenFAST(object):
     def write_WaterKin(self,WaterKin_file):
         f = open(WaterKin_file, 'w')
 
-        f.write('MoorDyn v2 (Feb 2022) Waves and Currents input file set up for USFLOWT\n')
-        f.write('Wave kinematics that will have an impact over the cans and the mooring lines.\n')
+        f.write('MoorDyn v2 Waves and Currents input file set up\n')
+        f.write('This file was written by FAST_writer.py, comments from seed file have been dropped.\n')
         f.write('--------------------------- WAVES -------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveKinMod'], 'WaveKinMod', '- type of wave input {0 no waves; 3 set up grid of wave data based on time series}\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveKinFile'], 'WaveKinFile', '- file containing wave elevation time series at 0,0,0\n'))
@@ -2495,16 +2531,30 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:}'.format(self.fst_vt['WaterKin']['Z_Type'], '- Z wave input type (0: not used; 1: list values in ascending order; 2: uniform specified by -Zlim, Zlim, num)\n'))
         f.write('{:<22} {:}'.format(', '.join(['{:.3f}'.format(i) for i in self.fst_vt['WaterKin']['Z_Grid']]), '- Z wave grid point data separated by commas\n'))
         f.write('--------------------------- CURRENT -------------------------------------\n')
-        f.write('0                    CurrentMod  - type of current input {0 no current; 1 steady current profile described below} \n')
+        f.write('{:}                    CurrentMod  - type of current input (0 no current; 1 steady current profile described below) \n'.format(self.fst_vt['WaterKin']['CurrentMod']))
         f.write('z-depth     x-current      y-current\n')
         f.write('(m)           (m/s)         (m/s)\n')
+        if self.fst_vt['WaterKin']['z-depth']:
+            for i in range(len(self.fst_vt['WaterKin']['z-depth'])):
+                f.write('{:.3f} {:.3f} {:.3f}'.format(self.fst_vt['WaterKin']['z-depth'][i], self.fst_vt['WaterKin']['x-current'][i], self.fst_vt['WaterKin']['y-current'][i]))
         f.write('--------------------- need this line ------------------\n')
 
         f.flush()
         os.fsync(f)
         f.close()
 
+    def write_NonLinearEA(self,Stiffness_file, Linetype, NonLinearEA):
+        f = open(Stiffness_file, 'w')
 
+        f.write('---{:}---\n'.format(Linetype))
+        f.write('Strain    Tension\n')
+        f.write('(-)       (N)\n')
+        for i in range(len(NonLinearEA["Strain"])):
+            f.write('{:.3f} {:.3f}'.format(NonLinearEA["Strain"][i], NonLinearEA["Tension"][i]))
+
+        f.flush()
+        os.fsync(f)
+        f.close()
         
         
     def write_StC(self,StC_vt,StC_filename):
@@ -2631,7 +2681,7 @@ if __name__=="__main__":
                                        'glue-codes', 'openfast', 
                                        '5MW_Land_BD_DLL_WTurb')   # Path to fst directory files
     
-    check_rtest_cloned(os.path.join(fast.FAST_directory, fast.FAST_InputFile))
+    check_rtest_cloned(os.path.join(fast.FAST_directory))
     
     fast.execute()
     
