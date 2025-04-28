@@ -719,8 +719,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          AD%p%WaveField => Init%OutData_SeaSt%WaveField
       END IF
 
-      p_FAST%ModuleInitialized(Module_AD) = .TRUE.
-
       ! Loop through rotors and add module for each one
       do i = 1, size(Init%OutData_AD%rotors)
          CALL MV_AddModule(m_Glue%ModData, Module_AD, 'AD', i, p_FAST%dt_module(Module_AD), p_FAST%DT, &
