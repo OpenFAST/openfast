@@ -202,11 +202,12 @@ end subroutine SetErr
 !===============================================================================================================
 !--------------------------------------------- HydroDyn Init----------------------------------------------------
 !===============================================================================================================
-SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                             &
+SUBROUTINE HydroDyn_C_Init(                                                            &
                SeaSt_InputFilePassed,                                                  &
                SeaSt_InputFileString_C,   SeaSt_InputFileStringLength_C,               &
                HD_InputFilePassed,                                                     &
                HD_InputFileString_C,      HD_InputFileStringLength_C,                  &
+               OutRootName_C,                                                          &
                Gravity_C, defWtrDens_C, defWtrDpth_C, defMSL2SWL_C,                    &
                PtfmRefPtPositionX_C, PtfmRefPtPositionY_C,                             &
                NumNodePts_C,  InitNodePositions_C,                                     &
@@ -220,13 +221,13 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
 !GCC$ ATTRIBUTES DLLEXPORT :: HydroDyn_C_Init
 #endif
 
-   character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
-   integer(c_int),            intent(in   )  :: SeaSt_InputFilePassed                  !< True: pass the input file content; False: pass the input file name
+   integer(c_int),            intent(in   )  :: SeaSt_InputFilePassed                  !< 0: pass the input file name; 1: pass the input file content
    type(c_ptr),               intent(in   )  :: SeaSt_InputFileString_C                !< SeaSt input file as a single string with lines deliniated by C_NULL_CHAR
    integer(c_int),            intent(in   )  :: SeaSt_InputFileStringLength_C          !< SeaSt length of the input file string
-   integer(c_int),            intent(in   )  :: HD_InputFilePassed                  !< True: pass the input file content; False: pass the input file name
+   integer(c_int),            intent(in   )  :: HD_InputFilePassed                     !< 0: pass the input file name; 1: pass the input file content
    type(c_ptr),               intent(in   )  :: HD_InputFileString_C                   !< HD input file as a single string with lines deliniated by C_NULL_CHAR
    integer(c_int),            intent(in   )  :: HD_InputFileStringLength_C             !< HD length of the input file string
+   character(kind=c_char),    intent(in   )  :: OutRootName_C(IntfStrLen)              !< Root name to use for echo files and other
    real(c_float),             intent(in   )  :: Gravity_C                              !< Gravitational constant (set by calling code)
    real(c_float),             intent(in   )  :: defWtrDens_C                           !< Default value for water density (may be overridden by input file)
    real(c_float),             intent(in   )  :: defWtrDpth_C                           !< Default value for water density (may be overridden by input file)

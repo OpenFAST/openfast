@@ -103,6 +103,9 @@ class HydroDynLib(CDLL):
         self._initialize_routines()
         self.ended = False                  # For error handling at end
 
+        # Input file handling configuration
+        self.seastate_inputs_passed_as_string: bool = True  # Pass input file as string
+        self.hydrodyn_inputs_passed_as_string: bool = True  # Pass input file as string
 
         # Create buffers for class data
         self.abort_error_level = 4
@@ -161,11 +164,13 @@ class HydroDynLib(CDLL):
     # _initialize_routines() ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
         self.HydroDyn_C_Init.argtypes = [
-            POINTER(c_char),                    # OutRootName 
+            POINTER(c_int),                     # SeaState input file passed as string
             POINTER(c_char_p),                  # SeaState input file string
             POINTER(c_int),                     # SeaState input file string length
+            POINTER(c_int),                     # HydroDyn input file passed as string
             POINTER(c_char_p),                  # HydroDyn input file string
             POINTER(c_int),                     # HydroDyn input file string length
+            POINTER(c_char),                    # OutRootName 
             POINTER(c_float),                   # gravity
             POINTER(c_float),                   # defWtrDens
             POINTER(c_float),                   # defWtrDpth
@@ -281,28 +286,30 @@ class HydroDynLib(CDLL):
 
         # call HydroDyn_C_Init
         self.HydroDyn_C_Init(
-            _outRootName_c,                         # IN: rootname for HD file writing
-            c_char_p(seast_input_string),           # IN: SeaState input file string
-            byref(c_int(seast_input_string_length)),# IN: SeaState input file string length
-            c_char_p(hd_input_string),              # IN: HydroDyn input file string
-            byref(c_int(hd_input_string_length)),   # IN: HydroDyn input file string length
-            byref(c_float(self.gravity)),           # IN: gravity
-            byref(c_float(self.defWtrDens)),        # IN: default water density
-            byref(c_float(self.defWtrDpth)),        # IN: default water depth
-            byref(c_float(self.defMSL2SWL)),        # IN: default offset between still-water level and mean sea level
-            byref(c_float(self.ptfmRefPt_x)),       # IN: Platform initial position (X)
-            byref(c_float(self.ptfmRefPt_y)),       # IN: Platform initial position (Y)
-            byref(c_int(self.numNodePts)),          # IN: number of attachment points expected (where motions are transferred into HD)
-            nodeInitLoc_flat_c,                     # IN: initNodePos -- initial node positions in flat array of 6*numNodePts
-            byref(c_int(self.InterpOrder)),         # IN: InterpOrder (1: linear, 2: quadratic)
-            byref(c_double(self.t_start)),          # IN: time initial 
-            byref(c_double(self.dt)),               # IN: time step (dt)
-            byref(c_double(self.tmax)),             # IN: tmax
-            byref(self._numChannels_c),             # OUT: number of channels
-            self._channel_names_c,                  # OUT: output channel names
-            self._channel_units_c,                  # OUT: output channel units
-            byref(self.error_status_c),             # OUT: ErrStat_C
-            self.error_message_c                    # OUT: ErrMsg_C
+            byref(c_int(self.seastate_inputs_passed_as_string)),    # IN: SeaState input file is passed as string
+            c_char_p(seast_input_string),                           # IN: SeaState input file string
+            byref(c_int(seast_input_string_length)),                # IN: SeaState input file string length
+            byref(c_int(self.hydrodyn_inputs_passed_as_string)),    # IN: HydroDyn input file is passed as string
+            c_char_p(hd_input_string),                              # IN: HydroDyn input file string
+            byref(c_int(hd_input_string_length)),                   # IN: HydroDyn input file string length
+            _outRootName_c,                                         # IN: rootname for HD file writing
+            byref(c_float(self.gravity)),                           # IN: gravity
+            byref(c_float(self.defWtrDens)),                        # IN: default water density
+            byref(c_float(self.defWtrDpth)),                        # IN: default water depth
+            byref(c_float(self.defMSL2SWL)),                        # IN: default offset between still-water level and mean sea level
+            byref(c_float(self.ptfmRefPt_x)),                       # IN: Platform initial position (X)
+            byref(c_float(self.ptfmRefPt_y)),                       # IN: Platform initial position (Y)
+            byref(c_int(self.numNodePts)),                          # IN: number of attachment points expected (where motions are transferred into HD)
+            nodeInitLoc_flat_c,                                     # IN: initNodePos -- initial node positions in flat array of 6*numNodePts
+            byref(c_int(self.InterpOrder)),                         # IN: InterpOrder (1: linear, 2: quadratic)
+            byref(c_double(self.t_start)),                          # IN: time initial 
+            byref(c_double(self.dt)),                               # IN: time step (dt)
+            byref(c_double(self.tmax)),                             # IN: tmax
+            byref(self._numChannels_c),                             # OUT: number of channels
+            self._channel_names_c,                                  # OUT: output channel names
+            self._channel_units_c,                                  # OUT: output channel units
+            byref(self.error_status_c),                             # OUT: ErrStat_C
+            self.error_message_c                                    # OUT: ErrMsg_C
         )
 
         self.check_error()
