@@ -70,14 +70,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: HubRad = 0.0_ReKi      !< Preconed hub radius (distance from the rotor apex to the blade root) [m]
     REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Initial or fixed rotor speed [rad/s]
     LOGICAL  :: isFixed_GenDOF = .false.      !< whether the generator is fixed or free [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_x      !< Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     INTEGER(IntKi)  :: GearBox_index = 0_IntKi      !< Index to gearbox rotation in state array (for steady-state calculations) [-]
     TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE ED_InitOutputType
@@ -868,54 +860,53 @@ IMPLICIT NONE
 ! =======================
    integer(IntKi), public, parameter :: ED_x_QT                          =   1 ! ED%QT
    integer(IntKi), public, parameter :: ED_x_QDT                         =   2 ! ED%QDT
-   integer(IntKi), public, parameter :: ED_z_DummyConstrState            =   3 ! ED%DummyConstrState
-   integer(IntKi), public, parameter :: ED_u_BladePtLoads                =   4 ! ED%BladePtLoads(DL%i1)
-   integer(IntKi), public, parameter :: ED_u_PlatformPtMesh              =   5 ! ED%PlatformPtMesh
-   integer(IntKi), public, parameter :: ED_u_TowerPtLoads                =   6 ! ED%TowerPtLoads
-   integer(IntKi), public, parameter :: ED_u_HubPtLoad                   =   7 ! ED%HubPtLoad
-   integer(IntKi), public, parameter :: ED_u_NacelleLoads                =   8 ! ED%NacelleLoads
-   integer(IntKi), public, parameter :: ED_u_TFinCMLoads                 =   9 ! ED%TFinCMLoads
-   integer(IntKi), public, parameter :: ED_u_TwrAddedMass                =  10 ! ED%TwrAddedMass
-   integer(IntKi), public, parameter :: ED_u_PtfmAddedMass               =  11 ! ED%PtfmAddedMass
-   integer(IntKi), public, parameter :: ED_u_BlPitchCom                  =  12 ! ED%BlPitchCom
-   integer(IntKi), public, parameter :: ED_u_YawMom                      =  13 ! ED%YawMom
-   integer(IntKi), public, parameter :: ED_u_GenTrq                      =  14 ! ED%GenTrq
-   integer(IntKi), public, parameter :: ED_u_HSSBrTrqC                   =  15 ! ED%HSSBrTrqC
-   integer(IntKi), public, parameter :: ED_y_BladeLn2Mesh                =  16 ! ED%BladeLn2Mesh(DL%i1)
-   integer(IntKi), public, parameter :: ED_y_PlatformPtMesh              =  17 ! ED%PlatformPtMesh
-   integer(IntKi), public, parameter :: ED_y_TowerLn2Mesh                =  18 ! ED%TowerLn2Mesh
-   integer(IntKi), public, parameter :: ED_y_HubPtMotion                 =  19 ! ED%HubPtMotion
-   integer(IntKi), public, parameter :: ED_y_BladeRootMotion             =  20 ! ED%BladeRootMotion(DL%i1)
-   integer(IntKi), public, parameter :: ED_y_NacelleMotion               =  21 ! ED%NacelleMotion
-   integer(IntKi), public, parameter :: ED_y_TFinCMMotion                =  22 ! ED%TFinCMMotion
-   integer(IntKi), public, parameter :: ED_y_WriteOutput                 =  23 ! ED%WriteOutput
-   integer(IntKi), public, parameter :: ED_y_BlPitch                     =  24 ! ED%BlPitch
-   integer(IntKi), public, parameter :: ED_y_Yaw                         =  25 ! ED%Yaw
-   integer(IntKi), public, parameter :: ED_y_YawRate                     =  26 ! ED%YawRate
-   integer(IntKi), public, parameter :: ED_y_LSS_Spd                     =  27 ! ED%LSS_Spd
-   integer(IntKi), public, parameter :: ED_y_HSS_Spd                     =  28 ! ED%HSS_Spd
-   integer(IntKi), public, parameter :: ED_y_RotSpeed                    =  29 ! ED%RotSpeed
-   integer(IntKi), public, parameter :: ED_y_TwrAccel                    =  30 ! ED%TwrAccel
-   integer(IntKi), public, parameter :: ED_y_YawAngle                    =  31 ! ED%YawAngle
-   integer(IntKi), public, parameter :: ED_y_RootMyc                     =  32 ! ED%RootMyc
-   integer(IntKi), public, parameter :: ED_y_YawBrTAxp                   =  33 ! ED%YawBrTAxp
-   integer(IntKi), public, parameter :: ED_y_YawBrTAyp                   =  34 ! ED%YawBrTAyp
-   integer(IntKi), public, parameter :: ED_y_LSSTipPxa                   =  35 ! ED%LSSTipPxa
-   integer(IntKi), public, parameter :: ED_y_RootMxc                     =  36 ! ED%RootMxc
-   integer(IntKi), public, parameter :: ED_y_LSSTipMxa                   =  37 ! ED%LSSTipMxa
-   integer(IntKi), public, parameter :: ED_y_LSSTipMya                   =  38 ! ED%LSSTipMya
-   integer(IntKi), public, parameter :: ED_y_LSSTipMza                   =  39 ! ED%LSSTipMza
-   integer(IntKi), public, parameter :: ED_y_LSSTipMys                   =  40 ! ED%LSSTipMys
-   integer(IntKi), public, parameter :: ED_y_LSSTipMzs                   =  41 ! ED%LSSTipMzs
-   integer(IntKi), public, parameter :: ED_y_YawBrMyn                    =  42 ! ED%YawBrMyn
-   integer(IntKi), public, parameter :: ED_y_YawBrMzn                    =  43 ! ED%YawBrMzn
-   integer(IntKi), public, parameter :: ED_y_NcIMURAxs                   =  44 ! ED%NcIMURAxs
-   integer(IntKi), public, parameter :: ED_y_NcIMURAys                   =  45 ! ED%NcIMURAys
-   integer(IntKi), public, parameter :: ED_y_NcIMURAzs                   =  46 ! ED%NcIMURAzs
-   integer(IntKi), public, parameter :: ED_y_RotPwr                      =  47 ! ED%RotPwr
-   integer(IntKi), public, parameter :: ED_y_LSShftFxa                   =  48 ! ED%LSShftFxa
-   integer(IntKi), public, parameter :: ED_y_LSShftFys                   =  49 ! ED%LSShftFys
-   integer(IntKi), public, parameter :: ED_y_LSShftFzs                   =  50 ! ED%LSShftFzs
+   integer(IntKi), public, parameter :: ED_u_BladePtLoads                =   3 ! ED%BladePtLoads(DL%i1)
+   integer(IntKi), public, parameter :: ED_u_PlatformPtMesh              =   4 ! ED%PlatformPtMesh
+   integer(IntKi), public, parameter :: ED_u_TowerPtLoads                =   5 ! ED%TowerPtLoads
+   integer(IntKi), public, parameter :: ED_u_HubPtLoad                   =   6 ! ED%HubPtLoad
+   integer(IntKi), public, parameter :: ED_u_NacelleLoads                =   7 ! ED%NacelleLoads
+   integer(IntKi), public, parameter :: ED_u_TFinCMLoads                 =   8 ! ED%TFinCMLoads
+   integer(IntKi), public, parameter :: ED_u_TwrAddedMass                =   9 ! ED%TwrAddedMass
+   integer(IntKi), public, parameter :: ED_u_PtfmAddedMass               =  10 ! ED%PtfmAddedMass
+   integer(IntKi), public, parameter :: ED_u_BlPitchCom                  =  11 ! ED%BlPitchCom
+   integer(IntKi), public, parameter :: ED_u_YawMom                      =  12 ! ED%YawMom
+   integer(IntKi), public, parameter :: ED_u_GenTrq                      =  13 ! ED%GenTrq
+   integer(IntKi), public, parameter :: ED_u_HSSBrTrqC                   =  14 ! ED%HSSBrTrqC
+   integer(IntKi), public, parameter :: ED_y_BladeLn2Mesh                =  15 ! ED%BladeLn2Mesh(DL%i1)
+   integer(IntKi), public, parameter :: ED_y_PlatformPtMesh              =  16 ! ED%PlatformPtMesh
+   integer(IntKi), public, parameter :: ED_y_TowerLn2Mesh                =  17 ! ED%TowerLn2Mesh
+   integer(IntKi), public, parameter :: ED_y_HubPtMotion                 =  18 ! ED%HubPtMotion
+   integer(IntKi), public, parameter :: ED_y_BladeRootMotion             =  19 ! ED%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: ED_y_NacelleMotion               =  20 ! ED%NacelleMotion
+   integer(IntKi), public, parameter :: ED_y_TFinCMMotion                =  21 ! ED%TFinCMMotion
+   integer(IntKi), public, parameter :: ED_y_WriteOutput                 =  22 ! ED%WriteOutput
+   integer(IntKi), public, parameter :: ED_y_BlPitch                     =  23 ! ED%BlPitch
+   integer(IntKi), public, parameter :: ED_y_Yaw                         =  24 ! ED%Yaw
+   integer(IntKi), public, parameter :: ED_y_YawRate                     =  25 ! ED%YawRate
+   integer(IntKi), public, parameter :: ED_y_LSS_Spd                     =  26 ! ED%LSS_Spd
+   integer(IntKi), public, parameter :: ED_y_HSS_Spd                     =  27 ! ED%HSS_Spd
+   integer(IntKi), public, parameter :: ED_y_RotSpeed                    =  28 ! ED%RotSpeed
+   integer(IntKi), public, parameter :: ED_y_TwrAccel                    =  29 ! ED%TwrAccel
+   integer(IntKi), public, parameter :: ED_y_YawAngle                    =  30 ! ED%YawAngle
+   integer(IntKi), public, parameter :: ED_y_RootMyc                     =  31 ! ED%RootMyc
+   integer(IntKi), public, parameter :: ED_y_YawBrTAxp                   =  32 ! ED%YawBrTAxp
+   integer(IntKi), public, parameter :: ED_y_YawBrTAyp                   =  33 ! ED%YawBrTAyp
+   integer(IntKi), public, parameter :: ED_y_LSSTipPxa                   =  34 ! ED%LSSTipPxa
+   integer(IntKi), public, parameter :: ED_y_RootMxc                     =  35 ! ED%RootMxc
+   integer(IntKi), public, parameter :: ED_y_LSSTipMxa                   =  36 ! ED%LSSTipMxa
+   integer(IntKi), public, parameter :: ED_y_LSSTipMya                   =  37 ! ED%LSSTipMya
+   integer(IntKi), public, parameter :: ED_y_LSSTipMza                   =  38 ! ED%LSSTipMza
+   integer(IntKi), public, parameter :: ED_y_LSSTipMys                   =  39 ! ED%LSSTipMys
+   integer(IntKi), public, parameter :: ED_y_LSSTipMzs                   =  40 ! ED%LSSTipMzs
+   integer(IntKi), public, parameter :: ED_y_YawBrMyn                    =  41 ! ED%YawBrMyn
+   integer(IntKi), public, parameter :: ED_y_YawBrMzn                    =  42 ! ED%YawBrMzn
+   integer(IntKi), public, parameter :: ED_y_NcIMURAxs                   =  43 ! ED%NcIMURAxs
+   integer(IntKi), public, parameter :: ED_y_NcIMURAys                   =  44 ! ED%NcIMURAys
+   integer(IntKi), public, parameter :: ED_y_NcIMURAzs                   =  45 ! ED%NcIMURAzs
+   integer(IntKi), public, parameter :: ED_y_RotPwr                      =  46 ! ED%RotPwr
+   integer(IntKi), public, parameter :: ED_y_LSShftFxa                   =  47 ! ED%LSShftFxa
+   integer(IntKi), public, parameter :: ED_y_LSShftFys                   =  48 ! ED%LSShftFys
+   integer(IntKi), public, parameter :: ED_y_LSShftFzs                   =  49 ! ED%LSShftFzs
 
 contains
 
@@ -1072,102 +1063,6 @@ subroutine ED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    DstInitOutputData%HubRad = SrcInitOutputData%HubRad
    DstInitOutputData%RotSpeed = SrcInitOutputData%RotSpeed
    DstInitOutputData%isFixed_GenDOF = SrcInitOutputData%isFixed_GenDOF
-   if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
-      if (.not. allocated(DstInitOutputData%LinNames_y)) then
-         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   end if
-   if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
-      if (.not. allocated(DstInitOutputData%LinNames_x)) then
-         allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   end if
-   if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
-      if (.not. allocated(DstInitOutputData%LinNames_u)) then
-         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
-      if (.not. allocated(DstInitOutputData%RotFrame_y)) then
-         allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x)
-      if (.not. allocated(DstInitOutputData%RotFrame_x)) then
-         allocate(DstInitOutputData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
-   end if
-   if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
-      if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
-         allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
-      if (.not. allocated(DstInitOutputData%RotFrame_u)) then
-         allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   end if
-   if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
-      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
-         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   end if
    DstInitOutputData%GearBox_index = SrcInitOutputData%GearBox_index
    call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1200,30 +1095,6 @@ subroutine ED_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%TwrHNodes)) then
       deallocate(InitOutputData%TwrHNodes)
    end if
-   if (allocated(InitOutputData%LinNames_y)) then
-      deallocate(InitOutputData%LinNames_y)
-   end if
-   if (allocated(InitOutputData%LinNames_x)) then
-      deallocate(InitOutputData%LinNames_x)
-   end if
-   if (allocated(InitOutputData%LinNames_u)) then
-      deallocate(InitOutputData%LinNames_u)
-   end if
-   if (allocated(InitOutputData%RotFrame_y)) then
-      deallocate(InitOutputData%RotFrame_y)
-   end if
-   if (allocated(InitOutputData%RotFrame_x)) then
-      deallocate(InitOutputData%RotFrame_x)
-   end if
-   if (allocated(InitOutputData%DerivOrder_x)) then
-      deallocate(InitOutputData%DerivOrder_x)
-   end if
-   if (allocated(InitOutputData%RotFrame_u)) then
-      deallocate(InitOutputData%RotFrame_u)
-   end if
-   if (allocated(InitOutputData%IsLoad_u)) then
-      deallocate(InitOutputData%IsLoad_u)
-   end if
    call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
@@ -1252,14 +1123,6 @@ subroutine ED_PackInitOutput(RF, Indata)
    call RegPack(RF, InData%HubRad)
    call RegPack(RF, InData%RotSpeed)
    call RegPack(RF, InData%isFixed_GenDOF)
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_x)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%RotFrame_x)
-   call RegPackAlloc(RF, InData%DerivOrder_x)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%IsLoad_u)
    call RegPack(RF, InData%GearBox_index)
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
@@ -1292,14 +1155,6 @@ subroutine ED_UnPackInitOutput(RF, OutData)
    call RegUnpack(RF, OutData%HubRad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotSpeed); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%isFixed_GenDOF); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GearBox_index); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
@@ -7878,63 +7733,6 @@ subroutine ED_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine ED_VarsPackConstrState(Vars, z, ValAry)
-   type(ED_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ED_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine ED_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(ED_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ED_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine ED_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(ED_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ED_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine ED_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(ED_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ED_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function ED_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (ED_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine ED_VarsPackInput(Vars, u, ValAry)
    type(ED_InputType), intent(in)          :: u

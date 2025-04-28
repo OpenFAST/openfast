@@ -57,9 +57,6 @@ IMPLICIT NONE
     REAL(DbKi)  :: Tmax = 0.0_R8Ki      !< max time from glue code [s]
     REAL(ReKi)  :: AvgWindSpeed = 0.0_ReKi      !< average wind speed for the simulation [m/s]
     REAL(ReKi)  :: AirDens = 0.0_ReKi      !< air density [kg/m^3]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< number of global controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< number of turbine specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< number of controller outputs [to supercontroller] [-]
     INTEGER(IntKi)  :: TrimCase = 0_IntKi      !< Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True] [-]
     REAL(ReKi)  :: TrimGain = 0.0_ReKi      !< Proportional gain for the rotational speed error (>0) [used only if TrimCase>0] [rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque]
     REAL(ReKi)  :: RotSpeedRef = 0.0_ReKi      !< Reference rotor speed [rad/s]
@@ -72,8 +69,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumCableControl = 0_IntKi      !< Number of cable control channels requested [-]
     CHARACTER(64) , DIMENSION(:), ALLOCATABLE  :: CableControlRequestor      !< Array with text info about which module requested the cable control channel (size of NumCableControl).  This is just for diagnostics. [-]
     INTEGER(IntKi)  :: InterpOrder = 0_IntKi      !< Interpolation order from glue code -- required to set m%u_xStC sizes [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: fromSCGlob      !< Initial global inputs to the controller [from the supercontroller] [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Initial turbine specific inputs to the controller [from the supercontroller] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed      !< Number of Lidar measurement distances [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
@@ -90,7 +85,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
     INTEGER(IntKi)  :: CouplingScheme = 0_IntKi      !< Switch that indicates if a particular coupling scheme is required [-]
     LOGICAL  :: UseHSSBrake = .false.      !< flag to determine if high-speed shaft brake is potentially used (true=yes) [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
@@ -207,7 +202,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: PrevBlAirfoilCom = 0.0_ReKi      !< Previously commanded Airfoil UserProp for blade.  Passed to AD15 for airfoil interpolation (must be same units as given in AD15 airfoil tables) [-]
     REAL(ReKi)  :: ElecPwr_prev = 0.0_ReKi      !< Electrical power (from previous step), sent to Bladed DLL [W]
     REAL(ReKi)  :: GenTrq_prev = 0.0_ReKi      !< Electrical generator torque (from previous step), sent to Bladed DLL [N-m]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: toSC      !< controller output to supercontroller [-]
     LOGICAL  :: initialized = .false.      !< flag that determines if DLL has been called (for difference between CalcOutput and UpdateStates) [-]
     INTEGER(IntKi)  :: NumLogChannels = 0_IntKi      !< number of log channels from controller [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: LogChannels_OutParam      !< Names and units (and other characteristics) of logging outputs from DLL [-]
@@ -305,6 +299,7 @@ IMPLICIT NONE
 ! =========  SrvD_DiscreteStateType  =======
   TYPE, PUBLIC :: SrvD_DiscreteStateType
     REAL(ReKi)  :: CtrlOffset = 0.0_ReKi      !< Controller offset parameter [N-m]
+    REAL(ReKi)  :: CtrlIntegral = 0      !< Controller integral parameter [N-m]
     TYPE(StC_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: BStC      !< StC module states - blade [-]
     TYPE(StC_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: NStC      !< StC module states - nacelle [-]
     TYPE(StC_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: TStC      !< StC module states - tower [-]
@@ -453,7 +448,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumCableControl = 0_IntKi      !< Number of cable control channels requested [-]
     INTEGER(IntKi)  :: NumStC_Control = 0_IntKi      !< Number of cable StC channels requested [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: StCMeasNumPerChan      !< Number of cable StC channel to average on each control channel sent to DLL [-]
-    LOGICAL  :: UseSC = .false.      !< Supercontroller on/off flag [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_x_indx      !< matrix to help fill/pack the x vector in computing the jacobian [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
@@ -478,7 +472,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< Number of pulse gates [-]
     REAL(ReKi)  :: PulseSpacing = 0.0_ReKi      !< Distance between range gates [m]
     REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -522,8 +515,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: LSShftFxa = 0.0_ReKi      !< Rotating low-speed shaft force x [N]
     REAL(ReKi)  :: LSShftFys = 0.0_ReKi      !< Nonrotating low-speed shaft force y [N]
     REAL(ReKi)  :: LSShftFzs = 0.0_ReKi      !< Nonrotating low-speed shaft force z [N]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCglob      !< A swap array: used to pass global input data to the DLL controller from the supercontroller [-]
     TYPE(MeshType)  :: PtfmMotionMesh      !< Platform motion mesh at platform reference point [-]
     TYPE(MeshType) , DIMENSION(:,:), ALLOCATABLE  :: BStCMotionMesh      !< StC module blade        input motion mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: NStCMotionMesh      !< StC module nacelle      input motion mesh [-]
@@ -553,7 +544,6 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: NStCLoadMesh      !< StC module nacelle      output load mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: TStCLoadMesh      !< StC module tower        output load mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: SStCLoadMesh      !< StC module substructure output load mesh [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: toSC      !< A swap array: used to pass output data from the DLL controller to the supercontroller [-]
   END TYPE SrvD_OutputType
 ! =======================
 ! =========  SrvD_MiscVarType  =======
@@ -589,78 +579,70 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: SrvD_x_NStC_StC_x                =   3 ! SrvD%NStC(DL%i1)%StC_x
    integer(IntKi), public, parameter :: SrvD_x_TStC_StC_x                =   4 ! SrvD%TStC(DL%i1)%StC_x
    integer(IntKi), public, parameter :: SrvD_x_SStC_StC_x                =   5 ! SrvD%SStC(DL%i1)%StC_x
-   integer(IntKi), public, parameter :: SrvD_z_DummyConstrState          =   6 ! SrvD%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_z_BStC_DummyConstrState     =   7 ! SrvD%BStC(DL%i1)%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_z_NStC_DummyConstrState     =   8 ! SrvD%NStC(DL%i1)%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_z_TStC_DummyConstrState     =   9 ! SrvD%TStC(DL%i1)%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_z_SStC_DummyConstrState     =  10 ! SrvD%SStC(DL%i1)%DummyConstrState
-   integer(IntKi), public, parameter :: SrvD_u_BlPitch                   =  11 ! SrvD%BlPitch
-   integer(IntKi), public, parameter :: SrvD_u_Yaw                       =  12 ! SrvD%Yaw
-   integer(IntKi), public, parameter :: SrvD_u_YawRate                   =  13 ! SrvD%YawRate
-   integer(IntKi), public, parameter :: SrvD_u_LSS_Spd                   =  14 ! SrvD%LSS_Spd
-   integer(IntKi), public, parameter :: SrvD_u_HSS_Spd                   =  15 ! SrvD%HSS_Spd
-   integer(IntKi), public, parameter :: SrvD_u_RotSpeed                  =  16 ! SrvD%RotSpeed
-   integer(IntKi), public, parameter :: SrvD_u_ExternalYawPosCom         =  17 ! SrvD%ExternalYawPosCom
-   integer(IntKi), public, parameter :: SrvD_u_ExternalYawRateCom        =  18 ! SrvD%ExternalYawRateCom
-   integer(IntKi), public, parameter :: SrvD_u_ExternalBlPitchCom        =  19 ! SrvD%ExternalBlPitchCom
-   integer(IntKi), public, parameter :: SrvD_u_ExternalGenTrq            =  20 ! SrvD%ExternalGenTrq
-   integer(IntKi), public, parameter :: SrvD_u_ExternalElecPwr           =  21 ! SrvD%ExternalElecPwr
-   integer(IntKi), public, parameter :: SrvD_u_ExternalHSSBrFrac         =  22 ! SrvD%ExternalHSSBrFrac
-   integer(IntKi), public, parameter :: SrvD_u_ExternalBlAirfoilCom      =  23 ! SrvD%ExternalBlAirfoilCom
-   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaL       =  24 ! SrvD%ExternalCableDeltaL
-   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaLdot    =  25 ! SrvD%ExternalCableDeltaLdot
-   integer(IntKi), public, parameter :: SrvD_u_TwrAccel                  =  26 ! SrvD%TwrAccel
-   integer(IntKi), public, parameter :: SrvD_u_YawErr                    =  27 ! SrvD%YawErr
-   integer(IntKi), public, parameter :: SrvD_u_WindDir                   =  28 ! SrvD%WindDir
-   integer(IntKi), public, parameter :: SrvD_u_RootMyc                   =  29 ! SrvD%RootMyc
-   integer(IntKi), public, parameter :: SrvD_u_YawBrTAxp                 =  30 ! SrvD%YawBrTAxp
-   integer(IntKi), public, parameter :: SrvD_u_YawBrTAyp                 =  31 ! SrvD%YawBrTAyp
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipPxa                 =  32 ! SrvD%LSSTipPxa
-   integer(IntKi), public, parameter :: SrvD_u_RootMxc                   =  33 ! SrvD%RootMxc
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMxa                 =  34 ! SrvD%LSSTipMxa
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMya                 =  35 ! SrvD%LSSTipMya
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMza                 =  36 ! SrvD%LSSTipMza
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMys                 =  37 ! SrvD%LSSTipMys
-   integer(IntKi), public, parameter :: SrvD_u_LSSTipMzs                 =  38 ! SrvD%LSSTipMzs
-   integer(IntKi), public, parameter :: SrvD_u_YawBrMyn                  =  39 ! SrvD%YawBrMyn
-   integer(IntKi), public, parameter :: SrvD_u_YawBrMzn                  =  40 ! SrvD%YawBrMzn
-   integer(IntKi), public, parameter :: SrvD_u_NcIMURAxs                 =  41 ! SrvD%NcIMURAxs
-   integer(IntKi), public, parameter :: SrvD_u_NcIMURAys                 =  42 ! SrvD%NcIMURAys
-   integer(IntKi), public, parameter :: SrvD_u_NcIMURAzs                 =  43 ! SrvD%NcIMURAzs
-   integer(IntKi), public, parameter :: SrvD_u_RotPwr                    =  44 ! SrvD%RotPwr
-   integer(IntKi), public, parameter :: SrvD_u_HorWindV                  =  45 ! SrvD%HorWindV
-   integer(IntKi), public, parameter :: SrvD_u_YawAngle                  =  46 ! SrvD%YawAngle
-   integer(IntKi), public, parameter :: SrvD_u_LSShftFxa                 =  47 ! SrvD%LSShftFxa
-   integer(IntKi), public, parameter :: SrvD_u_LSShftFys                 =  48 ! SrvD%LSShftFys
-   integer(IntKi), public, parameter :: SrvD_u_LSShftFzs                 =  49 ! SrvD%LSShftFzs
-   integer(IntKi), public, parameter :: SrvD_u_fromSC                    =  50 ! SrvD%fromSC
-   integer(IntKi), public, parameter :: SrvD_u_fromSCglob                =  51 ! SrvD%fromSCglob
-   integer(IntKi), public, parameter :: SrvD_u_PtfmMotionMesh            =  52 ! SrvD%PtfmMotionMesh
-   integer(IntKi), public, parameter :: SrvD_u_BStCMotionMesh            =  53 ! SrvD%BStCMotionMesh(DL%i1, DL%i2)
-   integer(IntKi), public, parameter :: SrvD_u_NStCMotionMesh            =  54 ! SrvD%NStCMotionMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_u_TStCMotionMesh            =  55 ! SrvD%TStCMotionMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_u_SStCMotionMesh            =  56 ! SrvD%SStCMotionMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_u_LidSpeed                  =  57 ! SrvD%LidSpeed
-   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsX             =  58 ! SrvD%MsrPositionsX
-   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsY             =  59 ! SrvD%MsrPositionsY
-   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsZ             =  60 ! SrvD%MsrPositionsZ
-   integer(IntKi), public, parameter :: SrvD_y_WriteOutput               =  61 ! SrvD%WriteOutput
-   integer(IntKi), public, parameter :: SrvD_y_BlPitchCom                =  62 ! SrvD%BlPitchCom
-   integer(IntKi), public, parameter :: SrvD_y_BlAirfoilCom              =  63 ! SrvD%BlAirfoilCom
-   integer(IntKi), public, parameter :: SrvD_y_YawMom                    =  64 ! SrvD%YawMom
-   integer(IntKi), public, parameter :: SrvD_y_YawPosCom                 =  65 ! SrvD%YawPosCom
-   integer(IntKi), public, parameter :: SrvD_y_YawRateCom                =  66 ! SrvD%YawRateCom
-   integer(IntKi), public, parameter :: SrvD_y_GenTrq                    =  67 ! SrvD%GenTrq
-   integer(IntKi), public, parameter :: SrvD_y_HSSBrTrqC                 =  68 ! SrvD%HSSBrTrqC
-   integer(IntKi), public, parameter :: SrvD_y_ElecPwr                   =  69 ! SrvD%ElecPwr
-   integer(IntKi), public, parameter :: SrvD_y_TBDrCon                   =  70 ! SrvD%TBDrCon
-   integer(IntKi), public, parameter :: SrvD_y_CableDeltaL               =  71 ! SrvD%CableDeltaL
-   integer(IntKi), public, parameter :: SrvD_y_CableDeltaLdot            =  72 ! SrvD%CableDeltaLdot
-   integer(IntKi), public, parameter :: SrvD_y_BStCLoadMesh              =  73 ! SrvD%BStCLoadMesh(DL%i1, DL%i2)
-   integer(IntKi), public, parameter :: SrvD_y_NStCLoadMesh              =  74 ! SrvD%NStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_TStCLoadMesh              =  75 ! SrvD%TStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_SStCLoadMesh              =  76 ! SrvD%SStCLoadMesh(DL%i1)
-   integer(IntKi), public, parameter :: SrvD_y_toSC                      =  77 ! SrvD%toSC
+   integer(IntKi), public, parameter :: SrvD_u_BlPitch                   =   6 ! SrvD%BlPitch
+   integer(IntKi), public, parameter :: SrvD_u_Yaw                       =   7 ! SrvD%Yaw
+   integer(IntKi), public, parameter :: SrvD_u_YawRate                   =   8 ! SrvD%YawRate
+   integer(IntKi), public, parameter :: SrvD_u_LSS_Spd                   =   9 ! SrvD%LSS_Spd
+   integer(IntKi), public, parameter :: SrvD_u_HSS_Spd                   =  10 ! SrvD%HSS_Spd
+   integer(IntKi), public, parameter :: SrvD_u_RotSpeed                  =  11 ! SrvD%RotSpeed
+   integer(IntKi), public, parameter :: SrvD_u_ExternalYawPosCom         =  12 ! SrvD%ExternalYawPosCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalYawRateCom        =  13 ! SrvD%ExternalYawRateCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalBlPitchCom        =  14 ! SrvD%ExternalBlPitchCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalGenTrq            =  15 ! SrvD%ExternalGenTrq
+   integer(IntKi), public, parameter :: SrvD_u_ExternalElecPwr           =  16 ! SrvD%ExternalElecPwr
+   integer(IntKi), public, parameter :: SrvD_u_ExternalHSSBrFrac         =  17 ! SrvD%ExternalHSSBrFrac
+   integer(IntKi), public, parameter :: SrvD_u_ExternalBlAirfoilCom      =  18 ! SrvD%ExternalBlAirfoilCom
+   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaL       =  19 ! SrvD%ExternalCableDeltaL
+   integer(IntKi), public, parameter :: SrvD_u_ExternalCableDeltaLdot    =  20 ! SrvD%ExternalCableDeltaLdot
+   integer(IntKi), public, parameter :: SrvD_u_TwrAccel                  =  21 ! SrvD%TwrAccel
+   integer(IntKi), public, parameter :: SrvD_u_YawErr                    =  22 ! SrvD%YawErr
+   integer(IntKi), public, parameter :: SrvD_u_WindDir                   =  23 ! SrvD%WindDir
+   integer(IntKi), public, parameter :: SrvD_u_RootMyc                   =  24 ! SrvD%RootMyc
+   integer(IntKi), public, parameter :: SrvD_u_YawBrTAxp                 =  25 ! SrvD%YawBrTAxp
+   integer(IntKi), public, parameter :: SrvD_u_YawBrTAyp                 =  26 ! SrvD%YawBrTAyp
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipPxa                 =  27 ! SrvD%LSSTipPxa
+   integer(IntKi), public, parameter :: SrvD_u_RootMxc                   =  28 ! SrvD%RootMxc
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMxa                 =  29 ! SrvD%LSSTipMxa
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMya                 =  30 ! SrvD%LSSTipMya
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMza                 =  31 ! SrvD%LSSTipMza
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMys                 =  32 ! SrvD%LSSTipMys
+   integer(IntKi), public, parameter :: SrvD_u_LSSTipMzs                 =  33 ! SrvD%LSSTipMzs
+   integer(IntKi), public, parameter :: SrvD_u_YawBrMyn                  =  34 ! SrvD%YawBrMyn
+   integer(IntKi), public, parameter :: SrvD_u_YawBrMzn                  =  35 ! SrvD%YawBrMzn
+   integer(IntKi), public, parameter :: SrvD_u_NcIMURAxs                 =  36 ! SrvD%NcIMURAxs
+   integer(IntKi), public, parameter :: SrvD_u_NcIMURAys                 =  37 ! SrvD%NcIMURAys
+   integer(IntKi), public, parameter :: SrvD_u_NcIMURAzs                 =  38 ! SrvD%NcIMURAzs
+   integer(IntKi), public, parameter :: SrvD_u_RotPwr                    =  39 ! SrvD%RotPwr
+   integer(IntKi), public, parameter :: SrvD_u_HorWindV                  =  40 ! SrvD%HorWindV
+   integer(IntKi), public, parameter :: SrvD_u_YawAngle                  =  41 ! SrvD%YawAngle
+   integer(IntKi), public, parameter :: SrvD_u_LSShftFxa                 =  42 ! SrvD%LSShftFxa
+   integer(IntKi), public, parameter :: SrvD_u_LSShftFys                 =  43 ! SrvD%LSShftFys
+   integer(IntKi), public, parameter :: SrvD_u_LSShftFzs                 =  44 ! SrvD%LSShftFzs
+   integer(IntKi), public, parameter :: SrvD_u_PtfmMotionMesh            =  45 ! SrvD%PtfmMotionMesh
+   integer(IntKi), public, parameter :: SrvD_u_BStCMotionMesh            =  46 ! SrvD%BStCMotionMesh(DL%i1, DL%i2)
+   integer(IntKi), public, parameter :: SrvD_u_NStCMotionMesh            =  47 ! SrvD%NStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_TStCMotionMesh            =  48 ! SrvD%TStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_SStCMotionMesh            =  49 ! SrvD%SStCMotionMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_u_LidSpeed                  =  50 ! SrvD%LidSpeed
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsX             =  51 ! SrvD%MsrPositionsX
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsY             =  52 ! SrvD%MsrPositionsY
+   integer(IntKi), public, parameter :: SrvD_u_MsrPositionsZ             =  53 ! SrvD%MsrPositionsZ
+   integer(IntKi), public, parameter :: SrvD_y_WriteOutput               =  54 ! SrvD%WriteOutput
+   integer(IntKi), public, parameter :: SrvD_y_BlPitchCom                =  55 ! SrvD%BlPitchCom
+   integer(IntKi), public, parameter :: SrvD_y_BlAirfoilCom              =  56 ! SrvD%BlAirfoilCom
+   integer(IntKi), public, parameter :: SrvD_y_YawMom                    =  57 ! SrvD%YawMom
+   integer(IntKi), public, parameter :: SrvD_y_YawPosCom                 =  58 ! SrvD%YawPosCom
+   integer(IntKi), public, parameter :: SrvD_y_YawRateCom                =  59 ! SrvD%YawRateCom
+   integer(IntKi), public, parameter :: SrvD_y_GenTrq                    =  60 ! SrvD%GenTrq
+   integer(IntKi), public, parameter :: SrvD_y_HSSBrTrqC                 =  61 ! SrvD%HSSBrTrqC
+   integer(IntKi), public, parameter :: SrvD_y_ElecPwr                   =  62 ! SrvD%ElecPwr
+   integer(IntKi), public, parameter :: SrvD_y_TBDrCon                   =  63 ! SrvD%TBDrCon
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaL               =  64 ! SrvD%CableDeltaL
+   integer(IntKi), public, parameter :: SrvD_y_CableDeltaLdot            =  65 ! SrvD%CableDeltaLdot
+   integer(IntKi), public, parameter :: SrvD_y_BStCLoadMesh              =  66 ! SrvD%BStCLoadMesh(DL%i1, DL%i2)
+   integer(IntKi), public, parameter :: SrvD_y_NStCLoadMesh              =  67 ! SrvD%NStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_TStCLoadMesh              =  68 ! SrvD%TStCLoadMesh(DL%i1)
+   integer(IntKi), public, parameter :: SrvD_y_SStCLoadMesh              =  69 ! SrvD%SStCLoadMesh(DL%i1)
 
 contains
 
@@ -708,9 +690,6 @@ subroutine SrvD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    DstInitInputData%Tmax = SrcInitInputData%Tmax
    DstInitInputData%AvgWindSpeed = SrcInitInputData%AvgWindSpeed
    DstInitInputData%AirDens = SrcInitInputData%AirDens
-   DstInitInputData%NumSC2CtrlGlob = SrcInitInputData%NumSC2CtrlGlob
-   DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
-   DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
    DstInitInputData%TrimCase = SrcInitInputData%TrimCase
    DstInitInputData%TrimGain = SrcInitInputData%TrimGain
    DstInitInputData%RotSpeedRef = SrcInitInputData%RotSpeedRef
@@ -780,30 +759,6 @@ subroutine SrvD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
       DstInitInputData%CableControlRequestor = SrcInitInputData%CableControlRequestor
    end if
    DstInitInputData%InterpOrder = SrcInitInputData%InterpOrder
-   if (allocated(SrcInitInputData%fromSCGlob)) then
-      LB(1:1) = lbound(SrcInitInputData%fromSCGlob)
-      UB(1:1) = ubound(SrcInitInputData%fromSCGlob)
-      if (.not. allocated(DstInitInputData%fromSCGlob)) then
-         allocate(DstInitInputData%fromSCGlob(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%fromSCGlob.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%fromSCGlob = SrcInitInputData%fromSCGlob
-   end if
-   if (allocated(SrcInitInputData%fromSC)) then
-      LB(1:1) = lbound(SrcInitInputData%fromSC)
-      UB(1:1) = ubound(SrcInitInputData%fromSC)
-      if (.not. allocated(DstInitInputData%fromSC)) then
-         allocate(DstInitInputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%fromSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%fromSC = SrcInitInputData%fromSC
-   end if
    if (allocated(SrcInitInputData%LidSpeed)) then
       LB(1:1) = lbound(SrcInitInputData%LidSpeed)
       UB(1:1) = ubound(SrcInitInputData%LidSpeed)
@@ -888,12 +843,6 @@ subroutine SrvD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%CableControlRequestor)) then
       deallocate(InitInputData%CableControlRequestor)
    end if
-   if (allocated(InitInputData%fromSCGlob)) then
-      deallocate(InitInputData%fromSCGlob)
-   end if
-   if (allocated(InitInputData%fromSC)) then
-      deallocate(InitInputData%fromSC)
-   end if
    if (allocated(InitInputData%LidSpeed)) then
       deallocate(InitInputData%LidSpeed)
    end if
@@ -934,9 +883,6 @@ subroutine SrvD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%Tmax)
    call RegPack(RF, InData%AvgWindSpeed)
    call RegPack(RF, InData%AirDens)
-   call RegPack(RF, InData%NumSC2CtrlGlob)
-   call RegPack(RF, InData%NumSC2Ctrl)
-   call RegPack(RF, InData%NumCtrl2SC)
    call RegPack(RF, InData%TrimCase)
    call RegPack(RF, InData%TrimGain)
    call RegPack(RF, InData%RotSpeedRef)
@@ -949,8 +895,6 @@ subroutine SrvD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%NumCableControl)
    call RegPackAlloc(RF, InData%CableControlRequestor)
    call RegPack(RF, InData%InterpOrder)
-   call RegPackAlloc(RF, InData%fromSCGlob)
-   call RegPackAlloc(RF, InData%fromSC)
    call RegPackAlloc(RF, InData%LidSpeed)
    call RegPackAlloc(RF, InData%MsrPositionsX)
    call RegPackAlloc(RF, InData%MsrPositionsY)
@@ -992,9 +936,6 @@ subroutine SrvD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%Tmax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AvgWindSpeed); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2CtrlGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2Ctrl); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumCtrl2SC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TrimCase); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TrimGain); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RotSpeedRef); if (RegCheckErr(RF, RoutineName)) return
@@ -1007,8 +948,6 @@ subroutine SrvD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%NumCableControl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CableControlRequestor); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InterpOrder); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSCGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LidSpeed); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MsrPositionsX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MsrPositionsY); if (RegCheckErr(RF, RoutineName)) return
@@ -1059,7 +998,9 @@ subroutine SrvD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstInitOutputData%Vars => SrcInitOutputData%Vars
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstInitOutputData%CouplingScheme = SrcInitOutputData%CouplingScheme
    DstInitOutputData%UseHSSBrake = SrcInitOutputData%UseHSSBrake
    if (allocated(SrcInitOutputData%LinNames_y)) then
@@ -1177,7 +1118,8 @@ subroutine SrvD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   nullify(InitOutputData%Vars)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -1208,18 +1150,11 @@ subroutine SrvD_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SrvD_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SrvD_PackInitOutput'
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    call RegPack(RF, InData%CouplingScheme)
    call RegPack(RF, InData%UseHSSBrake)
    call RegPackAlloc(RF, InData%LinNames_y)
@@ -1240,30 +1175,11 @@ subroutine SrvD_UnPackInitOutput(RF, OutData)
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call RegUnpack(RF, OutData%CouplingScheme); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UseHSSBrake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
@@ -1710,18 +1626,6 @@ subroutine SrvD_CopyBladedDLLType(SrcBladedDLLTypeData, DstBladedDLLTypeData, Ct
    DstBladedDLLTypeData%PrevBlAirfoilCom = SrcBladedDLLTypeData%PrevBlAirfoilCom
    DstBladedDLLTypeData%ElecPwr_prev = SrcBladedDLLTypeData%ElecPwr_prev
    DstBladedDLLTypeData%GenTrq_prev = SrcBladedDLLTypeData%GenTrq_prev
-   if (allocated(SrcBladedDLLTypeData%toSC)) then
-      LB(1:1) = lbound(SrcBladedDLLTypeData%toSC)
-      UB(1:1) = ubound(SrcBladedDLLTypeData%toSC)
-      if (.not. allocated(DstBladedDLLTypeData%toSC)) then
-         allocate(DstBladedDLLTypeData%toSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%toSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstBladedDLLTypeData%toSC = SrcBladedDLLTypeData%toSC
-   end if
    DstBladedDLLTypeData%initialized = SrcBladedDLLTypeData%initialized
    DstBladedDLLTypeData%NumLogChannels = SrcBladedDLLTypeData%NumLogChannels
    if (allocated(SrcBladedDLLTypeData%LogChannels_OutParam)) then
@@ -2078,9 +1982,6 @@ subroutine SrvD_DestroyBladedDLLType(BladedDLLTypeData, ErrStat, ErrMsg)
    if (allocated(BladedDLLTypeData%avrSWAP)) then
       deallocate(BladedDLLTypeData%avrSWAP)
    end if
-   if (allocated(BladedDLLTypeData%toSC)) then
-      deallocate(BladedDLLTypeData%toSC)
-   end if
    if (allocated(BladedDLLTypeData%LogChannels_OutParam)) then
       LB(1:1) = lbound(BladedDLLTypeData%LogChannels_OutParam)
       UB(1:1) = ubound(BladedDLLTypeData%LogChannels_OutParam)
@@ -2176,7 +2077,6 @@ subroutine SrvD_PackBladedDLLType(RF, Indata)
    call RegPack(RF, InData%PrevBlAirfoilCom)
    call RegPack(RF, InData%ElecPwr_prev)
    call RegPack(RF, InData%GenTrq_prev)
-   call RegPackAlloc(RF, InData%toSC)
    call RegPack(RF, InData%initialized)
    call RegPack(RF, InData%NumLogChannels)
    call RegPack(RF, allocated(InData%LogChannels_OutParam))
@@ -2291,7 +2191,6 @@ subroutine SrvD_UnPackBladedDLLType(RF, OutData)
    call RegUnpack(RF, OutData%PrevBlAirfoilCom); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ElecPwr_prev); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GenTrq_prev); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%toSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%initialized); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumLogChannels); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%LogChannels_OutParam)) deallocate(OutData%LogChannels_OutParam)
@@ -2643,6 +2542,7 @@ subroutine SrvD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrS
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstDiscStateData%CtrlOffset = SrcDiscStateData%CtrlOffset
+   DstDiscStateData%CtrlIntegral = SrcDiscStateData%CtrlIntegral
    if (allocated(SrcDiscStateData%BStC)) then
       LB(1:1) = lbound(SrcDiscStateData%BStC)
       UB(1:1) = ubound(SrcDiscStateData%BStC)
@@ -2766,6 +2666,7 @@ subroutine SrvD_PackDiscState(RF, Indata)
    integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%CtrlOffset)
+   call RegPack(RF, InData%CtrlIntegral)
    call RegPack(RF, allocated(InData%BStC))
    if (allocated(InData%BStC)) then
       call RegPackBounds(RF, 1, lbound(InData%BStC), ubound(InData%BStC))
@@ -2815,6 +2716,7 @@ subroutine SrvD_UnPackDiscState(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%CtrlOffset); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CtrlIntegral); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BStC)) deallocate(OutData%BStC)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -4160,7 +4062,6 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%StCMeasNumPerChan = SrcParamData%StCMeasNumPerChan
    end if
-   DstParamData%UseSC = SrcParamData%UseSC
    if (allocated(SrcParamData%Jac_u_indx)) then
       LB(1:2) = lbound(SrcParamData%Jac_u_indx)
       UB(1:2) = ubound(SrcParamData%Jac_u_indx)
@@ -4361,18 +4262,6 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumPulseGate = SrcParamData%NumPulseGate
    DstParamData%PulseSpacing = SrcParamData%PulseSpacing
    DstParamData%URefLid = SrcParamData%URefLid
-   if (associated(SrcParamData%Vars)) then
-      if (.not. associated(DstParamData%Vars)) then
-         allocate(DstParamData%Vars, stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end if
 end subroutine
 
 subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -4499,12 +4388,6 @@ subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%Jac_Idx_SStC_y)) then
       deallocate(ParamData%Jac_Idx_SStC_y)
    end if
-   if (associated(ParamData%Vars)) then
-      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      deallocate(ParamData%Vars)
-      ParamData%Vars => null()
-   end if
 end subroutine
 
 subroutine SrvD_PackParam(RF, Indata)
@@ -4513,7 +4396,6 @@ subroutine SrvD_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'SrvD_PackParam'
    integer(B4Ki)   :: i1, i2, i3
    integer(B4Ki)   :: LB(3), UB(3)
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%HSSBrDT)
@@ -4654,7 +4536,6 @@ subroutine SrvD_PackParam(RF, Indata)
    call RegPack(RF, InData%NumCableControl)
    call RegPack(RF, InData%NumStC_Control)
    call RegPackAlloc(RF, InData%StCMeasNumPerChan)
-   call RegPack(RF, InData%UseSC)
    call RegPackAlloc(RF, InData%Jac_u_indx)
    call RegPackAlloc(RF, InData%Jac_x_indx)
    call RegPackAlloc(RF, InData%du)
@@ -4679,13 +4560,6 @@ subroutine SrvD_PackParam(RF, Indata)
    call RegPack(RF, InData%NumPulseGate)
    call RegPack(RF, InData%PulseSpacing)
    call RegPack(RF, InData%URefLid)
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4697,8 +4571,6 @@ subroutine SrvD_UnPackParam(RF, OutData)
    integer(B4Ki)   :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HSSBrDT); if (RegCheckErr(RF, RoutineName)) return
@@ -4859,7 +4731,6 @@ subroutine SrvD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumCableControl); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumStC_Control); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%StCMeasNumPerChan); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UseSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Jac_x_indx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%du); if (RegCheckErr(RF, RoutineName)) return
@@ -4884,24 +4755,6 @@ subroutine SrvD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumPulseGate); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PulseSpacing); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%URefLid); if (RegCheckErr(RF, RoutineName)) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
 end subroutine
 
 subroutine SrvD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -5011,30 +4864,6 @@ subroutine SrvD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    DstInputData%LSShftFxa = SrcInputData%LSShftFxa
    DstInputData%LSShftFys = SrcInputData%LSShftFys
    DstInputData%LSShftFzs = SrcInputData%LSShftFzs
-   if (allocated(SrcInputData%fromSC)) then
-      LB(1:1) = lbound(SrcInputData%fromSC)
-      UB(1:1) = ubound(SrcInputData%fromSC)
-      if (.not. allocated(DstInputData%fromSC)) then
-         allocate(DstInputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%fromSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInputData%fromSC = SrcInputData%fromSC
-   end if
-   if (allocated(SrcInputData%fromSCglob)) then
-      LB(1:1) = lbound(SrcInputData%fromSCglob)
-      UB(1:1) = ubound(SrcInputData%fromSCglob)
-      if (.not. allocated(DstInputData%fromSCglob)) then
-         allocate(DstInputData%fromSCglob(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%fromSCglob.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInputData%fromSCglob = SrcInputData%fromSCglob
-   end if
    call MeshCopy(SrcInputData%PtfmMotionMesh, DstInputData%PtfmMotionMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -5180,12 +5009,6 @@ subroutine SrvD_DestroyInput(InputData, ErrStat, ErrMsg)
    if (allocated(InputData%ExternalCableDeltaLdot)) then
       deallocate(InputData%ExternalCableDeltaLdot)
    end if
-   if (allocated(InputData%fromSC)) then
-      deallocate(InputData%fromSC)
-   end if
-   if (allocated(InputData%fromSCglob)) then
-      deallocate(InputData%fromSCglob)
-   end if
    call MeshDestroy( InputData%PtfmMotionMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputData%BStCMotionMesh)) then
@@ -5286,8 +5109,6 @@ subroutine SrvD_PackInput(RF, Indata)
    call RegPack(RF, InData%LSShftFxa)
    call RegPack(RF, InData%LSShftFys)
    call RegPack(RF, InData%LSShftFzs)
-   call RegPackAlloc(RF, InData%fromSC)
-   call RegPackAlloc(RF, InData%fromSCglob)
    call MeshPack(RF, InData%PtfmMotionMesh) 
    call RegPack(RF, allocated(InData%BStCMotionMesh))
    if (allocated(InData%BStCMotionMesh)) then
@@ -5382,8 +5203,6 @@ subroutine SrvD_UnPackInput(RF, OutData)
    call RegUnpack(RF, OutData%LSShftFxa); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LSShftFys); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LSShftFzs); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSCglob); if (RegCheckErr(RF, RoutineName)) return
    call MeshUnpack(RF, OutData%PtfmMotionMesh) ! PtfmMotionMesh 
    if (allocated(OutData%BStCMotionMesh)) deallocate(OutData%BStCMotionMesh)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
@@ -5602,18 +5421,6 @@ subroutine SrvD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   if (allocated(SrcOutputData%toSC)) then
-      LB(1:1) = lbound(SrcOutputData%toSC)
-      UB(1:1) = ubound(SrcOutputData%toSC)
-      if (.not. allocated(DstOutputData%toSC)) then
-         allocate(DstOutputData%toSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%toSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstOutputData%toSC = SrcOutputData%toSC
-   end if
 end subroutine
 
 subroutine SrvD_DestroyOutput(OutputData, ErrStat, ErrMsg)
@@ -5683,9 +5490,6 @@ subroutine SrvD_DestroyOutput(OutputData, ErrStat, ErrMsg)
       end do
       deallocate(OutputData%SStCLoadMesh)
    end if
-   if (allocated(OutputData%toSC)) then
-      deallocate(OutputData%toSC)
-   end if
 end subroutine
 
 subroutine SrvD_PackOutput(RF, Indata)
@@ -5745,7 +5549,6 @@ subroutine SrvD_PackOutput(RF, Indata)
          call MeshPack(RF, InData%SStCLoadMesh(i1)) 
       end do
    end if
-   call RegPackAlloc(RF, InData%toSC)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -5824,7 +5627,6 @@ subroutine SrvD_UnPackOutput(RF, OutData)
          call MeshUnpack(RF, OutData%SStCLoadMesh(i1)) ! SStCLoadMesh 
       end do
    end if
-   call RegUnpackAlloc(RF, OutData%toSC); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine SrvD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -6702,12 +6504,6 @@ SUBROUTINE SrvD_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg
    u_out%LSShftFxa = a1*u1%LSShftFxa + a2*u2%LSShftFxa
    u_out%LSShftFys = a1*u1%LSShftFys + a2*u2%LSShftFys
    u_out%LSShftFzs = a1*u1%LSShftFzs + a2*u2%LSShftFzs
-   IF (ALLOCATED(u_out%fromSC) .AND. ALLOCATED(u1%fromSC)) THEN
-      u_out%fromSC = a1*u1%fromSC + a2*u2%fromSC
-   END IF ! check if allocated
-   IF (ALLOCATED(u_out%fromSCglob) .AND. ALLOCATED(u1%fromSCglob)) THEN
-      u_out%fromSCglob = a1*u1%fromSCglob + a2*u2%fromSCglob
-   END IF ! check if allocated
    CALL MeshExtrapInterp1(u1%PtfmMotionMesh, u2%PtfmMotionMesh, tin, u_out%PtfmMotionMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(u_out%BStCMotionMesh) .AND. ALLOCATED(u1%BStCMotionMesh)) THEN
@@ -6860,12 +6656,6 @@ SUBROUTINE SrvD_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, Er
    u_out%LSShftFxa = a1*u1%LSShftFxa + a2*u2%LSShftFxa + a3*u3%LSShftFxa
    u_out%LSShftFys = a1*u1%LSShftFys + a2*u2%LSShftFys + a3*u3%LSShftFys
    u_out%LSShftFzs = a1*u1%LSShftFzs + a2*u2%LSShftFzs + a3*u3%LSShftFzs
-   IF (ALLOCATED(u_out%fromSC) .AND. ALLOCATED(u1%fromSC)) THEN
-      u_out%fromSC = a1*u1%fromSC + a2*u2%fromSC + a3*u3%fromSC
-   END IF ! check if allocated
-   IF (ALLOCATED(u_out%fromSCglob) .AND. ALLOCATED(u1%fromSCglob)) THEN
-      u_out%fromSCglob = a1*u1%fromSCglob + a2*u2%fromSCglob + a3*u3%fromSCglob
-   END IF ! check if allocated
    CALL MeshExtrapInterp2(u1%PtfmMotionMesh, u2%PtfmMotionMesh, u3%PtfmMotionMesh, tin, u_out%PtfmMotionMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(u_out%BStCMotionMesh) .AND. ALLOCATED(u1%BStCMotionMesh)) THEN
@@ -7059,9 +6849,6 @@ SUBROUTINE SrvD_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMs
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
    END IF ! check if allocated
-   IF (ALLOCATED(y_out%toSC) .AND. ALLOCATED(y1%toSC)) THEN
-      y_out%toSC = a1*y1%toSC + a2*y2%toSC
-   END IF ! check if allocated
 END SUBROUTINE
 
 SUBROUTINE SrvD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
@@ -7172,9 +6959,6 @@ SUBROUTINE SrvD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
          CALL MeshExtrapInterp2(y1%SStCLoadMesh(i1), y2%SStCLoadMesh(i1), y3%SStCLoadMesh(i1), tin, y_out%SStCLoadMesh(i1), tin_out, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
-   END IF ! check if allocated
-   IF (ALLOCATED(y_out%toSC) .AND. ALLOCATED(y1%toSC)) THEN
-      y_out%toSC = a1*y1%toSC + a2*y2%toSC + a3*y3%toSC
    END IF ! check if allocated
 END SUBROUTINE
 
@@ -7327,87 +7111,6 @@ subroutine SrvD_VarPackContStateDeriv(V, x, ValAry)
    end associate
 end subroutine
 
-subroutine SrvD_VarsPackConstrState(Vars, z, ValAry)
-   type(SrvD_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SrvD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine SrvD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(SrvD_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SrvD_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case (SrvD_z_BStC_DummyConstrState)
-         VarVals(1) = z%BStC(DL%i1)%DummyConstrState                          ! Scalar
-      case (SrvD_z_NStC_DummyConstrState)
-         VarVals(1) = z%NStC(DL%i1)%DummyConstrState                          ! Scalar
-      case (SrvD_z_TStC_DummyConstrState)
-         VarVals(1) = z%TStC(DL%i1)%DummyConstrState                          ! Scalar
-      case (SrvD_z_SStC_DummyConstrState)
-         VarVals(1) = z%SStC(DL%i1)%DummyConstrState                          ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine SrvD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SrvD_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SrvD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine SrvD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(SrvD_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SrvD_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      case (SrvD_z_BStC_DummyConstrState)
-         z%BStC(DL%i1)%DummyConstrState = VarVals(1)                          ! Scalar
-      case (SrvD_z_NStC_DummyConstrState)
-         z%NStC(DL%i1)%DummyConstrState = VarVals(1)                          ! Scalar
-      case (SrvD_z_TStC_DummyConstrState)
-         z%TStC(DL%i1)%DummyConstrState = VarVals(1)                          ! Scalar
-      case (SrvD_z_SStC_DummyConstrState)
-         z%SStC(DL%i1)%DummyConstrState = VarVals(1)                          ! Scalar
-      end select
-   end associate
-end subroutine
-
-function SrvD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (SrvD_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case (SrvD_z_BStC_DummyConstrState)
-       Name = "z%BStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
-   case (SrvD_z_NStC_DummyConstrState)
-       Name = "z%NStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
-   case (SrvD_z_TStC_DummyConstrState)
-       Name = "z%TStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
-   case (SrvD_z_SStC_DummyConstrState)
-       Name = "z%SStC("//trim(Num2LStr(DL%i1))//")%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
-
 subroutine SrvD_VarsPackInput(Vars, u, ValAry)
    type(SrvD_InputType), intent(in)        :: u
    type(ModVarsType), intent(in)          :: Vars
@@ -7502,10 +7205,6 @@ subroutine SrvD_VarPackInput(V, u, ValAry)
          VarVals(1) = u%LSShftFys                                             ! Scalar
       case (SrvD_u_LSShftFzs)
          VarVals(1) = u%LSShftFzs                                             ! Scalar
-      case (SrvD_u_fromSC)
-         VarVals = u%fromSC(V%iLB:V%iUB)                                      ! Rank 1 Array
-      case (SrvD_u_fromSCglob)
-         VarVals = u%fromSCglob(V%iLB:V%iUB)                                  ! Rank 1 Array
       case (SrvD_u_PtfmMotionMesh)
          call MV_PackMesh(V, u%PtfmMotionMesh, ValAry)                        ! Mesh
       case (SrvD_u_BStCMotionMesh)
@@ -7624,10 +7323,6 @@ subroutine SrvD_VarUnpackInput(V, ValAry, u)
          u%LSShftFys = VarVals(1)                                             ! Scalar
       case (SrvD_u_LSShftFzs)
          u%LSShftFzs = VarVals(1)                                             ! Scalar
-      case (SrvD_u_fromSC)
-         u%fromSC(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
-      case (SrvD_u_fromSCglob)
-         u%fromSCglob(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
       case (SrvD_u_PtfmMotionMesh)
          call MV_UnpackMesh(V, ValAry, u%PtfmMotionMesh)                      ! Mesh
       case (SrvD_u_BStCMotionMesh)
@@ -7732,10 +7427,6 @@ function SrvD_InputFieldName(DL) result(Name)
        Name = "u%LSShftFys"
    case (SrvD_u_LSShftFzs)
        Name = "u%LSShftFzs"
-   case (SrvD_u_fromSC)
-       Name = "u%fromSC"
-   case (SrvD_u_fromSCglob)
-       Name = "u%fromSCglob"
    case (SrvD_u_PtfmMotionMesh)
        Name = "u%PtfmMotionMesh"
    case (SrvD_u_BStCMotionMesh)
@@ -7807,8 +7498,6 @@ subroutine SrvD_VarPackOutput(V, y, ValAry)
          call MV_PackMesh(V, y%TStCLoadMesh(DL%i1), ValAry)                   ! Mesh
       case (SrvD_y_SStCLoadMesh)
          call MV_PackMesh(V, y%SStCLoadMesh(DL%i1), ValAry)                   ! Mesh
-      case (SrvD_y_toSC)
-         VarVals = y%toSC(V%iLB:V%iUB)                                        ! Rank 1 Array
       case default
          VarVals = 0.0_R8Ki
       end select
@@ -7863,8 +7552,6 @@ subroutine SrvD_VarUnpackOutput(V, ValAry, y)
          call MV_UnpackMesh(V, ValAry, y%TStCLoadMesh(DL%i1))                 ! Mesh
       case (SrvD_y_SStCLoadMesh)
          call MV_UnpackMesh(V, ValAry, y%SStCLoadMesh(DL%i1))                 ! Mesh
-      case (SrvD_y_toSC)
-         y%toSC(V%iLB:V%iUB) = VarVals                                        ! Rank 1 Array
       end select
    end associate
 end subroutine
@@ -7905,8 +7592,6 @@ function SrvD_OutputFieldName(DL) result(Name)
        Name = "y%TStCLoadMesh("//trim(Num2LStr(DL%i1))//")"
    case (SrvD_y_SStCLoadMesh)
        Name = "y%SStCLoadMesh("//trim(Num2LStr(DL%i1))//")"
-   case (SrvD_y_toSC)
-       Name = "y%toSC"
    case default
        Name = "Unknown Field"
    end select

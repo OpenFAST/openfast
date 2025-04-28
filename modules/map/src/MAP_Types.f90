@@ -256,21 +256,16 @@ IMPLICIT NONE
   END TYPE MAP_MiscVarType
 ! =======================
    integer(IntKi), public, parameter :: MAP_x_dummy                      =   1 ! MAP%dummy
-   integer(IntKi), public, parameter :: MAP_z_H                          =   2 ! MAP%H
-   integer(IntKi), public, parameter :: MAP_z_V                          =   3 ! MAP%V
-   integer(IntKi), public, parameter :: MAP_z_x                          =   4 ! MAP%x
-   integer(IntKi), public, parameter :: MAP_z_y                          =   5 ! MAP%y
-   integer(IntKi), public, parameter :: MAP_z_z                          =   6 ! MAP%z
-   integer(IntKi), public, parameter :: MAP_u_x                          =   7 ! MAP%x
-   integer(IntKi), public, parameter :: MAP_u_y                          =   8 ! MAP%y
-   integer(IntKi), public, parameter :: MAP_u_z                          =   9 ! MAP%z
-   integer(IntKi), public, parameter :: MAP_u_PtFairDisplacement         =  10 ! MAP%PtFairDisplacement
-   integer(IntKi), public, parameter :: MAP_y_Fx                         =  11 ! MAP%Fx
-   integer(IntKi), public, parameter :: MAP_y_Fy                         =  12 ! MAP%Fy
-   integer(IntKi), public, parameter :: MAP_y_Fz                         =  13 ! MAP%Fz
-   integer(IntKi), public, parameter :: MAP_y_WriteOutput                =  14 ! MAP%WriteOutput
-   integer(IntKi), public, parameter :: MAP_y_wrtOutput                  =  15 ! MAP%wrtOutput
-   integer(IntKi), public, parameter :: MAP_y_ptFairleadLoad             =  16 ! MAP%ptFairleadLoad
+   integer(IntKi), public, parameter :: MAP_u_x                          =   2 ! MAP%x
+   integer(IntKi), public, parameter :: MAP_u_y                          =   3 ! MAP%y
+   integer(IntKi), public, parameter :: MAP_u_z                          =   4 ! MAP%z
+   integer(IntKi), public, parameter :: MAP_u_PtFairDisplacement         =   5 ! MAP%PtFairDisplacement
+   integer(IntKi), public, parameter :: MAP_y_Fx                         =   6 ! MAP%Fx
+   integer(IntKi), public, parameter :: MAP_y_Fy                         =   7 ! MAP%Fy
+   integer(IntKi), public, parameter :: MAP_y_Fz                         =   8 ! MAP%Fz
+   integer(IntKi), public, parameter :: MAP_y_WriteOutput                =   9 ! MAP%WriteOutput
+   integer(IntKi), public, parameter :: MAP_y_wrtOutput                  =  10 ! MAP%wrtOutput
+   integer(IntKi), public, parameter :: MAP_y_ptFairleadLoad             =  11 ! MAP%ptFairleadLoad
 
 contains
 
@@ -3114,87 +3109,6 @@ subroutine MAP_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine MAP_VarsPackConstrState(Vars, z, ValAry)
-   type(MAP_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call MAP_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine MAP_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(MAP_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (MAP_z_H)
-         VarVals = z%H(V%iLB:V%iUB)                                           ! Rank 1 Array
-      case (MAP_z_V)
-         VarVals = z%V(V%iLB:V%iUB)                                           ! Rank 1 Array
-      case (MAP_z_x)
-         VarVals = z%x(V%iLB:V%iUB)                                           ! Rank 1 Array
-      case (MAP_z_y)
-         VarVals = z%y(V%iLB:V%iUB)                                           ! Rank 1 Array
-      case (MAP_z_z)
-         VarVals = z%z(V%iLB:V%iUB)                                           ! Rank 1 Array
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine MAP_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(MAP_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call MAP_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine MAP_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(MAP_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (MAP_z_H)
-         z%H(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
-      case (MAP_z_V)
-         z%V(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
-      case (MAP_z_x)
-         z%x(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
-      case (MAP_z_y)
-         z%y(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
-      case (MAP_z_z)
-         z%z(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
-      end select
-   end associate
-end subroutine
-
-function MAP_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (MAP_z_H)
-       Name = "z%H"
-   case (MAP_z_V)
-       Name = "z%V"
-   case (MAP_z_x)
-       Name = "z%x"
-   case (MAP_z_y)
-       Name = "z%y"
-   case (MAP_z_z)
-       Name = "z%z"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine MAP_VarsPackInput(Vars, u, ValAry)
    type(MAP_InputType), intent(in)         :: u

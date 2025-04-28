@@ -115,10 +115,9 @@ IMPLICIT NONE
   END TYPE IceFloe_MiscVarType
 ! =======================
    integer(IntKi), public, parameter :: IceFloe_x_DummyContStateVar      =   1 ! IceFloe%DummyContStateVar
-   integer(IntKi), public, parameter :: IceFloe_z_DummyConstrStateVar    =   2 ! IceFloe%DummyConstrStateVar
-   integer(IntKi), public, parameter :: IceFloe_u_iceMesh                =   3 ! IceFloe%iceMesh
-   integer(IntKi), public, parameter :: IceFloe_y_iceMesh                =   4 ! IceFloe%iceMesh
-   integer(IntKi), public, parameter :: IceFloe_y_WriteOutput            =   5 ! IceFloe%WriteOutput
+   integer(IntKi), public, parameter :: IceFloe_u_iceMesh                =   2 ! IceFloe%iceMesh
+   integer(IntKi), public, parameter :: IceFloe_y_iceMesh                =   3 ! IceFloe%iceMesh
+   integer(IntKi), public, parameter :: IceFloe_y_WriteOutput            =   4 ! IceFloe%WriteOutput
 
 contains
 
@@ -1182,63 +1181,6 @@ subroutine IceFloe_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine IceFloe_VarsPackConstrState(Vars, z, ValAry)
-   type(IceFloe_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call IceFloe_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine IceFloe_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(IceFloe_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (IceFloe_z_DummyConstrStateVar)
-         VarVals(1) = z%DummyConstrStateVar                                   ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine IceFloe_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(IceFloe_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call IceFloe_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine IceFloe_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(IceFloe_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (IceFloe_z_DummyConstrStateVar)
-         z%DummyConstrStateVar = VarVals(1)                                   ! Scalar
-      end select
-   end associate
-end subroutine
-
-function IceFloe_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (IceFloe_z_DummyConstrStateVar)
-       Name = "z%DummyConstrStateVar"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine IceFloe_VarsPackInput(Vars, u, ValAry)
    type(IceFloe_InputType), intent(in)     :: u

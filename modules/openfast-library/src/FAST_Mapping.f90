@@ -23,6 +23,7 @@ module FAST_Mapping
 use FAST_Types
 use FAST_ModTypes
 use ExtLoads
+use ExternalInflow
 
 implicit none
 
@@ -50,15 +51,19 @@ character(24), parameter   :: Custom_ED_to_ExtLd = 'ED -> ExtLd', &
                               Custom_BD_to_SrvD = 'BD -> SrvD', &
                               Custom_ED_to_SrvD = 'ED -> SrvD', &
                               Custom_SED_to_SrvD = 'SED -> SrvD', &
+                              Custom_ExtInfw_to_AD = 'ExtInfw -> AD', &
                               Custom_ExtInfw_to_SrvD = 'ExtInfw -> SrvD', &
                               Custom_IfW_to_SrvD = 'IfW -> SrvD', &
                               Custom_SrvD_to_ED = 'SrvD -> ED', &
                               Custom_SrvD_to_SED = 'SrvD -> SED', &
                               Custom_SrvD_to_SD = 'SrvD -> SD', &
                               Custom_SrvD_to_MD = 'SrvD -> MD', &
+                              Custom_AD_to_ExtInfw = 'AD -> ExtInfw', &
                               Custom_ED_Tower_Damping = 'ED Tower Damping', &
                               Custom_ED_Blade_Damping = 'ED Blade Damping', &
-                              Custom_BD_Blade_Damping = 'BD Blade Damping'
+                              Custom_BD_Blade_Damping = 'BD Blade Damping', &
+                              Custom_FF_to_ED = 'FF -> ED', &
+                              Custom_FF_to_SD = 'FF -> SD'
 
 contains
 
@@ -390,6 +395,7 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
       ! Add mappings within module
       select case (Mods(iModDst)%ID)
       case (Module_ED)
+
          call MapCustom(MappingsTmp, Custom_ED_Tower_Damping, Mods(iModDst), Mods(iModDst), &
                         Active=Turbine%p_FAST%CalcSteady)
          
@@ -397,10 +403,42 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
             call MapCustom(MappingsTmp, Custom_ED_Blade_Damping, Mods(iModDst), Mods(iModDst), &
                            i=i, Active=Turbine%p_FAST%CalcSteady .and. (Turbine%p_FAST%CompElast == Module_ED))
          end do
+
+         ! If FAST.Farm integration enabled and substructure is not modeled with SubDyn
+         if (Turbine%p_FAST%FarmIntegration .and. (Turbine%p_FAST%CompSub /= Module_SD)) then
+
+            ! Copy ED platform load mesh to substructure loads mesh
+            call MeshCopy(Turbine%ED%Input(INPUT_CURR, Mods(iModDst)%Ins)%PlatformPtMesh, &
+                          Turbine%m_Glue%Ext%SubstructureLoadsFF, &
+                          MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+            Turbine%m_Glue%Ext%SubstructureLoadsFF%Force = 0.0_ReKi
+            Turbine%m_Glue%Ext%SubstructureLoadsFF%Moment = 0.0_ReKi
+
+            call MapCustom(MappingsTmp, Custom_FF_to_ED, Mods(iModDst), Mods(iModDst))
+
+         end if
                         
       case (Module_BD)
+
          call MapCustom(MappingsTmp, Custom_BD_Blade_Damping, Mods(iModDst), Mods(iModDst), &
                         Active=Turbine%p_FAST%CalcSteady)
+
+      case (Module_SD)
+
+         ! If FAST.Farm integration enabled
+         if (Turbine%p_FAST%FarmIntegration) then
+
+            ! Copy SD platform load mesh to substructure loads mesh
+            call MeshCopy(Turbine%SD%Input(INPUT_CURR)%LMesh, &
+                          Turbine%m_Glue%Ext%SubstructureLoadsFF, &
+                          MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+            Turbine%m_Glue%Ext%SubstructureLoadsFF%Force = 0.0_ReKi
+            Turbine%m_Glue%Ext%SubstructureLoadsFF%Moment = 0.0_ReKi
+
+            call MapCustom(MappingsTmp, Custom_FF_to_SD, Mods(iModDst), Mods(iModDst))
+
+         end if
+
       end select
 
       ! Loop through source modules
@@ -477,16 +515,6 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
    do i = 1, size(MappingsTmp)
       call Glue_DestroyMappingType(MappingsTmp(i), ErrStat2, ErrMsg2)
       if (Failed()) return
-   end do
-
-   ! Loop through mappings
-   do iMap = 1, size(Mappings)
-      associate (SrcMod => Mods(Mappings(iMap)%iModSrc), &
-                 DstMod => Mods(Mappings(iMap)%iModDst))
-
-         write (*, *) "Mapping: ", Mappings(iMap)%Desc
-
-      end associate
    end do
 
    !----------------------------------------------------------------------------
@@ -705,6 +733,11 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          DstMod=DstMod, DstDL=DatLoc(AD_u_NacelleMotion), &      ! AD%u%rotors(DstMod%Ins)%NacelleMotion
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
+
+   case (Module_ExtInfw)
+
+      call MapCustom(Mappings, Custom_ExtInfw_to_AD, SrcMod, DstMod, &
+                     Active=DstMod%Ins == 1)
 
    case (Module_IfW)
 
@@ -1271,6 +1304,11 @@ subroutine InitMappings_ExtInfw(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
    ErrMsg = ''
 
    select case (SrcMod%ID)
+
+   case (Module_AD)
+      call MapCustom(Mappings, Custom_AD_to_ExtInfw, SrcMod, DstMod, &
+                     Active=SrcMod%Ins == 1)
+
    end select
 
 contains
@@ -1454,19 +1492,6 @@ subroutine InitMappings_FEAM(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          SrcDL=DatLoc(SD_y_Y3Mesh), &                     ! SD%y%y3Mesh
                          DstDL=DatLoc(FEAM_u_PtFairleadDisplacement), &   ! FEAM%u%PtFairleadDisplacement
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
-
-   end select
-
-   select case (SrcMod%ID)
-   case (Module_ED)
-
-      if (Turbine%p_FAST%CompSub /= Module_SD) then
-         ! CALL MeshMapCreate( SubstructureMotion, FEAM%u%PtFairleadDisplacement,  MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-      end if
-
-   case (Module_SD)
-
-      ! CALL MeshMapCreate( SubstructureMotion, FEAM%u%PtFairleadDisplacement,  MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
 
    end select
 
@@ -2012,14 +2037,14 @@ end subroutine
 
 subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
                        DstMod, DstDL, DstDispDL, ErrStat, ErrMsg, Active)
-   type(FAST_TurbineType), target         :: Turbine
-   type(MappingType), allocatable         :: Mappings(:)
-   type(ModDataType), intent(inout)       :: SrcMod, DstMod
-   type(DatLoc), intent(in)               :: SrcDL, DstDL
-   type(DatLoc), intent(in)               :: SrcDispDL, DstDispDL
-   integer(IntKi), intent(out)            :: ErrStat
-   character(*), intent(out)              :: ErrMsg
-   logical, optional, intent(in)          :: Active
+   type(FAST_TurbineType), target                  :: Turbine
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(ModDataType), intent(inout)                :: SrcMod, DstMod
+   type(DatLoc), intent(in)                        :: SrcDL, DstDL
+   type(DatLoc), intent(in)                        :: SrcDispDL, DstDispDL
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+   logical, optional, intent(in)                   :: Active
 
    character(*), parameter                :: RoutineName = 'MapLoadMesh'
    integer(IntKi)                         :: ErrStat2
@@ -2068,7 +2093,9 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    end if
 
    ! Create mapping description
-   Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+   Mapping%Desc = trim(SrcMod%Abbr)//'_'//trim(Num2LStr(SrcMod%Ins))//" "// &
+                  trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+                  trim(DstMod%Abbr)//'_'//trim(Num2LStr(DstMod%Ins))//" "// &
                   trim(FAST_InputFieldName(DstMod, DstDL))// &
                   " ["//trim(FAST_InputFieldName(SrcMod, SrcDispDL))// &
                   " @ "//trim(FAST_OutputFieldName(DstMod, DstDispDL))//"]"
@@ -2128,7 +2155,7 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    end if
 
    ! Add mapping to array of mappings
-   Mappings = [Mappings, Mapping]
+   call AppendMapping(Mappings, Mapping)
 
 contains
    logical function Failed()
@@ -2158,13 +2185,13 @@ contains
 end subroutine
 
 subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
-   type(FAST_TurbineType), target         :: Turbine
-   type(MappingType), allocatable         :: Mappings(:)
-   type(ModDataType), intent(inout)       :: SrcMod, DstMod
-   type(DatLoc), intent(in)               :: SrcDL, DstDL
-   integer(IntKi), intent(out)            :: ErrStat
-   character(*), intent(out)              :: ErrMsg
-   logical, optional, intent(in)          :: Active
+   type(FAST_TurbineType), target                  :: Turbine
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(ModDataType), intent(inout)                :: SrcMod, DstMod
+   type(DatLoc), intent(in)                        :: SrcDL, DstDL
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+   logical, optional, intent(in)                   :: Active
 
    character(*), parameter                :: RoutineName = 'MapMotionMesh'
    integer(IntKi)                         :: ErrStat2
@@ -2199,7 +2226,9 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrSta
    end if
 
    ! Create mapping description
-   Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+   Mapping%Desc = trim(SrcMod%Abbr)//'_'//trim(Num2LStr(SrcMod%Ins))//" "// &
+                  trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
+                  trim(DstMod%Abbr)//'_'//trim(Num2LStr(DstMod%Ins))//" "// &
                   trim(FAST_InputFieldName(DstMod, DstDL))
 
    ! Initialize mapping structure
@@ -2221,7 +2250,7 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrSta
    call MeshMapCreate(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Add mapping to array of mappings
-   Mappings = [Mappings, Mapping]
+   call AppendMapping(Mappings, Mapping)
 
 contains
    logical function Failed()
@@ -2230,15 +2259,15 @@ contains
    end function
 end subroutine
 
-subroutine MapVariable(Maps, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
-   type(MappingType), allocatable      :: Maps(:)
-   type(ModDataType), intent(inout)    :: SrcMod, DstMod
-   type(DatLoc), intent(in)            :: SrcDL, DstDL
-   integer(IntKi), intent(out)         :: ErrStat
-   character(*), intent(out)           :: ErrMsg
-   logical, optional, intent(in)       :: Active
-   type(MappingType)                   :: Mapping
-   integer(IntKi)                      :: iVarSrc, iVarDst
+subroutine MapVariable(Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Active)
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(ModDataType), intent(inout)                :: SrcMod, DstMod
+   type(DatLoc), intent(in)                        :: SrcDL, DstDL
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+   logical, optional, intent(in)                   :: Active
+   type(MappingType)                               :: Mapping
+   integer(IntKi)                                  :: iVarSrc, iVarDst
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -2298,18 +2327,19 @@ subroutine MapVariable(Maps, SrcMod, SrcDL, DstMod, DstDL, ErrStat, ErrMsg, Acti
    ! Allocate variable data storage
    call AllocAry(Mapping%VarData, max(Mapping%SrcVar%Num, Mapping%DstVar%Num), "VarData", ErrStat, ErrMsg)
 
-   Maps = [Maps, Mapping]
+   ! Add mapping to array of mappings
+   call AppendMapping(Mappings, Mapping)
 end subroutine
 
 !> MapCustom creates a custom mapping that is not included in linearization.
 !! Each custom mapping needs an entry in FAST_InputSolve to actually perform the transfer.
-subroutine MapCustom(Maps, Desc, SrcMod, DstMod, i, Active)
-   type(MappingType), allocatable         :: Maps(:)
-   character(*), intent(in)               :: Desc
-   type(ModDataType), intent(inout)       :: SrcMod, DstMod
-   integer(IntKi), optional, intent(in)   :: i
-   logical, optional, intent(in)          :: Active
-   type(MappingType)                      :: Mapping
+subroutine MapCustom(Mappings, Desc, SrcMod, DstMod, i, Active)
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   character(*), intent(in)                        :: Desc
+   type(ModDataType), intent(inout)                :: SrcMod, DstMod
+   integer(IntKi), optional, intent(in)            :: i
+   logical, optional, intent(in)                   :: Active
+   type(MappingType)                               :: Mapping
 
    if (present(Active)) then
       if (.not. Active) return
@@ -2326,7 +2356,24 @@ subroutine MapCustom(Maps, Desc, SrcMod, DstMod, i, Active)
    Mapping%DstIns = DstMod%Ins
    if (present(i)) Mapping%i = i
 
-   Maps = [Maps, Mapping]
+   ! Add mapping to array of mappings
+   call AppendMapping(Mappings, Mapping)
+end subroutine
+
+! Append mapping to array of mappings
+subroutine AppendMapping(Mappings, Mapping)
+   type(MappingType), allocatable, intent(inout)   :: Mappings(:)
+   type(MappingType), intent(in)                   :: Mapping
+   type(MappingType), allocatable                  :: MappingsTmp(:)
+
+   if (allocated(Mappings)) then
+      call move_alloc(Mappings, MappingsTmp)
+      allocate(Mappings(size(MappingsTmp) + 1))
+      Mappings(:size(MappingsTmp)) = MappingsTmp
+      Mappings(size(Mappings)) = Mapping
+   else
+      allocate(Mappings(1), source=Mapping)
+   end if
 end subroutine
 
 subroutine SetMapVarFlags(Mapping, SrcMod, DstMod)
@@ -2470,11 +2517,11 @@ subroutine FAST_LinearizeMappings(ModGlue, Mappings, Turbine, ErrStat, ErrMsg)
             call Assemble_dUdy_Motions(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdy)
 
             ! Copy linearization matrices to global dUdu matrix
-            call Assemble_dUdu(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdu)
+            call Assemble_dUdu_Motions(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdu)
 
          case (Map_LoadMesh)
 
-            ! Get source and destination meshes
+            ! Get source and destination load meshes
             call FAST_OutputMeshPointer(ModSrc, Turbine, Mapping%SrcDL, SrcMesh, ErrStat2, ErrMsg2); if (Failed()) return
             call FAST_InputMeshPointer(ModDst, Turbine, Mapping%DstDL, DstMesh, INPUT_CURR, ErrStat2, ErrMsg2); if (Failed()) return
 
@@ -2505,7 +2552,7 @@ subroutine FAST_LinearizeMappings(ModGlue, Mappings, Turbine, ErrStat, ErrMsg)
             call Assemble_dUdy_Loads(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdy)
 
             ! Copy linearization matrices to global dUdu matrix
-            call Assemble_dUdu(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdu)
+            call Assemble_dUdu_Loads(Mapping, ModMap, ModSrc%Vars, ModDst%Vars, ModGlue%Lin%dUdu)
 
          end select
 
@@ -2537,7 +2584,7 @@ contains
       end select
    end subroutine
 
-   subroutine Assemble_dUdu(Mapping, ModMap, VarsSrc, VarsDst, dUdu)
+   subroutine Assemble_dUdu_Motions(Mapping, ModMap, VarsSrc, VarsDst, dUdu)
       type(MappingType), intent(in) :: Mapping
       type(VarMapType), intent(in)  :: ModMap
       type(ModVarsType), intent(in) :: VarsSrc, VarsDst
@@ -2552,6 +2599,14 @@ contains
       if (allocated(Mapping%MeshMap%dM%ta_uD)) then
          call SumBlock(VarsDst%u, ModMap%iVarDst(FieldTransDisp), VarsDst%u, ModMap%iVarDst(FieldTransAcc), Mapping%MeshMap%dM%ta_uD, dUdu)
       end if
+
+   end subroutine
+
+   subroutine Assemble_dUdu_Loads(Mapping, ModMap, VarsSrc, VarsDst, dUdu)
+      type(MappingType), intent(in) :: Mapping
+      type(VarMapType), intent(in)  :: ModMap
+      type(ModVarsType), intent(in) :: VarsSrc, VarsDst
+      real(R8Ki), intent(inout)     :: dUdu(:, :)
 
       ! Effect of input Translation Displacement on input Moments
       if (allocated(Mapping%MeshMap%dM%M_uS)) then
@@ -2980,7 +3035,9 @@ subroutine FAST_ResetMappingReady(MapAry)
    integer(IntKi)                   :: i
    do i = 1, size(MapAry)
       select case (MapAry(i)%SrcModID)
-      case default         ! Default to transfer is not ready
+      case (Module_ExtInfw)   ! Modules always ready to transfer
+         MapAry(i)%Ready = .true.
+      case default            ! Default to transfer is not ready
          MapAry(i)%Ready = .false.
       end select
    end do
@@ -3037,6 +3094,13 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 !-------------------------------------------------------------------------------
 ! AeroDyn Inputs
 !-------------------------------------------------------------------------------
+
+   case (Custom_ExtInfw_to_AD)
+
+      ! ExtInfw updates the flow field used by InflowWind and AeroDyn so consider that an
+      ! input to InflowWind and perform the update during InflowWind's input solve
+      call ExtInfw_UpdateFlowField(T%p_FAST, T%ExtInfw, ErrStat2, ErrMsg2)
+      if (ErrStat >= AbortErrLev) return
 
    case (Custom_SrvD_to_AD)
 
@@ -3131,6 +3195,11 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       ! Apply damping force as Bld_Kdmp*(node velocity)
       T%ED%Input(iInput, Mapping%DstIns)%BladePtLoads(Mapping%i)%Force = T%ED%Input(iInput, Mapping%DstIns)%BladePtLoads(Mapping%i)%Force - T%p_FAST%Bld_Kdmp * Mapping%TmpMotionMesh%TranslationVel
 
+   case (Custom_FF_to_ED)
+
+      T%ED%Input(iInput, Mapping%DstIns)%PlatformPtMesh%Force  = T%ED%Input(iInput, Mapping%DstIns)%PlatformPtMesh%Force  + T%m_Glue%Ext%SubstructureLoadsFF%Force
+      T%ED%Input(iInput, Mapping%DstIns)%PlatformPtMesh%Moment = T%ED%Input(iInput, Mapping%DstIns)%PlatformPtMesh%Moment + T%m_Glue%Ext%SubstructureLoadsFF%Moment
+
 !-------------------------------------------------------------------------------
 ! SED Inputs
 !-------------------------------------------------------------------------------
@@ -3142,6 +3211,16 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       T%SED%Input(iInput)%BlPitchCom = T%SrvD%y%BlPitchCom
       T%SED%Input(iInput)%YawPosCom = T%SrvD%y%YawPosCom
       T%SED%Input(iInput)%YawRateCom = T%SrvD%y%YawRateCom
+
+!-------------------------------------------------------------------------------
+! ExtInfw Inputs
+!-------------------------------------------------------------------------------
+
+   case (Custom_AD_to_ExtInfw)
+
+      call ExtInfw_SetInputs(T%p_FAST, T%AD%Input(iInput), T%AD%y, T%SrvD%y, T%ExtInfw, ErrStat2, ErrMsg2)
+      if (ErrStat >= AbortErrLev) return
+      call ExtInfw_SetWriteOutput(T%ExtInfw)
 
 !-------------------------------------------------------------------------------
 ! ExtLoads Inputs
@@ -3210,6 +3289,11 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       if (allocated(T%SD%Input(iInput)%CableDeltaL) .and. allocated(T%SrvD%y%CableDeltaL)) then
          T%SD%Input(iInput)%CableDeltaL = T%SrvD%y%CableDeltaL   ! these should be sized identically during init
       end if
+
+   case (Custom_FF_to_SD)
+
+      T%SD%Input(iInput)%LMesh%Force  = T%SD%Input(iInput)%LMesh%Force  + T%m_Glue%Ext%SubstructureLoadsFF%Force
+      T%SD%Input(iInput)%LMesh%Moment = T%SD%Input(iInput)%LMesh%Moment + T%m_Glue%Ext%SubstructureLoadsFF%Moment
 
 !-------------------------------------------------------------------------------
 ! ServoDyn Inputs

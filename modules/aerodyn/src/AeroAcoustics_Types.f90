@@ -273,23 +273,22 @@ IMPLICIT NONE
   END TYPE AA_OutputType
 ! =======================
    integer(IntKi), public, parameter :: AA_x_DummyContState              =   1 ! AA%DummyContState
-   integer(IntKi), public, parameter :: AA_z_DummyConstrState            =   2 ! AA%DummyConstrState
-   integer(IntKi), public, parameter :: AA_u_RotGtoL                     =   3 ! AA%RotGtoL
-   integer(IntKi), public, parameter :: AA_u_AeroCent_G                  =   4 ! AA%AeroCent_G
-   integer(IntKi), public, parameter :: AA_u_Vrel                        =   5 ! AA%Vrel
-   integer(IntKi), public, parameter :: AA_u_AoANoise                    =   6 ! AA%AoANoise
-   integer(IntKi), public, parameter :: AA_u_Inflow                      =   7 ! AA%Inflow
-   integer(IntKi), public, parameter :: AA_y_SumSpecNoise                =   8 ! AA%SumSpecNoise
-   integer(IntKi), public, parameter :: AA_y_SumSpecNoiseSep             =   9 ! AA%SumSpecNoiseSep
-   integer(IntKi), public, parameter :: AA_y_OASPL                       =  10 ! AA%OASPL
-   integer(IntKi), public, parameter :: AA_y_OASPL_Mech                  =  11 ! AA%OASPL_Mech
-   integer(IntKi), public, parameter :: AA_y_DirectiviOutput             =  12 ! AA%DirectiviOutput
-   integer(IntKi), public, parameter :: AA_y_OutLECoords                 =  13 ! AA%OutLECoords
-   integer(IntKi), public, parameter :: AA_y_PtotalFreq                  =  14 ! AA%PtotalFreq
-   integer(IntKi), public, parameter :: AA_y_WriteOutputForPE            =  15 ! AA%WriteOutputForPE
-   integer(IntKi), public, parameter :: AA_y_WriteOutput                 =  16 ! AA%WriteOutput
-   integer(IntKi), public, parameter :: AA_y_WriteOutputSep              =  17 ! AA%WriteOutputSep
-   integer(IntKi), public, parameter :: AA_y_WriteOutputNode             =  18 ! AA%WriteOutputNode
+   integer(IntKi), public, parameter :: AA_u_RotGtoL                     =   2 ! AA%RotGtoL
+   integer(IntKi), public, parameter :: AA_u_AeroCent_G                  =   3 ! AA%AeroCent_G
+   integer(IntKi), public, parameter :: AA_u_Vrel                        =   4 ! AA%Vrel
+   integer(IntKi), public, parameter :: AA_u_AoANoise                    =   5 ! AA%AoANoise
+   integer(IntKi), public, parameter :: AA_u_Inflow                      =   6 ! AA%Inflow
+   integer(IntKi), public, parameter :: AA_y_SumSpecNoise                =   7 ! AA%SumSpecNoise
+   integer(IntKi), public, parameter :: AA_y_SumSpecNoiseSep             =   8 ! AA%SumSpecNoiseSep
+   integer(IntKi), public, parameter :: AA_y_OASPL                       =   9 ! AA%OASPL
+   integer(IntKi), public, parameter :: AA_y_OASPL_Mech                  =  10 ! AA%OASPL_Mech
+   integer(IntKi), public, parameter :: AA_y_DirectiviOutput             =  11 ! AA%DirectiviOutput
+   integer(IntKi), public, parameter :: AA_y_OutLECoords                 =  12 ! AA%OutLECoords
+   integer(IntKi), public, parameter :: AA_y_PtotalFreq                  =  13 ! AA%PtotalFreq
+   integer(IntKi), public, parameter :: AA_y_WriteOutputForPE            =  14 ! AA%WriteOutputForPE
+   integer(IntKi), public, parameter :: AA_y_WriteOutput                 =  15 ! AA%WriteOutput
+   integer(IntKi), public, parameter :: AA_y_WriteOutputSep              =  16 ! AA%WriteOutputSep
+   integer(IntKi), public, parameter :: AA_y_WriteOutputNode             =  17 ! AA%WriteOutputNode
 
 contains
 
@@ -3059,63 +3058,6 @@ subroutine AA_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine AA_VarsPackConstrState(Vars, z, ValAry)
-   type(AA_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call AA_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine AA_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(AA_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (AA_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine AA_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(AA_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call AA_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine AA_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(AA_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (AA_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function AA_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (AA_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine AA_VarsPackInput(Vars, u, ValAry)
    type(AA_InputType), intent(in)          :: u

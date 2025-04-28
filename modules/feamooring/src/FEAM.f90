@@ -361,17 +361,6 @@ subroutine FEAM_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
     ErrStat = ErrID_None
     ErrMsg = ""
  
-    ! Allocate space for variables (deallocate if already allocated)
-    if (associated(p%Vars)) deallocate(p%Vars)
-    allocate(p%Vars, stat=ErrStat2)
-    if (ErrStat2 /= 0) then
-       call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
-       return
-    end if
- 
-    ! Add pointers to vars to initialization output
-    InitOut%Vars => p%Vars
- 
     !---------------------------------------------------------------------------
     ! Continuous State Variables
     !---------------------------------------------------------------------------
@@ -380,7 +369,7 @@ subroutine FEAM_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
     ! Input variables
     !---------------------------------------------------------------------------
 
-    call MV_AddMeshVar(p%Vars%u, "PtFairleadDisplacement", [FieldTransDisp], &
+    call MV_AddMeshVar(InitOut%Vars%u, "PtFairleadDisplacement", [FieldTransDisp], &
                        DatLoc(FEAM_u_PtFairleadDisplacement), &
                        Mesh=u%PtFairleadDisplacement)                      
 
@@ -388,7 +377,7 @@ subroutine FEAM_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
     ! Output variables
     !---------------------------------------------------------------------------
  
-    call MV_AddMeshVar(p%Vars%y, 'PtFairleadLoad', [FieldForce], &
+    call MV_AddMeshVar(InitOut%Vars%y, 'PtFairleadLoad', [FieldForce], &
                        DatLoc(FEAM_y_PtFairleadLoad), &
                        Mesh=y%PtFairleadLoad)
  
@@ -396,7 +385,7 @@ subroutine FEAM_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
     ! Initialize Variables and Values
     !---------------------------------------------------------------------------
  
-    CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+    CALL MV_InitVarsJac(InitOut%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
  
  contains
     logical function Failed()

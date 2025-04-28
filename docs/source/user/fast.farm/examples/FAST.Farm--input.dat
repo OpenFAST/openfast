@@ -4,12 +4,9 @@ Comment
 False         Echo                  - Echo input data to <RootName>.ech? (flag)
 FATAL         AbortLevel            - Error level when simulation should abort (string) {"WARNING", "SEVERE", "FATAL"}
 2000.0        TMax                  - Total run time (s) [>=0.0]
-False         UseSC                 - Use a super controller? (flag)
 1             Mod_AmbWind           - Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: one InflowWind module, 3: multiple instances of InflowWind module}
 2             Mod_WaveField         - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
 0             Mod_SharedMooring     - Shared mooring system model (switch) {0: None, 3=MoorDyn}}
---- SUPER CONTROLLER --- [used only for UseSC=True]
-"SC_DLL.dll"  SC_FileName Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoted string)
 --- SHARED MOORING SYSTEM --- [used only for Mod_SharedMoor>0]
 ""            SharedMoorFile        - Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
 0.04	      DT_Mooring            - Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]

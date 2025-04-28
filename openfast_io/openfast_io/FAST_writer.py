@@ -30,35 +30,49 @@ def auto_format(f, var):
     elif isinstance(var, float):
         f.write('{: 2.15e}\n'.format(var))
 
-def float_default_out(val):
+def float_default_out(val, trim = False):
     """
     Formatted float output when 'default' is an option
 
     args:
     val: value to be formatted
+    trim: trim the whitespace from the returned value
 
     returns:
     formatted value
     """
     if type(val) is float:
-        return '{: 22f}'.format(val)
+        if trim:
+            return '{:.4f}'.format(val)
+        else:
+            return '{: 22f}'.format(val)
     else:
-        return '{:<22}'.format(val)
+        if trim:
+            return '{:}'.format(val)
+        else:
+            return '{:<22}'.format(val)
 
-def int_default_out(val):
+def int_default_out(val, trim = False):
     """
     Formatted int output when 'default' is an option
 
     args:
     val: value to be formatted
+    trim: trim the whitespace from the returned value
 
     returns:
     formatted value
     """
     if type(val) is float:
-        return '{:<22d}'.format(val)
+        if trim:
+            return '{:d}'.format(val)
+        else:
+            return '{:<22d}'.format(val)
     else:
-        return '{:<22}'.format(val)
+        if trim:
+            return '{:}'.format(val)
+        else:
+            return '{:<22}'.format(val)
 
 def get_dict(vartree, branch):
     """
@@ -187,7 +201,17 @@ class InputWriter_OpenFAST(object):
         else:
             # If elastodyn blade is being used OR if the blade file exists
             if self.fst_vt['Fst']['CompElast'] == 1 or os.path.isfile(self.fst_vt['ElastoDyn']['BldFile1']):
-                self.write_ElastoDynBlade()
+                
+                if isinstance(self.fst_vt['ElastoDynBlade'], list):
+                    for i_EDbld, EDbld in enumerate(self.fst_vt['ElastoDynBlade']):
+                        self.fst_vt['ElastoDyn']['BldFile%d'%(i_EDbld+1)] = self.FAST_namingOut + '_ElastoDynBlade_%d.dat'%(i_EDbld+1)
+                        self.write_ElastoDynBlade(bldInd = i_EDbld)
+
+                elif isinstance(self.fst_vt['ElastoDynBlade'], dict):
+                    self.fst_vt['ElastoDyn']['BldFile1'] = self.FAST_namingOut + '_ElastoDynBlade.dat'
+                    self.fst_vt['ElastoDyn']['BldFile2'] = self.fst_vt['ElastoDyn']['BldFile1']
+                    self.fst_vt['ElastoDyn']['BldFile3'] = self.fst_vt['ElastoDyn']['BldFile1']
+                    self.write_ElastoDynBlade()
 
             self.write_ElastoDynTower()
             self.write_ElastoDyn()
@@ -226,11 +250,24 @@ class InputWriter_OpenFAST(object):
             self.write_MAP()
         elif self.fst_vt['Fst']['CompMooring'] == 3:
             self.write_MoorDyn()
-            if 'WaterKin' in self.fst_vt['MoorDyn']['options']:
+            if 'option_names' in self.fst_vt['MoorDyn'] and 'WATERKIN' in self.fst_vt['MoorDyn']['option_names']:
                 self.write_WaterKin(os.path.join(self.FAST_runDirectory,self.fst_vt['MoorDyn']['WaterKin_file']))
 
-        if self.fst_vt['Fst']['CompElast'] == 2 or 'Echo' in self.fst_vt['BeamDyn']:
-            self.write_BeamDyn()
+        #     # look at if the the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
+        #     # if its a dictionary, just write the same BeamDyn file 
+
+        if isinstance(self.fst_vt['BeamDyn'], list):
+            for i_BD, BD in enumerate(self.fst_vt['BeamDyn']):
+                if not BD == {}:
+                    self.fst_vt['Fst']['BDBldFile(%d)'%(i_BD+1)] = self.FAST_namingOut + '_BeamDyn_%d.dat'%(i_BD+1)
+                    self.write_BeamDyn(bldInd = i_BD)
+
+        elif isinstance(self.fst_vt['BeamDyn'], dict):
+            if not self.fst_vt['BeamDyn'] == {}:
+                self.fst_vt['Fst']['BDBldFile(1)'] = self.FAST_namingOut + '_BeamDyn.dat'
+                self.fst_vt['Fst']['BDBldFile(2)'] = self.fst_vt['Fst']['BDBldFile(1)']
+                self.fst_vt['Fst']['BDBldFile(3)'] = self.fst_vt['Fst']['BDBldFile(1)']
+                self.write_BeamDyn() 
 
         self.write_MainInput()
 
@@ -551,54 +588,57 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_ElastoDynBlade(self):
+    def write_ElastoDynBlade(self, bldInd = None):
 
-        self.fst_vt['ElastoDyn']['BldFile1'] = self.FAST_namingOut + '_ElastoDyn_blade.dat'
-        self.fst_vt['ElastoDyn']['BldFile2'] = self.fst_vt['ElastoDyn']['BldFile1']         # TODO: have the possibility of different blade files
-        self.fst_vt['ElastoDyn']['BldFile3'] = self.fst_vt['ElastoDyn']['BldFile1']
-        blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile1'])
+        if bldInd is None:
+            EDbld_dict = self.fst_vt['ElastoDynBlade']
+            blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile1'])
+        else:
+            EDbld_dict = self.fst_vt['ElastoDynBlade'][bldInd]
+            blade_file = os.path.join(self.FAST_runDirectory,self.fst_vt['ElastoDyn']['BldFile'+(bldInd+1)])
+
         f = open(blade_file, 'w')
 
         f.write('------- ELASTODYN INDIVIDUAL BLADE INPUT FILE --------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- BLADE PARAMETERS ----------------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['NBlInpSt'], 'NBlInpSt', '- Number of blade input stations (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFlDmp1'], 'BldFlDmp(1)', '- Blade flap mode #1 structural damping in percent of critical (%)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFlDmp2'], 'BldFlDmp(2)', '- Blade flap mode #2 structural damping in percent of critical (%)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldEdDmp1'], 'BldEdDmp(1)', '- Blade edge mode #1 structural damping in percent of critical (%)\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['NBlInpSt'], 'NBlInpSt', '- Number of blade input stations (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFlDmp1'], 'BldFlDmp(1)', '- Blade flap mode #1 structural damping in percent of critical (%)\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFlDmp2'], 'BldFlDmp(2)', '- Blade flap mode #2 structural damping in percent of critical (%)\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldEdDmp1'], 'BldEdDmp(1)', '- Blade edge mode #1 structural damping in percent of critical (%)\n'))
         f.write('---------------------- BLADE ADJUSTMENT FACTORS --------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['FlStTunr1'], 'FlStTunr(1)', '- Blade flapwise modal stiffness tuner, 1st mode (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['FlStTunr2'], 'FlStTunr(2)', '- Blade flapwise modal stiffness tuner, 2nd mode (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['AdjBlMs'], 'AdjBlMs', '- Factor to adjust blade mass density (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['AdjFlSt'], 'AdjFlSt', '- Factor to adjust blade flap stiffness (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['AdjEdSt'], 'AdjEdSt', '- Factor to adjust blade edge stiffness (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['FlStTunr1'], 'FlStTunr(1)', '- Blade flapwise modal stiffness tuner, 1st mode (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['FlStTunr2'], 'FlStTunr(2)', '- Blade flapwise modal stiffness tuner, 2nd mode (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['AdjBlMs'], 'AdjBlMs', '- Factor to adjust blade mass density (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['AdjFlSt'], 'AdjFlSt', '- Factor to adjust blade flap stiffness (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['AdjEdSt'], 'AdjEdSt', '- Factor to adjust blade edge stiffness (-)\n'))
         f.write('---------------------- DISTRIBUTED BLADE PROPERTIES ----------------------------\n')
         f.write('    BlFract      PitchAxis      StrcTwst       BMassDen        FlpStff        EdgStff\n')
         f.write('      (-)           (-)          (deg)          (kg/m)         (Nm^2)         (Nm^2)\n')
-        BlFract   = self.fst_vt['ElastoDynBlade']['BlFract']
-        PitchAxis = self.fst_vt['ElastoDynBlade']['PitchAxis']
-        StrcTwst  = self.fst_vt['ElastoDynBlade']['StrcTwst']
-        BMassDen  = self.fst_vt['ElastoDynBlade']['BMassDen']
-        FlpStff   = self.fst_vt['ElastoDynBlade']['FlpStff']
-        EdgStff   = self.fst_vt['ElastoDynBlade']['EdgStff']
+        BlFract   = EDbld_dict['BlFract']
+        PitchAxis = EDbld_dict['PitchAxis']
+        StrcTwst  = EDbld_dict['StrcTwst']
+        BMassDen  = EDbld_dict['BMassDen']
+        FlpStff   = EDbld_dict['FlpStff']
+        EdgStff   = EDbld_dict['EdgStff']
         for BlFracti, PitchAxisi, StrcTwsti, BMassDeni, FlpStffi, EdgStffi in zip(BlFract, PitchAxis, StrcTwst, BMassDen, FlpStff, EdgStff):
             f.write('{: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e}\n'.format(BlFracti, PitchAxisi, StrcTwsti, BMassDeni, FlpStffi, EdgStffi))
         f.write('---------------------- BLADE MODE SHAPES ---------------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl1Sh'][0], 'BldFl1Sh(2)', '- Flap mode 1, coeff of x^2\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl1Sh'][1], 'BldFl1Sh(3)', '-            , coeff of x^3\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl1Sh'][2], 'BldFl1Sh(4)', '-            , coeff of x^4\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl1Sh'][3], 'BldFl1Sh(5)', '-            , coeff of x^5\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl1Sh'][4], 'BldFl1Sh(6)', '-            , coeff of x^6\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl2Sh'][0], 'BldFl2Sh(2)', '- Flap mode 2, coeff of x^2\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl2Sh'][1], 'BldFl2Sh(3)', '-            , coeff of x^3\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl2Sh'][2], 'BldFl2Sh(4)', '-            , coeff of x^4\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl2Sh'][3], 'BldFl2Sh(5)', '-            , coeff of x^5\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldFl2Sh'][4], 'BldFl2Sh(6)', '-            , coeff of x^6\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldEdgSh'][0], 'BldEdgSh(2)', '- Edge mode 1, coeff of x^2\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldEdgSh'][1], 'BldEdgSh(3)', '-            , coeff of x^3\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldEdgSh'][2], 'BldEdgSh(4)', '-            , coeff of x^4\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldEdgSh'][3], 'BldEdgSh(5)', '-            , coeff of x^5\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['ElastoDynBlade']['BldEdgSh'][4], 'BldEdgSh(6)', '-            , coeff of x^6\n'))      
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl1Sh'][0], 'BldFl1Sh(2)', '- Flap mode 1, coeff of x^2\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl1Sh'][1], 'BldFl1Sh(3)', '-            , coeff of x^3\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl1Sh'][2], 'BldFl1Sh(4)', '-            , coeff of x^4\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl1Sh'][3], 'BldFl1Sh(5)', '-            , coeff of x^5\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl1Sh'][4], 'BldFl1Sh(6)', '-            , coeff of x^6\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl2Sh'][0], 'BldFl2Sh(2)', '- Flap mode 2, coeff of x^2\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl2Sh'][1], 'BldFl2Sh(3)', '-            , coeff of x^3\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl2Sh'][2], 'BldFl2Sh(4)', '-            , coeff of x^4\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl2Sh'][3], 'BldFl2Sh(5)', '-            , coeff of x^5\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldFl2Sh'][4], 'BldFl2Sh(6)', '-            , coeff of x^6\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldEdgSh'][0], 'BldEdgSh(2)', '- Edge mode 1, coeff of x^2\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldEdgSh'][1], 'BldEdgSh(3)', '-            , coeff of x^3\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldEdgSh'][2], 'BldEdgSh(4)', '-            , coeff of x^4\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldEdgSh'][3], 'BldEdgSh(5)', '-            , coeff of x^5\n'))
+        f.write('{:<22} {:<11} {:}'.format(EDbld_dict['BldEdgSh'][4], 'BldEdgSh(6)', '-            , coeff of x^6\n'))      
          
         f.flush()
         os.fsync(f)
@@ -662,39 +702,47 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_BeamDyn(self):
-        self.fst_vt['Fst']['BDBldFile(1)'] = self.FAST_namingOut + '_BeamDyn.dat'
-        self.fst_vt['Fst']['BDBldFile(2)'] = self.fst_vt['Fst']['BDBldFile(1)']
-        self.fst_vt['Fst']['BDBldFile(3)'] = self.fst_vt['Fst']['BDBldFile(1)']
+    def write_BeamDyn(self, bldInd = None):
 
-        self.write_BeamDynBlade()
+        # if we have bldInd is None, 
+        if bldInd is None:
 
-        beamdyn_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['BDBldFile(1)'])
+            self.fst_vt['BeamDyn']['BldFile'] = self.FAST_namingOut + '_BeamDyn_Blade.dat'
+            bd_dict = self.fst_vt['BeamDyn']
+            beamdyn_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['BDBldFile(1)'])
+        else:
+            self.fst_vt['BeamDyn'][bldInd]['BldFile'] = self.FAST_namingOut + '_BeamDyn_Blade_%d.dat'%(bldInd+1)
+            bd_dict = self.fst_vt['BeamDyn'][bldInd]
+            beamdyn_file = os.path.join(self.FAST_runDirectory,self.fst_vt['Fst']['BDBldFile(%s)'%(bldInd+1)])
+
+
+        self.write_BeamDynBlade(bldInd = bldInd)
+
         f            = open(beamdyn_file, 'w')
 
         f.write('--------- BEAMDYN with OpenFAST INPUT FILE -------------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- SIMULATION CONTROL --------------------------------------\n')
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['Echo'], 'Echo', '- Echo input data to "<RootName>.ech" (flag)\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['QuasiStaticInit'], 'QuasiStaticInit', '- Use quasistatic pre-conditioning with centripetal accelerations in initialization (flag) [dynamic solve only]\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['rhoinf'], 'rhoinf', '- Numerical damping parameter for generalized-alpha integrator\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['quadrature'], 'quadrature', '- Quadrature method: 1=Gaussian; 2=Trapezoidal (switch)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['refine'], 'refine', '- Refinement factor for trapezoidal quadrature (-) [DEFAULT = 1; used only when quadrature=2]\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['n_fact'], 'n_fact', '- Factorization frequency for the Jacobian in N-R iteration(-) [DEFAULT = 5]\n'))
-        f.write(float_default_out(self.fst_vt['BeamDyn']['DTBeam']) + '   {:<11} {:}'.format('DTBeam', '- Time step size (s).\n'))
-        f.write(int_default_out(self.fst_vt['BeamDyn']['load_retries']) + '   {:<11} {:}'.format('load_retries', '- Number of factored load retries before quitting the aimulation [DEFAULT = 20]\n'))
-        f.write(int_default_out(self.fst_vt['BeamDyn']['NRMax']) + '   {:<11} {:}'.format('NRMax', '- Max number of iterations in Newton-Raphson algorithm (-). [DEFAULT = 10]\n'))
-        f.write(float_default_out(self.fst_vt['BeamDyn']['stop_tol']) + '   {:<11} {:}'.format('stop_tol', '- Tolerance for stopping criterion (-) [DEFAULT = 1E-5]\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['tngt_stf_fd'], 'tngt_stf_fd', '- Use finite differenced tangent stiffness matrix? (flag)\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['tngt_stf_comp'], 'tngt_stf_comp', '- Compare analytical finite differenced tangent stiffness matrix? (flag)\n'))
-        f.write(float_default_out(self.fst_vt['BeamDyn']['tngt_stf_pert']) + '   {:<11} {:}'.format('tngt_stf_pert', '- Perturbation size for finite differencing (-) [DEFAULT = 1E-6]\n'))
-        f.write(float_default_out(self.fst_vt['BeamDyn']['tngt_stf_difftol']) + '   {:<11} {:}'.format('tngt_stf_difftol', '- Maximum allowable relative difference between analytical and fd tangent stiffness (-); [DEFAULT = 0.1]\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['RotStates'], 'RotStates', '- Orient states in the rotating frame during linearization? (flag) [used only when linearizing]\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['Echo'], 'Echo', '- Echo input data to "<RootName>.ech" (flag)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['QuasiStaticInit'], 'QuasiStaticInit', '- Use quasistatic pre-conditioning with centripetal accelerations in initialization (flag) [dynamic solve only]\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['rhoinf'], 'rhoinf', '- Numerical damping parameter for generalized-alpha integrator\n'))
+        f.write('{:<22d} {:<11} {:}'.format(bd_dict['quadrature'], 'quadrature', '- Quadrature method: 1=Gaussian; 2=Trapezoidal (switch)\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['refine'], 'refine', '- Refinement factor for trapezoidal quadrature (-) [DEFAULT = 1; used only when quadrature=2]\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['n_fact'], 'n_fact', '- Factorization frequency for the Jacobian in N-R iteration(-) [DEFAULT = 5]\n'))
+        f.write(float_default_out(bd_dict['DTBeam']) + '   {:<11} {:}'.format('DTBeam', '- Time step size (s).\n'))
+        f.write(int_default_out(bd_dict['load_retries']) + '   {:<11} {:}'.format('load_retries', '- Number of factored load retries before quitting the aimulation [DEFAULT = 20]\n'))
+        f.write(int_default_out(bd_dict['NRMax']) + '   {:<11} {:}'.format('NRMax', '- Max number of iterations in Newton-Raphson algorithm (-). [DEFAULT = 10]\n'))
+        f.write(float_default_out(bd_dict['stop_tol']) + '   {:<11} {:}'.format('stop_tol', '- Tolerance for stopping criterion (-) [DEFAULT = 1E-5]\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['tngt_stf_fd'], 'tngt_stf_fd', '- Use finite differenced tangent stiffness matrix? (flag)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['tngt_stf_comp'], 'tngt_stf_comp', '- Compare analytical finite differenced tangent stiffness matrix? (flag)\n'))
+        f.write(float_default_out(bd_dict['tngt_stf_pert']) + '   {:<11} {:}'.format('tngt_stf_pert', '- Perturbation size for finite differencing (-) [DEFAULT = 1E-6]\n'))
+        f.write(float_default_out(bd_dict['tngt_stf_difftol']) + '   {:<11} {:}'.format('tngt_stf_difftol', '- Maximum allowable relative difference between analytical and fd tangent stiffness (-); [DEFAULT = 0.1]\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['RotStates'], 'RotStates', '- Orient states in the rotating frame during linearization? (flag) [used only when linearizing]\n'))
         f.write('---------------------- GEOMETRY PARAMETER --------------------------------------\n')
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['member_total'], 'member_total', '- Total number of members (-)\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['kp_total'], 'kp_total', '- Total number of key points (-) [must be at least 3]\n'))
-        for i in range(self.fst_vt['BeamDyn']['member_total']):
-            mem = self.fst_vt['BeamDyn']['members'][i]
+        f.write('{:<22d} {:<11} {:}'.format(bd_dict['member_total'], 'member_total', '- Total number of members (-)\n'))
+        f.write('{:<22d} {:<11} {:}'.format(bd_dict['kp_total'], 'kp_total', '- Total number of key points (-) [must be at least 3]\n'))
+        for i in range(bd_dict['member_total']):
+            mem = bd_dict['members'][i]
             f.write('{:<22} {:<11} {:}'.format(' '.join(['%d'%(i+1),'%d'%len(mem['kp_xr'])]), '', '- Member number; Number of key points in this member\n'))
             f.write(" ".join(['{:^21s}'.format(i) for i in ['kp_xr', 'kp_yr', 'kp_zr', 'initial_twist']])+'\n')
             f.write(" ".join(['{:^21s}'.format(i) for i in ['(m)', '(m)', '(m)', '(deg)']])+'\n')
@@ -706,19 +754,19 @@ class InputWriter_OpenFAST(object):
                 ln.append('{: 2.14e}'.format(mem['initial_twist'][j]))
                 f.write(" ".join(ln) + '\n')
         f.write('---------------------- MESH PARAMETER ------------------------------------------\n')
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['order_elem'], 'order_elem', '- Order of interpolation (basis) function (-)\n'))
+        f.write('{:<22d} {:<11} {:}'.format(bd_dict['order_elem'], 'order_elem', '- Order of interpolation (basis) function (-)\n'))
         f.write('---------------------- MATERIAL PARAMETER --------------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['BeamDyn']['BldFile']+'"', 'BldFile', '- Name of file containing properties for blade (quoted string)\n'))
+        f.write('{:<22} {:<11} {:}'.format('"'+bd_dict['BldFile']+'"', 'BldFile', '- Name of file containing properties for blade (quoted string)\n'))
         f.write('---------------------- PITCH ACTUATOR PARAMETERS -------------------------------\n')
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['UsePitchAct'], 'UsePitchAct', '- Whether a pitch actuator should be used (flag)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['PitchJ'], 'PitchJ', '- Pitch actuator inertia (kg-m^2) [used only when UsePitchAct is true]\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['PitchK'], 'PitchK', '- Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['PitchC'], 'PitchC', '- Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['UsePitchAct'], 'UsePitchAct', '- Whether a pitch actuator should be used (flag)\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['PitchJ'], 'PitchJ', '- Pitch actuator inertia (kg-m^2) [used only when UsePitchAct is true]\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['PitchK'], 'PitchK', '- Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['PitchC'], 'PitchC', '- Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]\n'))
         f.write('---------------------- OUTPUTS -------------------------------------------------\n')
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['SumPrint'], 'SumPrint', '- Print summary data to "<RootName>.sum" (flag)\n'))
-        f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['BeamDyn']['OutFmt']+'"', 'OutFmt', '- Format used for text tabular output, excluding the time channel.\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['NNodeOuts'], 'NNodeOuts', '- Number of nodes to output to file [0 - 9] (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['BeamDyn']['OutNd']), 'OutNd', '- Nodes whose values will be output  (-)\n'))
+        f.write('{!s:<22} {:<11} {:}'.format(bd_dict['SumPrint'], 'SumPrint', '- Print summary data to "<RootName>.sum" (flag)\n'))
+        f.write('{:<22} {:<11} {:}'.format('"'+bd_dict['OutFmt']+'"', 'OutFmt', '- Format used for text tabular output, excluding the time channel.\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_dict['NNodeOuts'], 'NNodeOuts', '- Number of nodes to output to file [0 - 9] (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(bd_dict['OutNd']), 'OutNd', '- Nodes whose values will be output  (-)\n'))
         f.write('          OutList            - The next line(s) contains a list of output parameters. See OutListParameters.xlsx for a listing of available output channels, (-)\n')
         outlist = self.get_outlist(self.fst_vt['outlist'], ['BeamDyn'])
         for channel_list in outlist:
@@ -727,10 +775,10 @@ class InputWriter_OpenFAST(object):
         f.write('END of input file (the word "END" must appear in the first 3 columns of the last OutList line)\n')
                 
         # Optional nodal output section
-        if 'BldNd_BlOutNd' in self.fst_vt['BeamDyn']:
+        if 'BldNd_BlOutNd' in bd_dict:
             f.write('====== Outputs for all blade stations (same ending as above for B1N1.... =========================== [optional section]\n')
-            # f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['BeamDyn']['BldNd_BladesOut'], 'BldNd_BladesOut', '- Number of blades to output all node information at.  Up to number of blades on turbine. (-)\n'))
-            f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['BeamDyn']['BldNd_BlOutNd'], 'BldNd_BlOutNd', '- Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)\n'))
+            # f.write('{:<22d} {:<11} {:}'.format(bd_dict['BldNd_BladesOut'], 'BldNd_BladesOut', '- Number of blades to output all node information at.  Up to number of blades on turbine. (-)\n'))
+            f.write('{!s:<22} {:<11} {:}'.format(bd_dict['BldNd_BlOutNd'], 'BldNd_BlOutNd', '- Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)\n'))
             f.write('                   OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, BeamDyn_Nodes tab for a listing of available output channels, (-)\n')
             
             opt_outlist = self.get_outlist(self.fst_vt['outlist'], ['BeamDyn_Nodes'])      
@@ -744,32 +792,36 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_BeamDynBlade(self):
+    def write_BeamDynBlade(self, bldInd = None):
 
-        # bd_blade_file = self.fst_vt['BeamDyn']['BldFile']
-        self.fst_vt['BeamDyn']['BldFile'] = self.FAST_namingOut + '_BeamDyn_Blade.dat'
-        bd_blade_file = os.path.abspath(os.path.join(self.FAST_runDirectory, self.fst_vt['BeamDyn']['BldFile']))
+        if bldInd is None:
+            bd_blade_dict = self.fst_vt['BeamDynBlade']
+            bd_blade_file = os.path.abspath(os.path.join(self.FAST_runDirectory, self.fst_vt['BeamDyn']['BldFile']))
+        else:
+            bd_blade_dict = self.fst_vt['BeamDynBlade'][bldInd]
+            bd_blade_file = os.path.abspath(os.path.join(self.FAST_runDirectory, self.fst_vt['BeamDyn'][bldInd]['BldFile']))
+
         f = open(bd_blade_file, 'w')
 
         f.write('------- BEAMDYN INDIVIDUAL BLADE INPUT FILE --------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('---------------------- BLADE PARAMETERS --------------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDynBlade']['station_total'], 'station_total', '- Number of blade input stations (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['BeamDynBlade']['damp_type'], 'damp_type', '- Damping type: 0: no damping; 1: damped\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_blade_dict['station_total'], 'station_total', '- Number of blade input stations (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(bd_blade_dict['damp_type'], 'damp_type', '- Damping type: 0: no damping; 1: damped\n'))
         f.write('---------------------- DAMPING COEFFICIENT------------------------------------\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['mu1','mu2','mu3','mu4','mu5','mu6']])+'\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)','(-)','(-)','(-)','(-)','(-)']])+'\n')
-        mu = [self.fst_vt['BeamDynBlade']['mu1'], self.fst_vt['BeamDynBlade']['mu2'], self.fst_vt['BeamDynBlade']['mu3'], self.fst_vt['BeamDynBlade']['mu4'], self.fst_vt['BeamDynBlade']['mu5'], self.fst_vt['BeamDynBlade']['mu6']]
+        mu = [bd_blade_dict['mu1'], bd_blade_dict['mu2'], bd_blade_dict['mu3'], bd_blade_dict['mu4'], bd_blade_dict['mu5'], bd_blade_dict['mu6']]
         f.write(" ".join(['{:^11f}'.format(i) for i in mu])+'\n')
         f.write('---------------------- DISTRIBUTED PROPERTIES---------------------------------\n')
 
-        for i in range(len(self.fst_vt['BeamDynBlade']['radial_stations'])):
-            f.write('{: 2.15e}\n'.format(self.fst_vt['BeamDynBlade']['radial_stations'][i]))
+        for i in range(len(bd_blade_dict['radial_stations'])):
+            f.write('{: 2.15e}\n'.format(bd_blade_dict['radial_stations'][i]))
             for j in range(6):
-                f.write(" ".join(['{: 2.15e}'.format(i) for i in self.fst_vt['BeamDynBlade']['beam_stiff'][i,j,:]])+'\n')
+                f.write(" ".join(['{: 2.15e}'.format(i) for i in bd_blade_dict['beam_stiff'][i,j,:]])+'\n')
             f.write('\n')
             for j in range(6):
-                f.write(" ".join(['{: 2.15e}'.format(i) for i in self.fst_vt['BeamDynBlade']['beam_inertia'][i,j,:]])+'\n')
+                f.write(" ".join(['{: 2.15e}'.format(i) for i in bd_blade_dict['beam_inertia'][i,j,:]])+'\n')
             f.write('\n')
 
         f.write('\n')
@@ -788,9 +840,9 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['VFlowAng'], 'VFlowAng', '- Upflow angle (degrees) (not used for native Bladed format WindType=7)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['VelInterpCubic'], 'VelInterpCubic', '- Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['NWindVel'], 'NWindVel', '- Number of points to output the wind velocity    (0 to 9)\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['InflowWind']['WindVxiList']), 'WindVxiList', '- List of coordinates in the inertial X direction (m)\n'))        
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['InflowWind']['WindVyiList']), 'WindVyiList', '- List of coordinates in the inertial Y direction (m)\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['InflowWind']['WindVziList']), 'WindVziList', '- List of coordinates in the inertial Z direction (m)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['InflowWind']['WindVxiList'], dtype=str)), 'WindVxiList', '- List of coordinates in the inertial X direction (m)\n'))        
+        f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['InflowWind']['WindVyiList'], dtype=str)), 'WindVyiList', '- List of coordinates in the inertial Y direction (m)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['InflowWind']['WindVziList'], dtype=str)), 'WindVziList', '- List of coordinates in the inertial Z direction (m)\n'))
         f.write('================== Parameters for Steady Wind Conditions [used only for WindType = 1] =========================\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['HWindSpeed'], 'HWindSpeed', '- Horizontal wind speed                            (m/s)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['InflowWind']['RefHt'], 'RefHt', '- Reference height for horizontal wind speed      (m)\n'))
@@ -862,7 +914,19 @@ class InputWriter_OpenFAST(object):
         # AeroDyn v15.03
 
         # Generate AeroDyn v15 blade input file
-        self.write_AeroDynBlade()
+        if isinstance(self.fst_vt['AeroDynBlade'], list):
+            for i_adBld, adBld in enumerate(self.fst_vt['AeroDynBlade']):
+                self.fst_vt['AeroDyn']['ADBlFile%d'%(i_adBld+1)] = self.FAST_namingOut + '_AeroDyn_blade_%d.dat'%(i_adBld+1)
+                self.write_AeroDynBlade(bldInd = i_adBld)
+
+        elif isinstance(self.fst_vt['AeroDynBlade'], dict):
+            self.fst_vt['AeroDyn']['ADBlFile1'] = self.FAST_namingOut + '_AeroDyn_blade.dat'
+            self.fst_vt['AeroDyn']['ADBlFile2'] = self.fst_vt['AeroDyn']['ADBlFile1']
+            self.fst_vt['AeroDyn']['ADBlFile3'] = self.fst_vt['AeroDyn']['ADBlFile1']
+            self.write_AeroDynBlade()
+
+
+        # self.write_AeroDynBlade()
 
         # Generate AeroDyn v15 polars
         self.write_AeroDynPolar()
@@ -983,7 +1047,7 @@ class InputWriter_OpenFAST(object):
         #     f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['AeroDyn']['TwOutNd']), 'TwOutNd', '- Tower nodes whose values will be output  (-)\n'))
         # else:
         #     f.write('{:<22} {:<11} {:}'.format(0, 'TwOutNd', '- Tower nodes whose values will be output  (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join(self.fst_vt['AeroDyn']['TwOutNd']), 'TwOutNd', '- Tower nodes whose values will be output  (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['AeroDyn']['TwOutNd'], dtype=str)), 'TwOutNd', '- Tower nodes whose values will be output  (-)\n'))
         f.write('                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)\n')
 
         outlist = self.get_outlist(self.fst_vt['outlist'], ['AeroDyn'])      
@@ -1010,36 +1074,39 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_AeroDynBlade(self):
-        # AeroDyn v15.00 Blade
-        self.fst_vt['AeroDyn']['ADBlFile1'] = self.FAST_namingOut + '_AeroDyn_blade.dat'
-        self.fst_vt['AeroDyn']['ADBlFile2'] = self.fst_vt['AeroDyn']['ADBlFile1']
-        self.fst_vt['AeroDyn']['ADBlFile3'] = self.fst_vt['AeroDyn']['ADBlFile1']
-        filename = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn']['ADBlFile1'])
+    def write_AeroDynBlade(self, bldInd = None):
+
+        if bldInd is None:
+            filename = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn']['ADBlFile1'])
+            adBld_dict = self.fst_vt['AeroDynBlade']
+        else:
+            filename = os.path.join(self.FAST_runDirectory, self.fst_vt['AeroDyn']['ADBlFile%d'%(bldInd+1)])
+            adBld_dict = self.fst_vt['AeroDynBlade'][bldInd]
+        
         f = open(filename, 'w')
 
         f.write('------- AERODYN15 BLADE DEFINITION INPUT FILE -------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
         f.write('======  Blade Properties =================================================================\n')
-        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['AeroDynBlade']['NumBlNds'], 'NumBlNds', '- Number of blade nodes used in the analysis (-)\n'))
-        f.write('     BlSpn     BlCrvAC     BlSwpAC     BlCrvAng     BlTwist     BlChord     BlAFID     t_c      BlCb     BlCenBn     BlCenBt    BlCpn    BlCpt    BlCan    BlCat    BlCam\n')
-        f.write('     (m)       (m)         (m)         (deg)        (deg)       (m)         (-)        (-)      (-)      (m)         (m)        (-)      (-)      (-)      (-)      (-)\n')
-        BlSpn    = self.fst_vt['AeroDynBlade']['BlSpn']
-        BlCrvAC  = self.fst_vt['AeroDynBlade']['BlCrvAC']
-        BlSwpAC  = self.fst_vt['AeroDynBlade']['BlSwpAC']
-        BlCrvAng = self.fst_vt['AeroDynBlade']['BlCrvAng']
-        BlTwist  = self.fst_vt['AeroDynBlade']['BlTwist']
-        BlChord  = self.fst_vt['AeroDynBlade']['BlChord']
-        BlAFID   = self.fst_vt['AeroDynBlade']['BlAFID']
-        t_c      = self.fst_vt['AeroDynBlade']['t_c']
-        BlCb     = self.fst_vt['AeroDynBlade']['BlCb']
-        BlCenBn  = self.fst_vt['AeroDynBlade']['BlCenBn']
-        BlCenBt  = self.fst_vt['AeroDynBlade']['BlCenBt']
-        BlCpn    = self.fst_vt['AeroDynBlade']['BlCpn']
-        BlCpt    = self.fst_vt['AeroDynBlade']['BlCpt']
-        BlCan    = self.fst_vt['AeroDynBlade']['BlCan']
-        BlCat    = self.fst_vt['AeroDynBlade']['BlCat']
-        BlCam    = self.fst_vt['AeroDynBlade']['BlCam']
+        f.write('{:<11d} {:<11} {:}'.format(adBld_dict['NumBlNds'], 'NumBlNds', '- Number of blade nodes used in the analysis (-)\n'))
+        f.write('    BlSpn        BlCrvAC        BlSwpAC        BlCrvAng       BlTwist        BlChord          BlAFID       t_c       BlCb        BlCenBn      BlCenBt       BlCpn     BlCpt     BlCan     BlCat     BlCam\n')
+        f.write('     (m)           (m)            (m)            (deg)         (deg)           (m)              (-)        (-)       (-)         (m)             (m)         (-)       (-)       (-)       (-)       (-)\n')
+        BlSpn    = adBld_dict['BlSpn']
+        BlCrvAC  = adBld_dict['BlCrvAC']
+        BlSwpAC  = adBld_dict['BlSwpAC']
+        BlCrvAng = adBld_dict['BlCrvAng']
+        BlTwist  = adBld_dict['BlTwist']
+        BlChord  = adBld_dict['BlChord']
+        BlAFID   = adBld_dict['BlAFID']
+        t_c      = adBld_dict['t_c']
+        BlCb     = adBld_dict['BlCb']
+        BlCenBn  = adBld_dict['BlCenBn']
+        BlCenBt  = adBld_dict['BlCenBt']
+        BlCpn    = adBld_dict['BlCpn']
+        BlCpt    = adBld_dict['BlCpt']
+        BlCan    = adBld_dict['BlCan']
+        BlCat    = adBld_dict['BlCat']
+        BlCam    = adBld_dict['BlCam']
         for Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, AFID, t_c, BlCb, BlCenBn, BlCenBt, BlCpn, BlCpt, BlCan, BlCat, BlCam in zip(BlSpn, BlCrvAC, BlSwpAC, BlCrvAng, BlTwist, BlChord, BlAFID, t_c, BlCb, BlCenBn, BlCenBt, BlCpn, BlCpt, BlCan, BlCat, BlCam):
             f.write('{: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 8d} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e}\n'.format(Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, int(AFID), t_c, BlCb, BlCenBn, BlCenBt, BlCpn, BlCpt, BlCan, BlCat, BlCam))
         
@@ -1530,7 +1597,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['PotMod'], 'PotMod', '- Potential-flow model {0: none=no potential flow, 1: frequency-to-time-domain transforms based on WAMIT output, 2: fluid-impulse theory (FIT)} (switch)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['ExctnMod'], 'ExctnMod', '- Wave-excitation model {0: no wave-excitation calculation, 1: DFT, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ssexctn INPUT FILE]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['ExctnDisp'], 'ExctnDisp','- Method of computing Wave Excitation {0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0 and SeaState\'s WaveMod>0]} (switch)\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['ExctnCutOff'], 'ExctnCutOff','- Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2]) [only used when PotMod=1 and ExctnMod>0 and SeaState\'s WaveMod>0]} (switch)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['ExctnCutOff'], 'ExctnCutOff','- Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] [used only when PotMod=1, ExctnMod>0, and ExctnDisp=2]) [only used when PotMod=1 and ExctnMod>0 and SeaState\'s WaveMod>0]} (switch)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['PtfmYMod'], 'PtfmYMod', '- Model for large platform yaw offset {0: Static reference yaw offset based on PtfmRefY, 1: dynamic reference yaw offset based on low-pass filtering the PRP yaw motion with cutoff frequency PtfmYCutOff} (switch)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['PtfmRefY'], 'PtfmRefY', '- Constant (if PtfmYMod=0) or initial (if PtfmYMod=1) platform reference yaw offset (deg)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['PtfmYCutOff'], 'PtfmYCutOff', '- Cutoff frequency for the low-pass filtering of PRP yaw motion when PtfmYMod=1 [unused when PtfmYMod=0] (Hz)\n'))
@@ -1540,7 +1607,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['RdtnDT'], 'RdtnDT', '- Time step for wave radiation kernel calculations (sec) [only used when PotMod=1 and ExctnMod>0 or RdtnMod>0; DT<=RdtnDT<=0.1 recommended; determines RdtnOmegaMax=Pi/RdtnDT in the cosine transform]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NBody'], 'NBody', '- Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NBodyMod'], 'NBodyMod', '- Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]\n'))
-        f.write('{:<22} {:<11} {:}'.format(', '.join([f'"{pf}"' for pf in self.fst_vt['HydroDyn']['PotFile']]), 'PotFile', '- Root name of potential-flow model data; WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3) (quoted string) [1 to NBody if NBodyMod>1] [MAKE SURE THE FREQUENCIES INHERENT IN THESE WAMIT FILES SPAN THE PHYSICALLY-SIGNIFICANT RANGE OF FREQUENCIES FOR THE GIVEN PLATFORM; THEY MUST CONTAIN THE ZERO- AND INFINITE-FREQUENCY LIMITS!]\n'))
+        f.write('{:<22} {:<11} {:}'.format('"{}"'.format('", "'.join(self.fst_vt['HydroDyn']['PotFile']) if isinstance(self.fst_vt['HydroDyn']['PotFile'], list) else self.fst_vt['HydroDyn']['PotFile']), 'PotFile', '- Root name of potential-flow model data; WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3) (quoted string) [1 to NBody if NBodyMod>1] [MAKE SURE THE FREQUENCIES INHERENT IN THESE WAMIT FILES SPAN THE PHYSICALLY-SIGNIFICANT RANGE OF FREQUENCIES FOR THE GIVEN PLATFORM; THEY MUST CONTAIN THE ZERO- AND INFINITE-FREQUENCY LIMITS!]\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['WAMITULEN']]), 'WAMITULEN', '- Characteristic body length scale used to redimensionalize WAMIT output (meters) [1 to NBody if NBodyMod>1] [only used when PotMod=1]\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['PtfmRefxt']]), 'PtfmRefxt', '- The xt offset of the body reference point(s) from (0,0,0) (meters) [1 to NBody] [only used when PotMod=1]\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join([f'{val}' for val in self.fst_vt['HydroDyn']['PtfmRefyt']]), 'PtfmRefyt', '- The yt offset of the body reference point(s) from (0,0,0) (meters) [1 to NBody] [only used when PotMod=1]\n'))
@@ -1630,98 +1697,203 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['JointAxID'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['JointOvrlp'][i]))
             f.write(" ".join(ln) + '\n')
-        f.write('---------------------- MEMBER CROSS-SECTION PROPERTIES -------------------------\n')
-        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NPropSets'], 'NPropSets', '- Number of member property sets (-)\n'))
+        f.write('---------------------- CYLINDRICAL MEMBER CROSS-SECTION PROPERTIES -------------------------\n')
+        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NPropSetsCyl'], 'NPropSetsCyl', '- Number of cylindrical member property sets (-)\n'))
         f.write(" ".join(['{:^11s}'.format(i) for i in ['PropSetID', 'PropD', 'PropThck']])+'\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(m)', '(m)']])+'\n')
-        for i in range(self.fst_vt['HydroDyn']['NPropSets']):
+        for i in range(self.fst_vt['HydroDyn']['NPropSetsCyl']):
             ln = []
-            ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['PropSetID'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['PropD'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['PropThck'][i]))
+            ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['CylPropSetID'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylPropD'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylPropThck'][i]))
             f.write(" ".join(ln) + '\n')
-        f.write('---------------------- SIMPLE HYDRODYNAMIC COEFFICIENTS (model 1) --------------\n')
+        f.write('---------------------- RECTANGULAR MEMBER CROSS-SECTION PROPERTIES -------------------------\n')
+        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NPropSetsRec'], 'NPropSetsRec', '- Number of rectangular member property sets (-)\n'))
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['PropSetID', 'PropA', 'PropB', 'PropThck']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(m)', '(m)', '(m)']])+'\n')
+        for i in range(self.fst_vt['HydroDyn']['NPropSetsRec']):
+            ln = []
+            ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['RecPropSetID'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecPropA'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecPropB'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecPropThck'][i]))
+            f.write(" ".join(ln) + '\n')
+        f.write('---------------------- SIMPLE CYLINDRICAL-MEMBER HYDRODYNAMIC COEFFICIENTS (model 1) --------------\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['SimplCd', 'SimplCdMG', 'SimplCa', 'SimplCaMG', 'SimplCp', 'SimplCpMG', 'SimplAxCd', 'SimplAxCdMG', 'SimplAxCa', 'SimplAxCaMG', 'SimplAxCp', 'SimplAxCpMG', 'SimplCb', 'SimplCbMG']])+'\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)']*14])+'\n')
         ln = []
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplCd']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplCdMG']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplCa']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplCaMG']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplCp']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplCpMG']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplAxCd']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplAxCdMG']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplAxCa']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplAxCaMG']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplAxCp']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplAxCpMG']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplCb']))
-        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['SimplCbMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplCd']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplCdMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplCa']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplCaMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplCp']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplCpMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplAxCd']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplAxCdMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplAxCa']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplAxCaMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplAxCp']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplAxCpMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplCb']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylSimplCbMG']))
         f.write(" ".join(ln) + '\n')
-        f.write('---------------------- DEPTH-BASED HYDRODYNAMIC COEFFICIENTS (model 2) ---------\n')        
-        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NCoefDpth'], 'NCoefDpth', '- Number of depth-dependent coefficients (-)\n'))
+        f.write('---------------------- SIMPLE RECTANGULAR-MEMBER HYDRODYNAMIC COEFFICIENTS (model 1) --------------\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['SimplCdA', 'SimplCdAMG', 'SimplCdB', 'SimplCdBMG', 'SimplCaA', 'SimplCaAMG', 'SimplCaB', 'SimplCaBMG', 'SimplCp', 'SimplCpMG', 'SimplAxCd', 'SimplAxCdMG', 'SimplAxCa', 'SimplAxCaMG', 'SimplAxCp', 'SimplAxCpMG', 'SimplCb', 'SimplCbMG']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)']*18])+'\n')
+        ln = []
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCdA']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCdAMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCdB']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCdBMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCaA']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCaAMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCaB']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCaBMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCp']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCpMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplAxCd']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplAxCdMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplAxCa']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplAxCaMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplAxCp']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplAxCpMG']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCb']))
+        ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecSimplCbMG']))
+        f.write(" ".join(ln) + '\n')
+        f.write('---------------------- DEPTH-BASED CYLINDRICAL-MEMBER HYDRODYNAMIC COEFFICIENTS (model 2) ---------\n')
+        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NCoefDpthCyl'], 'NCoefDpthCyl', '- Number of depth-dependent cylindrical-member coefficients (-)\n'))
         f.write(" ".join(['{:^11s}'.format(i) for i in ['Dpth', 'DpthCd', 'DpthCdMG', 'DpthCa', 'DpthCaMG', 'DpthCp', 'DpthCpMG', 'DpthAxCd', 'DpthAxCdMG', 'DpthAxCa', 'DpthAxCaMG', 'DpthAxCp', 'DpthAxCpMG', 'DpthCb', 'DpthCbMG']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(m)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
-        for i in range(self.fst_vt['HydroDyn']['NCoefDpth']):
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(m)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
+        for i in range(self.fst_vt['HydroDyn']['NCoefDpthCyl']):
             ln = []
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['Dpth'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthCd'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthCdMG'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthCa'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthCaMG'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthCp'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthCpMG'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthAxCd'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthAxCdMG'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthAxCa'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthAxCaMG'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthAxCp'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthAxCpMG'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthCb'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['DpthCbMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpth'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthCd'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthCdMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthCa'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthCaMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthCp'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthCpMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthAxCd'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthAxCdMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthAxCa'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthAxCaMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthAxCp'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthAxCpMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthCb'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylDpthCbMG'][i]))
             f.write(" ".join(ln) + '\n')
-        f.write('---------------------- MEMBER-BASED HYDRODYNAMIC COEFFICIENTS (model 3) --------\n')
-        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NCoefMembers'], 'NCoefMembers', '- Number of member-based coefficients (-)\n'))
-        mem_coeff_names = ['MemberID_HydC', 'MemberCd1', 'MemberCd2', 'MemberCdMG1', 'MemberCdMG2', 'MemberCa1', 'MemberCa2', 'MemberCaMG1', 'MemberCaMG2', 'MemberCp1', 'MemberCp2', 'MemberCpMG1', 'MemberCpMG2', 'MemberAxCd1', 'MemberAxCd2', 'MemberAxCdMG1', 'MemberAxCdMG2', 'MemberAxCa1', 'MemberAxCa2', 'MemberAxCaMG1', 'MemberAxCaMG2', 'MemberAxCp1', 'MemberAxCp2', 'MemberAxCpMG1', 'MemberAxCpMG2','MemberCb1','MemberCb2','MemberCbMG1','MemberCbMG2']
+        f.write('---------------------- DEPTH-BASED RECTANGULAR-MEMBER HYDRODYNAMIC COEFFICIENTS (model 2) ---------\n')
+        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NCoefDpthRec'], 'NCoefDpthRec', '- Number of depth-dependent rectangular-member coefficients (-)\n'))
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['Dpth', 'DpthCdA', 'DpthCdAMG', 'DpthCdB', 'DpthCdBMG', 'DpthCaA', 'DpthCaAMG', 'DpthCaB', 'DpthCaBMG', 'DpthCp', 'DpthCpMG', 'DpthAxCd', 'DpthAxCdMG', 'DpthAxCa', 'DpthAxCaMG', 'DpthAxCp', 'DpthAxCpMG', 'DpthCb', 'DpthCbMG']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(m)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
+        for i in range(self.fst_vt['HydroDyn']['NCoefDpthRec']):
+            ln = []
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpth'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCdA'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCdAMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCdB'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCdBMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCaA'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCaAMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCaB'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCaBMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCp'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCpMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthAxCd'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthAxCdMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthAxCa'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthAxCaMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthAxCp'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthAxCpMG'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCb'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecDpthCbMG'][i]))
+            f.write(" ".join(ln) + '\n')
+        f.write('---------------------- MEMBER-BASED CYLINDRICAL-MEMBER HYDRODYNAMIC COEFFICIENTS (model 3) --------\n')
+        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NCoefMembersCyl'], 'NCoefMembersCyl', '- Number of member-based cylindrical-member coefficients (-)\n'))
+        mem_coeff_names = ['MemberID', 'MemberCd1', 'MemberCd2', 'MemberCdMG1', 'MemberCdMG2', 'MemberCa1', 'MemberCa2', 'MemberCaMG1', 'MemberCaMG2', 'MemberCp1', 'MemberCp2', 'MemberCpMG1', 'MemberCpMG2', 'MemberAxCd1', 'MemberAxCd2', 'MemberAxCdMG1', 'MemberAxCdMG2', 'MemberAxCa1', 'MemberAxCa2', 'MemberAxCaMG1', 'MemberAxCaMG2', 'MemberAxCp1', 'MemberAxCp2', 'MemberAxCpMG1', 'MemberAxCpMG2','MemberCb1','MemberCb2','MemberCbMG1','MemberCbMG2']
         f.write(" ".join(['{:^11s}'.format(i) for i in mem_coeff_names])+'\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)']*len(mem_coeff_names)])+'\n')
-        for i in range(self.fst_vt['HydroDyn']['NCoefMembers']):
+        for i in range(self.fst_vt['HydroDyn']['NCoefMembersCyl']):
             ln = []
-            ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MemberID_HydC'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCd1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCd2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCdMG1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCdMG2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCa1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCa2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCaMG1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCaMG2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCp1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCp2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCpMG1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCpMG2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCd1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCd2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCdMG1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCdMG2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCa1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCa2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCaMG1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCaMG2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCp1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCp2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCpMG1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberAxCpMG2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCb1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCb2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCbMG1'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MemberCbMG2'][i]))
+            ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MemberID_HydCCyl'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCd1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCd2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCdMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCdMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCa1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCa2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCaMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCaMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCp1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCp2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCpMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCpMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCd1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCd2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCdMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCdMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCa1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCa2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCaMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCaMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCp1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCp2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCpMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberAxCpMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCb1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCb2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCbMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['CylMemberCbMG2'][i]))
+            f.write(" ".join(ln) + '\n')
+        f.write('---------------------- MEMBER-BASED RECTANGULAR-MEMBER HYDRODYNAMIC COEFFICIENTS (model 3) --------\n')
+        f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NCoefMembersRec'], 'NCoefMembersRec', '- Number of member-based rectangular-member coefficients (-)\n'))
+        mem_coeff_names = ['MemberID', 'MemberCdA1', 'MemberCdA2', 'MemberCdAMG1', 'MemberCdAMG2', 'MemberCdB1', 'MemberCdB2', 'MemberCdBMG1', 'MemberCdBMG2', 'MemberCaA1', 'MemberCaA2', 'MemberCaAMG1', 'MemberCaAMG2', 'MemberCaB1', 'MemberCaB2', 'MemberCaBMG1', 'MemberCaBMG2', 'MemberCp1', 'MemberCp2', 'MemberCpMG1', 'MemberCpMG2', 'MemberAxCd1', 'MemberAxCd2', 'MemberAxCdMG1', 'MemberAxCdMG2', 'MemberAxCa1', 'MemberAxCa2', 'MemberAxCaMG1', 'MemberAxCaMG2', 'MemberAxCp1', 'MemberAxCp2', 'MemberAxCpMG1', 'MemberAxCpMG2','MemberCb1','MemberCb2','MemberCbMG1','MemberCbMG2']
+        f.write(" ".join(['{:^11s}'.format(i) for i in mem_coeff_names])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)']*len(mem_coeff_names)])+'\n')
+        for i in range(self.fst_vt['HydroDyn']['NCoefMembersRec']):
+            ln = []
+            ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MemberID_HydCRec'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCdA1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCdA2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCdAMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCdAMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCdB1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCdB2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCdBMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCdBMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCaA1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCaA2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCaAMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCaAMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCaB1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCaB2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCaBMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCaBMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCp1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCp2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCpMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCpMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCd1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCd2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCdMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCdMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCa1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCa2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCaMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCaMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCp1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCp2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCpMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberAxCpMG2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCb1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCb2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCbMG1'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['RecMemberCbMG2'][i]))
             f.write(" ".join(ln) + '\n')
         f.write('-------------------- MEMBERS -------------------------------------------------\n')
         f.write('{:<11d} {:<11} {:}'.format(self.fst_vt['HydroDyn']['NMembers'], 'NMembers', '- Number of members (-)\n'))
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['MemberID', 'MJointID1', 'MJointID2', 'MPropSetID1', 'MPropSetID2', 'MDivSize', 'MCoefMod', 'MHstLMod', 'PropPot']])+' !  [MCoefMod=1: use simple coeff table, 2: use depth-based coeff table, 3: use member-based coeff table] [ PropPot/=0 if member is modeled with potential-flow theory]\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(-)', '(-)', '(-)', '(-)', '(m)', '(switch)', '(switch)', '(flag)']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['MemberID', 'MJointID1', 'MJointID2', 'MPropSetID1', 'MPropSetID2', 'MSecGeom', 'MSpinOrient', 'MDivSize', 'MCoefMod', 'MHstLMod', 'PropPot']])+' !  [MCoefMod=1: use simple coeff table, 2: use depth-based coeff table, 3: use member-based coeff table] [ PropPot/=0 if member is modeled with potential-flow theory]\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(-)', '(-)', '(-)', '(-)', '(switch)', '(deg)', '(m)', '(switch)', '(switch)', '(flag)']])+'\n')
         for i in range(self.fst_vt['HydroDyn']['NMembers']):
             ln = []
             ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MemberID'][i]))
@@ -1729,6 +1901,8 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MJointID2'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MPropSetID1'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MPropSetID2'][i]))
+            ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MSecGeom'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MSpinOrient'][i]))
             ln.append('{:^11}'.format(self.fst_vt['HydroDyn']['MDivSize'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MCoefMod'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['HydroDyn']['MHstLMod'][i]))
@@ -1871,8 +2045,8 @@ class InputWriter_OpenFAST(object):
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['OutFmt'], 'OutFmt','- Output format for numerical results (quoted string) [not checked for validity!]\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['SeaState']['OutSFmt'], 'OutSFmt','- Output format for header strings (quoted string) [not checked for validity!]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['NWaveElev'], 'NWaveElev','- Number of points where the incident wave elevations can be computed (-)       [maximum of 9 output locations]\n'))
-        f.write('{:<22} {:<11} {:}'.format(", ".join([f'{val:f}' for val in self.fst_vt['SeaState']['WaveElevxi']]), 'WaveElevxi', '- List of xi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]\n'))
-        f.write('{:<22} {:<11} {:}'.format(", ".join([f'{val:f}' for val in self.fst_vt['SeaState']['WaveElevyi']]), 'WaveElevyi', '- List of yi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]\n'))
+        f.write('{:<22} {:<11} {:}'.format(", ".join([f'{float(val):f}' for val in self.fst_vt['SeaState']['WaveElevxi']]), 'WaveElevxi', '- List of xi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]\n'))
+        f.write('{:<22} {:<11} {:}'.format(", ".join([f'{float(val):f}' for val in self.fst_vt['SeaState']['WaveElevyi']]), 'WaveElevyi', '- List of yi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SeaState']['NWaveKin'], 'NWaveKin','- Number of points where the wave kinematics can be output (-)       [maximum of 9 output locations]\n'))
         
         if self.fst_vt['SeaState']['NWaveKin'] > 0 :
@@ -1977,8 +2151,8 @@ class InputWriter_OpenFAST(object):
             f.write(" ".join(ln) + '\n')
         f.write('----------------------------------- MEMBERS --------------------------------------\n')
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NMembers'], 'NMembers', '- Number of frame members\n'))
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['MemberID', 'MJointID1', 'MJointID2', 'MPropSetID1', 'MPropSetID2', 'MType', 'COSMID']])+' ![MType={1:beam circ., 2:cable, 3:rigid, 4:beam arb.}. COMSID={-1:none}]\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)','(-)','(-)','(-)','(-)','(-)','(-)']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['MemberID', 'MJointID1', 'MJointID2', 'MPropSetID1', 'MPropSetID2', 'MType', 'MSpin/COSMID']])+' ![MType={1c:beam circ., 1r: beam rect., 2:cable, 3:rigid, 4:beam arb., 5:spring}. COMSID={-1:none}]\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)','(-)','(-)','(-)','(-)','(-)','(deg/-)']])+'\n')
         for i in range(self.fst_vt['SubDyn']['NMembers']):
             ln = []
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['MemberID'][i]))
@@ -1986,16 +2160,25 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['MJointID2'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['MPropSetID1'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['MPropSetID2'][i]))
-            ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['MType'][i]))
+            if self.fst_vt['SubDyn']['MType'][i] == -1:
+                ln.append('{:^11s}'.format('1r'))
+            elif self.fst_vt['SubDyn']['MType'][i] == 1:
+                ln.append('{:^11s}'.format('1c'))
+            else:
+                ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['MType'][i]))
             # Need to change M_COSMID None elements to -1
             self.fst_vt['SubDyn']['M_COSMID'][i] = -1 if self.fst_vt['SubDyn']['M_COSMID'][i] is None else self.fst_vt['SubDyn']['M_COSMID'][i]
-            ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['M_COSMID'][i]))
+
+            if self.fst_vt['SubDyn']['MType'][i] == 5:
+                ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['M_COSMID'][i]))
+            else:
+                ln.append('{:^11}'.format(self.fst_vt['SubDyn']['M_Spin'][i]))
             f.write(" ".join(ln) + '\n')
         f.write('------------------ CIRCULAR BEAM CROSS-SECTION PROPERTIES -----------------------------\n')
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NPropSets'], 'NPropSets', '- Number of structurally unique cross-sections\n'))
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['PropSetID', 'YoungE', 'ShearG1', 'MatDens', 'XsecD', 'XsecT']])+'\n')
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NBCPropSets'], 'NPropSets', '- Number of structurally unique circular cross-sections\n'))
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['PropSetID', 'YoungE', 'ShearG', 'MatDens', 'XsecD', 'XsecT']])+'\n')
         f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)','(N/m2)','(N/m2)','(kg/m3)','(m)','(m)']])+'\n')
-        for i in range(self.fst_vt['SubDyn']['NPropSets']):
+        for i in range(self.fst_vt['SubDyn']['NBCPropSets']):
             ln = []
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['PropSetID1'][i]))
             ln.append('{:^11e}'.format(self.fst_vt['SubDyn']['YoungE1'][i]))
@@ -2004,22 +2187,37 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecD'][i]))
             ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecT'][i]))
             f.write(" ".join(ln) + '\n')
-        f.write('----------------- ARBITRARY BEAM CROSS-SECTION PROPERTIES -----------------------------\n')
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NXPropSets'], 'NXPropSets', '- Number of structurally unique non-circular cross-sections (if 0 the following table is ignored)\n'))
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['PropSetID', 'YoungE', 'ShearG2', 'MatDens', 'XsecA', 'XsecAsx', 'XsecAsy', 'XsecJxx', 'XsecJyy', 'XsecJ0']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)','(N/m2)','(N/m2)','(kg/m3)','(m2)','(m2)','(m2)','(m4)','(m4)','(m4)']])+'\n')
-        for i in range(self.fst_vt['SubDyn']['NXPropSets']):
+        f.write('------------------ RECTANGULAR BEAM CROSS-SECTION PROPERTIES -----------------------------\n')
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NBRPropSets'], 'NPropSets', '- Number of structurally unique rectangular cross-sections\n'))
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['PropSetID', 'YoungE', 'ShearG', 'MatDens', 'XsecSa', 'XsecSb', 'XsecT']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)','(N/m2)','(N/m2)','(kg/m3)','(m)','(m)','(m)']])+'\n')
+        for i in range(self.fst_vt['SubDyn']['NBRPropSets']):
             ln = []
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['PropSetID2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['SubDyn']['YoungE2'][i]))
-            ln.append('{:^11}'.format(self.fst_vt['SubDyn']['ShearG2'][i]))
+            ln.append('{:^11e}'.format(self.fst_vt['SubDyn']['YoungE2'][i]))
+            ln.append('{:^11e}'.format(self.fst_vt['SubDyn']['ShearG2'][i]))
             ln.append('{:^11}'.format(self.fst_vt['SubDyn']['MatDens2'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecSa'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecSb'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecT2'][i]))
+            f.write(" ".join(ln) + '\n')
+        f.write('----------------- ARBITRARY BEAM CROSS-SECTION PROPERTIES -----------------------------\n')
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NXPropSets'], 'NXPropSets', '- Number of structurally unique arbitrary cross-sections (if 0 the following table is ignored)\n'))
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['PropSetID', 'YoungE', 'ShearG', 'MatDens', 'XsecA', 'XsecAsx', 'XsecAsy', 'XsecJxx', 'XsecJyy', 'XsecJ0', 'XsecJt']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)','(N/m2)','(N/m2)','(kg/m3)','(m2)','(m2)','(m2)','(m4)','(m4)','(m4)','(m4)']])+'\n')
+        for i in range(self.fst_vt['SubDyn']['NXPropSets']):
+            ln = []
+            ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['PropSetID3'][i]))
+            ln.append('{:^11e}'.format(self.fst_vt['SubDyn']['YoungE3'][i]))
+            ln.append('{:^11e}'.format(self.fst_vt['SubDyn']['ShearG3'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['SubDyn']['MatDens3'][i]))
             ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecA'][i]))
             ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecAsx'][i]))
             ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecAsy'][i]))
             ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecJxx'][i]))
             ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecJyy'][i]))
             ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecJ0'][i]))
+            ln.append('{:^11}'.format(self.fst_vt['SubDyn']['XsecJt'][i]))
             f.write(" ".join(ln) + '\n')
         f.write('-------------------------- CABLE PROPERTIES  -------------------------------------\n')
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NCablePropSets'], 'NCablePropSets', '- Number of cable cable properties\n'))
@@ -2281,7 +2479,7 @@ class InputWriter_OpenFAST(object):
         os.fsync(f)
         f.close()
 
-    def write_MoorDyn(self):
+    def write_MoorDyn(self): # TODO: see TODO's in FAST_reader/read_MoorDyn.py and make corresponding changes here
 
         self.fst_vt['Fst']['MooringFile'] = self.FAST_namingOut + '_MoorDyn.dat'
         moordyn_file = os.path.join(self.FAST_runDirectory, self.fst_vt['Fst']['MooringFile'])
@@ -2289,30 +2487,41 @@ class InputWriter_OpenFAST(object):
 
         f.write('--------------------- MoorDyn Input File ------------------------------------\n')
         f.write('Generated with OpenFAST_IO\n')
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['Echo'], 'Echo', '- echo the input file data (flag)\n'))
+        f.write('Comments from seed file have been dropped. Output Channels are not yet fully supported\n')
+        f.write('NOTE: MoorDyn does not use ECHO, instead use WriteLog of 0, 1, 2, or 3 in the options list \n')
         f.write('----------------------- LINE TYPES ------------------------------------------\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['Name', 'Diam', 'MassDen', 'EA', 'BA/-zeta', 'EI', 'Cd', 'Ca', 'CdAx', 'CaAx']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(m)', '(kg/m)', '(N)', '(N-s/-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['Name', 'Diam', 'MassDen', 'EA', 'BA/-zeta', 'EI', 'Cd', 'Ca', 'CdAx', 'CaAx', 'Cl (optional)', 'dF (optional)', 'cF (optional)']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['(-)', '(m)', '(kg/m)', '(N)', '(N-s/-)', '(N-m^2)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)']])+'\n')
         for i in range(len(self.fst_vt['MoorDyn']['Name'])):
             ln = []
-            ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Name'][i]))
+            ln.append('{:<11}'.format(self.fst_vt['MoorDyn']['Name'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Diam'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['MassDen'][i]))
-            ln.append('{:^11.4e}'.format(self.fst_vt['MoorDyn']['EA'][i]))
-            ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['BA_zeta'][i]))
+            ln.append('|'.join([float_default_out(a, trim=True) for a in self.fst_vt['MoorDyn']['EA'][i]]))
+            ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['BA_zeta'][i]]))
             ln.append('{:^11.4e}'.format(self.fst_vt['MoorDyn']['EI'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Cd'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Ca'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CdAx'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CaAx'][i]))
+            if self.fst_vt['MoorDyn']['Cl'][i] != None: 
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Cl'][i]))
+            if self.fst_vt['MoorDyn']['dF'][i] != None: 
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['dF'][i]))
+            if self.fst_vt['MoorDyn']['cF'][i] != None: 
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['cF'][i]))
             f.write(" ".join(ln) + '\n')
-        if self.fst_vt['MoorDyn']['Rod_Name']:
+
+            if self.fst_vt['MoorDyn']['NonLinearEA'][i] != None:
+                self.write_NonLinearEA(self.fst_vt['MoorDyn']['EA'][i][0], self.fst_vt['MoorDyn']['Name'][i], self.fst_vt['MoorDyn']['NonLinearEA'][i])
+
+        if 'Rod_Name' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Rod_Name']:
             f.write('----------------------- ROD TYPES ------------------------------------------\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['TypeName', 'Diam', 'Mass/m', 'Cd', 'Ca', 'CdEnd', 'CaEnd']])+'\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['(name)', '(m)', '(kg/m)', '(-)', '(-)', '(-)', '(-)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['TypeName', 'Diam', 'Mass/m', 'Cd', 'Ca', 'CdEnd', 'CaEnd']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['(name)', '(m)', '(kg/m)', '(-)', '(-)', '(-)', '(-)']])+'\n')
             for i in range(len(self.fst_vt['MoorDyn']['Rod_Name'])):
                 ln = []
-                ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Rod_Name'][i]))
+                ln.append('{:<11}'.format(self.fst_vt['MoorDyn']['Rod_Name'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Rod_Diam'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Rod_MassDen'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Rod_Cd'][i]))
@@ -2322,13 +2531,13 @@ class InputWriter_OpenFAST(object):
                 f.write(" ".join(ln) + '\n')
 
 
-        if self.fst_vt['MoorDyn']['Body_ID']:
+        if 'Body_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Body_ID']:
             f.write('----------------------- BODIES ------------------------------------------\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['ID', 'Attachement', 'X0', 'Y0', 'Z0', 'r0',  'p0','y0','Mass','CG*','I*','Volume','CdA*','Ca*']])+'\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['(#)', '(word)', '(m)', '(m)', '(m)', '(deg)',  '(deg)','(deg)','(kg)','(m)','(kg-m^2)','(m^3)','m^2','(kg/m^3)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['ID', 'Attachement', 'X0', 'Y0', 'Z0', 'r0',  'p0','y0','Mass','CG*','I*','Volume','CdA*','Ca*']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['(#)', '(word)', '(m)', '(m)', '(m)', '(deg)',  '(deg)','(deg)','(kg)','(m)','(kg-m^2)','(m^3)','m^2','(kg/m^3)']])+'\n')
             for i in range(len(self.fst_vt['MoorDyn']['Body_ID'])):
                 ln = []
-                ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['Body_ID'][i]))
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Body_ID'][i]))
                 ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Body_Attachment'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['X0'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Y0'][i]))
@@ -2344,13 +2553,13 @@ class InputWriter_OpenFAST(object):
                 ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['Body_Ca'][i]]))
                 f.write(" ".join(ln) + '\n')
 
-        if self.fst_vt['MoorDyn']['Rod_ID']:
+        if 'Rod_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Rod_ID']:
             f.write('----------------------- RODS ------------------------------------------\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['ID', 'RodType', 'Attachment', 'Xa', 'Ya', 'Za', 'Xb','Yb','Zb','NumSegs','RodOutputs']])+'\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['(#)', '(name)', '(word/ID)', '(m)', '(m)', '(m)', '(m)','(m)','(m)','(-)','(-)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['ID', 'RodType', 'Attachment', 'Xa', 'Ya', 'Za', 'Xb','Yb','Zb','NumSegs','RodOutputs']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['(#)', '(name)', '(word/ID)', '(m)', '(m)', '(m)', '(m)','(m)','(m)','(-)','(-)']])+'\n')
             for i in range(len(self.fst_vt['MoorDyn']['Rod_ID'])):
                 ln = []
-                ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Rod_ID'][i]))
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Rod_ID'][i]))
                 ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Rod_Type'][i]))
                 ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Rod_Attachment'][i]))
                 ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Xa'][i]))
@@ -2365,11 +2574,11 @@ class InputWriter_OpenFAST(object):
         
 
         f.write('---------------------- POINTS --------------------------------\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['ID', 'Attachment', 'X', 'Y', 'Z', 'M', 'V', 'CdA', 'CA']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(-)', '(m)', '(m)', '(m)', '(kg)', '(m^3)', '(m^2)', '(-)']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['ID', 'Attachment', 'X', 'Y', 'Z', 'M', 'V', 'CdA', 'CA']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['(-)', '(-)', '(m)', '(m)', '(m)', '(kg)', '(m^3)', '(m^2)', '(-)']])+'\n')
         for i in range(len(self.fst_vt['MoorDyn']['Point_ID'])):
             ln = []
-            ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['Point_ID'][i]))
+            ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Point_ID'][i]))
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Attachment'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['X'][i]))
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['Y'][i]))
@@ -2380,11 +2589,11 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['CA'][i]))
             f.write(" ".join(ln) + '\n')
         f.write('---------------------- LINES --------------------------------------\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['Line', 'LineType', 'AttachA', 'AttachB', 'UnstrLen', 'NumSegs',  'Outputs']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(-)', '(-)', '(-)', '(m)', '(-)',  '(-)']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['Line', 'LineType', 'AttachA', 'AttachB', 'UnstrLen', 'NumSegs',  'Outputs']])+'\n')
+        f.write(" ".join(['{:<11s}'.format(i) for i in ['(-)', '(-)', '(-)', '(-)', '(m)', '(-)',  '(-)']])+'\n')
         for i in range(len(self.fst_vt['MoorDyn']['Line_ID'])):
             ln = []
-            ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['Line_ID'][i]))
+            ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Line_ID'][i]))
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['LineType'][i]))
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['AttachA'][i]))
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['AttachB'][i]))
@@ -2393,40 +2602,58 @@ class InputWriter_OpenFAST(object):
             ln.append('{:^11}'.format(self.fst_vt['MoorDyn']['Outputs'][i]))
             f.write(" ".join(ln) + '\n')
 
-        if self.fst_vt['MoorDyn']['ChannelID']: # There are control inputs
+        if 'Failure_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['Failure_ID']: # there are failure inputs
+            f.write('---------------------- FAILURE ----------------------\n')
+            f.write('FailureID  Point    Line(s)   FailTime   FailTen\n')
+            f.write('()           ()       (,)      (s or 0)   (N or 0)\n')
+            for i_line in range(len(self.fst_vt['MoorDyn']['Failure_ID'])):
+                ln = []
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['Failure_ID'][i_line]))
+                ln.append('{:^11s}'.format(self.fst_vt['MoorDyn']['Failure_Point'][i_line]))
+                ln.append('{:^11s}'.format(','.join(['{:^d}'.format(a) for a in self.fst_vt['MoorDyn']['Failure_Line(s)'][i_line]])))
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['FailTime'][i_line]))
+                ln.append('{:^11.4f}'.format(self.fst_vt['MoorDyn']['FailTen'][i_line]))
+                f.write(" ".join(ln) + '\n')
+
+        if 'ChannelID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['ChannelID']: # There are control inputs
             f.write('---------------------- CONTROL ---------------------------------------\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['ChannelID', 'Line(s)']])+'\n')
-            f.write(" ".join(['{:^11s}'.format(i) for i in ['()', '(,)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['ChannelID', 'Line(s)']])+'\n')
+            f.write(" ".join(['{:<11s}'.format(i) for i in ['()', '(,)']])+'\n')
             for i_line in range(len(self.fst_vt['MoorDyn']['ChannelID'])):
                 ln = []
-                ln.append('{:^11d}'.format(self.fst_vt['MoorDyn']['ChannelID'][i_line]))
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['ChannelID'][i_line]))
                 ln.append(','.join(self.fst_vt['MoorDyn']['Lines_Control'][i_line]))
                 f.write(" ".join(ln) + '\n')
 
-        f.write('---------------------- SOLVER OPTIONS ---------------------------------------\n')
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['dtM'], 'dtM', '- time step to use in mooring integration (s)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['kbot'], 'kbot', '- bottom stiffness (Pa/m)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['cbot'], 'cbot', '- bottom damping (Pa-s/m)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['dtIC'], 'dtIC', '- time interval for analyzing convergence during IC gen (s)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['TmaxIC'], 'TmaxIC', '- max time for ic gen (s)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['CdScaleIC'], 'CdScaleIC', '- factor by which to scale drag coefficients during dynamic relaxation (-)\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['MoorDyn']['threshIC'], 'threshIC', '- threshold for IC convergence (-)\n'))
-        if 'inertialF' in self.fst_vt['MoorDyn']['options']:
-            f.write('{:<22d} {:<11} {:}'.format(int(self.fst_vt['MoorDyn']['inertialF']), 'inertialF', '- Compute the inertial forces (0: no, 1: yes). Switch to 0 if you get: Warning: extreme pitch moment from body-attached Rod.\n'))
+        if 'External_ID' in self.fst_vt['MoorDyn'] and self.fst_vt['MoorDyn']['External_ID']: # there are external load outputs
+            f.write('---------------------- EXTERNAL LOADS --------------------------------\n')
+            f.write('ID    Object          Fext             Blin          Bquad         CSys\n')
+            f.write('(#)   (name)           (N)            (Ns/m)       (Ns^2/m^2)      (-)\n')
+            for i_line in range(len(self.fst_vt['MoorDyn']['External_ID'])):
+                ln = []
+                ln.append('{:<7d}'.format(self.fst_vt['MoorDyn']['External_ID'][i_line]))
+                ln.append('{:^11s}'.format(self.fst_vt['MoorDyn']['Object'][i_line]))
+                ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['Fext'][i_line]]))
+                ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['Blin'][i_line]]))
+                ln.append('|'.join(['{:^.4f}'.format(a) for a in self.fst_vt['MoorDyn']['Bquad'][i_line]]))
+                ln.append('{:^11s}'.format(self.fst_vt['MoorDyn']['CSys'][i_line]))
+                f.write(" ".join(ln) + '\n')
 
-        if 'WaterKin' in self.fst_vt['MoorDyn']['options']:
-            self.fst_vt['MoorDyn']['WaterKin_file'] = self.FAST_namingOut + '_WaterKin.dat'
-            f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['MoorDyn']['WaterKin_file']+'"', 'WaterKin', '- WaterKin input file\n'))
+        f.write('---------------------- SOLVER OPTIONS ---------------------------------------\n') 
+        for i in range(len(self.fst_vt['MoorDyn']['option_values'])):
 
-        
-        # f.write('{:^11s} {:<11} {:}'.format(self.fst_vt['MoorDyn']['WaterKin'], 'WaterKin', 'Handling of water motion (0=off, 1=on)\n'))
+            if 'WATERKIN' in self.fst_vt['MoorDyn']['option_names'][i]:
+                self.fst_vt['MoorDyn']['WaterKin_file'] = self.FAST_namingOut + '_WaterKin.dat'
+                f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['MoorDyn']['WaterKin_file']+'"', self.fst_vt['MoorDyn']['option_names'][i], self.fst_vt['MoorDyn']['option_descriptions'][i]+'\n'))
+            else: # if not waterkin handle normally
+                f.write('{:<22} {:<11} {:}'.format(float_default_out(self.fst_vt['MoorDyn']['option_values'][i]), self.fst_vt['MoorDyn']['option_names'][i], self.fst_vt['MoorDyn']['option_descriptions'][i]+'\n'))
+
         f.write('------------------------ OUTPUTS --------------------------------------------\n')
         outlist = self.get_outlist(self.fst_vt['outlist'], ['MoorDyn'])
         for channel_list in outlist:
             for i in range(len(channel_list)):
-                f.write('"' + channel_list[i] + '"\n')
-        f.write('END\n')
-        f.write('------------------------- need this line --------------------------------------\n')
+                f.write(channel_list[i] + '\n')
+        f.write('------------------------- END --------------------------------------\n')
 
         f.flush()
         os.fsync(f)
@@ -2435,8 +2662,8 @@ class InputWriter_OpenFAST(object):
     def write_WaterKin(self,WaterKin_file):
         f = open(WaterKin_file, 'w')
 
-        f.write('MoorDyn v2 (Feb 2022) Waves and Currents input file set up for USFLOWT\n')
-        f.write('Wave kinematics that will have an impact over the cans and the mooring lines.\n')
+        f.write('MoorDyn v2 Waves and Currents input file set up\n')
+        f.write('This file was written by FAST_writer.py, comments from seed file have been dropped.\n')
         f.write('--------------------------- WAVES -------------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveKinMod'], 'WaveKinMod', '- type of wave input {0 no waves; 3 set up grid of wave data based on time series}\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['WaterKin']['WaveKinFile'], 'WaveKinFile', '- file containing wave elevation time series at 0,0,0\n'))
@@ -2449,16 +2676,30 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:}'.format(self.fst_vt['WaterKin']['Z_Type'], '- Z wave input type (0: not used; 1: list values in ascending order; 2: uniform specified by -Zlim, Zlim, num)\n'))
         f.write('{:<22} {:}'.format(', '.join(['{:.3f}'.format(i) for i in self.fst_vt['WaterKin']['Z_Grid']]), '- Z wave grid point data separated by commas\n'))
         f.write('--------------------------- CURRENT -------------------------------------\n')
-        f.write('0                    CurrentMod  - type of current input {0 no current; 1 steady current profile described below} \n')
+        f.write('{:}                    CurrentMod  - type of current input (0 no current; 1 steady current profile described below) \n'.format(self.fst_vt['WaterKin']['CurrentMod']))
         f.write('z-depth     x-current      y-current\n')
         f.write('(m)           (m/s)         (m/s)\n')
+        if self.fst_vt['WaterKin']['z-depth']:
+            for i in range(len(self.fst_vt['WaterKin']['z-depth'])):
+                f.write('{:.3f} {:.3f} {:.3f}'.format(self.fst_vt['WaterKin']['z-depth'][i], self.fst_vt['WaterKin']['x-current'][i], self.fst_vt['WaterKin']['y-current'][i]))
         f.write('--------------------- need this line ------------------\n')
 
         f.flush()
         os.fsync(f)
         f.close()
 
+    def write_NonLinearEA(self,Stiffness_file, Linetype, NonLinearEA):
+        f = open(Stiffness_file, 'w')
 
+        f.write('---{:}---\n'.format(Linetype))
+        f.write('Strain    Tension\n')
+        f.write('(-)       (N)\n')
+        for i in range(len(NonLinearEA["Strain"])):
+            f.write('{:.3f} {:.3f}'.format(NonLinearEA["Strain"][i], NonLinearEA["Tension"][i]))
+
+        f.flush()
+        os.fsync(f)
+        f.close()
         
         
     def write_StC(self,StC_vt,StC_filename):
@@ -2585,7 +2826,7 @@ if __name__=="__main__":
                                        'glue-codes', 'openfast', 
                                        '5MW_Land_BD_DLL_WTurb')   # Path to fst directory files
     
-    check_rtest_cloned(os.path.join(fast.FAST_directory, fast.FAST_InputFile))
+    check_rtest_cloned(os.path.join(fast.FAST_directory))
     
     fast.execute()
     

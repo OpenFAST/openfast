@@ -319,17 +319,6 @@ subroutine ExtInfw_InitVars(u, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Allocate space for variables (deallocate if already allocated)
-   if (associated(p%Vars)) deallocate(p%Vars)
-   allocate(p%Vars, stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   ! Add pointers to vars to initialization output
-   InitOut%Vars => p%Vars
-
    !----------------------------------------------------------------------------
    ! Continuous State Variables
    !----------------------------------------------------------------------------
@@ -346,7 +335,7 @@ subroutine ExtInfw_InitVars(u, p, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Initialize Variables and Values
    !----------------------------------------------------------------------------
 
-   CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+   CALL MV_InitVarsJac(InitOut%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
 
 contains
    logical function Failed()
@@ -486,7 +475,7 @@ SUBROUTINE SetExtInfwPositions(p_FAST, u_AD, ExtInfw, ErrStat, ErrMsg)
          ExtInfw%u%xdotForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(1,J),c_float)
          ExtInfw%u%ydotForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(2,J),c_float)
          ExtInfw%u%zdotForce(Node) = real(ExtInfw%m%ActForceMotionsPoints(k)%TranslationVel(3,J),c_float)
-         ExtInfw%u%pOrientation((Node-1)*9_1:Node*9) = real(pack(ExtInfw%m%ActForceMotionsPoints(k)%Orientation(:,:,J),.true.),c_float)
+         ExtInfw%u%pOrientation((Node-1)*9+1:Node*9) = real(pack(ExtInfw%m%ActForceMotionsPoints(k)%Orientation(:,:,J),.true.),c_float)
       END DO
 
    END DO

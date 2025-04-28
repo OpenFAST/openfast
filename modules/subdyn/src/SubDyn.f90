@@ -1005,6 +1005,8 @@ REAL(ReKi)                   :: Dummy_ReAry(SDMaxInpCols) , DummyFloat
 INTEGER(IntKi)               :: Dummy_IntAry(SDMaxInpCols)
 LOGICAL                      :: Dummy_Bool
 INTEGER(IntKi)               :: Dummy_Int
+REAL(R8Ki)                   :: tmpMat(3,3)
+
 INTEGER(IntKi)       :: ErrStat2
 CHARACTER(ErrMsgLen) :: ErrMsg2
 ! Initialize ErrStat
@@ -1014,11 +1016,11 @@ ErrMsg  = ""
 UnEc = -1 
 Echo = .FALSE.
 
-!$OMP critical(fileopen)
+!$OMP critical(fileopen_critical)
 CALL GetNewUnit( UnIn )   
   
 CALL OpenFInpfile(UnIn, TRIM(SDInputFile), ErrStat2, ErrMsg2)
-!$OMP end critical(fileopen)
+!$OMP end critical(fileopen_critical)
 
 IF ( ErrStat2 /= ErrID_None ) THEN
    Call Fatal('Could not open SubDyn input file')
@@ -1304,36 +1306,52 @@ CALL ReadCom  ( UnIn, SDInputFile,             'Members '                     ,E
 CALL ReadIVar ( UnIn, SDInputFile, p%NMembers, 'NMembers', 'Number of members',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Headers'              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Units  '              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(Init%Members, p%NMembers, MembersCol, 'Members', ErrStat2, ErrMsg2)
-Init%Members(:,:) = 0.0_ReKi
-
-nColumns=MembersCol
+CALL AllocAry(Init%Members,    p%NMembers, MembersCol, 'Members',    ErrStat2, ErrMsg2)
+CALL AllocAry(Init%MemberSpin, p%NMembers,             'MemberSpin', ErrStat2, ErrMsg2)
+Init%Members(:,:)  = 0.0_IntKi
+Init%MemberSpin(:) = 0.0_ReKi
 
 if (p%NMembers == 0) then
    CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": There should be at least one SubDyn member: "'//trim(Line)//'"')
    return
 endif
 
-CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
-READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of members array'; if (Failed()) return
-CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 )
-if (ErrStat2/=0) then
-   ! We try with one column less (legacy format)
-   nColumns = MembersCol-1
-   deallocate(StrArray)
-   CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
-   CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
-   call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members. &
-   &The directional cosines will be computed based on the member nodes for all members.')
-   Init%Members(:,7) = -1 ! For the spring element, we need the direction cosine from the user. Both JointIDs are coincident, the direction cosine cannot be determined.
-endif
-! Extract fields from first line
-DO I = 1, nColumns
-   bInteger = is_integer(StrArray(I), Init%Members(1,I)) ! Convert from string to float
-   if (.not.bInteger) then
-      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found in Member line. Problematic line: "'//trim(Line)//'"')
-      return
-   endif
+CALL AllocAry(StrArray, MembersCol, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return
+DO J = 1, p%NMembers
+   READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading SubDyn members table'; if (Failed()) return
+   CALL ReadCAryFromStr ( Line, StrArray, MembersCol, 'Members', 'SubDyn members table should have 7 entries on each line', ErrStat2, ErrMsg2 ); if (Failed()) return
+   ! Extract fields from first line
+   DO I = 1, MembersCol - 1
+      bInteger = is_integer(StrArray(I), Init%Members(J,I)) ! Convert from string to integer
+      if ( (I==6) .and. ( trim(StrArray(I))=='1c' .or. trim(StrArray(I))=='1C' ) ) then
+         Init%Members(J,I) = idMemberBeamCirc
+      else if ( (I==6) .and. ( trim(StrArray(I))=='1r' .or. trim(StrArray(I))=='1R' ) ) then
+         Init%Members(J,I) = idMemberBeamRect
+      else if (.not.bInteger) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found in Member line. Problematic line: "'//trim(Line)//'"')
+         return
+      end if
+   END DO
+   I = MembersCol
+   if ( Init%Members(J,6)==idMemberBeamCirc .or. Init%Members(J,6)==idMemberBeamRect .or. Init%Members(J,6)==idMemberBeamArb ) then
+      bNumeric = is_numeric( StrArray(I), Init%MemberSpin(J) )
+      if (.not.bNumeric) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": The last input entry for a beam member should be an angle in degrees for the member spin orientation (MSpin). Problematic line: "'//trim(Line)//'"')
+         return
+      end if
+      Init%MemberSpin(J) = Init%MemberSpin(J) * D2R
+      Init%Members(J,I) = -1
+   else if ( Init%Members(J,6)==idMemberCable .or. Init%Members(J,6)==idMemberRigid ) then
+      Init%MemberSpin(J) = 0
+      Init%Members(J,I) = -1
+   else
+      Init%MemberSpin(J) = 0
+      bInteger = is_integer(StrArray(I), Init%Members(J,I)) ! Convert from string to integer
+      if (.not.bInteger) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found for COSMID for a spring member. Problematic line: "'//trim(Line)//'"')
+         return
+      end if
+   end if
 ENDDO
 
 if (allocated(StrArray)) then
@@ -1341,27 +1359,39 @@ if (allocated(StrArray)) then
 endif
 
 ! ! Read remaining lines
-DO I = 2, p%NMembers
-   CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
-   Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
-ENDDO 
+! DO I = 2, p%NMembers
+!    CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
+!    Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
+! ENDDO
 
 IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
-!------------------ MEMBER CROSS-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 1/2 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsB, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 1/3 [isotropic material for now: use this table if circular-tubular elements ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 1/3 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsBC, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Header'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Units '            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(Init%PropSetsB, Init%NPropSetsB, PropSetsBCol, 'ProSets', ErrStat2, ErrMsg2) ; if(Failed()) return
-DO I = 1, Init%NPropSetsB
-   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
-   Init%PropSetsB(I,:) = Dummy_ReAry(1:PropSetsBCol)
+CALL AllocAry(Init%PropSetsBC, Init%NPropSetsBC, PropSetsBCCol, 'PropSets', ErrStat2, ErrMsg2) ; if(Failed()) return
+DO I = 1, Init%NPropSetsBC
+   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBCCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
+   Init%PropSetsBC(I,:) = Dummy_ReAry(1:PropSetsBCCol)
 ENDDO   
-IF (Check( Init%NPropSetsB < 1 , 'NPropSets must be >0')) return
+IF (Check( Init%NPropSetsBC < 0, 'NPropSetsBC must be >=0')) return
 
-!------------------ MEMBER CROSS-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                  'Member CROSS-Section Property Data 2/2 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 2/3 [isotropic material for now: use this table if rectangular-tubular elements ---------------------
+CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 2/3 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsBR, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Header'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Units '            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL AllocAry(Init%PropSetsBR, Init%NPropSetsBR, PropSetsBRCol, 'PropSets', ErrStat2, ErrMsg2) ; if(Failed()) return
+DO I = 1, Init%NPropSetsBR
+   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBRCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
+   Init%PropSetsBR(I,:) = Dummy_ReAry(1:PropSetsBRCol)
+ENDDO
+IF (Check( Init%NPropSetsBR < 0, 'NPropSetsBR must be >=0')) return
+
+!------------------ MEMBER CROSS-SECTION PROPERTY data 2/3 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                  'Member CROSS-Section Property Data 3/3 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsX, 'NXPropSets', 'Number of non-circular property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1369,7 +1399,7 @@ CALL AllocAry(Init%PropSetsX, Init%NPropSetsX, PropSetsXCol, 'XPropSets', ErrSta
 DO I = 1, Init%NPropSetsX
    CALL ReadAry( UnIn, SDInputFile, Init%PropSetsX(I,:), PropSetsXCol, 'XPropSets', 'XPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 ENDDO   
-IF (Check( Init%NPropSetsX < 0, 'NXPropSets must be >=0')) return
+IF (Check( Init%NPropSetsX < 0,  'NPropSetsX must be >=0')) return
 
 if (.not. LegacyFormat) then
    !-------------------------- CABLE PROPERTIES  -------------------------------------
@@ -1447,6 +1477,25 @@ CALL ReadCom  ( UnIn, SDInputFile,              'Cosine Matrices Units  '       
 CALL AllocAry(Init%COSMs, Init%NCOSMs, COSMsCol, 'COSMs', ErrStat2, ErrMsg2); if(Failed()) return
 DO I = 1, Init%NCOSMs
    CALL ReadAry( UnIn, SDInputFile, Init%COSMs(I,:), COSMsCol, 'CosM', 'Cosine Matrix IDs  and Values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   tmpMat = reshape(Init%COSMs(I,2:COSMsCol),shape(tmpMat))
+   tmpMat = matmul(tmpMat,transpose(tmpMat))
+   tmpMat(1,1) = tmpMat(1,1)-1.0_R8Ki
+   tmpMat(2,2) = tmpMat(2,2)-1.0_R8Ki
+   tmpMat(3,3) = tmpMat(3,3)-1.0_R8Ki
+   tmpMat = ABS(tmpMat)
+   do j = 1,3
+      do k = 1,3
+         if (tmpMat(j,k) > 0.0001_R8Ki) then
+            CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Member cosine matrix on line '//trim(Num2LStr(I))//' with COSMID '//trim(Num2LStr(Init%COSMs(I,1)))//' is not orthogonal to the required precision and is therefore not a valid rotation matrix. ')
+            return
+         end if
+      end do
+   end do
+   tmpMat = reshape(Init%COSMs(I,2:COSMsCol),shape(tmpMat))
+   if ( Determinant(tmpMat, ErrStat2, ErrMsg2) < 0.0_R8Ki) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Member cosine matrix on line '//trim(Num2LStr(I))//' with COSMID '//trim(Num2LStr(Init%COSMs(I,1)))//' has a negative determinant and is therefore not a valid rotation matrix. ')
+      return
+   end if
 ENDDO   
 IF (Check( Init%NCOSMs < 0     ,'NCOSMs must be >=0')) return
 
@@ -3630,10 +3679,10 @@ SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, Err
 
    ! --- Create file  and get unit
    UnSum = -1 ! we haven't opened the summary file, yet.   
-   !$OMP critical(fileopen)
+   !$OMP critical(fileopen_critical)
    call GetNewUnit( UnSum )
    call OpenFOutFile ( UnSum, FileName, ErrStat2, ErrMsg2 ) 
-   !$OMP end critical(fileopen)
+   !$OMP end critical(fileopen_critical)
    write(UnSum, '(A)')'{'
 
    ! --- Misc
@@ -3699,7 +3748,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    REAL(ReKi)             :: rOP(3)      ! Vector from origin to P (ref point)
    REAL(ReKi)             :: rPG(3)      ! Vector from origin to G
    REAL(FEKi),allocatable :: MBB(:,:)    ! Leader DOFs mass matrix
-   REAL(ReKi)             :: XYZ1(3),XYZ2(3) !temporary arrays
+   REAL(ReKi)             :: XYZ1(3),XYZ2(3),spin !temporary arrays
    REAL(FEKi)             :: DirCos(3,3) ! direction cosine matrix (global to local)
    CHARACTER(*),PARAMETER                 :: SectionDivide = '#____________________________________________________________________________________________________'
    real(ReKi), dimension(:,:), allocatable :: TI2 ! For Equivalent mass matrix
@@ -3834,27 +3883,29 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),(F15.0,","),3(ES15.6,","),ES15.6') !, comment='',label=.true.)
 
    ! Element properties
-   CALL AllocAry( DummyArray,  size(p%ElemProps), 16, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL AllocAry( DummyArray,  size(p%ElemProps), 18, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
    do i=1,size(p%ElemProps)
-      DummyArray(i,1) = p%Elems(i,1) ! Should be == i
-      DummyArray(i,2) = p%Elems(i,2) ! Node 1
-      DummyArray(i,3) = p%Elems(i,3) ! Node 2
-      DummyArray(i,4) = p%Elems(i,4) ! Prop 1
-      DummyArray(i,5) = p%Elems(i,5) ! Prop 2
-      DummyArray(i,6) = p%ElemProps(i)%eType ! Type
-      DummyArray(i,7) = p%ElemProps(i)%Length !Length
-      DummyArray(i,8) = p%ElemProps(i)%Area ! Area  m^2
-      DummyArray(i,9) = p%ElemProps(i)%Rho  ! density  kg/m^3
-      DummyArray(i,10) = p%ElemProps(i)%YoungE ! Young modulus
-      DummyArray(i,11) = p%ElemProps(i)%ShearG ! G
-      DummyArray(i,12) = p%ElemProps(i)%Kappa_x ! Shear coefficient
-      DummyArray(i,13) = p%ElemProps(i)%Ixx   ! Moment of inertia
-      DummyArray(i,14) = p%ElemProps(i)%Iyy   ! Moment of inertia
-      DummyArray(i,15) = p%ElemProps(i)%Jzz   ! Moment of inertia
-      DummyArray(i,16) = p%ElemProps(i)%T0    ! Pretension [N]
-   enddo
-   write(UnSum, '("#",4x,6(A9),10('//SFmt//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
-   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),6(ES15.6,","),ES15.6') !, comment='',label=.true.)
+      DummyArray(i,1) = p%Elems(i,1)            ! Should be == i
+      DummyArray(i,2) = p%Elems(i,2)            ! Node 1
+      DummyArray(i,3) = p%Elems(i,3)            ! Node 2
+      DummyArray(i,4) = p%Elems(i,4)            ! Prop 1
+      DummyArray(i,5) = p%Elems(i,5)            ! Prop 2
+      DummyArray(i,6) = p%ElemProps(i)%eType    ! Type
+      DummyArray(i,7) = p%ElemProps(i)%Length   ! Length [m]
+      DummyArray(i,8) = p%ElemProps(i)%Area     ! Area [m^2]
+      DummyArray(i,9) = p%ElemProps(i)%Rho      ! density [kg/m^3]
+      DummyArray(i,10) = p%ElemProps(i)%YoungE  ! Young's modulus
+      DummyArray(i,11) = p%ElemProps(i)%ShearG  ! Shear modulus
+      DummyArray(i,12) = p%ElemProps(i)%Kappa_x ! Shear area coefficient
+      DummyArray(i,13) = p%ElemProps(i)%Kappa_y ! Shear area coefficient
+      DummyArray(i,14) = p%ElemProps(i)%Ixx     ! Area moment of inertia [m^4]
+      DummyArray(i,15) = p%ElemProps(i)%Iyy     ! Area moment of inertia [m^4]
+      DummyArray(i,16) = p%ElemProps(i)%Jzz     ! Polar area moment of inertia [m^4]
+      DummyArray(i,17) = p%ElemProps(i)%Jt      ! Torsion constant [m^4]
+      DummyArray(i,18) = p%ElemProps(i)%T0      ! Pretension [N]
+   end do
+   write(UnSum, '("#",4x,6(A9),12('//SFmt//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','kappa_x_[-]','kappa_y_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','Jt_[m^4]','T0_[N]'
+   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),8(ES15.6,","),ES15.6') !, comment='',label=.true.)
    deallocate(DummyArray)
 
    ! --- C
@@ -3877,10 +3928,18 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    ! --- User inputs (less interesting, repeat of input file)
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A)') '#User inputs'
-   WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  '#Number of properties (NProps):',Init%NPropB
+   WRITE(UnSum, '()')
+   WRITE(UnSum, '(A,I6)')  '#Number of circular-section beam properties (NProps):',Init%NPropBC
    WRITE(UnSum, '(A8,5(A15))')  '#Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecD',      'XsecT'
-   WRITE(UnSum, '("#",I8, ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2 ) ') (NINT(Init%PropsB(i, 1)), (Init%PropsB(i, j), j = 2, 6), i = 1, Init%NPropB)
+   WRITE(UnSum, '("#",I8, ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2 ) ') (NINT(Init%PropsBC(i, 1)), (Init%PropsBC(i, j), j = 2, 6), i = 1, Init%NPropBC)
+   WRITE(UnSum, '()')
+   WRITE(UnSum, '(A,I6)')  '#Number of rectangular-section beam properties (NProps):',Init%NPropBR
+   WRITE(UnSum, '(A8,6(A15))')  '#Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecSa',     'XsecSb',      'XsecT'
+   WRITE(UnSum, '("#",I8, ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2 ) ') (NINT(Init%PropsBR(i, 1)), (Init%PropsBR(i, j), j = 2, 7), i = 1, Init%NPropBR)
+   WRITE(UnSum, '()')
+   WRITE(UnSum, '(A,I6)')  '#Number of arbitrary-section beam properties (NProps):',Init%NPropSetsX
+   WRITE(UnSum, '(A8,10(A15))')  '#Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecA',     'XsecAsx',     'XsecAsy',     'XsecJxx',     'XsecJyy',     'XsecJ0',     'XsecJt'
+   WRITE(UnSum, '("#",I8, ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2,ES15.6E2 ) ') (NINT(Init%PropSetsX(i, 1)), (Init%PropSetsX(i, j), j = 2, 11), i = 1, Init%NPropSetsX)
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  '#No. of Reaction DOFs:',p%nDOFC__
@@ -3911,15 +3970,23 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
       propIDs=Init%Members(i,iMProp:iMProp+1) 
       if (Init%Members(I, iMType)/=idMemberSpring) then ! This check only applies for members different than springs (springs have no mass and no length)
-      mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
+         mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
       endif
       IF (ErrStat .EQ. ErrID_None) THEN
-        mType =  Init%Members(I, iMType) ! 
+        mType = Init%Members(I, iMType)
         if (mType==idMemberBeamCirc) then
-           iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
-           iProp(2) = FINDLOCI(Init%PropSetsB(:,1), propIDs(2))
-           mMass= BeamMass(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
-                             Init%PropSetsB(iProp(2),4),Init%PropSetsB(iProp(2),5),Init%PropSetsB(iProp(2),6), mLength, method=-1)
+           iProp(1) = FINDLOCI(Init%PropSetsBC(:,1), propIDs(1))
+           iProp(2) = FINDLOCI(Init%PropSetsBC(:,1), propIDs(2))
+           mMass = BeamMassC(Init%PropSetsBC(iProp(1),4),Init%PropSetsBC(iProp(1),5),Init%PropSetsBC(iProp(1),6),   &
+                             Init%PropSetsBC(iProp(2),4),Init%PropSetsBC(iProp(2),5),Init%PropSetsBC(iProp(2),6), mLength, method=-1)
+
+           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
+        else if (mType==idMemberBeamRect) then
+           iProp(1) = FINDLOCI(Init%PropSetsBR(:,1), propIDs(1))
+           iProp(2) = FINDLOCI(Init%PropSetsBR(:,1), propIDs(2))
+           mMass = BeamMassR(Init%PropSetsBR(iProp(1),4),Init%PropSetsBR(iProp(1),5),Init%PropSetsBR(iProp(1),6),Init%PropSetsBR(iProp(1),7),   &
+                             Init%PropSetsBR(iProp(2),4),Init%PropSetsBR(iProp(2),5),Init%PropSetsBR(iProp(2),6),Init%PropSetsBR(iProp(2),7), mLength, method=-1)
 
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
@@ -3942,7 +4009,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
          else if (mType==idMemberBeamArb) then
            iProp(1) = FINDLOCI(Init%PropSetsX(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsX(:,1), propIDs(2))
-           mMass= -1 ! TODO compute mass for arbitrary beams
+           mMass = Init%PropSetsX(iProp(1),4) * Init%PropSetsX(iProp(1),5) * mLength ! Simplified calculation because arbitrary beams only support uniform section properties
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass, mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
          else
@@ -3959,12 +4026,13 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A, I6)') '#Direction Cosine Matrices for all Members: GLOBAL-2-LOCAL. No. of 3x3 matrices=', p%NMembers 
    WRITE(UnSum, '(A9,9(A15))')  '#Member ID', 'DC(1,1)', 'DC(1,2)', 'DC(1,3)', 'DC(2,1)','DC(2,2)','DC(2,3)','DC(3,1)','DC(3,2)','DC(3,3)'
    DO i=1,p%NMembers
-      mType = Init%Members(I, iMType)
+      mType  = Init%Members(I, iMType)
       iNode1 = FINDLOCI(Init%Joints(:,1), Init%Members(i,2)) ! index of joint 1 of member i
       iNode2 = FINDLOCI(Init%Joints(:,1), Init%Members(i,3)) ! index of joint 2 of member i
       XYZ1   = Init%Joints(iNode1,2:4)
       XYZ2   = Init%Joints(iNode2,2:4)
-      if ((mType == idMemberSpring) .or. (mType == idMemberBeamArb)) then ! The direction cosine for these member types must be provided by the user
+      spin   = Init%MemberSpin(I)
+      if ( mType == idMemberSpring ) then ! The direction cosine for these member types must be provided by the user
          iDirCos = p%Elems(i, iMDirCosID)
          DirCos(1, 1) =  Init%COSMs(iDirCos, 2)
          DirCos(2, 1) =  Init%COSMs(iDirCos, 3)
@@ -3976,7 +4044,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
          DirCos(2, 3) =  Init%COSMs(iDirCos, 9)
          DirCos(3, 3) =  Init%COSMs(iDirCos, 10)
       else
-         CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), mType, DirCos, mLength, ErrStat, ErrMsg)
+         CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), spin, mType, DirCos, mLength, ErrStat, ErrMsg)
       endif
       DirCos=TRANSPOSE(DirCos) !This is now global to local
       WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
@@ -4257,10 +4325,10 @@ END FUNCTION MemberLength
 !------------------------------------------------------------------------------------------------------
 !> Calculate member mass, given properties at the ends, keep units consistent
 !! For now it works only for circular pipes or for a linearly varying area
-FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
+FUNCTION BeamMassC(rho1,D1,t1,rho2,D2,t2,L,method)
    REAL(ReKi), INTENT(IN) :: rho1,D1,t1,rho2,D2,t2 ,L       ! Density, OD and wall thickness for circular tube members at ends, Length of member
    INTEGER(IntKi), INTENT(IN) :: method ! -1: FEM compatible, 0: mid values, 1: circular tube, integral, 
-   REAL(ReKi)  :: BeamMass  !mass
+   REAL(ReKi)  :: BeamMassC  !mass
    REAL(ReKi)  :: a0,a1,a2,b0,b1,dd,dt  !temporary coefficients
    REAL(ReKi)  :: Area,r1,r2,t
    !Density allowed to vary linearly only
@@ -4279,9 +4347,9 @@ FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
       endif
       Area = Pi_D*(r1*r1-r2*r2)
       if (method==0) then 
-         BeamMass= (rho2+rho1)/2 * L  * Area
+         BeamMassC= (rho2+rho1)/2 * L  * Area
       else
-         BeamMass = rho1 * L  * Area ! WHAT is currently used by FEM
+         BeamMassC = rho1 * L  * Area ! WHAT is currently used by FEM
       endif
       
    case (1) ! circular tube
@@ -4290,20 +4358,48 @@ FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
       dd=D2-D1 !OD variation
       a1=pi * ( dd*t1 + D1*dt -2.*t1*dt)/L 
       a2=pi * ( dd*dt-dt**2.)/L**2.
-      BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+      BeamMassC = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
 
    case (2) ! linearly varying area
       a0=D1  !This is an area
       a1=(D2-D1)/L !Delta area
       a2=0.
-      BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+      BeamMassC = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
 
    case default
       print*,'Wrong call to BeamMass, method unknown',method
       STOP
    end select
 
-END FUNCTION BeamMass
+END FUNCTION BeamMassC
+
+FUNCTION BeamMassR(rho1,Sa1,Sb1,t1,rho2,Sa2,Sb2,t2,L,method)
+   REAL(ReKi), INTENT(IN) :: rho1,Sa1,Sb1,t1,rho2,Sa2,Sb2,t2,L       ! Density, outer side lenghts and wall thickness for rectangular tube members at ends, Length of member
+   INTEGER(IntKi), INTENT(IN) :: method ! -1: FEM compatible
+   REAL(ReKi)  :: BeamMassR  !mass
+   REAL(ReKi)  :: Sa,Sb,SaIn,SbIn  !temporary coefficients
+   REAL(ReKi)  :: Area,t
+   ! Density currently not allowed to vary
+   IF (method<=0) THEN
+      ! Mid values for Sa, Sb, and t
+      Sa = 0.5_ReKi*(Sa1 + Sa2)
+      Sb = 0.5_ReKi*(Sb1 + Sb2)
+      t  = 0.5_ReKi*( t1 +  t2)
+      if ( EqualRealNos(t, 0.0_ReKi) ) then
+         SaIn = 0.0
+         SbIn = 0.0
+      else
+         SaIn = Sa - 2.0*t
+         SbIn = Sb - 2.0*t
+      endif
+      Area = Sa*Sb-SaIn*SbIn
+      BeamMassR = rho1 * L * Area ! WHAT is currently used by FEM
+   ELSE
+      print*,'Wrong call to BeamMassR, method unknown',method
+      STOP
+   ENDIF
+
+END FUNCTION BeamMassR
 
 !------------------------------------------------------------------------------------------------------
 !> Check whether MAT IS SYMMETRIC AND RETURNS THE MAXIMUM RELATIVE ERROR    

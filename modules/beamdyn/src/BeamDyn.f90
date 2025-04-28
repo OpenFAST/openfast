@@ -923,7 +923,6 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
 
 
    p%RotStates      = InputFileData%RotStates      ! Rotate states in linearization?
-   ! if (ChangeRefFrame) p%RotStates = .true.
    
    p%rhoinf         = InputFileData%rhoinf         ! Numerical damping coefficient: [0,1].  No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
    p%dt             = InputFileData%DTBeam         ! Time step size
@@ -2418,8 +2417,8 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
-   INTEGER(IntKi)                :: ErrStat           !< index to current element
-   CHARACTER(ErrMsgLen)          :: ErrMsg            !< index to current element
+   INTEGER(IntKi)                :: ErrStat           !< Ignored error handling for LAPACK_GEMM
+   CHARACTER(ErrMsgLen)          :: ErrMsg            !< Ignored error handling for LAPACK_GEMM
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
    INTEGER(IntKi)                :: idx_node          !< index to current GLL point in element
@@ -2659,7 +2658,8 @@ SUBROUTINE BD_QPData_mEta_rho( p, m )
    do nelem = 1, p%elem_total
       qp_start = (nelem-1)*p%nqp
       do idx_qp = 1, p%nqp
-         call Calc_RR0mEta_rho(m%qp%RR0(:,:,idx_qp,nelem), &
+         call Calc_RR0mEta_rho(p%qp%mEta(:,idx_qp,nelem), &
+                               m%qp%RR0(:,:,idx_qp,nelem), &
                                p%Mass0_QP(:,:,qp_start+idx_qp), &
                                m%qp%RR0mEta(:,idx_qp,nelem), &
                                m%qp%rho(:,:,idx_qp,nelem))
@@ -2667,13 +2667,13 @@ SUBROUTINE BD_QPData_mEta_rho( p, m )
    end do
 
 contains
-   subroutine Calc_RR0mEta_rho(RR0, Mass0, RR0mEta, rho)
-      real(BDKi), intent(in)  :: RR0(:,:), Mass0(:,:)
+   subroutine Calc_RR0mEta_rho(mEta, RR0, Mass0, RR0mEta, rho)
+      real(BDKi), intent(in)  :: mEta(:), RR0(:,:), Mass0(:,:)
       real(BDKi), intent(out)  :: RR0mEta(:), rho(:,:)
 
          !> Calculate the new center of mass times mass at the deflected location
          !! as \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) m \underline{\eta} \f$
-         m%qp%RR0mEta(:,idx_qp,nelem) = MATMUL(RR0, p%qp%mEta(:,idx_qp,nelem))
+         RR0mEta(:) = MATMUL(RR0, mEta)
 
          !> Calculate \f$ \rho = \left(\underline{\underline{R}}\underline{\underline{R}}_0\right)
          !!                      \underline{\underline{M}}_{2,2}
@@ -2954,8 +2954,8 @@ SUBROUTINE BD_QPDataVelocity( p, x, m )
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< Misc/optimization variables
 
-   INTEGER(IntKi)                               :: ErrStat           !< index to current element
-   CHARACTER(ErrMsgLen)                         :: ErrMsg            !< index to current element
+   INTEGER(IntKi)                               :: ErrStat           !< Ignored error handling for LAPACK_GEMM
+   CHARACTER(ErrMsgLen)                         :: ErrMsg            !< Ignored error handling for LAPACK_GEMM
    INTEGER(IntKi)                               :: nelem             !< index to current element
    INTEGER(IntKi)                               :: idx_qp            !< index to quadrature point
    INTEGER(IntKi)                               :: elem_start        !< Starting quadrature point of current element
@@ -2996,8 +2996,8 @@ SUBROUTINE BD_QPDataAcceleration( p, OtherState, m )
    TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState        !< Other states at t on input; at t+dt on outputs
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< Misc/optimization variables
 
-   INTEGER(IntKi)                               :: ErrStat           !< index to current element
-   CHARACTER(ErrMsgLen)                         :: ErrMsg           !< index to current element
+   INTEGER(IntKi)                               :: ErrStat           !< Ignored error handling for LAPACK_GEMM
+   CHARACTER(ErrMsgLen)                         :: ErrMsg            !< Ignored error handling for LAPACK_GEMM
    INTEGER(IntKi)                               :: nelem             !< index of current element
    INTEGER(IntKi)                               :: idx_qp            !< index of current quadrature point
    INTEGER(IntKi)                               :: idx_node
@@ -5878,17 +5878,6 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Allocate space for variables (deallocate if already allocated)
-   if (associated(p%Vars)) deallocate(p%Vars)
-   allocate(p%Vars, stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   ! Add pointers to vars to initialization output
-   InitOut%Vars => p%Vars
-
    !----------------------------------------------------------------------------
    ! Continuous State Variables
    !----------------------------------------------------------------------------
@@ -5903,7 +5892,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
       label = 'finite element node '//trim(num2lstr(i))//' (number of elements = '//&
                   trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
 
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransDisp, &
+      call MV_AddVar(InitOut%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransDisp, &
                      DatLoc(BD_x_q), iAry=1, jAry=i, Num=3, &
                      Flags=Flags, &
                      Perturb=0.2_BDKi*D2R_D * p%blade_length, &
@@ -5911,7 +5900,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                                trim(label)//' translational displacement in Y, m', &
                                trim(label)//' translational displacement in Z, m'])
 
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldOrientation, &
+      call MV_AddVar(InitOut%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldOrientation, &
                      DatLoc(BD_x_q), iAry=4, jAry=i, Num=3, &
                      Flags=ior(Flags, VF_WM_Rot), &
                      Perturb=0.2_BDKi*D2R_D, &
@@ -5925,7 +5914,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
       label = 'First time derivative of finite element node '//trim(num2lstr(i))//' (number of elements = '//&
                   trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
 
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransVel, &
+      call MV_AddVar(InitOut%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldTransVel, &
                      DatLoc(BD_x_dqdt), iAry=1, jAry=i, Num=3, &
                      Flags=Flags, &
                      Perturb=0.2_BDKi*D2R_D * p%blade_length, &
@@ -5933,7 +5922,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                                trim(label)//' translational displacement in Y, m/s', &
                                trim(label)//' translational displacement in Z, m/s'])
 
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldAngularVel, &
+      call MV_AddVar(InitOut%Vars%x, "Blade Node "//trim(num2lstr(i)), FieldAngularVel, &
                      DatLoc(BD_x_dqdt), iAry=4, jAry=i, Num=3, &
                      Flags=Flags, &
                      Perturb=0.2_BDKi*D2R_D, &
@@ -5949,7 +5938,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    MaxThrust = 170.0_R8Ki*p%blade_length**2
    MaxTorque =  14.0_R8Ki*p%blade_length**3
 
-   call MV_AddMeshVar(p%Vars%u, "RootMotion", MotionFields, &
+   call MV_AddMeshVar(InitOut%Vars%u, "RootMotion", MotionFields, &
                       DatLoc(BD_u_RootMotion), &
                       Mesh=u%RootMotion, &
                       Perturbs=[0.2_R8Ki*D2R_D * p%blade_length, &    ! FieldTransDisp
@@ -5959,13 +5948,13 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
                                 0.2_R8Ki*D2R_D * p%blade_length, &    ! FieldTransAcc
                                 0.2_R8Ki*D2R_D])                      ! FieldAngularAcc
 
-   call MV_AddMeshVar(p%Vars%u, "PointLoad", LoadFields, &
+   call MV_AddMeshVar(InitOut%Vars%u, "PointLoad", LoadFields, &
                       DatLoc(BD_u_PointLoad), &
                       Mesh=u%PointLoad, &
                       Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! FieldForce
                                 MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! FieldMoment
 
-   call MV_AddMeshVar(p%Vars%u, "DistrLoad", LoadFields, &
+   call MV_AddMeshVar(InitOut%Vars%u, "DistrLoad", LoadFields, &
                       DatLoc(BD_u_DistrLoad), &
                       Flags=ior(VF_Line, VF_AeroMap), &
                       Mesh=u%DistrLoad, &
@@ -5976,17 +5965,17 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Output variables
    !----------------------------------------------------------------------------
 
-   call MV_AddMeshVar(p%Vars%y, 'Reaction force', LoadFields, DatLoc(BD_y_ReactionForce), Mesh=y%ReactionForce)
+   call MV_AddMeshVar(InitOut%Vars%y, 'Reaction force', LoadFields, DatLoc(BD_y_ReactionForce), Mesh=y%ReactionForce)
 
-   call MV_AddMeshVar(p%Vars%y, 'Blade motion', [FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel], &
+   call MV_AddMeshVar(InitOut%Vars%y, 'Blade motion', [FieldTransDisp, FieldOrientation, FieldTransVel, FieldAngularVel], &
                       DatLoc(BD_y_BldMotion), &
                       Flags=VF_AeroMap, &
                       Mesh=y%BldMotion)
-   call MV_AddMeshVar(p%Vars%y, 'Blade motion', [FieldTransAcc, FieldAngularAcc], DatLoc(BD_y_BldMotion), &
+   call MV_AddMeshVar(InitOut%Vars%y, 'Blade motion', [FieldTransAcc, FieldAngularAcc], DatLoc(BD_y_BldMotion), &
                       Mesh=y%BldMotion)
 
    do i = 1, p%NumOuts
-      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, FieldScalar, &
+      call MV_AddVar(InitOut%Vars%y, p%OutParam(i)%Name, FieldScalar, &
                      DatLoc(BD_y_WriteOutput), iAry=i, &
                      Flags=VF_WriteOut + OutParamFlags(p%OutParam(i)%Indx), &
                      LinNames=[trim(p%OutParam(i)%Name)//', '//trim(p%OutParam(i)%Units)], &
@@ -5995,7 +5984,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
 
    idx = p%NumOuts + 1
    do i = 1, p%BldNd_NumOuts
-      call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, FieldScalar, &
+      call MV_AddVar(InitOut%Vars%y, p%BldNd_OutParam(i)%Name, FieldScalar, &
                      DatLoc(BD_y_WriteOutput), iAry=idx, &
                      Num=size(p%BldNd_BlOutNd), &
                      Flags=VF_WriteOut + BldNd_OutParamFlags(p%BldNd_OutParam(i)%Name), &
@@ -6008,7 +5997,7 @@ subroutine BD_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
    ! Initialize Variables and Values
    !----------------------------------------------------------------------------
 
-   CALL MV_InitVarsJac(p%Vars, m%Jac, Linearize .or. p%CompAeroMaps, ErrStat2, ErrMsg2); if (Failed()) return
+   CALL MV_InitVarsJac(InitOut%Vars, m%Jac, Linearize .or. p%CompAeroMaps, ErrStat2, ErrMsg2); if (Failed()) return
 
    call BD_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call BD_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -6177,16 +6166,6 @@ SUBROUTINE BD_JacobianPInput(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat,
             dXdu(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%u(i)%Perturb)
          end do
       end do
-
-      ! If rotate states is enabled, modify Jacobian
-      if (p%RotStates) then
-         ! Calculate difference between input root orientation and root reference orientation
-         RotateStates = matmul(u%RootMotion%Orientation(:,:,1), OtherState%GlbRot)
-         do i=1,size(dXdu,1),3
-            dXdu(i:i+2, :) = matmul(RotateStates, dXdu(i:i+2, :))
-         end do
-      end if
-
    end if
 
    !----------------------------------------------------------------------------
@@ -6212,7 +6191,7 @@ END SUBROUTINE BD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, StateRotation)
+SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
 
    TYPE(ModVarsType),                    INTENT(IN   )      :: Vars               !< Module variables
    REAL(DbKi),                           INTENT(IN   )      :: t                  !< Time in seconds at operating point
@@ -6233,7 +6212,6 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) with respect to the continuous states (x)
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) with respect to the continuous states (x)
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dZdx(:,:)          !< Partial derivatives of constraint state functions (Z) with respect to the continuous states (x)
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: StateRotation(:,:) !< Matrix by which the states are optionally rotated
 
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_JacobianPContState'
    INTEGER(IntKi)                :: ErrStat2
@@ -6249,24 +6227,6 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
    ! Copy state values
    call BD_CopyContState(x, m%x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
    call BD_VarsPackContState(Vars, x, m%Jac%x)
-   
-   ! If rotate states is enabled
-   if (p%RotStates) then
-      ! Calculate difference between input root orientation and root reference orientation
-      RotateStates = matmul(u%RootMotion%Orientation(:,:,1), OtherState%GlbRot)
-      RotateStatesTranspose = transpose( RotateStates )
-
-      if (present(StateRotation)) then
-         if (.not. allocated(StateRotation)) then
-            call AllocAry(StateRotation, 3, 3, 'StateRotation', ErrStat2, ErrMsg2); if (Failed()) return
-         end if
-         StateRotation = RotateStates
-      end if
-   else
-      if (present(StateRotation)) then
-         if (allocated(StateRotation)) deallocate(StateRotation)
-      end if
-   end if
 
    !----------------------------------------------------------------------------
 
@@ -6312,14 +6272,6 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
             call MV_ComputeCentralDiff(Vars%y, Vars%x(i)%Perturb, m%Jac%y_pos, m%Jac%y_neg, dYdx(:,col))
          end do
       end do
-            
-      ! If rotate state is enabled, modify Jacobian
-      if (p%RotStates) then
-         do i = 1, size(dYdx,2), 3
-            dYdx(:, i:i+2) = matmul( dYdx(:, i:i+2), RotateStatesTranspose)
-         end do
-      end if
-
    end if
 
    !----------------------------------------------------------------------------
@@ -6357,17 +6309,6 @@ SUBROUTINE BD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
             dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
          end do
       end do
-
-      ! If rotate state is enabled, modify Jacobian
-      if (p%RotStates) then
-         do i=1,size(dXdx,1),3
-            dXdx(i:i+2,:) = matmul(RotateStates, dXdx(i:i+2,:))
-         end do
-         do i=1,size(dXdx,2),3
-            dXdx(:, i:i+2) = matmul(dXdx(:, i:i+2), RotateStatesTranspose)
-         end do
-      end if
-
    end if
 
    !----------------------------------------------------------------------------

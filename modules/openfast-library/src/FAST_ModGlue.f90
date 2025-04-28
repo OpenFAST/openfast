@@ -31,14 +31,20 @@ use FAST_Mapping
 implicit none
 
 private
-public :: ModGlue_Init
-public :: ModGlue_Linearize_OP, ModGlue_CalcSteady
-public :: ModGlue_SaveOperatingPoint, ModGlue_RestoreOperatingPoint
-public :: CalcWriteLinearMatrices, Glue_CombineModules
+
+public :: ModGlue_Init, &
+          ModGlue_Linearize_OP, &
+          ModGlue_CalcSteady, &
+          ModGlue_SaveOperatingPoint, &
+          ModGlue_RestoreOperatingPoint, &
+          ModGlue_CalcWriteLinearMatrices, &
+          ModGlue_CombineModules
+
+logical :: CalcSteadyDebug = .false.
 
 contains
 
-subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilter, Linearize, ErrStat, ErrMsg, Name)
+subroutine ModGlue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilter, Linearize, ErrStat, ErrMsg, Name)
    type(ModGlueType), intent(out)      :: ModGlue
    type(ModDataType), intent(in)       :: ModDataAry(:)
    integer(IntKi), intent(in)          :: iModAry(:)
@@ -49,14 +55,14 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
    character(ErrMsgLen), intent(out)   :: ErrMsg
    character(*), optional, intent(in)  :: Name
 
-   character(*), parameter             :: RoutineName = 'Glue_CombineModules'
+   character(*), parameter             :: RoutineName = 'ModGlue_CombineModules'
    integer(IntKi)                      :: ErrStat2
    character(ErrMsgLen)                :: ErrMsg2
    integer(IntKi)                      :: iGbl(2)
    integer(IntKi)                      :: i, j, k
    integer(IntKi)                      :: iMod, iVarGlue
-   integer(IntKi)                      :: xNumVals, zNumVals, uNumVals, yNumVals
-   integer(IntKi)                      :: xNumVars, zNumVars, uNumVars, yNumVars
+   integer(IntKi)                      :: xNumVals, uNumVals, yNumVals
+   integer(IntKi)                      :: xNumVars, uNumVars, yNumVars
    integer(IntKi)                      :: ix, iz, iu, iy
    character(20)                       :: NamePrefix
    type(VarMapType)                    :: ModMap
@@ -91,8 +97,8 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
    !----------------------------------------------------------------------------
 
    ! Initialize number of variables and values in each group
-   xNumVars = 0; zNumVars = 0; uNumVars = 0; yNumVars = 0
-   xNumVals = 0; zNumVals = 0; uNumVals = 0; yNumVals = 0
+   xNumVars = 0; uNumVars = 0; yNumVars = 0
+   xNumVals = 0; uNumVals = 0; yNumVals = 0
 
    ! Loop through each module and sum the number of variables that will be in
    ! the combined module
@@ -112,11 +118,6 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
          GlueModData%Vars%Nx = ModData%Vars%Nx ! Same as original module
          xNumVars = xNumVars + size(GlueModData%Vars%x)
 
-         ! Constraint state
-         call CopyVariables(ModData%Vars%z, GlueModData%Vars%z, zNumVals); if (Failed()) return
-         GlueModData%Vars%Nz = ModData%Vars%Nz ! Same as original module
-         zNumVars = zNumVars + size(GlueModData%Vars%z)
-
          ! Input
          call CopyVariables(ModData%Vars%u, GlueModData%Vars%u, uNumVals); if (Failed()) return
          GlueModData%Vars%Nu = ModData%Vars%Nu ! Same as original module
@@ -132,13 +133,11 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
 
    ! Set total number of values in glue module
    ModGlue%Vars%Nx = xNumVals
-   ModGlue%Vars%Nz = zNumVals
    ModGlue%Vars%Nu = uNumVals
    ModGlue%Vars%Ny = yNumVals
 
    ! Allocate arrays for to hold combined variables
    allocate (ModGlue%Vars%x(xNumVars), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%x")) return
-   allocate (ModGlue%Vars%z(zNumVars), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%z")) return
    allocate (ModGlue%Vars%u(uNumVars), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%u")) return
    allocate (ModGlue%Vars%y(yNumVars), stat=ErrStat2); if (FailedAlloc("ModOut%Vars%y")) return
 
@@ -164,15 +163,6 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
             ModGlue%Vars%x(ix)%iLoc = ModGlue%Vars%x(ix)%iGlu  ! Set local indices to glue indices
             ModGlue%Vars%x(ix)%iGlu = 0                        ! Set glue indices to 0
             call AddLinNamePrefix(ModGlue%Vars%x(ix), NamePrefix)
-         end do
-
-         ! Constraint state
-         do j = 1, size(GlueModData%Vars%z)
-            iz = iz + 1
-            ModGlue%Vars%z(iz) = GlueModData%Vars%z(j)
-            ModGlue%Vars%z(iz)%iLoc = ModGlue%Vars%z(iz)%iGlu  ! Set local indices to glue indices
-            ModGlue%Vars%z(iz)%iGlu = 0                        ! Set glue indices to 0
-            call AddLinNamePrefix(ModGlue%Vars%z(iz), NamePrefix)
          end do
 
          ! Input
@@ -310,10 +300,6 @@ subroutine Glue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFilte
       call AllocAry(ModGlue%Lin%dx, ModGlue%Vars%Nx, "dx", ErrStat2, ErrMsg2)
       if (Failed()) return
    end if
-   if (ModGlue%Vars%Nz > 0) then
-      call AllocAry(ModGlue%Lin%z, ModGlue%Vars%Nz, "z", ErrStat2, ErrMsg2)
-      if (Failed()) return
-   end if
    if (ModGlue%Vars%Nu > 0) then
       call AllocAry(ModGlue%Lin%u, ModGlue%Vars%Nu, "u", ErrStat2, ErrMsg2)
       if (Failed()) return
@@ -422,12 +408,12 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function
 
-   logical function FailedAlloc(name)
-      character(*), intent(in)   :: name
+   logical function FailedAlloc(NameLoc)
+      character(*), intent(in)   :: NameLoc
       if (ErrStat2 == 0) then
          FailedAlloc = .false.
       else
-         call SetErrStat(ErrID_Fatal, "Failed to allocate "//name, ErrStat, ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, "Failed to allocate "//NameLoc, ErrStat, ErrMsg, RoutineName)
          FailedAlloc = .true.
       end if
    end function
@@ -550,7 +536,7 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
 
    LinFlags = VF_Linearize + VF_Mapping
    ! LinFlags = VF_None
-   call Glue_CombineModules(m%ModGlue, m%ModData, m%Mappings, p%Lin%iMod, LinFlags, &
+   call ModGlue_CombineModules(m%ModGlue, m%ModData, m%Mappings, p%Lin%iMod, LinFlags, &
                             p_FAST%Linearize, ErrStat2, ErrMsg2, Name="Lin")
    if (Failed()) return
 
@@ -577,7 +563,6 @@ subroutine ModGlue_Init(p, m, y, p_FAST, m_FAST, Turbine, ErrStat, ErrMsg)
 
       ! Initialize arrays to store operating point states and input
       call AllocAry(y%Lin%x, m%ModGlue%Vars%Nx, p%Lin%NumTimes, "Lin%x", ErrStat2, ErrMsg2); if (Failed()) return
-      call AllocAry(y%Lin%z, m%ModGlue%Vars%Nz, p%Lin%NumTimes, "Lin%z", ErrStat2, ErrMsg2); if (Failed()) return
       call AllocAry(y%Lin%u, m%ModGlue%Vars%Nu, p%Lin%NumTimes, "Lin%u", ErrStat2, ErrMsg2); if (Failed()) return
 
    end if
@@ -765,6 +750,9 @@ subroutine ModGlue_CalcSteady(n_t_global, t_global, p, m, y, p_FAST, m_FAST, T, 
          ! azimuth from the previous rotation
          error = CalcOutputErrorAtAzimuth()
 
+         ! Sae error for output
+         T%y_FAST%DriverWriteOutput(4) = real(error, ReKi)
+
          ! Update converged flag based on error and tolerance
          m%CS%IsConverged = (error < p_FAST%TrimTol)
 
@@ -840,13 +828,16 @@ contains
 
    function CalcOutputErrorAtAzimuth() result(eps_squared)
       real(R8Ki)  :: eps_squared_sum, eps_squared
+      integer(IntKi) :: un, k
+
+
 
       ! Calculate difference between interpolated outputs for this rotation and
       ! interpolated outputs from previous rotation
       call MV_ComputeDiff(m%ModGlue%Vars%y, m%CS%y_interp, m%CS%y_azimuth(:, m%Lin%AzimuthIndex), m%CS%y_diff)
 
       ! Initialize epsilon squared sum
-      eps_squared_sum = 0
+      eps_squared_sum = 0.0_R8Ki
 
       ! Loop through glue output variables
       do i = 1, size(m%ModGlue%Vars%y)
@@ -868,6 +859,32 @@ contains
 
       ! Normalize error by number of outputs
       eps_squared = eps_squared_sum/m%CS%NumOutputs
+
+      ! If debug output requested
+      if (CalcSteadyDebug) then
+
+         call OpenFOutFile(un, "CSDiff-"//trim(Num2LStr(m%CS%NumRotations))//"-"//trim(Num2LStr(m%Lin%AzimuthIndex))//".csv", ErrStat2, ErrMsg2)
+         write (un, *) "name;interp;azimuth;diff;ref;err"
+
+         ! Loop through glue output variables
+         do i = 1, size(m%ModGlue%Vars%y)
+            associate (Var => m%ModGlue%Vars%y(i))
+
+               ! Skip write outputs
+               if (MV_HasFlagsAll(Var, VF_WriteOut)) cycle
+
+               ! Loop through values in variable
+               k = 1
+               do j = Var%iLoc(1), Var%iLoc(2)
+                  write (un, *) trim(Var%LinNames(k)), ";", m%CS%y_interp(j), ";", m%CS%y_azimuth(j, m%Lin%AzimuthIndex), ";", &
+                     m%CS%y_diff(j), ";", m%CS%y_ref(j), ";", (m%CS%y_diff(j)/m%CS%y_ref(j))**2
+                  k = k + 1
+               end do
+            end associate
+         end do
+
+         close (un)
+      end if
    end function
 
    logical function Failed()
@@ -976,7 +993,7 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
 
          ! If requested, write the module linearization matrices was requested
          if (p_FAST%LinOutMod) then
-            call CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, p_FAST, y_FAST, t_global, Un, &
+            call ModGlue_CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, p_FAST, y_FAST, t_global, Un, &
                                          LinRootName, VF_Linearize, ErrStat2, ErrMsg2, ModSuffix=ModData%Abbr)
             if (Failed()) return
          end if
@@ -986,7 +1003,6 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
 
    ! Copy arrays into linearization operating points
    if (allocated(m%ModGlue%Lin%x)) y%Lin%x(:, m%Lin%TimeIndex) = m%ModGlue%Lin%x
-   if (allocated(m%ModGlue%Lin%z)) y%Lin%z(:, m%Lin%TimeIndex) = m%ModGlue%Lin%z
    if (allocated(m%ModGlue%Lin%u)) y%Lin%u(:, m%Lin%TimeIndex) = m%ModGlue%Lin%u
 
    ! Linearize mesh mappings to populate dUdy and dUdu
@@ -994,7 +1010,7 @@ subroutine ModGlue_Linearize_OP(p, m, y, p_FAST, m_FAST, y_FAST, t_global, Turbi
    if (Failed()) return
 
    ! Write glue code matrices to file
-   call CalcWriteLinearMatrices(m%ModGlue%Vars, m%ModGlue%Lin, p_FAST, y_FAST, t_global, Un, LinRootName, VF_Linearize, ErrStat2, ErrMsg2)
+   call ModGlue_CalcWriteLinearMatrices(m%ModGlue%Vars, m%ModGlue%Lin, p_FAST, y_FAST, t_global, Un, LinRootName, VF_Linearize, ErrStat2, ErrMsg2)
    if (Failed()) return
 
    ! Update index for next linearization time
@@ -1305,7 +1321,7 @@ subroutine Postcondition(uVars, dUdu, dUdy, JacScaleFactor)
 
 end subroutine
 
-subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinRootName, FilterFlag, ErrStat, ErrMsg, ModSuffix, CalcGlue, FullOutput)
+subroutine ModGlue_CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinRootName, FilterFlag, ErrStat, ErrMsg, ModSuffix, CalcGlue, FullOutput)
    type(ModVarsType), intent(in)             :: Vars           !< Variable data
    type(ModLinType), intent(inout)           :: Lin            !< Linearization data
    type(FAST_ParameterType), intent(in)      :: p_FAST         !< Parameters
@@ -1326,7 +1342,7 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    character(32)                    :: Desc
    character(1024)                  :: OutFileName
    integer(IntKi)                   :: i
-   integer(IntKi)                   :: Nx, Nxd, Nz, Nu, Ny
+   integer(IntKi)                   :: Nx, Nu, Ny
    character(50)                    :: Fmt
    logical, allocatable             :: uUse(:), yUse(:), xUse(:)
    logical                          :: CalcGlueLoc, FullOutputLoc
@@ -1357,8 +1373,6 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
 
    ! Calculate number of values in variable after applying filter
    Nx = MV_NumVals(Vars%x, FilterFlag)
-   Nxd = 0
-   Nz = MV_NumVals(Vars%z, FilterFlag)
    Nu = MV_NumVals(Vars%u, FilterFlag)
    Ny = MV_NumVals(Vars%y, FilterFlag)
 
@@ -1380,8 +1394,8 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
 
    fmt = '(3x,A,1x,I5)'
    Desc = 'Number of continuous states: '; write (Un, fmt) Desc, Nx
-   Desc = 'Number of discrete states:   '; write (Un, fmt) Desc, Nxd
-   Desc = 'Number of constraint states: '; write (Un, fmt) Desc, Nz
+   Desc = 'Number of discrete states:   '; write (Un, fmt) Desc, 0
+   Desc = 'Number of constraint states: '; write (Un, fmt) Desc, 0
    Desc = 'Number of inputs:            '; write (Un, fmt) Desc, Nu
    Desc = 'Number of outputs:           '; write (Un, fmt) Desc, Ny
 
@@ -1403,11 +1417,6 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    if (Nx > 0 .and. allocated(Lin%dx)) then
       write (Un, '(A)') 'Order of continuous state derivatives:'
       call WrLinFile_txt_Table(Vars%x, FilterFlag, p_FAST, Un, "Row/Column", Lin%dx, IsDeriv=.true.)
-   end if
-
-   if (Nz > 0 .and. allocated(Lin%z)) then
-      write (Un, '(A)') 'Order of constraint states:'
-      call WrLinFile_txt_Table(Vars%z, FilterFlag, p_FAST, Un, "Row/Column", Lin%z)
    end if
 
    if (Nu > 0 .and. allocated(Lin%u)) then
@@ -1476,7 +1485,6 @@ subroutine CalcWriteLinearMatrices(Vars, Lin, p_FAST, y_FAST, t_global, Un, LinR
    if (allocated(Lin%dXdu)) call WrPartialMatrix(Lin%dXdu, Un, p_FAST%OutFmt, 'B', UseRow=xUse, UseCol=uUse)
    if (allocated(Lin%dYdx)) call WrPartialMatrix(Lin%dYdx, Un, p_FAST%OutFmt, 'C', UseRow=yUse, UseCol=xUse)
    if (allocated(Lin%dYdu)) call WrPartialMatrix(Lin%dYdu, Un, p_FAST%OutFmt, 'D', UseRow=yUse, UseCol=uUse)
-   if (allocated(Lin%StateRotation)) call WrPartialMatrix(Lin%StateRotation, Un, p_FAST%OutFmt, 'StateRotation')
 
    ! Close file
    close (Un)
@@ -1487,7 +1495,7 @@ contains
       Failed = ErrStat >= AbortErrLev
       if (Failed) close (Un)
    end function Failed
-end subroutine CalcWriteLinearMatrices
+end subroutine ModGlue_CalcWriteLinearMatrices
 
 subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDeriv, ShowRot)
 
@@ -1509,7 +1517,7 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
    character(100)                :: Fmt, FmtStr, FmtRot
    character(25)                 :: DerivStr, DerivUnitStr
    logical                       :: ShowRotLoc
-   real(R8Ki)                    :: DCM(3, 3), wm(3)
+   real(R8Ki)                    :: DCM(3, 3), rv(3)
    integer(IntKi)                :: i, j, RowColIdx
 
    ShowRotLoc = .false.
@@ -1590,18 +1598,18 @@ subroutine WrLinFile_txt_Table(VarAry, FlagFilter, p_FAST, Un, RowCol, op, IsDer
 
                write (Un, Fmt) RowColIdx, op(i_op), VarRotFrame, VarDerivOrder, trim(DerivStr)//' '//trim(Var%LinNames(j))//trim(DerivUnitStr)
 
-            else if (MV_HasFlagsAll(Var, VF_WM_Rot)) then ! BeamDyn Wiener-Milenkovic orientation
+            else if (MV_HasFlagsAll(Var, VF_WM_Rot)) then ! BeamDyn state orientation
 
                ! Skip writing if not the first value in orientation (3 values)
                if (mod(j - 1, 3) /= 0) cycle
 
-               ! Convert from quaternion in operating point to BeamDyn WM parameter
-               wm = -quat_to_wm(op(i_op:i_op + 2))
+               ! Convert from quaternion to rotation vector
+               rv = quat_to_rvec(op(i_op:i_op + 2))
 
                ! Write all components of WM parameters
-               write (Un, Fmt) RowColIdx, wm(1), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j))
-               write (Un, Fmt) RowColIdx, wm(2), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j))
-               write (Un, Fmt) RowColIdx, wm(3), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j))
+               write (Un, Fmt) RowColIdx, rv(1), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 0))
+               write (Un, Fmt) RowColIdx, rv(2), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 1))
+               write (Un, Fmt) RowColIdx, rv(3), VarRotFrame, VarDerivOrder, trim(Var%LinNames(j + 2))
 
             else
 

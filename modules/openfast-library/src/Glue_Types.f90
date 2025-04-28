@@ -220,12 +220,14 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UJacIterRemain = 0      !< Number of convergence iterations until Jacobian update [-]
     INTEGER(IntKi)  :: UJacStepsRemain = 0      !< Number of time steps until Jacobian update [-]
     LOGICAL  :: ConvWarn = .false.      !< Flag to warn about convergence failure [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: XB_IO      !<  [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac_IO      !<  [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: IO_R      !< Input Solve residual (RHS) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: IO_X      !< Input Solve delta input [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: IO_Jac      !< Input Solve jacobian [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J11      !< Jacobian upper left quadrant [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J12      !< Jacobian upper right quadrant [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J21      !< Jacobian lower left quadrant [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: J22      !< Jacobian lower right quadrant [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Tan      !< State tangent matrix [-]
   END TYPE Glue_TCMisc
 ! =======================
 ! =========  Glue_LinMisc  =======
@@ -235,11 +237,17 @@ IMPLICIT NONE
     LOGICAL  :: IsConverged = .false.      !<  [-]
   END TYPE Glue_LinMisc
 ! =======================
+! =========  Glue_External  =======
+  TYPE, PUBLIC :: Glue_External
+    TYPE(MeshType)  :: SubstructureLoadsFF      !< Externally applied substructure loads from FAST.Farm [-]
+  END TYPE Glue_External
+! =======================
 ! =========  Glue_MiscVarType  =======
   TYPE, PUBLIC :: Glue_MiscVarType
     TYPE(ModDataType) , DIMENSION(:), ALLOCATABLE  :: ModData      !< Module variable and value data [-]
     TYPE(MappingType) , DIMENSION(:), ALLOCATABLE  :: Mappings      !< Module mapping [-]
     TYPE(ModGlueType)  :: ModGlue      !< Glue code module [-]
+    TYPE(Glue_External)  :: Ext      !< External data (ie. FAST.Farm) [-]
     TYPE(Glue_LinMisc)  :: Lin      !< Linearization misc vars [-]
     TYPE(Glue_CalcSteady)  :: CS      !< CalcSteady calculation data [-]
     TYPE(Glue_AeroMap)  :: AM      !< AeroMap data [-]
@@ -1896,29 +1904,41 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
    DstTCMiscData%UJacIterRemain = SrcTCMiscData%UJacIterRemain
    DstTCMiscData%UJacStepsRemain = SrcTCMiscData%UJacStepsRemain
    DstTCMiscData%ConvWarn = SrcTCMiscData%ConvWarn
-   if (allocated(SrcTCMiscData%XB_IO)) then
-      LB(1:2) = lbound(SrcTCMiscData%XB_IO)
-      UB(1:2) = ubound(SrcTCMiscData%XB_IO)
-      if (.not. allocated(DstTCMiscData%XB_IO)) then
-         allocate(DstTCMiscData%XB_IO(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcTCMiscData%IO_R)) then
+      LB(1:1) = lbound(SrcTCMiscData%IO_R)
+      UB(1:1) = ubound(SrcTCMiscData%IO_R)
+      if (.not. allocated(DstTCMiscData%IO_R)) then
+         allocate(DstTCMiscData%IO_R(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%XB_IO.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%IO_R.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstTCMiscData%XB_IO = SrcTCMiscData%XB_IO
+      DstTCMiscData%IO_R = SrcTCMiscData%IO_R
    end if
-   if (allocated(SrcTCMiscData%Jac_IO)) then
-      LB(1:2) = lbound(SrcTCMiscData%Jac_IO)
-      UB(1:2) = ubound(SrcTCMiscData%Jac_IO)
-      if (.not. allocated(DstTCMiscData%Jac_IO)) then
-         allocate(DstTCMiscData%Jac_IO(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcTCMiscData%IO_X)) then
+      LB(1:2) = lbound(SrcTCMiscData%IO_X)
+      UB(1:2) = ubound(SrcTCMiscData%IO_X)
+      if (.not. allocated(DstTCMiscData%IO_X)) then
+         allocate(DstTCMiscData%IO_X(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%Jac_IO.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%IO_X.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstTCMiscData%Jac_IO = SrcTCMiscData%Jac_IO
+      DstTCMiscData%IO_X = SrcTCMiscData%IO_X
+   end if
+   if (allocated(SrcTCMiscData%IO_Jac)) then
+      LB(1:2) = lbound(SrcTCMiscData%IO_Jac)
+      UB(1:2) = ubound(SrcTCMiscData%IO_Jac)
+      if (.not. allocated(DstTCMiscData%IO_Jac)) then
+         allocate(DstTCMiscData%IO_Jac(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%IO_Jac.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%IO_Jac = SrcTCMiscData%IO_Jac
    end if
    if (allocated(SrcTCMiscData%J11)) then
       LB(1:2) = lbound(SrcTCMiscData%J11)
@@ -1968,6 +1988,18 @@ subroutine Glue_CopyTCMisc(SrcTCMiscData, DstTCMiscData, CtrlCode, ErrStat, ErrM
       end if
       DstTCMiscData%J22 = SrcTCMiscData%J22
    end if
+   if (allocated(SrcTCMiscData%Tan)) then
+      LB(1:2) = lbound(SrcTCMiscData%Tan)
+      UB(1:2) = ubound(SrcTCMiscData%Tan)
+      if (.not. allocated(DstTCMiscData%Tan)) then
+         allocate(DstTCMiscData%Tan(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTCMiscData%Tan.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTCMiscData%Tan = SrcTCMiscData%Tan
+   end if
 end subroutine
 
 subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
@@ -1994,11 +2026,14 @@ subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
    if (allocated(TCMiscData%IPIV)) then
       deallocate(TCMiscData%IPIV)
    end if
-   if (allocated(TCMiscData%XB_IO)) then
-      deallocate(TCMiscData%XB_IO)
+   if (allocated(TCMiscData%IO_R)) then
+      deallocate(TCMiscData%IO_R)
    end if
-   if (allocated(TCMiscData%Jac_IO)) then
-      deallocate(TCMiscData%Jac_IO)
+   if (allocated(TCMiscData%IO_X)) then
+      deallocate(TCMiscData%IO_X)
+   end if
+   if (allocated(TCMiscData%IO_Jac)) then
+      deallocate(TCMiscData%IO_Jac)
    end if
    if (allocated(TCMiscData%J11)) then
       deallocate(TCMiscData%J11)
@@ -2011,6 +2046,9 @@ subroutine Glue_DestroyTCMisc(TCMiscData, ErrStat, ErrMsg)
    end if
    if (allocated(TCMiscData%J22)) then
       deallocate(TCMiscData%J22)
+   end if
+   if (allocated(TCMiscData%Tan)) then
+      deallocate(TCMiscData%Tan)
    end if
 end subroutine
 
@@ -2029,12 +2067,14 @@ subroutine Glue_PackTCMisc(RF, Indata)
    call RegPack(RF, InData%UJacIterRemain)
    call RegPack(RF, InData%UJacStepsRemain)
    call RegPack(RF, InData%ConvWarn)
-   call RegPackAlloc(RF, InData%XB_IO)
-   call RegPackAlloc(RF, InData%Jac_IO)
+   call RegPackAlloc(RF, InData%IO_R)
+   call RegPackAlloc(RF, InData%IO_X)
+   call RegPackAlloc(RF, InData%IO_Jac)
    call RegPackAlloc(RF, InData%J11)
    call RegPackAlloc(RF, InData%J12)
    call RegPackAlloc(RF, InData%J21)
    call RegPackAlloc(RF, InData%J22)
+   call RegPackAlloc(RF, InData%Tan)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2056,12 +2096,14 @@ subroutine Glue_UnPackTCMisc(RF, OutData)
    call RegUnpack(RF, OutData%UJacIterRemain); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UJacStepsRemain); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvWarn); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%XB_IO); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_IO); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IO_R); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IO_X); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%IO_Jac); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J11); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J12); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J21); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%J22); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Tan); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine Glue_CopyLinMisc(SrcLinMiscData, DstLinMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -2106,6 +2148,52 @@ subroutine Glue_UnPackLinMisc(RF, OutData)
    call RegUnpack(RF, OutData%TimeIndex); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AzimuthIndex); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IsConverged); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_CopyExternal(SrcExternalData, DstExternalData, CtrlCode, ErrStat, ErrMsg)
+   type(Glue_External), intent(inout) :: SrcExternalData
+   type(Glue_External), intent(inout) :: DstExternalData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Glue_CopyExternal'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call MeshCopy(SrcExternalData%SubstructureLoadsFF, DstExternalData%SubstructureLoadsFF, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine Glue_DestroyExternal(ExternalData, ErrStat, ErrMsg)
+   type(Glue_External), intent(inout) :: ExternalData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Glue_DestroyExternal'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call MeshDestroy( ExternalData%SubstructureLoadsFF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine Glue_PackExternal(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(Glue_External), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Glue_PackExternal'
+   if (RF%ErrStat >= AbortErrLev) return
+   call MeshPack(RF, InData%SubstructureLoadsFF) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine Glue_UnPackExternal(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(Glue_External), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Glue_UnPackExternal'
+   if (RF%ErrStat /= ErrID_None) return
+   call MeshUnpack(RF, OutData%SubstructureLoadsFF) ! SubstructureLoadsFF 
 end subroutine
 
 subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
@@ -2156,6 +2244,9 @@ subroutine Glue_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call Glue_CopyModGlueType(SrcMiscData%ModGlue, DstMiscData%ModGlue, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call Glue_CopyExternal(SrcMiscData%Ext, DstMiscData%Ext, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    call Glue_CopyLinMisc(SrcMiscData%Lin, DstMiscData%Lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -2201,6 +2292,8 @@ subroutine Glue_DestroyMisc(MiscData, ErrStat, ErrMsg)
    end if
    call Glue_DestroyModGlueType(MiscData%ModGlue, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Glue_DestroyExternal(MiscData%Ext, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Glue_DestroyLinMisc(MiscData%Lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Glue_DestroyCalcSteady(MiscData%CS, ErrStat2, ErrMsg2)
@@ -2237,6 +2330,7 @@ subroutine Glue_PackMisc(RF, Indata)
       end do
    end if
    call Glue_PackModGlueType(RF, InData%ModGlue) 
+   call Glue_PackExternal(RF, InData%Ext) 
    call Glue_PackLinMisc(RF, InData%Lin) 
    call Glue_PackCalcSteady(RF, InData%CS) 
    call Glue_PackAeroMap(RF, InData%AM) 
@@ -2280,6 +2374,7 @@ subroutine Glue_UnPackMisc(RF, OutData)
       end do
    end if
    call Glue_UnpackModGlueType(RF, OutData%ModGlue) ! ModGlue 
+   call Glue_UnpackExternal(RF, OutData%Ext) ! Ext 
    call Glue_UnpackLinMisc(RF, OutData%Lin) ! Lin 
    call Glue_UnpackCalcSteady(RF, OutData%CS) ! CS 
    call Glue_UnpackAeroMap(RF, OutData%AM) ! AM 

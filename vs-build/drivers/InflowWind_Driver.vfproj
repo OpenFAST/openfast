@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Console Application" Version="11.0" ProjectIdGuid="{D9220A21-8C69-42E4-B085-E5D996B867D9}">
+	<Platforms>
+		<Platform Name="x64"/>
+	</Platforms>
+	<Configurations>
+		<Configuration Name="Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration Name="Debug_Double|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" RealKIND="realKIND8" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration Name="Debug_Matlab|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" MultiProcessorCompilation="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" WarnInterfaces="true" FloatingPointExceptionHandling="fpe0" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration Name="Release|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration Name="Release_Double|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" RealKIND="realKIND8" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration Name="Release_Matlab|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration Name="Release_OpenMP|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" OpenMP="OpenMPParallelCode" EnableOpenMPSupport="OpenMPParallelCodeIFX" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+		<Configuration Name="Release_Double_OpenMP|x64" UseCompiler="ifxCompiler" OutputDirectory="..\..\build\bin" IntermediateDirectory="..\..\build\$(Configuration)_$(Platform)\$(ProjectName)\">
+			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" MultiProcessorCompilation="true" Preprocess="preprocessYes" OpenMP="OpenMPParallelCode" EnableOpenMPSupport="OpenMPParallelCodeIFX" RealKIND="realKIND8" UseMkl="mklSequential"/>
+			<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999"/>
+			<Tool Name="VFResourceCompilerTool"/>
+			<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+			<Tool Name="VFCustomBuildTool"/>
+			<Tool Name="VFPreLinkEventTool"/>
+			<Tool Name="VFPreBuildEventTool"/>
+			<Tool Name="VFPostBuildEventTool"/>
+			<Tool Name="VFManifestTool" SuppressStartupBanner="true"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+		<Filter Name="Registry Files" Filter="txt">
+			<File RelativePath="..\..\modules\inflowwind\src\InflowWind_Driver_Registry.txt">
+			<FileConfiguration Name="Debug|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Name="VFCustomBuildTool" Outputs="..\..\modules\seastate\src\InflowWind_Driver_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Name="VFCustomBuildTool" Outputs="..\..\modules\seastate\src\InflowWind_Driver_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Debug_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Name="VFCustomBuildTool" Outputs="..\..\modules\seastate\src\InflowWind_Driver_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Name="VFCustomBuildTool" Outputs="..\..\modules\seastate\src\InflowWind_Driver_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Name="VFCustomBuildTool" Outputs="..\..\modules\seastate\src\InflowWind_Driver_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Matlab|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Name="VFCustomBuildTool" Outputs="..\..\modules\seastate\src\InflowWind_Driver_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Name="VFCustomBuildTool" Outputs="..\..\modules\seastate\src\InflowWind_Driver_Types.f90"/>
+				</FileConfiguration>
+				<FileConfiguration Name="Release_Double_OpenMP|x64">
+					<Tool CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Name="VFCustomBuildTool" Outputs="..\..\modules\seastate\src\InflowWind_Driver_Types.f90"/>
+				</FileConfiguration>
+			</File>
+		</Filter>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+			<File RelativePath="..\..\modules\inflowwind\src\InflowWind_Driver.f90"/>
+			<File RelativePath="..\..\modules\inflowwind\src\InflowWind_Driver_Subs.f90"/>
+			<File RelativePath="..\..\modules\inflowwind\src\InflowWind_Driver_Types.f90"/>
+		</Filter>
+	</Files>
+	<Globals/>
+</VisualStudioProject>

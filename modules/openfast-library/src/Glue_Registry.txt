@@ -177,20 +177,25 @@ typedef ^ ^                     IntKi           IterTotal               -  0  - 
 typedef ^ ^                     IntKi           UJacIterRemain          -  0  -     "Number of convergence iterations until Jacobian update" -
 typedef ^ ^                     IntKi           UJacStepsRemain         -  0  -     "Number of time steps until Jacobian update" -
 typedef ^ ^                     logical         ConvWarn                -  -  -     "Flag to warn about convergence failure" -
-typedef ^ ^                     R8Ki            XB_IO                   :: -  -     "" -
-typedef ^ ^                     R8Ki            Jac_IO                  :: -  -     "" -
+typedef ^ ^                     R8Ki            IO_R                    :  -  -     "Input Solve residual (RHS)" -
+typedef ^ ^                     R8Ki            IO_X                    :: -  -     "Input Solve delta input" -
+typedef ^ ^                     R8Ki            IO_Jac                  :: -  -     "Input Solve jacobian" -
 typedef ^ ^                     R8Ki            J11                     :: -  -     "Jacobian upper left quadrant" -
 typedef ^ ^                     R8Ki            J12                     :: -  -     "Jacobian upper right quadrant" -
 typedef ^ ^                     R8Ki            J21                     :: -  -     "Jacobian lower left quadrant" -
 typedef ^ ^                     R8Ki            J22                     :: -  -     "Jacobian lower right quadrant" -
+typedef ^ ^                     R8Ki            Tan                     :: -  -     "State tangent matrix" -
 
 typedef ^ Glue_LinMisc          IntKi           TimeIndex               -  -  -     "" -
 typedef ^ ^                     IntKi           AzimuthIndex            -  -  -     "" -
 typedef ^ ^                     logical         IsConverged             -  -  -     "" -
 
+typedef ^ Glue_External         MeshType        SubstructureLoadsFF     -  -  -     "Externally applied substructure loads from FAST.Farm" -
+
 typedef ^ Glue_MiscVarType      ModDataType     ModData                 :  -  -     "Module variable and value data" -
 typedef ^ ^                     MappingType     Mappings                :  -  -     "Module mapping" -
 typedef ^ ^                     ModGlueType     ModGlue                 -  -  -     "Glue code module" -
+typedef ^ ^                     Glue_External   Ext                     -  -  -     "External data (ie. FAST.Farm)" -
 typedef ^ ^                     Glue_LinMisc    Lin                     -  -  -     "Linearization misc vars"
 typedef ^ ^                     Glue_CalcSteady CS                      -  -  -     "CalcSteady calculation data"
 typedef ^ ^                     Glue_AeroMap    AM                      -  -  -     "AeroMap data"

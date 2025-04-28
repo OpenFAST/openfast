@@ -170,20 +170,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  RotInitOutputType  =======
   TYPE, PUBLIC :: RotInitOutputType
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
     REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density [kg/m^3]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(AD_BladeShape) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< airfoil coordinates for each blade [m]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_x      !< Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue) [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     TYPE(AD_BladePropsType) , DIMENSION(:), ALLOCATABLE  :: BladeProps      !< blade property information from blade input files [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrElev      !< Elevation at tower node [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrDiam      !< Diameter of tower at node [m]
   END TYPE RotInitOutputType
@@ -356,7 +348,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  RotParameterType  =======
   TYPE, PUBLIC :: RotParameterType
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
     INTEGER(IntKi)  :: NumBlNds = 0_IntKi      !< Number of nodes on each blade [-]
     INTEGER(IntKi)  :: NumTwrNds = 0_IntKi      !< Number of nodes on the tower [-]
@@ -588,21 +579,19 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: AD_x_BEMT_DBEMT_element_vind_1   =   3 ! AD%BEMT%DBEMT%element(DL%i1, DL%i2)%vind_1
    integer(IntKi), public, parameter :: AD_x_BEMT_V_w                    =   4 ! AD%BEMT%V_w
    integer(IntKi), public, parameter :: AD_x_AA_DummyContState           =   5 ! AD%AA%DummyContState
-   integer(IntKi), public, parameter :: AD_z_BEMT_phi                    =   6 ! AD%BEMT%phi
-   integer(IntKi), public, parameter :: AD_z_AA_DummyConstrState         =   7 ! AD%AA%DummyConstrState
-   integer(IntKi), public, parameter :: AD_u_NacelleMotion               =   8 ! AD%NacelleMotion
-   integer(IntKi), public, parameter :: AD_u_TowerMotion                 =   9 ! AD%TowerMotion
-   integer(IntKi), public, parameter :: AD_u_HubMotion                   =  10 ! AD%HubMotion
-   integer(IntKi), public, parameter :: AD_u_BladeRootMotion             =  11 ! AD%BladeRootMotion(DL%i1)
-   integer(IntKi), public, parameter :: AD_u_BladeMotion                 =  12 ! AD%BladeMotion(DL%i1)
-   integer(IntKi), public, parameter :: AD_u_TFinMotion                  =  13 ! AD%TFinMotion
-   integer(IntKi), public, parameter :: AD_u_UserProp                    =  14 ! AD%UserProp
-   integer(IntKi), public, parameter :: AD_y_NacelleLoad                 =  15 ! AD%NacelleLoad
-   integer(IntKi), public, parameter :: AD_y_HubLoad                     =  16 ! AD%HubLoad
-   integer(IntKi), public, parameter :: AD_y_TowerLoad                   =  17 ! AD%TowerLoad
-   integer(IntKi), public, parameter :: AD_y_BladeLoad                   =  18 ! AD%BladeLoad(DL%i1)
-   integer(IntKi), public, parameter :: AD_y_TFinLoad                    =  19 ! AD%TFinLoad
-   integer(IntKi), public, parameter :: AD_y_WriteOutput                 =  20 ! AD%WriteOutput
+   integer(IntKi), public, parameter :: AD_u_NacelleMotion               =   6 ! AD%NacelleMotion
+   integer(IntKi), public, parameter :: AD_u_TowerMotion                 =   7 ! AD%TowerMotion
+   integer(IntKi), public, parameter :: AD_u_HubMotion                   =   8 ! AD%HubMotion
+   integer(IntKi), public, parameter :: AD_u_BladeRootMotion             =   9 ! AD%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: AD_u_BladeMotion                 =  10 ! AD%BladeMotion(DL%i1)
+   integer(IntKi), public, parameter :: AD_u_TFinMotion                  =  11 ! AD%TFinMotion
+   integer(IntKi), public, parameter :: AD_u_UserProp                    =  12 ! AD%UserProp
+   integer(IntKi), public, parameter :: AD_y_NacelleLoad                 =  13 ! AD%NacelleLoad
+   integer(IntKi), public, parameter :: AD_y_HubLoad                     =  14 ! AD%HubLoad
+   integer(IntKi), public, parameter :: AD_y_TowerLoad                   =  15 ! AD%TowerLoad
+   integer(IntKi), public, parameter :: AD_y_BladeLoad                   =  16 ! AD%BladeLoad(DL%i1)
+   integer(IntKi), public, parameter :: AD_y_TFinLoad                    =  17 ! AD%TFinLoad
+   integer(IntKi), public, parameter :: AD_y_WriteOutput                 =  18 ! AD%WriteOutput
 
 contains
 
@@ -1573,7 +1562,9 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
    character(*), parameter        :: RoutineName = 'AD_CopyRotInitOutputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstRotInitOutputTypeData%Vars => SrcRotInitOutputTypeData%Vars
+   call NWTC_Library_CopyModVarsType(SrcRotInitOutputTypeData%Vars, DstRotInitOutputTypeData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstRotInitOutputTypeData%AirDens = SrcRotInitOutputTypeData%AirDens
    if (allocated(SrcRotInitOutputTypeData%WriteOutputHdr)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%WriteOutputHdr)
@@ -1615,90 +1606,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   if (allocated(SrcRotInitOutputTypeData%LinNames_y)) then
-      LB(1:1) = lbound(SrcRotInitOutputTypeData%LinNames_y)
-      UB(1:1) = ubound(SrcRotInitOutputTypeData%LinNames_y)
-      if (.not. allocated(DstRotInitOutputTypeData%LinNames_y)) then
-         allocate(DstRotInitOutputTypeData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInitOutputTypeData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotInitOutputTypeData%LinNames_y = SrcRotInitOutputTypeData%LinNames_y
-   end if
-   if (allocated(SrcRotInitOutputTypeData%LinNames_x)) then
-      LB(1:1) = lbound(SrcRotInitOutputTypeData%LinNames_x)
-      UB(1:1) = ubound(SrcRotInitOutputTypeData%LinNames_x)
-      if (.not. allocated(DstRotInitOutputTypeData%LinNames_x)) then
-         allocate(DstRotInitOutputTypeData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInitOutputTypeData%LinNames_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotInitOutputTypeData%LinNames_x = SrcRotInitOutputTypeData%LinNames_x
-   end if
-   if (allocated(SrcRotInitOutputTypeData%LinNames_u)) then
-      LB(1:1) = lbound(SrcRotInitOutputTypeData%LinNames_u)
-      UB(1:1) = ubound(SrcRotInitOutputTypeData%LinNames_u)
-      if (.not. allocated(DstRotInitOutputTypeData%LinNames_u)) then
-         allocate(DstRotInitOutputTypeData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInitOutputTypeData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotInitOutputTypeData%LinNames_u = SrcRotInitOutputTypeData%LinNames_u
-   end if
-   if (allocated(SrcRotInitOutputTypeData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcRotInitOutputTypeData%RotFrame_y)
-      UB(1:1) = ubound(SrcRotInitOutputTypeData%RotFrame_y)
-      if (.not. allocated(DstRotInitOutputTypeData%RotFrame_y)) then
-         allocate(DstRotInitOutputTypeData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInitOutputTypeData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotInitOutputTypeData%RotFrame_y = SrcRotInitOutputTypeData%RotFrame_y
-   end if
-   if (allocated(SrcRotInitOutputTypeData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcRotInitOutputTypeData%RotFrame_x)
-      UB(1:1) = ubound(SrcRotInitOutputTypeData%RotFrame_x)
-      if (.not. allocated(DstRotInitOutputTypeData%RotFrame_x)) then
-         allocate(DstRotInitOutputTypeData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInitOutputTypeData%RotFrame_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotInitOutputTypeData%RotFrame_x = SrcRotInitOutputTypeData%RotFrame_x
-   end if
-   if (allocated(SrcRotInitOutputTypeData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcRotInitOutputTypeData%RotFrame_u)
-      UB(1:1) = ubound(SrcRotInitOutputTypeData%RotFrame_u)
-      if (.not. allocated(DstRotInitOutputTypeData%RotFrame_u)) then
-         allocate(DstRotInitOutputTypeData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInitOutputTypeData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotInitOutputTypeData%RotFrame_u = SrcRotInitOutputTypeData%RotFrame_u
-   end if
-   if (allocated(SrcRotInitOutputTypeData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcRotInitOutputTypeData%IsLoad_u)
-      UB(1:1) = ubound(SrcRotInitOutputTypeData%IsLoad_u)
-      if (.not. allocated(DstRotInitOutputTypeData%IsLoad_u)) then
-         allocate(DstRotInitOutputTypeData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInitOutputTypeData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotInitOutputTypeData%IsLoad_u = SrcRotInitOutputTypeData%IsLoad_u
-   end if
    if (allocated(SrcRotInitOutputTypeData%BladeProps)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%BladeProps)
       UB(1:1) = ubound(SrcRotInitOutputTypeData%BladeProps)
@@ -1714,18 +1621,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   end if
-   if (allocated(SrcRotInitOutputTypeData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcRotInitOutputTypeData%DerivOrder_x)
-      UB(1:1) = ubound(SrcRotInitOutputTypeData%DerivOrder_x)
-      if (.not. allocated(DstRotInitOutputTypeData%DerivOrder_x)) then
-         allocate(DstRotInitOutputTypeData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInitOutputTypeData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstRotInitOutputTypeData%DerivOrder_x = SrcRotInitOutputTypeData%DerivOrder_x
    end if
    if (allocated(SrcRotInitOutputTypeData%TwrElev)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%TwrElev)
@@ -1764,7 +1659,8 @@ subroutine AD_DestroyRotInitOutputType(RotInitOutputTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_DestroyRotInitOutputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   nullify(RotInitOutputTypeData%Vars)
+   call NWTC_Library_DestroyModVarsType(RotInitOutputTypeData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotInitOutputTypeData%WriteOutputHdr)) then
       deallocate(RotInitOutputTypeData%WriteOutputHdr)
    end if
@@ -1780,27 +1676,6 @@ subroutine AD_DestroyRotInitOutputType(RotInitOutputTypeData, ErrStat, ErrMsg)
       end do
       deallocate(RotInitOutputTypeData%BladeShape)
    end if
-   if (allocated(RotInitOutputTypeData%LinNames_y)) then
-      deallocate(RotInitOutputTypeData%LinNames_y)
-   end if
-   if (allocated(RotInitOutputTypeData%LinNames_x)) then
-      deallocate(RotInitOutputTypeData%LinNames_x)
-   end if
-   if (allocated(RotInitOutputTypeData%LinNames_u)) then
-      deallocate(RotInitOutputTypeData%LinNames_u)
-   end if
-   if (allocated(RotInitOutputTypeData%RotFrame_y)) then
-      deallocate(RotInitOutputTypeData%RotFrame_y)
-   end if
-   if (allocated(RotInitOutputTypeData%RotFrame_x)) then
-      deallocate(RotInitOutputTypeData%RotFrame_x)
-   end if
-   if (allocated(RotInitOutputTypeData%RotFrame_u)) then
-      deallocate(RotInitOutputTypeData%RotFrame_u)
-   end if
-   if (allocated(RotInitOutputTypeData%IsLoad_u)) then
-      deallocate(RotInitOutputTypeData%IsLoad_u)
-   end if
    if (allocated(RotInitOutputTypeData%BladeProps)) then
       LB(1:1) = lbound(RotInitOutputTypeData%BladeProps)
       UB(1:1) = ubound(RotInitOutputTypeData%BladeProps)
@@ -1809,9 +1684,6 @@ subroutine AD_DestroyRotInitOutputType(RotInitOutputTypeData, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
       deallocate(RotInitOutputTypeData%BladeProps)
-   end if
-   if (allocated(RotInitOutputTypeData%DerivOrder_x)) then
-      deallocate(RotInitOutputTypeData%DerivOrder_x)
    end if
    if (allocated(RotInitOutputTypeData%TwrElev)) then
       deallocate(RotInitOutputTypeData%TwrElev)
@@ -1827,15 +1699,8 @@ subroutine AD_PackRotInitOutputType(RF, Indata)
    character(*), parameter         :: RoutineName = 'AD_PackRotInitOutputType'
    integer(B4Ki)   :: i1
    integer(B4Ki)   :: LB(1), UB(1)
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    call RegPack(RF, InData%AirDens)
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
@@ -1848,13 +1713,6 @@ subroutine AD_PackRotInitOutputType(RF, Indata)
          call AD_PackBladeShape(RF, InData%BladeShape(i1)) 
       end do
    end if
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_x)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%RotFrame_x)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%IsLoad_u)
    call RegPack(RF, allocated(InData%BladeProps))
    if (allocated(InData%BladeProps)) then
       call RegPackBounds(RF, 1, lbound(InData%BladeProps), ubound(InData%BladeProps))
@@ -1864,7 +1722,6 @@ subroutine AD_PackRotInitOutputType(RF, Indata)
          call AD_PackBladePropsType(RF, InData%BladeProps(i1)) 
       end do
    end if
-   call RegPackAlloc(RF, InData%DerivOrder_x)
    call RegPackAlloc(RF, InData%TwrElev)
    call RegPackAlloc(RF, InData%TwrDiam)
    if (RegCheckErr(RF, RoutineName)) return
@@ -1878,27 +1735,8 @@ subroutine AD_UnPackRotInitOutputType(RF, OutData)
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
@@ -1915,13 +1753,6 @@ subroutine AD_UnPackRotInitOutputType(RF, OutData)
          call AD_UnpackBladeShape(RF, OutData%BladeShape(i1)) ! BladeShape 
       end do
    end if
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BladeProps)) deallocate(OutData%BladeProps)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -1935,7 +1766,6 @@ subroutine AD_UnPackRotInitOutputType(RF, OutData)
          call AD_UnpackBladePropsType(RF, OutData%BladeProps(i1)) ! BladeProps 
       end do
    end if
-   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrElev); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrDiam); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -3590,18 +3420,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    character(*), parameter        :: RoutineName = 'AD_CopyRotParameterType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(SrcRotParameterTypeData%Vars)) then
-      if (.not. associated(DstRotParameterTypeData%Vars)) then
-         allocate(DstRotParameterTypeData%Vars, stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%Vars.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      call NWTC_Library_CopyModVarsType(SrcRotParameterTypeData%Vars, DstRotParameterTypeData%Vars, CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end if
    DstRotParameterTypeData%NumBlades = SrcRotParameterTypeData%NumBlades
    DstRotParameterTypeData%NumBlNds = SrcRotParameterTypeData%NumBlNds
    DstRotParameterTypeData%NumTwrNds = SrcRotParameterTypeData%NumTwrNds
@@ -4024,12 +3842,6 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_DestroyRotParameterType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(RotParameterTypeData%Vars)) then
-      call NWTC_Library_DestroyModVarsType(RotParameterTypeData%Vars, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      deallocate(RotParameterTypeData%Vars)
-      RotParameterTypeData%Vars => null()
-   end if
    if (allocated(RotParameterTypeData%TwrDiam)) then
       deallocate(RotParameterTypeData%TwrDiam)
    end if
@@ -4143,15 +3955,7 @@ subroutine AD_PackRotParameterType(RF, Indata)
    character(*), parameter         :: RoutineName = 'AD_PackRotParameterType'
    integer(B4Ki)   :: i1, i2
    integer(B4Ki)   :: LB(2), UB(2)
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
    call RegPack(RF, InData%NumBlades)
    call RegPack(RF, InData%NumBlNds)
    call RegPack(RF, InData%NumTwrNds)
@@ -4255,27 +4059,7 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
    call RegUnpack(RF, OutData%NumBlades); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBlNds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumTwrNds); if (RegCheckErr(RF, RoutineName)) return
@@ -7428,69 +7212,6 @@ subroutine AD_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine AD_VarsPackConstrState(Vars, z, ValAry)
-   type(RotConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call AD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine AD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(RotConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (AD_z_BEMT_phi)
-         VarVals = z%BEMT%phi(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
-      case (AD_z_AA_DummyConstrState)
-         VarVals(1) = z%AA%DummyConstrState                                   ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine AD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(RotConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call AD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine AD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(RotConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (AD_z_BEMT_phi)
-         z%BEMT%phi(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
-      case (AD_z_AA_DummyConstrState)
-         z%AA%DummyConstrState = VarVals(1)                                   ! Scalar
-      end select
-   end associate
-end subroutine
-
-function AD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (AD_z_BEMT_phi)
-       Name = "z%BEMT%phi"
-   case (AD_z_AA_DummyConstrState)
-       Name = "z%AA%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine AD_VarsPackInput(Vars, u, ValAry)
    type(RotInputType), intent(in)          :: u

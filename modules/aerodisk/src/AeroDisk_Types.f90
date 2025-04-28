@@ -170,18 +170,17 @@ IMPLICIT NONE
   END TYPE ADsk_MiscVarType
 ! =======================
    integer(IntKi), public, parameter :: ADsk_x_DummyContState            =   1 ! ADsk%DummyContState
-   integer(IntKi), public, parameter :: ADsk_z_DummyConstrState          =   2 ! ADsk%DummyConstrState
-   integer(IntKi), public, parameter :: ADsk_u_HubMotion                 =   3 ! ADsk%HubMotion
-   integer(IntKi), public, parameter :: ADsk_u_RotSpeed                  =   4 ! ADsk%RotSpeed
-   integer(IntKi), public, parameter :: ADsk_u_BlPitch                   =   5 ! ADsk%BlPitch
-   integer(IntKi), public, parameter :: ADsk_y_AeroLoads                 =   6 ! ADsk%AeroLoads
-   integer(IntKi), public, parameter :: ADsk_y_YawErr                    =   7 ! ADsk%YawErr
-   integer(IntKi), public, parameter :: ADsk_y_PsiSkew                   =   8 ! ADsk%PsiSkew
-   integer(IntKi), public, parameter :: ADsk_y_ChiSkew                   =   9 ! ADsk%ChiSkew
-   integer(IntKi), public, parameter :: ADsk_y_VRel                      =  10 ! ADsk%VRel
-   integer(IntKi), public, parameter :: ADsk_y_Ct                        =  11 ! ADsk%Ct
-   integer(IntKi), public, parameter :: ADsk_y_Cq                        =  12 ! ADsk%Cq
-   integer(IntKi), public, parameter :: ADsk_y_WriteOutput               =  13 ! ADsk%WriteOutput
+   integer(IntKi), public, parameter :: ADsk_u_HubMotion                 =   2 ! ADsk%HubMotion
+   integer(IntKi), public, parameter :: ADsk_u_RotSpeed                  =   3 ! ADsk%RotSpeed
+   integer(IntKi), public, parameter :: ADsk_u_BlPitch                   =   4 ! ADsk%BlPitch
+   integer(IntKi), public, parameter :: ADsk_y_AeroLoads                 =   5 ! ADsk%AeroLoads
+   integer(IntKi), public, parameter :: ADsk_y_YawErr                    =   6 ! ADsk%YawErr
+   integer(IntKi), public, parameter :: ADsk_y_PsiSkew                   =   7 ! ADsk%PsiSkew
+   integer(IntKi), public, parameter :: ADsk_y_ChiSkew                   =   8 ! ADsk%ChiSkew
+   integer(IntKi), public, parameter :: ADsk_y_VRel                      =   9 ! ADsk%VRel
+   integer(IntKi), public, parameter :: ADsk_y_Ct                        =  10 ! ADsk%Ct
+   integer(IntKi), public, parameter :: ADsk_y_Cq                        =  11 ! ADsk%Cq
+   integer(IntKi), public, parameter :: ADsk_y_WriteOutput               =  12 ! ADsk%WriteOutput
 
 contains
 
@@ -1778,63 +1777,6 @@ subroutine ADsk_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine ADsk_VarsPackConstrState(Vars, z, ValAry)
-   type(ADsk_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ADsk_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine ADsk_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(ADsk_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ADsk_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine ADsk_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(ADsk_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ADsk_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine ADsk_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(ADsk_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ADsk_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function ADsk_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (ADsk_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine ADsk_VarsPackInput(Vars, u, ValAry)
    type(ADsk_InputType), intent(in)        :: u

@@ -245,29 +245,28 @@ IMPLICIT NONE
   END TYPE WD_OutputType
 ! =======================
    integer(IntKi), public, parameter :: WD_x_DummyContState              =   1 ! WD%DummyContState
-   integer(IntKi), public, parameter :: WD_z_DummyConstrState            =   2 ! WD%DummyConstrState
-   integer(IntKi), public, parameter :: WD_u_xhat_disk                   =   3 ! WD%xhat_disk
-   integer(IntKi), public, parameter :: WD_u_YawErr                      =   4 ! WD%YawErr
-   integer(IntKi), public, parameter :: WD_u_psi_skew                    =   5 ! WD%psi_skew
-   integer(IntKi), public, parameter :: WD_u_chi_skew                    =   6 ! WD%chi_skew
-   integer(IntKi), public, parameter :: WD_u_p_hub                       =   7 ! WD%p_hub
-   integer(IntKi), public, parameter :: WD_u_V_plane                     =   8 ! WD%V_plane
-   integer(IntKi), public, parameter :: WD_u_Vx_wind_disk                =   9 ! WD%Vx_wind_disk
-   integer(IntKi), public, parameter :: WD_u_TI_amb                      =  10 ! WD%TI_amb
-   integer(IntKi), public, parameter :: WD_u_D_rotor                     =  11 ! WD%D_rotor
-   integer(IntKi), public, parameter :: WD_u_Vx_rel_disk                 =  12 ! WD%Vx_rel_disk
-   integer(IntKi), public, parameter :: WD_u_Ct_azavg                    =  13 ! WD%Ct_azavg
-   integer(IntKi), public, parameter :: WD_u_Cq_azavg                    =  14 ! WD%Cq_azavg
-   integer(IntKi), public, parameter :: WD_y_xhat_plane                  =  15 ! WD%xhat_plane
-   integer(IntKi), public, parameter :: WD_y_p_plane                     =  16 ! WD%p_plane
-   integer(IntKi), public, parameter :: WD_y_Vx_wake                     =  17 ! WD%Vx_wake
-   integer(IntKi), public, parameter :: WD_y_Vr_wake                     =  18 ! WD%Vr_wake
-   integer(IntKi), public, parameter :: WD_y_Vx_wake2                    =  19 ! WD%Vx_wake2
-   integer(IntKi), public, parameter :: WD_y_Vy_wake2                    =  20 ! WD%Vy_wake2
-   integer(IntKi), public, parameter :: WD_y_Vz_wake2                    =  21 ! WD%Vz_wake2
-   integer(IntKi), public, parameter :: WD_y_D_wake                      =  22 ! WD%D_wake
-   integer(IntKi), public, parameter :: WD_y_x_plane                     =  23 ! WD%x_plane
-   integer(IntKi), public, parameter :: WD_y_WAT_k                       =  24 ! WD%WAT_k
+   integer(IntKi), public, parameter :: WD_u_xhat_disk                   =   2 ! WD%xhat_disk
+   integer(IntKi), public, parameter :: WD_u_YawErr                      =   3 ! WD%YawErr
+   integer(IntKi), public, parameter :: WD_u_psi_skew                    =   4 ! WD%psi_skew
+   integer(IntKi), public, parameter :: WD_u_chi_skew                    =   5 ! WD%chi_skew
+   integer(IntKi), public, parameter :: WD_u_p_hub                       =   6 ! WD%p_hub
+   integer(IntKi), public, parameter :: WD_u_V_plane                     =   7 ! WD%V_plane
+   integer(IntKi), public, parameter :: WD_u_Vx_wind_disk                =   8 ! WD%Vx_wind_disk
+   integer(IntKi), public, parameter :: WD_u_TI_amb                      =   9 ! WD%TI_amb
+   integer(IntKi), public, parameter :: WD_u_D_rotor                     =  10 ! WD%D_rotor
+   integer(IntKi), public, parameter :: WD_u_Vx_rel_disk                 =  11 ! WD%Vx_rel_disk
+   integer(IntKi), public, parameter :: WD_u_Ct_azavg                    =  12 ! WD%Ct_azavg
+   integer(IntKi), public, parameter :: WD_u_Cq_azavg                    =  13 ! WD%Cq_azavg
+   integer(IntKi), public, parameter :: WD_y_xhat_plane                  =  14 ! WD%xhat_plane
+   integer(IntKi), public, parameter :: WD_y_p_plane                     =  15 ! WD%p_plane
+   integer(IntKi), public, parameter :: WD_y_Vx_wake                     =  16 ! WD%Vx_wake
+   integer(IntKi), public, parameter :: WD_y_Vr_wake                     =  17 ! WD%Vr_wake
+   integer(IntKi), public, parameter :: WD_y_Vx_wake2                    =  18 ! WD%Vx_wake2
+   integer(IntKi), public, parameter :: WD_y_Vy_wake2                    =  19 ! WD%Vy_wake2
+   integer(IntKi), public, parameter :: WD_y_Vz_wake2                    =  20 ! WD%Vz_wake2
+   integer(IntKi), public, parameter :: WD_y_D_wake                      =  21 ! WD%D_wake
+   integer(IntKi), public, parameter :: WD_y_x_plane                     =  22 ! WD%x_plane
+   integer(IntKi), public, parameter :: WD_y_WAT_k                       =  23 ! WD%WAT_k
 
 contains
 
@@ -2035,63 +2034,6 @@ subroutine WD_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine WD_VarsPackConstrState(Vars, z, ValAry)
-   type(WD_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call WD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine WD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(WD_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (WD_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine WD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(WD_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call WD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine WD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(WD_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (WD_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function WD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (WD_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine WD_VarsPackInput(Vars, u, ValAry)
    type(WD_InputType), intent(in)          :: u

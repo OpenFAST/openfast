@@ -359,15 +359,13 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: FVW_x_W_r_NW                     =   5 ! FVW%W(DL%i1)%r_NW
    integer(IntKi), public, parameter :: FVW_x_W_r_FW                     =   6 ! FVW%W(DL%i1)%r_FW
    integer(IntKi), public, parameter :: FVW_x_UA_element_x               =   7 ! FVW%UA(DL%i1)%element(DL%i2, DL%i3)%x
-   integer(IntKi), public, parameter :: FVW_z_W_Gamma_LL                 =   8 ! FVW%W(DL%i1)%Gamma_LL
-   integer(IntKi), public, parameter :: FVW_z_residual                   =   9 ! FVW%residual
-   integer(IntKi), public, parameter :: FVW_u_rotors_HubOrientation      =  10 ! FVW%rotors(DL%i1)%HubOrientation
-   integer(IntKi), public, parameter :: FVW_u_rotors_HubPosition         =  11 ! FVW%rotors(DL%i1)%HubPosition
-   integer(IntKi), public, parameter :: FVW_u_W_Vwnd_LL                  =  12 ! FVW%W(DL%i1)%Vwnd_LL
-   integer(IntKi), public, parameter :: FVW_u_W_omega_z                  =  13 ! FVW%W(DL%i1)%omega_z
-   integer(IntKi), public, parameter :: FVW_u_WingsMesh                  =  14 ! FVW%WingsMesh(DL%i1)
-   integer(IntKi), public, parameter :: FVW_u_V_wind                     =  15 ! FVW%V_wind
-   integer(IntKi), public, parameter :: FVW_y_W_Vind                     =  16 ! FVW%W(DL%i1)%Vind
+   integer(IntKi), public, parameter :: FVW_u_rotors_HubOrientation      =   8 ! FVW%rotors(DL%i1)%HubOrientation
+   integer(IntKi), public, parameter :: FVW_u_rotors_HubPosition         =   9 ! FVW%rotors(DL%i1)%HubPosition
+   integer(IntKi), public, parameter :: FVW_u_W_Vwnd_LL                  =  10 ! FVW%W(DL%i1)%Vwnd_LL
+   integer(IntKi), public, parameter :: FVW_u_W_omega_z                  =  11 ! FVW%W(DL%i1)%omega_z
+   integer(IntKi), public, parameter :: FVW_u_WingsMesh                  =  12 ! FVW%WingsMesh(DL%i1)
+   integer(IntKi), public, parameter :: FVW_u_V_wind                     =  13 ! FVW%V_wind
+   integer(IntKi), public, parameter :: FVW_y_W_Vind                     =  14 ! FVW%W(DL%i1)%Vind
 
 contains
 
@@ -4245,69 +4243,6 @@ subroutine FVW_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine FVW_VarsPackConstrState(Vars, z, ValAry)
-   type(FVW_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call FVW_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine FVW_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(FVW_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (FVW_z_W_Gamma_LL)
-         VarVals = z%W(DL%i1)%Gamma_LL(V%iLB:V%iUB)                           ! Rank 1 Array
-      case (FVW_z_residual)
-         VarVals(1) = z%residual                                              ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine FVW_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(FVW_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call FVW_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine FVW_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(FVW_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (FVW_z_W_Gamma_LL)
-         z%W(DL%i1)%Gamma_LL(V%iLB:V%iUB) = VarVals                           ! Rank 1 Array
-      case (FVW_z_residual)
-         z%residual = VarVals(1)                                              ! Scalar
-      end select
-   end associate
-end subroutine
-
-function FVW_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (FVW_z_W_Gamma_LL)
-       Name = "z%W("//trim(Num2LStr(DL%i1))//")%Gamma_LL"
-   case (FVW_z_residual)
-       Name = "z%residual"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine FVW_VarsPackInput(Vars, u, ValAry)
    type(FVW_InputType), intent(in)         :: u

@@ -150,12 +150,9 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: WAMIT_x_SS_Rdtn_x                =   1 ! WAMIT%SS_Rdtn%x
    integer(IntKi), public, parameter :: WAMIT_x_SS_Exctn_x               =   2 ! WAMIT%SS_Exctn%x
    integer(IntKi), public, parameter :: WAMIT_x_Conv_Rdtn_DummyContState =   3 ! WAMIT%Conv_Rdtn%DummyContState
-   integer(IntKi), public, parameter :: WAMIT_z_Conv_Rdtn_DummyConstrState =   4 ! WAMIT%Conv_Rdtn%DummyConstrState
-   integer(IntKi), public, parameter :: WAMIT_z_SS_Rdtn_DummyConstrState =   5 ! WAMIT%SS_Rdtn%DummyConstrState
-   integer(IntKi), public, parameter :: WAMIT_z_SS_Exctn_DummyConstrState =   6 ! WAMIT%SS_Exctn%DummyConstrState
-   integer(IntKi), public, parameter :: WAMIT_u_Mesh                     =   7 ! WAMIT%Mesh
-   integer(IntKi), public, parameter :: WAMIT_u_PtfmRefY                 =   8 ! WAMIT%PtfmRefY
-   integer(IntKi), public, parameter :: WAMIT_y_Mesh                     =   9 ! WAMIT%Mesh
+   integer(IntKi), public, parameter :: WAMIT_u_Mesh                     =   4 ! WAMIT%Mesh
+   integer(IntKi), public, parameter :: WAMIT_u_PtfmRefY                 =   5 ! WAMIT%PtfmRefY
+   integer(IntKi), public, parameter :: WAMIT_y_Mesh                     =   6 ! WAMIT%Mesh
 
 contains
 
@@ -1591,75 +1588,6 @@ subroutine WAMIT_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine WAMIT_VarsPackConstrState(Vars, z, ValAry)
-   type(WAMIT_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call WAMIT_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine WAMIT_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(WAMIT_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (WAMIT_z_Conv_Rdtn_DummyConstrState)
-         VarVals(1) = z%Conv_Rdtn%DummyConstrState                            ! Scalar
-      case (WAMIT_z_SS_Rdtn_DummyConstrState)
-         VarVals(1) = z%SS_Rdtn%DummyConstrState                              ! Scalar
-      case (WAMIT_z_SS_Exctn_DummyConstrState)
-         VarVals(1) = z%SS_Exctn%DummyConstrState                             ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine WAMIT_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(WAMIT_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call WAMIT_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine WAMIT_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(WAMIT_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (WAMIT_z_Conv_Rdtn_DummyConstrState)
-         z%Conv_Rdtn%DummyConstrState = VarVals(1)                            ! Scalar
-      case (WAMIT_z_SS_Rdtn_DummyConstrState)
-         z%SS_Rdtn%DummyConstrState = VarVals(1)                              ! Scalar
-      case (WAMIT_z_SS_Exctn_DummyConstrState)
-         z%SS_Exctn%DummyConstrState = VarVals(1)                             ! Scalar
-      end select
-   end associate
-end subroutine
-
-function WAMIT_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (WAMIT_z_Conv_Rdtn_DummyConstrState)
-       Name = "z%Conv_Rdtn%DummyConstrState"
-   case (WAMIT_z_SS_Rdtn_DummyConstrState)
-       Name = "z%SS_Rdtn%DummyConstrState"
-   case (WAMIT_z_SS_Exctn_DummyConstrState)
-       Name = "z%SS_Exctn%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine WAMIT_VarsPackInput(Vars, u, ValAry)
    type(WAMIT_InputType), intent(in)       :: u

@@ -44,7 +44,6 @@ USE SeaState_Types
 USE HydroDyn_Types
 USE IceFloe_Types
 USE ExternalInflow_Types
-USE SCDataEx_Types
 USE IceDyn_Types
 USE FEAMooring_Types
 USE MAP_Types
@@ -108,7 +107,7 @@ IMPLICIT NONE
 ! =========  FAST_VTK_ModeShapeType  =======
   TYPE, PUBLIC :: FAST_VTK_ModeShapeType
     CHARACTER(1024)  :: CheckpointRoot      !< name of the checkpoint file written by FAST when linearization data was produced [-]
-    CHARACTER(1024)  :: MatlabFileName      !< name of the file with eigenvectors written by Matlab [-]
+    CHARACTER(1024)  :: DataFileName      !< name of the file with eigenvectors written by Matlab [-]
     INTEGER(IntKi)  :: VTKLinModes = 0_IntKi      !< Number of modes to visualize [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: VTKModes      !< Which modes to visualize [-]
     INTEGER(IntKi)  :: VTKLinTim = 0_IntKi      !< Switch to make one animation for all LinTimes together (1) or separate animations for each LinTimes(2) [-]
@@ -121,14 +120,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: x_eig_magnitude      !< magnitude of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: x_eig_phase      !< phase of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode) [-]
   END TYPE FAST_VTK_ModeShapeType
-! =======================
-! =========  FAST_SS_CaseType  =======
-  TYPE, PUBLIC :: FAST_SS_CaseType
-    REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Rotor speed for this case of the steady-state solve [>0] [(rad/s)]
-    REAL(ReKi)  :: TSR = 0.0_ReKi      !< TSR for this case of the steady-state solve [>0] [(-)]
-    REAL(ReKi)  :: WindSpeed = 0.0_ReKi      !< Windspeed for this case of the steady-state solve [>0] [(m/s)]
-    REAL(ReKi)  :: Pitch = 0.0_ReKi      !< Pitch angle for this case of the steady-state solve [(rad)]
-  END TYPE FAST_SS_CaseType
 ! =======================
 ! =========  FAST_ParameterType  =======
   TYPE, PUBLIC :: FAST_ParameterType
@@ -143,7 +134,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: numIceLegs = 0_IntKi      !< number of suport-structure legs in contact with ice (IceDyn coupling) [-]
     INTEGER(IntKi)  :: nBeams = 0_IntKi      !< number of BeamDyn instances [-]
     LOGICAL  :: BD_OutputSibling = .false.      !< flag to determine if BD input is sibling of output mesh [-]
-    LOGICAL , DIMENSION(1:NumModules)  :: ModuleInitialized = .false.      !< An array determining if the module has been initialized [-]
     REAL(DbKi)  :: RhoInf = 0.0_R8Ki      !< Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0] [-]
     REAL(DbKi)  :: ConvTol = 0.0_R8Ki      !< Convergence iteration error tolerance for tight coupling generalized alpha integrator (-) [-]
     INTEGER(IntKi)  :: MaxConvIter = 0_IntKi      !< Maximum number of convergence iterations for tight coupling generalized alpha integrator (-) [-]
@@ -211,6 +201,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: VTK_fps = 0.0_R8Ki      !< number of frames per second to output VTK data [-]
     TYPE(FAST_VTK_SurfaceType)  :: VTK_surface      !< Data for VTK surface visualization [-]
     CHARACTER(4)  :: Tdesc      !< description of turbine ID (for FAST.Farm) screen printing [-]
+    REAL(DbKi) , DIMENSION(1:6)  :: PlatformPosInit = 0.0_R8Ki      !< Platform inital 6 DOF position from ED (this is different from TurbinePos) [-]
     LOGICAL  :: CalcSteady = .false.      !< Calculate a steady-state periodic operating point before linearization [unused if Linearize=False] [-]
     INTEGER(IntKi)  :: TrimCase = 0_IntKi      !< Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [unused if Linearize=False; used only if CalcSteady=True] [-]
     REAL(ReKi)  :: TrimTol = 0.0_ReKi      !< Tolerance for the rotational speed convergence (>0) [unused if Linearize=False; used only if CalcSteady=True] [-]
@@ -223,8 +214,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: LinOutputs = 0_IntKi      !< Outputs included in linearization (switch) {0=none; 1=from OutList(s); 2=all module outputs (debug)} [unused if Linearize=False] [-]
     LOGICAL  :: LinOutJac = .false.      !< Include full Jacabians in linearization output (for debug) (flag) [unused if Linearize=False; used only if LinInputs=LinOutputs=2] [-]
     LOGICAL  :: LinOutMod = .false.      !< Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False] [-]
-    TYPE(FAST_VTK_ModeShapeType)  :: VTK_modes      !< Data for VTK mode-shape visualization [-]
-    LOGICAL  :: UseSC = .false.      !< Use Supercontroller [-]
     INTEGER(IntKi)  :: Lin_NumMods = 0_IntKi      !< number of modules in the linearization [-]
     INTEGER(IntKi) , DIMENSION(1:NumModules)  :: Lin_ModOrder = 0_IntKi      !< indices that determine which order the modules are in the glue-code linearization matrix [-]
     INTEGER(IntKi)  :: LinInterpOrder = 0_IntKi      !< Interpolation order for CalcSteady solution [-]
@@ -241,48 +230,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: GearBox_index = 0_IntKi      !< Index to gearbox rotation in state array (for steady-state calculations) [-]
   END TYPE FAST_ParameterType
 ! =======================
-! =========  FAST_LinType  =======
-  TYPE, PUBLIC :: FAST_LinType
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: Names_u      !< Names of the linearized inputs [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: Names_y      !< Names of the linearized outputs [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: Names_x      !< Names of the linearized continuous states [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: Names_xd      !< Names of the linearized discrete states [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: Names_z      !< Names of the linearized constraint states [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: op_u      !< input operating point [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: op_y      !< output operating point [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: op_x      !< continuous state operating point [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: op_dx      !< 1st time derivative of continuous state operating point [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: op_xd      !< discrete state operating point [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: op_z      !< constraint state operating point [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: op_x_eig_mag      !< continuous state eigenvector magnitude [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: op_x_eig_phase      !< continuous state eigenvector phase [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: Use_u      !< array same size as names_u, which indicates if this input is used in linearization output file [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: Use_y      !< array same size as names_y, which indicates if this output is used in linearization output file [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: A      !< A matrix [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: B      !< B matrix [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: C      !< C matrix [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: D      !< D matrix [-]
-    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: StateRotation      !< Matrix that rotates the continuous states [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Whether the input is a load (used for scaling for potentially ill-conditioned G matrix) [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Whether corresponding input is in rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Whether corresponding output is in rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_x      !< Whether corresponding continuous state is in rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_z      !< Whether corresponding constraint state is in rotating frame [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Derivative order for continuous states [-]
-    INTEGER(IntKi) , DIMENSION(1:3)  :: SizeLin = 0_IntKi      !< sizes of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states [-]
-    INTEGER(IntKi) , DIMENSION(1:3)  :: LinStartIndx = 0_IntKi      !< the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states [-]
-    INTEGER(IntKi)  :: NumOutputs = 0_IntKi      !< number of WriteOutputs in each linearized module [-]
-  END TYPE FAST_LinType
-! =======================
-! =========  FAST_ModLinType  =======
-  TYPE, PUBLIC :: FAST_ModLinType
-    TYPE(FAST_LinType) , DIMENSION(:), ALLOCATABLE  :: Instance      !< Linearization data for each module instance (e.g., 3 blades for BD) [-]
-  END TYPE FAST_ModLinType
-! =======================
 ! =========  FAST_LinFileType  =======
   TYPE, PUBLIC :: FAST_LinFileType
-    TYPE(FAST_ModLinType) , DIMENSION(1:NumModules)  :: Modules      !< Linearization data for each module [-]
-    TYPE(FAST_LinType)  :: Glue      !< Linearization data for the glue code (coupled system) [-]
     REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Rotor azimuth angular speed [rad/s]
     REAL(ReKi)  :: Azimuth = 0.0_ReKi      !< Rotor azimuth position [rad]
     REAL(ReKi)  :: WindSpeed = 0.0_ReKi      !< Wind speed at reference height [m/s]
@@ -453,13 +402,6 @@ IMPLICIT NONE
     TYPE(ExtInfw_MiscVarType)  :: m      !< Parameters [-]
   END TYPE ExternalInflow_Data
 ! =======================
-! =========  SCDataEx_Data  =======
-  TYPE, PUBLIC :: SCDataEx_Data
-    TYPE(SC_DX_InputType)  :: u      !< System inputs [-]
-    TYPE(SC_DX_OutputType)  :: y      !< System outputs [-]
-    TYPE(SC_DX_ParameterType)  :: p      !< System parameters [-]
-  END TYPE SCDataEx_Data
-! =======================
 ! =========  SubDyn_Data  =======
   TYPE, PUBLIC :: SubDyn_Data
     TYPE(SD_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: x      !< Continuous states [-]
@@ -580,90 +522,6 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
   END TYPE OrcaFlex_Data
 ! =======================
-! =========  FAST_ModuleMapType  =======
-  TYPE, PUBLIC :: FAST_ModuleMapType
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_P_2_BD_P      !< Map ElastoDyn BladeRootMotion meshes to BeamDyn RootMotion point meshes [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BD_P_2_ED_P      !< Map BeamDyn ReactionForce loads point meshes to ElastoDyn HubPtLoad point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_P_2_BD_P_Hub      !< ElastoDyn hub to BeamDyn for hub orientation necessary for pitch actuator [-]
-    TYPE(MeshMapType)  :: ED_P_2_HD_PRP_P      !< Map ElastoDyn PlatformPtMesh to HydroDyn platform reference Point [-]
-    TYPE(MeshMapType)  :: SubStructure_2_HD_W_P      !< Map ElastoDyn PlatformPtMesh or SubDyn y2Mesh to HydroDyn WAMIT Point [-]
-    TYPE(MeshMapType)  :: HD_W_P_2_SubStructure      !< Map HydroDyn WAMIT Point from y%WAMITMesh to ElastoDyn PlatformPtMesh or SD LMesh [-]
-    TYPE(MeshMapType)  :: SubStructure_2_HD_M_P      !< Map ElastoDyn PlatformPtMesh or SubDyn y2Mesh to HydroDyn Morison Point [-]
-    TYPE(MeshMapType)  :: HD_M_P_2_SubStructure      !< Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh or SD LMesh [-]
-    TYPE(MeshMapType)  :: Structure_2_Mooring      !< Map structural SD (y3Mesh)/ED to MAP/FEAM/MoorDyn/OrcaFlex point mesh [Motions]
-    TYPE(MeshMapType)  :: Mooring_2_Structure      !< Map FEAM/MAP/MoorDyn/OrcaFlex mesh to SD (LMesh)/ED (PlatformPtMesh)/ExtPtfm mesh [Loads]
-    TYPE(MeshMapType)  :: ED_P_2_SD_TP      !< Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh [-]
-    TYPE(MeshMapType)  :: SD_TP_2_ED_P      !< Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_P_2_NStC_P_N      !< Map ElastoDyn      nacelle point mesh to ServoDyn/NStC point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: NStC_P_2_ED_P_N      !< Map ServoDyn/NStC  nacelle point mesh to ElastoDyn     point mesh on the nacelle [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_L_2_TStC_P_T      !< Map ElastoDyn      tower   line2 mesh to ServoDyn/TStC point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: TStC_P_2_ED_P_T      !< Map ServoDyn/TStC  tower   point mesh to ElastoDyn     point load mesh on the tower [-]
-    TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: ED_L_2_BStC_P_B      !< Map ElastoDyn blade line2 mesh to ServoDyn/BStC point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: BStC_P_2_ED_P_B      !< Map ServoDyn/BStC point mesh to ElastoDyn point load mesh on the blade [-]
-    TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: BD_L_2_BStC_P_B      !< Map BeamDyn blade line2 mesh to ServoDyn/BStC point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:,:), ALLOCATABLE  :: BStC_P_2_BD_P_B      !< Map ServoDyn/BStC point mesh to BeamDyn point load mesh on the blade [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SStC_P_P_2_SubStructure      !< Map ServoDyn/SStC platform point mesh load   to SubDyn/ElastoDyn  point load mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SubStructure_2_SStC_P_P      !< Map SubDyn y3mesh or ED platform mesh motion to ServoDyn/SStC point mesh [-]
-    TYPE(MeshMapType)  :: ED_P_2_SrvD_P_P      !< Map ElastoDyn/Simplified-ElastoDyn platform point mesh motion to ServoDyn      point mesh -- for passing to controller [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BDED_L_2_AD_L_B      !< Map ElastoDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: AD_L_2_BDED_B      !< Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BD_L_2_BD_L      !< Map BeamDyn BldMotion output meshes to locations on the BD input DistrLoad mesh stored in MeshMapType%y_BD_BldMotion_4Loads (BD input and output meshes are not siblings and in fact have nodes at different locations [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SED_P_2_AD_L_B      !< Map Simplified-ElastoDyn BladeRoot point meshes to rigid AeroDyn BladeMotion line2 meshes [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SED_P_2_AD_P_R      !< Map Simplified-ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: AD_L_2_SED_P      !< Map AeroDyn blade load output mesh to Simplified-ElastoDyn Hub point mesh [-]
-    TYPE(MeshMapType)  :: ED_P_2_AD_P_N      !< Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh [-]
-    TYPE(MeshMapType)  :: AD_P_2_ED_P_N      !< Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh [-]
-    TYPE(MeshMapType)  :: ED_P_2_AD_P_TF      !< Map ElastoDyn TailFin CM point motion mesh to AeroDyn TailFin ref point motion mesh [-]
-    TYPE(MeshMapType)  :: AD_P_2_ED_P_TF      !< Map AeroDyn TailFin ref point load mesh to ElastoDyn TailFin CM point load mesh [-]
-    TYPE(MeshMapType)  :: ED_L_2_AD_L_T      !< Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh [-]
-    TYPE(MeshMapType)  :: AD_L_2_ED_P_T      !< Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_P_2_AD_P_R      !< Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes [-]
-    TYPE(MeshMapType)  :: ED_P_2_AD_P_H      !< Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh [-]
-    TYPE(MeshMapType)  :: ADsk_P_2_ED_P_H      !< Map AeroDisk point load mesh to ElastoDyn hub point load mesh [-]
-    TYPE(MeshMapType)  :: ED_P_2_ADsk_P_H      !< Map ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh [-]
-    TYPE(MeshMapType)  :: SED_P_2_AD_P_N      !< Map Simplified-ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh [-]
-    TYPE(MeshMapType)  :: SED_L_2_AD_L_T      !< Map Simplified-ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn TowerMotion line2 mesh [-]
-    TYPE(MeshMapType)  :: SED_P_2_AD_P_H      !< Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh [-]
-    TYPE(MeshMapType)  :: ADsk_P_2_SED_P_H      !< Map AeroDisk point load mesh to Simplfied-ElastoDyn hub point load mesh [-]
-    TYPE(MeshMapType)  :: SED_P_2_ADsk_P_H      !< Map Simplified-ElastoDyn HubPtMotion point mesh to AeroDisk HubMotion point mesh [-]
-    TYPE(MeshMapType)  :: AD_P_2_ED_P_H      !< Map AeroDyn HubLoad point mesh to ElastoDyn HubPtLoad point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: BDED_L_2_ExtLd_P_B      !< Map ElastoDyn/BeamDyn BladeLn2Mesh point meshes OR BeamDyn BldMotion line2 meshes to ExtLoads point meshes [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ExtLd_P_2_BDED_B      !< Map ExtLoads at points to ElastoDyn BladePtLoad point meshes or BeamDyn BldMotion line2 meshes [-]
-    TYPE(MeshMapType)  :: ED_L_2_ExtLd_P_T      !< Map ElastoDyn TowerLn2Mesh line2 mesh to ExtLoads point mesh [-]
-    TYPE(MeshMapType)  :: ExtLd_P_2_ED_P_T      !< Map ExtLoads TowerLoad point mesh to ElastoDyn TowerPtLoads point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: ED_P_2_ExtLd_P_R      !< Map ElastoDyn BladeRootMotion point meshes to ExtLoads BladeRootMotion point meshes [-]
-    TYPE(MeshMapType)  :: ED_P_2_ExtLd_P_H      !< Map ElastoDyn HubPtMotion point mesh to ExtLoads HubMotion point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: AD_L_2_ExtLd_B      !< Map AeroDyn line loads on blades to ExtLoads point loads [-]
-    TYPE(MeshMapType)  :: AD_L_2_ExtLd_T      !< Map AeroDyn line loads on tower to ExtKoads point loads [-]
-    TYPE(MeshMapType)  :: IceF_P_2_SD_P      !< Map IceFloe point mesh to SubDyn LMesh point mesh [-]
-    TYPE(MeshMapType)  :: SDy3_P_2_IceF_P      !< Map SubDyn y3Mesh point mesh to IceFloe point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: IceD_P_2_SD_P      !< Map IceDyn point mesh to SubDyn LMesh point mesh [-]
-    TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SDy3_P_2_IceD_P      !< Map SubDyn y3Mesh point mesh to IceDyn point mesh [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Jacobian_Opt1      !< Stored Jacobian in ED_HD_InputOutputSolve or FullOpt1_InputOutputSolve [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Jacobian_pivot      !< Pivot array used for LU decomposition of Jacobian_Opt1 [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
-    TYPE(MeshType)  :: u_ED_NacelleLoads      !< copy of ED input mesh [-]
-    TYPE(MeshType)  :: SubstructureLoads_Tmp      !< copy of substructure loads input mesh (ED or SD) [-]
-    TYPE(MeshType)  :: SubstructureLoads_Tmp2      !< copy of substructure loads input mesh (ED or SD, used only for temporary storage) [-]
-    TYPE(MeshType)  :: PlatformLoads_Tmp      !< copy of platform loads input mesh (ED) [-]
-    TYPE(MeshType)  :: PlatformLoads_Tmp2      !< copy of platform loads input mesh (ED, used only for temporary storage) [-]
-    TYPE(MeshType)  :: SubstructureLoads_Tmp_Farm      !< copy of substructure mesh used to store loads from farm-level MD [-]
-    TYPE(MeshType)  :: u_ED_TowerPtloads      !< copy of ED input mesh [-]
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: u_ED_BladePtLoads      !< copy of ED input mesh [-]
-    TYPE(MeshType)  :: u_SD_TPMesh      !< copy of SD input mesh [-]
-    TYPE(MeshType)  :: u_HD_M_Mesh      !< copy of HD morison input mesh [-]
-    TYPE(MeshType)  :: u_HD_W_Mesh      !< copy of HD wamit input mesh [-]
-    TYPE(MeshType)  :: u_ED_HubPtLoad      !< copy of  ED input mesh [-]
-    TYPE(MeshType)  :: u_ED_HubPtLoad_2      !< copy of  ED input mesh [-]
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: u_BD_RootMotion      !< copy of  BD input meshes [-]
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: y_BD_BldMotion_4Loads      !< BD blade motion output at locations on DistrLoad input meshes [-]
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: u_BD_Distrload      !< copy of BD DistrLoad input meshes [-]
-    TYPE(MeshType)  :: u_Orca_PtfmMesh      !< copy of Orca PtfmMesh input mesh [-]
-    TYPE(MeshType)  :: u_ExtPtfm_PtfmMesh      !< copy of ExtPtfm_MCKF PtfmMesh input mesh [-]
-    TYPE(MeshType)  :: u_SED_HubPtLoad      !< copy of  SED input mesh [-]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: HubOrient      !< Orientation matrix to translate results from blade 1 to remaining blades in aeromaps [(-)]
-  END TYPE FAST_ModuleMapType
-! =======================
 ! =========  FAST_ExternInputType  =======
   TYPE, PUBLIC :: FAST_ExternInputType
     REAL(ReKi)  :: GenTrq = 0.0_ReKi      !< generator torque input from Simulink/Labview [-]
@@ -741,11 +599,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TurbIDforName = -1      !< ID number for turbine (used to create output file naming convention) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TurbinePos = 0.0_ReKi      !< Initial position of turbine base (origin used for graphics or in FAST.Farm) [m]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< number of global controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< number of turbine specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< number of controller outputs [to supercontroller] [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: fromSCGlob      !< Initial global inputs to the controller [from the supercontroller] [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Initial turbine specific inputs to the controller [from the supercontroller] [-]
     LOGICAL  :: FarmIntegration = .false.      !< whether this is called from FAST.Farm (or another program that doesn't want FAST to call all of the init stuff first) [-]
     INTEGER(IntKi) , DIMENSION(1:4)  :: windGrid_n = 0_IntKi      !< number of grid points in the x, y, z, and t directions for IfW [-]
     REAL(ReKi) , DIMENSION(1:4)  :: windGrid_delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction for IfW [m,m,m,s]
@@ -770,7 +623,6 @@ IMPLICIT NONE
     TYPE(Glue_ParameterType)  :: p_Glue      !< Parameters for the glue code [-]
     TYPE(Glue_OutputFileType)  :: y_Glue      !< Output variables for the glue code [-]
     TYPE(Glue_MiscVarType)  :: m_Glue      !< Miscellaneous variables [-]
-    TYPE(FAST_ModuleMapType)  :: MeshMapData      !< Data for mapping between modules [-]
     TYPE(ElastoDyn_Data)  :: ED      !< Data for the ElastoDyn module [-]
     TYPE(SED_Data)  :: SED      !< Data for the Simplified-ElastoDyn module [-]
     TYPE(BeamDyn_Data)  :: BD      !< Data for the BeamDyn module [-]
@@ -780,7 +632,6 @@ IMPLICIT NONE
     TYPE(ExtLoads_Data)  :: ExtLd      !< Data for the External loads module [-]
     TYPE(InflowWind_Data)  :: IfW      !< Data for InflowWind module [-]
     TYPE(ExternalInflow_Data)  :: ExtInfw      !< Data for ExternalInflow integration module [-]
-    TYPE(SCDataEx_Data)  :: SC_DX      !< Data for SuperController integration module [-]
     TYPE(SeaState_Data)  :: SeaSt      !< Data for the SeaState module [-]
     TYPE(HydroDyn_Data)  :: HD      !< Data for the HydroDyn module [-]
     TYPE(SubDyn_Data)  :: SD      !< Data for the SubDyn module [-]
@@ -1061,7 +912,7 @@ subroutine FAST_CopyVTK_ModeShapeType(SrcVTK_ModeShapeTypeData, DstVTK_ModeShape
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstVTK_ModeShapeTypeData%CheckpointRoot = SrcVTK_ModeShapeTypeData%CheckpointRoot
-   DstVTK_ModeShapeTypeData%MatlabFileName = SrcVTK_ModeShapeTypeData%MatlabFileName
+   DstVTK_ModeShapeTypeData%DataFileName = SrcVTK_ModeShapeTypeData%DataFileName
    DstVTK_ModeShapeTypeData%VTKLinModes = SrcVTK_ModeShapeTypeData%VTKLinModes
    if (allocated(SrcVTK_ModeShapeTypeData%VTKModes)) then
       LB(1:1) = lbound(SrcVTK_ModeShapeTypeData%VTKModes)
@@ -1174,7 +1025,7 @@ subroutine FAST_PackVTK_ModeShapeType(RF, Indata)
    character(*), parameter         :: RoutineName = 'FAST_PackVTK_ModeShapeType'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%CheckpointRoot)
-   call RegPack(RF, InData%MatlabFileName)
+   call RegPack(RF, InData%DataFileName)
    call RegPack(RF, InData%VTKLinModes)
    call RegPackAlloc(RF, InData%VTKModes)
    call RegPack(RF, InData%VTKLinTim)
@@ -1198,7 +1049,7 @@ subroutine FAST_UnPackVTK_ModeShapeType(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%CheckpointRoot); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%MatlabFileName); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%DataFileName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTKLinModes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%VTKModes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VTKLinTim); if (RegCheckErr(RF, RoutineName)) return
@@ -1210,53 +1061,6 @@ subroutine FAST_UnPackVTK_ModeShapeType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%DampedFreq_Hz); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%x_eig_magnitude); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%x_eig_phase); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_CopySS_CaseType(SrcSS_CaseTypeData, DstSS_CaseTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(FAST_SS_CaseType), intent(in) :: SrcSS_CaseTypeData
-   type(FAST_SS_CaseType), intent(inout) :: DstSS_CaseTypeData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'FAST_CopySS_CaseType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstSS_CaseTypeData%RotSpeed = SrcSS_CaseTypeData%RotSpeed
-   DstSS_CaseTypeData%TSR = SrcSS_CaseTypeData%TSR
-   DstSS_CaseTypeData%WindSpeed = SrcSS_CaseTypeData%WindSpeed
-   DstSS_CaseTypeData%Pitch = SrcSS_CaseTypeData%Pitch
-end subroutine
-
-subroutine FAST_DestroySS_CaseType(SS_CaseTypeData, ErrStat, ErrMsg)
-   type(FAST_SS_CaseType), intent(inout) :: SS_CaseTypeData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'FAST_DestroySS_CaseType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine FAST_PackSS_CaseType(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(FAST_SS_CaseType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackSS_CaseType'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, InData%RotSpeed)
-   call RegPack(RF, InData%TSR)
-   call RegPack(RF, InData%WindSpeed)
-   call RegPack(RF, InData%Pitch)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_UnPackSS_CaseType(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(FAST_SS_CaseType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackSS_CaseType'
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpack(RF, OutData%RotSpeed); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%TSR); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%WindSpeed); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Pitch); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -1282,7 +1086,6 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%numIceLegs = SrcParamData%numIceLegs
    DstParamData%nBeams = SrcParamData%nBeams
    DstParamData%BD_OutputSibling = SrcParamData%BD_OutputSibling
-   DstParamData%ModuleInitialized = SrcParamData%ModuleInitialized
    DstParamData%RhoInf = SrcParamData%RhoInf
    DstParamData%ConvTol = SrcParamData%ConvTol
    DstParamData%MaxConvIter = SrcParamData%MaxConvIter
@@ -1352,6 +1155,7 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstParamData%Tdesc = SrcParamData%Tdesc
+   DstParamData%PlatformPosInit = SrcParamData%PlatformPosInit
    DstParamData%CalcSteady = SrcParamData%CalcSteady
    DstParamData%TrimCase = SrcParamData%TrimCase
    DstParamData%TrimTol = SrcParamData%TrimTol
@@ -1364,10 +1168,6 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%LinOutputs = SrcParamData%LinOutputs
    DstParamData%LinOutJac = SrcParamData%LinOutJac
    DstParamData%LinOutMod = SrcParamData%LinOutMod
-   call FAST_CopyVTK_ModeShapeType(SrcParamData%VTK_modes, DstParamData%VTK_modes, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   DstParamData%UseSC = SrcParamData%UseSC
    DstParamData%Lin_NumMods = SrcParamData%Lin_NumMods
    DstParamData%Lin_ModOrder = SrcParamData%Lin_ModOrder
    DstParamData%LinInterpOrder = SrcParamData%LinInterpOrder
@@ -1428,8 +1228,6 @@ subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call FAST_DestroyVTK_SurfaceType(ParamData%VTK_surface, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FAST_DestroyVTK_ModeShapeType(ParamData%VTK_modes, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%RotSpeed)) then
       deallocate(ParamData%RotSpeed)
    end if
@@ -1457,7 +1255,6 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%numIceLegs)
    call RegPack(RF, InData%nBeams)
    call RegPack(RF, InData%BD_OutputSibling)
-   call RegPack(RF, InData%ModuleInitialized)
    call RegPack(RF, InData%RhoInf)
    call RegPack(RF, InData%ConvTol)
    call RegPack(RF, InData%MaxConvIter)
@@ -1525,6 +1322,7 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%VTK_fps)
    call FAST_PackVTK_SurfaceType(RF, InData%VTK_surface) 
    call RegPack(RF, InData%Tdesc)
+   call RegPack(RF, InData%PlatformPosInit)
    call RegPack(RF, InData%CalcSteady)
    call RegPack(RF, InData%TrimCase)
    call RegPack(RF, InData%TrimTol)
@@ -1537,8 +1335,6 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%LinOutputs)
    call RegPack(RF, InData%LinOutJac)
    call RegPack(RF, InData%LinOutMod)
-   call FAST_PackVTK_ModeShapeType(RF, InData%VTK_modes) 
-   call RegPack(RF, InData%UseSC)
    call RegPack(RF, InData%Lin_NumMods)
    call RegPack(RF, InData%Lin_ModOrder)
    call RegPack(RF, InData%LinInterpOrder)
@@ -1575,7 +1371,6 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%numIceLegs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nBeams); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BD_OutputSibling); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%ModuleInitialized); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RhoInf); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvTol); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MaxConvIter); if (RegCheckErr(RF, RoutineName)) return
@@ -1643,6 +1438,7 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%VTK_fps); if (RegCheckErr(RF, RoutineName)) return
    call FAST_UnpackVTK_SurfaceType(RF, OutData%VTK_surface) ! VTK_surface 
    call RegUnpack(RF, OutData%Tdesc); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PlatformPosInit); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CalcSteady); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TrimCase); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TrimTol); if (RegCheckErr(RF, RoutineName)) return
@@ -1655,8 +1451,6 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%LinOutputs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LinOutJac); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LinOutMod); if (RegCheckErr(RF, RoutineName)) return
-   call FAST_UnpackVTK_ModeShapeType(RF, OutData%VTK_modes) ! VTK_modes 
-   call RegUnpack(RF, OutData%UseSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Lin_NumMods); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Lin_ModOrder); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LinInterpOrder); if (RegCheckErr(RF, RoutineName)) return
@@ -1673,616 +1467,15 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%GearBox_index); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(FAST_LinType), intent(in) :: SrcLinTypeData
-   type(FAST_LinType), intent(inout) :: DstLinTypeData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(2), UB(2)
-   integer(IntKi)                 :: ErrStat2
-   character(*), parameter        :: RoutineName = 'FAST_CopyLinType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(SrcLinTypeData%Names_u)) then
-      LB(1:1) = lbound(SrcLinTypeData%Names_u)
-      UB(1:1) = ubound(SrcLinTypeData%Names_u)
-      if (.not. allocated(DstLinTypeData%Names_u)) then
-         allocate(DstLinTypeData%Names_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%Names_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%Names_u = SrcLinTypeData%Names_u
-   end if
-   if (allocated(SrcLinTypeData%Names_y)) then
-      LB(1:1) = lbound(SrcLinTypeData%Names_y)
-      UB(1:1) = ubound(SrcLinTypeData%Names_y)
-      if (.not. allocated(DstLinTypeData%Names_y)) then
-         allocate(DstLinTypeData%Names_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%Names_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%Names_y = SrcLinTypeData%Names_y
-   end if
-   if (allocated(SrcLinTypeData%Names_x)) then
-      LB(1:1) = lbound(SrcLinTypeData%Names_x)
-      UB(1:1) = ubound(SrcLinTypeData%Names_x)
-      if (.not. allocated(DstLinTypeData%Names_x)) then
-         allocate(DstLinTypeData%Names_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%Names_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%Names_x = SrcLinTypeData%Names_x
-   end if
-   if (allocated(SrcLinTypeData%Names_xd)) then
-      LB(1:1) = lbound(SrcLinTypeData%Names_xd)
-      UB(1:1) = ubound(SrcLinTypeData%Names_xd)
-      if (.not. allocated(DstLinTypeData%Names_xd)) then
-         allocate(DstLinTypeData%Names_xd(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%Names_xd.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%Names_xd = SrcLinTypeData%Names_xd
-   end if
-   if (allocated(SrcLinTypeData%Names_z)) then
-      LB(1:1) = lbound(SrcLinTypeData%Names_z)
-      UB(1:1) = ubound(SrcLinTypeData%Names_z)
-      if (.not. allocated(DstLinTypeData%Names_z)) then
-         allocate(DstLinTypeData%Names_z(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%Names_z.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%Names_z = SrcLinTypeData%Names_z
-   end if
-   if (allocated(SrcLinTypeData%op_u)) then
-      LB(1:1) = lbound(SrcLinTypeData%op_u)
-      UB(1:1) = ubound(SrcLinTypeData%op_u)
-      if (.not. allocated(DstLinTypeData%op_u)) then
-         allocate(DstLinTypeData%op_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%op_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%op_u = SrcLinTypeData%op_u
-   end if
-   if (allocated(SrcLinTypeData%op_y)) then
-      LB(1:1) = lbound(SrcLinTypeData%op_y)
-      UB(1:1) = ubound(SrcLinTypeData%op_y)
-      if (.not. allocated(DstLinTypeData%op_y)) then
-         allocate(DstLinTypeData%op_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%op_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%op_y = SrcLinTypeData%op_y
-   end if
-   if (allocated(SrcLinTypeData%op_x)) then
-      LB(1:1) = lbound(SrcLinTypeData%op_x)
-      UB(1:1) = ubound(SrcLinTypeData%op_x)
-      if (.not. allocated(DstLinTypeData%op_x)) then
-         allocate(DstLinTypeData%op_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%op_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%op_x = SrcLinTypeData%op_x
-   end if
-   if (allocated(SrcLinTypeData%op_dx)) then
-      LB(1:1) = lbound(SrcLinTypeData%op_dx)
-      UB(1:1) = ubound(SrcLinTypeData%op_dx)
-      if (.not. allocated(DstLinTypeData%op_dx)) then
-         allocate(DstLinTypeData%op_dx(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%op_dx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%op_dx = SrcLinTypeData%op_dx
-   end if
-   if (allocated(SrcLinTypeData%op_xd)) then
-      LB(1:1) = lbound(SrcLinTypeData%op_xd)
-      UB(1:1) = ubound(SrcLinTypeData%op_xd)
-      if (.not. allocated(DstLinTypeData%op_xd)) then
-         allocate(DstLinTypeData%op_xd(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%op_xd.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%op_xd = SrcLinTypeData%op_xd
-   end if
-   if (allocated(SrcLinTypeData%op_z)) then
-      LB(1:1) = lbound(SrcLinTypeData%op_z)
-      UB(1:1) = ubound(SrcLinTypeData%op_z)
-      if (.not. allocated(DstLinTypeData%op_z)) then
-         allocate(DstLinTypeData%op_z(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%op_z.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%op_z = SrcLinTypeData%op_z
-   end if
-   if (allocated(SrcLinTypeData%op_x_eig_mag)) then
-      LB(1:1) = lbound(SrcLinTypeData%op_x_eig_mag)
-      UB(1:1) = ubound(SrcLinTypeData%op_x_eig_mag)
-      if (.not. allocated(DstLinTypeData%op_x_eig_mag)) then
-         allocate(DstLinTypeData%op_x_eig_mag(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%op_x_eig_mag.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%op_x_eig_mag = SrcLinTypeData%op_x_eig_mag
-   end if
-   if (allocated(SrcLinTypeData%op_x_eig_phase)) then
-      LB(1:1) = lbound(SrcLinTypeData%op_x_eig_phase)
-      UB(1:1) = ubound(SrcLinTypeData%op_x_eig_phase)
-      if (.not. allocated(DstLinTypeData%op_x_eig_phase)) then
-         allocate(DstLinTypeData%op_x_eig_phase(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%op_x_eig_phase.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%op_x_eig_phase = SrcLinTypeData%op_x_eig_phase
-   end if
-   if (allocated(SrcLinTypeData%Use_u)) then
-      LB(1:1) = lbound(SrcLinTypeData%Use_u)
-      UB(1:1) = ubound(SrcLinTypeData%Use_u)
-      if (.not. allocated(DstLinTypeData%Use_u)) then
-         allocate(DstLinTypeData%Use_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%Use_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%Use_u = SrcLinTypeData%Use_u
-   end if
-   if (allocated(SrcLinTypeData%Use_y)) then
-      LB(1:1) = lbound(SrcLinTypeData%Use_y)
-      UB(1:1) = ubound(SrcLinTypeData%Use_y)
-      if (.not. allocated(DstLinTypeData%Use_y)) then
-         allocate(DstLinTypeData%Use_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%Use_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%Use_y = SrcLinTypeData%Use_y
-   end if
-   if (allocated(SrcLinTypeData%A)) then
-      LB(1:2) = lbound(SrcLinTypeData%A)
-      UB(1:2) = ubound(SrcLinTypeData%A)
-      if (.not. allocated(DstLinTypeData%A)) then
-         allocate(DstLinTypeData%A(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%A.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%A = SrcLinTypeData%A
-   end if
-   if (allocated(SrcLinTypeData%B)) then
-      LB(1:2) = lbound(SrcLinTypeData%B)
-      UB(1:2) = ubound(SrcLinTypeData%B)
-      if (.not. allocated(DstLinTypeData%B)) then
-         allocate(DstLinTypeData%B(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%B = SrcLinTypeData%B
-   end if
-   if (allocated(SrcLinTypeData%C)) then
-      LB(1:2) = lbound(SrcLinTypeData%C)
-      UB(1:2) = ubound(SrcLinTypeData%C)
-      if (.not. allocated(DstLinTypeData%C)) then
-         allocate(DstLinTypeData%C(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%C.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%C = SrcLinTypeData%C
-   end if
-   if (allocated(SrcLinTypeData%D)) then
-      LB(1:2) = lbound(SrcLinTypeData%D)
-      UB(1:2) = ubound(SrcLinTypeData%D)
-      if (.not. allocated(DstLinTypeData%D)) then
-         allocate(DstLinTypeData%D(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%D.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%D = SrcLinTypeData%D
-   end if
-   if (allocated(SrcLinTypeData%StateRotation)) then
-      LB(1:2) = lbound(SrcLinTypeData%StateRotation)
-      UB(1:2) = ubound(SrcLinTypeData%StateRotation)
-      if (.not. allocated(DstLinTypeData%StateRotation)) then
-         allocate(DstLinTypeData%StateRotation(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%StateRotation.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%StateRotation = SrcLinTypeData%StateRotation
-   end if
-   if (allocated(SrcLinTypeData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcLinTypeData%IsLoad_u)
-      UB(1:1) = ubound(SrcLinTypeData%IsLoad_u)
-      if (.not. allocated(DstLinTypeData%IsLoad_u)) then
-         allocate(DstLinTypeData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%IsLoad_u = SrcLinTypeData%IsLoad_u
-   end if
-   if (allocated(SrcLinTypeData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcLinTypeData%RotFrame_u)
-      UB(1:1) = ubound(SrcLinTypeData%RotFrame_u)
-      if (.not. allocated(DstLinTypeData%RotFrame_u)) then
-         allocate(DstLinTypeData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%RotFrame_u = SrcLinTypeData%RotFrame_u
-   end if
-   if (allocated(SrcLinTypeData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcLinTypeData%RotFrame_y)
-      UB(1:1) = ubound(SrcLinTypeData%RotFrame_y)
-      if (.not. allocated(DstLinTypeData%RotFrame_y)) then
-         allocate(DstLinTypeData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%RotFrame_y = SrcLinTypeData%RotFrame_y
-   end if
-   if (allocated(SrcLinTypeData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcLinTypeData%RotFrame_x)
-      UB(1:1) = ubound(SrcLinTypeData%RotFrame_x)
-      if (.not. allocated(DstLinTypeData%RotFrame_x)) then
-         allocate(DstLinTypeData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%RotFrame_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%RotFrame_x = SrcLinTypeData%RotFrame_x
-   end if
-   if (allocated(SrcLinTypeData%RotFrame_z)) then
-      LB(1:1) = lbound(SrcLinTypeData%RotFrame_z)
-      UB(1:1) = ubound(SrcLinTypeData%RotFrame_z)
-      if (.not. allocated(DstLinTypeData%RotFrame_z)) then
-         allocate(DstLinTypeData%RotFrame_z(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%RotFrame_z.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%RotFrame_z = SrcLinTypeData%RotFrame_z
-   end if
-   if (allocated(SrcLinTypeData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcLinTypeData%DerivOrder_x)
-      UB(1:1) = ubound(SrcLinTypeData%DerivOrder_x)
-      if (.not. allocated(DstLinTypeData%DerivOrder_x)) then
-         allocate(DstLinTypeData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstLinTypeData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstLinTypeData%DerivOrder_x = SrcLinTypeData%DerivOrder_x
-   end if
-   DstLinTypeData%SizeLin = SrcLinTypeData%SizeLin
-   DstLinTypeData%LinStartIndx = SrcLinTypeData%LinStartIndx
-   DstLinTypeData%NumOutputs = SrcLinTypeData%NumOutputs
-end subroutine
-
-subroutine FAST_DestroyLinType(LinTypeData, ErrStat, ErrMsg)
-   type(FAST_LinType), intent(inout) :: LinTypeData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'FAST_DestroyLinType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(LinTypeData%Names_u)) then
-      deallocate(LinTypeData%Names_u)
-   end if
-   if (allocated(LinTypeData%Names_y)) then
-      deallocate(LinTypeData%Names_y)
-   end if
-   if (allocated(LinTypeData%Names_x)) then
-      deallocate(LinTypeData%Names_x)
-   end if
-   if (allocated(LinTypeData%Names_xd)) then
-      deallocate(LinTypeData%Names_xd)
-   end if
-   if (allocated(LinTypeData%Names_z)) then
-      deallocate(LinTypeData%Names_z)
-   end if
-   if (allocated(LinTypeData%op_u)) then
-      deallocate(LinTypeData%op_u)
-   end if
-   if (allocated(LinTypeData%op_y)) then
-      deallocate(LinTypeData%op_y)
-   end if
-   if (allocated(LinTypeData%op_x)) then
-      deallocate(LinTypeData%op_x)
-   end if
-   if (allocated(LinTypeData%op_dx)) then
-      deallocate(LinTypeData%op_dx)
-   end if
-   if (allocated(LinTypeData%op_xd)) then
-      deallocate(LinTypeData%op_xd)
-   end if
-   if (allocated(LinTypeData%op_z)) then
-      deallocate(LinTypeData%op_z)
-   end if
-   if (allocated(LinTypeData%op_x_eig_mag)) then
-      deallocate(LinTypeData%op_x_eig_mag)
-   end if
-   if (allocated(LinTypeData%op_x_eig_phase)) then
-      deallocate(LinTypeData%op_x_eig_phase)
-   end if
-   if (allocated(LinTypeData%Use_u)) then
-      deallocate(LinTypeData%Use_u)
-   end if
-   if (allocated(LinTypeData%Use_y)) then
-      deallocate(LinTypeData%Use_y)
-   end if
-   if (allocated(LinTypeData%A)) then
-      deallocate(LinTypeData%A)
-   end if
-   if (allocated(LinTypeData%B)) then
-      deallocate(LinTypeData%B)
-   end if
-   if (allocated(LinTypeData%C)) then
-      deallocate(LinTypeData%C)
-   end if
-   if (allocated(LinTypeData%D)) then
-      deallocate(LinTypeData%D)
-   end if
-   if (allocated(LinTypeData%StateRotation)) then
-      deallocate(LinTypeData%StateRotation)
-   end if
-   if (allocated(LinTypeData%IsLoad_u)) then
-      deallocate(LinTypeData%IsLoad_u)
-   end if
-   if (allocated(LinTypeData%RotFrame_u)) then
-      deallocate(LinTypeData%RotFrame_u)
-   end if
-   if (allocated(LinTypeData%RotFrame_y)) then
-      deallocate(LinTypeData%RotFrame_y)
-   end if
-   if (allocated(LinTypeData%RotFrame_x)) then
-      deallocate(LinTypeData%RotFrame_x)
-   end if
-   if (allocated(LinTypeData%RotFrame_z)) then
-      deallocate(LinTypeData%RotFrame_z)
-   end if
-   if (allocated(LinTypeData%DerivOrder_x)) then
-      deallocate(LinTypeData%DerivOrder_x)
-   end if
-end subroutine
-
-subroutine FAST_PackLinType(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(FAST_LinType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackLinType'
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPackAlloc(RF, InData%Names_u)
-   call RegPackAlloc(RF, InData%Names_y)
-   call RegPackAlloc(RF, InData%Names_x)
-   call RegPackAlloc(RF, InData%Names_xd)
-   call RegPackAlloc(RF, InData%Names_z)
-   call RegPackAlloc(RF, InData%op_u)
-   call RegPackAlloc(RF, InData%op_y)
-   call RegPackAlloc(RF, InData%op_x)
-   call RegPackAlloc(RF, InData%op_dx)
-   call RegPackAlloc(RF, InData%op_xd)
-   call RegPackAlloc(RF, InData%op_z)
-   call RegPackAlloc(RF, InData%op_x_eig_mag)
-   call RegPackAlloc(RF, InData%op_x_eig_phase)
-   call RegPackAlloc(RF, InData%Use_u)
-   call RegPackAlloc(RF, InData%Use_y)
-   call RegPackAlloc(RF, InData%A)
-   call RegPackAlloc(RF, InData%B)
-   call RegPackAlloc(RF, InData%C)
-   call RegPackAlloc(RF, InData%D)
-   call RegPackAlloc(RF, InData%StateRotation)
-   call RegPackAlloc(RF, InData%IsLoad_u)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%RotFrame_x)
-   call RegPackAlloc(RF, InData%RotFrame_z)
-   call RegPackAlloc(RF, InData%DerivOrder_x)
-   call RegPack(RF, InData%SizeLin)
-   call RegPack(RF, InData%LinStartIndx)
-   call RegPack(RF, InData%NumOutputs)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_UnPackLinType(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(FAST_LinType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackLinType'
-   integer(B4Ki)   :: LB(2), UB(2)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackAlloc(RF, OutData%Names_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Names_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Names_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Names_xd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Names_z); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%op_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%op_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%op_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%op_dx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%op_xd); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%op_z); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%op_x_eig_mag); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%op_x_eig_phase); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Use_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Use_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%A); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%B); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%C); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%D); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%StateRotation); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_z); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%SizeLin); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%LinStartIndx); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumOutputs); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_CopyModLinType(SrcModLinTypeData, DstModLinTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(FAST_ModLinType), intent(in) :: SrcModLinTypeData
-   type(FAST_ModLinType), intent(inout) :: DstModLinTypeData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)                  :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_CopyModLinType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(SrcModLinTypeData%Instance)) then
-      LB(1:1) = lbound(SrcModLinTypeData%Instance)
-      UB(1:1) = ubound(SrcModLinTypeData%Instance)
-      if (.not. allocated(DstModLinTypeData%Instance)) then
-         allocate(DstModLinTypeData%Instance(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModLinTypeData%Instance.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_CopyLinType(SrcModLinTypeData%Instance(i1), DstModLinTypeData%Instance(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-end subroutine
-
-subroutine FAST_DestroyModLinType(ModLinTypeData, ErrStat, ErrMsg)
-   type(FAST_ModLinType), intent(inout) :: ModLinTypeData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_DestroyModLinType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(ModLinTypeData%Instance)) then
-      LB(1:1) = lbound(ModLinTypeData%Instance)
-      UB(1:1) = ubound(ModLinTypeData%Instance)
-      do i1 = LB(1), UB(1)
-         call FAST_DestroyLinType(ModLinTypeData%Instance(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModLinTypeData%Instance)
-   end if
-end subroutine
-
-subroutine FAST_PackModLinType(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(FAST_ModLinType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackModLinType'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, allocated(InData%Instance))
-   if (allocated(InData%Instance)) then
-      call RegPackBounds(RF, 1, lbound(InData%Instance), ubound(InData%Instance))
-      LB(1:1) = lbound(InData%Instance)
-      UB(1:1) = ubound(InData%Instance)
-      do i1 = LB(1), UB(1)
-         call FAST_PackLinType(RF, InData%Instance(i1)) 
-      end do
-   end if
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_UnPackModLinType(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(FAST_ModLinType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackModLinType'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   if (allocated(OutData%Instance)) deallocate(OutData%Instance)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%Instance(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Instance.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call FAST_UnpackLinType(RF, OutData%Instance(i1)) ! Instance 
-      end do
-   end if
-end subroutine
-
 subroutine FAST_CopyLinFileType(SrcLinFileTypeData, DstLinFileTypeData, CtrlCode, ErrStat, ErrMsg)
    type(FAST_LinFileType), intent(in) :: SrcLinFileTypeData
    type(FAST_LinFileType), intent(inout) :: DstLinFileTypeData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)                  :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyLinFileType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   LB(1:1) = lbound(SrcLinFileTypeData%Modules)
-   UB(1:1) = ubound(SrcLinFileTypeData%Modules)
-   do i1 = LB(1), UB(1)
-      call FAST_CopyModLinType(SrcLinFileTypeData%Modules(i1), DstLinFileTypeData%Modules(i1), CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end do
-   call FAST_CopyLinType(SrcLinFileTypeData%Glue, DstLinFileTypeData%Glue, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    DstLinFileTypeData%RotSpeed = SrcLinFileTypeData%RotSpeed
    DstLinFileTypeData%Azimuth = SrcLinFileTypeData%Azimuth
    DstLinFileTypeData%WindSpeed = SrcLinFileTypeData%WindSpeed
@@ -2292,36 +1485,16 @@ subroutine FAST_DestroyLinFileType(LinFileTypeData, ErrStat, ErrMsg)
    type(FAST_LinFileType), intent(inout) :: LinFileTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_DestroyLinFileType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   LB(1:1) = lbound(LinFileTypeData%Modules)
-   UB(1:1) = ubound(LinFileTypeData%Modules)
-   do i1 = LB(1), UB(1)
-      call FAST_DestroyModLinType(LinFileTypeData%Modules(i1), ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   end do
-   call FAST_DestroyLinType(LinFileTypeData%Glue, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackLinFileType(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(FAST_LinFileType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FAST_PackLinFileType'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
-   LB(1:1) = lbound(InData%Modules)
-   UB(1:1) = ubound(InData%Modules)
-   do i1 = LB(1), UB(1)
-      call FAST_PackModLinType(RF, InData%Modules(i1)) 
-   end do
-   call FAST_PackLinType(RF, InData%Glue) 
    call RegPack(RF, InData%RotSpeed)
    call RegPack(RF, InData%Azimuth)
    call RegPack(RF, InData%WindSpeed)
@@ -2332,15 +1505,7 @@ subroutine FAST_UnPackLinFileType(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FAST_LinFileType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FAST_UnPackLinFileType'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat /= ErrID_None) return
-   LB(1:1) = lbound(OutData%Modules)
-   UB(1:1) = ubound(OutData%Modules)
-   do i1 = LB(1), UB(1)
-      call FAST_UnpackModLinType(RF, OutData%Modules(i1)) ! Modules 
-   end do
-   call FAST_UnpackLinType(RF, OutData%Glue) ! Glue 
    call RegUnpack(RF, OutData%RotSpeed); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Azimuth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WindSpeed); if (RegCheckErr(RF, RoutineName)) return
@@ -6004,66 +5169,6 @@ subroutine FAST_UnPackExternalInflow_Data(RF, OutData)
    call ExtInfw_UnpackMisc(RF, OutData%m) ! m 
 end subroutine
 
-subroutine FAST_CopySCDataEx_Data(SrcSCDataEx_DataData, DstSCDataEx_DataData, CtrlCode, ErrStat, ErrMsg)
-   type(SCDataEx_Data), intent(in) :: SrcSCDataEx_DataData
-   type(SCDataEx_Data), intent(inout) :: DstSCDataEx_DataData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_CopySCDataEx_Data'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call SC_DX_CopyInput(SrcSCDataEx_DataData%u, DstSCDataEx_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_DX_CopyOutput(SrcSCDataEx_DataData%y, DstSCDataEx_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SC_DX_CopyParam(SrcSCDataEx_DataData%p, DstSCDataEx_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-end subroutine
-
-subroutine FAST_DestroySCDataEx_Data(SCDataEx_DataData, ErrStat, ErrMsg)
-   type(SCDataEx_Data), intent(inout) :: SCDataEx_DataData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_DestroySCDataEx_Data'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   call SC_DX_DestroyInput(SCDataEx_DataData%u, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DX_DestroyOutput(SCDataEx_DataData%y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SC_DX_DestroyParam(SCDataEx_DataData%p, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-end subroutine
-
-subroutine FAST_PackSCDataEx_Data(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(SCDataEx_Data), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackSCDataEx_Data'
-   if (RF%ErrStat >= AbortErrLev) return
-   call SC_DX_PackInput(RF, InData%u) 
-   call SC_DX_PackOutput(RF, InData%y) 
-   call SC_DX_PackParam(RF, InData%p) 
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_UnPackSCDataEx_Data(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(SCDataEx_Data), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackSCDataEx_Data'
-   if (RF%ErrStat /= ErrID_None) return
-   call SC_DX_UnpackInput(RF, OutData%u) ! u 
-   call SC_DX_UnpackOutput(RF, OutData%y) ! y 
-   call SC_DX_UnpackParam(RF, OutData%p) ! p 
-end subroutine
-
 subroutine FAST_CopySubDyn_Data(SrcSubDyn_DataData, DstSubDyn_DataData, CtrlCode, ErrStat, ErrMsg)
    type(SubDyn_Data), intent(inout) :: SrcSubDyn_DataData
    type(SubDyn_Data), intent(inout) :: DstSubDyn_DataData
@@ -8943,1887 +8048,6 @@ subroutine FAST_UnPackOrcaFlex_Data(RF, OutData)
    call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
-subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(FAST_ModuleMapType), intent(inout) :: SrcModuleMapTypeData
-   type(FAST_ModuleMapType), intent(inout) :: DstModuleMapTypeData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1, i2, i3
-   integer(B4Ki)                  :: LB(3), UB(3)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_CopyModuleMapType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(SrcModuleMapTypeData%ED_P_2_BD_P)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%ED_P_2_BD_P)
-      UB(1:1) = ubound(SrcModuleMapTypeData%ED_P_2_BD_P)
-      if (.not. allocated(DstModuleMapTypeData%ED_P_2_BD_P)) then
-         allocate(DstModuleMapTypeData%ED_P_2_BD_P(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%ED_P_2_BD_P.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_BD_P(i1), DstModuleMapTypeData%ED_P_2_BD_P(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%BD_P_2_ED_P)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%BD_P_2_ED_P)
-      UB(1:1) = ubound(SrcModuleMapTypeData%BD_P_2_ED_P)
-      if (.not. allocated(DstModuleMapTypeData%BD_P_2_ED_P)) then
-         allocate(DstModuleMapTypeData%BD_P_2_ED_P(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%BD_P_2_ED_P.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%BD_P_2_ED_P(i1), DstModuleMapTypeData%BD_P_2_ED_P(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%ED_P_2_BD_P_Hub)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%ED_P_2_BD_P_Hub)
-      UB(1:1) = ubound(SrcModuleMapTypeData%ED_P_2_BD_P_Hub)
-      if (.not. allocated(DstModuleMapTypeData%ED_P_2_BD_P_Hub)) then
-         allocate(DstModuleMapTypeData%ED_P_2_BD_P_Hub(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%ED_P_2_BD_P_Hub.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_BD_P_Hub(i1), DstModuleMapTypeData%ED_P_2_BD_P_Hub(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_HD_PRP_P, DstModuleMapTypeData%ED_P_2_HD_PRP_P, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SubStructure_2_HD_W_P, DstModuleMapTypeData%SubStructure_2_HD_W_P, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%HD_W_P_2_SubStructure, DstModuleMapTypeData%HD_W_P_2_SubStructure, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SubStructure_2_HD_M_P, DstModuleMapTypeData%SubStructure_2_HD_M_P, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%HD_M_P_2_SubStructure, DstModuleMapTypeData%HD_M_P_2_SubStructure, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%Structure_2_Mooring, DstModuleMapTypeData%Structure_2_Mooring, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%Mooring_2_Structure, DstModuleMapTypeData%Mooring_2_Structure, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_SD_TP, DstModuleMapTypeData%ED_P_2_SD_TP, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SD_TP_2_ED_P, DstModuleMapTypeData%SD_TP_2_ED_P, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%ED_P_2_NStC_P_N)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%ED_P_2_NStC_P_N)
-      UB(1:1) = ubound(SrcModuleMapTypeData%ED_P_2_NStC_P_N)
-      if (.not. allocated(DstModuleMapTypeData%ED_P_2_NStC_P_N)) then
-         allocate(DstModuleMapTypeData%ED_P_2_NStC_P_N(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%ED_P_2_NStC_P_N.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_NStC_P_N(i1), DstModuleMapTypeData%ED_P_2_NStC_P_N(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%NStC_P_2_ED_P_N)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%NStC_P_2_ED_P_N)
-      UB(1:1) = ubound(SrcModuleMapTypeData%NStC_P_2_ED_P_N)
-      if (.not. allocated(DstModuleMapTypeData%NStC_P_2_ED_P_N)) then
-         allocate(DstModuleMapTypeData%NStC_P_2_ED_P_N(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%NStC_P_2_ED_P_N.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%NStC_P_2_ED_P_N(i1), DstModuleMapTypeData%NStC_P_2_ED_P_N(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%ED_L_2_TStC_P_T)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%ED_L_2_TStC_P_T)
-      UB(1:1) = ubound(SrcModuleMapTypeData%ED_L_2_TStC_P_T)
-      if (.not. allocated(DstModuleMapTypeData%ED_L_2_TStC_P_T)) then
-         allocate(DstModuleMapTypeData%ED_L_2_TStC_P_T(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%ED_L_2_TStC_P_T.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_L_2_TStC_P_T(i1), DstModuleMapTypeData%ED_L_2_TStC_P_T(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%TStC_P_2_ED_P_T)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%TStC_P_2_ED_P_T)
-      UB(1:1) = ubound(SrcModuleMapTypeData%TStC_P_2_ED_P_T)
-      if (.not. allocated(DstModuleMapTypeData%TStC_P_2_ED_P_T)) then
-         allocate(DstModuleMapTypeData%TStC_P_2_ED_P_T(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%TStC_P_2_ED_P_T.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%TStC_P_2_ED_P_T(i1), DstModuleMapTypeData%TStC_P_2_ED_P_T(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%ED_L_2_BStC_P_B)) then
-      LB(1:2) = lbound(SrcModuleMapTypeData%ED_L_2_BStC_P_B)
-      UB(1:2) = ubound(SrcModuleMapTypeData%ED_L_2_BStC_P_B)
-      if (.not. allocated(DstModuleMapTypeData%ED_L_2_BStC_P_B)) then
-         allocate(DstModuleMapTypeData%ED_L_2_BStC_P_B(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%ED_L_2_BStC_P_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_L_2_BStC_P_B(i1,i2), DstModuleMapTypeData%ED_L_2_BStC_P_B(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         end do
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%BStC_P_2_ED_P_B)) then
-      LB(1:2) = lbound(SrcModuleMapTypeData%BStC_P_2_ED_P_B)
-      UB(1:2) = ubound(SrcModuleMapTypeData%BStC_P_2_ED_P_B)
-      if (.not. allocated(DstModuleMapTypeData%BStC_P_2_ED_P_B)) then
-         allocate(DstModuleMapTypeData%BStC_P_2_ED_P_B(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%BStC_P_2_ED_P_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%BStC_P_2_ED_P_B(i1,i2), DstModuleMapTypeData%BStC_P_2_ED_P_B(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         end do
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%BD_L_2_BStC_P_B)) then
-      LB(1:2) = lbound(SrcModuleMapTypeData%BD_L_2_BStC_P_B)
-      UB(1:2) = ubound(SrcModuleMapTypeData%BD_L_2_BStC_P_B)
-      if (.not. allocated(DstModuleMapTypeData%BD_L_2_BStC_P_B)) then
-         allocate(DstModuleMapTypeData%BD_L_2_BStC_P_B(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%BD_L_2_BStC_P_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%BD_L_2_BStC_P_B(i1,i2), DstModuleMapTypeData%BD_L_2_BStC_P_B(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         end do
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%BStC_P_2_BD_P_B)) then
-      LB(1:2) = lbound(SrcModuleMapTypeData%BStC_P_2_BD_P_B)
-      UB(1:2) = ubound(SrcModuleMapTypeData%BStC_P_2_BD_P_B)
-      if (.not. allocated(DstModuleMapTypeData%BStC_P_2_BD_P_B)) then
-         allocate(DstModuleMapTypeData%BStC_P_2_BD_P_B(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%BStC_P_2_BD_P_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%BStC_P_2_BD_P_B(i1,i2), DstModuleMapTypeData%BStC_P_2_BD_P_B(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         end do
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%SStC_P_P_2_SubStructure)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%SStC_P_P_2_SubStructure)
-      UB(1:1) = ubound(SrcModuleMapTypeData%SStC_P_P_2_SubStructure)
-      if (.not. allocated(DstModuleMapTypeData%SStC_P_P_2_SubStructure)) then
-         allocate(DstModuleMapTypeData%SStC_P_P_2_SubStructure(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SStC_P_P_2_SubStructure.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SStC_P_P_2_SubStructure(i1), DstModuleMapTypeData%SStC_P_P_2_SubStructure(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%SubStructure_2_SStC_P_P)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%SubStructure_2_SStC_P_P)
-      UB(1:1) = ubound(SrcModuleMapTypeData%SubStructure_2_SStC_P_P)
-      if (.not. allocated(DstModuleMapTypeData%SubStructure_2_SStC_P_P)) then
-         allocate(DstModuleMapTypeData%SubStructure_2_SStC_P_P(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SubStructure_2_SStC_P_P.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SubStructure_2_SStC_P_P(i1), DstModuleMapTypeData%SubStructure_2_SStC_P_P(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_SrvD_P_P, DstModuleMapTypeData%ED_P_2_SrvD_P_P, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%BDED_L_2_AD_L_B)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%BDED_L_2_AD_L_B)
-      UB(1:1) = ubound(SrcModuleMapTypeData%BDED_L_2_AD_L_B)
-      if (.not. allocated(DstModuleMapTypeData%BDED_L_2_AD_L_B)) then
-         allocate(DstModuleMapTypeData%BDED_L_2_AD_L_B(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%BDED_L_2_AD_L_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%BDED_L_2_AD_L_B(i1), DstModuleMapTypeData%BDED_L_2_AD_L_B(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%AD_L_2_BDED_B)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%AD_L_2_BDED_B)
-      UB(1:1) = ubound(SrcModuleMapTypeData%AD_L_2_BDED_B)
-      if (.not. allocated(DstModuleMapTypeData%AD_L_2_BDED_B)) then
-         allocate(DstModuleMapTypeData%AD_L_2_BDED_B(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%AD_L_2_BDED_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_L_2_BDED_B(i1), DstModuleMapTypeData%AD_L_2_BDED_B(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%BD_L_2_BD_L)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%BD_L_2_BD_L)
-      UB(1:1) = ubound(SrcModuleMapTypeData%BD_L_2_BD_L)
-      if (.not. allocated(DstModuleMapTypeData%BD_L_2_BD_L)) then
-         allocate(DstModuleMapTypeData%BD_L_2_BD_L(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%BD_L_2_BD_L.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%BD_L_2_BD_L(i1), DstModuleMapTypeData%BD_L_2_BD_L(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%SED_P_2_AD_L_B)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%SED_P_2_AD_L_B)
-      UB(1:1) = ubound(SrcModuleMapTypeData%SED_P_2_AD_L_B)
-      if (.not. allocated(DstModuleMapTypeData%SED_P_2_AD_L_B)) then
-         allocate(DstModuleMapTypeData%SED_P_2_AD_L_B(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SED_P_2_AD_L_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_AD_L_B(i1), DstModuleMapTypeData%SED_P_2_AD_L_B(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%SED_P_2_AD_P_R)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%SED_P_2_AD_P_R)
-      UB(1:1) = ubound(SrcModuleMapTypeData%SED_P_2_AD_P_R)
-      if (.not. allocated(DstModuleMapTypeData%SED_P_2_AD_P_R)) then
-         allocate(DstModuleMapTypeData%SED_P_2_AD_P_R(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SED_P_2_AD_P_R.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_AD_P_R(i1), DstModuleMapTypeData%SED_P_2_AD_P_R(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%AD_L_2_SED_P)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%AD_L_2_SED_P)
-      UB(1:1) = ubound(SrcModuleMapTypeData%AD_L_2_SED_P)
-      if (.not. allocated(DstModuleMapTypeData%AD_L_2_SED_P)) then
-         allocate(DstModuleMapTypeData%AD_L_2_SED_P(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%AD_L_2_SED_P.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_L_2_SED_P(i1), DstModuleMapTypeData%AD_L_2_SED_P(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_AD_P_N, DstModuleMapTypeData%ED_P_2_AD_P_N, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_P_2_ED_P_N, DstModuleMapTypeData%AD_P_2_ED_P_N, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_AD_P_TF, DstModuleMapTypeData%ED_P_2_AD_P_TF, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_P_2_ED_P_TF, DstModuleMapTypeData%AD_P_2_ED_P_TF, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_L_2_AD_L_T, DstModuleMapTypeData%ED_L_2_AD_L_T, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_L_2_ED_P_T, DstModuleMapTypeData%AD_L_2_ED_P_T, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%ED_P_2_AD_P_R)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%ED_P_2_AD_P_R)
-      UB(1:1) = ubound(SrcModuleMapTypeData%ED_P_2_AD_P_R)
-      if (.not. allocated(DstModuleMapTypeData%ED_P_2_AD_P_R)) then
-         allocate(DstModuleMapTypeData%ED_P_2_AD_P_R(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%ED_P_2_AD_P_R.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_AD_P_R(i1), DstModuleMapTypeData%ED_P_2_AD_P_R(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_AD_P_H, DstModuleMapTypeData%ED_P_2_AD_P_H, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ADsk_P_2_ED_P_H, DstModuleMapTypeData%ADsk_P_2_ED_P_H, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_ADsk_P_H, DstModuleMapTypeData%ED_P_2_ADsk_P_H, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_AD_P_N, DstModuleMapTypeData%SED_P_2_AD_P_N, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_L_2_AD_L_T, DstModuleMapTypeData%SED_L_2_AD_L_T, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_AD_P_H, DstModuleMapTypeData%SED_P_2_AD_P_H, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ADsk_P_2_SED_P_H, DstModuleMapTypeData%ADsk_P_2_SED_P_H, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SED_P_2_ADsk_P_H, DstModuleMapTypeData%SED_P_2_ADsk_P_H, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_P_2_ED_P_H, DstModuleMapTypeData%AD_P_2_ED_P_H, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%BDED_L_2_ExtLd_P_B)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%BDED_L_2_ExtLd_P_B)
-      UB(1:1) = ubound(SrcModuleMapTypeData%BDED_L_2_ExtLd_P_B)
-      if (.not. allocated(DstModuleMapTypeData%BDED_L_2_ExtLd_P_B)) then
-         allocate(DstModuleMapTypeData%BDED_L_2_ExtLd_P_B(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%BDED_L_2_ExtLd_P_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%BDED_L_2_ExtLd_P_B(i1), DstModuleMapTypeData%BDED_L_2_ExtLd_P_B(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%ExtLd_P_2_BDED_B)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%ExtLd_P_2_BDED_B)
-      UB(1:1) = ubound(SrcModuleMapTypeData%ExtLd_P_2_BDED_B)
-      if (.not. allocated(DstModuleMapTypeData%ExtLd_P_2_BDED_B)) then
-         allocate(DstModuleMapTypeData%ExtLd_P_2_BDED_B(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%ExtLd_P_2_BDED_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ExtLd_P_2_BDED_B(i1), DstModuleMapTypeData%ExtLd_P_2_BDED_B(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_L_2_ExtLd_P_T, DstModuleMapTypeData%ED_L_2_ExtLd_P_T, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ExtLd_P_2_ED_P_T, DstModuleMapTypeData%ExtLd_P_2_ED_P_T, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%ED_P_2_ExtLd_P_R)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%ED_P_2_ExtLd_P_R)
-      UB(1:1) = ubound(SrcModuleMapTypeData%ED_P_2_ExtLd_P_R)
-      if (.not. allocated(DstModuleMapTypeData%ED_P_2_ExtLd_P_R)) then
-         allocate(DstModuleMapTypeData%ED_P_2_ExtLd_P_R(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%ED_P_2_ExtLd_P_R.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_ExtLd_P_R(i1), DstModuleMapTypeData%ED_P_2_ExtLd_P_R(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_ExtLd_P_H, DstModuleMapTypeData%ED_P_2_ExtLd_P_H, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%AD_L_2_ExtLd_B)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%AD_L_2_ExtLd_B)
-      UB(1:1) = ubound(SrcModuleMapTypeData%AD_L_2_ExtLd_B)
-      if (.not. allocated(DstModuleMapTypeData%AD_L_2_ExtLd_B)) then
-         allocate(DstModuleMapTypeData%AD_L_2_ExtLd_B(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%AD_L_2_ExtLd_B.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_L_2_ExtLd_B(i1), DstModuleMapTypeData%AD_L_2_ExtLd_B(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%AD_L_2_ExtLd_T, DstModuleMapTypeData%AD_L_2_ExtLd_T, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%IceF_P_2_SD_P, DstModuleMapTypeData%IceF_P_2_SD_P, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SDy3_P_2_IceF_P, DstModuleMapTypeData%SDy3_P_2_IceF_P, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%IceD_P_2_SD_P)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%IceD_P_2_SD_P)
-      UB(1:1) = ubound(SrcModuleMapTypeData%IceD_P_2_SD_P)
-      if (.not. allocated(DstModuleMapTypeData%IceD_P_2_SD_P)) then
-         allocate(DstModuleMapTypeData%IceD_P_2_SD_P(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%IceD_P_2_SD_P.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%IceD_P_2_SD_P(i1), DstModuleMapTypeData%IceD_P_2_SD_P(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%SDy3_P_2_IceD_P)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%SDy3_P_2_IceD_P)
-      UB(1:1) = ubound(SrcModuleMapTypeData%SDy3_P_2_IceD_P)
-      if (.not. allocated(DstModuleMapTypeData%SDy3_P_2_IceD_P)) then
-         allocate(DstModuleMapTypeData%SDy3_P_2_IceD_P(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%SDy3_P_2_IceD_P.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%SDy3_P_2_IceD_P(i1), DstModuleMapTypeData%SDy3_P_2_IceD_P(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%Jacobian_Opt1)) then
-      LB(1:2) = lbound(SrcModuleMapTypeData%Jacobian_Opt1)
-      UB(1:2) = ubound(SrcModuleMapTypeData%Jacobian_Opt1)
-      if (.not. allocated(DstModuleMapTypeData%Jacobian_Opt1)) then
-         allocate(DstModuleMapTypeData%Jacobian_Opt1(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%Jacobian_Opt1.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModuleMapTypeData%Jacobian_Opt1 = SrcModuleMapTypeData%Jacobian_Opt1
-   end if
-   if (allocated(SrcModuleMapTypeData%Jacobian_pivot)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%Jacobian_pivot)
-      UB(1:1) = ubound(SrcModuleMapTypeData%Jacobian_pivot)
-      if (.not. allocated(DstModuleMapTypeData%Jacobian_pivot)) then
-         allocate(DstModuleMapTypeData%Jacobian_pivot(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%Jacobian_pivot.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModuleMapTypeData%Jacobian_pivot = SrcModuleMapTypeData%Jacobian_pivot
-   end if
-   if (allocated(SrcModuleMapTypeData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcModuleMapTypeData%Jac_u_indx)
-      UB(1:2) = ubound(SrcModuleMapTypeData%Jac_u_indx)
-      if (.not. allocated(DstModuleMapTypeData%Jac_u_indx)) then
-         allocate(DstModuleMapTypeData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModuleMapTypeData%Jac_u_indx = SrcModuleMapTypeData%Jac_u_indx
-   end if
-   call MeshCopy(SrcModuleMapTypeData%u_ED_NacelleLoads, DstModuleMapTypeData%u_ED_NacelleLoads, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%SubstructureLoads_Tmp, DstModuleMapTypeData%SubstructureLoads_Tmp, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%SubstructureLoads_Tmp2, DstModuleMapTypeData%SubstructureLoads_Tmp2, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%PlatformLoads_Tmp, DstModuleMapTypeData%PlatformLoads_Tmp, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%PlatformLoads_Tmp2, DstModuleMapTypeData%PlatformLoads_Tmp2, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%SubstructureLoads_Tmp_Farm, DstModuleMapTypeData%SubstructureLoads_Tmp_Farm, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%u_ED_TowerPtloads, DstModuleMapTypeData%u_ED_TowerPtloads, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%u_ED_BladePtLoads)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%u_ED_BladePtLoads)
-      UB(1:1) = ubound(SrcModuleMapTypeData%u_ED_BladePtLoads)
-      if (.not. allocated(DstModuleMapTypeData%u_ED_BladePtLoads)) then
-         allocate(DstModuleMapTypeData%u_ED_BladePtLoads(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%u_ED_BladePtLoads.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshCopy(SrcModuleMapTypeData%u_ED_BladePtLoads(i1), DstModuleMapTypeData%u_ED_BladePtLoads(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call MeshCopy(SrcModuleMapTypeData%u_SD_TPMesh, DstModuleMapTypeData%u_SD_TPMesh, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%u_HD_M_Mesh, DstModuleMapTypeData%u_HD_M_Mesh, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%u_HD_W_Mesh, DstModuleMapTypeData%u_HD_W_Mesh, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%u_ED_HubPtLoad, DstModuleMapTypeData%u_ED_HubPtLoad, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%u_ED_HubPtLoad_2, DstModuleMapTypeData%u_ED_HubPtLoad_2, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%u_BD_RootMotion)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%u_BD_RootMotion)
-      UB(1:1) = ubound(SrcModuleMapTypeData%u_BD_RootMotion)
-      if (.not. allocated(DstModuleMapTypeData%u_BD_RootMotion)) then
-         allocate(DstModuleMapTypeData%u_BD_RootMotion(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%u_BD_RootMotion.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshCopy(SrcModuleMapTypeData%u_BD_RootMotion(i1), DstModuleMapTypeData%u_BD_RootMotion(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%y_BD_BldMotion_4Loads)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%y_BD_BldMotion_4Loads)
-      UB(1:1) = ubound(SrcModuleMapTypeData%y_BD_BldMotion_4Loads)
-      if (.not. allocated(DstModuleMapTypeData%y_BD_BldMotion_4Loads)) then
-         allocate(DstModuleMapTypeData%y_BD_BldMotion_4Loads(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%y_BD_BldMotion_4Loads.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshCopy(SrcModuleMapTypeData%y_BD_BldMotion_4Loads(i1), DstModuleMapTypeData%y_BD_BldMotion_4Loads(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   if (allocated(SrcModuleMapTypeData%u_BD_Distrload)) then
-      LB(1:1) = lbound(SrcModuleMapTypeData%u_BD_Distrload)
-      UB(1:1) = ubound(SrcModuleMapTypeData%u_BD_Distrload)
-      if (.not. allocated(DstModuleMapTypeData%u_BD_Distrload)) then
-         allocate(DstModuleMapTypeData%u_BD_Distrload(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%u_BD_Distrload.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshCopy(SrcModuleMapTypeData%u_BD_Distrload(i1), DstModuleMapTypeData%u_BD_Distrload(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      end do
-   end if
-   call MeshCopy(SrcModuleMapTypeData%u_Orca_PtfmMesh, DstModuleMapTypeData%u_Orca_PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%u_ExtPtfm_PtfmMesh, DstModuleMapTypeData%u_ExtPtfm_PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call MeshCopy(SrcModuleMapTypeData%u_SED_HubPtLoad, DstModuleMapTypeData%u_SED_HubPtLoad, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcModuleMapTypeData%HubOrient)) then
-      LB(1:3) = lbound(SrcModuleMapTypeData%HubOrient)
-      UB(1:3) = ubound(SrcModuleMapTypeData%HubOrient)
-      if (.not. allocated(DstModuleMapTypeData%HubOrient)) then
-         allocate(DstModuleMapTypeData%HubOrient(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%HubOrient.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstModuleMapTypeData%HubOrient = SrcModuleMapTypeData%HubOrient
-   end if
-end subroutine
-
-subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
-   type(FAST_ModuleMapType), intent(inout) :: ModuleMapTypeData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1, i2, i3
-   integer(B4Ki)   :: LB(3), UB(3)
-   integer(IntKi)                 :: ErrStat2
-   character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_DestroyModuleMapType'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   if (allocated(ModuleMapTypeData%ED_P_2_BD_P)) then
-      LB(1:1) = lbound(ModuleMapTypeData%ED_P_2_BD_P)
-      UB(1:1) = ubound(ModuleMapTypeData%ED_P_2_BD_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_BD_P(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%ED_P_2_BD_P)
-   end if
-   if (allocated(ModuleMapTypeData%BD_P_2_ED_P)) then
-      LB(1:1) = lbound(ModuleMapTypeData%BD_P_2_ED_P)
-      UB(1:1) = ubound(ModuleMapTypeData%BD_P_2_ED_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%BD_P_2_ED_P(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%BD_P_2_ED_P)
-   end if
-   if (allocated(ModuleMapTypeData%ED_P_2_BD_P_Hub)) then
-      LB(1:1) = lbound(ModuleMapTypeData%ED_P_2_BD_P_Hub)
-      UB(1:1) = ubound(ModuleMapTypeData%ED_P_2_BD_P_Hub)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_BD_P_Hub(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%ED_P_2_BD_P_Hub)
-   end if
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%Structure_2_Mooring, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%Mooring_2_Structure, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_SD_TP, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SD_TP_2_ED_P, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%ED_P_2_NStC_P_N)) then
-      LB(1:1) = lbound(ModuleMapTypeData%ED_P_2_NStC_P_N)
-      UB(1:1) = ubound(ModuleMapTypeData%ED_P_2_NStC_P_N)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_NStC_P_N(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%ED_P_2_NStC_P_N)
-   end if
-   if (allocated(ModuleMapTypeData%NStC_P_2_ED_P_N)) then
-      LB(1:1) = lbound(ModuleMapTypeData%NStC_P_2_ED_P_N)
-      UB(1:1) = ubound(ModuleMapTypeData%NStC_P_2_ED_P_N)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%NStC_P_2_ED_P_N(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%NStC_P_2_ED_P_N)
-   end if
-   if (allocated(ModuleMapTypeData%ED_L_2_TStC_P_T)) then
-      LB(1:1) = lbound(ModuleMapTypeData%ED_L_2_TStC_P_T)
-      UB(1:1) = ubound(ModuleMapTypeData%ED_L_2_TStC_P_T)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_L_2_TStC_P_T(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%ED_L_2_TStC_P_T)
-   end if
-   if (allocated(ModuleMapTypeData%TStC_P_2_ED_P_T)) then
-      LB(1:1) = lbound(ModuleMapTypeData%TStC_P_2_ED_P_T)
-      UB(1:1) = ubound(ModuleMapTypeData%TStC_P_2_ED_P_T)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%TStC_P_2_ED_P_T(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%TStC_P_2_ED_P_T)
-   end if
-   if (allocated(ModuleMapTypeData%ED_L_2_BStC_P_B)) then
-      LB(1:2) = lbound(ModuleMapTypeData%ED_L_2_BStC_P_B)
-      UB(1:2) = ubound(ModuleMapTypeData%ED_L_2_BStC_P_B)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_L_2_BStC_P_B(i1,i2), ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         end do
-      end do
-      deallocate(ModuleMapTypeData%ED_L_2_BStC_P_B)
-   end if
-   if (allocated(ModuleMapTypeData%BStC_P_2_ED_P_B)) then
-      LB(1:2) = lbound(ModuleMapTypeData%BStC_P_2_ED_P_B)
-      UB(1:2) = ubound(ModuleMapTypeData%BStC_P_2_ED_P_B)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%BStC_P_2_ED_P_B(i1,i2), ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         end do
-      end do
-      deallocate(ModuleMapTypeData%BStC_P_2_ED_P_B)
-   end if
-   if (allocated(ModuleMapTypeData%BD_L_2_BStC_P_B)) then
-      LB(1:2) = lbound(ModuleMapTypeData%BD_L_2_BStC_P_B)
-      UB(1:2) = ubound(ModuleMapTypeData%BD_L_2_BStC_P_B)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%BD_L_2_BStC_P_B(i1,i2), ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         end do
-      end do
-      deallocate(ModuleMapTypeData%BD_L_2_BStC_P_B)
-   end if
-   if (allocated(ModuleMapTypeData%BStC_P_2_BD_P_B)) then
-      LB(1:2) = lbound(ModuleMapTypeData%BStC_P_2_BD_P_B)
-      UB(1:2) = ubound(ModuleMapTypeData%BStC_P_2_BD_P_B)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%BStC_P_2_BD_P_B(i1,i2), ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         end do
-      end do
-      deallocate(ModuleMapTypeData%BStC_P_2_BD_P_B)
-   end if
-   if (allocated(ModuleMapTypeData%SStC_P_P_2_SubStructure)) then
-      LB(1:1) = lbound(ModuleMapTypeData%SStC_P_P_2_SubStructure)
-      UB(1:1) = ubound(ModuleMapTypeData%SStC_P_P_2_SubStructure)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SStC_P_P_2_SubStructure(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%SStC_P_P_2_SubStructure)
-   end if
-   if (allocated(ModuleMapTypeData%SubStructure_2_SStC_P_P)) then
-      LB(1:1) = lbound(ModuleMapTypeData%SubStructure_2_SStC_P_P)
-      UB(1:1) = ubound(ModuleMapTypeData%SubStructure_2_SStC_P_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SubStructure_2_SStC_P_P(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%SubStructure_2_SStC_P_P)
-   end if
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_SrvD_P_P, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%BDED_L_2_AD_L_B)) then
-      LB(1:1) = lbound(ModuleMapTypeData%BDED_L_2_AD_L_B)
-      UB(1:1) = ubound(ModuleMapTypeData%BDED_L_2_AD_L_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%BDED_L_2_AD_L_B(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%BDED_L_2_AD_L_B)
-   end if
-   if (allocated(ModuleMapTypeData%AD_L_2_BDED_B)) then
-      LB(1:1) = lbound(ModuleMapTypeData%AD_L_2_BDED_B)
-      UB(1:1) = ubound(ModuleMapTypeData%AD_L_2_BDED_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_L_2_BDED_B(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%AD_L_2_BDED_B)
-   end if
-   if (allocated(ModuleMapTypeData%BD_L_2_BD_L)) then
-      LB(1:1) = lbound(ModuleMapTypeData%BD_L_2_BD_L)
-      UB(1:1) = ubound(ModuleMapTypeData%BD_L_2_BD_L)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%BD_L_2_BD_L(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%BD_L_2_BD_L)
-   end if
-   if (allocated(ModuleMapTypeData%SED_P_2_AD_L_B)) then
-      LB(1:1) = lbound(ModuleMapTypeData%SED_P_2_AD_L_B)
-      UB(1:1) = ubound(ModuleMapTypeData%SED_P_2_AD_L_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_AD_L_B(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%SED_P_2_AD_L_B)
-   end if
-   if (allocated(ModuleMapTypeData%SED_P_2_AD_P_R)) then
-      LB(1:1) = lbound(ModuleMapTypeData%SED_P_2_AD_P_R)
-      UB(1:1) = ubound(ModuleMapTypeData%SED_P_2_AD_P_R)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_AD_P_R(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%SED_P_2_AD_P_R)
-   end if
-   if (allocated(ModuleMapTypeData%AD_L_2_SED_P)) then
-      LB(1:1) = lbound(ModuleMapTypeData%AD_L_2_SED_P)
-      UB(1:1) = ubound(ModuleMapTypeData%AD_L_2_SED_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_L_2_SED_P(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%AD_L_2_SED_P)
-   end if
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_P_2_ED_P_N, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_AD_P_TF, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_P_2_ED_P_TF, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%ED_P_2_AD_P_R)) then
-      LB(1:1) = lbound(ModuleMapTypeData%ED_P_2_AD_P_R)
-      UB(1:1) = ubound(ModuleMapTypeData%ED_P_2_AD_P_R)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_AD_P_R(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%ED_P_2_AD_P_R)
-   end if
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ADsk_P_2_ED_P_H, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_ADsk_P_H, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_AD_P_N, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_L_2_AD_L_T, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_AD_P_H, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ADsk_P_2_SED_P_H, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SED_P_2_ADsk_P_H, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_P_2_ED_P_H, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%BDED_L_2_ExtLd_P_B)) then
-      LB(1:1) = lbound(ModuleMapTypeData%BDED_L_2_ExtLd_P_B)
-      UB(1:1) = ubound(ModuleMapTypeData%BDED_L_2_ExtLd_P_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%BDED_L_2_ExtLd_P_B(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%BDED_L_2_ExtLd_P_B)
-   end if
-   if (allocated(ModuleMapTypeData%ExtLd_P_2_BDED_B)) then
-      LB(1:1) = lbound(ModuleMapTypeData%ExtLd_P_2_BDED_B)
-      UB(1:1) = ubound(ModuleMapTypeData%ExtLd_P_2_BDED_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ExtLd_P_2_BDED_B(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%ExtLd_P_2_BDED_B)
-   end if
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_L_2_ExtLd_P_T, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ExtLd_P_2_ED_P_T, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%ED_P_2_ExtLd_P_R)) then
-      LB(1:1) = lbound(ModuleMapTypeData%ED_P_2_ExtLd_P_R)
-      UB(1:1) = ubound(ModuleMapTypeData%ED_P_2_ExtLd_P_R)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_ExtLd_P_R(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%ED_P_2_ExtLd_P_R)
-   end if
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_ExtLd_P_H, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%AD_L_2_ExtLd_B)) then
-      LB(1:1) = lbound(ModuleMapTypeData%AD_L_2_ExtLd_B)
-      UB(1:1) = ubound(ModuleMapTypeData%AD_L_2_ExtLd_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_L_2_ExtLd_B(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%AD_L_2_ExtLd_B)
-   end if
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_L_2_ExtLd_T, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%IceF_P_2_SD_P, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SDy3_P_2_IceF_P, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%IceD_P_2_SD_P)) then
-      LB(1:1) = lbound(ModuleMapTypeData%IceD_P_2_SD_P)
-      UB(1:1) = ubound(ModuleMapTypeData%IceD_P_2_SD_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%IceD_P_2_SD_P(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%IceD_P_2_SD_P)
-   end if
-   if (allocated(ModuleMapTypeData%SDy3_P_2_IceD_P)) then
-      LB(1:1) = lbound(ModuleMapTypeData%SDy3_P_2_IceD_P)
-      UB(1:1) = ubound(ModuleMapTypeData%SDy3_P_2_IceD_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SDy3_P_2_IceD_P(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%SDy3_P_2_IceD_P)
-   end if
-   if (allocated(ModuleMapTypeData%Jacobian_Opt1)) then
-      deallocate(ModuleMapTypeData%Jacobian_Opt1)
-   end if
-   if (allocated(ModuleMapTypeData%Jacobian_pivot)) then
-      deallocate(ModuleMapTypeData%Jacobian_pivot)
-   end if
-   if (allocated(ModuleMapTypeData%Jac_u_indx)) then
-      deallocate(ModuleMapTypeData%Jac_u_indx)
-   end if
-   call MeshDestroy( ModuleMapTypeData%u_ED_NacelleLoads, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%SubstructureLoads_Tmp, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%SubstructureLoads_Tmp2, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%PlatformLoads_Tmp, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%PlatformLoads_Tmp2, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%SubstructureLoads_Tmp_Farm, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%u_ED_TowerPtloads, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%u_ED_BladePtLoads)) then
-      LB(1:1) = lbound(ModuleMapTypeData%u_ED_BladePtLoads)
-      UB(1:1) = ubound(ModuleMapTypeData%u_ED_BladePtLoads)
-      do i1 = LB(1), UB(1)
-         call MeshDestroy( ModuleMapTypeData%u_ED_BladePtLoads(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%u_ED_BladePtLoads)
-   end if
-   call MeshDestroy( ModuleMapTypeData%u_SD_TPMesh, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%u_HD_M_Mesh, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%u_HD_W_Mesh, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%u_ED_HubPtLoad, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%u_ED_HubPtLoad_2, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%u_BD_RootMotion)) then
-      LB(1:1) = lbound(ModuleMapTypeData%u_BD_RootMotion)
-      UB(1:1) = ubound(ModuleMapTypeData%u_BD_RootMotion)
-      do i1 = LB(1), UB(1)
-         call MeshDestroy( ModuleMapTypeData%u_BD_RootMotion(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%u_BD_RootMotion)
-   end if
-   if (allocated(ModuleMapTypeData%y_BD_BldMotion_4Loads)) then
-      LB(1:1) = lbound(ModuleMapTypeData%y_BD_BldMotion_4Loads)
-      UB(1:1) = ubound(ModuleMapTypeData%y_BD_BldMotion_4Loads)
-      do i1 = LB(1), UB(1)
-         call MeshDestroy( ModuleMapTypeData%y_BD_BldMotion_4Loads(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%y_BD_BldMotion_4Loads)
-   end if
-   if (allocated(ModuleMapTypeData%u_BD_Distrload)) then
-      LB(1:1) = lbound(ModuleMapTypeData%u_BD_Distrload)
-      UB(1:1) = ubound(ModuleMapTypeData%u_BD_Distrload)
-      do i1 = LB(1), UB(1)
-         call MeshDestroy( ModuleMapTypeData%u_BD_Distrload(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end do
-      deallocate(ModuleMapTypeData%u_BD_Distrload)
-   end if
-   call MeshDestroy( ModuleMapTypeData%u_Orca_PtfmMesh, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%u_ExtPtfm_PtfmMesh, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call MeshDestroy( ModuleMapTypeData%u_SED_HubPtLoad, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ModuleMapTypeData%HubOrient)) then
-      deallocate(ModuleMapTypeData%HubOrient)
-   end if
-end subroutine
-
-subroutine FAST_PackModuleMapType(RF, Indata)
-   type(RegFile), intent(inout) :: RF
-   type(FAST_ModuleMapType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackModuleMapType'
-   integer(B4Ki)   :: i1, i2, i3
-   integer(B4Ki)   :: LB(3), UB(3)
-   if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, allocated(InData%ED_P_2_BD_P))
-   if (allocated(InData%ED_P_2_BD_P)) then
-      call RegPackBounds(RF, 1, lbound(InData%ED_P_2_BD_P), ubound(InData%ED_P_2_BD_P))
-      LB(1:1) = lbound(InData%ED_P_2_BD_P)
-      UB(1:1) = ubound(InData%ED_P_2_BD_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_BD_P(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%BD_P_2_ED_P))
-   if (allocated(InData%BD_P_2_ED_P)) then
-      call RegPackBounds(RF, 1, lbound(InData%BD_P_2_ED_P), ubound(InData%BD_P_2_ED_P))
-      LB(1:1) = lbound(InData%BD_P_2_ED_P)
-      UB(1:1) = ubound(InData%BD_P_2_ED_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%BD_P_2_ED_P(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%ED_P_2_BD_P_Hub))
-   if (allocated(InData%ED_P_2_BD_P_Hub)) then
-      call RegPackBounds(RF, 1, lbound(InData%ED_P_2_BD_P_Hub), ubound(InData%ED_P_2_BD_P_Hub))
-      LB(1:1) = lbound(InData%ED_P_2_BD_P_Hub)
-      UB(1:1) = ubound(InData%ED_P_2_BD_P_Hub)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_BD_P_Hub(i1)) 
-      end do
-   end if
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_HD_PRP_P) 
-   call NWTC_Library_PackMeshMapType(RF, InData%SubStructure_2_HD_W_P) 
-   call NWTC_Library_PackMeshMapType(RF, InData%HD_W_P_2_SubStructure) 
-   call NWTC_Library_PackMeshMapType(RF, InData%SubStructure_2_HD_M_P) 
-   call NWTC_Library_PackMeshMapType(RF, InData%HD_M_P_2_SubStructure) 
-   call NWTC_Library_PackMeshMapType(RF, InData%Structure_2_Mooring) 
-   call NWTC_Library_PackMeshMapType(RF, InData%Mooring_2_Structure) 
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_SD_TP) 
-   call NWTC_Library_PackMeshMapType(RF, InData%SD_TP_2_ED_P) 
-   call RegPack(RF, allocated(InData%ED_P_2_NStC_P_N))
-   if (allocated(InData%ED_P_2_NStC_P_N)) then
-      call RegPackBounds(RF, 1, lbound(InData%ED_P_2_NStC_P_N), ubound(InData%ED_P_2_NStC_P_N))
-      LB(1:1) = lbound(InData%ED_P_2_NStC_P_N)
-      UB(1:1) = ubound(InData%ED_P_2_NStC_P_N)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_NStC_P_N(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%NStC_P_2_ED_P_N))
-   if (allocated(InData%NStC_P_2_ED_P_N)) then
-      call RegPackBounds(RF, 1, lbound(InData%NStC_P_2_ED_P_N), ubound(InData%NStC_P_2_ED_P_N))
-      LB(1:1) = lbound(InData%NStC_P_2_ED_P_N)
-      UB(1:1) = ubound(InData%NStC_P_2_ED_P_N)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%NStC_P_2_ED_P_N(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%ED_L_2_TStC_P_T))
-   if (allocated(InData%ED_L_2_TStC_P_T)) then
-      call RegPackBounds(RF, 1, lbound(InData%ED_L_2_TStC_P_T), ubound(InData%ED_L_2_TStC_P_T))
-      LB(1:1) = lbound(InData%ED_L_2_TStC_P_T)
-      UB(1:1) = ubound(InData%ED_L_2_TStC_P_T)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%ED_L_2_TStC_P_T(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%TStC_P_2_ED_P_T))
-   if (allocated(InData%TStC_P_2_ED_P_T)) then
-      call RegPackBounds(RF, 1, lbound(InData%TStC_P_2_ED_P_T), ubound(InData%TStC_P_2_ED_P_T))
-      LB(1:1) = lbound(InData%TStC_P_2_ED_P_T)
-      UB(1:1) = ubound(InData%TStC_P_2_ED_P_T)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%TStC_P_2_ED_P_T(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%ED_L_2_BStC_P_B))
-   if (allocated(InData%ED_L_2_BStC_P_B)) then
-      call RegPackBounds(RF, 2, lbound(InData%ED_L_2_BStC_P_B), ubound(InData%ED_L_2_BStC_P_B))
-      LB(1:2) = lbound(InData%ED_L_2_BStC_P_B)
-      UB(1:2) = ubound(InData%ED_L_2_BStC_P_B)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_PackMeshMapType(RF, InData%ED_L_2_BStC_P_B(i1,i2)) 
-         end do
-      end do
-   end if
-   call RegPack(RF, allocated(InData%BStC_P_2_ED_P_B))
-   if (allocated(InData%BStC_P_2_ED_P_B)) then
-      call RegPackBounds(RF, 2, lbound(InData%BStC_P_2_ED_P_B), ubound(InData%BStC_P_2_ED_P_B))
-      LB(1:2) = lbound(InData%BStC_P_2_ED_P_B)
-      UB(1:2) = ubound(InData%BStC_P_2_ED_P_B)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_PackMeshMapType(RF, InData%BStC_P_2_ED_P_B(i1,i2)) 
-         end do
-      end do
-   end if
-   call RegPack(RF, allocated(InData%BD_L_2_BStC_P_B))
-   if (allocated(InData%BD_L_2_BStC_P_B)) then
-      call RegPackBounds(RF, 2, lbound(InData%BD_L_2_BStC_P_B), ubound(InData%BD_L_2_BStC_P_B))
-      LB(1:2) = lbound(InData%BD_L_2_BStC_P_B)
-      UB(1:2) = ubound(InData%BD_L_2_BStC_P_B)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_PackMeshMapType(RF, InData%BD_L_2_BStC_P_B(i1,i2)) 
-         end do
-      end do
-   end if
-   call RegPack(RF, allocated(InData%BStC_P_2_BD_P_B))
-   if (allocated(InData%BStC_P_2_BD_P_B)) then
-      call RegPackBounds(RF, 2, lbound(InData%BStC_P_2_BD_P_B), ubound(InData%BStC_P_2_BD_P_B))
-      LB(1:2) = lbound(InData%BStC_P_2_BD_P_B)
-      UB(1:2) = ubound(InData%BStC_P_2_BD_P_B)
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_PackMeshMapType(RF, InData%BStC_P_2_BD_P_B(i1,i2)) 
-         end do
-      end do
-   end if
-   call RegPack(RF, allocated(InData%SStC_P_P_2_SubStructure))
-   if (allocated(InData%SStC_P_P_2_SubStructure)) then
-      call RegPackBounds(RF, 1, lbound(InData%SStC_P_P_2_SubStructure), ubound(InData%SStC_P_P_2_SubStructure))
-      LB(1:1) = lbound(InData%SStC_P_P_2_SubStructure)
-      UB(1:1) = ubound(InData%SStC_P_P_2_SubStructure)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%SStC_P_P_2_SubStructure(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%SubStructure_2_SStC_P_P))
-   if (allocated(InData%SubStructure_2_SStC_P_P)) then
-      call RegPackBounds(RF, 1, lbound(InData%SubStructure_2_SStC_P_P), ubound(InData%SubStructure_2_SStC_P_P))
-      LB(1:1) = lbound(InData%SubStructure_2_SStC_P_P)
-      UB(1:1) = ubound(InData%SubStructure_2_SStC_P_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%SubStructure_2_SStC_P_P(i1)) 
-      end do
-   end if
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_SrvD_P_P) 
-   call RegPack(RF, allocated(InData%BDED_L_2_AD_L_B))
-   if (allocated(InData%BDED_L_2_AD_L_B)) then
-      call RegPackBounds(RF, 1, lbound(InData%BDED_L_2_AD_L_B), ubound(InData%BDED_L_2_AD_L_B))
-      LB(1:1) = lbound(InData%BDED_L_2_AD_L_B)
-      UB(1:1) = ubound(InData%BDED_L_2_AD_L_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%BDED_L_2_AD_L_B(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%AD_L_2_BDED_B))
-   if (allocated(InData%AD_L_2_BDED_B)) then
-      call RegPackBounds(RF, 1, lbound(InData%AD_L_2_BDED_B), ubound(InData%AD_L_2_BDED_B))
-      LB(1:1) = lbound(InData%AD_L_2_BDED_B)
-      UB(1:1) = ubound(InData%AD_L_2_BDED_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%AD_L_2_BDED_B(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%BD_L_2_BD_L))
-   if (allocated(InData%BD_L_2_BD_L)) then
-      call RegPackBounds(RF, 1, lbound(InData%BD_L_2_BD_L), ubound(InData%BD_L_2_BD_L))
-      LB(1:1) = lbound(InData%BD_L_2_BD_L)
-      UB(1:1) = ubound(InData%BD_L_2_BD_L)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%BD_L_2_BD_L(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%SED_P_2_AD_L_B))
-   if (allocated(InData%SED_P_2_AD_L_B)) then
-      call RegPackBounds(RF, 1, lbound(InData%SED_P_2_AD_L_B), ubound(InData%SED_P_2_AD_L_B))
-      LB(1:1) = lbound(InData%SED_P_2_AD_L_B)
-      UB(1:1) = ubound(InData%SED_P_2_AD_L_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_AD_L_B(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%SED_P_2_AD_P_R))
-   if (allocated(InData%SED_P_2_AD_P_R)) then
-      call RegPackBounds(RF, 1, lbound(InData%SED_P_2_AD_P_R), ubound(InData%SED_P_2_AD_P_R))
-      LB(1:1) = lbound(InData%SED_P_2_AD_P_R)
-      UB(1:1) = ubound(InData%SED_P_2_AD_P_R)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_AD_P_R(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%AD_L_2_SED_P))
-   if (allocated(InData%AD_L_2_SED_P)) then
-      call RegPackBounds(RF, 1, lbound(InData%AD_L_2_SED_P), ubound(InData%AD_L_2_SED_P))
-      LB(1:1) = lbound(InData%AD_L_2_SED_P)
-      UB(1:1) = ubound(InData%AD_L_2_SED_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%AD_L_2_SED_P(i1)) 
-      end do
-   end if
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_AD_P_N) 
-   call NWTC_Library_PackMeshMapType(RF, InData%AD_P_2_ED_P_N) 
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_AD_P_TF) 
-   call NWTC_Library_PackMeshMapType(RF, InData%AD_P_2_ED_P_TF) 
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_L_2_AD_L_T) 
-   call NWTC_Library_PackMeshMapType(RF, InData%AD_L_2_ED_P_T) 
-   call RegPack(RF, allocated(InData%ED_P_2_AD_P_R))
-   if (allocated(InData%ED_P_2_AD_P_R)) then
-      call RegPackBounds(RF, 1, lbound(InData%ED_P_2_AD_P_R), ubound(InData%ED_P_2_AD_P_R))
-      LB(1:1) = lbound(InData%ED_P_2_AD_P_R)
-      UB(1:1) = ubound(InData%ED_P_2_AD_P_R)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_AD_P_R(i1)) 
-      end do
-   end if
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_AD_P_H) 
-   call NWTC_Library_PackMeshMapType(RF, InData%ADsk_P_2_ED_P_H) 
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_ADsk_P_H) 
-   call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_AD_P_N) 
-   call NWTC_Library_PackMeshMapType(RF, InData%SED_L_2_AD_L_T) 
-   call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_AD_P_H) 
-   call NWTC_Library_PackMeshMapType(RF, InData%ADsk_P_2_SED_P_H) 
-   call NWTC_Library_PackMeshMapType(RF, InData%SED_P_2_ADsk_P_H) 
-   call NWTC_Library_PackMeshMapType(RF, InData%AD_P_2_ED_P_H) 
-   call RegPack(RF, allocated(InData%BDED_L_2_ExtLd_P_B))
-   if (allocated(InData%BDED_L_2_ExtLd_P_B)) then
-      call RegPackBounds(RF, 1, lbound(InData%BDED_L_2_ExtLd_P_B), ubound(InData%BDED_L_2_ExtLd_P_B))
-      LB(1:1) = lbound(InData%BDED_L_2_ExtLd_P_B)
-      UB(1:1) = ubound(InData%BDED_L_2_ExtLd_P_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%BDED_L_2_ExtLd_P_B(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%ExtLd_P_2_BDED_B))
-   if (allocated(InData%ExtLd_P_2_BDED_B)) then
-      call RegPackBounds(RF, 1, lbound(InData%ExtLd_P_2_BDED_B), ubound(InData%ExtLd_P_2_BDED_B))
-      LB(1:1) = lbound(InData%ExtLd_P_2_BDED_B)
-      UB(1:1) = ubound(InData%ExtLd_P_2_BDED_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%ExtLd_P_2_BDED_B(i1)) 
-      end do
-   end if
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_L_2_ExtLd_P_T) 
-   call NWTC_Library_PackMeshMapType(RF, InData%ExtLd_P_2_ED_P_T) 
-   call RegPack(RF, allocated(InData%ED_P_2_ExtLd_P_R))
-   if (allocated(InData%ED_P_2_ExtLd_P_R)) then
-      call RegPackBounds(RF, 1, lbound(InData%ED_P_2_ExtLd_P_R), ubound(InData%ED_P_2_ExtLd_P_R))
-      LB(1:1) = lbound(InData%ED_P_2_ExtLd_P_R)
-      UB(1:1) = ubound(InData%ED_P_2_ExtLd_P_R)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_ExtLd_P_R(i1)) 
-      end do
-   end if
-   call NWTC_Library_PackMeshMapType(RF, InData%ED_P_2_ExtLd_P_H) 
-   call RegPack(RF, allocated(InData%AD_L_2_ExtLd_B))
-   if (allocated(InData%AD_L_2_ExtLd_B)) then
-      call RegPackBounds(RF, 1, lbound(InData%AD_L_2_ExtLd_B), ubound(InData%AD_L_2_ExtLd_B))
-      LB(1:1) = lbound(InData%AD_L_2_ExtLd_B)
-      UB(1:1) = ubound(InData%AD_L_2_ExtLd_B)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%AD_L_2_ExtLd_B(i1)) 
-      end do
-   end if
-   call NWTC_Library_PackMeshMapType(RF, InData%AD_L_2_ExtLd_T) 
-   call NWTC_Library_PackMeshMapType(RF, InData%IceF_P_2_SD_P) 
-   call NWTC_Library_PackMeshMapType(RF, InData%SDy3_P_2_IceF_P) 
-   call RegPack(RF, allocated(InData%IceD_P_2_SD_P))
-   if (allocated(InData%IceD_P_2_SD_P)) then
-      call RegPackBounds(RF, 1, lbound(InData%IceD_P_2_SD_P), ubound(InData%IceD_P_2_SD_P))
-      LB(1:1) = lbound(InData%IceD_P_2_SD_P)
-      UB(1:1) = ubound(InData%IceD_P_2_SD_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%IceD_P_2_SD_P(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%SDy3_P_2_IceD_P))
-   if (allocated(InData%SDy3_P_2_IceD_P)) then
-      call RegPackBounds(RF, 1, lbound(InData%SDy3_P_2_IceD_P), ubound(InData%SDy3_P_2_IceD_P))
-      LB(1:1) = lbound(InData%SDy3_P_2_IceD_P)
-      UB(1:1) = ubound(InData%SDy3_P_2_IceD_P)
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_PackMeshMapType(RF, InData%SDy3_P_2_IceD_P(i1)) 
-      end do
-   end if
-   call RegPackAlloc(RF, InData%Jacobian_Opt1)
-   call RegPackAlloc(RF, InData%Jacobian_pivot)
-   call RegPackAlloc(RF, InData%Jac_u_indx)
-   call MeshPack(RF, InData%u_ED_NacelleLoads) 
-   call MeshPack(RF, InData%SubstructureLoads_Tmp) 
-   call MeshPack(RF, InData%SubstructureLoads_Tmp2) 
-   call MeshPack(RF, InData%PlatformLoads_Tmp) 
-   call MeshPack(RF, InData%PlatformLoads_Tmp2) 
-   call MeshPack(RF, InData%SubstructureLoads_Tmp_Farm) 
-   call MeshPack(RF, InData%u_ED_TowerPtloads) 
-   call RegPack(RF, allocated(InData%u_ED_BladePtLoads))
-   if (allocated(InData%u_ED_BladePtLoads)) then
-      call RegPackBounds(RF, 1, lbound(InData%u_ED_BladePtLoads), ubound(InData%u_ED_BladePtLoads))
-      LB(1:1) = lbound(InData%u_ED_BladePtLoads)
-      UB(1:1) = ubound(InData%u_ED_BladePtLoads)
-      do i1 = LB(1), UB(1)
-         call MeshPack(RF, InData%u_ED_BladePtLoads(i1)) 
-      end do
-   end if
-   call MeshPack(RF, InData%u_SD_TPMesh) 
-   call MeshPack(RF, InData%u_HD_M_Mesh) 
-   call MeshPack(RF, InData%u_HD_W_Mesh) 
-   call MeshPack(RF, InData%u_ED_HubPtLoad) 
-   call MeshPack(RF, InData%u_ED_HubPtLoad_2) 
-   call RegPack(RF, allocated(InData%u_BD_RootMotion))
-   if (allocated(InData%u_BD_RootMotion)) then
-      call RegPackBounds(RF, 1, lbound(InData%u_BD_RootMotion), ubound(InData%u_BD_RootMotion))
-      LB(1:1) = lbound(InData%u_BD_RootMotion)
-      UB(1:1) = ubound(InData%u_BD_RootMotion)
-      do i1 = LB(1), UB(1)
-         call MeshPack(RF, InData%u_BD_RootMotion(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%y_BD_BldMotion_4Loads))
-   if (allocated(InData%y_BD_BldMotion_4Loads)) then
-      call RegPackBounds(RF, 1, lbound(InData%y_BD_BldMotion_4Loads), ubound(InData%y_BD_BldMotion_4Loads))
-      LB(1:1) = lbound(InData%y_BD_BldMotion_4Loads)
-      UB(1:1) = ubound(InData%y_BD_BldMotion_4Loads)
-      do i1 = LB(1), UB(1)
-         call MeshPack(RF, InData%y_BD_BldMotion_4Loads(i1)) 
-      end do
-   end if
-   call RegPack(RF, allocated(InData%u_BD_Distrload))
-   if (allocated(InData%u_BD_Distrload)) then
-      call RegPackBounds(RF, 1, lbound(InData%u_BD_Distrload), ubound(InData%u_BD_Distrload))
-      LB(1:1) = lbound(InData%u_BD_Distrload)
-      UB(1:1) = ubound(InData%u_BD_Distrload)
-      do i1 = LB(1), UB(1)
-         call MeshPack(RF, InData%u_BD_Distrload(i1)) 
-      end do
-   end if
-   call MeshPack(RF, InData%u_Orca_PtfmMesh) 
-   call MeshPack(RF, InData%u_ExtPtfm_PtfmMesh) 
-   call MeshPack(RF, InData%u_SED_HubPtLoad) 
-   call RegPackAlloc(RF, InData%HubOrient)
-   if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
-subroutine FAST_UnPackModuleMapType(RF, OutData)
-   type(RegFile), intent(inout)    :: RF
-   type(FAST_ModuleMapType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackModuleMapType'
-   integer(B4Ki)   :: i1, i2, i3
-   integer(B4Ki)   :: LB(3), UB(3)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   if (RF%ErrStat /= ErrID_None) return
-   if (allocated(OutData%ED_P_2_BD_P)) deallocate(OutData%ED_P_2_BD_P)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ED_P_2_BD_P(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ED_P_2_BD_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_BD_P(i1)) ! ED_P_2_BD_P 
-      end do
-   end if
-   if (allocated(OutData%BD_P_2_ED_P)) deallocate(OutData%BD_P_2_ED_P)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BD_P_2_ED_P(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BD_P_2_ED_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%BD_P_2_ED_P(i1)) ! BD_P_2_ED_P 
-      end do
-   end if
-   if (allocated(OutData%ED_P_2_BD_P_Hub)) deallocate(OutData%ED_P_2_BD_P_Hub)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ED_P_2_BD_P_Hub(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ED_P_2_BD_P_Hub.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_BD_P_Hub(i1)) ! ED_P_2_BD_P_Hub 
-      end do
-   end if
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_HD_PRP_P) ! ED_P_2_HD_PRP_P 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%SubStructure_2_HD_W_P) ! SubStructure_2_HD_W_P 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%HD_W_P_2_SubStructure) ! HD_W_P_2_SubStructure 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%SubStructure_2_HD_M_P) ! SubStructure_2_HD_M_P 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%HD_M_P_2_SubStructure) ! HD_M_P_2_SubStructure 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%Structure_2_Mooring) ! Structure_2_Mooring 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%Mooring_2_Structure) ! Mooring_2_Structure 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_SD_TP) ! ED_P_2_SD_TP 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%SD_TP_2_ED_P) ! SD_TP_2_ED_P 
-   if (allocated(OutData%ED_P_2_NStC_P_N)) deallocate(OutData%ED_P_2_NStC_P_N)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ED_P_2_NStC_P_N(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ED_P_2_NStC_P_N.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_NStC_P_N(i1)) ! ED_P_2_NStC_P_N 
-      end do
-   end if
-   if (allocated(OutData%NStC_P_2_ED_P_N)) deallocate(OutData%NStC_P_2_ED_P_N)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%NStC_P_2_ED_P_N(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%NStC_P_2_ED_P_N.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%NStC_P_2_ED_P_N(i1)) ! NStC_P_2_ED_P_N 
-      end do
-   end if
-   if (allocated(OutData%ED_L_2_TStC_P_T)) deallocate(OutData%ED_L_2_TStC_P_T)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ED_L_2_TStC_P_T(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ED_L_2_TStC_P_T.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_L_2_TStC_P_T(i1)) ! ED_L_2_TStC_P_T 
-      end do
-   end if
-   if (allocated(OutData%TStC_P_2_ED_P_T)) deallocate(OutData%TStC_P_2_ED_P_T)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%TStC_P_2_ED_P_T(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%TStC_P_2_ED_P_T.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%TStC_P_2_ED_P_T(i1)) ! TStC_P_2_ED_P_T 
-      end do
-   end if
-   if (allocated(OutData%ED_L_2_BStC_P_B)) deallocate(OutData%ED_L_2_BStC_P_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ED_L_2_BStC_P_B(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ED_L_2_BStC_P_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_L_2_BStC_P_B(i1,i2)) ! ED_L_2_BStC_P_B 
-         end do
-      end do
-   end if
-   if (allocated(OutData%BStC_P_2_ED_P_B)) deallocate(OutData%BStC_P_2_ED_P_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BStC_P_2_ED_P_B(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BStC_P_2_ED_P_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_UnpackMeshMapType(RF, OutData%BStC_P_2_ED_P_B(i1,i2)) ! BStC_P_2_ED_P_B 
-         end do
-      end do
-   end if
-   if (allocated(OutData%BD_L_2_BStC_P_B)) deallocate(OutData%BD_L_2_BStC_P_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BD_L_2_BStC_P_B(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BD_L_2_BStC_P_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_UnpackMeshMapType(RF, OutData%BD_L_2_BStC_P_B(i1,i2)) ! BD_L_2_BStC_P_B 
-         end do
-      end do
-   end if
-   if (allocated(OutData%BStC_P_2_BD_P_B)) deallocate(OutData%BStC_P_2_BD_P_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BStC_P_2_BD_P_B(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BStC_P_2_BD_P_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i2 = LB(2), UB(2)
-         do i1 = LB(1), UB(1)
-            call NWTC_Library_UnpackMeshMapType(RF, OutData%BStC_P_2_BD_P_B(i1,i2)) ! BStC_P_2_BD_P_B 
-         end do
-      end do
-   end if
-   if (allocated(OutData%SStC_P_P_2_SubStructure)) deallocate(OutData%SStC_P_P_2_SubStructure)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%SStC_P_P_2_SubStructure(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SStC_P_P_2_SubStructure.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%SStC_P_P_2_SubStructure(i1)) ! SStC_P_P_2_SubStructure 
-      end do
-   end if
-   if (allocated(OutData%SubStructure_2_SStC_P_P)) deallocate(OutData%SubStructure_2_SStC_P_P)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%SubStructure_2_SStC_P_P(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SubStructure_2_SStC_P_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%SubStructure_2_SStC_P_P(i1)) ! SubStructure_2_SStC_P_P 
-      end do
-   end if
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_SrvD_P_P) ! ED_P_2_SrvD_P_P 
-   if (allocated(OutData%BDED_L_2_AD_L_B)) deallocate(OutData%BDED_L_2_AD_L_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BDED_L_2_AD_L_B(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BDED_L_2_AD_L_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%BDED_L_2_AD_L_B(i1)) ! BDED_L_2_AD_L_B 
-      end do
-   end if
-   if (allocated(OutData%AD_L_2_BDED_B)) deallocate(OutData%AD_L_2_BDED_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%AD_L_2_BDED_B(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AD_L_2_BDED_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_L_2_BDED_B(i1)) ! AD_L_2_BDED_B 
-      end do
-   end if
-   if (allocated(OutData%BD_L_2_BD_L)) deallocate(OutData%BD_L_2_BD_L)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BD_L_2_BD_L(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BD_L_2_BD_L.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%BD_L_2_BD_L(i1)) ! BD_L_2_BD_L 
-      end do
-   end if
-   if (allocated(OutData%SED_P_2_AD_L_B)) deallocate(OutData%SED_P_2_AD_L_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%SED_P_2_AD_L_B(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SED_P_2_AD_L_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_AD_L_B(i1)) ! SED_P_2_AD_L_B 
-      end do
-   end if
-   if (allocated(OutData%SED_P_2_AD_P_R)) deallocate(OutData%SED_P_2_AD_P_R)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%SED_P_2_AD_P_R(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SED_P_2_AD_P_R.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_AD_P_R(i1)) ! SED_P_2_AD_P_R 
-      end do
-   end if
-   if (allocated(OutData%AD_L_2_SED_P)) deallocate(OutData%AD_L_2_SED_P)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%AD_L_2_SED_P(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AD_L_2_SED_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_L_2_SED_P(i1)) ! AD_L_2_SED_P 
-      end do
-   end if
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_AD_P_N) ! ED_P_2_AD_P_N 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_P_2_ED_P_N) ! AD_P_2_ED_P_N 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_AD_P_TF) ! ED_P_2_AD_P_TF 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_P_2_ED_P_TF) ! AD_P_2_ED_P_TF 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_L_2_AD_L_T) ! ED_L_2_AD_L_T 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_L_2_ED_P_T) ! AD_L_2_ED_P_T 
-   if (allocated(OutData%ED_P_2_AD_P_R)) deallocate(OutData%ED_P_2_AD_P_R)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ED_P_2_AD_P_R(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ED_P_2_AD_P_R.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_AD_P_R(i1)) ! ED_P_2_AD_P_R 
-      end do
-   end if
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_AD_P_H) ! ED_P_2_AD_P_H 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ADsk_P_2_ED_P_H) ! ADsk_P_2_ED_P_H 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_ADsk_P_H) ! ED_P_2_ADsk_P_H 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_AD_P_N) ! SED_P_2_AD_P_N 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_L_2_AD_L_T) ! SED_L_2_AD_L_T 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_AD_P_H) ! SED_P_2_AD_P_H 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ADsk_P_2_SED_P_H) ! ADsk_P_2_SED_P_H 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%SED_P_2_ADsk_P_H) ! SED_P_2_ADsk_P_H 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_P_2_ED_P_H) ! AD_P_2_ED_P_H 
-   if (allocated(OutData%BDED_L_2_ExtLd_P_B)) deallocate(OutData%BDED_L_2_ExtLd_P_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%BDED_L_2_ExtLd_P_B(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%BDED_L_2_ExtLd_P_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%BDED_L_2_ExtLd_P_B(i1)) ! BDED_L_2_ExtLd_P_B 
-      end do
-   end if
-   if (allocated(OutData%ExtLd_P_2_BDED_B)) deallocate(OutData%ExtLd_P_2_BDED_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ExtLd_P_2_BDED_B(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ExtLd_P_2_BDED_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%ExtLd_P_2_BDED_B(i1)) ! ExtLd_P_2_BDED_B 
-      end do
-   end if
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_L_2_ExtLd_P_T) ! ED_L_2_ExtLd_P_T 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ExtLd_P_2_ED_P_T) ! ExtLd_P_2_ED_P_T 
-   if (allocated(OutData%ED_P_2_ExtLd_P_R)) deallocate(OutData%ED_P_2_ExtLd_P_R)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%ED_P_2_ExtLd_P_R(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ED_P_2_ExtLd_P_R.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_ExtLd_P_R(i1)) ! ED_P_2_ExtLd_P_R 
-      end do
-   end if
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%ED_P_2_ExtLd_P_H) ! ED_P_2_ExtLd_P_H 
-   if (allocated(OutData%AD_L_2_ExtLd_B)) deallocate(OutData%AD_L_2_ExtLd_B)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%AD_L_2_ExtLd_B(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AD_L_2_ExtLd_B.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_L_2_ExtLd_B(i1)) ! AD_L_2_ExtLd_B 
-      end do
-   end if
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%AD_L_2_ExtLd_T) ! AD_L_2_ExtLd_T 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%IceF_P_2_SD_P) ! IceF_P_2_SD_P 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%SDy3_P_2_IceF_P) ! SDy3_P_2_IceF_P 
-   if (allocated(OutData%IceD_P_2_SD_P)) deallocate(OutData%IceD_P_2_SD_P)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%IceD_P_2_SD_P(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%IceD_P_2_SD_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%IceD_P_2_SD_P(i1)) ! IceD_P_2_SD_P 
-      end do
-   end if
-   if (allocated(OutData%SDy3_P_2_IceD_P)) deallocate(OutData%SDy3_P_2_IceD_P)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%SDy3_P_2_IceD_P(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SDy3_P_2_IceD_P.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call NWTC_Library_UnpackMeshMapType(RF, OutData%SDy3_P_2_IceD_P(i1)) ! SDy3_P_2_IceD_P 
-      end do
-   end if
-   call RegUnpackAlloc(RF, OutData%Jacobian_Opt1); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jacobian_pivot); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%Jac_u_indx); if (RegCheckErr(RF, RoutineName)) return
-   call MeshUnpack(RF, OutData%u_ED_NacelleLoads) ! u_ED_NacelleLoads 
-   call MeshUnpack(RF, OutData%SubstructureLoads_Tmp) ! SubstructureLoads_Tmp 
-   call MeshUnpack(RF, OutData%SubstructureLoads_Tmp2) ! SubstructureLoads_Tmp2 
-   call MeshUnpack(RF, OutData%PlatformLoads_Tmp) ! PlatformLoads_Tmp 
-   call MeshUnpack(RF, OutData%PlatformLoads_Tmp2) ! PlatformLoads_Tmp2 
-   call MeshUnpack(RF, OutData%SubstructureLoads_Tmp_Farm) ! SubstructureLoads_Tmp_Farm 
-   call MeshUnpack(RF, OutData%u_ED_TowerPtloads) ! u_ED_TowerPtloads 
-   if (allocated(OutData%u_ED_BladePtLoads)) deallocate(OutData%u_ED_BladePtLoads)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%u_ED_BladePtLoads(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_ED_BladePtLoads.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshUnpack(RF, OutData%u_ED_BladePtLoads(i1)) ! u_ED_BladePtLoads 
-      end do
-   end if
-   call MeshUnpack(RF, OutData%u_SD_TPMesh) ! u_SD_TPMesh 
-   call MeshUnpack(RF, OutData%u_HD_M_Mesh) ! u_HD_M_Mesh 
-   call MeshUnpack(RF, OutData%u_HD_W_Mesh) ! u_HD_W_Mesh 
-   call MeshUnpack(RF, OutData%u_ED_HubPtLoad) ! u_ED_HubPtLoad 
-   call MeshUnpack(RF, OutData%u_ED_HubPtLoad_2) ! u_ED_HubPtLoad_2 
-   if (allocated(OutData%u_BD_RootMotion)) deallocate(OutData%u_BD_RootMotion)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%u_BD_RootMotion(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_BD_RootMotion.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshUnpack(RF, OutData%u_BD_RootMotion(i1)) ! u_BD_RootMotion 
-      end do
-   end if
-   if (allocated(OutData%y_BD_BldMotion_4Loads)) deallocate(OutData%y_BD_BldMotion_4Loads)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%y_BD_BldMotion_4Loads(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y_BD_BldMotion_4Loads.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshUnpack(RF, OutData%y_BD_BldMotion_4Loads(i1)) ! y_BD_BldMotion_4Loads 
-      end do
-   end if
-   if (allocated(OutData%u_BD_Distrload)) deallocate(OutData%u_BD_Distrload)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%u_BD_Distrload(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%u_BD_Distrload.', RF%ErrStat, RF%ErrMsg, RoutineName)
-         return
-      end if
-      do i1 = LB(1), UB(1)
-         call MeshUnpack(RF, OutData%u_BD_Distrload(i1)) ! u_BD_Distrload 
-      end do
-   end if
-   call MeshUnpack(RF, OutData%u_Orca_PtfmMesh) ! u_Orca_PtfmMesh 
-   call MeshUnpack(RF, OutData%u_ExtPtfm_PtfmMesh) ! u_ExtPtfm_PtfmMesh 
-   call MeshUnpack(RF, OutData%u_SED_HubPtLoad) ! u_SED_HubPtLoad 
-   call RegUnpackAlloc(RF, OutData%HubOrient); if (RegCheckErr(RF, RoutineName)) return
-end subroutine
-
 subroutine FAST_CopyExternInputType(SrcExternInputTypeData, DstExternInputTypeData, CtrlCode, ErrStat, ErrMsg)
    type(FAST_ExternInputType), intent(in) :: SrcExternInputTypeData
    type(FAST_ExternInputType), intent(inout) :: DstExternInputTypeData
@@ -11379,33 +8603,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
    DstExternInitTypeData%TurbIDforName = SrcExternInitTypeData%TurbIDforName
    DstExternInitTypeData%TurbinePos = SrcExternInitTypeData%TurbinePos
    DstExternInitTypeData%WaveFieldMod = SrcExternInitTypeData%WaveFieldMod
-   DstExternInitTypeData%NumSC2CtrlGlob = SrcExternInitTypeData%NumSC2CtrlGlob
-   DstExternInitTypeData%NumSC2Ctrl = SrcExternInitTypeData%NumSC2Ctrl
-   DstExternInitTypeData%NumCtrl2SC = SrcExternInitTypeData%NumCtrl2SC
-   if (allocated(SrcExternInitTypeData%fromSCGlob)) then
-      LB(1:1) = lbound(SrcExternInitTypeData%fromSCGlob)
-      UB(1:1) = ubound(SrcExternInitTypeData%fromSCGlob)
-      if (.not. allocated(DstExternInitTypeData%fromSCGlob)) then
-         allocate(DstExternInitTypeData%fromSCGlob(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstExternInitTypeData%fromSCGlob.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstExternInitTypeData%fromSCGlob = SrcExternInitTypeData%fromSCGlob
-   end if
-   if (allocated(SrcExternInitTypeData%fromSC)) then
-      LB(1:1) = lbound(SrcExternInitTypeData%fromSC)
-      UB(1:1) = ubound(SrcExternInitTypeData%fromSC)
-      if (.not. allocated(DstExternInitTypeData%fromSC)) then
-         allocate(DstExternInitTypeData%fromSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstExternInitTypeData%fromSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstExternInitTypeData%fromSC = SrcExternInitTypeData%fromSC
-   end if
    DstExternInitTypeData%FarmIntegration = SrcExternInitTypeData%FarmIntegration
    DstExternInitTypeData%windGrid_n = SrcExternInitTypeData%windGrid_n
    DstExternInitTypeData%windGrid_delta = SrcExternInitTypeData%windGrid_delta
@@ -11428,12 +8625,6 @@ subroutine FAST_DestroyExternInitType(ExternInitTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyExternInitType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(ExternInitTypeData%fromSCGlob)) then
-      deallocate(ExternInitTypeData%fromSCGlob)
-   end if
-   if (allocated(ExternInitTypeData%fromSC)) then
-      deallocate(ExternInitTypeData%fromSC)
-   end if
    nullify(ExternInitTypeData%windGrid_data)
 end subroutine
 
@@ -11447,11 +8638,6 @@ subroutine FAST_PackExternInitType(RF, Indata)
    call RegPack(RF, InData%TurbIDforName)
    call RegPack(RF, InData%TurbinePos)
    call RegPack(RF, InData%WaveFieldMod)
-   call RegPack(RF, InData%NumSC2CtrlGlob)
-   call RegPack(RF, InData%NumSC2Ctrl)
-   call RegPack(RF, InData%NumCtrl2SC)
-   call RegPackAlloc(RF, InData%fromSCGlob)
-   call RegPackAlloc(RF, InData%fromSC)
    call RegPack(RF, InData%FarmIntegration)
    call RegPack(RF, InData%windGrid_n)
    call RegPack(RF, InData%windGrid_delta)
@@ -11482,11 +8668,6 @@ subroutine FAST_UnPackExternInitType(RF, OutData)
    call RegUnpack(RF, OutData%TurbIDforName); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbinePos); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2CtrlGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2Ctrl); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumCtrl2SC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSCGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%FarmIntegration); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%windGrid_n); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%windGrid_delta); if (RegCheckErr(RF, RoutineName)) return
@@ -11532,9 +8713,6 @@ subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode
    call Glue_CopyMisc(SrcTurbineTypeData%m_Glue, DstTurbineTypeData%m_Glue, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call FAST_CopyModuleMapType(SrcTurbineTypeData%MeshMapData, DstTurbineTypeData%MeshMapData, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    call FAST_CopyElastoDyn_Data(SrcTurbineTypeData%ED, DstTurbineTypeData%ED, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -11560,9 +8738,6 @@ subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call FAST_CopyExternalInflow_Data(SrcTurbineTypeData%ExtInfw, DstTurbineTypeData%ExtInfw, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call FAST_CopySCDataEx_Data(SrcTurbineTypeData%SC_DX, DstTurbineTypeData%SC_DX, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call FAST_CopySeaState_Data(SrcTurbineTypeData%SeaSt, DstTurbineTypeData%SeaSt, CtrlCode, ErrStat2, ErrMsg2)
@@ -11618,8 +8793,6 @@ subroutine FAST_DestroyTurbineType(TurbineTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Glue_DestroyMisc(TurbineTypeData%m_Glue, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FAST_DestroyModuleMapType(TurbineTypeData%MeshMapData, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyElastoDyn_Data(TurbineTypeData%ED, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroySED_Data(TurbineTypeData%SED, ErrStat2, ErrMsg2)
@@ -11637,8 +8810,6 @@ subroutine FAST_DestroyTurbineType(TurbineTypeData, ErrStat, ErrMsg)
    call FAST_DestroyInflowWind_Data(TurbineTypeData%IfW, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyExternalInflow_Data(TurbineTypeData%ExtInfw, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FAST_DestroySCDataEx_Data(TurbineTypeData%SC_DX, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroySeaState_Data(TurbineTypeData%SeaSt, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -11674,7 +8845,6 @@ subroutine FAST_PackTurbineType(RF, Indata)
    call Glue_PackParam(RF, InData%p_Glue) 
    call Glue_PackOutputFileType(RF, InData%y_Glue) 
    call Glue_PackMisc(RF, InData%m_Glue) 
-   call FAST_PackModuleMapType(RF, InData%MeshMapData) 
    call FAST_PackElastoDyn_Data(RF, InData%ED) 
    call FAST_PackSED_Data(RF, InData%SED) 
    call FAST_PackBeamDyn_Data(RF, InData%BD) 
@@ -11684,7 +8854,6 @@ subroutine FAST_PackTurbineType(RF, Indata)
    call FAST_PackExtLoads_Data(RF, InData%ExtLd) 
    call FAST_PackInflowWind_Data(RF, InData%IfW) 
    call FAST_PackExternalInflow_Data(RF, InData%ExtInfw) 
-   call FAST_PackSCDataEx_Data(RF, InData%SC_DX) 
    call FAST_PackSeaState_Data(RF, InData%SeaSt) 
    call FAST_PackHydroDyn_Data(RF, InData%HD) 
    call FAST_PackSubDyn_Data(RF, InData%SD) 
@@ -11710,7 +8879,6 @@ subroutine FAST_UnPackTurbineType(RF, OutData)
    call Glue_UnpackParam(RF, OutData%p_Glue) ! p_Glue 
    call Glue_UnpackOutputFileType(RF, OutData%y_Glue) ! y_Glue 
    call Glue_UnpackMisc(RF, OutData%m_Glue) ! m_Glue 
-   call FAST_UnpackModuleMapType(RF, OutData%MeshMapData) ! MeshMapData 
    call FAST_UnpackElastoDyn_Data(RF, OutData%ED) ! ED 
    call FAST_UnpackSED_Data(RF, OutData%SED) ! SED 
    call FAST_UnpackBeamDyn_Data(RF, OutData%BD) ! BD 
@@ -11720,7 +8888,6 @@ subroutine FAST_UnPackTurbineType(RF, OutData)
    call FAST_UnpackExtLoads_Data(RF, OutData%ExtLd) ! ExtLd 
    call FAST_UnpackInflowWind_Data(RF, OutData%IfW) ! IfW 
    call FAST_UnpackExternalInflow_Data(RF, OutData%ExtInfw) ! ExtInfw 
-   call FAST_UnpackSCDataEx_Data(RF, OutData%SC_DX) ! SC_DX 
    call FAST_UnpackSeaState_Data(RF, OutData%SeaSt) ! SeaSt 
    call FAST_UnpackHydroDyn_Data(RF, OutData%HD) ! HD 
    call FAST_UnpackSubDyn_Data(RF, OutData%SD) ! SD 

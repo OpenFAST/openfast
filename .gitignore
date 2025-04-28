@@ -29,12 +29,13 @@
 *.app
 __pycache__/*
 *.pyc
+*.egg-info
 
 # Build specific files
 build*/
 _build*/
 install/
-vs-build/
+vs-build-old/
 
 # OS and IDE specific files
 .DS_Store

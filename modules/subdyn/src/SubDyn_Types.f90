@@ -68,12 +68,15 @@ IMPLICIT NONE
     REAL(ReKi)  :: Ixx = 0.0_ReKi      !< Moment of inertia of an element [-]
     REAL(ReKi)  :: Iyy = 0.0_ReKi      !< Moment of inertia of an element [-]
     REAL(ReKi)  :: Jzz = 0.0_ReKi      !< Moment of inertia of an element [-]
+    REAL(ReKi)  :: Jt = 0.0_ReKi      !< Torsion constant of an element [-]
     LOGICAL  :: Shear = .false.      !< Use timoshenko (true) E-B (false) [-]
     REAL(ReKi)  :: Kappa_x = 0.0_ReKi      !< Shear coefficient [-]
     REAL(ReKi)  :: Kappa_y = 0.0_ReKi      !< Shear coefficient [-]
     REAL(ReKi)  :: YoungE = 0.0_ReKi      !< Young's modulus [-]
     REAL(ReKi)  :: ShearG = 0.0_ReKi      !< Shear modulus [N/m^2]
     REAL(ReKi) , DIMENSION(1:2)  :: D = 0.0_ReKi      !< Diameter at node 1 and 2, for visualization only [m]
+    REAL(ReKi) , DIMENSION(1:2)  :: Sa = 0.0_ReKi      !< Side A lengths at node 1 and 2, for visualization only [m]
+    REAL(ReKi) , DIMENSION(1:2)  :: Sb = 0.0_ReKi      !< Side B lengths at node 1 and 2, for visualization only [m]
     REAL(ReKi)  :: Area = 0.0_ReKi      !< Area of an element [m^2]
     REAL(ReKi)  :: Rho = 0.0_ReKi      !< Density [kg/m^3]
     REAL(ReKi)  :: T0 = 0.0_ReKi      !< Pretension  [N]
@@ -120,14 +123,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
-    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_x      !< Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue) [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: CableCChanRqst      !< flag indicating control channel for active cable tensioning is requested [-]
   END TYPE SD_InitOutputType
 ! =======================
@@ -140,7 +135,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step from Glue Code [seconds]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of joints of the sub structure [-]
     INTEGER(IntKi)  :: NPropSetsX = 0_IntKi      !< Number of extended property sets [-]
-    INTEGER(IntKi)  :: NPropSetsB = 0_IntKi      !< Number of property sets for beams [-]
+    INTEGER(IntKi)  :: NPropSetsBC = 0_IntKi      !< Number of property sets for beams with a circular section [-]
+    INTEGER(IntKi)  :: NPropSetsBR = 0_IntKi      !< Number of property sets for beams with a rectangular section [-]
     INTEGER(IntKi)  :: NPropSetsC = 0_IntKi      !< Number of property sets for cables [-]
     INTEGER(IntKi)  :: NPropSetsR = 0_IntKi      !< Number of property sets for rigid links [-]
     INTEGER(IntKi)  :: NPropSetsS = 0_IntKi      !< Number of property sets for spring elements [-]
@@ -150,7 +146,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NDiv = 0_IntKi      !< Number of divisions for each member [-]
     LOGICAL  :: CBMod = .false.      !< Perform C-B flag [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Joints      !< Joints number and coordinate values [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsB      !< Property sets number and values [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsBC      !< Property sets number and values for circular beam sections [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsBR      !< Property sets number and values for rectangular beam sections [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsC      !< Property ID and values for cables [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsR      !< Property ID and values for rigid link [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsS      !< Property ID and values for spring element [-]
@@ -162,6 +159,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:2)  :: RayleighDamp = 0.0_ReKi      !< Mass and stiffness proportional damping coefficients (Rayleigh Damping) [only if GuyanDampMod=1] [-]
     REAL(ReKi) , DIMENSION(1:6,1:6)  :: GuyanDampMat = 0.0_ReKi      !< Guyan Damping Matrix, see also CBB [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Members      !< Member joints connection           [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MemberSpin      !< Member spin angle about its axis - for rectangular members  [rad]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: SSOutList      !< List of Output Channels            [-]
     LOGICAL  :: OutCOSM = .false.      !< Output Cos-matrices Flag           [-]
     LOGICAL  :: TabDelim = .false.      !< Generate a tab-delimited output file in OutJckF-Flag                        [-]
@@ -172,12 +170,15 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Soil_Points      !< Node positions where soil stiffness will be added                           [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Soil_Nodes      !< Node indices where soil stiffness will be added                             [-]
     INTEGER(IntKi)  :: NElem = 0_IntKi      !< Total number of elements [-]
-    INTEGER(IntKi)  :: NPropB = 0_IntKi      !< Total number of property sets for Beams [-]
+    INTEGER(IntKi)  :: NPropBC = 0_IntKi      !< Total number of property sets for Beams with a circular section [-]
+    INTEGER(IntKi)  :: NPropBR = 0_IntKi      !< Total number of property sets for Beams with a rectangular section [-]
+    INTEGER(IntKi)  :: NPropX = 0_IntKi      !< Total number of property sets for Beams with an arbitrary section [-]
     INTEGER(IntKi)  :: NPropC = 0_IntKi      !< Total number of property sets for Cable [-]
     INTEGER(IntKi)  :: NPropR = 0_IntKi      !< Total number of property sets for Rigid [-]
     INTEGER(IntKi)  :: NPropS = 0_IntKi      !< Total number of property sets for Spring [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Nodes      !< Nodes number and coordinates            [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsB      !< Property sets and values for Beams      [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsBC      !< Property sets and values for Beams with a circular section [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsBR      !< Property sets and values for Beams with a rectangular section [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsC      !< Property sets and values for Cable      [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsR      !< Property sets and values for Rigid link [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsS      !< Property sets and values for Spring     [-]
@@ -227,6 +228,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nDOF_red = 0_IntKi      !< Total degree of freedom after constraint reduction [-]
     INTEGER(IntKi)  :: Nmembers = 0_IntKi      !< Number of members of the sub structure [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Elems      !< Element nodes connections [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ElemSpin      !< Element spin angle about its axis [rad]
     TYPE(ElemPropType) , DIMENSION(:), ALLOCATABLE  :: ElemProps      !< List of element properties [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FC      !< Initial cable force T0, not reduced [N]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: FG      !< Gravity force vector, not reduced [N]
@@ -382,14 +384,13 @@ IMPLICIT NONE
 ! =======================
    integer(IntKi), public, parameter :: SD_x_qm                          =   1 ! SD%qm
    integer(IntKi), public, parameter :: SD_x_qmdot                       =   2 ! SD%qmdot
-   integer(IntKi), public, parameter :: SD_z_DummyConstrState            =   3 ! SD%DummyConstrState
-   integer(IntKi), public, parameter :: SD_u_TPMesh                      =   4 ! SD%TPMesh
-   integer(IntKi), public, parameter :: SD_u_LMesh                       =   5 ! SD%LMesh
-   integer(IntKi), public, parameter :: SD_u_CableDeltaL                 =   6 ! SD%CableDeltaL
-   integer(IntKi), public, parameter :: SD_y_Y1Mesh                      =   7 ! SD%Y1Mesh
-   integer(IntKi), public, parameter :: SD_y_Y2Mesh                      =   8 ! SD%Y2Mesh
-   integer(IntKi), public, parameter :: SD_y_Y3Mesh                      =   9 ! SD%Y3Mesh
-   integer(IntKi), public, parameter :: SD_y_WriteOutput                 =  10 ! SD%WriteOutput
+   integer(IntKi), public, parameter :: SD_u_TPMesh                      =   3 ! SD%TPMesh
+   integer(IntKi), public, parameter :: SD_u_LMesh                       =   4 ! SD%LMesh
+   integer(IntKi), public, parameter :: SD_u_CableDeltaL                 =   5 ! SD%CableDeltaL
+   integer(IntKi), public, parameter :: SD_y_Y1Mesh                      =   6 ! SD%Y1Mesh
+   integer(IntKi), public, parameter :: SD_y_Y2Mesh                      =   7 ! SD%Y2Mesh
+   integer(IntKi), public, parameter :: SD_y_Y3Mesh                      =   8 ! SD%Y3Mesh
+   integer(IntKi), public, parameter :: SD_y_WriteOutput                 =   9 ! SD%WriteOutput
 
 contains
 
@@ -771,12 +772,15 @@ subroutine SD_CopyElemPropType(SrcElemPropTypeData, DstElemPropTypeData, CtrlCod
    DstElemPropTypeData%Ixx = SrcElemPropTypeData%Ixx
    DstElemPropTypeData%Iyy = SrcElemPropTypeData%Iyy
    DstElemPropTypeData%Jzz = SrcElemPropTypeData%Jzz
+   DstElemPropTypeData%Jt = SrcElemPropTypeData%Jt
    DstElemPropTypeData%Shear = SrcElemPropTypeData%Shear
    DstElemPropTypeData%Kappa_x = SrcElemPropTypeData%Kappa_x
    DstElemPropTypeData%Kappa_y = SrcElemPropTypeData%Kappa_y
    DstElemPropTypeData%YoungE = SrcElemPropTypeData%YoungE
    DstElemPropTypeData%ShearG = SrcElemPropTypeData%ShearG
    DstElemPropTypeData%D = SrcElemPropTypeData%D
+   DstElemPropTypeData%Sa = SrcElemPropTypeData%Sa
+   DstElemPropTypeData%Sb = SrcElemPropTypeData%Sb
    DstElemPropTypeData%Area = SrcElemPropTypeData%Area
    DstElemPropTypeData%Rho = SrcElemPropTypeData%Rho
    DstElemPropTypeData%T0 = SrcElemPropTypeData%T0
@@ -823,12 +827,15 @@ subroutine SD_PackElemPropType(RF, Indata)
    call RegPack(RF, InData%Ixx)
    call RegPack(RF, InData%Iyy)
    call RegPack(RF, InData%Jzz)
+   call RegPack(RF, InData%Jt)
    call RegPack(RF, InData%Shear)
    call RegPack(RF, InData%Kappa_x)
    call RegPack(RF, InData%Kappa_y)
    call RegPack(RF, InData%YoungE)
    call RegPack(RF, InData%ShearG)
    call RegPack(RF, InData%D)
+   call RegPack(RF, InData%Sa)
+   call RegPack(RF, InData%Sb)
    call RegPack(RF, InData%Area)
    call RegPack(RF, InData%Rho)
    call RegPack(RF, InData%T0)
@@ -867,12 +874,15 @@ subroutine SD_UnPackElemPropType(RF, OutData)
    call RegUnpack(RF, OutData%Ixx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Iyy); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Jzz); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Jt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Shear); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Kappa_x); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Kappa_y); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%YoungE); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ShearG); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%D); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Sa); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Sb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Area); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Rho); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%T0); if (RegCheckErr(RF, RoutineName)) return
@@ -1030,102 +1040,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   if (allocated(SrcInitOutputData%LinNames_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
-      if (.not. allocated(DstInitOutputData%LinNames_y)) then
-         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   end if
-   if (allocated(SrcInitOutputData%LinNames_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
-      if (.not. allocated(DstInitOutputData%LinNames_x)) then
-         allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   end if
-   if (allocated(SrcInitOutputData%LinNames_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
-      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
-      if (.not. allocated(DstInitOutputData%LinNames_u)) then
-         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_y)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
-      if (.not. allocated(DstInitOutputData%RotFrame_y)) then
-         allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x)
-      if (.not. allocated(DstInitOutputData%RotFrame_x)) then
-         allocate(DstInitOutputData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
-   end if
-   if (allocated(SrcInitOutputData%RotFrame_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
-      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
-      if (.not. allocated(DstInitOutputData%RotFrame_u)) then
-         allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   end if
-   if (allocated(SrcInitOutputData%IsLoad_u)) then
-      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
-      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
-      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
-         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   end if
-   if (allocated(SrcInitOutputData%DerivOrder_x)) then
-      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
-      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
-      if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
-         allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   end if
    if (allocated(SrcInitOutputData%CableCChanRqst)) then
       LB(1:1) = lbound(SrcInitOutputData%CableCChanRqst)
       UB(1:1) = ubound(SrcInitOutputData%CableCChanRqst)
@@ -1159,30 +1073,6 @@ subroutine SD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InitOutputData%LinNames_y)) then
-      deallocate(InitOutputData%LinNames_y)
-   end if
-   if (allocated(InitOutputData%LinNames_x)) then
-      deallocate(InitOutputData%LinNames_x)
-   end if
-   if (allocated(InitOutputData%LinNames_u)) then
-      deallocate(InitOutputData%LinNames_u)
-   end if
-   if (allocated(InitOutputData%RotFrame_y)) then
-      deallocate(InitOutputData%RotFrame_y)
-   end if
-   if (allocated(InitOutputData%RotFrame_x)) then
-      deallocate(InitOutputData%RotFrame_x)
-   end if
-   if (allocated(InitOutputData%RotFrame_u)) then
-      deallocate(InitOutputData%RotFrame_u)
-   end if
-   if (allocated(InitOutputData%IsLoad_u)) then
-      deallocate(InitOutputData%IsLoad_u)
-   end if
-   if (allocated(InitOutputData%DerivOrder_x)) then
-      deallocate(InitOutputData%DerivOrder_x)
-   end if
    if (allocated(InitOutputData%CableCChanRqst)) then
       deallocate(InitOutputData%CableCChanRqst)
    end if
@@ -1197,14 +1087,6 @@ subroutine SD_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-   call RegPackAlloc(RF, InData%LinNames_y)
-   call RegPackAlloc(RF, InData%LinNames_x)
-   call RegPackAlloc(RF, InData%LinNames_u)
-   call RegPackAlloc(RF, InData%RotFrame_y)
-   call RegPackAlloc(RF, InData%RotFrame_x)
-   call RegPackAlloc(RF, InData%RotFrame_u)
-   call RegPackAlloc(RF, InData%IsLoad_u)
-   call RegPackAlloc(RF, InData%DerivOrder_x)
    call RegPackAlloc(RF, InData%CableCChanRqst)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -1221,14 +1103,6 @@ subroutine SD_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-   call RegUnpackAlloc(RF, OutData%LinNames_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%LinNames_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_y); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_x); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%RotFrame_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%IsLoad_u); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%DerivOrder_x); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CableCChanRqst); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1250,7 +1124,8 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
    DstInitTypeData%DT = SrcInitTypeData%DT
    DstInitTypeData%NJoints = SrcInitTypeData%NJoints
    DstInitTypeData%NPropSetsX = SrcInitTypeData%NPropSetsX
-   DstInitTypeData%NPropSetsB = SrcInitTypeData%NPropSetsB
+   DstInitTypeData%NPropSetsBC = SrcInitTypeData%NPropSetsBC
+   DstInitTypeData%NPropSetsBR = SrcInitTypeData%NPropSetsBR
    DstInitTypeData%NPropSetsC = SrcInitTypeData%NPropSetsC
    DstInitTypeData%NPropSetsR = SrcInitTypeData%NPropSetsR
    DstInitTypeData%NPropSetsS = SrcInitTypeData%NPropSetsS
@@ -1271,17 +1146,29 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       end if
       DstInitTypeData%Joints = SrcInitTypeData%Joints
    end if
-   if (allocated(SrcInitTypeData%PropSetsB)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropSetsB)
-      UB(1:2) = ubound(SrcInitTypeData%PropSetsB)
-      if (.not. allocated(DstInitTypeData%PropSetsB)) then
-         allocate(DstInitTypeData%PropSetsB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcInitTypeData%PropSetsBC)) then
+      LB(1:2) = lbound(SrcInitTypeData%PropSetsBC)
+      UB(1:2) = ubound(SrcInitTypeData%PropSetsBC)
+      if (.not. allocated(DstInitTypeData%PropSetsBC)) then
+         allocate(DstInitTypeData%PropSetsBC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropSetsB.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropSetsBC.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstInitTypeData%PropSetsB = SrcInitTypeData%PropSetsB
+      DstInitTypeData%PropSetsBC = SrcInitTypeData%PropSetsBC
+   end if
+   if (allocated(SrcInitTypeData%PropSetsBR)) then
+      LB(1:2) = lbound(SrcInitTypeData%PropSetsBR)
+      UB(1:2) = ubound(SrcInitTypeData%PropSetsBR)
+      if (.not. allocated(DstInitTypeData%PropSetsBR)) then
+         allocate(DstInitTypeData%PropSetsBR(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropSetsBR.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%PropSetsBR = SrcInitTypeData%PropSetsBR
    end if
    if (allocated(SrcInitTypeData%PropSetsC)) then
       LB(1:2) = lbound(SrcInitTypeData%PropSetsC)
@@ -1382,6 +1269,18 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       end if
       DstInitTypeData%Members = SrcInitTypeData%Members
    end if
+   if (allocated(SrcInitTypeData%MemberSpin)) then
+      LB(1:1) = lbound(SrcInitTypeData%MemberSpin)
+      UB(1:1) = ubound(SrcInitTypeData%MemberSpin)
+      if (.not. allocated(DstInitTypeData%MemberSpin)) then
+         allocate(DstInitTypeData%MemberSpin(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%MemberSpin.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%MemberSpin = SrcInitTypeData%MemberSpin
+   end if
    if (allocated(SrcInitTypeData%SSOutList)) then
       LB(1:1) = lbound(SrcInitTypeData%SSOutList)
       UB(1:1) = ubound(SrcInitTypeData%SSOutList)
@@ -1469,7 +1368,9 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       DstInitTypeData%Soil_Nodes = SrcInitTypeData%Soil_Nodes
    end if
    DstInitTypeData%NElem = SrcInitTypeData%NElem
-   DstInitTypeData%NPropB = SrcInitTypeData%NPropB
+   DstInitTypeData%NPropBC = SrcInitTypeData%NPropBC
+   DstInitTypeData%NPropBR = SrcInitTypeData%NPropBR
+   DstInitTypeData%NPropX = SrcInitTypeData%NPropX
    DstInitTypeData%NPropC = SrcInitTypeData%NPropC
    DstInitTypeData%NPropR = SrcInitTypeData%NPropR
    DstInitTypeData%NPropS = SrcInitTypeData%NPropS
@@ -1485,17 +1386,29 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
       end if
       DstInitTypeData%Nodes = SrcInitTypeData%Nodes
    end if
-   if (allocated(SrcInitTypeData%PropsB)) then
-      LB(1:2) = lbound(SrcInitTypeData%PropsB)
-      UB(1:2) = ubound(SrcInitTypeData%PropsB)
-      if (.not. allocated(DstInitTypeData%PropsB)) then
-         allocate(DstInitTypeData%PropsB(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+   if (allocated(SrcInitTypeData%PropsBC)) then
+      LB(1:2) = lbound(SrcInitTypeData%PropsBC)
+      UB(1:2) = ubound(SrcInitTypeData%PropsBC)
+      if (.not. allocated(DstInitTypeData%PropsBC)) then
+         allocate(DstInitTypeData%PropsBC(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropsB.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropsBC.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstInitTypeData%PropsB = SrcInitTypeData%PropsB
+      DstInitTypeData%PropsBC = SrcInitTypeData%PropsBC
+   end if
+   if (allocated(SrcInitTypeData%PropsBR)) then
+      LB(1:2) = lbound(SrcInitTypeData%PropsBR)
+      UB(1:2) = ubound(SrcInitTypeData%PropsBR)
+      if (.not. allocated(DstInitTypeData%PropsBR)) then
+         allocate(DstInitTypeData%PropsBR(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitTypeData%PropsBR.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitTypeData%PropsBR = SrcInitTypeData%PropsBR
    end if
    if (allocated(SrcInitTypeData%PropsC)) then
       LB(1:2) = lbound(SrcInitTypeData%PropsC)
@@ -1618,8 +1531,11 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    if (allocated(InitTypeData%Joints)) then
       deallocate(InitTypeData%Joints)
    end if
-   if (allocated(InitTypeData%PropSetsB)) then
-      deallocate(InitTypeData%PropSetsB)
+   if (allocated(InitTypeData%PropSetsBC)) then
+      deallocate(InitTypeData%PropSetsBC)
+   end if
+   if (allocated(InitTypeData%PropSetsBR)) then
+      deallocate(InitTypeData%PropSetsBR)
    end if
    if (allocated(InitTypeData%PropSetsC)) then
       deallocate(InitTypeData%PropSetsC)
@@ -1645,6 +1561,9 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    if (allocated(InitTypeData%Members)) then
       deallocate(InitTypeData%Members)
    end if
+   if (allocated(InitTypeData%MemberSpin)) then
+      deallocate(InitTypeData%MemberSpin)
+   end if
    if (allocated(InitTypeData%SSOutList)) then
       deallocate(InitTypeData%SSOutList)
    end if
@@ -1669,8 +1588,11 @@ subroutine SD_DestroyInitType(InitTypeData, ErrStat, ErrMsg)
    if (allocated(InitTypeData%Nodes)) then
       deallocate(InitTypeData%Nodes)
    end if
-   if (allocated(InitTypeData%PropsB)) then
-      deallocate(InitTypeData%PropsB)
+   if (allocated(InitTypeData%PropsBC)) then
+      deallocate(InitTypeData%PropsBC)
+   end if
+   if (allocated(InitTypeData%PropsBR)) then
+      deallocate(InitTypeData%PropsBR)
    end if
    if (allocated(InitTypeData%PropsC)) then
       deallocate(InitTypeData%PropsC)
@@ -1713,7 +1635,8 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%NJoints)
    call RegPack(RF, InData%NPropSetsX)
-   call RegPack(RF, InData%NPropSetsB)
+   call RegPack(RF, InData%NPropSetsBC)
+   call RegPack(RF, InData%NPropSetsBR)
    call RegPack(RF, InData%NPropSetsC)
    call RegPack(RF, InData%NPropSetsR)
    call RegPack(RF, InData%NPropSetsS)
@@ -1723,7 +1646,8 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPack(RF, InData%NDiv)
    call RegPack(RF, InData%CBMod)
    call RegPackAlloc(RF, InData%Joints)
-   call RegPackAlloc(RF, InData%PropSetsB)
+   call RegPackAlloc(RF, InData%PropSetsBC)
+   call RegPackAlloc(RF, InData%PropSetsBR)
    call RegPackAlloc(RF, InData%PropSetsC)
    call RegPackAlloc(RF, InData%PropSetsR)
    call RegPackAlloc(RF, InData%PropSetsS)
@@ -1735,6 +1659,7 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPack(RF, InData%RayleighDamp)
    call RegPack(RF, InData%GuyanDampMat)
    call RegPackAlloc(RF, InData%Members)
+   call RegPackAlloc(RF, InData%MemberSpin)
    call RegPackAlloc(RF, InData%SSOutList)
    call RegPack(RF, InData%OutCOSM)
    call RegPack(RF, InData%TabDelim)
@@ -1745,12 +1670,15 @@ subroutine SD_PackInitType(RF, Indata)
    call RegPackAlloc(RF, InData%Soil_Points)
    call RegPackAlloc(RF, InData%Soil_Nodes)
    call RegPack(RF, InData%NElem)
-   call RegPack(RF, InData%NPropB)
+   call RegPack(RF, InData%NPropBC)
+   call RegPack(RF, InData%NPropBR)
+   call RegPack(RF, InData%NPropX)
    call RegPack(RF, InData%NPropC)
    call RegPack(RF, InData%NPropR)
    call RegPack(RF, InData%NPropS)
    call RegPackAlloc(RF, InData%Nodes)
-   call RegPackAlloc(RF, InData%PropsB)
+   call RegPackAlloc(RF, InData%PropsBC)
+   call RegPackAlloc(RF, InData%PropsBR)
    call RegPackAlloc(RF, InData%PropsC)
    call RegPackAlloc(RF, InData%PropsR)
    call RegPackAlloc(RF, InData%PropsS)
@@ -1779,7 +1707,8 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NJoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsX); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NPropSetsB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NPropSetsBC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NPropSetsBR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropSetsS); if (RegCheckErr(RF, RoutineName)) return
@@ -1789,7 +1718,8 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpack(RF, OutData%NDiv); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CBMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Joints); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%PropSetsB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PropSetsBC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PropSetsBR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropSetsC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropSetsR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropSetsS); if (RegCheckErr(RF, RoutineName)) return
@@ -1801,6 +1731,7 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpack(RF, OutData%RayleighDamp); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GuyanDampMat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Members); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%MemberSpin); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%SSOutList); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutCOSM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TabDelim); if (RegCheckErr(RF, RoutineName)) return
@@ -1811,12 +1742,15 @@ subroutine SD_UnPackInitType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Soil_Points); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Soil_Nodes); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NElem); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NPropB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NPropBC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NPropBR); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NPropX); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NPropS); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Nodes); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%PropsB); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PropsBC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%PropsBR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropsC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropsR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%PropsS); if (RegCheckErr(RF, RoutineName)) return
@@ -2114,6 +2048,18 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Elems = SrcParamData%Elems
+   end if
+   if (allocated(SrcParamData%ElemSpin)) then
+      LB(1:1) = lbound(SrcParamData%ElemSpin)
+      UB(1:1) = ubound(SrcParamData%ElemSpin)
+      if (.not. allocated(DstParamData%ElemSpin)) then
+         allocate(DstParamData%ElemSpin(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ElemSpin.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ElemSpin = SrcParamData%ElemSpin
    end if
    if (allocated(SrcParamData%ElemProps)) then
       LB(1:1) = lbound(SrcParamData%ElemProps)
@@ -2926,6 +2872,9 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%Elems)) then
       deallocate(ParamData%Elems)
    end if
+   if (allocated(ParamData%ElemSpin)) then
+      deallocate(ParamData%ElemSpin)
+   end if
    if (allocated(ParamData%ElemProps)) then
       LB(1:1) = lbound(ParamData%ElemProps)
       UB(1:1) = ubound(ParamData%ElemProps)
@@ -3173,6 +3122,7 @@ subroutine SD_PackParam(RF, Indata)
    call RegPack(RF, InData%nDOF_red)
    call RegPack(RF, InData%Nmembers)
    call RegPackAlloc(RF, InData%Elems)
+   call RegPackAlloc(RF, InData%ElemSpin)
    call RegPack(RF, allocated(InData%ElemProps))
    if (allocated(InData%ElemProps)) then
       call RegPackBounds(RF, 1, lbound(InData%ElemProps), ubound(InData%ElemProps))
@@ -3350,6 +3300,7 @@ subroutine SD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%nDOF_red); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Nmembers); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Elems); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ElemSpin); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%ElemProps)) deallocate(OutData%ElemProps)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -4682,63 +4633,6 @@ subroutine SD_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine SD_VarsPackConstrState(Vars, z, ValAry)
-   type(SD_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SD_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine SD_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(SD_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SD_z_DummyConstrState)
-         VarVals(1) = z%DummyConstrState                                      ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine SD_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(SD_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call SD_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine SD_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(SD_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (SD_z_DummyConstrState)
-         z%DummyConstrState = VarVals(1)                                      ! Scalar
-      end select
-   end associate
-end subroutine
-
-function SD_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (SD_z_DummyConstrState)
-       Name = "z%DummyConstrState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine SD_VarsPackInput(Vars, u, ValAry)
    type(SD_InputType), intent(in)          :: u

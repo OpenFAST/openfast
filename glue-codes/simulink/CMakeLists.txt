@@ -30,13 +30,11 @@ set(MEX_LIBS
   $<TARGET_FILE:mappplib>
   $<TARGET_FILE:moordynlib>
   $<TARGET_FILE:orcaflexlib>
-  $<TARGET_FILE:sctypeslib>
   $<TARGET_FILE:servodynlib-matlab> # MATLAB Specific
   $<TARGET_FILE:subdynlib>
   $<TARGET_FILE:extinflowlib>
   $<TARGET_FILE:extloadslib>
   $<TARGET_FILE:ifwlib>
-  $<TARGET_FILE:scfastlib>
   $<TARGET_FILE:extinflowtypeslib>
   $<TARGET_FILE:versioninfolib>
   $<TARGET_FILE:nwtclibs-matlab>    # MATLAB Specific
@@ -57,7 +55,7 @@ matlab_add_mex(
     src/FAST_SFunc.c
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Subs.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Mods.f90
-    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_SolverTC.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Solver.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Funcs.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_ModGlue.f90
@@ -77,7 +75,6 @@ set_target_properties(FAST_SFunc PROPERTIES
 target_include_directories(FAST_SFunc PUBLIC 
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/openfast-library/src>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/externalinflow/src>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/supercontroller/src>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/extloads/src>
 )
 if(APPLE OR UNIX)
@@ -87,6 +84,6 @@ endif()
 install(TARGETS FAST_SFunc
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
+  LIBRARY DESTINATION bin
   ARCHIVE DESTINATION lib
 )

@@ -120,13 +120,12 @@ IMPLICIT NONE
 ! =======================
    integer(IntKi), public, parameter :: DBEMT_x_element_vind             =   1 ! DBEMT%element(DL%i1, DL%i2)%vind
    integer(IntKi), public, parameter :: DBEMT_x_element_vind_1           =   2 ! DBEMT%element(DL%i1, DL%i2)%vind_1
-   integer(IntKi), public, parameter :: DBEMT_z_DummyState               =   3 ! DBEMT%DummyState
-   integer(IntKi), public, parameter :: DBEMT_u_AxInd_disk               =   4 ! DBEMT%AxInd_disk
-   integer(IntKi), public, parameter :: DBEMT_u_Un_disk                  =   5 ! DBEMT%Un_disk
-   integer(IntKi), public, parameter :: DBEMT_u_R_disk                   =   6 ! DBEMT%R_disk
-   integer(IntKi), public, parameter :: DBEMT_u_element_vind_s           =   7 ! DBEMT%element(DL%i1, DL%i2)%vind_s
-   integer(IntKi), public, parameter :: DBEMT_u_element_spanRatio        =   8 ! DBEMT%element(DL%i1, DL%i2)%spanRatio
-   integer(IntKi), public, parameter :: DBEMT_y_vind                     =   9 ! DBEMT%vind
+   integer(IntKi), public, parameter :: DBEMT_u_AxInd_disk               =   3 ! DBEMT%AxInd_disk
+   integer(IntKi), public, parameter :: DBEMT_u_Un_disk                  =   4 ! DBEMT%Un_disk
+   integer(IntKi), public, parameter :: DBEMT_u_R_disk                   =   5 ! DBEMT%R_disk
+   integer(IntKi), public, parameter :: DBEMT_u_element_vind_s           =   6 ! DBEMT%element(DL%i1, DL%i2)%vind_s
+   integer(IntKi), public, parameter :: DBEMT_u_element_spanRatio        =   7 ! DBEMT%element(DL%i1, DL%i2)%spanRatio
+   integer(IntKi), public, parameter :: DBEMT_y_vind                     =   8 ! DBEMT%vind
 
 contains
 
@@ -1531,63 +1530,6 @@ subroutine DBEMT_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine DBEMT_VarsPackConstrState(Vars, z, ValAry)
-   type(DBEMT_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call DBEMT_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine DBEMT_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(DBEMT_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (DBEMT_z_DummyState)
-         VarVals(1) = z%DummyState                                            ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine DBEMT_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(DBEMT_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call DBEMT_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine DBEMT_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(DBEMT_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (DBEMT_z_DummyState)
-         z%DummyState = VarVals(1)                                            ! Scalar
-      end select
-   end associate
-end subroutine
-
-function DBEMT_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (DBEMT_z_DummyState)
-       Name = "z%DummyState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine DBEMT_VarsPackInput(Vars, u, ValAry)
    type(DBEMT_InputType), intent(in)       :: u

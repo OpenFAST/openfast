@@ -114,11 +114,6 @@ typedef  ^                       InitOutputType    CHARACTER(ChanLen)     WriteO
 typedef  ^                       ^                 CHARACTER(ChanLen)     WriteOutputUnt    :   -   -    "Units of output-to-file channels"                       -
 typedef  ^                       ^                 ProgDesc               Ver               -   -   -    "Version information of InflowWind module"               -
 typedef  ^                       ^                 WindFileDat            WindFileInfo      -   -   -    "Meta data from the wind file"                           -
-typedef  ^                       ^                 CHARACTER(LinChanLen)  LinNames_y       {:}  -   -    "Names of the outputs used in linearization" -
-typedef  ^                       ^                 CHARACTER(LinChanLen)  LinNames_u       {:}  -   -    "Names of the inputs used in linearization" -
-typedef  ^                       ^                 LOGICAL                RotFrame_y       {:}  -   -    "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
-typedef  ^                       ^                 LOGICAL                RotFrame_u       {:}  -   -    "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
-typedef  ^                       ^                 LOGICAL                IsLoad_u         {:}  -   -    "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef  ^                       ^                 FlowFieldType         *FlowField        -    -   -    "Flow field data to represent all wind types"  -
 typedef	 ^                       ^                 ModVarsType            Vars             -    -   -    "Module Variables"
 

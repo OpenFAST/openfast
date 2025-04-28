@@ -65,7 +65,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density [kg/m^3]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE ExtLd_InitOutputType
 ! =======================
 ! =========  ExtLd_ContinuousStateType  =======
@@ -97,7 +97,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  ExtLd_ParameterType  =======
   TYPE, PUBLIC :: ExtLd_ParameterType
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     TYPE(ExtLdDX_ParameterType)  :: DX_p      !< Data to send to external driver [-]
     INTEGER(IntKi)  :: NumBlds = 0_IntKi      !< Number of blades on the turbine [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NumBldNds      !< Number of blade nodes for each blade [-]
@@ -129,25 +128,24 @@ IMPLICIT NONE
   END TYPE ExtLd_OutputType
 ! =======================
    integer(IntKi), public, parameter :: ExtLd_x_blah                     =   1 ! ExtLd%blah
-   integer(IntKi), public, parameter :: ExtLd_z_blah                     =   2 ! ExtLd%blah
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_twrDef              =   3 ! ExtLd%DX_u%twrDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldDef              =   4 ! ExtLd%DX_u%bldDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_hubDef              =   5 ! ExtLd%DX_u%hubDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_nacDef              =   6 ! ExtLd%DX_u%nacDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldRootDef          =   7 ! ExtLd%DX_u%bldRootDef
-   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldPitch            =   8 ! ExtLd%DX_u%bldPitch
-   integer(IntKi), public, parameter :: ExtLd_u_az                       =   9 ! ExtLd%az
-   integer(IntKi), public, parameter :: ExtLd_u_TowerMotion              =  10 ! ExtLd%TowerMotion
-   integer(IntKi), public, parameter :: ExtLd_u_HubMotion                =  11 ! ExtLd%HubMotion
-   integer(IntKi), public, parameter :: ExtLd_u_NacelleMotion            =  12 ! ExtLd%NacelleMotion
-   integer(IntKi), public, parameter :: ExtLd_u_BladeRootMotion          =  13 ! ExtLd%BladeRootMotion(DL%i1)
-   integer(IntKi), public, parameter :: ExtLd_u_BladeMotion              =  14 ! ExtLd%BladeMotion(DL%i1)
-   integer(IntKi), public, parameter :: ExtLd_u_TowerLoadAD              =  15 ! ExtLd%TowerLoadAD
-   integer(IntKi), public, parameter :: ExtLd_u_BladeLoadAD              =  16 ! ExtLd%BladeLoadAD(DL%i1)
-   integer(IntKi), public, parameter :: ExtLd_y_DX_y_twrLd               =  17 ! ExtLd%DX_y%twrLd
-   integer(IntKi), public, parameter :: ExtLd_y_DX_y_bldLd               =  18 ! ExtLd%DX_y%bldLd
-   integer(IntKi), public, parameter :: ExtLd_y_TowerLoad                =  19 ! ExtLd%TowerLoad
-   integer(IntKi), public, parameter :: ExtLd_y_BladeLoad                =  20 ! ExtLd%BladeLoad(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_twrDef              =   2 ! ExtLd%DX_u%twrDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldDef              =   3 ! ExtLd%DX_u%bldDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_hubDef              =   4 ! ExtLd%DX_u%hubDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_nacDef              =   5 ! ExtLd%DX_u%nacDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldRootDef          =   6 ! ExtLd%DX_u%bldRootDef
+   integer(IntKi), public, parameter :: ExtLd_u_DX_u_bldPitch            =   7 ! ExtLd%DX_u%bldPitch
+   integer(IntKi), public, parameter :: ExtLd_u_az                       =   8 ! ExtLd%az
+   integer(IntKi), public, parameter :: ExtLd_u_TowerMotion              =   9 ! ExtLd%TowerMotion
+   integer(IntKi), public, parameter :: ExtLd_u_HubMotion                =  10 ! ExtLd%HubMotion
+   integer(IntKi), public, parameter :: ExtLd_u_NacelleMotion            =  11 ! ExtLd%NacelleMotion
+   integer(IntKi), public, parameter :: ExtLd_u_BladeRootMotion          =  12 ! ExtLd%BladeRootMotion(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_u_BladeMotion              =  13 ! ExtLd%BladeMotion(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_u_TowerLoadAD              =  14 ! ExtLd%TowerLoadAD
+   integer(IntKi), public, parameter :: ExtLd_u_BladeLoadAD              =  15 ! ExtLd%BladeLoadAD(DL%i1)
+   integer(IntKi), public, parameter :: ExtLd_y_DX_y_twrLd               =  16 ! ExtLd%DX_y%twrLd
+   integer(IntKi), public, parameter :: ExtLd_y_DX_y_bldLd               =  17 ! ExtLd%DX_y%bldLd
+   integer(IntKi), public, parameter :: ExtLd_y_TowerLoad                =  18 ! ExtLd%TowerLoad
+   integer(IntKi), public, parameter :: ExtLd_y_BladeLoad                =  19 ! ExtLd%BladeLoad(DL%i1)
 
 contains
 
@@ -448,7 +446,9 @@ subroutine ExtLd_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%AirDens = SrcInitOutputData%AirDens
-   DstInitOutputData%Vars => SrcInitOutputData%Vars
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine ExtLd_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -468,26 +468,20 @@ subroutine ExtLd_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   nullify(InitOutputData%Vars)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ExtLd_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ExtLd_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtLd_PackInitOutput'
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call RegPack(RF, InData%AirDens)
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -498,31 +492,12 @@ subroutine ExtLd_UnPackInitOutput(RF, OutData)
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call RegUnpack(RF, OutData%AirDens); if (RegCheckErr(RF, RoutineName)) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine ExtLd_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
@@ -741,18 +716,6 @@ subroutine ExtLd_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    character(*), parameter        :: RoutineName = 'ExtLd_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(SrcParamData%Vars)) then
-      if (.not. associated(DstParamData%Vars)) then
-         allocate(DstParamData%Vars, stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end if
    call ExtLdDX_CopyParam(SrcParamData%DX_p, DstParamData%DX_p, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -785,12 +748,6 @@ subroutine ExtLd_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ExtLd_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(ParamData%Vars)) then
-      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      deallocate(ParamData%Vars)
-      ParamData%Vars => null()
-   end if
    call ExtLdDX_DestroyParam(ParamData%DX_p, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%NumBldNds)) then
@@ -802,15 +759,7 @@ subroutine ExtLd_PackParam(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ExtLd_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ExtLd_PackParam'
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
    call ExtLdDX_PackParam(RF, InData%DX_p) 
    call RegPack(RF, InData%NumBlds)
    call RegPackAlloc(RF, InData%NumBldNds)
@@ -829,27 +778,7 @@ subroutine ExtLd_UnPackParam(RF, OutData)
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
    call ExtLdDX_UnpackParam(RF, OutData%DX_p) ! DX_p 
    call RegUnpack(RF, OutData%NumBlds); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%NumBldNds); if (RegCheckErr(RF, RoutineName)) return
@@ -1704,63 +1633,6 @@ subroutine ExtLd_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine ExtLd_VarsPackConstrState(Vars, z, ValAry)
-   type(ExtLd_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ExtLd_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine ExtLd_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(ExtLd_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ExtLd_z_blah)
-         VarVals(1) = z%blah                                                  ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine ExtLd_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(ExtLd_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call ExtLd_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine ExtLd_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(ExtLd_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (ExtLd_z_blah)
-         z%blah = VarVals(1)                                                  ! Scalar
-      end select
-   end associate
-end subroutine
-
-function ExtLd_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (ExtLd_z_blah)
-       Name = "z%blah"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine ExtLd_VarsPackInput(Vars, u, ValAry)
    type(ExtLd_InputType), intent(in)       :: u

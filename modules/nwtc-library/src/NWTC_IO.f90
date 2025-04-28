@@ -1799,19 +1799,12 @@ END SUBROUTINE CheckR8Var
    END SUBROUTINE FindLine
 !=======================================================================
 !> This routine returns the next unit number greater than 9 that is not currently in use.
-!! If it cannot find any unit between 10 and 99 that is available, it either aborts or returns an appropriate error status/message.   
+!! If it cannot find any unit between 10 and 2^16-1 that is available, it either aborts or returns an appropriate error status/message.   
    SUBROUTINE GetNewUnit ( UnIn, ErrStat, ErrMsg )
-
-
-
-      ! Argument declarations.
 
    INTEGER,        INTENT(OUT)            :: UnIn                                         !< Logical unit for the file.
    INTEGER(IntKi), INTENT(OUT), OPTIONAL  :: ErrStat                                      !< The error status code; If not present code aborts
    CHARACTER(*),   INTENT(OUT), OPTIONAL  :: ErrMsg                                       !< The error message, if an error occurred
-
-
-      ! Local declarations.
 
    INTEGER                                :: Un                                           ! Unit number
    LOGICAL                                :: Opened                                       ! Flag indicating whether or not a file is opened.
@@ -1820,48 +1813,30 @@ END SUBROUTINE CheckR8Var
    !     macos -- 256  (change with ulimit -n)
    !     linux -- 1024 (change with ulimit -n)
    !     windows -- 512 (not sure how to change -- ADP)
-   INTEGER(IntKi), PARAMETER              :: MaxUnit   = 1024                             ! The maximum unit number available (or 10 less than the number of files you want to have open at a time)
+   INTEGER(IntKi), PARAMETER              :: MaxUnit   = 65535                            ! The maximum unit number available (or 10 less than the number of files you want to have open at a time)
    CHARACTER(ErrMsgLen)                   :: Msg                                          ! Temporary error message
 
+   ! See if unit is connected to an open file. Check the next largest number until it is not opened.
+   do Un = StartUnit, MaxUnit
+      UnIn = Un
+      inquire(unit=Un, opened=Opened)
+      if (Opened) cycle
+      if (present(ErrStat)) ErrStat = ErrID_None
+      if (present(ErrMsg))  ErrMsg  =  ''
+      return
+   end do
 
-      ! Initialize subroutine outputs
+   Msg = 'GetNewUnit() was unable to find an open file unit specifier between '//TRIM(Num2LStr(StartUnit)) &
+         //' and '//TRIM(Num2LStr(MaxUnit))//'.'
 
-   Un = StartUnit
+   UnIn = -1
+   if (present(ErrStat)) then
+      ErrStat = ErrID_Severe
+      if (present(ErrMsg)) ErrMsg = Msg
+   else
+      call ProgAbort(Msg)
+   end if
 
-   IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
-   IF ( PRESENT( ErrMsg  ) ) ErrMsg  =  ''
-
-      ! See if unit is connected to an open file. Check the next largest number until it is not opened.
-
-   DO
-
-      INQUIRE ( UNIT=Un , OPENED=Opened )
-
-      IF ( .NOT. Opened )  EXIT
-      Un = Un + 1
-
-      IF ( Un > MaxUnit ) THEN
-
-         Msg = 'GetNewUnit() was unable to find an open file unit specifier between '//TRIM(Num2LStr(StartUnit)) &
-                                                                            //' and '//TRIM(Num2LStr(MaxUnit))//'.'
-
-         IF ( PRESENT( ErrStat ) ) THEN
-            ErrStat = ErrID_Severe
-            IF ( PRESENT( ErrMsg) ) ErrMsg  =  Msg
-         ELSE
-            CALL ProgAbort( Msg )
-         END IF
-
-         EXIT           ! stop searching now
-
-      END IF
-
-
-   END DO
-
-   UnIn = Un
-
-   RETURN
    END SUBROUTINE GetNewUnit
 !=======================================================================
 !> This function returns a text description of the ErrID (ErrStat) code.
@@ -2074,7 +2049,6 @@ END SUBROUTINE CheckR8Var
    INTEGER                        :: iWord                                        ! Word index.
    INTEGER                        :: i                                            ! Character index in line.
    INTEGER                        :: iChar                                        ! Character index in word.
-   CHARACTER(len=1)               :: Char                                         ! Current character
    LOGICAL                        :: InQuotes                                     ! Flag indicating text is within quotes
    LOGICAL                        :: IgnoreQuotesLoc                              ! Local flag to ignore quotes
 
@@ -2108,11 +2082,8 @@ END SUBROUTINE CheckR8Var
    ! Loop through characters in line
    do i = 1, len_trim(line)
 
-      ! Get current character
-      Char = Line(i:i)
-
       ! Select based on character
-      select case (Char)
+      select case (Line(i:i))
       case ('"', "'")               ! Double quotes, single quotes
          if (IgnoreQuotesLoc .or. InQuotes) then
             InQuotes = .false.
@@ -2152,7 +2123,7 @@ END SUBROUTINE CheckR8Var
       end if
 
       ! Add character to word
-      Words(iWord)(iChar:iChar) = Char
+      Words(iWord)(iChar:iChar) = Line(i:i)
 
    end do
    
@@ -2494,7 +2465,7 @@ END SUBROUTINE CheckR8Var
 
       ! Get a unit number for the echo file:
 
-   !$OMP critical(fileopenNWTCio)
+   !$OMP critical(fileopenNWTCio_critical)
    IF ( Un < 0 ) THEN
       CALL GetNewUnit( Un, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat, ErrMsg, RoutineName )
@@ -2505,7 +2476,7 @@ END SUBROUTINE CheckR8Var
 
    CALL OpenFOutFile( Un, OutFile, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat, ErrMsg, RoutineName )
-   !$OMP end critical(fileopenNWTCio)
+   !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStat >= AbortErrLev ) RETURN
 
 
@@ -4732,13 +4703,13 @@ END SUBROUTINE CheckR8Var
       RETURN
    END IF
    
-   !$OMP critical(fileopenNWTCio)
+   !$OMP critical(fileopenNWTCio_critical)
    CALL GetNewUnit ( UnIn, ErrStatLcl, ErrMsg2 )
       CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL OpenFInpFile ( UnIn, FileInfo%FileList(FileIndx), ErrStatLcl, ErrMsg2 )
       CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !$OMP end critical(fileopenNWTCio)
+   !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStat >= AbortErrLev )  RETURN
 
 
@@ -6129,7 +6100,7 @@ subroutine ReadR4AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
 
    integer                                :: Ind                  ! Index into the string array.  Assumed to be one digit.
    integer                                :: IOS                  ! I/O status returned from the read statement.
-   character(30)                          :: Word(AryLen)         ! String to hold the words on the line.
+   character(30)                          :: Word                 ! String to hold the words on the line.
    character(2048)                        :: Line                 ! The contents of a line returned from ReadLine() with comment removed.
    integer                                :: LineLen              ! Length of line read in
 
@@ -6138,13 +6109,10 @@ subroutine ReadR4AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
       if (ErrStat >= AbortErrLev) return
 
    ! check for default
-   call GetWords(Line, Word(1), 1)
-   call Conv2UC( Word(1) )
+   call GetWords(Line, Word, 1)
+   call Conv2UC( Word )
 
-   if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
-
-      ! Values exist, so reread line into AryLen of words
-      call GetWords( Line, Word(AryLen), AryLen)
+   if ( index(Word, "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
 
       ! read the first AryLen numbers from the line
       read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
@@ -6193,7 +6161,7 @@ subroutine ReadR8AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
 
    integer                                :: Ind                  ! Index into the string array.  Assumed to be one digit.
    integer                                :: IOS                  ! I/O status returned from the read statement.
-   character(30)                          :: Word(AryLen)         ! String to hold the words on the line.
+   character(30)                          :: Word                 ! String to hold the words on the line.
    character(2048)                        :: Line                 ! The contents of a line returned from ReadLine() with comment removed.
    integer                                :: LineLen              ! Length of line read in
 
@@ -6202,13 +6170,10 @@ subroutine ReadR8AryWDefault ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, AryDef
       if (ErrStat >= AbortErrLev) return
 
    ! check for default
-   call GetWords(Line, Word(1), 1)
-   call Conv2UC( Word(1) )
+   call GetWords(Line, Word, 1)
+   call Conv2UC( Word )
 
-   if ( index(Word(1), "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
-
-      ! Values exist, so reread line into AryLen of words
-      call GetWords( Line, Word(AryLen), AryLen)
+   if ( index(Word, "DEFAULT" ) /= 1 ) then  ! If it's not "default", read this variable; otherwise use the DEFAULT value
 
       ! read the first AryLen numbers from the line
       read (Line,*,iostat=IOS)  ( Ary(Ind), Ind=1,AryLen )
@@ -6668,11 +6633,11 @@ end subroutine ReadR8AryWDefault
 
          ! Open the input file.
       UnIn = -1
-      !$OMP critical(fileopenNWTCio)
+      !$OMP critical(fileopenNWTCio_critical)
       CALL GetNewUnit ( UnIn, ErrStatLcl, ErrMsg2 )
 
       CALL OpenFInpFile ( UnIn, Filename, ErrStatLcl, ErrMsg2 )
-      !$OMP end critical(fileopenNWTCio)
+      !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
@@ -6980,7 +6945,7 @@ end subroutine ReadR8AryWDefault
 
       ! Generate the unit number for the binary file
    UnIn = 0
-   !$OMP critical(fileopenNWTCio)
+   !$OMP critical(fileopenNWTCio_critical)
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -6990,7 +6955,7 @@ end subroutine ReadR8AryWDefault
 
    CALL OpenBOutFile ( UnIn, TRIM(FileName), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !$OMP end critical(fileopenNWTCio)
+   !$OMP end critical(fileopenNWTCio_critical)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN

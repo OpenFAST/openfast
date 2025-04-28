@@ -25,8 +25,8 @@ use FAST_Types
 use FAST_Funcs
 use FAST_Mapping
 use FAST_ModGlue
-
 use FAST_Subs
+use NWTC_LAPACK
 
 implicit none
 
@@ -114,10 +114,10 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    ! Standard Turbine initialization
    call FAST_InitializeAll(t_initial, T%m_Glue, T%p_FAST, T%y_FAST, T%m_FAST, &
                            T%ED, T%SED, T%BD, T%SrvD, T%AD, T%ADsk, &
-                           T%ExtLd, T%IfW, T%ExtInfw, T%SC_DX, &
+                           T%ExtLd, T%IfW, T%ExtInfw, &
                            T%SeaSt, T%HD, T%SD, T%ExtPtfm, T%MAP, &
                            T%FEAM, T%MD, T%Orca, T%IceF, T%IceD, &
-                           T%MeshMapData, CompAeroMaps, ErrStat2, ErrMsg2)
+                           CompAeroMaps, ErrStat2, ErrMsg2)
    if (Failed()) return
 
    ! Initialize module data transfer mappings
@@ -165,7 +165,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Generate index for variables with AeroMap flag
-   call Glue_CombineModules(AM%Mod, m%ModData, m%Mappings, iModOrder, VF_AeroMap, &
+   call ModGlue_CombineModules(AM%Mod, m%ModData, m%Mappings, iModOrder, VF_AeroMap, &
                             .true., ErrStat2, ErrMsg2, Name="AeroMap")
    if (Failed()) return
 
@@ -213,9 +213,6 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
    ! Allocate arrays to store inputs
    call AllocAry(AM%u1, AM%Mod%Vars%Nu, 'u1', ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(AM%u2, AM%Mod%Vars%Nu, 'u2', ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Move hub orientation matrices to AeroMap structure
-   call move_alloc(T%MeshMapData%HubOrient, AM%HubOrientation)
 
    !----------------------------------------------------------------------------
    ! AeroMap structure initialization
@@ -760,7 +757,7 @@ subroutine SS_BuildJacobian(AM, caseData, Mappings, p_FAST, y_FAST, m_FAST, T, E
             if (Failed()) return
 
             ! Write linearization matrices
-            call CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, p_FAST, y_FAST, SS_t_global, Un, &
+            call ModGlue_CalcWriteLinearMatrices(ModData%Vars, ModData%Lin, p_FAST, y_FAST, SS_t_global, Un, &
                                          LinRootName, VF_AeroMap, ErrStat2, ErrMsg2, ModData%Abbr, CalcGlue=.false.)
             if (Failed()) return
 
@@ -830,7 +827,7 @@ subroutine SS_BuildJacobian(AM, caseData, Mappings, p_FAST, y_FAST, m_FAST, T, E
 
    ! If output debugging is enabled, write combined matrices and Jacobian
    if (output_debugging) then
-      call CalcWriteLinearMatrices(AM%Mod%Vars, AM%Mod%Lin, p_FAST, y_FAST, SS_t_global, Un, &
+      call ModGlue_CalcWriteLinearMatrices(AM%Mod%Vars, AM%Mod%Lin, p_FAST, y_FAST, SS_t_global, Un, &
                                    LinRootName, VF_AeroMap, ErrStat2, ErrMsg2, CalcGlue=.false.)
       if (Failed()) return
    end if

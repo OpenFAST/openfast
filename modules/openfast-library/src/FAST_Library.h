@@ -4,7 +4,6 @@
 // routines in FAST_Library_$(PlatformName).dll
 #include "ExternalInflow_Types.h"
 #include "ExtLoadsDX_Types.h"
-#include "SCDataEx_Types.h"
 #include "stdio.h"
 
 #ifdef __cplusplus
@@ -18,17 +17,16 @@ EXTERNAL_ROUTINE void FAST_DeallocateTurbines(int *ErrStat, char *ErrMsg);
 
 EXTERNAL_ROUTINE void FAST_ExtInfw_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, double * dt, int * InflowType,
                                            int * NumBl, int * NumBlElem, int * NumTwrElem, int * n_t_global,
-                                           ExtInfw_InputType_t* ExtInfw_Input, ExtInfw_OutputType_t* ExtInfw_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output,
+                                           ExtInfw_InputType_t* ExtInfw_Input, ExtInfw_OutputType_t* ExtInfw_Output,
                                            int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_ExtInfw_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbIDforName, char *OutFileRoot,
-                                        int * NumSC2CtrlGlob, int * NumSC2Ctrl, int * NumCtrl2SC, float * initSCInputsGlob, float * initSCInputsTurbine,
                                         int * NumActForcePtsBlade, int * NumActForcePtsTower, float * TurbinePosition, int *AbortErrLev,
                                         double * dtDriver, double * dt, int * InflowType, int * NumBl, int * NumBlElem, int * NumTwrElem, int * NodeClusterType,
-                                        ExtInfw_InputType_t* ExtInfw_Input, ExtInfw_OutputType_t* ExtInfw_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output, 
+                                        ExtInfw_InputType_t* ExtInfw_Input, ExtInfw_OutputType_t* ExtInfw_Output, 
                                         int *ErrStat, char *ErrMsg);
 
-EXTERNAL_ROUTINE void FAST_ExtLoads_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, double * dt, int * NumBl, int * n_t_global, ExtLdDX_InputType_t* ExtLdDX_Input, ExtLdDX_ParameterType_t* ExtLdDX_Parameter, ExtLdDX_OutputType_t* ExtLdDX_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output, int *ErrStat, char *ErrMsg);
-EXTERNAL_ROUTINE void FAST_ExtLoads_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbineID, char *OutFileRoot, float * TurbinePosition, int *AbortErrLev, double * dtDriver, double * dt, int * NumBl, double * az_blend_mean, double * az_blend_delta, ExtLdDX_InputType_t* ExtLdDX_Input, ExtLdDX_ParameterType_t* ExtLdDX_Parameter, ExtLdDX_OutputType_t* ExtLdDX_Output, SC_DX_InputType_t* SC_DX_Input, SC_DX_OutputType_t* SC_DX_Output, int *ErrStat, char *ErrMsg);
+EXTERNAL_ROUTINE void FAST_ExtLoads_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, double * dt, int * NumBl, int * n_t_global, ExtLdDX_InputType_t* ExtLdDX_Input, ExtLdDX_ParameterType_t* ExtLdDX_Parameter, ExtLdDX_OutputType_t* ExtLdDX_Output, int *ErrStat, char *ErrMsg);
+EXTERNAL_ROUTINE void FAST_ExtLoads_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbineID, char *OutFileRoot, float * TurbinePosition, int *AbortErrLev, double * dtDriver, double * dt, int * NumBl, double * az_blend_mean, double * az_blend_delta, ExtLdDX_InputType_t* ExtLdDX_Input, ExtLdDX_ParameterType_t* ExtLdDX_Parameter, ExtLdDX_OutputType_t* ExtLdDX_Output, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_Solution0(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_InitIOarrays_SubStep(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_CFD_Prework(int * iTurb, int *ErrStat, char *ErrMsg);
@@ -71,7 +69,7 @@ EXTERNAL_ROUTINE void FAST_CreateCheckpoint(int * iTurb, const char *CheckpointR
 #define CHANNEL_LENGTH 20
 #define MAXInitINPUTS 53
 
-#define NumFixedInputs  2 + 2 + MAXIMUM_BLADES + 1 + MAXIMUM_AFCTRL + MAXIMUM_CABLE_DELTAL + MAXIMUM_CABLE_DELTALDOT
+#define NumFixedInputs  (2 + 2 + MAXIMUM_BLADES + 1 + MAXIMUM_AFCTRL + MAXIMUM_CABLE_DELTAL + MAXIMUM_CABLE_DELTALDOT)
 /* Fixed inputs list:
     1       Generator Torque (N-m)
     2       Electrical Power (W)

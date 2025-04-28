@@ -86,7 +86,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Pointer to module variables [-]
+    TYPE(ModVarsType)  :: Vars      !< Pointer to module variables [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LAnchxi      !< Anchor coordinate [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LAnchyi      !< Anchor coordinate [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LAnchzi      !< Anchor coordinate [-]
@@ -160,7 +160,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FEAM_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     REAL(ReKi) , DIMENSION(1:3)  :: GRAV = 0.0_ReKi      !< Gravity [-]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     REAL(ReKi)  :: Eps = 0.0_ReKi      !< Tolerance for static iteration [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity [-]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [-]
@@ -228,13 +227,11 @@ IMPLICIT NONE
 ! =======================
    integer(IntKi), public, parameter :: FEAM_x_GLU                       =   1 ! FEAM%GLU
    integer(IntKi), public, parameter :: FEAM_x_GLDU                      =   2 ! FEAM%GLDU
-   integer(IntKi), public, parameter :: FEAM_z_TSN                       =   3 ! FEAM%TSN
-   integer(IntKi), public, parameter :: FEAM_z_TZER                      =   4 ! FEAM%TZER
-   integer(IntKi), public, parameter :: FEAM_u_HydroForceLineMesh        =   5 ! FEAM%HydroForceLineMesh
-   integer(IntKi), public, parameter :: FEAM_u_PtFairleadDisplacement    =   6 ! FEAM%PtFairleadDisplacement
-   integer(IntKi), public, parameter :: FEAM_y_WriteOutput               =   7 ! FEAM%WriteOutput
-   integer(IntKi), public, parameter :: FEAM_y_PtFairleadLoad            =   8 ! FEAM%PtFairleadLoad
-   integer(IntKi), public, parameter :: FEAM_y_LineMeshPosition          =   9 ! FEAM%LineMeshPosition
+   integer(IntKi), public, parameter :: FEAM_u_HydroForceLineMesh        =   3 ! FEAM%HydroForceLineMesh
+   integer(IntKi), public, parameter :: FEAM_u_PtFairleadDisplacement    =   4 ! FEAM%PtFairleadDisplacement
+   integer(IntKi), public, parameter :: FEAM_y_WriteOutput               =   5 ! FEAM%WriteOutput
+   integer(IntKi), public, parameter :: FEAM_y_PtFairleadLoad            =   6 ! FEAM%PtFairleadLoad
+   integer(IntKi), public, parameter :: FEAM_y_LineMeshPosition          =   7 ! FEAM%LineMeshPosition
 
 contains
 
@@ -771,7 +768,9 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstInitOutputData%Vars => SrcInitOutputData%Vars
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInitOutputData%LAnchxi)) then
       LB(1:1) = lbound(SrcInitOutputData%LAnchxi)
       UB(1:1) = ubound(SrcInitOutputData%LAnchxi)
@@ -863,7 +862,8 @@ subroutine FEAM_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   nullify(InitOutputData%Vars)
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%LAnchxi)) then
       deallocate(InitOutputData%LAnchxi)
    end if
@@ -888,18 +888,11 @@ subroutine FEAM_PackInitOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(FEAM_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FEAM_PackInitOutput'
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    call RegPackAlloc(RF, InData%LAnchxi)
    call RegPackAlloc(RF, InData%LAnchyi)
    call RegPackAlloc(RF, InData%LAnchzi)
@@ -916,30 +909,11 @@ subroutine FEAM_UnPackInitOutput(RF, OutData)
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
    call RegUnpackAlloc(RF, OutData%LAnchxi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LAnchyi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LAnchzi); if (RegCheckErr(RF, RoutineName)) return
@@ -1535,18 +1509,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    ErrMsg  = ''
    DstParamData%DT = SrcParamData%DT
    DstParamData%GRAV = SrcParamData%GRAV
-   if (associated(SrcParamData%Vars)) then
-      if (.not. associated(DstParamData%Vars)) then
-         allocate(DstParamData%Vars, stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   end if
    DstParamData%Eps = SrcParamData%Eps
    DstParamData%Gravity = SrcParamData%Gravity
    DstParamData%WtrDens = SrcParamData%WtrDens
@@ -1812,12 +1774,6 @@ subroutine FEAM_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FEAM_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (associated(ParamData%Vars)) then
-      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      deallocate(ParamData%Vars)
-      ParamData%Vars => null()
-   end if
    if (allocated(ParamData%NEQ)) then
       deallocate(ParamData%NEQ)
    end if
@@ -1886,17 +1842,9 @@ subroutine FEAM_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'FEAM_PackParam'
    integer(B4Ki)   :: i1, i2, i3, i4
    integer(B4Ki)   :: LB(4), UB(4)
-   logical         :: PtrInIndex
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
    call RegPack(RF, InData%GRAV)
-   call RegPack(RF, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(RF, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-      end if
-   end if
    call RegPack(RF, InData%Eps)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%WtrDens)
@@ -1966,29 +1914,9 @@ subroutine FEAM_UnPackParam(RF, OutData)
    integer(B4Ki)   :: LB(4), UB(4)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(B8Ki)   :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%GRAV); if (RegCheckErr(RF, RoutineName)) return
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', RF%ErrStat, RF%ErrMsg, RoutineName)
-            return
-         end if
-         RF%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
-   end if
    call RegUnpack(RF, OutData%Eps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDens); if (RegCheckErr(RF, RoutineName)) return
@@ -2624,69 +2552,6 @@ subroutine FEAM_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine FEAM_VarsPackConstrState(Vars, z, ValAry)
-   type(FEAM_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call FEAM_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine FEAM_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(FEAM_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (FEAM_z_TSN)
-         VarVals = z%TSN(V%iLB:V%iUB)                                         ! Rank 1 Array
-      case (FEAM_z_TZER)
-         VarVals = z%TZER(V%iLB:V%iUB)                                        ! Rank 1 Array
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine FEAM_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(FEAM_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call FEAM_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine FEAM_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(FEAM_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (FEAM_z_TSN)
-         z%TSN(V%iLB:V%iUB) = VarVals                                         ! Rank 1 Array
-      case (FEAM_z_TZER)
-         z%TZER(V%iLB:V%iUB) = VarVals                                        ! Rank 1 Array
-      end select
-   end associate
-end subroutine
-
-function FEAM_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (FEAM_z_TSN)
-       Name = "z%TSN"
-   case (FEAM_z_TZER)
-       Name = "z%TZER"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine FEAM_VarsPackInput(Vars, u, ValAry)
    type(FEAM_InputType), intent(in)        :: u

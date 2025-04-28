@@ -69,7 +69,7 @@ typedef  ^                ^              ReKi             WtrDens    -          
 typedef  FEAMooring/FEAM  InitOutputType  CHARACTER(ChanLen)  WriteOutputHdr  {:}  -  -  "Names of the output-to-file channels"  -
 typedef  ^                ^               CHARACTER(ChanLen)  WriteOutputUnt   {:}  -   - "Units of the output-to-file channels" -
 typedef  ^                ^               ProgDesc       Ver             -   -  -   "This module's name, version, and date"   -
-typedef  ^                ^               ModVarsType   *Vars           -   -  -   "Pointer to module variables"   -
+typedef  ^                ^               ModVarsType    Vars           -   -  -   "Pointer to module variables"   -
 typedef  ^                ^               ReKi           LAnchxi         {:}  -  -  "Anchor coordinate"  -
 typedef  ^                ^               ReKi           LAnchyi         {:}  -  -  "Anchor coordinate"  -
 typedef  ^                ^               ReKi           LAnchzi         {:}  -  -  "Anchor coordinate"  -
@@ -149,7 +149,6 @@ typedef  ^                ^                     IntKi    LastIndWave       -    
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  FEAMooring/FEAM  ParameterType  DbKi             DT          -           -  -   "Time step for continuous state integration & discrete state update"  seconds
 typedef  ^                ^              ReKi             GRAV       {3}          -  -   "Gravity" -
-typedef  ^                ^              ModVarsType     &Vars        -           -  -   "Module Variables"
 # parameters from Mooring
 typedef  ^                ^              ReKi             Eps        -           -  -   "Tolerance for static iteration"
 typedef  ^                ^              ReKi             Gravity   -           -  -   "Gravity"

@@ -49,14 +49,6 @@ typedef	^	InitOutputType	R8Ki	TwrBaseOrient	{3}{3}	-	-	"initial orientation of t
 typedef	^	InitOutputType	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
 typedef	^	InitOutputType	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/s
 typedef	^	InitOutputType	LOGICAL	isFixed_GenDOF	-	-	-	"whether the generator is fixed or free" -
-typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
-typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_x	{:}	-	-	"Names of the continuous states used in linearization"	-
-typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
-typedef	^	InitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
-typedef	^	InitOutputType	LOGICAL	RotFrame_x	{:}	-	-	"Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
-typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
-typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
-typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef	^	InitOutputType	IntKi	GearBox_index	-	-	-	"Index to gearbox rotation in state array (for steady-state calculations)"   -
 typedef	^	InitOutputType	ModVarsType	Vars	-	-	-	"Module Variables"
 

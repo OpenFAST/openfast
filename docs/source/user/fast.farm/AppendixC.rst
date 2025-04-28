@@ -15,14 +15,6 @@ is a one-digit number in the range [1,9], corresponding to row
 only values for the first 9 turbines can be output. Setting
 :math:`\alpha` > **NumTurbines** yields invalid output.
 
-In\ :math:`\zeta` and Ot\ :math:`\zeta` refer to super-controller input
-and output :math:`\zeta`, respectively, where :math:`\zeta` is a
-one-digit number in the range [1,9], corresponding to element
-:math:`\zeta` in the input and output arguments of the super-controller
-source code. If there are more than 9 elements, only values for the
-first 9 inputs and outputs can be output. Setting :math:`\zeta` greater
-than the number of elements yields invalid output.
-
 N\ :math:`\beta` refers to radial output node :math:`\beta`, where
 :math:`\beta` is a two-digit number in the range [01,20], corresponding
 to entry :math:`\beta` in the **OutRadii** list, where node
@@ -56,20 +48,6 @@ overlapped itself.
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | Channel Name                                                 | Units             | Description                                     |
       +==============================================================+===================+=================================================+
-      | *Super Controller*                                                                                                                 |
-      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | SCGblIn\ :math:`\zeta`                                       | (user)            | Global (turbine independent) super              |
-      |                                                              |                   | controller input :math:`\zeta`                  |
-      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | SCT\ :math:`\alpha`\ In\ :math:`\zeta`                       | (user)            | Turbine-dependent super controller input        |
-      |                                                              |                   | :math:`\zeta` for turbine :math:`\alpha`        |
-      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | SCGblOt\ :math:`\zeta`                                       | (user)            | Global (turbine independent) super              |
-      |                                                              |                   | controller output :math:`\zeta`                 |
-      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | SCT\ :math:`\alpha`\ Ot\ :math:`\zeta`                       | (user)            | Turbine-dependent super controller input        |
-      |                                                              |                   | :math:`\zeta` for turbine :math:`\alpha`        |
-      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | *Wind Turbine and Inflow*                                                                                                          |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | RtAxs\ :math:`\delta`\ T\ :math:`\alpha`                     | (-)               | Orientation of the rotor centerline for turbine |

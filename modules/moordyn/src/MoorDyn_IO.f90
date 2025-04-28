@@ -785,8 +785,8 @@ CONTAINS
       
       
          ! calculate number of output entries (excluding time) to write for this line
-         LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:6)) &
-                       + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(7:9)) &
+         LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:7)) &
+                       + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(8:9)) &
                              + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
    
          ALLOCATE(m%LineList(I)%LineWrOutput( 1 + LineNumOuts), STAT = ErrStat)  
@@ -873,7 +873,7 @@ CONTAINS
       ! Open the output file, if necessary, and write the header
       !-------------------------------------------------------------------------------------------------
 
-      IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file
+      IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0  .AND. p%OutSwitch > 0) THEN           ! Output has been requested so let's open an output file
 
          ! Open the file for output
          OutFileName = TRIM(p%RootName)//'.out'
@@ -934,8 +934,8 @@ CONTAINS
 
                         
             ! calculate number of output entries (excluding time) to write for this line
-            LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:6)) &
-                          + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(7:9)) &
+            LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:7)) &
+                          + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(8:9)) &
                                 + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
                                   
             if (wordy > 2) PRINT *, LineNumOuts, " output channels"
@@ -966,12 +966,17 @@ CONTAINS
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'bx', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'by', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'bz', J=0,(m%LineList(I)%N) )
             END IF
-            
+
             IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Vx', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Vy', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Vz', J=0,(m%LineList(I)%N) ) ! TODO adjust these when force to internal nodes
+            END IF
+            
+            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Wz', J=0,(m%LineList(I)%N) )
             END IF
-            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
+            IF (m%LineList(I)%OutFlagList(9) == 1) THEN
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Kurv', J=0,(m%LineList(I)%N) )
             END IF
@@ -1023,12 +1028,16 @@ CONTAINS
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, '(N)', p%Delim, '(N)', p%Delim, '(N)', J=0,(m%LineList(I)%N) )
             END IF
-            
             IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(N)', p%Delim, '(N)', p%Delim, '(N)', J=0,(m%LineList(I)%N) )
+            END IF
+            
+            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, '(Nup)', J=0,(m%LineList(I)%N) )
             END IF
-            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
+            IF (m%LineList(I)%OutFlagList(9) == 1) THEN
                WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A15))', advance='no', IOSTAT=ErrStat2) &
                   ( p%Delim, '(1/m)', J=0,(m%LineList(I)%N) )
             END IF
@@ -1580,10 +1589,10 @@ CONTAINS
          end if
          ! What the above does is say if ((dtOut==0) || (t >= (floor((t-dtC)/dtOut) + 1.0)*dtOut)), continue to writing files
 
-      if ( p%NumOuts > 0_IntKi ) then  
+      if ( p%NumOuts > 0_IntKi .and. p%MDUnOut > 0 ) then  
       
          ! Write the output parameters to the file
-         Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,ES15.7E2))'   ! should evenutally use user specified format?
+         Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,ES15.7))'   ! should evenutally use user specified format?
          
          WRITE(p%MDUnOut,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
       END IF
@@ -1605,9 +1614,9 @@ CONTAINS
                                + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
            
            if (m%LineList(I)%OutFlagList(2) == 1) THEN   ! if node positions are included, make them using a float format for higher precision
-            Frmt = '(F10.4,'//TRIM(Int2LStr(3*(m%LineList(I)%N + 1)))//'(A1,ES15.7E2),'//TRIM(Int2LStr(LineNumOuts - 3*(m%LineList(I)%N - 1)))//'(A1,ES15.7E2))'  
+            Frmt = '(F10.4,'//TRIM(Int2LStr(3*(m%LineList(I)%N + 1)))//'(A1,ES15.7),'//TRIM(Int2LStr(LineNumOuts - 3*(m%LineList(I)%N - 1)))//'(A1,ES15.7))'  
            else
-            Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,ES15.7E2))'   ! should evenutally use user specified format?
+            Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,ES15.7))'   ! should evenutally use user specified format?
            end if
            
            L = 1 ! start of index of line output file at first entry   12345.7890
@@ -1669,22 +1678,31 @@ CONTAINS
               END DO
            END IF
            
+           ! Node VIV force
+           IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+            DO J = 0,m%LineList(I)%N  
+              DO K = 1,3
+                m%LineList(I)%LineWrOutput(L) = m%LineList(I)%Lf(K,J)
+                L = L+1
+              END DO
+            END DO
+         END IF
            
            ! Node weights
-           IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+           IF (m%LineList(I)%OutFlagList(8) == 1) THEN
               DO J = 0,m%LineList(I)%N
                   m%LineList(I)%LineWrOutput(L) = m%LineList(I)%W(3,J)
                   L = L+1
               END DO
            END IF
            
-        !   ! Node curvatures
-        !   IF (m%LineList(I)%OutFlagList(8) == 1) THEN
-        !      DO J = 0,m%LineList(I)%N
-        !          m%LineList(I)%LineWrOutput(L) = m%LineList(I)%W(3,J)
-        !          L = L+1
-        !      END DO
-        !   END IF
+          ! Node curvatures
+          IF (m%LineList(I)%OutFlagList(9) == 1) THEN
+             DO J = 0,m%LineList(I)%N
+                 m%LineList(I)%LineWrOutput(L) = m%LineList(I)%Kurv(J)
+                 L = L+1
+             END DO
+          END IF
            
            
            ! Segment tension force (excludes damping term, just EA)
@@ -1755,7 +1773,7 @@ CONTAINS
                                + m%RodList(I)%N*SUM(m%RodList(I)%OutFlagList(12:18))
            
            
-           Frmt = '(F10.4,'//TRIM(Int2LStr(RodNumOuts))//'(A1,ES15.7E2))'   ! should evenutally use user specified format?
+           Frmt = '(F10.4,'//TRIM(Int2LStr(RodNumOuts))//'(A1,ES15.7))'   ! should evenutally use user specified format?
 
            L = 1 ! start of index of line output file at first entry
            

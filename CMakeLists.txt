@@ -208,7 +208,6 @@ set(OPENFAST_MODULES
   lindyn
   map
   turbsim
-  supercontroller
   externalinflow
   openfast-library
   simple-elastodyn

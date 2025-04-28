@@ -691,15 +691,8 @@ IF (ErrStat >= AbortErrLev) RETURN
     ! Module Variables
     !............................................................................................
     call MAP_InitVars(InitOut%Vars, InitInp, u, p, x, z, y, m, InitOut, InitInp%Linearize, ErrStat2, ErrMsg2)
-    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
     
-    !............................................................................................
-    ! Initialize Jacobian information:
-    !............................................................................................
-   !  if (InitInp%LinInitInp%Linearize) then      
-   !     call map_Init_Jacobian( p, u, y, InitOut, ErrStat2, ErrMsg2)
-   !     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   !  end if
   
   END SUBROUTINE MAP_Init                                                                        !   -------+
   !==========================================================================================================

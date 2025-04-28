@@ -250,19 +250,18 @@ IMPLICIT NONE
   END TYPE UA_OutputType
 ! =======================
    integer(IntKi), public, parameter :: UA_x_element_x                   =   1 ! UA%element(DL%i1, DL%i2)%x
-   integer(IntKi), public, parameter :: UA_z_DummyConstraintState        =   2 ! UA%DummyConstraintState
-   integer(IntKi), public, parameter :: UA_u_U                           =   3 ! UA%U
-   integer(IntKi), public, parameter :: UA_u_alpha                       =   4 ! UA%alpha
-   integer(IntKi), public, parameter :: UA_u_Re                          =   5 ! UA%Re
-   integer(IntKi), public, parameter :: UA_u_UserProp                    =   6 ! UA%UserProp
-   integer(IntKi), public, parameter :: UA_u_v_ac                        =   7 ! UA%v_ac
-   integer(IntKi), public, parameter :: UA_u_omega                       =   8 ! UA%omega
-   integer(IntKi), public, parameter :: UA_y_Cn                          =   9 ! UA%Cn
-   integer(IntKi), public, parameter :: UA_y_Cc                          =  10 ! UA%Cc
-   integer(IntKi), public, parameter :: UA_y_Cm                          =  11 ! UA%Cm
-   integer(IntKi), public, parameter :: UA_y_Cl                          =  12 ! UA%Cl
-   integer(IntKi), public, parameter :: UA_y_Cd                          =  13 ! UA%Cd
-   integer(IntKi), public, parameter :: UA_y_WriteOutput                 =  14 ! UA%WriteOutput
+   integer(IntKi), public, parameter :: UA_u_U                           =   2 ! UA%U
+   integer(IntKi), public, parameter :: UA_u_alpha                       =   3 ! UA%alpha
+   integer(IntKi), public, parameter :: UA_u_Re                          =   4 ! UA%Re
+   integer(IntKi), public, parameter :: UA_u_UserProp                    =   5 ! UA%UserProp
+   integer(IntKi), public, parameter :: UA_u_v_ac                        =   6 ! UA%v_ac
+   integer(IntKi), public, parameter :: UA_u_omega                       =   7 ! UA%omega
+   integer(IntKi), public, parameter :: UA_y_Cn                          =   8 ! UA%Cn
+   integer(IntKi), public, parameter :: UA_y_Cc                          =   9 ! UA%Cc
+   integer(IntKi), public, parameter :: UA_y_Cm                          =  10 ! UA%Cm
+   integer(IntKi), public, parameter :: UA_y_Cl                          =  11 ! UA%Cl
+   integer(IntKi), public, parameter :: UA_y_Cd                          =  12 ! UA%Cd
+   integer(IntKi), public, parameter :: UA_y_WriteOutput                 =  13 ! UA%WriteOutput
 
 contains
 
@@ -2638,63 +2637,6 @@ subroutine UA_VarPackContStateDeriv(V, x, ValAry)
       end select
    end associate
 end subroutine
-
-subroutine UA_VarsPackConstrState(Vars, z, ValAry)
-   type(UA_ConstraintStateType), intent(in) :: z
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(inout)              :: ValAry(:)
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call UA_VarPackConstrState(Vars%z(i), z, ValAry)
-   end do
-end subroutine
-
-subroutine UA_VarPackConstrState(V, z, ValAry)
-   type(ModVarType), intent(in)            :: V
-   type(UA_ConstraintStateType), intent(in) :: z
-   real(R8Ki), intent(inout)               :: ValAry(:)
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (UA_z_DummyConstraintState)
-         VarVals(1) = z%DummyConstraintState                                  ! Scalar
-      case default
-         VarVals = 0.0_R8Ki
-      end select
-   end associate
-end subroutine
-
-subroutine UA_VarsUnpackConstrState(Vars, ValAry, z)
-   type(ModVarsType), intent(in)          :: Vars
-   real(R8Ki), intent(in)                 :: ValAry(:)
-   type(UA_ConstraintStateType), intent(inout) :: z
-   integer(IntKi)                         :: i
-   do i = 1, size(Vars%z)
-      call UA_VarUnpackConstrState(Vars%z(i), ValAry, z)
-   end do
-end subroutine
-
-subroutine UA_VarUnpackConstrState(V, ValAry, z)
-   type(ModVarType), intent(in)            :: V
-   real(R8Ki), intent(in)                  :: ValAry(:)
-   type(UA_ConstraintStateType), intent(inout) :: z
-   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
-      select case (DL%Num)
-      case (UA_z_DummyConstraintState)
-         z%DummyConstraintState = VarVals(1)                                  ! Scalar
-      end select
-   end associate
-end subroutine
-
-function UA_ConstraintStateFieldName(DL) result(Name)
-   type(DatLoc), intent(in)      :: DL
-   character(32)                 :: Name
-   select case (DL%Num)
-   case (UA_z_DummyConstraintState)
-       Name = "z%DummyConstraintState"
-   case default
-       Name = "Unknown Field"
-   end select
-end function
 
 subroutine UA_VarsPackInput(Vars, u, ValAry)
    type(UA_InputType), intent(in)          :: u

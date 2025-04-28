@@ -105,34 +105,27 @@ typedef     ^       ^           character(VarNameLen)   Name        -   -   -   
 typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
 
 typedef     ^       ModVarsType IntKi           Nx                  -   0   -   "Number of x values"
-typedef     ^       ^           IntKi           Nz                  -   0   -   "Number of z values"
 typedef     ^       ^           IntKi           Nu                  -   0   -   "Number of u values"
 typedef     ^       ^           IntKi           Ny                  -   0   -   "Number of y values"
 typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"
-typedef     ^       ^           ModVarType      z                   :   -   -   "Module state variable array"
 typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"
 typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"
 
 typedef     ^       ModJacType  IntKi           Nx                  -   0   -   "Number of x values"
-typedef     ^       ^           IntKi           Nz                  -   0   -   "Number of z values"
 typedef     ^       ^           IntKi           Nu                  -   0   -   "Number of u values"
 typedef     ^       ^           IntKi           Ny                  -   0   -   "Number of y values"
 typedef     ^       ^           R8Ki            x                   :   -   -   ""  -
-typedef     ^       ^           R8Ki            z                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            u                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            y                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            x_perturb           :   -   -   ""  -
-typedef     ^       ^           R8Ki            z_perturb           :   -   -   ""  -
 typedef     ^       ^           R8Ki            u_perturb           :   -   -   ""  -
 typedef     ^       ^           R8Ki            x_pos               :   -   -   ""  -
 typedef     ^       ^           R8Ki            x_neg               :   -   -   ""  -
 typedef     ^       ^           R8Ki            y_pos               :   -   -   ""  -
 typedef     ^       ^           R8Ki            y_neg               :   -   -   ""  -
-typedef     ^       ^           R8Ki            StateRotation       ::  -   -   ""  -
 
 typedef     ^       ModLinType  R8Ki            x                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            dx                  :   -   -   ""  -
-typedef     ^       ^           R8Ki            z                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            u                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            y                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            J                   ::  -   -   ""  -
@@ -143,7 +136,6 @@ typedef     ^       ^           R8Ki            dXdu                ::  -   -   
 typedef     ^       ^           R8Ki            dXdy                ::  -   -   ""  -
 typedef     ^       ^           R8Ki            dUdu                ::  -   -   ""  -
 typedef     ^       ^           R8Ki            dUdy                ::  -   -   ""  -
-typedef     ^       ^           R8Ki            StateRotation       :: -  -     ""  -
 
 typedef     ^       ModDataType character(ChanLen) Abbr             -   -   -   "Module name abbreviation"  -
 typedef     ^       ^           IntKi           iMod                -   0   -   "Module index in array of modules"  -
