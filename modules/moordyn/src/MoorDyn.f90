@@ -204,6 +204,9 @@ CONTAINS
       DepthValue = ""  ! Start off as empty string, to only be filled if MD setting is specified (otherwise InitInp%WtrDepth is used)
                        ! DepthValue and InitInp%WtrDepth are processed later by setupBathymetry.
       WaterKinValue = ""
+
+      ! Read in the SeaState wave field pointer for wave kinematics (regardless if kinematics are enabled in MD or not)
+      p%WaveField => InitInp%WaveField 
       
       m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
 
@@ -693,6 +696,7 @@ CONTAINS
                    if (N > 3) then
                       CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 3 (bar-separated) values.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
+                      RETURN
                    else if (N==3) then                               ! visco-elastic case, load dependent dynamic stiffness!
                       m%LineTypeList(l)%ElasticMod = 3
                       read(tempStrings(2), *) m%LineTypeList(l)%alphaMBL
@@ -715,6 +719,7 @@ CONTAINS
                    if (N > m%LineTypeList(l)%ElasticMod) then
                       CALL SetErrStat( ErrID_Fatal, 'A line type BA entry cannot have more (bar-separated) values than its EA entry.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
+                      RETURN
                    else if (N==2) then                               ! visco-elastic case when two BA values provided
                       read(tempStrings(2), *) m%LineTypeList(l)%BA_D 
                    else if (m%LineTypeList(l)%ElasticMod > 1) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
@@ -925,7 +930,7 @@ CONTAINS
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL WrScr('   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.')  ! Specific screen output because errors likely
                      CALL WrScr('   Ensure row has all 13 columns needed in MDv2 input file (13th Dec 2021).')  
-                        CALL SetErrStat( ErrID_Fatal, 'Failed to read bodies.' , ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, 'Failed to read bodies.' , ErrStat, ErrMsg, RoutineName )
                      if (p%writeLog > 0) then
                         write(p%UnLog,'(A)') '   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.'
                         write(p%UnLog,'(A)') '   Ensure row has all 13 columns needed in MDv2 input file (13th Dec 2021).'
@@ -983,11 +988,13 @@ CONTAINS
                            
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Body "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL CleanUp()  
                            return
                         end if   
                      else
                         CALL SetErrStat( ErrID_Fatal,  "No number provided for Body "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
-                            return
+                        CALL CleanUp()
+                        return
                      end if
                      
                   else if (let1 == "FREE") then    ! if a free body
@@ -1005,6 +1012,7 @@ CONTAINS
                      
                   else 
                      CALL SetErrStat( ErrID_Fatal,  "Unidentified Body type string for Body "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
                      return
                   end if
                   
@@ -1075,6 +1083,13 @@ CONTAINS
                          m%RodList(l)%N, LineOutString
                   END IF
 
+                  ! check p%numRodTypes is greater than 0, if not users are missing Rod Types section of input file
+                  IF (p%nRodTypes == 0) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'No rod types defined in input file. Please define rod types before defining rods.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+
                   ! find Rod properties index
                   DO J = 1,p%nRodTypes
                      IF (trim(tempString1) == trim(m%RodTypeList(J)%name)) THEN
@@ -1083,6 +1098,7 @@ CONTAINS
                      END IF
                      IF (J == p%nRodTypes) THEN   ! call an error if there is no match
                          CALL SetErrStat( ErrID_Fatal, 'Unable to find matching rod type name for Rod '//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
+                         CALL CleanUp()
                          RETURN
                      END IF
                   END DO
@@ -1136,17 +1152,20 @@ CONTAINS
                      
                            else
                                CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )
+                               CALL CleanUp()
                                return
                            end if
                         
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for Rod "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL CleanUp()
                            return
                         end if
                      
                   else
                      CALL SetErrStat( ErrID_Fatal,  "No number provided for Rod "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
-                         return
+                     CALL CleanUp()   
+                     return
                   end if
                   
                   else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a rigidly coupled rod, add to list and add 
@@ -1185,11 +1204,13 @@ CONTAINS
                            
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Rod "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL CleanUp() 
                            return
                         end if   
                      else
                         CALL SetErrStat( ErrID_Fatal,  "No number provided for Rod "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
-                            return
+                        CALL CleanUp()   
+                        return
                      end if
                    
                   else if ((let1 == "ROD") .or. (let1 == "R") .or. (let1 == "FREE")) then
@@ -1206,6 +1227,7 @@ CONTAINS
                   else 
                   
                      CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
+                     CALL CleanUp() 
                      return
                   end if
                   
@@ -1321,11 +1343,11 @@ CONTAINS
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL WrScr('   Unable to parse Point '//trim(Num2LStr(l))//' row in input file.')  ! Specific screen output because errors likely
                      CALL WrScr('   Ensure row has all 9 columns, including CdA and Ca.')           ! to be caused by non-updated input file formats.
-                        CALL SetErrStat( ErrID_Fatal, 'Failed to read points.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line <<<<<<<<<
-                        if (p%writeLog > 0) then
-                           write(p%UnLog,'(A)') '   Unable to parse Point '//trim(Num2LStr(l))//' row in input file.'
-                           write(p%UnLog,'(A)') '   Ensure row has all 9 columns, including CdA and Ca.'
-                        end if
+                     CALL SetErrStat( ErrID_Fatal, 'Failed to read points.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line <<<<<<<<<
+                     if (p%writeLog > 0) then
+                        write(p%UnLog,'(A)') '   Unable to parse Point '//trim(Num2LStr(l))//' row in input file.'
+                        write(p%UnLog,'(A)') '   Ensure row has all 9 columns, including CdA and Ca.'
+                     end if
                      CALL CleanUp()
                      RETURN
                   END IF
@@ -1354,11 +1376,13 @@ CONTAINS
                            
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for Point "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL CleanUp()
                            return
                         end if                     
                      else
                         CALL SetErrStat( ErrID_Fatal,  "No number provided for Point "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
-                            return
+                        CALL CleanUp() 
+                        return
                      end if
                   
                   else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a fairlead, add to list and add 
@@ -1397,15 +1421,18 @@ CONTAINS
                            
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Point "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL CleanUp()
                            return
                         end if   
                      else
                         CALL SetErrStat( ErrID_Fatal,  "No number provided for Point "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
+                        CALL CleanUp()  
                             return
                      end if
                   
                   else 
                      CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Point "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
                      return
                   end if
                   
@@ -1482,6 +1509,7 @@ CONTAINS
                        END IF
                        IF (J == p%nLineTypes) THEN   ! call an error if there is no match
                            CALL SetErrStat( ErrID_Fatal, 'Unable to find matching line type name for Line '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
+                           CALL CleanUp()
                            RETURN
                        END IF
                   END DO
@@ -1510,6 +1538,7 @@ CONTAINS
                   
                   if (len_trim(num1)<1) then
                      CALL SetErrStat( ErrID_Fatal,  "Error: no number provided for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                     CALL CleanUp()
                      return
                   end if 
 
@@ -1525,10 +1554,12 @@ CONTAINS
                            CALL Rod_AddLine(m%RodList(J), l, 0, 1)   ! add line l (end A, denoted by 0) to rod J (end B, denoted by 1)
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end A attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
-                            return
+                           CALL CleanUp()  
+                           return
                         end if
                      else
                         CALL SetErrStat( ErrID_Fatal,  " Rod ID out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL CleanUp()
                         return
                      end if
                   
@@ -1539,6 +1570,7 @@ CONTAINS
                         CALL Point_AddLine(m%PointList(J), l, 0)   ! add line l (end A, denoted by 0) to point J
                      else
                         CALL SetErrStat( ErrID_Fatal,  "Error: point out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL CleanUp() 
                         return
                      end if
                         
@@ -1551,6 +1583,7 @@ CONTAINS
 
                   if (len_trim(num1)<1) then
                      CALL SetErrStat( ErrID_Fatal,  "Error: no number provided for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                     CALL CleanUp()
                      return
                   end if 
 
@@ -1566,10 +1599,12 @@ CONTAINS
                            CALL Rod_AddLine(m%RodList(J), l, 1, 1)   ! add line l (end B, denoted by 1) to rod J (end B, denoted by 1)
                         else
                            CALL SetErrStat( ErrID_Fatal,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end B attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
-                            return
+                           CALL CleanUp()
+                           return
                         end if
                      else
                         CALL SetErrStat( ErrID_Fatal,  " Rod ID out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL CleanUp()
                         return
                      end if
 
@@ -1580,6 +1615,7 @@ CONTAINS
                         CALL Point_AddLine(m%PointList(J), l, 1)   ! add line l (end B, denoted by 1) to point J
                      else
                         CALL SetErrStat( ErrID_Fatal,  "Error: point out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL CleanUp()
                         return
                      end if
                         
@@ -1793,11 +1829,13 @@ CONTAINS
                                END IF
                             ELSE
                                CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
+                               CALL CleanUp()
                                return
                             END IF
                          ELSE
                             CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" BODY attachment.", ErrStat, ErrMsg, RoutineName )
-                               return
+                            CALL CleanUp()
+                            return
                          END IF
                      ELSEIF (let1 == "POINT" .OR. let1 == "P") THEN
                         IF (len_trim(num1) > 0) THEN
@@ -1808,11 +1846,13 @@ CONTAINS
                               m%PointList(J)%Bquad = m%PointList(J)%Bquad + m%ExtLdList(l)%Bquad
                            ELSE
                               CALL SetErrStat( ErrID_Fatal,  "Point ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
+                              CALL CleanUp()
                               return
                            END IF
                         ELSE
                            CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" POINT attachment.", ErrStat, ErrMsg, RoutineName )
-                              return
+                           CALL CleanUp()
+                           return
                         END IF
                      ELSEIF (let1 == "ROD" .OR. let1 == "R") THEN
                         IF (len_trim(num1) > 0) THEN
@@ -1823,11 +1863,13 @@ CONTAINS
                               m%RodList(J)%Bquad = m%RodList(J)%Bquad(1:2) + m%ExtLdList(l)%Bquad(1:2) ! rods only have axial and transverse
                            ELSE
                               CALL SetErrStat( ErrID_Fatal,  "Rod ID out of bounds for External Load "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )
+                              CALL CleanUp()
                               return
                            END IF
                         ELSE
                            CALL SetErrStat( ErrID_Fatal,  "No number provided for External Load "//trim(Num2LStr(l))//" ROD attachment.", ErrStat, ErrMsg, RoutineName )
-                              return
+                           CALL CleanUp()
+                           return
                         END IF
                      END IF
                      
@@ -2693,8 +2735,8 @@ CONTAINS
          end if
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
+         m%IC_gen = .True. ! turn on IC_gen flag
          DO I = 1, p%nLines
-            m%LineList(I)%IC_gen = .True. ! turn on IC_gen flag for Line VIV model
             m%LineList(I)%Cdn = m%LineList(I)%Cdn * InputFileDat%CdScaleIC
             m%LineList(I)%Cdt = m%LineList(I)%Cdt * InputFileDat%CdScaleIC 
          END DO
@@ -2852,9 +2894,9 @@ CONTAINS
 
          CALL MD_DestroyInput( u_array(1), ErrStat2, ErrMsg2 )
 
-         ! UNboost drag coefficient of each line type   <<<
+         ! Unboost drag coefficient of each line type   <<<
+         m%IC_gen = .False. ! turn off IC_gen flag
          DO I = 1, p%nLines
-            m%LineList(I)%IC_gen = .False. ! turn off IC_gen flag for Line VIV model
             m%LineList(I)%Cdn = m%LineList(I)%Cdn / InputFileDat%CdScaleIC
             m%LineList(I)%Cdt = m%LineList(I)%Cdt / InputFileDat%CdScaleIC 
          END DO
@@ -2949,7 +2991,7 @@ CONTAINS
          CHARACTER(*),   INTENT(INOUT) :: Msg         ! The error message (ErrMsg)
 
          INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-         CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+         CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
 
          ! Set error status/message;
          IF ( ErrID /= ErrID_None ) THEN
@@ -3745,7 +3787,7 @@ CONTAINS
       
       ! give Lines latest state variable values for internal nodes
       DO l = 1,p%nLines
-         CALL Line_SetState(m%LineList(l), x%states(m%LineStateIs1(l):m%LineStateIsN(l)), t)
+         CALL Line_SetState(m%LineList(l), x%states(m%LineStateIs1(l):m%LineStateIsN(l)), t, m)
       END DO
 
       ! calculate dynamics of free objects (will also calculate forces (doRHS()) from any child/dependent objects)...

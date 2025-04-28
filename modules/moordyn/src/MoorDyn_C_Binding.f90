@@ -144,7 +144,7 @@ SUBROUTINE MD_C_Init(                                             &
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: G_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: RHO_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: DEPTH_C
-   REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6)
+   REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6) ! TODO: make this more flexible, can we not have 6 DOF only coupling?
    INTEGER(C_INT)                                 , INTENT(IN   )   :: InterpOrder_C
    INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)
