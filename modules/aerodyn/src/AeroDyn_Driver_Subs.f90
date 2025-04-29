@@ -1733,7 +1733,8 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, SeaSt, errStat, errMsg)
    errMsg  = ''
 
    IF ( .not. allocated( SeaSt%y%WriteOutput ) ) then 
-      ALLOCATE ( SeaSt%y%WriteOutput ( SeaSt%p%NumOuts ) , STAT=ErrStat )
+      call AllocAry ( SeaSt%y%WriteOutput, SeaSt%p%NumOuts, 'WriteOutputSS', errStat, errMsg )
+
       IF ( ErrStat /= 0 )  THEN
          ErrMsg  = ' Error allocating memory for the SeaState WriteOutput array.'
          ErrStat = ErrID_Fatal
