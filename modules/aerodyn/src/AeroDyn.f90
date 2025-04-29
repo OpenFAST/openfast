@@ -2260,7 +2260,7 @@ subroutine RotCalcOutput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, 
    end if 
 
    ! Calculate added mass and fluid inertia loads
-   if ( p%MHK > 0 ) then 
+   if ( p%MHK /= MHK_None ) then 
       call RotCalcAddedMassInertiaLoads(u, p, m, y, RotInflow, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if
