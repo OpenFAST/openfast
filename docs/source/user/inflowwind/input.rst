@@ -120,7 +120,7 @@ be performed in a different order than if both angles are specified in the same 
 Superposition of Wave and Current Inflow
 ========================================
 For MHK turbines, wave and current velocities and accelerations are superimposed (i.e., summed) such that all submerged components are exposed
-to the same inflow field. Both AeroDyn and HydroDyn can query SeaState for wave field infomation. SeaState then queries InflowWind for the current
+to the same inflow field. Both AeroDyn and HydroDyn can query SeaState for wave field information. SeaState then queries InflowWind for the current
 field, sums the velocities and accelerations, and returns the superimposed flow field information. This has several implications for modeling
 MHK turbines, which are listed below. Note that dynamic pressure contributions from InflowWind are neglected.
 

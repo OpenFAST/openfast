@@ -177,7 +177,7 @@ CONTAINS
          m%AllOuts( TwNFdy( beta) ) = m%Y_Twr(j)         
       end do ! out nodes
       
-      if ( p%MHK > 0 ) then
+      if ( p%MHK /= MHK_None ) then
          do beta=1,p%NTwOuts
             j = p%TwOutNd(beta)
             
@@ -194,7 +194,7 @@ CONTAINS
       end if
       
          ! hub outputs
-      if ( p%MHK > 0 ) then
+      if ( p%MHK /= MHK_None ) then
          tmpHubFB = matmul( u%HubMotion%Orientation(:,:,1) , m%HubFB )
          m%AllOuts( HbFbx ) = tmpHubFB(1)
          m%AllOuts( HbFby ) = tmpHubFB(2)
@@ -210,7 +210,7 @@ CONTAINS
       end if
    
          ! nacelle buoyancy outputs
-      if ( p%MHK > 0 ) then
+      if ( p%MHK /= MHK_None ) then
          tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacFB )
          m%AllOuts( NcFbx ) = tmp(1)
          m%AllOuts( NcFby ) = tmp(2)
@@ -237,7 +237,7 @@ CONTAINS
       end if
 
          ! nacelle total forces and moments
-      if ( p%MHK > 0 .OR. p%NacelleDrag) then
+      if ( (p%MHK /= MHK_None) .OR. p%NacelleDrag) then
 
          tmp = m%NacFi
          m%AllOuts( NcFxi ) = tmp(1)
@@ -278,7 +278,7 @@ CONTAINS
          end do ! nodes
       end do ! blades
 
-      if ( p%MHK > 0 ) then
+      if ( p%MHK /= MHK_None ) then
          do k=1,min(p%numBlades,AD_MaxBl_Out)    ! limit this
             do beta=1,p%NBlOuts
                j=p%BlOutNd(beta)

@@ -423,7 +423,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Calculate buoyancy parameters
       !............................................................................................
    do iR = 1, nRotors
-      if ( p%rotors(iR)%MHK > 0 ) then 
+      if ( p%rotors(iR)%MHK /= MHK_None ) then 
          call SetBuoyancyParameters( InputFileData%rotors(iR), u%rotors(iR), p%rotors(iR), ErrStat2, ErrMsg2 )
          if (Failed()) return;
       end if
@@ -433,7 +433,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Calculate inertia and added mass parameters
       !............................................................................................
    do iR = 1, nRotors
-      if ( p%rotors(iR)%MHK > 0 ) then 
+      if ( p%rotors(iR)%MHK /= MHK_None ) then 
          call SetAddedMassInertiaParameters( InputFileData%rotors(iR), p%rotors(iR), ErrStat2, ErrMsg2 )
          if (Failed()) return;
       end if
@@ -795,7 +795,7 @@ endif
    
    if (ErrStat >= AbortErrLev) RETURN
    
-   if (p%MHK > 0) then
+   if (p%MHK /= MHK_None) then
          ! Point mesh for blade buoyant loads
       allocate(m%BladeBuoyLoadPoint(p%NumBlades), Stat = ErrStat2)
       if (ErrStat2 /= 0) then
@@ -1024,7 +1024,7 @@ subroutine Init_y(y, u, p, errStat, errMsg)
    errMsg  = ""
    
          
-   if (p%NumTwrNds > 0 .and. (p%TwrAero /= TwrAero_None .or. p%MHK > 0)) then
+   if (p%NumTwrNds > 0 .and. (p%TwrAero /= TwrAero_None .or. p%MHK /= MHK_None)) then
             
       call MeshCopy ( SrcMesh  = u%TowerMotion    &
                     , DestMesh = y%TowerLoad      &
@@ -1463,13 +1463,13 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       p%NumBlNds         = 0
    endif
 
-   if (p%NumBlades>0 .and. p%MHK > 0) then
+   if (p%NumBlades>0 .and. p%MHK /= MHK_None) then
       call AllocAry( p%BlCenBn, p%NumBlNds, p%NumBlades, 'BlCenBn', ErrStat2, ErrMsg2 )
       call AllocAry( p%BlCenBt, p%NumBlNds, p%NumBlades, 'BlCenBt', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    endif
 
-   if (RotData%NumTwrNds > 0 .and. (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none .or. p%TwrAero /= TwrAero_none .or. p%MHK > 0)) then
+   if (RotData%NumTwrNds > 0 .and. (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none .or. p%TwrAero /= TwrAero_none .or. p%MHK /= MHK_None)) then
       p%NumTwrNds     = RotData%NumTwrNds
 
       call move_alloc( RotData%TwrDiam, p%TwrDiam )
@@ -1482,7 +1482,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       p%NumTwrNds = 0
    end if
 
-   if (p%MHK > 0) then
+   if (p%MHK /= MHK_None) then
       do k = 1,p%NumBlades
          p%BlCenBn(:,k) = RotData%BladeProps(k)%BlCenBn
          p%BlCenBt(:,k) = RotData%BladeProps(k)%BlCenBt
@@ -1976,7 +1976,7 @@ subroutine AD_CalcWind_Rotor(t, u, FlowField, p, p_AD, m, RotInflow, StartNode, 
       PosOffset = 0.0_ReKi
    end if
 
-   if (p%MHK > 0 .and. p_AD%CompSeaSt) then ! MHK turbines with waves
+   if (p%MHK /= MHK_None .and. p_AD%CompSeaSt) then ! MHK turbines with waves
       ! Hub
       if (u%HubMotion%Committed) then
          call WaveField_GetWaveVelAcc_AD(p_AD%WaveField, m%WaveField_m, StartNode, t, &
@@ -2248,7 +2248,7 @@ subroutine RotCalcOutput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, 
    y%NacelleLoad%Moment = 0.0_ReKi
 
    ! Calculate buoyant loads
-   if ( p%MHK > 0 ) then 
+   if ( p%MHK /= MHK_None ) then 
       call RotCalcBuoyantLoads(u, p, m, y, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if  
@@ -4402,7 +4402,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
       end do ! k=blades
 
       ! If the MHK flag is set to 1 or 2, check that the blade buoyancy and added mass coefficients are >= 0.
-      if ( InitInp%MHK > 0 )  then
+      if ( InitInp%MHK /= MHK_None )  then
          do k=1,NumBl(iR)
             BlCbSum = 0.0_ReKi
             do j=1,InputFileData%rotors(iR)%BladeProps(k)%NumBlNds
@@ -4471,7 +4471,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
          end if
 
          ! If the MHK flag is set to 1 or 2, check that the tower buoyancy and added mass coefficients are >= 0.
-         if ( InitInp%MHK > 0 .and. InputFileData%rotors(iR)%NumTwrNds > 0 )  then
+         if ( InitInp%MHK /= MHK_None .and. InputFileData%rotors(iR)%NumTwrNds > 0 )  then
             TwrCbSum = 0.0_ReKi
             do j=1,InputFileData%rotors(iR)%NumTwrNds
                if ( InputFileData%rotors(iR)%TwrCb(j) < 0.0_ReKi )  then
@@ -4497,7 +4497,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
       ! .............................
       ! check hub mesh data:
       ! .............................
-   if ( InitInp%MHK > 0 )  then
+   if ( InitInp%MHK /= MHK_None )  then
 
          ! Check that the hub volume is >= 0.
       do iR = 1,size(NumBl)
@@ -4511,7 +4511,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
       ! .............................
       ! check nacelle mesh data:
       ! .............................
-   if ( InitInp%MHK > 0 )  then
+   if ( InitInp%MHK /= MHK_None )  then
 
          ! Check that the nacelle volume is >= 0.
       do iR = 1,size(NumBl)

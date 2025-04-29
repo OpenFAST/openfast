@@ -1526,7 +1526,7 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
 
 !   ..... Developer must add checking for invalid inputs here: .....
 
-   if ( p%MHK == 0 ) then
+   if ( p%MHK == MHK_None ) then
       InvalidOutput( BldNd_Fbxi ) = .true.
       InvalidOutput( BldNd_Fbyi ) = .true.
       InvalidOutput( BldNd_Fbzi ) = .true.

@@ -904,7 +904,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       return
    end if
 
-   if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InitInp%MHK /= 0 ) ) then
+   if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InitInp%MHK /= MHK_None ) ) then
       call SetErrStat( ErrID_Fatal,'CurrMod must be set to 0 for an MHK turbine.',ErrStat,ErrMsg,RoutineName)
       return
    end if

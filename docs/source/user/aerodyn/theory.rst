@@ -252,7 +252,7 @@ The fluid inertia force is given as
 
 where :math:`C_p` is the dynamic pressure coefficient.
 
-The fluid density and added mass and dynamic pressure coeffcients are user-specified. Added mass and fluid
+The fluid density and added mass and dynamic pressure coefficients are user-specified. Added mass and fluid
 inertia loads can be turned off by setting the relevant coefficients to zero. Additional information about calculating added mass coefficients can be
 found in :numref:`AD_user_guide` ("Determination of Added Mass Coefficients for Floating Hydrokinetic Turbine Blades using Computational Fluid Dynamics").
 The body and fluid accelerations are calculated internally and passed to AeroDyn. Body accelerations are available from the structural solver (or driver),

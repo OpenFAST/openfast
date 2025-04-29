@@ -588,7 +588,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_SeaSt%PtfmLocationY = p_FAST%TurbinePos(2)
 
       
-      IF ( p_FAST%MHK .NE. 0_IntKi .AND. p_FAST%CompInflow == Module_IfW) THEN
+      IF ( p_FAST%MHK /= MHK_None .AND. p_FAST%CompInflow == Module_IfW) THEN
          Init%InData_SeaSt%hasCurrField = .TRUE.
       ELSE
          Init%InData_SeaSt%hasCurrField = .FALSE.
@@ -615,7 +615,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
          p_FAST%VTK_surface%NWaveElevPts(2) = 0
       endif
 
-      IF ( p_FAST%MHK .NE. 0_IntKi .AND. p_FAST%CompInflow == Module_IfW) THEN ! MHK turbine with dynamic current
+      IF ( p_FAST%MHK /= MHK_None .AND. p_FAST%CompInflow == Module_IfW) THEN ! MHK turbine with dynamic current
          ! Simulating an MHK turbine; load dynamic current from IfW
          SeaSt%p%WaveField%CurrField  => Init%OutData_IfW%FlowField
          SeaSt%p%WaveField%hasCurrField = .TRUE.
@@ -714,7 +714,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
                     AD%OtherSt(STATE_CURR), AD%y, AD%m, p_FAST%dt_module( MODULE_AD ), Init%OutData_AD, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
-      IF ( p_FAST%MHK .NE. 0_IntKi .AND. p_FAST%CompSeaSt == Module_SeaSt) THEN ! MHK turbine
+      IF ( p_FAST%MHK /= MHK_None .AND. p_FAST%CompSeaSt == Module_SeaSt) THEN ! MHK turbine
          ! Set AD pointers to wavefield
          AD%p%WaveField => Init%OutData_SeaSt%WaveField
       END IF
