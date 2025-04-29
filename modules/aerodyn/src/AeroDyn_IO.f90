@@ -2214,7 +2214,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
    end if
    
 
-   if (.not. (p%NacelleDrag .OR. p%MHK > 0)) then  ! Invalid Nacelle Total loads
+   if ((.not. p%NacelleDrag) .AND. (p%MHK == MHK_None)) then  ! Invalid Nacelle Total loads
       InvalidOutput( NcFxi ) = .true.
       InvalidOutput( NcFyi ) = .true.
       InvalidOutput( NcFzi ) = .true.
