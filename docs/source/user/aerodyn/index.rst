@@ -1,3 +1,5 @@
+.. _AD_user_guide:
+
 AeroDyn Users Guide and Theory Manual
 ======================================
 
@@ -16,6 +18,8 @@ can be downladed from the list below.
 - :download:`Development Plan for the Aerodynamic Linearization of OpenFAST <../../../OtherSupporting/AeroDyn/AeroLin_2019-12.pdf>`
 - :download:`AeroDyn Meshes and Related Calculations <../../../OtherSupporting/AeroDyn/AeroDynMesh_Rev4.docx>`
 - :download:`Calculation of Buoyancy on a Marine Hydrokinetic Turbine in AeroDyn <../../../OtherSupporting/AeroDyn/Buoyancy_Implementation_Plan_Rev11.docx>`
+- :download:`Calculation of Fluid Inertia and Added Mass Loads on an MHK Turbine in AeroDyn <../../../OtherSupporting/AeroDyn/Fluid_Inertia_Added_Mass_Implementation_Plan.docx>`
+- :download:`Determination of Added Mass Coefficients for Floating Hydrokinetic Turbine Blades using Computational Fluid Dynamics <../../../OtherSupporting/AeroDyn/UMERC24-Poster.pdf>`
 
 .. - :download:` <AeroDyn_Plan_TCF_AddedMass_Force.docx*>`
 

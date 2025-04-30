@@ -519,7 +519,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n_HiPass      !< High-pass filtered normal relative flow velocity at joints [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: zFillGroup      !< Instantaneous highest point of each filled group [m]
     TYPE(MeshMapType)  :: VisMeshMap      !< Mesh mapping for visualization mesh [-]
-    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
+    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState WaveField module [-]
   END TYPE Morison_MiscVarType
 ! =======================
 ! =========  Morison_ParameterType  =======

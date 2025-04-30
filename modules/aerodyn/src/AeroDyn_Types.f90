@@ -36,6 +36,7 @@ USE BEMT_Types
 USE FVW_Types
 USE AeroAcoustics_Types
 USE InflowWind_Types
+USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModelUnknown                     = -1      !  [-]
@@ -130,6 +131,7 @@ IMPLICIT NONE
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity force [Nm/s^2]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
+    LOGICAL  :: CompSeaSt = .false.      !< Flag to indicate whether SeaState is selected [-]
     REAL(ReKi)  :: defFldDens = 0.0_ReKi      !< Default fluid density from the driver; may be overwritten [kg/m^3]
     REAL(ReKi)  :: defKinVisc = 0.0_ReKi      !< Default kinematic viscosity from the driver; may be overwritten [m^2/s]
     REAL(ReKi)  :: defSpdSound = 0.0_ReKi      !< Default speed of sound from the driver; may be overwritten [m/s]
@@ -150,9 +152,15 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlTwist      !< Twist at blade node [radians]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlChord      !< Chord at blade node [m]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BlAFID      !< ID of Airfoil at blade node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: t_c      !< Thickness to chord ratio at blade node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlCb      !< Coefficient of buoyancy at blade node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlCenBn      !< Center of buoyancy normal offset at blade node [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlCenBt      !< Center of buoyancy tangential offset at blade node [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlCpn      !< Chordwise coefficient of dynamic pressure at blade node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlCpt      !< Edgewise coefficient of dynamic pressure at blade node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlCan      !< Chordwise coefficient of added mass at blade node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlCat      !< Edgewise coefficient of added mass at blade node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlCam      !< Pitch coefficient of added mass at blade node [-]
   END TYPE AD_BladePropsType
 ! =======================
 ! =========  AD_BladeShape  =======
@@ -188,6 +196,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrCd      !< Coefficient of drag at tower node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrTI      !< Turbulence intensity for tower shadow at tower node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrCb      !< Coefficient of buoyancy at tower node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrCp      !< Coefficient of dynamic pressure at tower node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrCa      !< Coefficient of added mass at tower node [-]
     REAL(ReKi)  :: VolHub = 0.0_ReKi      !< Hub volume [m^3]
     REAL(ReKi)  :: HubCenBx = 0.0_ReKi      !< Hub center of buoyancy x direction offset [m]
     REAL(ReKi)  :: VolNac = 0.0_ReKi      !< Nacelle volume [m^3]
@@ -210,7 +220,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TwrShadow = 0_IntKi      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     INTEGER(IntKi)  :: TwrAero = 0_IntKi      !< Calculate tower aerodynamic loads? {0=none, 1=aero without VIV, 2=aero with VIV} [-]
     LOGICAL  :: CavitCheck = .false.      !< Flag that tells us if we want to check for cavitation [-]
-    LOGICAL  :: Buoyancy = .false.      !< Include buoyancy effects? [flag]
     LOGICAL  :: NacelleDrag = .false.      !< Include NacelleDrag effects? [flag]
     LOGICAL  :: CompAA = .false.      !< Compute AeroAcoustic noise [flag]
     CHARACTER(1024)  :: AA_InputFile      !< AeroAcoustics input file name [quoted strings]
@@ -347,6 +356,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrTI      !< Turbulence intensity for tower shadow at tower node [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlTwist      !< Twist at blade node [radians]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrCb      !< Coefficient of buoyancy at tower node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrCp      !< Coefficient of dynamic pressure at tower node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrCa      !< Coefficient of added mass at tower node [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlCenBn      !< Normal offset between aerodynamic center and center of buoyancy at blade node [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlCenBt      !< Tangential offset between aerodynamic center and center of buoyancy at blade node [m]
     REAL(ReKi)  :: VolHub = 0.0_ReKi      !< Hub volume [m^3]
@@ -362,10 +373,17 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlDL      !< Matrix of blade element length based on CB, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlTaper      !< Matrix of blade element taper, used in buoyancy calculation [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlAxCent      !< Matrix of blade element axial centroid, used in buoyancy calculation [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlIN      !< Matrix of blade node normal-to-chord inertia factor [kg/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlIT      !< Matrix of blade node tangential-to-chord inertia factor [kg/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlAN      !< Matrix of blade node normal-to-chord added mass factor [kg/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlAT      !< Matrix of blade node tangential-to-chord added mass factor [kg/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlAM      !< Matrix of blade node pitch added mass factor [kgm]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrRad      !< Array of equivalent tower radius at each node, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrDL      !< Array of tower element length, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrTaper      !< Array of tower element taper, used in buoyancy calculation [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrAxCent      !< Array of tower element axial centroid, used in buoyancy calculation [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrIT      !< Array of tower node tangential inertia factor [kg/m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrAT      !< Array of tower node tangential added mass factor [kg/m]
     TYPE(BEMT_ParameterType)  :: BEMT      !< Parameters for BEMT module [-]
     TYPE(AA_ParameterType)  :: AA      !< Parameters for AA module [-]
     INTEGER(IntKi)  :: NumExtendedInputs = 0_IntKi      !< number of extended inputs [-]
@@ -378,7 +396,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TwrAero = 0_IntKi      !< Calculate tower aerodynamic loads? {0=none, 1=aero without VIV, 2=aero with VIV} [switch]
     INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< DBEMT_Mod [-]
     LOGICAL  :: CavitCheck = .false.      !< Flag that tells us if we want to check for cavitation [-]
-    LOGICAL  :: Buoyancy = .false.      !< Include buoyancy effects? [flag]
     LOGICAL  :: NacelleDrag = .false.      !< Include NacelleDrag effects? [flag]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK [flag]
     LOGICAL  :: CompAA = .false.      !< Compute AeroAcoustic noise [flag]
@@ -420,12 +437,14 @@ IMPLICIT NONE
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
+    LOGICAL  :: CompSeaSt = .false.      !< Flag to indicate whether SeaState is selected [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
     LOGICAL  :: SectAvg = .false.      !< Use Sector average for BEM inflow velocity calculation [-]
     INTEGER(IntKi)  :: SA_Weighting = 0_IntKi      !< Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse}  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True] [-]
     REAL(ReKi)  :: SA_PsiBwd = 0.0_ReKi      !< Sector Average - Backard Azimuth (<0) [deg]
     REAL(ReKi)  :: SA_PsiFwd = 0.0_ReKi      !< Sector Average - Forward Azimuth (>0) [deg]
     INTEGER(IntKi)  :: SA_nPerSec = 0_IntKi      !< Sector Average - Number of points per sector (>1) [-]
+    TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field data type [-]
   END TYPE AD_ParameterType
 ! =======================
 ! =========  RotInputType  =======
@@ -515,6 +534,11 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacDragM      !< drag moment at nacelle (tower top) node [Nm]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacFi      !< Total force at nacelle (tower top) node [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacMi      !< Total moment at nacelle (tower top) node [Nm]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: BlFI      !< inertia force per unit length at blade node [N/m]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: BlFA      !< added mass force per unit length at blade node [N/m]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: BlMA      !< added mass moment per unit length at blade node [N/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrFI      !< inertia force per unit length at tower node [N/m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrFA      !< added mass force per unit length at tower node [N/m]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootLoad      !< meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only) [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_L_2_R_P      !< mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeBuoyLoadPoint      !< point mesh for lumped buoyant blade loads [-]
@@ -546,6 +570,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindPos      !< XYZ coordinates to query for wind velocity/acceleration [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindVel      !< XYZ components of wind velocity [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
+    TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState WaveField module [-]
     TYPE(AD_InflowType) , DIMENSION(:), ALLOCATABLE  :: Inflow      !< Inflow storage (size of u for history of inputs) [-]
   END TYPE AD_MiscVarType
 ! =======================
@@ -1013,6 +1038,7 @@ subroutine AD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
    DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%MHK = SrcInitInputData%MHK
+   DstInitInputData%CompSeaSt = SrcInitInputData%CompSeaSt
    DstInitInputData%defFldDens = SrcInitInputData%defFldDens
    DstInitInputData%defKinVisc = SrcInitInputData%defKinVisc
    DstInitInputData%defSpdSound = SrcInitInputData%defSpdSound
@@ -1073,6 +1099,7 @@ subroutine AD_PackInitInput(RF, Indata)
    call RegPack(RF, InData%CompAeroMaps)
    call RegPack(RF, InData%Gravity)
    call RegPack(RF, InData%MHK)
+   call RegPack(RF, InData%CompSeaSt)
    call RegPack(RF, InData%defFldDens)
    call RegPack(RF, InData%defKinVisc)
    call RegPack(RF, InData%defSpdSound)
@@ -1122,6 +1149,7 @@ subroutine AD_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Gravity); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CompSeaSt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%defFldDens); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%defKinVisc); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%defSpdSound); if (RegCheckErr(RF, RoutineName)) return
@@ -1245,6 +1273,18 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
       end if
       DstBladePropsTypeData%BlAFID = SrcBladePropsTypeData%BlAFID
    end if
+   if (allocated(SrcBladePropsTypeData%t_c)) then
+      LB(1:1) = lbound(SrcBladePropsTypeData%t_c)
+      UB(1:1) = ubound(SrcBladePropsTypeData%t_c)
+      if (.not. allocated(DstBladePropsTypeData%t_c)) then
+         allocate(DstBladePropsTypeData%t_c(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%t_c.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBladePropsTypeData%t_c = SrcBladePropsTypeData%t_c
+   end if
    if (allocated(SrcBladePropsTypeData%BlCb)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlCb)
       UB(1:1) = ubound(SrcBladePropsTypeData%BlCb)
@@ -1281,6 +1321,66 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
       end if
       DstBladePropsTypeData%BlCenBt = SrcBladePropsTypeData%BlCenBt
    end if
+   if (allocated(SrcBladePropsTypeData%BlCpn)) then
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCpn)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCpn)
+      if (.not. allocated(DstBladePropsTypeData%BlCpn)) then
+         allocate(DstBladePropsTypeData%BlCpn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%BlCpn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBladePropsTypeData%BlCpn = SrcBladePropsTypeData%BlCpn
+   end if
+   if (allocated(SrcBladePropsTypeData%BlCpt)) then
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCpt)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCpt)
+      if (.not. allocated(DstBladePropsTypeData%BlCpt)) then
+         allocate(DstBladePropsTypeData%BlCpt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%BlCpt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBladePropsTypeData%BlCpt = SrcBladePropsTypeData%BlCpt
+   end if
+   if (allocated(SrcBladePropsTypeData%BlCan)) then
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCan)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCan)
+      if (.not. allocated(DstBladePropsTypeData%BlCan)) then
+         allocate(DstBladePropsTypeData%BlCan(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%BlCan.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBladePropsTypeData%BlCan = SrcBladePropsTypeData%BlCan
+   end if
+   if (allocated(SrcBladePropsTypeData%BlCat)) then
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCat)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCat)
+      if (.not. allocated(DstBladePropsTypeData%BlCat)) then
+         allocate(DstBladePropsTypeData%BlCat(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%BlCat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBladePropsTypeData%BlCat = SrcBladePropsTypeData%BlCat
+   end if
+   if (allocated(SrcBladePropsTypeData%BlCam)) then
+      LB(1:1) = lbound(SrcBladePropsTypeData%BlCam)
+      UB(1:1) = ubound(SrcBladePropsTypeData%BlCam)
+      if (.not. allocated(DstBladePropsTypeData%BlCam)) then
+         allocate(DstBladePropsTypeData%BlCam(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladePropsTypeData%BlCam.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBladePropsTypeData%BlCam = SrcBladePropsTypeData%BlCam
+   end if
 end subroutine
 
 subroutine AD_DestroyBladePropsType(BladePropsTypeData, ErrStat, ErrMsg)
@@ -1311,6 +1411,9 @@ subroutine AD_DestroyBladePropsType(BladePropsTypeData, ErrStat, ErrMsg)
    if (allocated(BladePropsTypeData%BlAFID)) then
       deallocate(BladePropsTypeData%BlAFID)
    end if
+   if (allocated(BladePropsTypeData%t_c)) then
+      deallocate(BladePropsTypeData%t_c)
+   end if
    if (allocated(BladePropsTypeData%BlCb)) then
       deallocate(BladePropsTypeData%BlCb)
    end if
@@ -1319,6 +1422,21 @@ subroutine AD_DestroyBladePropsType(BladePropsTypeData, ErrStat, ErrMsg)
    end if
    if (allocated(BladePropsTypeData%BlCenBt)) then
       deallocate(BladePropsTypeData%BlCenBt)
+   end if
+   if (allocated(BladePropsTypeData%BlCpn)) then
+      deallocate(BladePropsTypeData%BlCpn)
+   end if
+   if (allocated(BladePropsTypeData%BlCpt)) then
+      deallocate(BladePropsTypeData%BlCpt)
+   end if
+   if (allocated(BladePropsTypeData%BlCan)) then
+      deallocate(BladePropsTypeData%BlCan)
+   end if
+   if (allocated(BladePropsTypeData%BlCat)) then
+      deallocate(BladePropsTypeData%BlCat)
+   end if
+   if (allocated(BladePropsTypeData%BlCam)) then
+      deallocate(BladePropsTypeData%BlCam)
    end if
 end subroutine
 
@@ -1335,9 +1453,15 @@ subroutine AD_PackBladePropsType(RF, Indata)
    call RegPackAlloc(RF, InData%BlTwist)
    call RegPackAlloc(RF, InData%BlChord)
    call RegPackAlloc(RF, InData%BlAFID)
+   call RegPackAlloc(RF, InData%t_c)
    call RegPackAlloc(RF, InData%BlCb)
    call RegPackAlloc(RF, InData%BlCenBn)
    call RegPackAlloc(RF, InData%BlCenBt)
+   call RegPackAlloc(RF, InData%BlCpn)
+   call RegPackAlloc(RF, InData%BlCpt)
+   call RegPackAlloc(RF, InData%BlCan)
+   call RegPackAlloc(RF, InData%BlCat)
+   call RegPackAlloc(RF, InData%BlCam)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1357,9 +1481,15 @@ subroutine AD_UnPackBladePropsType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%BlTwist); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlChord); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlAFID); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%t_c); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlCb); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlCenBn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlCenBt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlCpn); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlCpt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlCan); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlCat); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlCam); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyBladeShape(SrcBladeShapeData, DstBladeShapeData, CtrlCode, ErrStat, ErrMsg)
@@ -1836,6 +1966,30 @@ subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCod
       end if
       DstRotInputFileData%TwrCb = SrcRotInputFileData%TwrCb
    end if
+   if (allocated(SrcRotInputFileData%TwrCp)) then
+      LB(1:1) = lbound(SrcRotInputFileData%TwrCp)
+      UB(1:1) = ubound(SrcRotInputFileData%TwrCp)
+      if (.not. allocated(DstRotInputFileData%TwrCp)) then
+         allocate(DstRotInputFileData%TwrCp(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInputFileData%TwrCp.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotInputFileData%TwrCp = SrcRotInputFileData%TwrCp
+   end if
+   if (allocated(SrcRotInputFileData%TwrCa)) then
+      LB(1:1) = lbound(SrcRotInputFileData%TwrCa)
+      UB(1:1) = ubound(SrcRotInputFileData%TwrCa)
+      if (.not. allocated(DstRotInputFileData%TwrCa)) then
+         allocate(DstRotInputFileData%TwrCa(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotInputFileData%TwrCa.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotInputFileData%TwrCa = SrcRotInputFileData%TwrCa
+   end if
    DstRotInputFileData%VolHub = SrcRotInputFileData%VolHub
    DstRotInputFileData%HubCenBx = SrcRotInputFileData%HubCenBx
    DstRotInputFileData%VolNac = SrcRotInputFileData%VolNac
@@ -1885,6 +2039,12 @@ subroutine AD_DestroyRotInputFile(RotInputFileData, ErrStat, ErrMsg)
    if (allocated(RotInputFileData%TwrCb)) then
       deallocate(RotInputFileData%TwrCb)
    end if
+   if (allocated(RotInputFileData%TwrCp)) then
+      deallocate(RotInputFileData%TwrCp)
+   end if
+   if (allocated(RotInputFileData%TwrCa)) then
+      deallocate(RotInputFileData%TwrCa)
+   end if
    call AD_DestroyTFinInputFileType(RotInputFileData%TFin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
@@ -1911,6 +2071,8 @@ subroutine AD_PackRotInputFile(RF, Indata)
    call RegPackAlloc(RF, InData%TwrCd)
    call RegPackAlloc(RF, InData%TwrTI)
    call RegPackAlloc(RF, InData%TwrCb)
+   call RegPackAlloc(RF, InData%TwrCp)
+   call RegPackAlloc(RF, InData%TwrCa)
    call RegPack(RF, InData%VolHub)
    call RegPack(RF, InData%HubCenBx)
    call RegPack(RF, InData%VolNac)
@@ -1952,6 +2114,8 @@ subroutine AD_UnPackRotInputFile(RF, OutData)
    call RegUnpackAlloc(RF, OutData%TwrCd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrTI); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrCb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrCp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrCa); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VolHub); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HubCenBx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VolNac); if (RegCheckErr(RF, RoutineName)) return
@@ -1985,7 +2149,6 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%TwrShadow = SrcInputFileData%TwrShadow
    DstInputFileData%TwrAero = SrcInputFileData%TwrAero
    DstInputFileData%CavitCheck = SrcInputFileData%CavitCheck
-   DstInputFileData%Buoyancy = SrcInputFileData%Buoyancy
    DstInputFileData%NacelleDrag = SrcInputFileData%NacelleDrag
    DstInputFileData%CompAA = SrcInputFileData%CompAA
    DstInputFileData%AA_InputFile = SrcInputFileData%AA_InputFile
@@ -2153,7 +2316,6 @@ subroutine AD_PackInputFile(RF, Indata)
    call RegPack(RF, InData%TwrShadow)
    call RegPack(RF, InData%TwrAero)
    call RegPack(RF, InData%CavitCheck)
-   call RegPack(RF, InData%Buoyancy)
    call RegPack(RF, InData%NacelleDrag)
    call RegPack(RF, InData%CompAA)
    call RegPack(RF, InData%AA_InputFile)
@@ -2235,7 +2397,6 @@ subroutine AD_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%TwrShadow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TwrAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CavitCheck); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Buoyancy); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NacelleDrag); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAA); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AA_InputFile); if (RegCheckErr(RF, RoutineName)) return
@@ -3322,6 +3483,30 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       end if
       DstRotParameterTypeData%TwrCb = SrcRotParameterTypeData%TwrCb
    end if
+   if (allocated(SrcRotParameterTypeData%TwrCp)) then
+      LB(1:1) = lbound(SrcRotParameterTypeData%TwrCp)
+      UB(1:1) = ubound(SrcRotParameterTypeData%TwrCp)
+      if (.not. allocated(DstRotParameterTypeData%TwrCp)) then
+         allocate(DstRotParameterTypeData%TwrCp(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%TwrCp.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%TwrCp = SrcRotParameterTypeData%TwrCp
+   end if
+   if (allocated(SrcRotParameterTypeData%TwrCa)) then
+      LB(1:1) = lbound(SrcRotParameterTypeData%TwrCa)
+      UB(1:1) = ubound(SrcRotParameterTypeData%TwrCa)
+      if (.not. allocated(DstRotParameterTypeData%TwrCa)) then
+         allocate(DstRotParameterTypeData%TwrCa(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%TwrCa.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%TwrCa = SrcRotParameterTypeData%TwrCa
+   end if
    if (allocated(SrcRotParameterTypeData%BlCenBn)) then
       LB(1:2) = lbound(SrcRotParameterTypeData%BlCenBn)
       UB(1:2) = ubound(SrcRotParameterTypeData%BlCenBn)
@@ -3403,6 +3588,66 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       end if
       DstRotParameterTypeData%BlAxCent = SrcRotParameterTypeData%BlAxCent
    end if
+   if (allocated(SrcRotParameterTypeData%BlIN)) then
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlIN)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlIN)
+      if (.not. allocated(DstRotParameterTypeData%BlIN)) then
+         allocate(DstRotParameterTypeData%BlIN(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%BlIN.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%BlIN = SrcRotParameterTypeData%BlIN
+   end if
+   if (allocated(SrcRotParameterTypeData%BlIT)) then
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlIT)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlIT)
+      if (.not. allocated(DstRotParameterTypeData%BlIT)) then
+         allocate(DstRotParameterTypeData%BlIT(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%BlIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%BlIT = SrcRotParameterTypeData%BlIT
+   end if
+   if (allocated(SrcRotParameterTypeData%BlAN)) then
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlAN)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlAN)
+      if (.not. allocated(DstRotParameterTypeData%BlAN)) then
+         allocate(DstRotParameterTypeData%BlAN(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%BlAN.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%BlAN = SrcRotParameterTypeData%BlAN
+   end if
+   if (allocated(SrcRotParameterTypeData%BlAT)) then
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlAT)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlAT)
+      if (.not. allocated(DstRotParameterTypeData%BlAT)) then
+         allocate(DstRotParameterTypeData%BlAT(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%BlAT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%BlAT = SrcRotParameterTypeData%BlAT
+   end if
+   if (allocated(SrcRotParameterTypeData%BlAM)) then
+      LB(1:2) = lbound(SrcRotParameterTypeData%BlAM)
+      UB(1:2) = ubound(SrcRotParameterTypeData%BlAM)
+      if (.not. allocated(DstRotParameterTypeData%BlAM)) then
+         allocate(DstRotParameterTypeData%BlAM(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%BlAM.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%BlAM = SrcRotParameterTypeData%BlAM
+   end if
    if (allocated(SrcRotParameterTypeData%TwrRad)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%TwrRad)
       UB(1:1) = ubound(SrcRotParameterTypeData%TwrRad)
@@ -3451,6 +3696,30 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
       end if
       DstRotParameterTypeData%TwrAxCent = SrcRotParameterTypeData%TwrAxCent
    end if
+   if (allocated(SrcRotParameterTypeData%TwrIT)) then
+      LB(1:1) = lbound(SrcRotParameterTypeData%TwrIT)
+      UB(1:1) = ubound(SrcRotParameterTypeData%TwrIT)
+      if (.not. allocated(DstRotParameterTypeData%TwrIT)) then
+         allocate(DstRotParameterTypeData%TwrIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%TwrIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%TwrIT = SrcRotParameterTypeData%TwrIT
+   end if
+   if (allocated(SrcRotParameterTypeData%TwrAT)) then
+      LB(1:1) = lbound(SrcRotParameterTypeData%TwrAT)
+      UB(1:1) = ubound(SrcRotParameterTypeData%TwrAT)
+      if (.not. allocated(DstRotParameterTypeData%TwrAT)) then
+         allocate(DstRotParameterTypeData%TwrAT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%TwrAT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotParameterTypeData%TwrAT = SrcRotParameterTypeData%TwrAT
+   end if
    call BEMT_CopyParam(SrcRotParameterTypeData%BEMT, DstRotParameterTypeData%BEMT, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -3489,7 +3758,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    DstRotParameterTypeData%TwrAero = SrcRotParameterTypeData%TwrAero
    DstRotParameterTypeData%DBEMT_Mod = SrcRotParameterTypeData%DBEMT_Mod
    DstRotParameterTypeData%CavitCheck = SrcRotParameterTypeData%CavitCheck
-   DstRotParameterTypeData%Buoyancy = SrcRotParameterTypeData%Buoyancy
    DstRotParameterTypeData%NacelleDrag = SrcRotParameterTypeData%NacelleDrag
    DstRotParameterTypeData%MHK = SrcRotParameterTypeData%MHK
    DstRotParameterTypeData%CompAA = SrcRotParameterTypeData%CompAA
@@ -3589,6 +3857,12 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
    if (allocated(RotParameterTypeData%TwrCb)) then
       deallocate(RotParameterTypeData%TwrCb)
    end if
+   if (allocated(RotParameterTypeData%TwrCp)) then
+      deallocate(RotParameterTypeData%TwrCp)
+   end if
+   if (allocated(RotParameterTypeData%TwrCa)) then
+      deallocate(RotParameterTypeData%TwrCa)
+   end if
    if (allocated(RotParameterTypeData%BlCenBn)) then
       deallocate(RotParameterTypeData%BlCenBn)
    end if
@@ -3607,6 +3881,21 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
    if (allocated(RotParameterTypeData%BlAxCent)) then
       deallocate(RotParameterTypeData%BlAxCent)
    end if
+   if (allocated(RotParameterTypeData%BlIN)) then
+      deallocate(RotParameterTypeData%BlIN)
+   end if
+   if (allocated(RotParameterTypeData%BlIT)) then
+      deallocate(RotParameterTypeData%BlIT)
+   end if
+   if (allocated(RotParameterTypeData%BlAN)) then
+      deallocate(RotParameterTypeData%BlAN)
+   end if
+   if (allocated(RotParameterTypeData%BlAT)) then
+      deallocate(RotParameterTypeData%BlAT)
+   end if
+   if (allocated(RotParameterTypeData%BlAM)) then
+      deallocate(RotParameterTypeData%BlAM)
+   end if
    if (allocated(RotParameterTypeData%TwrRad)) then
       deallocate(RotParameterTypeData%TwrRad)
    end if
@@ -3618,6 +3907,12 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
    end if
    if (allocated(RotParameterTypeData%TwrAxCent)) then
       deallocate(RotParameterTypeData%TwrAxCent)
+   end if
+   if (allocated(RotParameterTypeData%TwrIT)) then
+      deallocate(RotParameterTypeData%TwrIT)
+   end if
+   if (allocated(RotParameterTypeData%TwrAT)) then
+      deallocate(RotParameterTypeData%TwrAT)
    end if
    call BEMT_DestroyParam(RotParameterTypeData%BEMT, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3669,6 +3964,8 @@ subroutine AD_PackRotParameterType(RF, Indata)
    call RegPackAlloc(RF, InData%TwrTI)
    call RegPackAlloc(RF, InData%BlTwist)
    call RegPackAlloc(RF, InData%TwrCb)
+   call RegPackAlloc(RF, InData%TwrCp)
+   call RegPackAlloc(RF, InData%TwrCa)
    call RegPackAlloc(RF, InData%BlCenBn)
    call RegPackAlloc(RF, InData%BlCenBt)
    call RegPack(RF, InData%VolHub)
@@ -3684,10 +3981,17 @@ subroutine AD_PackRotParameterType(RF, Indata)
    call RegPackAlloc(RF, InData%BlDL)
    call RegPackAlloc(RF, InData%BlTaper)
    call RegPackAlloc(RF, InData%BlAxCent)
+   call RegPackAlloc(RF, InData%BlIN)
+   call RegPackAlloc(RF, InData%BlIT)
+   call RegPackAlloc(RF, InData%BlAN)
+   call RegPackAlloc(RF, InData%BlAT)
+   call RegPackAlloc(RF, InData%BlAM)
    call RegPackAlloc(RF, InData%TwrRad)
    call RegPackAlloc(RF, InData%TwrDL)
    call RegPackAlloc(RF, InData%TwrTaper)
    call RegPackAlloc(RF, InData%TwrAxCent)
+   call RegPackAlloc(RF, InData%TwrIT)
+   call RegPackAlloc(RF, InData%TwrAT)
    call BEMT_PackParam(RF, InData%BEMT) 
    call AA_PackParam(RF, InData%AA) 
    call RegPack(RF, InData%NumExtendedInputs)
@@ -3700,7 +4004,6 @@ subroutine AD_PackRotParameterType(RF, Indata)
    call RegPack(RF, InData%TwrAero)
    call RegPack(RF, InData%DBEMT_Mod)
    call RegPack(RF, InData%CavitCheck)
-   call RegPack(RF, InData%Buoyancy)
    call RegPack(RF, InData%NacelleDrag)
    call RegPack(RF, InData%MHK)
    call RegPack(RF, InData%CompAA)
@@ -3765,6 +4068,8 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%TwrTI); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlTwist); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrCb); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrCp); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrCa); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlCenBn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlCenBt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%VolHub); if (RegCheckErr(RF, RoutineName)) return
@@ -3780,10 +4085,17 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%BlDL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlTaper); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BlAxCent); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlIN); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlIT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlAN); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlAT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlAM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrRad); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrDL); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrTaper); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TwrAxCent); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrIT); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrAT); if (RegCheckErr(RF, RoutineName)) return
    call BEMT_UnpackParam(RF, OutData%BEMT) ! BEMT 
    call AA_UnpackParam(RF, OutData%AA) ! AA 
    call RegUnpack(RF, OutData%NumExtendedInputs); if (RegCheckErr(RF, RoutineName)) return
@@ -3796,7 +4108,6 @@ subroutine AD_UnPackRotParameterType(RF, OutData)
    call RegUnpack(RF, OutData%TwrAero); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DBEMT_Mod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CavitCheck); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%Buoyancy); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NacelleDrag); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAA); if (RegCheckErr(RF, RoutineName)) return
@@ -3905,12 +4216,14 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
    DstParamData%UA_Flag = SrcParamData%UA_Flag
+   DstParamData%CompSeaSt = SrcParamData%CompSeaSt
    DstParamData%FlowField => SrcParamData%FlowField
    DstParamData%SectAvg = SrcParamData%SectAvg
    DstParamData%SA_Weighting = SrcParamData%SA_Weighting
    DstParamData%SA_PsiBwd = SrcParamData%SA_PsiBwd
    DstParamData%SA_PsiFwd = SrcParamData%SA_PsiFwd
    DstParamData%SA_nPerSec = SrcParamData%SA_nPerSec
+   DstParamData%WaveField => SrcParamData%WaveField
 end subroutine
 
 subroutine AD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -3945,6 +4258,7 @@ subroutine AD_DestroyParam(ParamData, ErrStat, ErrMsg)
    call FVW_DestroyParam(ParamData%FVW, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(ParamData%FlowField)
+   nullify(ParamData%WaveField)
 end subroutine
 
 subroutine AD_PackParam(RF, Indata)
@@ -3980,6 +4294,7 @@ subroutine AD_PackParam(RF, Indata)
    call FVW_PackParam(RF, InData%FVW) 
    call RegPack(RF, InData%CompAeroMaps)
    call RegPack(RF, InData%UA_Flag)
+   call RegPack(RF, InData%CompSeaSt)
    call RegPack(RF, associated(InData%FlowField))
    if (associated(InData%FlowField)) then
       call RegPackPointer(RF, c_loc(InData%FlowField), PtrInIndex)
@@ -3992,6 +4307,13 @@ subroutine AD_PackParam(RF, Indata)
    call RegPack(RF, InData%SA_PsiBwd)
    call RegPack(RF, InData%SA_PsiFwd)
    call RegPack(RF, InData%SA_nPerSec)
+   call RegPack(RF, associated(InData%WaveField))
+   if (associated(InData%WaveField)) then
+      call RegPackPointer(RF, c_loc(InData%WaveField), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call SeaSt_WaveField_PackSeaSt_WaveFieldType(RF, InData%WaveField) 
+      end if
+   end if
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -4039,6 +4361,7 @@ subroutine AD_UnPackParam(RF, OutData)
    call FVW_UnpackParam(RF, OutData%FVW) ! FVW 
    call RegUnpack(RF, OutData%CompAeroMaps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UA_Flag); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CompSeaSt); if (RegCheckErr(RF, RoutineName)) return
    if (associated(OutData%FlowField)) deallocate(OutData%FlowField)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -4062,6 +4385,24 @@ subroutine AD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%SA_PsiBwd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SA_PsiFwd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SA_nPerSec); if (RegCheckErr(RF, RoutineName)) return
+   if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(RF, Ptr, PtrIdx); if (RegCheckErr(RF, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%WaveField)
+      else
+         allocate(OutData%WaveField,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', RF%ErrStat, RF%ErrMsg, RoutineName)
+            return
+         end if
+         RF%Pointers(PtrIdx) = c_loc(OutData%WaveField)
+         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(RF, OutData%WaveField) ! WaveField 
+      end if
+   else
+      OutData%WaveField => null()
+   end if
 end subroutine
 
 subroutine AD_CopyRotInputType(SrcRotInputTypeData, DstRotInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -5066,6 +5407,66 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
       end if
       DstRotMiscVarTypeData%NacMi = SrcRotMiscVarTypeData%NacMi
    end if
+   if (allocated(SrcRotMiscVarTypeData%BlFI)) then
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%BlFI)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%BlFI)
+      if (.not. allocated(DstRotMiscVarTypeData%BlFI)) then
+         allocate(DstRotMiscVarTypeData%BlFI(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BlFI.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%BlFI = SrcRotMiscVarTypeData%BlFI
+   end if
+   if (allocated(SrcRotMiscVarTypeData%BlFA)) then
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%BlFA)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%BlFA)
+      if (.not. allocated(DstRotMiscVarTypeData%BlFA)) then
+         allocate(DstRotMiscVarTypeData%BlFA(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BlFA.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%BlFA = SrcRotMiscVarTypeData%BlFA
+   end if
+   if (allocated(SrcRotMiscVarTypeData%BlMA)) then
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%BlMA)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%BlMA)
+      if (.not. allocated(DstRotMiscVarTypeData%BlMA)) then
+         allocate(DstRotMiscVarTypeData%BlMA(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BlMA.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%BlMA = SrcRotMiscVarTypeData%BlMA
+   end if
+   if (allocated(SrcRotMiscVarTypeData%TwrFI)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrFI)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrFI)
+      if (.not. allocated(DstRotMiscVarTypeData%TwrFI)) then
+         allocate(DstRotMiscVarTypeData%TwrFI(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%TwrFI.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%TwrFI = SrcRotMiscVarTypeData%TwrFI
+   end if
+   if (allocated(SrcRotMiscVarTypeData%TwrFA)) then
+      LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrFA)
+      UB(1:2) = ubound(SrcRotMiscVarTypeData%TwrFA)
+      if (.not. allocated(DstRotMiscVarTypeData%TwrFA)) then
+         allocate(DstRotMiscVarTypeData%TwrFA(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%TwrFA.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%TwrFA = SrcRotMiscVarTypeData%TwrFA
+   end if
    if (allocated(SrcRotMiscVarTypeData%BladeRootLoad)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeRootLoad)
       UB(1:1) = ubound(SrcRotMiscVarTypeData%BladeRootLoad)
@@ -5324,6 +5725,21 @@ subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
    if (allocated(RotMiscVarTypeData%NacMi)) then
       deallocate(RotMiscVarTypeData%NacMi)
    end if
+   if (allocated(RotMiscVarTypeData%BlFI)) then
+      deallocate(RotMiscVarTypeData%BlFI)
+   end if
+   if (allocated(RotMiscVarTypeData%BlFA)) then
+      deallocate(RotMiscVarTypeData%BlFA)
+   end if
+   if (allocated(RotMiscVarTypeData%BlMA)) then
+      deallocate(RotMiscVarTypeData%BlMA)
+   end if
+   if (allocated(RotMiscVarTypeData%TwrFI)) then
+      deallocate(RotMiscVarTypeData%TwrFI)
+   end if
+   if (allocated(RotMiscVarTypeData%TwrFA)) then
+      deallocate(RotMiscVarTypeData%TwrFA)
+   end if
    if (allocated(RotMiscVarTypeData%BladeRootLoad)) then
       LB(1:1) = lbound(RotMiscVarTypeData%BladeRootLoad)
       UB(1:1) = ubound(RotMiscVarTypeData%BladeRootLoad)
@@ -5450,6 +5866,11 @@ subroutine AD_PackRotMiscVarType(RF, Indata)
    call RegPackAlloc(RF, InData%NacDragM)
    call RegPackAlloc(RF, InData%NacFi)
    call RegPackAlloc(RF, InData%NacMi)
+   call RegPackAlloc(RF, InData%BlFI)
+   call RegPackAlloc(RF, InData%BlFA)
+   call RegPackAlloc(RF, InData%BlMA)
+   call RegPackAlloc(RF, InData%TwrFI)
+   call RegPackAlloc(RF, InData%TwrFA)
    call RegPack(RF, allocated(InData%BladeRootLoad))
    if (allocated(InData%BladeRootLoad)) then
       call RegPackBounds(RF, 1, lbound(InData%BladeRootLoad), ubound(InData%BladeRootLoad))
@@ -5592,6 +6013,11 @@ subroutine AD_UnPackRotMiscVarType(RF, OutData)
    call RegUnpackAlloc(RF, OutData%NacDragM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%NacFi); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%NacMi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlFI); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlFA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BlMA); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrFI); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%TwrFA); if (RegCheckErr(RF, RoutineName)) return
    if (allocated(OutData%BladeRootLoad)) deallocate(OutData%BladeRootLoad)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
@@ -5761,6 +6187,9 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%WindAcc = SrcMiscData%WindAcc
    end if
+   call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%Inflow)) then
       LB(1:1) = lbound(SrcMiscData%Inflow)
       UB(1:1) = ubound(SrcMiscData%Inflow)
@@ -5821,6 +6250,8 @@ subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%WindAcc)) then
       deallocate(MiscData%WindAcc)
    end if
+   call SeaSt_WaveField_DestroyMisc(MiscData%WaveField_m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%Inflow)) then
       LB(1:1) = lbound(MiscData%Inflow)
       UB(1:1) = ubound(MiscData%Inflow)
@@ -5862,6 +6293,7 @@ subroutine AD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%WindPos)
    call RegPackAlloc(RF, InData%WindVel)
    call RegPackAlloc(RF, InData%WindAcc)
+   call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
    call RegPack(RF, allocated(InData%Inflow))
    if (allocated(InData%Inflow)) then
       call RegPackBounds(RF, 1, lbound(InData%Inflow), ubound(InData%Inflow))
@@ -5914,6 +6346,7 @@ subroutine AD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WindPos); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WindVel); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WindAcc); if (RegCheckErr(RF, RoutineName)) return
+   call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
    if (allocated(OutData%Inflow)) deallocate(OutData%Inflow)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then

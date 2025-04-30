@@ -21,11 +21,11 @@ to vary with time. This feature can be useful for debugging the aerodynamic resp
 outside of OpenFAST. 
 
 2) Multi-rotor AeroDyn Driver Input File 
-:download:`(driver input file example) <examples/ad_driver_multiple.dvr>`: 
+:download:`(driver input file example) <examples/ad_driver_multiple.dvr>`
 
 
 3) AeroDyn Primary Input File 
-:download:`(primary input file example) <examples/ad_primary_example.dat>`: 
+:download:`(primary input file example) <examples/ad_primary_example.dat>` 
 
 The primary AeroDyn input file defines modeling options, environmental conditions (except freestream flow), airfoils, tower nodal discretization and properties, tower, hub, and nacelle properties, as well as output file specifications.
 
@@ -35,14 +35,14 @@ The input file begins with two lines of header information which is for your use
 
 4) Airfoil Data Input File
    
-:download:`(profile data) <examples/ad_polar_example.dat>`: 
+:download:`(profile data) <examples/ad_polar_example.dat>`
  
-:download:`(profile coordinates) <examples/ad_airfoil_example.dat>`: 
+:download:`(profile coordinates) <examples/ad_airfoil_example.dat>`
 
 The airfoil data input files themselves (one for each airfoil) include tables containing coefficients of lift force, drag force, and pitching moment versus AoA, as well as UA model parameters.  In these files, any line whose first non-blank character is an exclamation point (!) is ignored (for inserting comment lines).  The non-comment lines should appear within the file in order, but comment lines may be intermixed as desired for reading clarity.  
 
 5) Blade Data Input File
-:download:`(blade data input file example) <examples/ad_blade_example.dat>`: 
+:download:`(blade data input file example) <examples/ad_blade_example.dat>`
 
 The blade data input file contains the nodal discretization, geometry, twist, chord, airfoil identifier, and buoyancy properties for a blade.  Separate files are used for each blade, which permits modeling of aerodynamic imbalances.  
 

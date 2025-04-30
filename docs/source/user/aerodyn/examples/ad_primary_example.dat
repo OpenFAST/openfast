@@ -8,7 +8,6 @@ False         Echo               - Echo the input to "<rootname>.AD.ech"?  (flag
           0   TwrShadow          - Calculate tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}
 False         TwrAero            - Calculate tower aerodynamic loads? (flag)
 False         CavitCheck         - Perform cavitation check? (flag) [UA_Mod must be 0 when CavitCheck=true]
-False         Buoyancy           - Include buoyancy effects? (flag)
 False         NacelleDrag        - Include Nacelle Drag effects? (flag)
 False         CompAA             - Flag to compute AeroAcoustics calculation [used only when Wake_Mod = 1 or 2]
 "unused"      AA_InputFile       - AeroAcoustics input file [used only when CompAA=true]
@@ -74,10 +73,10 @@ True          UseBlCm            - Include aerodynamic pitching moment in calcul
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(1)        - Name of file containing distributed aerodynamic properties for Blade #1 (-)
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(2)        - Name of file containing distributed aerodynamic properties for Blade #2 (-) [unused if NumBl < 2]
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(3)        - Name of file containing distributed aerodynamic properties for Blade #3 (-) [unused if NumBl < 3]
-======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
           0   VolHub             - Hub volume (m^3)
           0   HubCenBx           - Hub center of buoyancy x direction offset (m)
-======  Nacelle Properties ========================================================================== [used only when Buoyancy=True or NacelleDrag=True]
+======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2 or when NacelleDrag=True]
           0   VolNac             - Nacelle volume (m^3)
     0, 0, 0   NacCenB            - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
     0, 0, 0   NacArea            - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
@@ -86,15 +85,15 @@ True          UseBlCm            - Include aerodynamic pitching moment in calcul
 ======  Tail Fin Aerodynamics =======================================================================
 False         TFinAero           - Calculate tail fin aerodynamics model (flag)
 "unused"      TFinFile           - Input file for tail fin aerodynamics [used only when TFinAero=True]
-======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
-          5   NumTwrNds         - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
-TwrElev        TwrDiam        TwrCd          TwrTI           TwrCb  ! TwrTI used only when TwrShadow=2; TwrCb used only when Buoyancy=True
-(m)              (m)           (-)            (-)            (-)
-0.0000000E+00  6.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
-2.0000000E+01  5.5000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
-4.0000000E+01  5.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
-6.0000000E+01  4.5000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
-8.0000000E+01  4.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  
+======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+          5   NumTwrNds         - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+TwrElev        TwrDiam        TwrCd          TwrTI          TwrCb          TwrCp          TwrCa !TwrTI used only with TwrShadow=2, TwrCb/TwrCp/TwrCa used only with MHK=1 or 2
+(m)            (m)            (-)            (-)            (-)            (-)            (-)
+0.0000000E+00  6.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+2.0000000E+01  5.5000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+4.0000000E+01  5.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+6.0000000E+01  4.5000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
+8.0000000E+01  4.0000000E+00  0.0000000E+00  1.0000000E-01  0.0000000E+00  0.0000000E+00  0.0000000E+00
 ======  Outputs  ====================================================================================
 True          SumPrint            - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"? (flag)
           4   NBlOuts             - Number of blade node outputs [0 - 9] (-)

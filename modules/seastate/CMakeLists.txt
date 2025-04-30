@@ -37,7 +37,7 @@ add_library(seastlib STATIC
   src/SeaSt_WaveField_Types.f90
   src/SeaState_Types.f90
 )
-target_link_libraries(seastlib nwtclibs versioninfolib)
+target_link_libraries(seastlib ifwlib nwtclibs versioninfolib)
 
 # C-bindings interface library
 add_library(seastate_c_binding SHARED 

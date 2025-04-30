@@ -177,7 +177,7 @@ CONTAINS
          m%AllOuts( TwNFdy( beta) ) = m%Y_Twr(j)         
       end do ! out nodes
       
-      if ( p%Buoyancy ) then
+      if ( p%MHK /= MHK_None ) then
          do beta=1,p%NTwOuts
             j = p%TwOutNd(beta)
             
@@ -194,7 +194,7 @@ CONTAINS
       end if
       
          ! hub outputs
-      if ( p%Buoyancy ) then
+      if ( p%MHK /= MHK_None ) then
          tmpHubFB = matmul( u%HubMotion%Orientation(:,:,1) , m%HubFB )
          m%AllOuts( HbFbx ) = tmpHubFB(1)
          m%AllOuts( HbFby ) = tmpHubFB(2)
@@ -210,7 +210,7 @@ CONTAINS
       end if
    
          ! nacelle buoyancy outputs
-      if ( p%Buoyancy ) then
+      if ( p%MHK /= MHK_None ) then
          tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacFB )
          m%AllOuts( NcFbx ) = tmp(1)
          m%AllOuts( NcFby ) = tmp(2)
@@ -237,7 +237,7 @@ CONTAINS
       end if
 
          ! nacelle total forces and moments
-      if ( p%Buoyancy .OR. p%NacelleDrag) then
+      if ( (p%MHK /= MHK_None) .OR. p%NacelleDrag) then
 
          tmp = m%NacFi
          m%AllOuts( NcFxi ) = tmp(1)
@@ -278,7 +278,7 @@ CONTAINS
          end do ! nodes
       end do ! blades
 
-      if ( p%Buoyancy ) then
+      if ( p%MHK /= MHK_None ) then
          do k=1,min(p%numBlades,AD_MaxBl_Out)    ! limit this
             do beta=1,p%NBlOuts
                j=p%BlOutNd(beta)
@@ -705,7 +705,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
    character(ErrMsgLen)                            :: ErrMsg_NoAllBldNdOuts
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
-   real(ReKi)                                      :: TmpRe5(5)         !< temporary 8 number array for reading values in
+   real(ReKi)                                      :: TmpRe7(7)         !< temporary 8 number array for reading values in
    logical                                         :: TwrAeroLogical    !< convert TwrAero from logical (input file) to integer (new)
    character(1024)                                 :: sDummy            !< temporary string
    character(1024)                                 :: tmpOutStr         !< temporary string for writing to screen
@@ -807,9 +807,6 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    frozenWakeProvided = legacyInputPresent('FrozenWake', Curline, ErrStat2, ErrMsg2, 'DBEMTMod=-1 (FrozenWake=True) or DBEMTMod>-1 (FrozenWake=False)')
       ! CavitCheck - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
    call ParseVar( FileInfo_In, CurLine, "CavitCheck", InputFileData%CavitCheck, ErrStat2, ErrMsg2, UnEc )
-      if (Failed()) return
-      ! Buoyancy - Include buoyancy effects? (flag)
-   call ParseVar( FileInfo_In, CurLine, "Buoyancy", InputFileData%Buoyancy, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! NacelleDrag - Include Nacelle Drag effects? (flag)
    call ParseVar( FileInfo_In, CurLine, "NacelleDrag", InputFileData%NacelleDrag, ErrStat2, ErrMsg2, UnEc )
@@ -1039,7 +1036,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       IF ( PathIsRelative( InputFileData%ADBlFile(I) ) ) InputFileData%ADBlFile(I) = TRIM(PriPath)//TRIM(InputFileData%ADBlFile(I))
    enddo
 
-   !======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+   !======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
    do iR = 1,size(NumBlades) ! Loop on rotors
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
@@ -1051,7 +1048,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          if (Failed()) return
    end do
 
-   !======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+   !======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2]
    do iR = 1,size(NumBlades) ! Loop on rotors
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
@@ -1088,14 +1085,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       endif
    enddo
 
-   !======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+   !======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
    do iR = 1,size(NumBlades) ! Loop on rotors
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
-         ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+         ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
       call ParseVar( FileInfo_In, CurLine, "NumTwrNds", InputFileData%rotors(iR)%NumTwrNds, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
-         !TwrElev        TwrDiam        TwrCd        TwrTI        TwrCb
+         !TwrElev        TwrDiam        TwrCd        TwrTI        TwrCb        TwrCp         TwrCa
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Tower Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
          !(m)            (m)            (-)          (-)          (-)
@@ -1112,14 +1109,20 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          if (Failed()) return
       CALL AllocAry( InputFileData%rotors(iR)%TwrCb, InputFileData%rotors(iR)%NumTwrNds, 'TwrCb', ErrStat2, ErrMsg2)
          if (Failed()) return 
+      CALL AllocAry( InputFileData%rotors(iR)%TwrCp, InputFileData%rotors(iR)%NumTwrNds, 'TwrCp', ErrStat2, ErrMsg2)
+         if (Failed()) return 
+      CALL AllocAry( InputFileData%rotors(iR)%TwrCa, InputFileData%rotors(iR)%NumTwrNds, 'TwrCa', ErrStat2, ErrMsg2)
+         if (Failed()) return 
       do I=1,InputFileData%rotors(iR)%NumTwrNds
-         call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe5, 5, ErrStat2, ErrMsg2, UnEc )
+         call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe7, 7, ErrStat2, ErrMsg2, UnEc )
             if (Failed()) return;
-         InputFileData%rotors(iR)%TwrElev(I) = TmpRe5( 1)
-         InputFileData%rotors(iR)%TwrDiam(I) = TmpRe5( 2)
-         InputFileData%rotors(iR)%TwrCd(I)   = TmpRe5( 3)
-         InputFileData%rotors(iR)%TwrTI(I)   = TmpRe5( 4)
-         InputFileData%rotors(iR)%TwrCb(I)   = TmpRe5( 5)
+         InputFileData%rotors(iR)%TwrElev(I) = TmpRe7( 1)
+         InputFileData%rotors(iR)%TwrDiam(I) = TmpRe7( 2)
+         InputFileData%rotors(iR)%TwrCd(I)   = TmpRe7( 3)
+         InputFileData%rotors(iR)%TwrTI(I)   = TmpRe7( 4)
+         InputFileData%rotors(iR)%TwrCb(I)   = TmpRe7( 5)
+         InputFileData%rotors(iR)%TwrCp(I)   = TmpRe7( 6)
+         InputFileData%rotors(iR)%TwrCa(I)   = TmpRe7( 7)
       end do
    enddo
 
@@ -1432,11 +1435,11 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, c
    INTEGER( IntKi )                          :: UnIn                                            ! Unit number for reading file
    INTEGER(IntKi)                            :: ErrStat2 , IOS                                  ! Temporary Error status
    CHARACTER(ErrMsgLen)                      :: ErrMsg2                                         ! Temporary Err msg
-   INTEGER,         PARAMETER                :: MaxCols = 10
+   INTEGER,         PARAMETER                :: MaxCols = 16
    CHARACTER(NWTC_SizeOfNumWord*(MaxCols+1)) :: Line
    INTEGER(IntKi)                            :: Indx(MaxCols)
-   CHARACTER(8),   PARAMETER                 :: AvailableChanNames(MaxCols) = (/'BLSPN   ', 'BLCRVAC ','BLSWPAC ','BLCRVANG','BLTWIST ','BLCHORD ', 'BLAFID  ', 'BLCB    ', 'BLCENBN ','BLCENBT ' /) ! in upper case only
-   LOGICAL,        PARAMETER                 :: RequiredChanNames( MaxCols) = (/.true.    , .true.    ,.true.    ,.false.   ,.true.    ,.true.    , .true.    , .false.   , .false.   ,.false.    /)
+   CHARACTER(8),   PARAMETER                 :: AvailableChanNames(MaxCols) = (/'BLSPN   ', 'BLCRVAC ','BLSWPAC ','BLCRVANG','BLTWIST ','BLCHORD ', 'BLAFID  ', 'T_C     ', 'BLCB    ', 'BLCENBN ','BLCENBT ','BLCPN   ','BLCPT   ','BLCAN   ','BLCAT   ','BLCAM   ' /) ! in upper case only
+   LOGICAL,        PARAMETER                 :: RequiredChanNames( MaxCols) = (/.true.    , .true.    ,.true.    ,.false.   ,.true.    ,.true.    , .true.    , .false.   , .false.   ,.false.   ,.false.   ,.false.   ,.false.   ,.false.   ,.false.   ,.false.   /)
 
    CHARACTER(*), PARAMETER                   :: RoutineName = 'ReadBladeInputs'
 
@@ -1503,13 +1506,25 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, c
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( BladeKInputFileData%BlAFID,  BladeKInputFileData%NumBlNds, 'BlAFID',  ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%t_c, BladeKInputFileData%NumBlNds, 't_c', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( BladeKInputFileData%BlCb, BladeKInputFileData%NumBlNds, 'BlCb', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( BladeKInputFileData%BlCenBn, BladeKInputFileData%NumBlNds, 'BlCenBn', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( BladeKInputFileData%BlCenBt, BladeKInputFileData%NumBlNds, 'BlCenBt', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+   CALL AllocAry( BladeKInputFileData%BlCpn, BladeKInputFileData%NumBlNds, 'BlCpn', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCpt, BladeKInputFileData%NumBlNds, 'BlCpt', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCan, BladeKInputFileData%NumBlNds, 'BlCan', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCat, BladeKInputFileData%NumBlNds, 'BlCat', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCam, BladeKInputFileData%NumBlNds, 'BlCam', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
       ! Return on error if we didn't allocate space for the next inputs
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL Cleanup()
@@ -1518,9 +1533,15 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, c
    
    ! Initialize in case these columns are missing (e.g., no buoyancy, or cant angle)
    BladeKInputFileData%BlCrvAng = 0.0_ReKi
+   BladeKInputFileData%t_c     = 0.0_ReKi
    BladeKInputFileData%BlCb     = 0.0_ReKi
    BladeKInputFileData%BlCenBn  = 0.0_ReKi
    BladeKInputFileData%BlCenBt  = 0.0_ReKi
+   BladeKInputFileData%BlCpn   = 0.0_ReKi
+   BladeKInputFileData%BlCpt   = 0.0_ReKi
+   BladeKInputFileData%BlCan   = 0.0_ReKi
+   BladeKInputFileData%BlCat   = 0.0_ReKi
+   BladeKInputFileData%BlCam   = 0.0_ReKi
    
    
    ! figure out what columns are specified in this file and in what order:
@@ -1628,17 +1649,47 @@ SUBROUTINE ConvertLineToCols(Line, i, Indx, BladeKInputFileData, ErrStat, ErrMsg
 
    c=Indx(8)
    IF (c > 0) THEN
-      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCb(I)
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%t_c(I)
    END IF
 
    c=Indx(9)
    IF (c > 0) THEN
-      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCenBn(I)
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCb(I)
    END IF
 
    c=Indx(10)
    IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCenBn(I)
+   END IF
+
+   c=Indx(11)
+   IF (c > 0) THEN
       READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCenBt(I)
+   END IF
+
+   c=Indx(12)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCpn(I)
+   END IF
+
+   c=Indx(13)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCpt(I)
+   END IF
+
+   c=Indx(14)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCan(I)
+   END IF
+
+   c=Indx(15)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCat(I)
+   END IF
+
+   c=Indx(16)
+   IF (c > 0) THEN
+      READ( Words(c), *, IOStat=IOS(c) ) BladeKInputFileData%BlCam(I)
    END IF
 
    IF (ANY(IOS /= 0)) THEN
@@ -1824,15 +1875,6 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, NumBlades, BladeInputFileD
       Msg = 'No'
    end if   
    WRITE (UnSu,Ec_LgFrmt) p%CavitCheck, 'CavitCheck', 'Perform cavitation check? '//TRIM(Msg)
-
-      ! Buoyancy
-   if (p%Buoyancy) then
-      Msg = 'Yes'
-   else
-      Msg = 'No'
-   end if   
-   WRITE (UnSu,Ec_LgFrmt) p%Buoyancy, 'Buoyancy', 'Include buoyancy effects? '//TRIM(Msg)
-
       ! Nacelle Drag
    if (p%NacelleDrag) then
       Msg = 'Yes'
@@ -2123,7 +2165,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       InvalidOutput( DBEMTau1 ) = .true.
    end if
 
-   if (.not. p%Buoyancy) then  ! Invalid buoyant loads
+   if ( p%MHK == MHK_None ) then  ! Invalid buoyant loads
       InvalidOutput( HbFbx ) = .true.
       InvalidOutput( HbFby ) = .true.
       InvalidOutput( HbFbz ) = .true.
@@ -2172,7 +2214,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
    end if
    
 
-   if (.not. (p%NacelleDrag .OR. p%Buoyancy)) then  ! Invalid Nacelle Total loads
+   if ((.not. p%NacelleDrag) .AND. (p%MHK == MHK_None)) then  ! Invalid Nacelle Total loads
       InvalidOutput( NcFxi ) = .true.
       InvalidOutput( NcFyi ) = .true.
       InvalidOutput( NcFzi ) = .true.

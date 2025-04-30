@@ -1005,8 +1005,8 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
       case (Module_AD)
          i = 1
          call AD_CalcWind_Rotor(ThisTime, T%AD%Input(iInput)%rotors(ModData%Ins), &
-                                T%AD%p%FlowField, T%AD%p%rotors(ModData%Ins), &
-                                T%AD%m%Inflow(iInput)%RotInflow(ModData%Ins), &
+                                T%AD%p%FlowField, T%AD%p%rotors(ModData%Ins), T%AD%p, &
+                                T%AD%m, T%AD%m%Inflow(iInput)%RotInflow(ModData%Ins), &
                                 i, ErrStat2, ErrMsg2)
          if (Failed()) return
          call RotCalcContStateDeriv(ThisTime, T%AD%Input(iInput)%rotors(ModData%Ins), &
