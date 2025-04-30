@@ -27,7 +27,6 @@ import os
 import sys
 basepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
-sys.path.insert(0, os.path.sep.join([basepath, "..", "glue-codes", "python"]))
 import platform
 import argparse
 import numpy as np
@@ -37,7 +36,7 @@ import rtestlib as rtl
 import openfastDrivers
 import pass_fail
 from errorPlotting import exportCaseSummary
-import openfast_library
+from pyOpenFAST import fast
 
 ##### Helper functions
 excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
@@ -134,20 +133,29 @@ if not noExec:
     else:
         raise SystemError("Platform could not be determined: platform.system -> {}".format(platform.system()))
 
-    openfastlib = openfast_library.FastLibAPI(openfastlib_path, caseInputFile)
-    openfastlib.fast_run()
+    openfastlib = fast.FastLibAPI(openfastlib_path, caseInputFile)
+    openfastlib.run()
 
     output_channel_names = openfastlib.output_channel_names
 
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
+rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
-testInfo = {
-    "attribute_names": output_channel_names
-}
+testInfo = {"attribute_names": output_channel_names}
 testData = openfastlib.output_values
+
+# Remove columns that shouldn't be compared
+for col in 'ConvIter ConvError NumUJac'.split():
+    try:
+        i = testInfo['attribute_names'].index(col)
+        del testInfo['attribute_names'][i]
+        testData = np.delete(testData, i, axis=1)
+    except ValueError as e:
+        continue
+
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
 
 passing_channels = pass_fail.passing_channels(testData.T, baselineData.T, rtol, atol)

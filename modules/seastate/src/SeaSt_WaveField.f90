@@ -7,8 +7,6 @@ IMPLICIT NONE
 PRIVATE
 
 ! Public functions and subroutines
-PUBLIC WaveField_GetNodeWaveElev1
-PUBLIC WaveField_GetNodeWaveElev2
 PUBLIC WaveField_GetNodeTotalWaveElev
 PUBLIC WaveField_GetNodeWaveNormal
 PUBLIC WaveField_GetNodeWaveKin
@@ -21,73 +19,15 @@ public WaveField_Interp_Setup3D, WaveField_Interp_Setup4D
 CONTAINS
 
 !-------------------- Subroutine for wave elevation ------------------!
-function WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg )
+
+FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg, Elev1, Elev2 )
    type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
    type(SeaSt_WaveField_MiscVarType),  intent(inout) :: WaveField_m
    real(DbKi),                         intent(in   ) :: Time
    real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
    integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
    character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
-
-   real(SiKi)                                        :: WaveField_GetNodeWaveElev1
-   real(SiKi)                                        :: Zeta
-   character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveElev1'
-   integer(IntKi)                                    :: errStat2
-   character(ErrMsgLen)                              :: errMsg2
-
-   ErrStat   = ErrID_None
-   ErrMsg    = ""
-
-   IF (ALLOCATED(WaveField%WaveElev1)) THEN
-      CALL WaveField_Interp_Setup3D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Zeta = WaveField_Interp_3D( WaveField%WaveElev1, WaveField_m )
-   ELSE
-      Zeta = 0.0_SiKi
-   END IF
-
-   WaveField_GetNodeWaveElev1 = Zeta
-
-end function WaveField_GetNodeWaveElev1
-
-
-function WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg )
-   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
-   type(SeaSt_WaveField_MiscVarType),  intent(inout) :: WaveField_m
-   real(DbKi),                         intent(in   ) :: Time
-   real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
-   integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
-   character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
-
-   real(SiKi)                                        :: WaveField_GetNodeWaveElev2
-   real(SiKi)                                        :: Zeta
-   character(*),                       parameter     :: RoutineName = 'WaveField_GetNodeWaveElev2'
-   integer(IntKi)                                    :: errStat2
-   character(ErrMsgLen)                              :: errMsg2
-
-   ErrStat   = ErrID_None
-   ErrMsg    = ""
-
-   IF (ALLOCATED(WaveField%WaveElev2)) THEN
-      CALL WaveField_Interp_Setup3D( Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Zeta = WaveField_Interp_3D( WaveField%WaveElev2, WaveField_m )
-   ELSE
-      Zeta = 0.0_SiKi
-   END IF
-
-   WaveField_GetNodeWaveElev2 = Zeta
-
-end function WaveField_GetNodeWaveElev2
-
-
-FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrStat, ErrMsg )
-   type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
-   type(SeaSt_WaveField_MiscVarType),  intent(inout) :: WaveField_m
-   real(DbKi),                         intent(in   ) :: Time
-   real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
-   integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
-   character(*),                       intent(  out) :: ErrMsg  ! Error message if errStat /= ErrID_None
+   real(SiKi), optional,               intent(  out) :: Elev1, Elev2 ! Elev1 and Elev2 components
 
    real(SiKi)                                        :: WaveField_GetNodeTotalWaveElev
    real(SiKi)                                        :: Zeta1, Zeta2
@@ -98,15 +38,29 @@ FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrS
    ErrStat   = ErrID_None
    ErrMsg    = ""
 
-   Zeta1 = WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
-   Zeta2 = WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
+   IF (ALLOCATED(WaveField%WaveElev1) .or. ALLOCATED(WaveField%WaveElev2)) then
+      CALL WaveField_Interp_Setup3D(Time, pos, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+
+   IF (ALLOCATED(WaveField%WaveElev1)) THEN
+      Zeta1 = WaveField_Interp_3D(WaveField%WaveElev1, WaveField_m)
+   ELSE
+      Zeta1 = 0.0_SiKi
+   END IF
+
+   IF (ALLOCATED(WaveField%WaveElev2)) THEN
+      Zeta2 = WaveField_Interp_3D(WaveField%WaveElev2, WaveField_m)
+   ELSE
+      Zeta2 = 0.0_SiKi
+   END IF
+
+   if (present(Elev1)) Elev1 = Zeta1
+   if (present(Elev2)) Elev2 = Zeta2
+
    WaveField_GetNodeTotalWaveElev = Zeta1 + Zeta2
 
-contains
-   logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      Failed = ErrStat >= AbortErrLev
-   end function
 END FUNCTION WaveField_GetNodeTotalWaveElev
 
 
@@ -114,7 +68,7 @@ SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, WaveField_m, Time, pos, r, n,
    type(SeaSt_WaveFieldType),          intent(in   ) :: WaveField
    type(SeaSt_WaveField_MiscVarType),  intent(inout) :: WaveField_m
    real(DbKi),                         intent(in   ) :: Time
-   real(ReKi),                         intent(in   ) :: pos(*)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
+   real(ReKi),                         intent(in   ) :: pos(:)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
    real(ReKi),                         intent(in   ) :: r       ! Distance for central differencing
    real(ReKi),                         intent(  out) :: n(3)    ! Free-surface normal vector
    integer(IntKi),                     intent(  out) :: ErrStat ! Error status of the operation
@@ -180,10 +134,9 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
    posXY0   = (/pos(1),pos(2),0.0_ReKi/)
    FAMCF(:) = 0.0
 
-   ! Wave elevation
-   WaveElev1 = WaveField_GetNodeWaveElev1( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
-   WaveElev2 = WaveField_GetNodeWaveElev2( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
-   WaveElev  = WaveElev1 + WaveElev2
+   ! Wave elevation (Calls WaveField_Interp_Setup3D internally so WaveField_Interp_3D can be used below)
+   WaveElev = WaveField_GetNodeTotalWaveElev(WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2, Elev1=WaveElev1, Elev2=WaveElev2)
+   if (Failed()) return
 
    IF (WaveField%WaveStMod == 0) THEN ! No wave stretching
 
@@ -237,7 +190,6 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, WaveField_m, Time, pos, forceNod
 
                ! Extrapoled wave stretching
                IF (WaveField%WaveStMod == 2) THEN
-                  CALL WaveField_Interp_Setup3D( Time, posXY, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                   FV(:) = FV(:) + WaveField_Interp_3D_vec( WaveField%PWaveVel0,  WaveField_m ) * pos(3)
                   FA(:) = FA(:) + WaveField_Interp_3D_vec( WaveField%PWaveAcc0,  WaveField_m ) * pos(3)
                   FDynP = FDynP + WaveField_Interp_3D    ( WaveField%PWaveDynP0, WaveField_m ) * pos(3)
@@ -309,7 +261,7 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNod
    posXY    = pos(1:2)
    posXY0   = (/pos(1),pos(2),0.0_ReKi/)
 
-   ! Wave elevation
+   ! Wave elevation (Calls WaveField_Interp_Setup3D internally so WaveField_Interp_3D_vec can be used below)
    WaveElev  = WaveField_GetNodeTotalWaveElev( WaveField, WaveField_m, Time, pos, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    IF (WaveField%WaveStMod == 0) THEN ! No wave stretching
@@ -346,7 +298,6 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, WaveField_m, Time, pos, forceNod
 
                ! Extrapoled wave stretching
                IF (WaveField%WaveStMod == 2) THEN
-                  CALL WaveField_Interp_Setup3D( Time, posXY, WaveField%GridParams, WaveField_m, ErrStat2, ErrMsg2 ); if (Failed()) return;
                   FV(:) = FV(:) + WaveField_Interp_3D_vec( WaveField%PWaveVel0, WaveField_m ) * pos(3)
                END IF
 
@@ -462,9 +413,17 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, F
    end if
 
    Tmp =  (p-pZero) / delta
-   Indx_Lo = INT( Tmp ) + 1    ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
-   isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo - 1, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
-
+   Indx_Lo = INT( Tmp ) + 1            ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
+   
+   ! Calculate isoparametric coordinate and clamp between -1 and 1
+   isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo - 1, ReKi)) - 1.0_ReKi 
+   if (isopc < -1.0_SiKi) then
+      isopc = -1.0_SiKi
+   else if (isopc > 1.0_SiKi) then
+      isopc = 1.0_SiKi
+   end if
+   
+   ! Check that lower index is valid
    if ( Indx_Lo < 1 ) then
       Indx_Lo = 1
       isopc = -1.0
@@ -474,8 +433,10 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, F
       end if
    end if
 
-   Indx_Hi = min( Indx_Lo + 1, nMax )     ! make sure it's a valid index, zero-based
-
+   ! Calculate hi grid index
+   Indx_Hi = min( Indx_Lo + 1, nMax )  ! make sure it's a valid index, zero-based
+   
+   ! Check that upper index is valid
    if ( Indx_Lo >= Indx_Hi ) then
       ! Need to clamp to grid boundary
       if (FirstWarn .and. Indx_Lo /= Indx_Hi) then ! don't warn if we are exactly at the boundary
@@ -485,12 +446,6 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, F
       Indx_Lo = max(Indx_Hi - 1, 1)
       isopc = 1.0
    end if
-
-   !-------------------------------------------------------------------------------------------------
-   ! to verify that we don't extrapolate, make sure isopc is bound between -1 and 1 (effectively nearest neighbor)
-   !-------------------------------------------------------------------------------------------------
-   isopc = min( 1.0_SiKi, isopc )
-   isopc = max(-1.0_SiKi, isopc )
 
 end subroutine SetCartesianXYIndex
 
@@ -521,7 +476,14 @@ subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, 
    Tmp = acos( max(-1.0_ReKi, min(1.0_ReKi, 1+(p / z_depth)) ) ) / delta
    Tmp =  nmax - 1 - Tmp
    Indx_Lo = INT( Tmp ) + 1    ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
-   isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo - 1, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
+   
+   ! Calculate isoparametric coordinate and clamp between -1 and 1
+   isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo - 1, ReKi)) - 1.0_ReKi 
+   if (isopc < -1.0_SiKi) then
+      isopc = -1.0_SiKi
+   else if (isopc > 1.0_SiKi) then
+      isopc = 1.0_SiKi
+   end if
 
    if ( Indx_Lo < 1 ) then
       Indx_Lo = 1
@@ -543,12 +505,6 @@ subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, 
       Indx_Lo = max(Indx_Hi - 1, 1)
       isopc = 1.0
    end if
-
-   !-------------------------------------------------------------------------------------------------
-   ! to verify that we don't extrapolate, make sure isopc is bound between -1 and 1 (effectively nearest neighbor)
-   !-------------------------------------------------------------------------------------------------
-   isopc = min( 1.0_SiKi, isopc )
-   isopc = max(-1.0_SiKi, isopc )
 
 end subroutine SetCartesianZIndex
 
@@ -588,13 +544,13 @@ subroutine SetTimeIndex(Time, deltaT, nMax, Indx_Lo, Indx_Hi, isopc, ErrStat, Er
    Tmp =  MOD(Tmp,real((nMax), ReKi))
    Indx_Lo = INT( Tmp )     ! convert REAL to INTEGER
 
-   isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo , ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
-
-   !-------------------------------------------------------------------------------------------------
-   ! to verify that we don't extrapolate, make sure isopc is bound between -1 and 1 (effectively nearest neighbor)
-   !-------------------------------------------------------------------------------------------------
-   isopc = min( 1.0_SiKi, isopc )
-   isopc = max(-1.0_SiKi, isopc )
+   ! Calculate isoparametric coordinate and clamp between -1 and 1
+   isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo, ReKi)) - 1.0_ReKi 
+   if (isopc < -1.0_SiKi) then
+      isopc = -1.0_SiKi
+   else if (isopc > 1.0_SiKi) then
+      isopc = 1.0_SiKi
+   end if
 
    Indx_Hi = min( Indx_Lo + 1, nMax  )     ! make sure it's a valid index, zero-based
 
@@ -616,6 +572,8 @@ subroutine WaveField_Interp_Setup4D( Time, Position, p, m, ErrStat, ErrMsg )
    character(*), parameter              :: RoutineName = 'WaveField_Interp_Setup4D'
    integer(IntKi)                       :: i
    real(SiKi)                           :: isopc(4)           ! isoparametric coordinates
+   real(SiKi)                           :: one_m_isopc(4)     ! 1 - isoparametric coordinates
+   real(SiKi)                           :: one_p_isopc(4)     ! 1 + isoparametric coordinates
    integer(IntKi)                       :: ErrStat2
    character(ErrMsgLen)                 :: ErrMsg2
 
@@ -642,24 +600,27 @@ subroutine WaveField_Interp_Setup4D( Time, Position, p, m, ErrStat, ErrMsg )
       if (Failed()) return;
    end if
 
+   ! Calculate 1+ and 1- isoparametric coordinates to avoid recalculations
+   one_m_isopc = 1.0_SiKi - isopc
+   one_p_isopc = 1.0_SiKi + isopc
+
    ! compute weighting factors
-   m%N4D( 1) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
-   m%N4D( 2) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
-   m%N4D( 3) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
-   m%N4D( 4) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
-   m%N4D( 5) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
-   m%N4D( 6) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
-   m%N4D( 7) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
-   m%N4D( 8) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
-   m%N4D( 9) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
-   m%N4D(10) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
-   m%N4D(11) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
-   m%N4D(12) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
-   m%N4D(13) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
-   m%N4D(14) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
-   m%N4D(15) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
-   m%N4D(16) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
-   m%N4D     = m%N4D / REAL( SIZE(m%N4D), SiKi )  ! normalize
+   m%N4D( 1) = one_m_isopc(1) * one_m_isopc(2) * one_m_isopc(3) * one_m_isopc(4) / 16.0_SiKi
+   m%N4D( 2) = one_p_isopc(1) * one_m_isopc(2) * one_m_isopc(3) * one_m_isopc(4) / 16.0_SiKi
+   m%N4D( 3) = one_m_isopc(1) * one_p_isopc(2) * one_m_isopc(3) * one_m_isopc(4) / 16.0_SiKi
+   m%N4D( 4) = one_p_isopc(1) * one_p_isopc(2) * one_m_isopc(3) * one_m_isopc(4) / 16.0_SiKi
+   m%N4D( 5) = one_m_isopc(1) * one_m_isopc(2) * one_p_isopc(3) * one_m_isopc(4) / 16.0_SiKi
+   m%N4D( 6) = one_p_isopc(1) * one_m_isopc(2) * one_p_isopc(3) * one_m_isopc(4) / 16.0_SiKi
+   m%N4D( 7) = one_m_isopc(1) * one_p_isopc(2) * one_p_isopc(3) * one_m_isopc(4) / 16.0_SiKi
+   m%N4D( 8) = one_p_isopc(1) * one_p_isopc(2) * one_p_isopc(3) * one_m_isopc(4) / 16.0_SiKi
+   m%N4D( 9) = one_m_isopc(1) * one_m_isopc(2) * one_m_isopc(3) * one_p_isopc(4) / 16.0_SiKi
+   m%N4D(10) = one_p_isopc(1) * one_m_isopc(2) * one_m_isopc(3) * one_p_isopc(4) / 16.0_SiKi
+   m%N4D(11) = one_m_isopc(1) * one_p_isopc(2) * one_m_isopc(3) * one_p_isopc(4) / 16.0_SiKi
+   m%N4D(12) = one_p_isopc(1) * one_p_isopc(2) * one_m_isopc(3) * one_p_isopc(4) / 16.0_SiKi
+   m%N4D(13) = one_m_isopc(1) * one_m_isopc(2) * one_p_isopc(3) * one_p_isopc(4) / 16.0_SiKi
+   m%N4D(14) = one_p_isopc(1) * one_m_isopc(2) * one_p_isopc(3) * one_p_isopc(4) / 16.0_SiKi
+   m%N4D(15) = one_m_isopc(1) * one_p_isopc(2) * one_p_isopc(3) * one_p_isopc(4) / 16.0_SiKi
+   m%N4D(16) = one_p_isopc(1) * one_p_isopc(2) * one_p_isopc(3) * one_p_isopc(4) / 16.0_SiKi
 
 contains
    logical function Failed()
@@ -679,7 +640,9 @@ subroutine WaveField_Interp_Setup3D( Time, Position, p, m, ErrStat, ErrMsg )
 
    character(*), parameter              :: RoutineName = 'WaveField_Interp_Setup3D'
    integer(IntKi)                       :: i
-   real(SiKi)                           :: isopc(4)           ! isoparametric coordinates
+   real(SiKi)                           :: isopc(3)           ! isoparametric coordinates
+   real(SiKi)                           :: one_m_isopc(3)     ! 1 - isoparametric coordinates
+   real(SiKi)                           :: one_p_isopc(3)     ! 1 + isoparametric coordinates
    integer(IntKi)                       :: ErrStat2
    character(ErrMsgLen)                 :: ErrMsg2
 
@@ -696,16 +659,19 @@ subroutine WaveField_Interp_Setup3D( Time, Position, p, m, ErrStat, ErrMsg )
       if (Failed()) return;
    enddo
 
+   ! Calculate 1+ and 1- isoparametric coordinates to avoid recalculations
+   one_m_isopc = 1.0_SiKi - isopc
+   one_p_isopc = 1.0_SiKi + isopc
+
    ! compute weighting factors
-   m%N3D(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   m%N3D(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   m%N3D(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   m%N3D(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   m%N3D(5)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   m%N3D(6)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   m%N3D(7)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   m%N3D(8)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   m%N3D     = m%N3D / REAL( SIZE(m%N3D), ReKi )  ! normalize
+   m%N3D(1)  = one_m_isopc(1) * one_m_isopc(2) * one_m_isopc(3) / 8.0_SiKi
+   m%N3D(2)  = one_p_isopc(1) * one_m_isopc(2) * one_m_isopc(3) / 8.0_SiKi
+   m%N3D(3)  = one_m_isopc(1) * one_p_isopc(2) * one_m_isopc(3) / 8.0_SiKi
+   m%N3D(4)  = one_p_isopc(1) * one_p_isopc(2) * one_m_isopc(3) / 8.0_SiKi
+   m%N3D(5)  = one_m_isopc(1) * one_m_isopc(2) * one_p_isopc(3) / 8.0_SiKi
+   m%N3D(6)  = one_p_isopc(1) * one_m_isopc(2) * one_p_isopc(3) / 8.0_SiKi
+   m%N3D(7)  = one_m_isopc(1) * one_p_isopc(2) * one_p_isopc(3) / 8.0_SiKi
+   m%N3D(8)  = one_p_isopc(1) * one_p_isopc(2) * one_p_isopc(3) / 8.0_SiKi
 
 contains
    logical function Failed()
@@ -723,26 +689,25 @@ function WaveField_Interp_4D( pKinXX, m )
    type(SeaSt_WaveField_MiscVarType),  intent(in   )  :: m
 
    real(SiKi)                          :: WaveField_Interp_4D
-   real(SiKi)                          :: u(16)    ! size 2^n
 
    ! interpolate
-   u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4) )
-   u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) )
-   u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) )
-   u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) )
-   u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4) )
-   u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) )
-   u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) )
-   u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) )
-   u( 9) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4) )
-   u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) )
-   u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) )
-   u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) )
-   u(13) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4) )
-   u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) )
-   u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) )
-   u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) )
-   WaveField_Interp_4D = SUM ( m%N4D * u )
+   WaveField_Interp_4D = &
+      m%N4D( 1) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4) ) + &
+      m%N4D( 2) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4) ) + &
+      m%N4D( 3) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4) ) + &
+      m%N4D( 4) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4) ) + &
+      m%N4D( 5) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) ) + &
+      m%N4D( 6) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4) ) + &
+      m%N4D( 7) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) ) + &
+      m%N4D( 8) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4) ) + &
+      m%N4D( 9) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) ) + &
+      m%N4D(10) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4) ) + &
+      m%N4D(11) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) ) + &
+      m%N4D(12) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4) ) + &
+      m%N4D(13) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) ) + &
+      m%N4D(14) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4) ) + &
+      m%N4D(15) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) ) + &
+      m%N4D(16) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4) )
 end function WaveField_Interp_4D
 
 
@@ -754,28 +719,27 @@ function WaveField_Interp_4D_Vec( pKinXX, m)
    type(SeaSt_WaveField_MiscVarType),  intent(in   )  :: m                    !< misc vars for interpolation
 
    real(SiKi)                                         :: WaveField_Interp_4D_Vec(3)
-   real(SiKi)                                         :: u(16)   ! size 2^n
    integer(IntKi)                                     :: iDir
 
    ! interpolate
    do iDir = 1,3
-      u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      u( 9) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      u(13) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      WaveField_Interp_4D_Vec(iDir) = SUM ( m%N4D * u )
+      WaveField_Interp_4D_Vec(iDir) = &
+         m%N4D( 1) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 2) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 3) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 4) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 5) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 6) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 7) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 8) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 9) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(10) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(11) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(12) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(13) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(14) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(15) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(16) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
    end do
 END FUNCTION WaveField_Interp_4D_Vec
 
@@ -788,28 +752,27 @@ function WaveField_Interp_4D_Vec6( pKinXX, m)
    type(SeaSt_WaveField_MiscVarType),  intent(in   )  :: m                    !< misc vars for interpolation
 
    real(SiKi)                                         :: WaveField_Interp_4D_Vec6(6)
-   real(SiKi)                                         :: u(16)   ! size 2^n
    integer(IntKi)                                     :: iDir
 
    ! interpolate
    do iDir = 1,6
-      u( 1) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u( 2) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u( 3) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u( 4) = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      u( 5) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u( 6) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u( 7) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u( 8) = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      u( 9) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u(10) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u(11) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u(12) = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      u(13) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir )
-      u(14) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir )
-      u(15) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir )
-      u(16) = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
-      WaveField_Interp_4D_Vec6(iDir) = SUM ( m%N4D * u )
+      WaveField_Interp_4D_Vec6(iDir) = &
+         m%N4D( 1) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 2) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 3) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 4) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 5) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 6) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 7) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 8) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Lo(4), iDir ) + &
+         m%N4D( 9) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(10) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(11) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(12) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(13) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(14) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(15) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir ) + &
+         m%N4D(16) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), m%Indx_Hi(4), iDir )
    end do
 END FUNCTION WaveField_Interp_4D_Vec6
 
@@ -824,19 +787,18 @@ function WaveField_Interp_3D( pKinXX, m )
 
    character(*), parameter                :: RoutineName = 'WaveField_Interp_3D'
    real(SiKi)                             :: WaveField_Interp_3D
-   real(SiKi)                             :: u(8)
    integer(IntKi)                         :: i
 
    ! interpolate
-   u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3) )
-   u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3) )
-   u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3) )
-   u(4)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3) )
-   u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3) )
-   u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3) )
-   u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3) )
-   u(8)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3) )
-   WaveField_Interp_3D = SUM ( m%N3D * u )
+   WaveField_Interp_3D = &
+      m%N3D(1) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3) ) + &
+      m%N3D(2) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3) ) + &
+      m%N3D(3) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3) ) + &
+      m%N3D(4) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3) ) + &
+      m%N3D(5) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3) ) + &
+      m%N3D(6) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3) ) + &
+      m%N3D(7) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3) ) + &
+      m%N3D(8) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3) )
 end function WaveField_Interp_3D
 
 
@@ -844,22 +806,20 @@ FUNCTION WaveField_Interp_3D_VEC( pKinXX, m )
    real(SiKi),                            intent(in   )  :: pKinXX(0:,:,:,:)  !< 3D Wave excitation data (SiKi for storage space reasons)
    type(SeaSt_WaveField_MiscVarType),     intent(inout)  :: m                 !< MiscVars
 
-   character(*), parameter                :: RoutineName = 'WaveField_Interp_3D_VEC'
    real(SiKi)                             :: WaveField_Interp_3D_VEC(3)
-   real(SiKi)                             :: u(8)
    integer(IntKi)                         :: i
 
    ! interpolate
    do i = 1,3
-      u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
-      u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
-      u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
-      u(4)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
-      u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
-      u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
-      u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
-      u(8)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
-      WaveField_Interp_3D_VEC(i) = SUM ( m%N3D * u )
+      WaveField_Interp_3D_VEC(i) = &
+         m%N3D(1) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), i ) + &
+         m%N3D(2) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i ) + &
+         m%N3D(3) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i ) + &
+         m%N3D(4) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i ) + &
+         m%N3D(5) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), i ) + &
+         m%N3D(6) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i ) + &
+         m%N3D(7) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i ) + &
+         m%N3D(8) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
    end do
 end function WaveField_Interp_3D_VEC
 
@@ -868,22 +828,20 @@ function Wavefield_Interp_3D_VEC6( pKinXX, m )
    real(SiKi),                            intent(in   )  :: pKinXX(0:,:,:,:)  !< 3D Wave excitation data (SiKi for storage space reasons)
    type(SeaSt_WaveField_MiscVarType),     intent(inout)  :: m                 !< Miscvars
 
-   character(*), parameter                :: RoutineName = 'Wavefield_Interp_3D_VEC6'
    real(SiKi)                             :: Wavefield_Interp_3D_VEC6(6)
-   real(SiKi)                             :: u(8)
    integer(IntKi)                         :: i
 
    ! interpolate
    do i = 1,6
-      u(1)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
-      u(2)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
-      u(3)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i )
-      u(4)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), i )
-      u(5)  = pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
-      u(6)  = pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
-      u(7)  = pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
-      u(8)  = pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), i )
-      Wavefield_Interp_3D_VEC6(i) = SUM ( m%N3D * u )
+      Wavefield_Interp_3D_VEC6(i) = &
+         m%N3D(1) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Lo(3), i ) + &
+         m%N3D(2) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Lo(3), i ) + &
+         m%N3D(3) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Lo(3), i ) + &
+         m%N3D(4) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Lo(3), i ) + &
+         m%N3D(5) * pKinXX( m%Indx_Lo(1), m%Indx_Lo(2), m%Indx_Hi(3), i ) + &
+         m%N3D(6) * pKinXX( m%Indx_Hi(1), m%Indx_Lo(2), m%Indx_Hi(3), i ) + &
+         m%N3D(7) * pKinXX( m%Indx_Lo(1), m%Indx_Hi(2), m%Indx_Hi(3), i ) + &
+         m%N3D(8) * pKinXX( m%Indx_Hi(1), m%Indx_Hi(2), m%Indx_Hi(3), i )
    end do
 end function Wavefield_Interp_3D_VEC6
 

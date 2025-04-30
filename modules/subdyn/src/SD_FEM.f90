@@ -1419,8 +1419,10 @@ SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
       end if
    ENDDO
 
+   p%nDOFRB = 0
    if (p%Floating .and. (p%nTP>1)) then
       p%TP1IsRBRefPt = .true.
+      p%nDOFRB = 6
       if (TPIDOffset == 0) then
          ErrStat = ErrID_Fatal
          ErrMsg  = 'For a floating structure with more than one transition pieces, must have one and only one interface joint assigned to the dummy transition piece (TPID=0) used to represent rigid-body motion. '

@@ -39,13 +39,22 @@ add_library(seastlib STATIC
 )
 target_link_libraries(seastlib nwtclibs versioninfolib)
 
+# C-bindings interface library
+add_library(seastate_c_binding SHARED 
+  src/SeaState_C_Binding.f90
+)
+target_link_libraries(seastate_c_binding seastlib versioninfolib)
+if(APPLE OR UNIX)
+  target_compile_definitions(seastate_c_binding PRIVATE IMPLICIT_DLLEXPORT)
+endif()
+
 # Driver
 add_executable(seastate_driver 
   src/SeaState_DriverCode.f90
 )
 target_link_libraries(seastate_driver seastlib)
 
-install(TARGETS seastate_driver seastlib
+install(TARGETS seastate_driver seastlib seastate_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

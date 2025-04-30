@@ -45,6 +45,7 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
+    TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
   END TYPE Orca_InitOutputType
 ! =======================
 ! =========  Orca_InputFile  =======
@@ -63,6 +64,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  Orca_MiscVarType  =======
   TYPE, PUBLIC :: Orca_MiscVarType
+    TYPE(ModJacType)  :: Jac      !< Jacobian matrices and arrays corresponding to module variables [-]
     REAL(ReKi) , DIMENSION(1:6,1:6)  :: PtfmAM = 0.0_ReKi      !< Added mass matrix results from OrcaFlex [-]
     REAL(ReKi) , DIMENSION(1:6)  :: PtfmFt = 0.0_ReKi      !< Force/moment results from OrcaFlex [-]
     REAL(ReKi) , DIMENSION(1:6)  :: F_PtfmAM = 0.0_ReKi      !< Force/moment results calculated from the added mass and accel [-]
@@ -72,6 +74,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  Orca_ParameterType  =======
   TYPE, PUBLIC :: Orca_ParameterType
+    INTEGER(IntKi)  :: iVarPtfmMeshU = 0_IntKi      !< Index of platform mesh input variable [-]
+    INTEGER(IntKi)  :: iVarPtfmMeshY = 0_IntKi      !< Index of platform mesh output variable [-]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     TYPE(DLL_Type)  :: DLL_Orca      !< Info for the OrcaFlex DLL [-]
     CHARACTER(1024)  :: SimNamePath      !< Path with simulation rootname with null end character for passing to C [-]
@@ -106,7 +110,12 @@ IMPLICIT NONE
     REAL(ReKi)  :: DummyConstrState = 0.0_ReKi      !< Dummy placeholder [-]
   END TYPE Orca_ConstraintStateType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: Orca_x_Dummy                     =   1 ! Orca%Dummy
+   integer(IntKi), public, parameter :: Orca_u_PtfmMesh                  =   2 ! Orca%PtfmMesh
+   integer(IntKi), public, parameter :: Orca_y_PtfmMesh                  =   3 ! Orca%PtfmMesh
+   integer(IntKi), public, parameter :: Orca_y_WriteOutput               =   4 ! Orca%WriteOutput
+
+contains
 
 subroutine Orca_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(Orca_InitInputType), intent(in) :: SrcInitInputData
@@ -191,6 +200,9 @@ subroutine Orca_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
    end if
+   call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine Orca_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -210,6 +222,8 @@ subroutine Orca_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyModVarsType(InitOutputData%Vars, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Orca_PackInitOutput(RF, Indata)
@@ -220,6 +234,7 @@ subroutine Orca_PackInitOutput(RF, Indata)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call RegPackAlloc(RF, InData%WriteOutputHdr)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
+   call NWTC_Library_PackModVarsType(RF, InData%Vars) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -234,6 +249,7 @@ subroutine Orca_UnPackInitOutput(RF, OutData)
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call RegUnpackAlloc(RF, OutData%WriteOutputHdr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
+   call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
 end subroutine
 
 subroutine Orca_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
@@ -332,9 +348,13 @@ subroutine Orca_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*),    intent(  out) :: ErrMsg
    integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Orca_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_CopyModJacType(SrcMiscData%Jac, DstMiscData%Jac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstMiscData%PtfmAM = SrcMiscData%PtfmAM
    DstMiscData%PtfmFt = SrcMiscData%PtfmFt
    DstMiscData%F_PtfmAM = SrcMiscData%F_PtfmAM
@@ -357,9 +377,13 @@ subroutine Orca_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(Orca_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'Orca_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyModJacType(MiscData%Jac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%AllOuts)) then
       deallocate(MiscData%AllOuts)
    end if
@@ -370,6 +394,7 @@ subroutine Orca_PackMisc(RF, Indata)
    type(Orca_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackMisc'
    if (RF%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackModJacType(RF, InData%Jac) 
    call RegPack(RF, InData%PtfmAM)
    call RegPack(RF, InData%PtfmFt)
    call RegPack(RF, InData%F_PtfmAM)
@@ -386,6 +411,7 @@ subroutine Orca_UnPackMisc(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModJacType(RF, OutData%Jac) ! Jac 
    call RegUnpack(RF, OutData%PtfmAM); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmFt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%F_PtfmAM); if (RegCheckErr(RF, RoutineName)) return
@@ -406,6 +432,8 @@ subroutine Orca_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Orca_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   DstParamData%iVarPtfmMeshU = SrcParamData%iVarPtfmMeshU
+   DstParamData%iVarPtfmMeshY = SrcParamData%iVarPtfmMeshY
    DstParamData%DT = SrcParamData%DT
    DstParamData%DLL_Orca = SrcParamData%DLL_Orca
    DstParamData%SimNamePath = SrcParamData%SimNamePath
@@ -460,6 +488,8 @@ subroutine Orca_PackParam(RF, Indata)
    integer(B4Ki)   :: i1
    integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
+   call RegPack(RF, InData%iVarPtfmMeshU)
+   call RegPack(RF, InData%iVarPtfmMeshY)
    call RegPack(RF, InData%DT)
    call DLLTypePack(RF, InData%DLL_Orca) 
    call RegPack(RF, InData%SimNamePath)
@@ -486,6 +516,8 @@ subroutine Orca_UnPackParam(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
+   call RegUnpack(RF, OutData%iVarPtfmMeshU); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iVarPtfmMeshY); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call DLLTypeUnpack(RF, OutData%DLL_Orca) ! DLL_Orca 
    call RegUnpack(RF, OutData%SimNamePath); if (RegCheckErr(RF, RoutineName)) return
@@ -1054,5 +1086,230 @@ SUBROUTINE Orca_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function Orca_InputMeshPointer(u, DL) result(Mesh)
+   type(Orca_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (Orca_u_PtfmMesh)
+       Mesh => u%PtfmMesh
+   end select
+end function
+
+function Orca_OutputMeshPointer(y, DL) result(Mesh)
+   type(Orca_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (Orca_y_PtfmMesh)
+       Mesh => y%PtfmMesh
+   end select
+end function
+
+subroutine Orca_VarsPackContState(Vars, x, ValAry)
+   type(Orca_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call Orca_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine Orca_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(Orca_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Orca_x_Dummy)
+         VarVals(1) = x%Dummy                                                 ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine Orca_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(Orca_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call Orca_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine Orca_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(Orca_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Orca_x_Dummy)
+         x%Dummy = VarVals(1)                                                 ! Scalar
+      end select
+   end associate
+end subroutine
+
+function Orca_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Orca_x_Dummy)
+       Name = "x%Dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine Orca_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(Orca_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call Orca_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine Orca_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(Orca_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Orca_x_Dummy)
+         VarVals(1) = x%Dummy                                                 ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine Orca_VarsPackInput(Vars, u, ValAry)
+   type(Orca_InputType), intent(in)        :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call Orca_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine Orca_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(Orca_InputType), intent(in)        :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Orca_u_PtfmMesh)
+         call MV_PackMesh(V, u%PtfmMesh, ValAry)                              ! Mesh
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine Orca_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(Orca_InputType), intent(inout)     :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call Orca_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine Orca_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(Orca_InputType), intent(inout)     :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Orca_u_PtfmMesh)
+         call MV_UnpackMesh(V, ValAry, u%PtfmMesh)                            ! Mesh
+      end select
+   end associate
+end subroutine
+
+function Orca_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Orca_u_PtfmMesh)
+       Name = "u%PtfmMesh"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine Orca_VarsPackOutput(Vars, y, ValAry)
+   type(Orca_OutputType), intent(in)       :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call Orca_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine Orca_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(Orca_OutputType), intent(in)       :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Orca_y_PtfmMesh)
+         call MV_PackMesh(V, y%PtfmMesh, ValAry)                              ! Mesh
+      case (Orca_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine Orca_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(Orca_OutputType), intent(inout)    :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call Orca_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine Orca_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(Orca_OutputType), intent(inout)    :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (Orca_y_PtfmMesh)
+         call MV_UnpackMesh(V, ValAry, y%PtfmMesh)                            ! Mesh
+      case (Orca_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function Orca_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (Orca_y_PtfmMesh)
+       Name = "y%PtfmMesh"
+   case (Orca_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE OrcaFlexInterface_Types
+
 !ENDOFREGISTRYGENERATEDFILE

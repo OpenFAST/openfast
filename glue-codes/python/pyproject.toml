@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools >= 40.6.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyOpenFAST"
+version = "0.1"
+description = "Python interface to OpenFAST FAST Library and physics modules."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Rafael Mudafort", email = "Rafael.Mudafort@nrel.gov" },
+]
+license = { file = "LICENSE.txt" }
+keywords = ["openfast"]
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy"
+]
+dependencies = [
+    "numpy~=2.0",
+    "matplotlib~=3.0",
+]
+
+[project.optional-dependencies]
+windio = [
+    "windio~=1.0",
+]
+develop = [
+    "pytest~=8.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["pyOpenFAST*"]
+
+[project.urls]
+Homepage = "https://github.com/openfast/openfast"
+Documentation = "https://openfast.readthedocs.io"

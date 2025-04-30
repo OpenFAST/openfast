@@ -263,17 +263,18 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
                                        ' m/s^2) differs from gravity in glue code ('//trim(num2Lstr(InitInp%gravity))//' m/s^2).')
    END IF
    
-       
+   ! Print the summary file if requested:
+   ! IF (InputFileData%SumPrint) THEN
+   !    CALL IceD_PrintSum( p, OtherState, ErrStat2, ErrMsg2 )
+   !       CALL CheckError( ErrStat2, ErrMsg2 )
+   !       IF (ErrStat >= AbortErrLev) RETURN
+   ! END IF
 
-  !     ! Print the summary file if requested:
-  ! IF (InputFileData%SumPrint) THEN
-  !    CALL IceD_PrintSum( p, OtherState, ErrStat2, ErrMsg2 )
-  !       CALL CheckError( ErrStat2, ErrMsg2 )
-  !       IF (ErrStat >= AbortErrLev) RETURN
-  ! END IF
+   ! Initialize module variables
+   CALL IceD_InitVars(u, p, x, y, m, InitOut%Vars, InputFileData, .false., ErrStat2, ErrMsg2)
+      CALL CheckError(ErrStat2, ErrMsg2)
 
-       ! Destroy the InputFileData structure (deallocate arrays)
-
+   ! Destroy the InputFileData structure (deallocate arrays)
    CALL IceD_DestroyInputFile(InputFileData, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
@@ -314,6 +315,56 @@ CONTAINS
    END SUBROUTINE CheckError
 
 END SUBROUTINE IceD_Init
+
+subroutine IceD_InitVars(u, p, x, y, m, Vars, InputFileData, Linearize, ErrStat, ErrMsg)
+   type(IceD_InputType),            intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
+   type(IceD_ParameterType),        intent(inout)  :: p              !< Parameters
+   type(IceD_ContinuousStateType),  intent(inout)  :: x              !< Continuous state
+   type(IceD_OutputType),           intent(inout)  :: y              !< Initial system outputs (outputs are not calculated;
+   type(IceD_MiscVarType),          intent(inout)  :: m              !< Misc variables for optimization (not copied in glue code)
+   type(ModVarsType),               intent(inout)  :: Vars           !< Module variables
+   type(IceD_InputFile),            intent(in)     :: InputFileData  !< Input file data
+   logical,                         intent(in)     :: Linearize      !< Flag to initialize linearization variables
+   integer(IntKi),                  intent(out)    :: ErrStat        !< Error status of the operation
+   character(*),                    intent(out)    :: ErrMsg         !< Error message if ErrStat /= ErrID_No   ne
+
+   character(*), parameter          :: RoutineName = 'IceD_InitVars'
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Initialization dependent on linearization
+   !----------------------------------------------------------------------------
+
+   call MV_InitVarsJac(Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   call IceD_CopyContState(x, m%x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call IceD_CopyContState(x, m%dxdt_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call IceD_CopyInput(u, m%u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call IceD_CopyOutput(y, m%y_lin, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE IceD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )

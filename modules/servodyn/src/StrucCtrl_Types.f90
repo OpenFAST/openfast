@@ -248,7 +248,17 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MeasVel      !< StC measured relative velocity     of tmd mass (local coordinates) signal to controller [m/s]
   END TYPE StC_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: StC_x_StC_x                      =   1 ! StC%StC_x
+   integer(IntKi), public, parameter :: StC_u_Mesh                       =   2 ! StC%Mesh(DL%i1)
+   integer(IntKi), public, parameter :: StC_u_CmdStiff                   =   3 ! StC%CmdStiff
+   integer(IntKi), public, parameter :: StC_u_CmdDamp                    =   4 ! StC%CmdDamp
+   integer(IntKi), public, parameter :: StC_u_CmdBrake                   =   5 ! StC%CmdBrake
+   integer(IntKi), public, parameter :: StC_u_CmdForce                   =   6 ! StC%CmdForce
+   integer(IntKi), public, parameter :: StC_y_Mesh                       =   7 ! StC%Mesh(DL%i1)
+   integer(IntKi), public, parameter :: StC_y_MeasDisp                   =   8 ! StC%MeasDisp
+   integer(IntKi), public, parameter :: StC_y_MeasVel                    =   9 ! StC%MeasVel
+
+contains
 
 subroutine StC_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
    type(StC_InputFile), intent(in) :: SrcInputFileData
@@ -2300,5 +2310,260 @@ SUBROUTINE StC_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Er
       y_out%MeasVel = a1*y1%MeasVel + a2*y2%MeasVel + a3*y3%MeasVel
    END IF ! check if allocated
 END SUBROUTINE
+
+function StC_InputMeshPointer(u, DL) result(Mesh)
+   type(StC_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (StC_u_Mesh)
+       Mesh => u%Mesh(DL%i1)
+   end select
+end function
+
+function StC_OutputMeshPointer(y, DL) result(Mesh)
+   type(StC_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   case (StC_y_Mesh)
+       Mesh => y%Mesh(DL%i1)
+   end select
+end function
+
+subroutine StC_VarsPackContState(Vars, x, ValAry)
+   type(StC_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call StC_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine StC_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_x_StC_x)
+         VarVals = x%StC_x(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(StC_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call StC_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine StC_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_x_StC_x)
+         x%StC_x(V%iLB:V%iUB, V%j) = VarVals                                  ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function StC_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_x_StC_x)
+       Name = "x%StC_x"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine StC_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(StC_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call StC_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine StC_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_x_StC_x)
+         VarVals = x%StC_x(V%iLB:V%iUB,V%j)                                   ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsPackInput(Vars, u, ValAry)
+   type(StC_InputType), intent(in)         :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call StC_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine StC_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_InputType), intent(in)         :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_u_Mesh)
+         call MV_PackMesh(V, u%Mesh(DL%i1), ValAry)                           ! Mesh
+      case (StC_u_CmdStiff)
+         VarVals = u%CmdStiff(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_u_CmdDamp)
+         VarVals = u%CmdDamp(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case (StC_u_CmdBrake)
+         VarVals = u%CmdBrake(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_u_CmdForce)
+         VarVals = u%CmdForce(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(StC_InputType), intent(inout)      :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call StC_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine StC_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_InputType), intent(inout)      :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_u_Mesh)
+         call MV_UnpackMesh(V, ValAry, u%Mesh(DL%i1))                         ! Mesh
+      case (StC_u_CmdStiff)
+         u%CmdStiff(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_u_CmdDamp)
+         u%CmdDamp(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      case (StC_u_CmdBrake)
+         u%CmdBrake(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_u_CmdForce)
+         u%CmdForce(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function StC_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_u_Mesh)
+       Name = "u%Mesh("//trim(Num2LStr(DL%i1))//")"
+   case (StC_u_CmdStiff)
+       Name = "u%CmdStiff"
+   case (StC_u_CmdDamp)
+       Name = "u%CmdDamp"
+   case (StC_u_CmdBrake)
+       Name = "u%CmdBrake"
+   case (StC_u_CmdForce)
+       Name = "u%CmdForce"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine StC_VarsPackOutput(Vars, y, ValAry)
+   type(StC_OutputType), intent(in)        :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call StC_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine StC_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(StC_OutputType), intent(in)        :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_y_Mesh)
+         call MV_PackMesh(V, y%Mesh(DL%i1), ValAry)                           ! Mesh
+      case (StC_y_MeasDisp)
+         VarVals = y%MeasDisp(V%iLB:V%iUB,V%j)                                ! Rank 2 Array
+      case (StC_y_MeasVel)
+         VarVals = y%MeasVel(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine StC_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(StC_OutputType), intent(inout)     :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call StC_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine StC_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(StC_OutputType), intent(inout)     :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (StC_y_Mesh)
+         call MV_UnpackMesh(V, ValAry, y%Mesh(DL%i1))                         ! Mesh
+      case (StC_y_MeasDisp)
+         y%MeasDisp(V%iLB:V%iUB, V%j) = VarVals                               ! Rank 2 Array
+      case (StC_y_MeasVel)
+         y%MeasVel(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function StC_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (StC_y_Mesh)
+       Name = "y%Mesh("//trim(Num2LStr(DL%i1))//")"
+   case (StC_y_MeasDisp)
+       Name = "y%MeasDisp"
+   case (StC_y_MeasVel)
+       Name = "y%MeasVel"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE StrucCtrl_Types
+
 !ENDOFREGISTRYGENERATEDFILE

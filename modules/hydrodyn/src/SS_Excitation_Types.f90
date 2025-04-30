@@ -101,7 +101,12 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< output Data [kN]
   END TYPE SS_Exc_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: SS_Exc_x_x                       =   1 ! SS_Exc%x
+   integer(IntKi), public, parameter :: SS_Exc_u_PtfmPos                 =   2 ! SS_Exc%PtfmPos
+   integer(IntKi), public, parameter :: SS_Exc_y_y                       =   3 ! SS_Exc%y
+   integer(IntKi), public, parameter :: SS_Exc_y_WriteOutput             =   4 ! SS_Exc%WriteOutput
+
+contains
 
 subroutine SS_Exc_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(SS_Exc_InitInputType), intent(in) :: SrcInitInputData
@@ -1151,5 +1156,226 @@ SUBROUTINE SS_Exc_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat,
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput
    END IF ! check if allocated
 END SUBROUTINE
+
+function SS_Exc_InputMeshPointer(u, DL) result(Mesh)
+   type(SS_Exc_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function SS_Exc_OutputMeshPointer(y, DL) result(Mesh)
+   type(SS_Exc_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine SS_Exc_VarsPackContState(Vars, x, ValAry)
+   type(SS_Exc_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call SS_Exc_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine SS_Exc_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SS_Exc_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SS_Exc_x_x)
+         VarVals = x%x(V%iLB:V%iUB)                                           ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SS_Exc_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SS_Exc_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call SS_Exc_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine SS_Exc_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SS_Exc_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SS_Exc_x_x)
+         x%x(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function SS_Exc_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Exc_x_x)
+       Name = "x%x"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine SS_Exc_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(SS_Exc_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call SS_Exc_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine SS_Exc_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SS_Exc_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SS_Exc_x_x)
+         VarVals = x%x(V%iLB:V%iUB)                                           ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SS_Exc_VarsPackInput(Vars, u, ValAry)
+   type(SS_Exc_InputType), intent(in)      :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call SS_Exc_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine SS_Exc_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SS_Exc_InputType), intent(in)      :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SS_Exc_u_PtfmPos)
+         VarVals = u%PtfmPos(V%iLB:V%iUB,V%j)                                 ! Rank 2 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SS_Exc_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SS_Exc_InputType), intent(inout)   :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call SS_Exc_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine SS_Exc_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SS_Exc_InputType), intent(inout)   :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SS_Exc_u_PtfmPos)
+         u%PtfmPos(V%iLB:V%iUB, V%j) = VarVals                                ! Rank 2 Array
+      end select
+   end associate
+end subroutine
+
+function SS_Exc_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Exc_u_PtfmPos)
+       Name = "u%PtfmPos"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine SS_Exc_VarsPackOutput(Vars, y, ValAry)
+   type(SS_Exc_OutputType), intent(in)     :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call SS_Exc_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine SS_Exc_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(SS_Exc_OutputType), intent(in)     :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SS_Exc_y_y)
+         VarVals = y%y(V%iLB:V%iUB)                                           ! Rank 1 Array
+      case (SS_Exc_y_WriteOutput)
+         VarVals = y%WriteOutput(V%iLB:V%iUB)                                 ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine SS_Exc_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(SS_Exc_OutputType), intent(inout)  :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call SS_Exc_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine SS_Exc_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(SS_Exc_OutputType), intent(inout)  :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (SS_Exc_y_y)
+         y%y(V%iLB:V%iUB) = VarVals                                           ! Rank 1 Array
+      case (SS_Exc_y_WriteOutput)
+         y%WriteOutput(V%iLB:V%iUB) = VarVals                                 ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function SS_Exc_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (SS_Exc_y_y)
+       Name = "y%y"
+   case (SS_Exc_y_WriteOutput)
+       Name = "y%WriteOutput"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE SS_Excitation_Types
+
 !ENDOFREGISTRYGENERATEDFILE

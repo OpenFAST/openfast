@@ -34,12 +34,12 @@ MODULE AWAE_Types
 USE InflowWind_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: XYSlice = 1      ! Extract an XY slice of data from the 3D grid [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: YZSlice = 2      ! Extract an YZ slice of data from the 3D grid [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: XZSlice = 3      ! Extract an XZ slice of data from the 3D grid [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_Uniform = 1      ! Spatial filter model for wake meandering: uniform [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_TruncJinc = 2      ! Spatial filter model for wake meandering: truncated jinc [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_WndwdJinc = 3      ! Spatial filter model for wake meandering: windowed jinc [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: XYSlice                          = 1      ! Extract an XY slice of data from the 3D grid [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: YZSlice                          = 2      ! Extract an YZ slice of data from the 3D grid [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: XZSlice                          = 3      ! Extract an XZ slice of data from the 3D grid [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_Uniform               = 1      ! Spatial filter model for wake meandering: uniform [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_TruncJinc             = 2      ! Spatial filter model for wake meandering: truncated jinc [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_WndwdJinc             = 3      ! Spatial filter model for wake meandering: windowed jinc [-]
 ! =========  AWAE_HighWindGrid  =======
   TYPE, PUBLIC :: AWAE_HighWindGrid
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: data => NULL()      !< UVW components of wind data across the high-res regularly-spaced grid [m/s]
@@ -252,7 +252,20 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WAT_k      !< Scaling factor for each wake plane and turbine (ny, nz, np, nWT) [-]
   END TYPE AWAE_InputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: AWAE_x_IfW_DummyContState        =   1 ! AWAE%IfW(DL%i1)%DummyContState
+   integer(IntKi), public, parameter :: AWAE_u_xhat_plane                =   2 ! AWAE%xhat_plane
+   integer(IntKi), public, parameter :: AWAE_u_p_plane                   =   3 ! AWAE%p_plane
+   integer(IntKi), public, parameter :: AWAE_u_Vx_wake                   =   4 ! AWAE%Vx_wake
+   integer(IntKi), public, parameter :: AWAE_u_Vy_wake                   =   5 ! AWAE%Vy_wake
+   integer(IntKi), public, parameter :: AWAE_u_Vz_wake                   =   6 ! AWAE%Vz_wake
+   integer(IntKi), public, parameter :: AWAE_u_D_wake                    =   7 ! AWAE%D_wake
+   integer(IntKi), public, parameter :: AWAE_u_WAT_k                     =   8 ! AWAE%WAT_k
+   integer(IntKi), public, parameter :: AWAE_y_Vdist_High_data           =   9 ! AWAE%Vdist_High(DL%i1)%data
+   integer(IntKi), public, parameter :: AWAE_y_V_plane                   =  10 ! AWAE%V_plane
+   integer(IntKi), public, parameter :: AWAE_y_TI_amb                    =  11 ! AWAE%TI_amb
+   integer(IntKi), public, parameter :: AWAE_y_Vx_wind_disk              =  12 ! AWAE%Vx_wind_disk
+
+contains
 
 subroutine AWAE_CopyHighWindGrid(SrcHighWindGridData, DstHighWindGridData, CtrlCode, ErrStat, ErrMsg)
    type(AWAE_HighWindGrid), intent(in) :: SrcHighWindGridData
@@ -2594,5 +2607,274 @@ subroutine AWAE_UnPackInput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%D_wake); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%WAT_k); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+function AWAE_InputMeshPointer(u, DL) result(Mesh)
+   type(AWAE_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function AWAE_OutputMeshPointer(y, DL) result(Mesh)
+   type(AWAE_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine AWAE_VarsPackContState(Vars, x, ValAry)
+   type(AWAE_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call AWAE_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine AWAE_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AWAE_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_x_IfW_DummyContState)
+         VarVals(1) = x%IfW(DL%i1)%DummyContState                             ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AWAE_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(AWAE_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call AWAE_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine AWAE_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AWAE_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_x_IfW_DummyContState)
+         x%IfW(DL%i1)%DummyContState = VarVals(1)                             ! Scalar
+      end select
+   end associate
+end subroutine
+
+function AWAE_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AWAE_x_IfW_DummyContState)
+       Name = "x%IfW("//trim(Num2LStr(DL%i1))//")%DummyContState"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine AWAE_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(AWAE_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call AWAE_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine AWAE_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AWAE_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_x_IfW_DummyContState)
+         VarVals(1) = x%IfW(DL%i1)%DummyContState                             ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AWAE_VarsPackInput(Vars, u, ValAry)
+   type(AWAE_InputType), intent(in)        :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call AWAE_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine AWAE_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AWAE_InputType), intent(in)        :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_u_xhat_plane)
+         VarVals = u%xhat_plane(V%iLB:V%iUB, V%j, V%k)                        ! Rank 3 Array
+      case (AWAE_u_p_plane)
+         VarVals = u%p_plane(V%iLB:V%iUB, V%j, V%k)                           ! Rank 3 Array
+      case (AWAE_u_Vx_wake)
+         VarVals = u%Vx_wake(V%iLB:V%iUB, V%j, V%k, V%m)                      ! Rank 4 Array
+      case (AWAE_u_Vy_wake)
+         VarVals = u%Vy_wake(V%iLB:V%iUB, V%j, V%k, V%m)                      ! Rank 4 Array
+      case (AWAE_u_Vz_wake)
+         VarVals = u%Vz_wake(V%iLB:V%iUB, V%j, V%k, V%m)                      ! Rank 4 Array
+      case (AWAE_u_D_wake)
+         VarVals = u%D_wake(V%iLB:V%iUB,V%j)                                  ! Rank 2 Array
+      case (AWAE_u_WAT_k)
+         VarVals = u%WAT_k(V%iLB:V%iUB, V%j, V%k, V%m)                        ! Rank 4 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AWAE_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(AWAE_InputType), intent(inout)     :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call AWAE_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine AWAE_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AWAE_InputType), intent(inout)     :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_u_xhat_plane)
+         u%xhat_plane(V%iLB:V%iUB, V%j, V%k) = VarVals                        ! Rank 3 Array
+      case (AWAE_u_p_plane)
+         u%p_plane(V%iLB:V%iUB, V%j, V%k) = VarVals                           ! Rank 3 Array
+      case (AWAE_u_Vx_wake)
+         u%Vx_wake(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals                      ! Rank 4 Array
+      case (AWAE_u_Vy_wake)
+         u%Vy_wake(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals                      ! Rank 4 Array
+      case (AWAE_u_Vz_wake)
+         u%Vz_wake(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals                      ! Rank 4 Array
+      case (AWAE_u_D_wake)
+         u%D_wake(V%iLB:V%iUB, V%j) = VarVals                                 ! Rank 2 Array
+      case (AWAE_u_WAT_k)
+         u%WAT_k(V%iLB:V%iUB, V%j, V%k, V%m) = VarVals                        ! Rank 4 Array
+      end select
+   end associate
+end subroutine
+
+function AWAE_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AWAE_u_xhat_plane)
+       Name = "u%xhat_plane"
+   case (AWAE_u_p_plane)
+       Name = "u%p_plane"
+   case (AWAE_u_Vx_wake)
+       Name = "u%Vx_wake"
+   case (AWAE_u_Vy_wake)
+       Name = "u%Vy_wake"
+   case (AWAE_u_Vz_wake)
+       Name = "u%Vz_wake"
+   case (AWAE_u_D_wake)
+       Name = "u%D_wake"
+   case (AWAE_u_WAT_k)
+       Name = "u%WAT_k"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine AWAE_VarsPackOutput(Vars, y, ValAry)
+   type(AWAE_OutputType), intent(in)       :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call AWAE_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine AWAE_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(AWAE_OutputType), intent(in)       :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_y_Vdist_High_data)
+         VarVals = y%Vdist_High(DL%i1)%data(V%iLB:V%iUB, V%j, V%k, V%m, V%n)  ! Rank 5 Array
+      case (AWAE_y_V_plane)
+         VarVals = y%V_plane(V%iLB:V%iUB, V%j, V%k)                           ! Rank 3 Array
+      case (AWAE_y_TI_amb)
+         VarVals = y%TI_amb(V%iLB:V%iUB)                                      ! Rank 1 Array
+      case (AWAE_y_Vx_wind_disk)
+         VarVals = y%Vx_wind_disk(V%iLB:V%iUB)                                ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine AWAE_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(AWAE_OutputType), intent(inout)    :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call AWAE_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine AWAE_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(AWAE_OutputType), intent(inout)    :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (AWAE_y_Vdist_High_data)
+         y%Vdist_High(DL%i1)%data(V%iLB:V%iUB, V%j, V%k, V%m, V%n) = VarVals  ! Rank 5 Array
+      case (AWAE_y_V_plane)
+         y%V_plane(V%iLB:V%iUB, V%j, V%k) = VarVals                           ! Rank 3 Array
+      case (AWAE_y_TI_amb)
+         y%TI_amb(V%iLB:V%iUB) = VarVals                                      ! Rank 1 Array
+      case (AWAE_y_Vx_wind_disk)
+         y%Vx_wind_disk(V%iLB:V%iUB) = VarVals                                ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function AWAE_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (AWAE_y_Vdist_High_data)
+       Name = "y%Vdist_High("//trim(Num2LStr(DL%i1))//")%data"
+   case (AWAE_y_V_plane)
+       Name = "y%V_plane"
+   case (AWAE_y_TI_amb)
+       Name = "y%TI_amb"
+   case (AWAE_y_Vx_wind_disk)
+       Name = "y%Vx_wind_disk"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE AWAE_Types
+
 !ENDOFREGISTRYGENERATEDFILE

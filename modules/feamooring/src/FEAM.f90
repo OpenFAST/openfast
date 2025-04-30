@@ -285,6 +285,14 @@ SUBROUTINE FEAM_Init(  InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, I
     y%WriteOutput = 0
 
     !............................................................................................
+    ! Module Variables
+    !............................................................................................
+
+    call FEAM_InitVars(u, p, x, y, misc, InitOut, .false., ErrStat2, ErrMsg2)
+    call CheckError( ErrStat2, ErrMsg2 )
+    if (ErrStat >= AbortErrLev) return
+
+    !............................................................................................
     ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
     !   this module must be called here:
     !............................................................................................
@@ -331,6 +339,60 @@ CONTAINS
     END SUBROUTINE CheckError 
     !----------------------------------------------------------------------------------------------------------------------------------
 END SUBROUTINE FEAM_Init
+!----------------------------------------------------------------------------------------------------------------------------------
+
+subroutine FEAM_InitVars(u, p, x, y, m, InitOut, Linearize, ErrStat, ErrMsg)
+    type(FEAM_InputType),           intent(inout)  :: u           !< An initial guess for the input; input mesh must be defined
+    type(FEAM_ParameterType),       intent(inout)  :: p           !< Parameters
+    type(FEAM_ContinuousStateType), intent(inout)  :: x           !< Continuous state
+    type(FEAM_OutputType),          intent(inout)  :: y           !< Initial system outputs (outputs are not calculated;
+    type(FEAM_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
+    type(FEAM_InitOutputType),      intent(inout)  :: InitOut     !< Output for initialization routine
+    logical,                        intent(in   )  :: Linearize   !< Flag to initialize linearization variables
+    integer(IntKi),                 intent(  out)  :: ErrStat     !< Error status of the operation
+    character(*),                   intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+ 
+    character(*), parameter :: RoutineName = 'FEAM_InitVars'
+    INTEGER(IntKi)          :: ErrStat2
+    CHARACTER(ErrMsgLen)    :: ErrMsg2
+ 
+    integer(IntKi)          :: i, j, Flags, idx
+ 
+    ErrStat = ErrID_None
+    ErrMsg = ""
+ 
+    !---------------------------------------------------------------------------
+    ! Continuous State Variables
+    !---------------------------------------------------------------------------
+ 
+    !---------------------------------------------------------------------------
+    ! Input variables
+    !---------------------------------------------------------------------------
+
+    call MV_AddMeshVar(InitOut%Vars%u, "PtFairleadDisplacement", [FieldTransDisp], &
+                       DatLoc(FEAM_u_PtFairleadDisplacement), &
+                       Mesh=u%PtFairleadDisplacement)                      
+
+    !---------------------------------------------------------------------------
+    ! Output variables
+    !---------------------------------------------------------------------------
+ 
+    call MV_AddMeshVar(InitOut%Vars%y, 'PtFairleadLoad', [FieldForce], &
+                       DatLoc(FEAM_y_PtFairleadLoad), &
+                       Mesh=y%PtFairleadLoad)
+ 
+    !---------------------------------------------------------------------------
+    ! Initialize Variables and Values
+    !---------------------------------------------------------------------------
+ 
+    CALL MV_InitVarsJac(InitOut%Vars, m%Jac, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+ 
+ contains
+    logical function Failed()
+       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+       Failed =  ErrStat >= AbortErrLev
+    end function Failed
+ end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Init_States(p, x, xd, z, OtherState, ErrStat, ErrMsg)
 

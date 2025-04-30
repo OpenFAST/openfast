@@ -34,12 +34,6 @@ typedef      ^            InitInputType       ReKi       dY_high                
 typedef      ^            InitInputType       ReKi       dZ_high                   -      -      -   "Z-component of the spatial increment of the high-resolution spatial domain for this turbine"      m
 typedef      ^            InitInputType       IntKi      TurbNum                   -      -      -   "Turbine ID number (start with 1; end with number of turbines)"      -
 typedef      ^            InitInputType CHARACTER(1024)  RootName                  -      -      -   "The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number]"      -
-typedef      ^            InitInputType       IntKi      NumSC2Ctrl                -      -      -   "Number of turbine-specific controller inputs [from supercontroller]" -
-typedef      ^            InitInputType       IntKi      NumSC2CtrlGlob            -      -      -   "Number of global controller inputs [from supercontroller]" -
-typedef      ^            InitInputType       IntKi      NumCtrl2SC                -      -      -   "Number of turbine-specific controller outputs [to supercontroller]" -
-typedef      ^            InitInputType       Logical    UseSC                     -      -      -   "Use the SuperController? (flag)" -
-typedef      ^            InitInputType       SiKi       fromSCGlob               {:}     -      -   "Global outputs from SuperController" -
-typedef      ^            InitInputType       SiKi       fromSC                   {:}     -      -   "Turbine-specific outputs from SuperController" -
 typedef      ^            InitInputType       SiKi      *Vdist_High     {:}{:}{:}{:}{:}   -      -   "Pointer to UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step"      "(m/s)"
 
 # Define outputs from the initialization routine here:
@@ -84,12 +78,10 @@ typedef      ^            ParameterType       ReKi       p_ref_Turbine          
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
-typedef      ^            InputType           SiKi       fromSCglob              {:}     -      -      "Global (turbine-independent) commands from the super controller"      "(various units)"
-typedef      ^            InputType           SiKi       fromSC                  {:}     -      -      "Turbine-dependent commands from the super controller from the super controller"      "(various units)"
+typedef    ^              InputType ReKi     dummy   - - -  "Remove this variable if you have InputType" -
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef      ^            OutputType          SiKi       toSC              {:}    -      -      "Turbine-dependent commands to the super controller"      "(various units)"
 typedef      ^            OutputType          ReKi       xHat_Disk                 {3}    -      -      "Orientation of rotor centerline, normal to disk"      "-"
 typedef      ^            OutputType          ReKi       YawErr                     -     -      -      "Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane"      "rad"
 typedef      ^            OutputType          ReKi       psi_skew                   -     -      -      "Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined"    rad

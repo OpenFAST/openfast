@@ -33,7 +33,7 @@ MODULE NWTC_Base
       ! General constants:
 
    INTEGER, PARAMETER            :: BITS_IN_ADDR  = C_INTPTR_T*8                  !< The number of bits in an address (32-bit or 64-bit).
-   INTEGER, PARAMETER            :: ErrMsgLen = 1024                              !< The maximum number of characters in an error message in the FAST framework
+   INTEGER, PARAMETER            :: ErrMsgLen = 8196                              !< The maximum number of characters in an error message in the FAST framework
    
    INTEGER(IntKi), PARAMETER     :: ChanLen   = 20                                !< The maximum allowable length of channel names (i.e., width of output columns) in the FAST framework
    INTEGER(IntKi), PARAMETER     :: OutStrLenM1 = ChanLen - 1                     !< The maximum allowable length of channel names without optional "-" or "M" at the beginning to indicate the negative of the channel
@@ -89,7 +89,7 @@ contains
    !!  and has the ability to provide a sort of traceback message of called
    !!  routines (if this is called consistently).
    !!  Modules in the FAST framework are recommended to use it.
-   subroutine SetErrStat (ErrStatLcl, ErrMessLcl, ErrStat, ErrMess, RoutineName)
+   pure subroutine SetErrStat (ErrStatLcl, ErrMessLcl, ErrStat, ErrMess, RoutineName)
       
       INTEGER(IntKi), INTENT(IN   )  :: ErrStatLcl   ! Error status of the operation
       CHARACTER(*),   INTENT(IN   )  :: ErrMessLcl   ! Error message if ErrStat /= ErrID_None

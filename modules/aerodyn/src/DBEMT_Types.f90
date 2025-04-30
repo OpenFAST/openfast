@@ -33,11 +33,11 @@ MODULE DBEMT_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_frozen = -1      ! use frozen-wake for linearization (not DBEMT) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_none = 0      ! use BEMT instead (not DBEMT) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauConst = 1      ! use constant tau1 [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauVaries = 2      ! use time-dependent tau1 [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_cont_tauConst = 3      ! use continuous formulation with constant tau1 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_frozen                     = -1      ! use frozen-wake for linearization (not DBEMT) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_none                       = 0      ! use BEMT instead (not DBEMT) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauConst                   = 1      ! use constant tau1 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_tauVaries                  = 2      ! use time-dependent tau1 [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_cont_tauConst              = 3      ! use continuous formulation with constant tau1 [-]
 ! =========  DBEMT_InitInputType  =======
   TYPE, PUBLIC :: DBEMT_InitInputType
     INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
@@ -118,7 +118,16 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vind      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tangential induced velocity (Vy*a') at node i on blade j [m/s]
   END TYPE DBEMT_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: DBEMT_x_element_vind             =   1 ! DBEMT%element(DL%i1, DL%i2)%vind
+   integer(IntKi), public, parameter :: DBEMT_x_element_vind_1           =   2 ! DBEMT%element(DL%i1, DL%i2)%vind_1
+   integer(IntKi), public, parameter :: DBEMT_u_AxInd_disk               =   3 ! DBEMT%AxInd_disk
+   integer(IntKi), public, parameter :: DBEMT_u_Un_disk                  =   4 ! DBEMT%Un_disk
+   integer(IntKi), public, parameter :: DBEMT_u_R_disk                   =   5 ! DBEMT%R_disk
+   integer(IntKi), public, parameter :: DBEMT_u_element_vind_s           =   6 ! DBEMT%element(DL%i1, DL%i2)%vind_s
+   integer(IntKi), public, parameter :: DBEMT_u_element_spanRatio        =   7 ! DBEMT%element(DL%i1, DL%i2)%spanRatio
+   integer(IntKi), public, parameter :: DBEMT_y_vind                     =   8 ! DBEMT%vind
+
+contains
 
 subroutine DBEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(DBEMT_InitInputType), intent(in) :: SrcInitInputData
@@ -1414,5 +1423,252 @@ SUBROUTINE DBEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, 
       y_out%vind = a1*y1%vind + a2*y2%vind + a3*y3%vind
    END IF ! check if allocated
 END SUBROUTINE
+
+function DBEMT_InputMeshPointer(u, DL) result(Mesh)
+   type(DBEMT_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function DBEMT_OutputMeshPointer(y, DL) result(Mesh)
+   type(DBEMT_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine DBEMT_VarsPackContState(Vars, x, ValAry)
+   type(DBEMT_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call DBEMT_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine DBEMT_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(DBEMT_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (DBEMT_x_element_vind)
+         VarVals = x%element(DL%i1, DL%i2)%vind(V%iLB:V%iUB)                  ! Rank 1 Array
+      case (DBEMT_x_element_vind_1)
+         VarVals = x%element(DL%i1, DL%i2)%vind_1(V%iLB:V%iUB)                ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine DBEMT_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(DBEMT_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call DBEMT_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine DBEMT_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(DBEMT_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (DBEMT_x_element_vind)
+         x%element(DL%i1, DL%i2)%vind(V%iLB:V%iUB) = VarVals                  ! Rank 1 Array
+      case (DBEMT_x_element_vind_1)
+         x%element(DL%i1, DL%i2)%vind_1(V%iLB:V%iUB) = VarVals                ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function DBEMT_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (DBEMT_x_element_vind)
+       Name = "x%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind"
+   case (DBEMT_x_element_vind_1)
+       Name = "x%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind_1"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine DBEMT_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(DBEMT_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call DBEMT_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine DBEMT_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(DBEMT_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (DBEMT_x_element_vind)
+         VarVals = x%element(DL%i1, DL%i2)%vind(V%iLB:V%iUB)                  ! Rank 1 Array
+      case (DBEMT_x_element_vind_1)
+         VarVals = x%element(DL%i1, DL%i2)%vind_1(V%iLB:V%iUB)                ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine DBEMT_VarsPackInput(Vars, u, ValAry)
+   type(DBEMT_InputType), intent(in)       :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call DBEMT_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine DBEMT_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(DBEMT_InputType), intent(in)       :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (DBEMT_u_AxInd_disk)
+         VarVals(1) = u%AxInd_disk                                            ! Scalar
+      case (DBEMT_u_Un_disk)
+         VarVals(1) = u%Un_disk                                               ! Scalar
+      case (DBEMT_u_R_disk)
+         VarVals(1) = u%R_disk                                                ! Scalar
+      case (DBEMT_u_element_vind_s)
+         VarVals = u%element(DL%i1, DL%i2)%vind_s(V%iLB:V%iUB)                ! Rank 1 Array
+      case (DBEMT_u_element_spanRatio)
+         VarVals(1) = u%element(DL%i1, DL%i2)%spanRatio                       ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine DBEMT_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(DBEMT_InputType), intent(inout)    :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call DBEMT_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine DBEMT_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(DBEMT_InputType), intent(inout)    :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (DBEMT_u_AxInd_disk)
+         u%AxInd_disk = VarVals(1)                                            ! Scalar
+      case (DBEMT_u_Un_disk)
+         u%Un_disk = VarVals(1)                                               ! Scalar
+      case (DBEMT_u_R_disk)
+         u%R_disk = VarVals(1)                                                ! Scalar
+      case (DBEMT_u_element_vind_s)
+         u%element(DL%i1, DL%i2)%vind_s(V%iLB:V%iUB) = VarVals                ! Rank 1 Array
+      case (DBEMT_u_element_spanRatio)
+         u%element(DL%i1, DL%i2)%spanRatio = VarVals(1)                       ! Scalar
+      end select
+   end associate
+end subroutine
+
+function DBEMT_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (DBEMT_u_AxInd_disk)
+       Name = "u%AxInd_disk"
+   case (DBEMT_u_Un_disk)
+       Name = "u%Un_disk"
+   case (DBEMT_u_R_disk)
+       Name = "u%R_disk"
+   case (DBEMT_u_element_vind_s)
+       Name = "u%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%vind_s"
+   case (DBEMT_u_element_spanRatio)
+       Name = "u%element("//trim(Num2LStr(DL%i1))//", "//trim(Num2LStr(DL%i2))//")%spanRatio"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine DBEMT_VarsPackOutput(Vars, y, ValAry)
+   type(DBEMT_OutputType), intent(in)      :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call DBEMT_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine DBEMT_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(DBEMT_OutputType), intent(in)      :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (DBEMT_y_vind)
+         VarVals = y%vind(V%iLB:V%iUB, V%j, V%k)                              ! Rank 3 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine DBEMT_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(DBEMT_OutputType), intent(inout)   :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call DBEMT_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine DBEMT_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(DBEMT_OutputType), intent(inout)   :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (DBEMT_y_vind)
+         y%vind(V%iLB:V%iUB, V%j, V%k) = VarVals                              ! Rank 3 Array
+      end select
+   end associate
+end subroutine
+
+function DBEMT_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (DBEMT_y_vind)
+       Name = "y%vind"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE DBEMT_Types
+
 !ENDOFREGISTRYGENERATEDFILE

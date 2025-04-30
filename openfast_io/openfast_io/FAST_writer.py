@@ -253,18 +253,17 @@ class InputWriter_OpenFAST(object):
             if 'option_names' in self.fst_vt['MoorDyn'] and 'WATERKIN' in self.fst_vt['MoorDyn']['option_names']:
                 self.write_WaterKin(os.path.join(self.FAST_runDirectory,self.fst_vt['MoorDyn']['WaterKin_file']))
 
-        if self.fst_vt['Fst']['CompElast'] == 2:
+        #     # look at if the the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
+        #     # if its a dictionary, just write the same BeamDyn file 
 
-            # look at if the the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
-            # if its a dictionary, just write the same BeamDyn file 
-
-            if isinstance(self.fst_vt['BeamDyn'], list):
-                for i_BD, BD in enumerate(self.fst_vt['BeamDyn']):
-
+        if isinstance(self.fst_vt['BeamDyn'], list):
+            for i_BD, BD in enumerate(self.fst_vt['BeamDyn']):
+                if not BD == {}:
                     self.fst_vt['Fst']['BDBldFile(%d)'%(i_BD+1)] = self.FAST_namingOut + '_BeamDyn_%d.dat'%(i_BD+1)
                     self.write_BeamDyn(bldInd = i_BD)
 
-            elif isinstance(self.fst_vt['BeamDyn'], dict):
+        elif isinstance(self.fst_vt['BeamDyn'], dict):
+            if not self.fst_vt['BeamDyn'] == {}:
                 self.fst_vt['Fst']['BDBldFile(1)'] = self.FAST_namingOut + '_BeamDyn.dat'
                 self.fst_vt['Fst']['BDBldFile(2)'] = self.fst_vt['Fst']['BDBldFile(1)']
                 self.fst_vt['Fst']['BDBldFile(3)'] = self.fst_vt['Fst']['BDBldFile(1)']
@@ -290,7 +289,10 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['TMax'], 'TMax', '- Total run time (s)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['DT'], 'DT', '- Recommended module time step (s)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['InterpOrder'], 'InterpOrder', '- Interpolation order for input/output time history (-) {1=linear, 2=quadratic}\n'))
-        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['NumCrctn'], 'NumCrctn', '- Number of correction iterations (-) {0=explicit calculation, i.e., no corrections}\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['NumCrctn'], 'NumCrctn', '- Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['RhoInf'], 'RhoInf', '- Convergence iteration error tolerance for tight coupling generalized alpha integrator (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['ConvTol'], 'ConvTol', '- Maximum number of convergence iterations for tight coupling generalized alpha integrator (-)\n'))
+        f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['MaxConvIter'], 'MaxConvIter', '- Number of correction iterations (-) {0=explicit calculation, i.e., no corrections}\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['DT_UJac'], 'DT_UJac', '- Time between calls to get Jacobians (s)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['UJacSclFact'], 'UJacSclFact', '- Scaling factor used in Jacobians (-)\n'))
         f.write('---------------------- FEATURE SWITCHES AND FLAGS ------------------------------\n')

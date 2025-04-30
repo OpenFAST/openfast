@@ -23,17 +23,7 @@ typedef   ^                ^             LOGICAL         Linearize  - .FALSE. - 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
 typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
-# if this module has implemented linearization, return the names of the rows/columns of the Jacobian matrices:
-#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_y      {:} - -   "Names of the outputs used in linearization" -
-#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_x      {:} - -   "Names of the continuous states used in linearization" -
-#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_xd     {:} - -   "Names of the discrete states used in linearization" -
-#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_z      {:} - -   "Names of the constraint states used in linearization" -
-#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_u      {:} - -   "Names of the inputs used in linearization" -
-#typedef   ^               InitOutputType LOGICAL               RotFrame_y      {:} - -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
-#typedef   ^               InitOutputType LOGICAL               RotFrame_x      {:} - -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame" -
-#typedef   ^               InitOutputType LOGICAL               RotFrame_xd     {:} - -   "Flag that tells FAST if the discrete states used in linearization are in the rotating frame" -
-#typedef   ^               InitOutputType LOGICAL               RotFrame_z      {:} - -   "Flag that tells FAST if the constraint states used in linearization are in the rotating frame" -
-#typedef   ^               InitOutputType LOGICAL               RotFrame_u      {:} - -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+typedef   ^               InitOutputType ModVarsType           Vars             -  - -   "Module Variables for solver and linearization" -
 
 
 # ..... States ....................................................................................................................

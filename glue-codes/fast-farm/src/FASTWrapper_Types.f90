@@ -53,12 +53,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: dZ_high = 0.0_ReKi      !< Z-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
     INTEGER(IntKi)  :: TurbNum = 0_IntKi      !< Turbine ID number (start with 1; end with number of turbines) [-]
     CHARACTER(1024)  :: RootName      !< The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number] [-]
-    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< Number of turbine-specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< Number of global controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< Number of turbine-specific controller outputs [to supercontroller] [-]
-    LOGICAL  :: UseSC = .false.      !< Use the SuperController? (flag) [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCGlob      !< Global outputs from SuperController [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Turbine-specific outputs from SuperController [-]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vdist_High => NULL()      !< Pointer to UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step [(m/s)]
   END TYPE FWrap_InitInputType
 ! =======================
@@ -107,13 +101,11 @@ IMPLICIT NONE
 ! =======================
 ! =========  FWrap_InputType  =======
   TYPE, PUBLIC :: FWrap_InputType
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCglob      !< Global (turbine-independent) commands from the super controller [(various units)]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Turbine-dependent commands from the super controller from the super controller [(various units)]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !< Remove this variable if you have InputType [-]
   END TYPE FWrap_InputType
 ! =======================
 ! =========  FWrap_OutputType  =======
   TYPE, PUBLIC :: FWrap_OutputType
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: toSC      !< Turbine-dependent commands to the super controller [(various units)]
     REAL(ReKi) , DIMENSION(1:3)  :: xHat_Disk = 0.0_ReKi      !< Orientation of rotor centerline, normal to disk [-]
     REAL(ReKi)  :: YawErr = 0.0_ReKi      !< Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane [rad]
     REAL(ReKi)  :: psi_skew = 0.0_ReKi      !< Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined [rad]
@@ -125,7 +117,19 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AzimAvg_Cq      !< Azimuthally averaged torque coefficient (normal to disk), distributed radially [-]
   END TYPE FWrap_OutputType
 ! =======================
-CONTAINS
+   integer(IntKi), public, parameter :: FWrap_x_dummy                    =   1 ! FWrap%dummy
+   integer(IntKi), public, parameter :: FWrap_u_dummy                    =   2 ! FWrap%dummy
+   integer(IntKi), public, parameter :: FWrap_y_xHat_Disk                =   3 ! FWrap%xHat_Disk
+   integer(IntKi), public, parameter :: FWrap_y_YawErr                   =   4 ! FWrap%YawErr
+   integer(IntKi), public, parameter :: FWrap_y_psi_skew                 =   5 ! FWrap%psi_skew
+   integer(IntKi), public, parameter :: FWrap_y_chi_skew                 =   6 ! FWrap%chi_skew
+   integer(IntKi), public, parameter :: FWrap_y_p_hub                    =   7 ! FWrap%p_hub
+   integer(IntKi), public, parameter :: FWrap_y_D_rotor                  =   8 ! FWrap%D_rotor
+   integer(IntKi), public, parameter :: FWrap_y_DiskAvg_Vx_Rel           =   9 ! FWrap%DiskAvg_Vx_Rel
+   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Ct               =  10 ! FWrap%AzimAvg_Ct
+   integer(IntKi), public, parameter :: FWrap_y_AzimAvg_Cq               =  11 ! FWrap%AzimAvg_Cq
+
+contains
 
 subroutine FWrap_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
    type(FWrap_InitInputType), intent(in) :: SrcInitInputData
@@ -155,34 +159,6 @@ subroutine FWrap_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%dZ_high = SrcInitInputData%dZ_high
    DstInitInputData%TurbNum = SrcInitInputData%TurbNum
    DstInitInputData%RootName = SrcInitInputData%RootName
-   DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
-   DstInitInputData%NumSC2CtrlGlob = SrcInitInputData%NumSC2CtrlGlob
-   DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
-   DstInitInputData%UseSC = SrcInitInputData%UseSC
-   if (allocated(SrcInitInputData%fromSCGlob)) then
-      LB(1:1) = lbound(SrcInitInputData%fromSCGlob)
-      UB(1:1) = ubound(SrcInitInputData%fromSCGlob)
-      if (.not. allocated(DstInitInputData%fromSCGlob)) then
-         allocate(DstInitInputData%fromSCGlob(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%fromSCGlob.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%fromSCGlob = SrcInitInputData%fromSCGlob
-   end if
-   if (allocated(SrcInitInputData%fromSC)) then
-      LB(1:1) = lbound(SrcInitInputData%fromSC)
-      UB(1:1) = ubound(SrcInitInputData%fromSC)
-      if (.not. allocated(DstInitInputData%fromSC)) then
-         allocate(DstInitInputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%fromSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%fromSC = SrcInitInputData%fromSC
-   end if
    DstInitInputData%Vdist_High => SrcInitInputData%Vdist_High
 end subroutine
 
@@ -193,12 +169,6 @@ subroutine FWrap_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FWrap_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(InitInputData%fromSCGlob)) then
-      deallocate(InitInputData%fromSCGlob)
-   end if
-   if (allocated(InitInputData%fromSC)) then
-      deallocate(InitInputData%fromSC)
-   end if
    nullify(InitInputData%Vdist_High)
 end subroutine
 
@@ -225,12 +195,6 @@ subroutine FWrap_PackInitInput(RF, Indata)
    call RegPack(RF, InData%dZ_high)
    call RegPack(RF, InData%TurbNum)
    call RegPack(RF, InData%RootName)
-   call RegPack(RF, InData%NumSC2Ctrl)
-   call RegPack(RF, InData%NumSC2CtrlGlob)
-   call RegPack(RF, InData%NumCtrl2SC)
-   call RegPack(RF, InData%UseSC)
-   call RegPackAlloc(RF, InData%fromSCGlob)
-   call RegPackAlloc(RF, InData%fromSC)
    call RegPackPtr(RF, InData%Vdist_High)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -262,12 +226,6 @@ subroutine FWrap_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%dZ_high); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TurbNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2Ctrl); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumSC2CtrlGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NumCtrl2SC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%UseSC); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSCGlob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackPtr(RF, OutData%Vdist_High, LB, UB); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -788,35 +746,10 @@ subroutine FWrap_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
-   integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'FWrap_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcInputData%fromSCglob)) then
-      LB(1:1) = lbound(SrcInputData%fromSCglob)
-      UB(1:1) = ubound(SrcInputData%fromSCglob)
-      if (.not. allocated(DstInputData%fromSCglob)) then
-         allocate(DstInputData%fromSCglob(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%fromSCglob.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInputData%fromSCglob = SrcInputData%fromSCglob
-   end if
-   if (allocated(SrcInputData%fromSC)) then
-      LB(1:1) = lbound(SrcInputData%fromSC)
-      UB(1:1) = ubound(SrcInputData%fromSC)
-      if (.not. allocated(DstInputData%fromSC)) then
-         allocate(DstInputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%fromSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInputData%fromSC = SrcInputData%fromSC
-   end if
+   DstInputData%dummy = SrcInputData%dummy
 end subroutine
 
 subroutine FWrap_DestroyInput(InputData, ErrStat, ErrMsg)
@@ -826,12 +759,6 @@ subroutine FWrap_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FWrap_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(InputData%fromSCglob)) then
-      deallocate(InputData%fromSCglob)
-   end if
-   if (allocated(InputData%fromSC)) then
-      deallocate(InputData%fromSC)
-   end if
 end subroutine
 
 subroutine FWrap_PackInput(RF, Indata)
@@ -839,8 +766,7 @@ subroutine FWrap_PackInput(RF, Indata)
    type(FWrap_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackInput'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPackAlloc(RF, InData%fromSCglob)
-   call RegPackAlloc(RF, InData%fromSC)
+   call RegPack(RF, InData%dummy)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -848,12 +774,8 @@ subroutine FWrap_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FWrap_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FWrap_UnPackInput'
-   integer(B4Ki)   :: LB(1), UB(1)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackAlloc(RF, OutData%fromSCglob); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpackAlloc(RF, OutData%fromSC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dummy); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -867,18 +789,6 @@ subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
    character(*), parameter        :: RoutineName = 'FWrap_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcOutputData%toSC)) then
-      LB(1:1) = lbound(SrcOutputData%toSC)
-      UB(1:1) = ubound(SrcOutputData%toSC)
-      if (.not. allocated(DstOutputData%toSC)) then
-         allocate(DstOutputData%toSC(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%toSC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstOutputData%toSC = SrcOutputData%toSC
-   end if
    DstOutputData%xHat_Disk = SrcOutputData%xHat_Disk
    DstOutputData%YawErr = SrcOutputData%YawErr
    DstOutputData%psi_skew = SrcOutputData%psi_skew
@@ -919,9 +829,6 @@ subroutine FWrap_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FWrap_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(OutputData%toSC)) then
-      deallocate(OutputData%toSC)
-   end if
    if (allocated(OutputData%AzimAvg_Ct)) then
       deallocate(OutputData%AzimAvg_Ct)
    end if
@@ -935,7 +842,6 @@ subroutine FWrap_PackOutput(RF, Indata)
    type(FWrap_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FWrap_PackOutput'
    if (RF%ErrStat >= AbortErrLev) return
-   call RegPackAlloc(RF, InData%toSC)
    call RegPack(RF, InData%xHat_Disk)
    call RegPack(RF, InData%YawErr)
    call RegPack(RF, InData%psi_skew)
@@ -956,7 +862,6 @@ subroutine FWrap_UnPackOutput(RF, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call RegUnpackAlloc(RF, OutData%toSC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%xHat_Disk); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%YawErr); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%psi_skew); if (RegCheckErr(RF, RoutineName)) return
@@ -967,5 +872,268 @@ subroutine FWrap_UnPackOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%AzimAvg_Ct); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%AzimAvg_Cq); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
+
+function FWrap_InputMeshPointer(u, DL) result(Mesh)
+   type(FWrap_InputType), target, intent(in) :: u
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+function FWrap_OutputMeshPointer(y, DL) result(Mesh)
+   type(FWrap_OutputType), target, intent(in) :: y
+   type(DatLoc), intent(in)               :: DL
+   type(MeshType), pointer                :: Mesh
+   nullify(Mesh)
+   select case (DL%Num)
+   end select
+end function
+
+subroutine FWrap_VarsPackContState(Vars, x, ValAry)
+   type(FWrap_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FWrap_VarPackContState(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine FWrap_VarPackContState(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FWrap_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_x_dummy)
+         VarVals(1) = x%dummy                                                 ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FWrap_VarsUnpackContState(Vars, ValAry, x)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FWrap_ContinuousStateType), intent(inout) :: x
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FWrap_VarUnpackContState(Vars%x(i), ValAry, x)
+   end do
+end subroutine
+
+subroutine FWrap_VarUnpackContState(V, ValAry, x)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FWrap_ContinuousStateType), intent(inout) :: x
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_x_dummy)
+         x%dummy = VarVals(1)                                                 ! Scalar
+      end select
+   end associate
+end subroutine
+
+function FWrap_ContinuousStateFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FWrap_x_dummy)
+       Name = "x%dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine FWrap_VarsPackContStateDeriv(Vars, x, ValAry)
+   type(FWrap_ContinuousStateType), intent(in) :: x
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%x)
+      call FWrap_VarPackContStateDeriv(Vars%x(i), x, ValAry)
+   end do
+end subroutine
+
+subroutine FWrap_VarPackContStateDeriv(V, x, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FWrap_ContinuousStateType), intent(in) :: x
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_x_dummy)
+         VarVals(1) = x%dummy                                                 ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FWrap_VarsPackInput(Vars, u, ValAry)
+   type(FWrap_InputType), intent(in)       :: u
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call FWrap_VarPackInput(Vars%u(i), u, ValAry)
+   end do
+end subroutine
+
+subroutine FWrap_VarPackInput(V, u, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FWrap_InputType), intent(in)       :: u
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_u_dummy)
+         VarVals(1) = u%dummy                                                 ! Scalar
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FWrap_VarsUnpackInput(Vars, ValAry, u)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FWrap_InputType), intent(inout)    :: u
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%u)
+      call FWrap_VarUnpackInput(Vars%u(i), ValAry, u)
+   end do
+end subroutine
+
+subroutine FWrap_VarUnpackInput(V, ValAry, u)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FWrap_InputType), intent(inout)    :: u
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_u_dummy)
+         u%dummy = VarVals(1)                                                 ! Scalar
+      end select
+   end associate
+end subroutine
+
+function FWrap_InputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FWrap_u_dummy)
+       Name = "u%dummy"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
+subroutine FWrap_VarsPackOutput(Vars, y, ValAry)
+   type(FWrap_OutputType), intent(in)      :: y
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(inout)              :: ValAry(:)
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call FWrap_VarPackOutput(Vars%y(i), y, ValAry)
+   end do
+end subroutine
+
+subroutine FWrap_VarPackOutput(V, y, ValAry)
+   type(ModVarType), intent(in)            :: V
+   type(FWrap_OutputType), intent(in)      :: y
+   real(R8Ki), intent(inout)               :: ValAry(:)
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_y_xHat_Disk)
+         VarVals = y%xHat_Disk(V%iLB:V%iUB)                                   ! Rank 1 Array
+      case (FWrap_y_YawErr)
+         VarVals(1) = y%YawErr                                                ! Scalar
+      case (FWrap_y_psi_skew)
+         VarVals(1) = y%psi_skew                                              ! Scalar
+      case (FWrap_y_chi_skew)
+         VarVals(1) = y%chi_skew                                              ! Scalar
+      case (FWrap_y_p_hub)
+         VarVals = y%p_hub(V%iLB:V%iUB)                                       ! Rank 1 Array
+      case (FWrap_y_D_rotor)
+         VarVals(1) = y%D_rotor                                               ! Scalar
+      case (FWrap_y_DiskAvg_Vx_Rel)
+         VarVals(1) = y%DiskAvg_Vx_Rel                                        ! Scalar
+      case (FWrap_y_AzimAvg_Ct)
+         VarVals = y%AzimAvg_Ct(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case (FWrap_y_AzimAvg_Cq)
+         VarVals = y%AzimAvg_Cq(V%iLB:V%iUB)                                  ! Rank 1 Array
+      case default
+         VarVals = 0.0_R8Ki
+      end select
+   end associate
+end subroutine
+
+subroutine FWrap_VarsUnpackOutput(Vars, ValAry, y)
+   type(ModVarsType), intent(in)          :: Vars
+   real(R8Ki), intent(in)                 :: ValAry(:)
+   type(FWrap_OutputType), intent(inout)   :: y
+   integer(IntKi)                         :: i
+   do i = 1, size(Vars%y)
+      call FWrap_VarUnpackOutput(Vars%y(i), ValAry, y)
+   end do
+end subroutine
+
+subroutine FWrap_VarUnpackOutput(V, ValAry, y)
+   type(ModVarType), intent(in)            :: V
+   real(R8Ki), intent(in)                  :: ValAry(:)
+   type(FWrap_OutputType), intent(inout)   :: y
+   associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
+      select case (DL%Num)
+      case (FWrap_y_xHat_Disk)
+         y%xHat_Disk(V%iLB:V%iUB) = VarVals                                   ! Rank 1 Array
+      case (FWrap_y_YawErr)
+         y%YawErr = VarVals(1)                                                ! Scalar
+      case (FWrap_y_psi_skew)
+         y%psi_skew = VarVals(1)                                              ! Scalar
+      case (FWrap_y_chi_skew)
+         y%chi_skew = VarVals(1)                                              ! Scalar
+      case (FWrap_y_p_hub)
+         y%p_hub(V%iLB:V%iUB) = VarVals                                       ! Rank 1 Array
+      case (FWrap_y_D_rotor)
+         y%D_rotor = VarVals(1)                                               ! Scalar
+      case (FWrap_y_DiskAvg_Vx_Rel)
+         y%DiskAvg_Vx_Rel = VarVals(1)                                        ! Scalar
+      case (FWrap_y_AzimAvg_Ct)
+         y%AzimAvg_Ct(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      case (FWrap_y_AzimAvg_Cq)
+         y%AzimAvg_Cq(V%iLB:V%iUB) = VarVals                                  ! Rank 1 Array
+      end select
+   end associate
+end subroutine
+
+function FWrap_OutputFieldName(DL) result(Name)
+   type(DatLoc), intent(in)      :: DL
+   character(32)                 :: Name
+   select case (DL%Num)
+   case (FWrap_y_xHat_Disk)
+       Name = "y%xHat_Disk"
+   case (FWrap_y_YawErr)
+       Name = "y%YawErr"
+   case (FWrap_y_psi_skew)
+       Name = "y%psi_skew"
+   case (FWrap_y_chi_skew)
+       Name = "y%chi_skew"
+   case (FWrap_y_p_hub)
+       Name = "y%p_hub"
+   case (FWrap_y_D_rotor)
+       Name = "y%D_rotor"
+   case (FWrap_y_DiskAvg_Vx_Rel)
+       Name = "y%DiskAvg_Vx_Rel"
+   case (FWrap_y_AzimAvg_Ct)
+       Name = "y%AzimAvg_Ct"
+   case (FWrap_y_AzimAvg_Cq)
+       Name = "y%AzimAvg_Cq"
+   case default
+       Name = "Unknown Field"
+   end select
+end function
+
 END MODULE FASTWrapper_Types
+
 !ENDOFREGISTRYGENERATEDFILE

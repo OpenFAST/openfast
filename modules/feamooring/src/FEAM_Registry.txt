@@ -69,6 +69,7 @@ typedef  ^                ^              ReKi             WtrDens    -          
 typedef  FEAMooring/FEAM  InitOutputType  CHARACTER(ChanLen)  WriteOutputHdr  {:}  -  -  "Names of the output-to-file channels"  -
 typedef  ^                ^               CHARACTER(ChanLen)  WriteOutputUnt   {:}  -   - "Units of the output-to-file channels" -
 typedef  ^                ^               ProgDesc       Ver             -   -  -   "This module's name, version, and date"   -
+typedef  ^                ^               ModVarsType    Vars           -   -  -   "Pointer to module variables"   -
 typedef  ^                ^               ReKi           LAnchxi         {:}  -  -  "Anchor coordinate"  -
 typedef  ^                ^               ReKi           LAnchyi         {:}  -  -  "Anchor coordinate"  -
 typedef  ^                ^               ReKi           LAnchzi         {:}  -  -  "Anchor coordinate"  -
@@ -114,7 +115,8 @@ typedef  ^                ^                     ReKi     EMAS0            {15}{1
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 # these could be local variables:
-typedef  ^                MiscVarType           ReKi     GLF              {:}{:}        -   -     "Global forcing matrix"  -
+typedef  ^                MiscVarType           ModJacType Jac            -             -   -     "Jacobian matrices and arrays corresponding to module variables"
+typedef  ^                ^                     ReKi     GLF              {:}{:}        -   -     "Global forcing matrix"  -
 typedef  ^                ^                     ReKi     GLK              {:}{:}{:}     -   -     "Global stiffness matrix"   -
 typedef  ^                ^                     ReKi     EMASS            {15}{15}      -   -     "Line element mass"
 typedef  ^                ^                     ReKi     ESTIF            {15}{15}      -   -     "Line element stiffness"
