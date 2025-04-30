@@ -352,14 +352,14 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_InputType  =======
   TYPE, PUBLIC :: SD_InputType
-    TYPE(MeshType)  :: TPMesh      !< Transition piece inputs on a point mesh [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: TPMesh      !< Transition piece inputs on a point mesh [-]
     TYPE(MeshType)  :: LMesh      !< Point mesh for interior node inputs [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: CableDeltaL      !< Cable tension, control input [-]
   END TYPE SD_InputType
 ! =======================
 ! =========  SD_OutputType  =======
   TYPE, PUBLIC :: SD_OutputType
-    TYPE(MeshType)  :: Y1Mesh      !< Transition piece outputs on a point mesh [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: Y1Mesh      !< Transition piece outputs on a point mesh [-]
     TYPE(MeshType)  :: Y2Mesh      !< Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh [-]
     TYPE(MeshType)  :: Y3Mesh      !< Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file [-]
@@ -414,10 +414,10 @@ IMPLICIT NONE
    integer(IntKi), public, parameter :: SD_x_qmdot                       =   2 ! SD%qmdot
    integer(IntKi), public, parameter :: SD_x_qR                          =   3 ! SD%qR
    integer(IntKi), public, parameter :: SD_x_qRdot                       =   4 ! SD%qRdot
-   integer(IntKi), public, parameter :: SD_u_TPMesh                      =   5 ! SD%TPMesh
+   integer(IntKi), public, parameter :: SD_u_TPMesh                      =   5 ! SD%TPMesh(DL%i1)
    integer(IntKi), public, parameter :: SD_u_LMesh                       =   6 ! SD%LMesh
    integer(IntKi), public, parameter :: SD_u_CableDeltaL                 =   7 ! SD%CableDeltaL
-   integer(IntKi), public, parameter :: SD_y_Y1Mesh                      =   8 ! SD%Y1Mesh
+   integer(IntKi), public, parameter :: SD_y_Y1Mesh                      =   8 ! SD%Y1Mesh(DL%i1)
    integer(IntKi), public, parameter :: SD_y_Y2Mesh                      =   9 ! SD%Y2Mesh
    integer(IntKi), public, parameter :: SD_y_Y3Mesh                      =  10 ! SD%Y3Mesh
    integer(IntKi), public, parameter :: SD_y_WriteOutput                 =  11 ! SD%WriteOutput
@@ -3816,15 +3816,29 @@ subroutine SD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
    integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call MeshCopy(SrcInputData%TPMesh, DstInputData%TPMesh, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcInputData%TPMesh)) then
+      LB(1:1) = lbound(SrcInputData%TPMesh)
+      UB(1:1) = ubound(SrcInputData%TPMesh)
+      if (.not. allocated(DstInputData%TPMesh)) then
+         allocate(DstInputData%TPMesh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%TPMesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcInputData%TPMesh(i1), DstInputData%TPMesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    call MeshCopy(SrcInputData%LMesh, DstInputData%LMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -3846,13 +3860,22 @@ subroutine SD_DestroyInput(InputData, ErrStat, ErrMsg)
    type(SD_InputType), intent(inout) :: InputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call MeshDestroy( InputData%TPMesh, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(InputData%TPMesh)) then
+      LB(1:1) = lbound(InputData%TPMesh)
+      UB(1:1) = ubound(InputData%TPMesh)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( InputData%TPMesh(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(InputData%TPMesh)
+   end if
    call MeshDestroy( InputData%LMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputData%CableDeltaL)) then
@@ -3864,8 +3887,18 @@ subroutine SD_PackInput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SD_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SD_PackInput'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
-   call MeshPack(RF, InData%TPMesh) 
+   call RegPack(RF, allocated(InData%TPMesh))
+   if (allocated(InData%TPMesh)) then
+      call RegPackBounds(RF, 1, lbound(InData%TPMesh), ubound(InData%TPMesh))
+      LB(1:1) = lbound(InData%TPMesh)
+      UB(1:1) = ubound(InData%TPMesh)
+      do i1 = LB(1), UB(1)
+         call MeshPack(RF, InData%TPMesh(i1)) 
+      end do
+   end if
    call MeshPack(RF, InData%LMesh) 
    call RegPackAlloc(RF, InData%CableDeltaL)
    if (RegCheckErr(RF, RoutineName)) return
@@ -3875,11 +3908,24 @@ subroutine SD_UnPackInput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SD_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackInput'
+   integer(B4Ki)   :: i1
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call MeshUnpack(RF, OutData%TPMesh) ! TPMesh 
+   if (allocated(OutData%TPMesh)) deallocate(OutData%TPMesh)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%TPMesh(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%TPMesh.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(RF, OutData%TPMesh(i1)) ! TPMesh 
+      end do
+   end if
    call MeshUnpack(RF, OutData%LMesh) ! LMesh 
    call RegUnpackAlloc(RF, OutData%CableDeltaL); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -3890,15 +3936,29 @@ subroutine SD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
    integer(B4Ki)                  :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call MeshCopy(SrcOutputData%Y1Mesh, DstOutputData%Y1Mesh, CtrlCode, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcOutputData%Y1Mesh)) then
+      LB(1:1) = lbound(SrcOutputData%Y1Mesh)
+      UB(1:1) = ubound(SrcOutputData%Y1Mesh)
+      if (.not. allocated(DstOutputData%Y1Mesh)) then
+         allocate(DstOutputData%Y1Mesh(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%Y1Mesh.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcOutputData%Y1Mesh(i1), DstOutputData%Y1Mesh(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    call MeshCopy(SrcOutputData%Y2Mesh, DstOutputData%Y2Mesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -3923,13 +3983,22 @@ subroutine SD_DestroyOutput(OutputData, ErrStat, ErrMsg)
    type(SD_OutputType), intent(inout) :: OutputData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call MeshDestroy( OutputData%Y1Mesh, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(OutputData%Y1Mesh)) then
+      LB(1:1) = lbound(OutputData%Y1Mesh)
+      UB(1:1) = ubound(OutputData%Y1Mesh)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( OutputData%Y1Mesh(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(OutputData%Y1Mesh)
+   end if
    call MeshDestroy( OutputData%Y2Mesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( OutputData%Y3Mesh, ErrStat2, ErrMsg2)
@@ -3943,8 +4012,18 @@ subroutine SD_PackOutput(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(SD_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SD_PackOutput'
+   integer(B4Ki)   :: i1
+   integer(B4Ki)   :: LB(1), UB(1)
    if (RF%ErrStat >= AbortErrLev) return
-   call MeshPack(RF, InData%Y1Mesh) 
+   call RegPack(RF, allocated(InData%Y1Mesh))
+   if (allocated(InData%Y1Mesh)) then
+      call RegPackBounds(RF, 1, lbound(InData%Y1Mesh), ubound(InData%Y1Mesh))
+      LB(1:1) = lbound(InData%Y1Mesh)
+      UB(1:1) = ubound(InData%Y1Mesh)
+      do i1 = LB(1), UB(1)
+         call MeshPack(RF, InData%Y1Mesh(i1)) 
+      end do
+   end if
    call MeshPack(RF, InData%Y2Mesh) 
    call MeshPack(RF, InData%Y3Mesh) 
    call RegPackAlloc(RF, InData%WriteOutput)
@@ -3955,11 +4034,24 @@ subroutine SD_UnPackOutput(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SD_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackOutput'
+   integer(B4Ki)   :: i1
    integer(B4Ki)   :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
-   call MeshUnpack(RF, OutData%Y1Mesh) ! Y1Mesh 
+   if (allocated(OutData%Y1Mesh)) deallocate(OutData%Y1Mesh)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Y1Mesh(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Y1Mesh.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshUnpack(RF, OutData%Y1Mesh(i1)) ! Y1Mesh 
+      end do
+   end if
    call MeshUnpack(RF, OutData%Y2Mesh) ! Y2Mesh 
    call MeshUnpack(RF, OutData%Y3Mesh) ! Y3Mesh 
    call RegUnpackAlloc(RF, OutData%WriteOutput); if (RegCheckErr(RF, RoutineName)) return
@@ -4724,8 +4816,12 @@ SUBROUTINE SD_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
    a1 = -(t_out - t(2))/t(2)
    a2 = t_out/t(2)
    
-   CALL MeshExtrapInterp1(u1%TPMesh, u2%TPMesh, tin, u_out%TPMesh, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   IF (ALLOCATED(u_out%TPMesh) .AND. ALLOCATED(u1%TPMesh)) THEN
+      do i1 = lbound(u_out%TPMesh,1),ubound(u_out%TPMesh,1)
+         CALL MeshExtrapInterp1(u1%TPMesh(i1), u2%TPMesh(i1), tin, u_out%TPMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
    CALL MeshExtrapInterp1(u1%LMesh, u2%LMesh, tin, u_out%LMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(u_out%CableDeltaL) .AND. ALLOCATED(u1%CableDeltaL)) THEN
@@ -4788,8 +4884,12 @@ SUBROUTINE SD_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrM
    a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
    a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
-   CALL MeshExtrapInterp2(u1%TPMesh, u2%TPMesh, u3%TPMesh, tin, u_out%TPMesh, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   IF (ALLOCATED(u_out%TPMesh) .AND. ALLOCATED(u1%TPMesh)) THEN
+      do i1 = lbound(u_out%TPMesh,1),ubound(u_out%TPMesh,1)
+         CALL MeshExtrapInterp2(u1%TPMesh(i1), u2%TPMesh(i1), u3%TPMesh(i1), tin, u_out%TPMesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
    CALL MeshExtrapInterp2(u1%LMesh, u2%LMesh, u3%LMesh, tin, u_out%LMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(u_out%CableDeltaL) .AND. ALLOCATED(u1%CableDeltaL)) THEN
@@ -4894,8 +4994,12 @@ SUBROUTINE SD_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg 
    a1 = -(t_out - t(2))/t(2)
    a2 = t_out/t(2)
    
-   CALL MeshExtrapInterp1(y1%Y1Mesh, y2%Y1Mesh, tin, y_out%Y1Mesh, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   IF (ALLOCATED(y_out%Y1Mesh) .AND. ALLOCATED(y1%Y1Mesh)) THEN
+      do i1 = lbound(y_out%Y1Mesh,1),ubound(y_out%Y1Mesh,1)
+         CALL MeshExtrapInterp1(y1%Y1Mesh(i1), y2%Y1Mesh(i1), tin, y_out%Y1Mesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
    CALL MeshExtrapInterp1(y1%Y2Mesh, y2%Y2Mesh, tin, y_out%Y2Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp1(y1%Y3Mesh, y2%Y3Mesh, tin, y_out%Y3Mesh, tin_out, ErrStat2, ErrMsg2)
@@ -4960,8 +5064,12 @@ SUBROUTINE SD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, Err
    a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
    a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
-   CALL MeshExtrapInterp2(y1%Y1Mesh, y2%Y1Mesh, y3%Y1Mesh, tin, y_out%Y1Mesh, tin_out, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   IF (ALLOCATED(y_out%Y1Mesh) .AND. ALLOCATED(y1%Y1Mesh)) THEN
+      do i1 = lbound(y_out%Y1Mesh,1),ubound(y_out%Y1Mesh,1)
+         CALL MeshExtrapInterp2(y1%Y1Mesh(i1), y2%Y1Mesh(i1), y3%Y1Mesh(i1), tin, y_out%Y1Mesh(i1), tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+   END IF ! check if allocated
    CALL MeshExtrapInterp2(y1%Y2Mesh, y2%Y2Mesh, y3%Y2Mesh, tin, y_out%Y2Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    CALL MeshExtrapInterp2(y1%Y3Mesh, y2%Y3Mesh, y3%Y3Mesh, tin, y_out%Y3Mesh, tin_out, ErrStat2, ErrMsg2)
@@ -4978,7 +5086,7 @@ function SD_InputMeshPointer(u, DL) result(Mesh)
    nullify(Mesh)
    select case (DL%Num)
    case (SD_u_TPMesh)
-       Mesh => u%TPMesh
+       Mesh => u%TPMesh(DL%i1)
    case (SD_u_LMesh)
        Mesh => u%LMesh
    end select
@@ -4991,7 +5099,7 @@ function SD_OutputMeshPointer(y, DL) result(Mesh)
    nullify(Mesh)
    select case (DL%Num)
    case (SD_y_Y1Mesh)
-       Mesh => y%Y1Mesh
+       Mesh => y%Y1Mesh(DL%i1)
    case (SD_y_Y2Mesh)
        Mesh => y%Y2Mesh
    case (SD_y_Y3Mesh)
@@ -5121,7 +5229,7 @@ subroutine SD_VarPackInput(V, u, ValAry)
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
       case (SD_u_TPMesh)
-         call MV_PackMesh(V, u%TPMesh, ValAry)                                ! Mesh
+         call MV_PackMesh(V, u%TPMesh(DL%i1), ValAry)                         ! Mesh
       case (SD_u_LMesh)
          call MV_PackMesh(V, u%LMesh, ValAry)                                 ! Mesh
       case (SD_u_CableDeltaL)
@@ -5149,7 +5257,7 @@ subroutine SD_VarUnpackInput(V, ValAry, u)
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
       case (SD_u_TPMesh)
-         call MV_UnpackMesh(V, ValAry, u%TPMesh)                              ! Mesh
+         call MV_UnpackMesh(V, ValAry, u%TPMesh(DL%i1))                       ! Mesh
       case (SD_u_LMesh)
          call MV_UnpackMesh(V, ValAry, u%LMesh)                               ! Mesh
       case (SD_u_CableDeltaL)
@@ -5163,7 +5271,7 @@ function SD_InputFieldName(DL) result(Name)
    character(32)                 :: Name
    select case (DL%Num)
    case (SD_u_TPMesh)
-       Name = "u%TPMesh"
+       Name = "u%TPMesh("//trim(Num2LStr(DL%i1))//")"
    case (SD_u_LMesh)
        Name = "u%LMesh"
    case (SD_u_CableDeltaL)
@@ -5190,7 +5298,7 @@ subroutine SD_VarPackOutput(V, y, ValAry)
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
       case (SD_y_Y1Mesh)
-         call MV_PackMesh(V, y%Y1Mesh, ValAry)                                ! Mesh
+         call MV_PackMesh(V, y%Y1Mesh(DL%i1), ValAry)                         ! Mesh
       case (SD_y_Y2Mesh)
          call MV_PackMesh(V, y%Y2Mesh, ValAry)                                ! Mesh
       case (SD_y_Y3Mesh)
@@ -5220,7 +5328,7 @@ subroutine SD_VarUnpackOutput(V, ValAry, y)
    associate (DL => V%DL, VarVals => ValAry(V%iLoc(1):V%iLoc(2)))
       select case (DL%Num)
       case (SD_y_Y1Mesh)
-         call MV_UnpackMesh(V, ValAry, y%Y1Mesh)                              ! Mesh
+         call MV_UnpackMesh(V, ValAry, y%Y1Mesh(DL%i1))                       ! Mesh
       case (SD_y_Y2Mesh)
          call MV_UnpackMesh(V, ValAry, y%Y2Mesh)                              ! Mesh
       case (SD_y_Y3Mesh)
@@ -5236,7 +5344,7 @@ function SD_OutputFieldName(DL) result(Name)
    character(32)                 :: Name
    select case (DL%Num)
    case (SD_y_Y1Mesh)
-       Name = "y%Y1Mesh"
+       Name = "y%Y1Mesh("//trim(Num2LStr(DL%i1))//")"
    case (SD_y_Y2Mesh)
        Name = "y%Y2Mesh"
    case (SD_y_Y3Mesh)

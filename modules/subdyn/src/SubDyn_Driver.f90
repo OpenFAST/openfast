@@ -182,18 +182,18 @@ PROGRAM SubDyn_Driver
       do iTP = 1,InitInData%nTP
          idx = (iTP-1)* 6 + 1
          ! Input displacements, velocities and potentially accelerations
-         u(1)%TPMesh%TranslationDisp(:,iTP) = drvrInitInp%uTPInSteady(idx:idx+2)
-         u(1)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(drvrInitInp%uTPInSteady(idx+3:idx+5),ReKi))
-         u(1)%TPMesh%TranslationVel(:,iTP)  = drvrInitInp%uDotTPInSteady(idx:idx+2)
-         u(1)%TPMesh%RotationVel(:,iTP)     = drvrInitInp%uDotTPInSteady(idx+3:idx+5)
-         u(1)%TPMesh%TranslationAcc(:,iTP)  = drvrInitInp%uDotDotTPInSteady(idx:idx+2)
-         u(1)%TPMesh%RotationAcc(:,iTP)     = drvrInitInp%uDotDotTPInSteady(idx+3:idx+5)
-         u(2)%TPMesh%TranslationDisp(:,iTP) = drvrInitInp%uTPInSteady(idx:idx+2)
-         u(2)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(drvrInitInp%uTPInSteady(idx+3:idx+5),ReKi))
-         u(2)%TPMesh%TranslationVel(:,iTP)  = drvrInitInp%uDotTPInSteady(idx:idx+2)
-         u(2)%TPMesh%RotationVel(:,iTP)     = drvrInitInp%uDotTPInSteady(idx+3:idx+5)
-         u(2)%TPMesh%TranslationAcc(:,iTP)  = drvrInitInp%uDotDotTPInSteady(idx:idx+2)
-         u(2)%TPMesh%RotationAcc(:,iTP)     = drvrInitInp%uDotDotTPInSteady(idx+3:idx+5)
+         u(1)%TPMesh(iTP)%TranslationDisp(:,1) = drvrInitInp%uTPInSteady(idx:idx+2)
+         u(1)%TPMesh(iTP)%Orientation(:,:,1)   = EulerConstructZYX(REAL(drvrInitInp%uTPInSteady(idx+3:idx+5),ReKi))
+         u(1)%TPMesh(iTP)%TranslationVel(:,1)  = drvrInitInp%uDotTPInSteady(idx:idx+2)
+         u(1)%TPMesh(iTP)%RotationVel(:,1)     = drvrInitInp%uDotTPInSteady(idx+3:idx+5)
+         u(1)%TPMesh(iTP)%TranslationAcc(:,1)  = drvrInitInp%uDotDotTPInSteady(idx:idx+2)
+         u(1)%TPMesh(iTP)%RotationAcc(:,1)     = drvrInitInp%uDotDotTPInSteady(idx+3:idx+5)
+         u(2)%TPMesh(iTP)%TranslationDisp(:,1) = drvrInitInp%uTPInSteady(idx:idx+2)
+         u(2)%TPMesh(iTP)%Orientation(:,:,1)   = EulerConstructZYX(REAL(drvrInitInp%uTPInSteady(idx+3:idx+5),ReKi))
+         u(2)%TPMesh(iTP)%TranslationVel(:,1)  = drvrInitInp%uDotTPInSteady(idx:idx+2)
+         u(2)%TPMesh(iTP)%RotationVel(:,1)     = drvrInitInp%uDotTPInSteady(idx+3:idx+5)
+         u(2)%TPMesh(iTP)%TranslationAcc(:,1)  = drvrInitInp%uDotDotTPInSteady(idx:idx+2)
+         u(2)%TPMesh(iTP)%RotationAcc(:,1)     = drvrInitInp%uDotDotTPInSteady(idx+3:idx+5)
      end do
    else
       ! Allocate array for time varying transition piece motion to be populated during time loop
@@ -245,23 +245,23 @@ PROGRAM SubDyn_Driver
          do iTP = 1,InitInData%nTP
             idx = (iTP-1)*18 + 1
             ! Input displacements, velocities and potentially accelerations
-            u(1)%TPMesh%TranslationDisp(:,iTP) = SDinStep(idx:idx+2)
-            u(1)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDinStep(idx+3:idx+5),ReKi))
-            u(1)%TPMesh%TranslationVel(:,iTP)  = SDinStep(idx+6 :idx+8)
-            u(1)%TPMesh%RotationVel(:,iTP)     = SDinStep(idx+9 :idx+11)
-            u(1)%TPMesh%TranslationAcc(:,iTP)  = SDinStep(idx+12:idx+14)
-            u(1)%TPMesh%RotationAcc(:,iTP)     = SDinStep(idx+15:idx+17)
+            u(1)%TPMesh(iTP)%TranslationDisp(:,1) = SDinStep(idx:idx+2)
+            u(1)%TPMesh(iTP)%Orientation(:,:,1)   = EulerConstructZYX(REAL(SDinStep(idx+3:idx+5),ReKi))
+            u(1)%TPMesh(iTP)%TranslationVel(:,1)  = SDinStep(idx+6 :idx+8)
+            u(1)%TPMesh(iTP)%RotationVel(:,1)     = SDinStep(idx+9 :idx+11)
+            u(1)%TPMesh(iTP)%TranslationAcc(:,1)  = SDinStep(idx+12:idx+14)
+            u(1)%TPMesh(iTP)%RotationAcc(:,1)     = SDinStep(idx+15:idx+17)
          end do
          call interpTimeValue(drvrInitInp%SDin,InputTime(2), iLast2 ,SDInStep)
          do iTP = 1,InitInData%nTP
             idx = (iTP-1)*18 + 1
             ! Input displacements, velocities and potentially accelerations
-            u(2)%TPMesh%TranslationDisp(:,iTP) = SDinStep(idx:idx+2)
-            u(2)%TPMesh%Orientation(:,:,iTP)   = EulerConstructZYX(REAL(SDinStep(idx+3:idx+5),ReKi))
-            u(2)%TPMesh%TranslationVel(:,iTP)  = SDinStep(idx+6 :idx+8)
-            u(2)%TPMesh%RotationVel(:,iTP)     = SDinStep(idx+9 :idx+11)
-            u(2)%TPMesh%TranslationAcc(:,iTP)  = SDinStep(idx+12:idx+14)
-            u(2)%TPMesh%RotationAcc(:,iTP)     = SDinStep(idx+15:idx+17)
+            u(2)%TPMesh(iTP)%TranslationDisp(:,1) = SDinStep(idx:idx+2)
+            u(2)%TPMesh(iTP)%Orientation(:,:,1)   = EulerConstructZYX(REAL(SDinStep(idx+3:idx+5),ReKi))
+            u(2)%TPMesh(iTP)%TranslationVel(:,1)  = SDinStep(idx+6 :idx+8)
+            u(2)%TPMesh(iTP)%RotationVel(:,1)     = SDinStep(idx+9 :idx+11)
+            u(2)%TPMesh(iTP)%TranslationAcc(:,1)  = SDinStep(idx+12:idx+14)
+            u(2)%TPMesh(iTP)%RotationAcc(:,1)     = SDinStep(idx+15:idx+17)
          end do
       end if
 

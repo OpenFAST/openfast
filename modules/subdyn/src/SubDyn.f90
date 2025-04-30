@@ -53,43 +53,54 @@ CONTAINS
 SUBROUTINE CreateTPMeshes( nTP, TP_RefPoint, inputMesh, outputMesh, ErrStat, ErrMsg )
    INTEGER(IntKi),            INTENT( IN    ) :: nTP
    REAL(ReKi),                INTENT( IN    ) :: TP_RefPoint(3,nTP)
-   TYPE(MeshType),            INTENT( INOUT ) :: inputMesh  ! u%TPMesh
-   TYPE(MeshType),            INTENT( INOUT ) :: outputMesh ! y%Y1Mesh
+   TYPE(MeshType),ALLOCATABLE,INTENT( INOUT ) :: inputMesh(:)  ! u%TPMesh
+   TYPE(MeshType),ALLOCATABLE,INTENT( INOUT ) :: outputMesh(:) ! y%Y1Mesh
    INTEGER(IntKi),            INTENT(   OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    
    INTEGER(IntKi)                             :: i
 
-   ! NOTE: The initialization of the fields for these meshes is to be handled by FAST/Driver
-   CALL MeshCreate( BlankMesh        = inputMesh         &
-                  ,IOS               = COMPONENT_INPUT   &
-                  ,Nnodes            = nTP               &
-                  ,ErrStat           = ErrStat           &
-                  ,ErrMess           = ErrMsg            &
-                  ,TranslationDisp   = .TRUE.            &
-                  ,Orientation       = .TRUE.            &
-                  ,TranslationVel    = .TRUE.            &
-                  ,RotationVel       = .TRUE.            &
-                  ,TranslationAcc    = .TRUE.            &
-                  ,RotationAcc       = .TRUE.            )
+   Allocate(inputMesh(nTP), STAT=ErrStat) 
+   IF (ErrStat/=0) THEN
+      ErrStat = ErrID_FATAL 
+      return
+   END IF
+   Allocate(outputMesh(nTP), STAT=ErrStat)
+   IF (ErrStat/=0) THEN
+      ErrStat = ErrID_FATAL 
+      return
+   END IF
 
-   ! Create the node and mesh element, note: assumes identiy matrix as reference orientation
+   ! NOTE: The initialization of the fields for these meshes is to be handled by FAST/Driver
    do i = 1,nTP
-      CALL MeshPositionNode (inputMesh, i, TP_RefPoint(:,i), ErrStat, ErrMsg); IF(ErrStat>=AbortErrLev) return
-      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, i); IF(ErrStat>=AbortErrLev) return
+      CALL MeshCreate( BlankMesh        = inputMesh(i)      &
+                     ,IOS               = COMPONENT_INPUT   &
+                     ,Nnodes            = 1                 &
+                     ,ErrStat           = ErrStat           &
+                     ,ErrMess           = ErrMsg            &
+                     ,TranslationDisp   = .TRUE.            &
+                     ,Orientation       = .TRUE.            &
+                     ,TranslationVel    = .TRUE.            &
+                     ,RotationVel       = .TRUE.            &
+                     ,TranslationAcc    = .TRUE.            &
+                     ,RotationAcc       = .TRUE.            )
+
+      ! Create the node and mesh element, note: assumes identiy matrix as reference orientation
+      CALL MeshPositionNode (inputMesh(i), 1, TP_RefPoint(:,i), ErrStat, ErrMsg); IF(ErrStat>=AbortErrLev) return
+      CALL MeshConstructElement(inputMesh(i), ELEMENT_POINT, ErrStat, ErrMsg, 1); IF(ErrStat>=AbortErrLev) return
+      CALL MeshCommit( inputMesh(i), ErrStat, ErrMsg); if(ErrStat >= AbortErrLev) return
+   
+      ! Create the Transition Piece reference point output mesh as a sibling copy of the input mesh
+      CALL MeshCopy ( SrcMesh      = inputMesh(i)           &
+                     ,DestMesh     = outputMesh(i)          &
+                     ,CtrlCode     = MESH_SIBLING           &
+                     ,IOS          = COMPONENT_OUTPUT       &
+                     ,ErrStat      = ErrStat                &
+                     ,ErrMess      = ErrMsg                 &
+                     ,Force        = .TRUE.                 &
+                     ,Moment       = .TRUE.                 )
    enddo
 
-   CALL MeshCommit( inputMesh, ErrStat, ErrMsg); if(ErrStat >= AbortErrLev) return
-   
-   ! Create the Transition Piece reference point output mesh as a sibling copy of the input mesh
-   CALL MeshCopy ( SrcMesh      = inputMesh              &
-                  ,DestMesh     = outputMesh             &
-                  ,CtrlCode     = MESH_SIBLING           &
-                  ,IOS          = COMPONENT_OUTPUT       &
-                  ,ErrStat      = ErrStat                &
-                  ,ErrMess      = ErrMsg                 &
-                  ,Force        = .TRUE.                 &
-                  ,Moment       = .TRUE.                 ) 
 END SUBROUTINE CreateTPMeshes
 !---------------------------------------------------------------------------
 !> Create output (Y2, for motion) and input (u, for forces)meshes, based on SubDyn nodes
@@ -533,25 +544,29 @@ subroutine SD_InitVars(Vars, Init, u, p, x, y, m, InitOut, Linearize, ErrStat, E
    dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
    maxDim = max(dx, dy, dz)
 
-   call MV_AddMeshVar(Vars%u, "TPMesh", MotionFields, DatLoc(SD_u_TPMesh), &
-                      Mesh=u%TPMesh, &
-                      Perturbs=[2.0_R8Ki*D2R_D, &  ! TranslationDisp
-                                2.0_R8Ki*D2R_D, &  ! Orientation
-                                2.0_R8Ki*D2R_D, &  ! TranslationVel
-                                2.0_R8Ki*D2R_D, &  ! RotationVel
-                                2.0_R8Ki*D2R_D, &  ! TranslationAcc
-                                2.0_R8Ki*D2R_D])   ! RotationAcc
+   do i = 1, size(u%TPMesh)
+      call MV_AddMeshVar(Vars%u, "TPMesh"//trim(Num2Lstr(i)), MotionFields, DatLoc(SD_u_TPMesh, i), &
+                         Mesh=u%TPMesh(i), &
+                         Perturbs=[2.0_R8Ki*D2R_D, &  ! TranslationDisp
+                                   2.0_R8Ki*D2R_D, &  ! Orientation
+                                   2.0_R8Ki*D2R_D, &  ! TranslationVel
+                                   2.0_R8Ki*D2R_D, &  ! RotationVel
+                                   2.0_R8Ki*D2R_D, &  ! TranslationAcc
+                                   2.0_R8Ki*D2R_D])   ! RotationAcc
+   enddo
 
    call MV_AddMeshVar(Vars%u, "LMesh", LoadFields, DatLoc(SD_u_LMesh), &
                       Mesh=u%LMesh, &
                       Perturbs=[170*maxDim**2, 14*maxDim**3]) ! Force, Moment
-   
+
    !----------------------------------------------------------------------------
    ! Output variables
    !----------------------------------------------------------------------------
 
    ! Mesh variables
-   call MV_AddMeshVar(Vars%y, 'Y1Mesh', LoadFields, DatLoc(SD_y_Y1Mesh), Mesh=y%Y1Mesh)
+   do i = 1,size(y%Y1Mesh)
+      call MV_AddMeshVar(Vars%y, 'Y1Mesh'//trim(Num2Lstr(i)), LoadFields, DatLoc(SD_y_Y1Mesh,i), Mesh=y%Y1Mesh(i))
+   enddo
    call MV_AddMeshVar(Vars%y, 'Y2Mesh', MotionFields, DatLoc(SD_y_Y2Mesh), Mesh=y%Y2Mesh)
    call MV_AddMeshVar(Vars%y, 'Y3Mesh', MotionFields, DatLoc(SD_y_Y3Mesh), Mesh=y%Y3Mesh)
 
@@ -880,21 +895,21 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             do i = 2,p%nTP
                Y1_GuyanLoadCorrection = -cross_product( matmul( Rb2g , m%u_TP((6*(i-1)+1):(6*(i-1)+3)) ) , m%Y1((6*(i-1)+1):(6*(i-1)+3)) )
                m%Y1((6*(i-1)+4):(6*(i-1)+6)) = m%Y1((6*(i-1)+4):(6*(i-1)+6)) + Y1_GuyanLoadCorrection
-               y%Y1Mesh%Force (:,i-1) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
-               y%Y1Mesh%Moment(:,i-1) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
+               y%Y1Mesh(i-1)%Force (:,1) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
+               y%Y1Mesh(i-1)%Moment(:,1) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
             enddo
          else
             do i = 1,p%nTP
-               y%Y1Mesh%Force (:,i) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
-               y%Y1Mesh%Moment(:,i) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
+               y%Y1Mesh(i)%Force (:,1) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
+               y%Y1Mesh(i)%Moment(:,1) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
             enddo
          end if
       else if (.not.p%floating) then
          do i = 1,p%nTP
             Y1_GuyanLoadCorrection = -cross_product( m%u_TP((6*(i-1)+1):(6*(i-1)+3)) , m%Y1((6*(i-1)+1):(6*(i-1)+3)) )
             m%Y1((6*(i-1)+4):(6*(i-1)+6)) = m%Y1((6*(i-1)+4):(6*(i-1)+6)) + Y1_GuyanLoadCorrection
-            y%Y1Mesh%Force (:,i) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
-            y%Y1Mesh%Moment(:,i) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
+            y%Y1Mesh(i)%Force (:,1) = m%Y1((6*(i-1)+1):(6*(i-1)+3))
+            y%Y1Mesh(i)%Moment(:,1) = m%Y1((6*(i-1)+4):(6*(i-1)+6))
          enddo
       end if
 
@@ -2426,12 +2441,12 @@ SUBROUTINE SD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
    if (present(dXdx)) then
 
       ! If analytical linearization is enabled
-      if (ANALYTICAL_LIN) then
+      ! if (ANALYTICAL_LIN) then
 
-         ! Calculate dXdx as state matrix, allocation occurs in function
-         call StateMatrices(p, ErrStat2, ErrMsg2, AA=dXdx); if(Failed()) return
+      !    ! Calculate dXdx as state matrix, allocation occurs in function
+      !    call StateMatrices(p, ErrStat2, ErrMsg2, AA=dXdx); if(Failed()) return
 
-      else
+      ! else
          
          ! Allocate dXdx if not allocated
          if (.not. allocated(dXdx)) then
@@ -2463,7 +2478,7 @@ SUBROUTINE SD_JacobianPContState(Vars, t, u, p, x, xd, z, OtherState, y, m, ErrS
                dXdx(:,col) = (m%Jac%x_pos - m%Jac%x_neg) / (2.0_R8Ki * Vars%x(i)%Perturb)
             end do
          end do
-      endif ! analytical or numerical
+      ! endif ! analytical or numerical
    end if
 
    if (present(dXddx)) then
@@ -3464,41 +3479,41 @@ SUBROUTINE GetUTP(u, p, x, m, ErrStat, ErrMsg, bPrime)
          DO iTP = 2,p%nTP
             Idx = 6*iTP-5
             ! Instantaneous vector from rigid-body reference point (dummy TP1) to the current TP in global earth-fixed system (X_TPj-XTP1)
-            rIP = ( u%TPMesh%Position(:,iTP-1) + u%TPMesh%TranslationDisp(:,iTP-1) ) - (p%RBRefPt + x%qR(1:3))
+            rIP = ( u%TPMesh(iTP-1)%Position(:,1) + u%TPMesh(iTP-1)%TranslationDisp(:,1) ) - (p%RBRefPt + x%qR(1:3))
             m%u_TP(Idx:(Idx+2))        = matmul(Rg2b,rIP)-p%rTP0(:,iTP-1)
-            m%u_TP((Idx+3):(Idx+5))    = GetSmllRotAngs(matmul(u%TPMesh%Orientation(:,:,iTP-1),transpose(Rg2b)), ErrStat2, ErrMsg2); if(Failed()) return
-            m%udot_TP(Idx:(Idx+2))     = matmul(Rg2b,(u%TPMesh%TranslationVel(:,iTP-1)-x%qRdot(1:3))-CROSS_PRODUCT( omega, rIP ))
-            m%udot_TP((Idx+3):(Idx+5)) = matmul(Rg2b,u%TPMesh%RotationVel(:,iTP-1)-omega)
+            m%u_TP((Idx+3):(Idx+5))    = GetSmllRotAngs(matmul(u%TPMesh(iTP-1)%Orientation(:,:,1),transpose(Rg2b)), ErrStat2, ErrMsg2); if(Failed()) return
+            m%udot_TP(Idx:(Idx+2))     = matmul(Rg2b,(u%TPMesh(iTP-1)%TranslationVel(:,1)-x%qRdot(1:3))-CROSS_PRODUCT( omega, rIP ))
+            m%udot_TP((Idx+3):(Idx+5)) = matmul(Rg2b,u%TPMesh(iTP-1)%RotationVel(:,1)-omega)
             if (bPrime) then
                m%udotdot_TP(Idx:(Idx+2))  = matmul(Rg2b, &
                                                 CROSS_PRODUCT( omega, CROSS_PRODUCT( omega, rIP ) ) &
-                                              - 2.0 * CROSS_PRODUCT( omega, u%TPMesh%TranslationVel(:,iTP-1)-x%qRdot(1:3) ) &
-                                              + u%TPMesh%TranslationAcc(:,iTP-1) &
+                                              - 2.0 * CROSS_PRODUCT( omega, u%TPMesh(iTP-1)%TranslationVel(:,1)-x%qRdot(1:3) ) &
+                                              + u%TPMesh(iTP-1)%TranslationAcc(:,1) &
                                              )
-               m%udotdot_TP((Idx+3):(Idx+5)) = matmul(Rg2b,u%TPMesh%RotationAcc(:,iTP-1)-CROSS_PRODUCT( omega, u%TPMesh%RotationVel(:,iTP-1)) )
+               m%udotdot_TP((Idx+3):(Idx+5)) = matmul(Rg2b,u%TPMesh(iTP-1)%RotationAcc(:,1)-CROSS_PRODUCT( omega, u%TPMesh(iTP-1)%RotationVel(:,1)) )
             else
                m%udotdot_TP(Idx:(Idx+2))  = matmul(Rg2b, &
                                                 CROSS_PRODUCT( omega, CROSS_PRODUCT( omega, rIP ) ) &
                                               - CROSS_PRODUCT( omega_dot, rIP ) &
-                                              - 2.0 * CROSS_PRODUCT( omega, u%TPMesh%TranslationVel(:,iTP-1)-x%qRdot(1:3) ) &
-                                              + ( u%TPMesh%TranslationAcc(:,iTP-1)-m%qRdotdot(1:3) ) &
+                                              - 2.0 * CROSS_PRODUCT( omega, u%TPMesh(iTP-1)%TranslationVel(:,1)-x%qRdot(1:3) ) &
+                                              + ( u%TPMesh(iTP-1)%TranslationAcc(:,1)-m%qRdotdot(1:3) ) &
                                              )
-               m%udotdot_TP((Idx+3):(Idx+5)) = matmul(Rg2b,u%TPMesh%RotationAcc(:,iTP-1)-omega_dot-CROSS_PRODUCT( omega, u%TPMesh%RotationVel(:,iTP-1)) )
+               m%udotdot_TP((Idx+3):(Idx+5)) = matmul(Rg2b,u%TPMesh(iTP-1)%RotationAcc(:,1)-omega_dot-CROSS_PRODUCT( omega, u%TPMesh(iTP-1)%RotationVel(:,1)) )
             endif
          ENDDO
 
       else ! Only one transition piece
 
          ! Rigid-body rotation matrices for floating only - based on the first transition piece
-         Rg2b(1:3,1:3)  = u%TPMesh%Orientation(:,:,1)  ! global to rigid-body coordinates
+         Rg2b(1:3,1:3)  = u%TPMesh(1)%Orientation(:,:,1)  ! global to rigid-body coordinates
          RRg2b(:,:)     = 0.0_R8Ki
          RRg2b(1:3,1:3) = Rg2b
          RRg2b(4:6,4:6) = Rg2b
 
          ! First transition piece used to represent the floater rigid-body motion is handled separately
-         m%u_TP(1:6)       = (/u%TPMesh%TranslationDisp(:,1),EulerExtractZYX(u%TPMesh%Orientation(:,:,1))/)
-         m%udot_TP(1:6)    = MATMUL( RRg2b , (/u%TPMesh%TranslationVel(:,1), u%TPMesh%RotationVel(:,1)/) )
-         m%udotdot_TP(1:6) = MATMUL( RRg2b , (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/) )
+         m%u_TP(1:6)       = (/u%TPMesh(1)%TranslationDisp(:,1),EulerExtractZYX(u%TPMesh(1)%Orientation(:,:,1))/)
+         m%udot_TP(1:6)    = MATMUL( RRg2b , (/u%TPMesh(1)%TranslationVel(:,1), u%TPMesh(1)%RotationVel(:,1)/) )
+         m%udotdot_TP(1:6) = MATMUL( RRg2b , (/u%TPMesh(1)%TranslationAcc(:,1), u%TPMesh(1)%RotationAcc(:,1)/) )
 
       end if
 
@@ -3508,10 +3523,10 @@ SUBROUTINE GetUTP(u, p, x, m, ErrStat, ErrMsg, bPrime)
       DO iTP = 1,p%nTP
          Idx = 6*iTP-5
          ! Need to be small angles due to the Guyan stiffness terms
-         rotations                 = GetSmllRotAngs(u%TPMesh%Orientation(:,:,iTP), ErrStat2, ErrMsg2); if(Failed()) return
-         m%u_TP(Idx:(Idx+5))       = (/REAL(u%TPMesh%TranslationDisp(:,iTP),ReKi), rotations/)
-         m%udot_TP(Idx:(Idx+5))    = (/u%TPMesh%TranslationVel(:,iTP), u%TPMesh%RotationVel(:,iTP)/)
-         m%udotdot_TP(Idx:(Idx+5)) = (/u%TPMesh%TranslationAcc(:,iTP), u%TPMesh%RotationAcc(:,iTP)/)
+         rotations                 = GetSmllRotAngs(u%TPMesh(iTP)%Orientation(:,:,1), ErrStat2, ErrMsg2); if(Failed()) return
+         m%u_TP(Idx:(Idx+5))       = (/REAL(u%TPMesh(iTP)%TranslationDisp(:,1),ReKi), rotations/)
+         m%udot_TP(Idx:(Idx+5))    = (/u%TPMesh(iTP)%TranslationVel(:,1), u%TPMesh(iTP)%RotationVel(:,1)/)
+         m%udotdot_TP(Idx:(Idx+5)) = (/u%TPMesh(iTP)%TranslationAcc(:,1), u%TPMesh(iTP)%RotationAcc(:,1)/)
       ENDDO
 
    END IF
@@ -3719,22 +3734,6 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bCB)
    ! --- Build original DOF vectors (DOF before the CB reduction)
    call ReducedToFull(p, m, m%UR_bar, m%UL, DU_full)
 
-   ! The subroutine is never called if p%Floating = .TRUE.
-   ! --- Adding rigid-body displacement
-   if (bGuyan .and. p%Floating) then
-      Rb2g(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
-      do iSDNode = 1,p%nNodes
-         DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
-         ! --- Guyan (rigid body) motion in global coordinates
-         rIP0(1:3)   = p%DP0(1:3, iSDNode)
-         rIP(1:3)    = matmul(Rb2g, rIP0)
-         duP(1:3)    = rIP - rIP0 ! NOTE: without rigid-body displacement
-         ! Full diplacements rigid-body + rotated elastic Guyan + rotated CB (if asked) >>> Rotate All
-         DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)
-         CALL SmllRotTrans('Nodal rotation',DU_full(DOFList(4)),DU_full(DOFList(5)),DU_full(DOFList(6)),DCM,'',ErrStat2,ErrMsg2);
-         DU_full(DOFList(4:6)) = EulerExtractZYX( matmul(DCM,transpose(Rb2g)) )
-      enddo
-   endif 
 END SUBROUTINE LeverArm
 
 !------------------------------------------------------------------------------------------------------
@@ -3796,7 +3795,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, ExtraMomen
       if (p%TP1IsRBRefPt) then
          Rg2b(1:3,1:3) = EulerConstructZYX(x%qR(4:6))
       else
-         Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 rigid-body coordinates
+         Rg2b(1:3,1:3) = u%TPMesh(1)%Orientation(:,:,1)  ! global 2 rigid-body coordinates
       end if
       do iNode = 1,p%nNodes
          m%Fext( p%NodesDOF(iNode)%List(1:3) ) =  matmul(Rg2b, u%LMesh%Force(:,iNode) + p%FG(p%NodesDOF(iNode)%List(1:3)) ) + p%FC(p%NodesDOF(iNode)%List(1:3))
@@ -4711,10 +4710,10 @@ SUBROUTINE StateMatrices(p, ErrStat, ErrMsg, AA, BB, CC, DD, u)
       if (nCB>0) then
          CC(1:nY,1:nCB )   = - p%C1_11
          CC(1:nY,nCB+1:nX) = - p%C1_12
-         if (p%Floating .and. present(u)) then
-            CC(1:3,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(1:3,:)) ! >>> Rotate All
-            CC(4:6,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(4:6,:)) ! >>> Rotate All
-         endif
+         ! if (p%Floating .and. present(u)) then
+         !    CC(1:3,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(1:3,:)) ! >>> Rotate All
+         !    CC(4:6,:) = matmul(transpose(u%TPMesh%Orientation(:,:,1)), CC(4:6,:)) ! >>> Rotate All
+         ! endif
       endif
    endif
 

@@ -296,7 +296,7 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
       else
          ! For floating, m%U_full_dotdot is currently in the earth-fixed frame.
          ! Need to transform back to the Guyan frame when computing MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze.
-         Rg2b = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
+         Rg2b = u%TPMesh(1)%Orientation(:,:,1)  ! global 2 body coordinates
       endif
    else
       call Eye(Rg2b, ErrStat2, ErrMsg2)
@@ -381,21 +381,21 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    ! Total interface reaction forces and moments in SS coordinate system
    !    "IntfFXss, IntfFYss, IntfFZss, IntfMXss, IntfMYss, IntfMZss,"
    do iTP = 1,nTP
-      AllOuts(IntfSS(1:6,iTP)) = - (/y%Y1Mesh%Force (:,iTP), y%Y1Mesh%Moment(:,iTP)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
+      AllOuts(IntfSS(1:6,iTP)) = - (/y%Y1Mesh(iTP)%Force(:,1), y%Y1Mesh(iTP)%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
    end do
 
    ! Interface translations and rotations in SS coordinate system 
    !    "IntfTDXss, IntfTDYss, IntfTDZss, IntfRDXss, IntfRDYss IntfRDZss"
    do iTP = 1,nTP
-      AllOuts(IntfTRss(1:3,iTP)) = u%TPMesh%TranslationDisp(:,iTP)
-      AllOuts(IntfTRss(4:6,iTP)) = EulerExtractZYX(u%TPMesh%Orientation(:,:,iTP))
+      AllOuts(IntfTRss(1:3,iTP)) = u%TPMesh(iTP)%TranslationDisp(:,1)
+      AllOuts(IntfTRss(4:6,iTP)) = EulerExtractZYX(u%TPMesh(iTP)%Orientation(:,:,1))
    end do
 
    ! Interface Translational and rotational accelerations in SS coordinate system
    !    "IntfTAXss, IntfTAYss, IntfTAZss, IntfRAXss, IntfRAYss IntfRAZss"
    do iTP = 1,nTP
-      AllOuts(IntfTRAss(1:3,iTP)) = u%TPMesh%TranslationAcc(:,iTP)
-      AllOuts(IntfTRAss(4:6,iTP)) = u%TPMesh%RotationAcc(:,iTP)
+      AllOuts(IntfTRAss(1:3,iTP)) = u%TPMesh(iTP)%TranslationAcc(:,1)
+      AllOuts(IntfTRAss(4:6,iTP)) = u%TPMesh(iTP)%RotationAcc(:,1)
    end do
 
    ! Interface elastic translational and rotational deflection in rigid-body coordinate system relative to rigid-body configuration
