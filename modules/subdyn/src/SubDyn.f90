@@ -778,7 +778,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi)                               :: I, idx, iSDNode             ! Counters
       REAL(ReKi)                                   :: Y1_GuyanLoadCorrection(3)   ! Lever arm moment contributions due to interface displacement
       INTEGER(IntKi), pointer                      :: DOFList(:)
-      REAL(ReKi)                                   :: DCM(3,3)
+      REAL(R8Ki)                                   :: DCM(3,3)
       REAL(ReKi)                                   :: F_I(6*p%nNodes_I)           ! Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       ! Variables for rigid body motion
       real(ReKi), dimension(3)                     :: rIP          ! Vector from TP to rotated Node
@@ -3537,7 +3537,7 @@ SUBROUTINE GetUFulls(u, p, x, m, ErrStat, ErrMsg)
    ! Local variables
    INTEGER(IntKi)               :: iSDNode
    INTEGER(IntKi), pointer      :: DOFList(:)
-   REAL(ReKi)                   :: DCM(3,3)     ! Orientation matrix of small elastic nodal rotation
+   REAL(R8Ki)                   :: DCM(3,3)     ! Orientation matrix of small elastic nodal rotation
    REAL(ReKi), dimension(3)     :: RBVel, RBAcc ! Rigid-body translational velocity and acceleration
    REAL(ReKi), dimension(3)     :: Om, OmD      ! Rigid-body rotational velocity and acceleration (Omega, OmegaDot)
    REAL(ReKi), dimension(3)     :: rIP          ! Vector from TP to rotated Node
