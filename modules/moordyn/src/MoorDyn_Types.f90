@@ -114,7 +114,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=free, 1=fixed, -1=coupled, 2=coupledpinned [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC = 0_IntKi      !< list of IdNums of points attached to this body [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR = 0_IntKi      !< list of IdNums of rods attached to this body [-]
-    INTEGER(IntKi)  :: nAttachedC = 0_IntKi      !< number of attached points [-]
+    INTEGER(IntKi)  :: nAttachedP = 0_IntKi      !< number of attached points [-]
     INTEGER(IntKi)  :: nAttachedR = 0_IntKi      !< number of attached rods [-]
     REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel = 0.0_R8Ki      !< relative position of point on body [-]
     REAL(DbKi) , DIMENSION(1:6,1:30)  :: r6RodRel = 0.0_R8Ki      !< relative position and orientation of rod on body [-]
@@ -315,7 +315,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: LineUnOut = 0_IntKi      !< unit number of line output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: LineWrOutput      !< one row of output data for this line [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: phi      !< phase of lift force [-]
-    LOGICAL  :: IC_gen = .FALSE.      !< boolean to indicate dynamic relaxation occuring [-]
     REAL(DbKi)  :: n_m = 500      !< Num timesteps for rolling RMS of crossflow velocity phase [-]
     REAL(DbKi)  :: phi_yd = 0.0_R8Ki      !< The crossflow motion phase [-]
     REAL(DbKi)  :: t_old = 0.0_R8Ki      !< old t [s]
@@ -437,6 +436,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_Ys      !< array of y-coordinates in the bathymetry grid [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BathGrid_npoints      !< number of grid points to describe the bathymetry grid [-]
     TYPE(SeaSt_WaveField_MiscVarType)  :: WaveField_m      !< misc var information from the SeaState Interpolation module [-]
+    LOGICAL  :: IC_gen = .FALSE.      !< boolean to indicate dynamic relaxation occuring [-]
   END TYPE MD_MiscVarType
 ! =======================
 ! =========  MD_ParameterType  =======
@@ -949,7 +949,7 @@ subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
    DstBodyData%typeNum = SrcBodyData%typeNum
    DstBodyData%AttachedC = SrcBodyData%AttachedC
    DstBodyData%AttachedR = SrcBodyData%AttachedR
-   DstBodyData%nAttachedC = SrcBodyData%nAttachedC
+   DstBodyData%nAttachedP = SrcBodyData%nAttachedP
    DstBodyData%nAttachedR = SrcBodyData%nAttachedR
    DstBodyData%rPointRel = SrcBodyData%rPointRel
    DstBodyData%r6RodRel = SrcBodyData%r6RodRel
@@ -997,7 +997,7 @@ subroutine MD_PackBody(RF, Indata)
    call RegPack(RF, InData%typeNum)
    call RegPack(RF, InData%AttachedC)
    call RegPack(RF, InData%AttachedR)
-   call RegPack(RF, InData%nAttachedC)
+   call RegPack(RF, InData%nAttachedP)
    call RegPack(RF, InData%nAttachedR)
    call RegPack(RF, InData%rPointRel)
    call RegPack(RF, InData%r6RodRel)
@@ -1037,7 +1037,7 @@ subroutine MD_UnPackBody(RF, OutData)
    call RegUnpack(RF, OutData%typeNum); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AttachedC); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AttachedR); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%nAttachedC); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%nAttachedP); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nAttachedR); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rPointRel); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%r6RodRel); if (RegCheckErr(RF, RoutineName)) return
@@ -2148,7 +2148,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstLineData%phi = SrcLineData%phi
    end if
-   DstLineData%IC_gen = SrcLineData%IC_gen
    DstLineData%n_m = SrcLineData%n_m
    DstLineData%phi_yd = SrcLineData%phi_yd
    DstLineData%t_old = SrcLineData%t_old
@@ -2377,7 +2376,6 @@ subroutine MD_PackLine(RF, Indata)
    call RegPack(RF, InData%LineUnOut)
    call RegPackAlloc(RF, InData%LineWrOutput)
    call RegPackAlloc(RF, InData%phi)
-   call RegPack(RF, InData%IC_gen)
    call RegPack(RF, InData%n_m)
    call RegPack(RF, InData%phi_yd)
    call RegPack(RF, InData%t_old)
@@ -2466,7 +2464,6 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpack(RF, OutData%LineUnOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LineWrOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%phi); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%IC_gen); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_m); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%phi_yd); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%t_old); if (RegCheckErr(RF, RoutineName)) return
@@ -3495,6 +3492,7 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SeaSt_WaveField_CopyMisc(SrcMiscData%WaveField_m, DstMiscData%WaveField_m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstMiscData%IC_gen = SrcMiscData%IC_gen
 end subroutine
 
 subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -3758,6 +3756,7 @@ subroutine MD_PackMisc(RF, Indata)
    call RegPackAlloc(RF, InData%BathGrid_Ys)
    call RegPackAlloc(RF, InData%BathGrid_npoints)
    call SeaSt_WaveField_PackMisc(RF, InData%WaveField_m) 
+   call RegPack(RF, InData%IC_gen)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -3904,6 +3903,7 @@ subroutine MD_UnPackMisc(RF, OutData)
    call RegUnpackAlloc(RF, OutData%BathGrid_Ys); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BathGrid_npoints); if (RegCheckErr(RF, RoutineName)) return
    call SeaSt_WaveField_UnpackMisc(RF, OutData%WaveField_m) ! WaveField_m 
+   call RegUnpack(RF, OutData%IC_gen); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
