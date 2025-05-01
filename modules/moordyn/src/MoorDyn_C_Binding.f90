@@ -108,7 +108,8 @@ INTEGER(IntKi),   PARAMETER             :: INPUT_PRED = 1      !< Index for pred
 !     These point meshes are merely used to simplify the mapping of motions/loads
 !     to/from MD using the library mesh mapping routines.  The input mesh into the
 !     library can only contain one point at present and is rigidly mapped to multiple
-!     MoorDyn mesh points.
+!     MoorDyn mesh points. This means all MoorDyn coupled objects as defined in the
+!     input file will be rigidly attached to the input mesh
 !
 !     In the future, we may wish modify this interface to allow for N mesh points
 !     for coupling to N MoorDyn mesh points for modeling things likeflexible structures.
