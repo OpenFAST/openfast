@@ -372,6 +372,9 @@ IMPLICIT NONE
     TYPE(SD_ContinuousStateType)  :: dxdt_lin      !<  [-]
     TYPE(SD_InputType)  :: u_perturb      !<  [-]
     TYPE(SD_OutputType)  :: y_lin      !<  [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: AM2Jac      !<  [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: AM2xq      !<  [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: AM2xq2      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qmdotdot      !< 2nd Derivative of states, used only for output-file purposes [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: qRdotdot      !< 2nd derivative of rigid-body states (floating only) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_TP 
@@ -4063,7 +4066,7 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyMisc'
@@ -4084,6 +4087,42 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SD_CopyOutput(SrcMiscData%y_lin, DstMiscData%y_lin, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcMiscData%AM2Jac)) then
+      LB(1:2) = lbound(SrcMiscData%AM2Jac)
+      UB(1:2) = ubound(SrcMiscData%AM2Jac)
+      if (.not. allocated(DstMiscData%AM2Jac)) then
+         allocate(DstMiscData%AM2Jac(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%AM2Jac.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%AM2Jac = SrcMiscData%AM2Jac
+   end if
+   if (allocated(SrcMiscData%AM2xq)) then
+      LB(1:2) = lbound(SrcMiscData%AM2xq)
+      UB(1:2) = ubound(SrcMiscData%AM2xq)
+      if (.not. allocated(DstMiscData%AM2xq)) then
+         allocate(DstMiscData%AM2xq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%AM2xq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%AM2xq = SrcMiscData%AM2xq
+   end if
+   if (allocated(SrcMiscData%AM2xq2)) then
+      LB(1:2) = lbound(SrcMiscData%AM2xq2)
+      UB(1:2) = ubound(SrcMiscData%AM2xq2)
+      if (.not. allocated(DstMiscData%AM2xq2)) then
+         allocate(DstMiscData%AM2xq2(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%AM2xq2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%AM2xq2 = SrcMiscData%AM2xq2
+   end if
    if (allocated(SrcMiscData%qmdotdot)) then
       LB(1:1) = lbound(SrcMiscData%qmdotdot)
       UB(1:1) = ubound(SrcMiscData%qmdotdot)
@@ -4515,6 +4554,15 @@ subroutine SD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call SD_DestroyOutput(MiscData%y_lin, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(MiscData%AM2Jac)) then
+      deallocate(MiscData%AM2Jac)
+   end if
+   if (allocated(MiscData%AM2xq)) then
+      deallocate(MiscData%AM2xq)
+   end if
+   if (allocated(MiscData%AM2xq2)) then
+      deallocate(MiscData%AM2xq2)
+   end if
    if (allocated(MiscData%qmdotdot)) then
       deallocate(MiscData%qmdotdot)
    end if
@@ -4629,6 +4677,9 @@ subroutine SD_PackMisc(RF, Indata)
    call SD_PackContState(RF, InData%dxdt_lin) 
    call SD_PackInput(RF, InData%u_perturb) 
    call SD_PackOutput(RF, InData%y_lin) 
+   call RegPackAlloc(RF, InData%AM2Jac)
+   call RegPackAlloc(RF, InData%AM2xq)
+   call RegPackAlloc(RF, InData%AM2xq2)
    call RegPackAlloc(RF, InData%qmdotdot)
    call RegPackAlloc(RF, InData%qRdotdot)
    call RegPackAlloc(RF, InData%F_TP)
@@ -4672,7 +4723,7 @@ subroutine SD_UnPackMisc(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(SD_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SD_UnPackMisc'
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
@@ -4681,6 +4732,9 @@ subroutine SD_UnPackMisc(RF, OutData)
    call SD_UnpackContState(RF, OutData%dxdt_lin) ! dxdt_lin 
    call SD_UnpackInput(RF, OutData%u_perturb) ! u_perturb 
    call SD_UnpackOutput(RF, OutData%y_lin) ! y_lin 
+   call RegUnpackAlloc(RF, OutData%AM2Jac); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AM2xq); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%AM2xq2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%qmdotdot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%qRdotdot); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%F_TP); if (RegCheckErr(RF, RoutineName)) return

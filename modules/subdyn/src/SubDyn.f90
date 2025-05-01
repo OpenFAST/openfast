@@ -2182,12 +2182,8 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat        !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    ! local variables
-   TYPE(SD_InputType)                              :: u_interp       ! interpolated value of inputs 
-   TYPE(SD_ContinuousStateType)                    :: dxdt
+   TYPE(SD_InputType)                              :: u_interp       ! interpolated value of inputs
    TYPE(SD_OutputType)                             :: y
-   REAL(R8Ki)                                      :: xq(m%Jac%Nx,1)
-   REAL(R8Ki)                                      :: tmpAry(m%Jac%Nx)
-   REAL(R8Ki),allocatable                          :: AM2Jac(:,:)
    INTEGER(IntKi)                                  :: i
    INTEGER(IntKi)                                  :: ErrStat2
    CHARACTER(ErrMsgLen)                            :: ErrMsg2
@@ -2202,44 +2198,43 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
 
    ! Estimate the Jacobian matrix of dx_dot/dx numerically
-   CALL SD_JacobianPContState( p%Vars, t, u_interp, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dXdx=AM2Jac)
+   CALL SD_JacobianPContState( p%Vars, t, u_interp, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dXdx=m%AM2Jac)
 
    ! Get the left-hand-side matrix AM2Jac = I - 0.5 * dt * dx_dot/dx
-   AM2Jac = - 0.5_R8Ki * p%SDDeltaT * AM2Jac
+   m%AM2Jac = - 0.5_R8Ki * p%SDDeltaT * m%AM2Jac
    do i = 1,m%Jac%Nx
-      AM2Jac(i,i) = AM2Jac(i,i) + 1.0_R8Ki
+      m%AM2Jac(i,i) = m%AM2Jac(i,i) + 1.0_R8Ki
    end do
 
    ! Compute the right-hand side xq = dt * ( x_dot(u_n,x_n) + x_dot(u_n+1,x_n) ) / 2
-   CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL SD_VarsPackContState(p%Vars, dxdt, xq(:,1))
+   CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
+   CALL SD_VarsPackContState(p%Vars, m%dxdt_lin, m%AM2xq(:,1))
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL SD_CalcContStateDeriv( t+p%SDDeltaT, u_interp, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL SD_VarsPackContState(p%Vars, dxdt, tmpAry)
-   xq(:,1) = 0.5_R8Ki * p%SDDeltaT * (xq(:,1) + tmpAry)
+   CALL SD_CalcContStateDeriv( t+p%SDDeltaT, u_interp, p, x, xd, z, OtherState, m, m%dxdt_lin, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
+   CALL SD_VarsPackContState(p%Vars, m%dxdt_lin, m%AM2xq2(:,1))
+   m%AM2xq(:,1) = 0.5_R8Ki * p%SDDeltaT * (m%AM2xq(:,1) + m%AM2xq2(:,1))
 
    !....................................................
    ! Solve for xq: (equivalent to xq= matmul(p%AM2InvJac,xq)
    ! J*( x_n - x_n+1 ) = dt * ( x_dot(u_n,x_n) + x_dot(u_n+1,x_n) )/2
    ! J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx) <- if linear but no longer the case
    !....................................................
-   CALL LAPACK_gels( 'N', AM2Jac, xq, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL SD_VarsUnpackContState(p%Vars, xq(:,1), dxdt)
+   CALL LAPACK_gels( 'N', m%AM2Jac, m%AM2xq, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
+   CALL SD_VarsUnpackContState(p%Vars, m%AM2xq(:,1), m%dxdt_lin)
 
    ! Update states
    if (p%TP1IsRBRefPt) then
-      x%qR    = x%qR    + dxdt%qR
-      x%qRdot = x%qRdot + dxdt%qRdot
+      x%qR    = x%qR    + m%dxdt_lin%qR
+      x%qRdot = x%qRdot + m%dxdt_lin%qRdot
    endif
    if (p%nDOFM>0) then
-      x%qm    = x%qm    + dxdt%qm
-      x%qmdot = x%qmdot + dxdt%qmdot
+      x%qm    = x%qm    + m%dxdt_lin%qm
+      x%qmdot = x%qmdot + m%dxdt_lin%qmdot
    endif
-     
+
    ! clean up temporary variable(s)
    CALL SD_DestroyInput(   u_interp, ErrStat, ErrMsg )
    CALL SD_DestroyOutput(         y, ErrStat, ErrMsg )
-   CALL SD_DestroyContState(   dxdt, ErrStat, ErrMsg )
 
 END SUBROUTINE SD_AM2
 
@@ -3071,9 +3066,9 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%Y1_Guy_L,     p%nDOFL_TP,  'Y1_Guy_L',      ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%F_L,          p%nDOF__L,   'F_L',           ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%F_L2,         p%nDOF__L,   'F_L2',          ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%UR_bar,       p%nDOFI__,   'UR_bar',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
-   CALL AllocAry( Misc%UR_bar_dot,   p%nDOFI__,   'UR_bar_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
-   CALL AllocAry( Misc%UR_bar_dotdot,p%nDOFI__,   'UR_bar_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
+   CALL AllocAry( Misc%UR_bar,       p%nDOFI__,   'UR_bar',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   CALL AllocAry( Misc%UR_bar_dot,   p%nDOFI__,   'UR_bar_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   CALL AllocAry( Misc%UR_bar_dotdot,p%nDOFI__,   'UR_bar_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%UL,           p%nDOF__L,   'UL',            ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_NS,        p%nDOF__L,   'UL_NS',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_dot,       p%nDOF__L,   'UL_dot',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
@@ -3087,12 +3082,16 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%U_full_dot,   p%nDOF,      'U_full_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dotdot,p%nDOF,      'U_full_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red,        p%nDOF_red,  'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%Fext,         p%nDOF     , 'm%Fext    ',    ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   CALL AllocAry( Misc%Fext_red,     p%nDOF_red , 'm%Fext_red',    ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   CALL AllocAry( Misc%FG,           p%nDOF     , 'm%FG      ',    ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   CALL AllocAry( Misc%F_TP,         p%nDOFL_TP , 'm%F_TP'    ,    ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
 
-   CALL AllocAry( Misc%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
-   CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
-   CALL AllocAry( Misc%FG,        p%nDOF     , 'm%FG      ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
-   
-   CALL AllocAry( Misc%F_TP,      p%nDOFL_TP ,         'm%F_TP'    , ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   IF (p%IntMethod .EQ. 4) THEN
+      CALL AllocAry( Misc%AM2Jac, 2*(p%nDOFRB+p%nDOFM), 2*(p%nDOFRB+p%nDOFM),'AM2Jac',ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+      CALL AllocAry( Misc%AM2xq,  2*(p%nDOFRB+p%nDOFM),                    1,'AM2xq', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+      CALL AllocAry( Misc%AM2xq2, 2*(p%nDOFRB+p%nDOFM),                    1,'AM2xq2',ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
+   END IF
 
 END SUBROUTINE AllocMiscVars
 
