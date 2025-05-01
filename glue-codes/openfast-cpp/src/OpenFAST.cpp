@@ -94,8 +94,15 @@ void fast::OpenFAST::findRestartFile(int iTurbLoc) {
     check_nc_error(ierr, "nc_get_vara_double - getting latest time");
     tStart = latest_time;
 
-    char tmpOutFileRoot[INTERFACE_STRING_LENGTH];
+    char *tmpOutFileRoot;
+    size_t len;
+    ierr = nc_inq_attlen(ncid, NC_GLOBAL, "out_file_root", &len);
+    check_nc_error(ierr, "nc_inq_attlen - getting out_file_root length");
+
+    tmpOutFileRoot = (char*) malloc(len + 1);
     ierr = nc_get_att_text(ncid, NC_GLOBAL, "out_file_root", tmpOutFileRoot);
+    check_nc_error(ierr, "nc_get_att_text - getting out_file_root");
+    tmpOutFileRoot[len] = '\0';
     turbineData[iTurbLoc].outFileRoot.assign(tmpOutFileRoot);
 
     ierr = nc_get_att_double(ncid, NC_GLOBAL, "dt_fast", &dtFAST);
