@@ -25,7 +25,7 @@ MODULE SD_FEM
  
   INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 20                    ! Maximum number of members at one joint
   INTEGER(IntKi),   PARAMETER  :: MaxOutChs       = 2000                  ! Max number of Output Channels to be read in
-  INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP])
+  INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP]), current used for output only. Need to update this to reflect multiple transition pieces.
    
   ! values of these parameters are ordered by their place in SubDyn input file:
   INTEGER(IntKi),   PARAMETER  :: JointsCol       = 9                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss, JointType, JointDirX JointDirY JointDirZ JointStiff)
@@ -78,8 +78,8 @@ MODULE SD_FEM
   ! Types of Guyan Damping
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_None     = 0
   INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Rayleigh = 1
-  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_66       = 2 
-  INTEGER(IntKi)               :: idGuyanDamp_Valid(3) = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_66 /)
+  INTEGER(IntKi),   PARAMETER  :: idGuyanDamp_Matrix   = 2 
+  INTEGER(IntKi)               :: idGuyanDamp_Valid(3) = (/idGuyanDamp_None, idGuyanDamp_Rayleigh, idGuyanDamp_Matrix /)
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,InterfCol,MembersCol,PropSetsBCCol,PropSetsBRCol,PropSetsXCol,PropSetsSCol,COSMsCol,CMassCol)
 
@@ -91,7 +91,7 @@ MODULE SD_FEM
   ! Implementation Flags
   LOGICAL, PARAMETER :: DEV_VERSION    = .false.
   LOGICAL, PARAMETER :: BC_Before_CB   = .true.
-  LOGICAL, PARAMETER :: ANALYTICAL_LIN = .true.
+  LOGICAL, PARAMETER :: ANALYTICAL_LIN = .false.   ! Analytical linearization is no longer valid in general
   LOGICAL, PARAMETER :: GUYAN_RIGID_FLOATING = .true.
 
 
@@ -243,17 +243,18 @@ END FUNCTION NodeHasRigidElem
 !! Typically called to get: 
 !!    - the transformation from the interface points to the TP point
 !!    - the transformation from the bottom nodes to SubDyn origin (0,0,)
-SUBROUTINE RigidTrnsf(Init, p, RefPoint, DOF, nDOF, T_ref, ErrStat, ErrMsg)
+SUBROUTINE RigidTrnsf(Init, p, RefPoint, DOF, nDOF, nTP, T_ref, ErrStat, ErrMsg)
    TYPE(SD_InitType),      INTENT(IN   )  :: Init        ! Input data for initialization routine
    TYPE(SD_ParameterType), INTENT(IN   )  :: p        
-   REAL(ReKi),             INTENT(IN   )  :: RefPoint(3) ! Coordinate of the reference point 
+   REAL(ReKi),             INTENT(IN   )  :: RefPoint(3,*) ! Coordinate of the reference point 
    INTEGER(IntKi),         INTENT(IN   )  :: nDOF        ! Number of DOFS 
    INTEGER(IntKi),         INTENT(IN   )  :: DOF(nDOF)  ! DOF indices that are used to create the transformation matrix
-   REAL(ReKi),             INTENT(  OUT)  :: T_ref(nDOF,6)  ! matrix that relates the subset of DOFs to the reference point
+   INTEGER(IntKi),         INTENT(IN   )  :: nTP         ! Number of transition pieces 
+   REAL(ReKi),             INTENT(  OUT)  :: T_ref(nDOF,6*nTP)  ! matrix that relates the subset of DOFs to the reference point
    INTEGER(IntKi),         INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
-   INTEGER                                :: I, iDOF, iiDOF, iNode, nDOFPerNode
+   INTEGER                                :: I, iDOF, iiDOF, iNode, nDOFPerNode, iTP
    REAL(ReKi)                             :: dx, dy, dz
    REAL(ReKi), dimension(6)               :: Line
    ErrStat = ErrID_None
@@ -264,6 +265,11 @@ SUBROUTINE RigidTrnsf(Init, p, RefPoint, DOF, nDOF, T_ref, ErrStat, ErrMsg)
       iNode       = p%DOFred2Nodes(iDOF,1) ! First column is node 
       nDOFPerNode = p%DOFred2Nodes(iDOF,2) ! Second column is number of DOF per node
       iiDOF       = p%DOFred2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+      if (nTP==1) then
+         iTP = 1
+      else
+         iTP = p%TPIdx(FINDLOCI(p%Nodes_I(:,1),iNode))
+      endif
 
       if ((iiDOF<1) .or. (iiDOF>6)) then
          ErrMsg  = 'RigidTrnsf, node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
@@ -273,13 +279,17 @@ SUBROUTINE RigidTrnsf(Init, p, RefPoint, DOF, nDOF, T_ref, ErrStat, ErrMsg)
          ErrMsg  = 'RigidTrnsf, node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
          return
       endif
+      if (iTP<1) then
+         ErrMsg  = 'RigidTrnsf, interface node not attached to any transition piece. Node:'//trim(Num2LStr(iNode)); ErrStat = ErrID_Fatal
+         return
+      endif
       
-      dx = Init%Nodes(iNode, 2) - RefPoint(1)
-      dy = Init%Nodes(iNode, 3) - RefPoint(2)
-      dz = Init%Nodes(iNode, 4) - RefPoint(3)
+      dx = Init%Nodes(iNode, 2) - RefPoint(1,iTP)
+      dy = Init%Nodes(iNode, 3) - RefPoint(2,iTP)
+      dz = Init%Nodes(iNode, 4) - RefPoint(3,iTP)
 
       CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) !returns Line
-      T_ref(I, 1:6) = Line
+      T_ref(I, (6*iTP-5):(6*iTP)) = Line
    ENDDO
 END SUBROUTINE RigidTrnsf
 
@@ -870,7 +880,7 @@ CONTAINS
 END SUBROUTINE SD_Discrt
 
 
-!> Store relative vector between nodes and TP point, to later compute Guyan rigid body motion
+!> Store relative vector between nodes and the first TP point, to later compute Guyan rigid body motion
 subroutine StoreNodesRelPos(Init, p, ErrStat, ErrMsg)
    type(SD_InitType),      intent(in   ) :: Init
    type(SD_ParameterType), intent(inout) :: p
@@ -886,9 +896,9 @@ subroutine StoreNodesRelPos(Init, p, ErrStat, ErrMsg)
    call AllocAry(p%DP0, 3, size(Init%Nodes,1), 'DP0', ErrStat2, ErrMsg2); if(Failed()) return
 
    do i = 1, size(Init%Nodes,1)
-      p%DP0(1, i) = Init%Nodes(i, 2) - Init%TP_RefPoint(1)
-      p%DP0(2, i) = Init%Nodes(i, 3) - Init%TP_RefPoint(2)
-      p%DP0(3, i) = Init%Nodes(i, 4) - Init%TP_RefPoint(3)
+      p%DP0(1, i) = Init%Nodes(i, 2) - Init%TP_RefPoint(1,1)
+      p%DP0(2, i) = Init%Nodes(i, 3) - Init%TP_RefPoint(2,1)
+      p%DP0(3, i) = Init%Nodes(i, 4) - Init%TP_RefPoint(3,1)
    enddo
 
 contains
@@ -1347,13 +1357,22 @@ SUBROUTINE CheckBCs(p, ErrStat, ErrMsg)
 END SUBROUTINE CheckBCs
 
 !> Check interface inputs, and remap 0s and 1s 
-SUBROUTINE CheckIntf(p, ErrStat, ErrMsg)
+SUBROUTINE CheckIntf(p, TPIdxInput, RB_RefJoint, ErrStat, ErrMsg)
    TYPE(SD_ParameterType),INTENT(INOUT) :: p
+   INTEGER(IntKi),        INTENT(INOUT) :: TPIdxInput(:)
+   INTEGER(IntKi),        INTENT(  OUT) :: RB_RefJoint
    INTEGER(IntKi),        INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),          INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi) :: I, J, iNode
+   INTEGER(IntKi)                       :: I, J, iNode, iFound, TPIDOffset
+   LOGICAL, ALLOCATABLE                 :: TPExist(:)
+   LOGICAL                              :: TP1NodeFound
    ErrMsg  = ""
    ErrStat = ErrID_None
+
+   call AllocAry(TPExist,p%nNodes_I,'TPExist',ErrStat,ErrMsg); if (ErrStat/=ErrID_None) return;
+   TPExist = .FALSE.
+   p%nTP   = -1;
+
    DO I = 1, p%nNodes_I
       iNode = p%Nodes_I(I,1) ! Node index
       DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
@@ -1369,6 +1388,70 @@ SUBROUTINE CheckIntf(p, ErrStat, ErrMsg)
          endif
       ENDDO
    ENDDO
+
+   TPIDOffset = 0
+   DO I = 1, p%nNodes_I
+      IF ( TPIdxInput(I) == 0 ) THEN
+         TPIDOffset = 1
+         EXIT
+      END IF
+   ENDDO
+   TPIdxInput = TPIdxInput + TPIDOffset
+
+   DO I = 1, p%nNodes_I
+      iNode = p%Nodes_I(I,1) ! Node index
+      if ( (TPIdxInput(I)<=0) .or. (TPIdxInput(I)>p%nNodes_I) ) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Transition-piece index must be sequential starting from 0 (floating with multiple transition pieces) or 1 (all other cases), check interface node:'//trim(Num2LStr(iNode))
+         return
+      else
+         if (TPIdxInput(I)>p%nTP) p%nTP = TPIdxInput(I)
+         TPExist(TPIdxInput(I))  = .TRUE.
+         p%TPIdx(I) = TPIdxInput(I)
+      endif
+   ENDDO
+
+   DO I = 1,p%nTP
+      if (.not.TPExist(I)) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Transition-piece index must be sequential starting from 0 (floating with multiple transition pieces) or 1 (all other cases), missing reference to transition piece '//trim(Num2LStr(I-TPIDOffset))
+         return
+      end if
+   ENDDO
+
+   p%nDOFRB = 0
+   if (p%Floating .and. (p%nTP>1)) then
+      p%TP1IsRBRefPt = .true.
+      p%nDOFRB = 6
+      if (TPIDOffset == 0) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'For a floating structure with more than one transition pieces, must have one and only one interface joint assigned to the dummy transition piece (TPID=0) used to represent rigid-body motion. '
+         return
+      end if
+   else
+      p%TP1IsRBRefPt = .false.
+   end if
+
+   TP1NodeFound = .false.
+   if (p%TP1IsRBRefPt) then
+      do I = 1, p%nNodes_I
+         if (p%TPIdx(I) == 1) then
+            if (.not.TP1NodeFound) then
+               TP1NodeFound = .true.
+               RB_RefJoint  = p%Nodes_I(I,1)
+            else
+               ErrStat = ErrID_Fatal
+               ErrMsg  = ' Only one joint can be assigned to the dummy transition piece (TPID=0) serving as the rigid-body reference point for the floating structure. '
+               return
+            end if
+         end if
+      end do
+   else
+      RB_RefJoint = -1
+   endif
+
+   deallocate(TPExist)
+
 END SUBROUTINE CheckIntf
 
 

@@ -21,13 +21,13 @@ MODULE SubDyn_Output
    USE NWTC_Library
    USE SubDyn_Types
    USE SD_FEM
-   USE SubDyn_Output_Params, only: MNfmKe, MNfmMe, MNTDss, MNRDe, MNTRAe, IntfSS, IntfTRss, IntfTRAss, ReactSS, OutStrLenM1
-   USE SubDyn_Output_Params, only: ParamIndxAry, ParamUnitsAry, ValidParamAry, SSqm01, SSqmd01, SSqmdd01
+   USE SubDyn_Output_Params, only: MNfmKe, MNfmMe, MNTDss, MNRDe, MNTRAe, IntfSS, IntfTRss, IntfTRAss, IntfTRe, ReactSS, RBTRDss, RBTRVss, RBTRAss
+   USE SubDyn_Output_Params, only: ParamIndxAry, ParamUnitsAry, ValidParamAry, SSqm01, SSqmd01, SSqmdd01, OutStrLenM1
 
    IMPLICIT NONE
 
    ! The maximum number of output channels which can be output by the code.
-   INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 21705
+   INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 21921
 
    PRIVATE
       ! ..... Public Subroutines ...................................................................................................
@@ -188,7 +188,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
       ! Compute p%TIreact, rigid transf. matrix from reaction DOFs to base structure point (0,0,-WD)
       CALL AllocAry(p%TIreact, 6, p%nDOFC__, 'TIReact  ', ErrStat2, ErrMsg2); if(Failed()) return
       CALL AllocAry(T_TIreact, p%nDOFC__, 6, 'TIReact_T', ErrStat2, ErrMsg2); if(Failed()) return
-      call RigidTrnsf(Init, p, (/0.0_Reki, 0.0_ReKi, -WtrDpth /), p%IDC__, p%nDOFC__, T_TIreact, ErrStat2, ErrMsg2); if(Failed()) return
+      call RigidTrnsf(Init, p, (/0.0_Reki, 0.0_ReKi, -WtrDpth /), p%IDC__, p%nDOFC__, 1_IntKi, T_TIreact, ErrStat2, ErrMsg2); if(Failed()) return
       p%TIreact=transpose(T_TIreact)
       deallocate(T_TIreact)
    ENDIF
@@ -282,6 +282,8 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    integer(IntKi), pointer        :: DOFList(:) !< List of DOF indices for a given Nodes (Alias to shorten notation)
    real(R8Ki), dimension(3,3)     :: Rg2b  ! Rotation matrix global 2 body (Guyan) coordinates
    real(R8Ki), dimension(6,6)     :: RRg2b ! Rotation matrix global 2 body (Guyan) coordinates, acts on a 6-vector
+   real(R8Ki), dimension(6,6)     :: RRb2g ! Rotation matrix global 2 body (Guyan) coordinates, acts on a 6-vector
+   integer(IntKi)                 :: iTP, nTP
    INTEGER(IntKi)                 :: ErrStat2      ! Error status of the operation
    CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
 
@@ -289,15 +291,20 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    ErrMsg  = ""
 
    if ( p%Floating ) then
-      ! For floating, m%U_full_dotdot is currently in the earth-fixed frame.
-      ! Need to transform back to the Guyan frame when computing MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze.
-      Rg2b = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
+      if ( p%TP1IsRBRefPt ) then
+         Rg2b = EulerConstructZYX(x%qR(4:6))
+      else
+         ! For floating, m%U_full_dotdot is currently in the earth-fixed frame.
+         ! Need to transform back to the Guyan frame when computing MαNβFMxe, MαNβFMye, MαNβFMze, MαNβMMxe, MαNβMMye, MαNβMMze.
+         Rg2b = u%TPMesh(1)%Orientation(:,:,1)  ! global 2 body coordinates
+      endif
    else
       call Eye(Rg2b, ErrStat2, ErrMsg2)
    end if
    RRg2b = 0.0_R8Ki
    RRg2b(1:3,1:3) = Rg2b
    RRg2b(4:6,4:6) = Rg2b
+   RRb2g = transpose(RRg2b)
 
    AllOuts = 0.0_ReKi  ! initialize for those outputs that aren't valid (and thus aren't set in this routine)
          
@@ -365,15 +372,60 @@ SUBROUTINE SDOut_MapOutputs(u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
    ! --------------------------------------------------------------------------------
    ! --- Interface kinematics and loads (TP/platform reference point)
    ! --------------------------------------------------------------------------------
+   if (p%TP1IsRBRefPt) then
+      nTP = p%nTP-1
+   else
+      nTP = p%nTP
+   end if
+
    ! Total interface reaction forces and moments in SS coordinate system
    !    "IntfFXss, IntfFYss, IntfFZss, IntfMXss, IntfMYss, IntfMZss,"
-   AllOuts(IntfSS(1:nDOFL_TP))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
+   do iTP = 1,nTP
+      AllOuts(IntfSS(1:6,iTP)) = - (/y%Y1Mesh(iTP)%Force(:,1), y%Y1Mesh(iTP)%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
+   end do
+
    ! Interface translations and rotations in SS coordinate system 
    !    "IntfTDXss, IntfTDYss, IntfTDZss, IntfRDXss, IntfRDYss IntfRDZss"
-   AllOuts(IntfTRss(1:nDOFL_TP))=m%u_TP 
+   do iTP = 1,nTP
+      AllOuts(IntfTRss(1:3,iTP)) = u%TPMesh(iTP)%TranslationDisp(:,1)
+      AllOuts(IntfTRss(4:6,iTP)) = EulerExtractZYX(u%TPMesh(iTP)%Orientation(:,:,1))
+   end do
+
    ! Interface Translational and rotational accelerations in SS coordinate system
    !    "IntfTAXss, IntfTAYss, IntfTAZss, IntfRAXss, IntfRAYss IntfRAZss"
-   AllOuts(IntfTRAss(1:nDOFL_TP))= m%udotdot_TP 
+   do iTP = 1,nTP
+      AllOuts(IntfTRAss(1:3,iTP)) = u%TPMesh(iTP)%TranslationAcc(:,1)
+      AllOuts(IntfTRAss(4:6,iTP)) = u%TPMesh(iTP)%RotationAcc(:,1)
+   end do
+
+   ! Interface elastic translational and rotational deflection in rigid-body coordinate system relative to rigid-body configuration
+   !    "IntfTDXe, IntfTDYe, IntfTDZe, IntfRDXe, IntfRDYe IntfRDZe"
+   if (p%floating) then
+      if (p%TP1IsRBRefPt) then
+         do iTP = 1,nTP
+            AllOuts(IntfTRe(1:6,iTP)) = m%u_TP( iTP*6+1:iTP*6+6 )
+         end do
+      else
+         AllOuts(IntfTRe(1:6,1  )) = 0.0
+      endif
+   else
+      do iTP = 1,nTP
+         AllOuts(IntfTRe(1:6,iTP)) = m%u_TP( (iTP-1)*6+1:(iTP-1)*6+6 )
+      end do
+   end if
+
+   ! --------------------------------------------------------------------------------
+   ! --- Interface kinematics and loads (TP/platform reference point)
+   ! --------------------------------------------------------------------------------
+   if (p%floating) then
+      AllOuts(RBTRDss) = m%u_TP(1:6)
+      AllOuts(RBTRVss) = matmul( RRb2g, m%udot_TP(1:6)    )
+      AllOuts(RBTRAss) = matmul( RRb2g, m%udotdot_TP(1:6) )
+   else
+      AllOuts(RBTRDss) = 0.0
+      AllOuts(RBTRVss) = 0.0
+      AllOuts(RBTRAss) = 0.0
+   end if
 
    ! --------------------------------------------------------------------------------
    ! --- Modal parameters "SSqmXX, SSqmdotXX, SSqmddXX" amplitude, speed and acceleration
@@ -732,6 +784,22 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
          InvalidOutput(MNTRAe  (:,J,I)) = .true.  !translational accel local ref
       END DO
    END DO
+
+   IF (p%TP1IsRBRefPt) THEN
+      DO I=p%nTP,9
+         InvalidOutput(IntfSS(:,I))    = .true.
+         InvalidOutput(IntfTRe(:,I))   = .true.
+         InvalidOutput(IntfTRss(:,I))  = .true.
+         InvalidOutput(IntfTRAss(:,I)) = .true.
+      END DO
+   ELSE
+      DO I=p%nTP+1,9
+         InvalidOutput(IntfSS(:,I))    = .true.
+         InvalidOutput(IntfTRe(:,I))   = .true.
+         InvalidOutput(IntfTRss(:,I))  = .true.
+         InvalidOutput(IntfTRAss(:,I)) = .true.
+      END DO
+   END IF
   
    !-------------------------------------------------------------------------------------------------
    ! ALLOCATE the OutParam array
@@ -758,7 +826,14 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
       p%OutParam(I)%Name = OutList(I)   
       OutListTmp         = OutList(I)
    
-   
+      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
+
+      ! Interface output backward compatibility
+      k = INDEX( OutListTmp, 'INTF' )
+      IF ( k>0 .and. INDEX( '0123456789', OutListTmp(k+4:k+4) ) <= 0 ) THEN
+         OutListTmp = OutListTmp(1:k+3)//'1'//OutListTmp(k+4:)
+      END IF
+
       ! Reverse the sign (+/-) of the output channel if the user prefixed the
       !   channel name with a '-', '_', 'm', or 'M' character indicating "minus".
       
@@ -778,10 +853,7 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
          OutListTmp = OutListTmp(1:1)//'0'//OutListTmp(2:)
          CheckOutListAgain  = .FALSE.
       end if
-      
-      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
-   
-   
+
       Indx =  IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
       
       IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again         

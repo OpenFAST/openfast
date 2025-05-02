@@ -73,7 +73,8 @@ typedef  ^  InitInputType  CHARACTER(1024)  SDInputFile  - - -       "Name of th
 typedef  ^  InitInputType  CHARACTER(1024)  RootName     - - -       "SubDyn rootname"
 typedef  ^  InitInputType  ReKi             g            - - -       "Gravity acceleration"
 typedef  ^  InitInputType  ReKi             WtrDpth      - - -       "Water Depth (positive valued)"
-typedef  ^  InitInputType  ReKi             TP_RefPoint  {3} - -     "global position of transition piece reference point (could also be defined in SubDyn itself)"
+typedef  ^  InitInputType  INTEGER          NTP - - -                "Number of coupled transition pieces" 
+typedef  ^  InitInputType  ReKi             TP_RefPoint  {3}{:} - -  "global position of transition piece reference point (could also be defined in SubDyn itself)"
 typedef  ^  InitInputType  ReKi             SubRotateZ   - - -       "Rotation angle in degrees about global Z"
 typedef  ^  InitInputType  ReKi             SoilStiffness ::: - -    "Soil stiffness matrices from SoilDyn" '(N/m, N-m/rad)'
 typedef  ^  InitInputType  MeshType         SoilMesh     - - -       "Mesh for soil stiffness locations" -
@@ -88,11 +89,13 @@ typedef  ^  ^               LOGICAL                CableCChanRqst  {:}  .FALSE. 
 
 # ============================== Define initialization data (not from glue code) here: ============================================================================================================================================
 typedef  ^  SD_InitType   CHARACTER(1024)    RootName - - -           "SubDyn rootname" 
-typedef  ^  SD_InitType   ReKi               TP_RefPoint  {3}  - -    "global position of transition piece reference point (could also be defined in SubDyn itself)" 
+typedef  ^  SD_InitType   ReKi               TP_RefPoint {3}{:}  - -  "global position of transition piece reference point (could also be defined in SubDyn itself)" 
 typedef  ^  SD_InitType   ReKi               SubRotateZ - - -         "Rotation angle in degrees about global Z" 
 typedef  ^  SD_InitType   ReKi               g - - -                  "Gravity acceleration" m/s^2
 typedef  ^  SD_InitType   DbKi               DT - - -                 "Time step from Glue Code" seconds
+typedef  ^  SD_InitType   INTEGER            NTP - - -                "Number of coupled transition pieces" 
 typedef  ^  SD_InitType   INTEGER            NJoints - - -            "Number of joints of the sub structure" 
+typedef  ^  SD_InitType   INTEGER            RB_RefJoint - - -        "Input joint ID of the rigid-body reference joint"
 typedef  ^  SD_InitType   INTEGER            NPropSetsX - - -         "Number of extended property sets" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsBC - - -        "Number of property sets for beams with a circular section" 
 typedef  ^  SD_InitType   INTEGER            NPropSetsBR - - -        "Number of property sets for beams with a rectangular section" 
@@ -116,7 +119,8 @@ typedef  ^  SD_InitType   ReKi               CMass {:}{:} - -         "Concentra
 typedef  ^  SD_InitType   ReKi               JDampings {:} - -        "Damping coefficients for internal modes" 
 typedef  ^  SD_InitType   IntKi              GuyanDampMod  -  -  -    "Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix]" 
 typedef  ^  SD_InitType   ReKi               RayleighDamp  {2} -  -   "Mass and stiffness proportional damping coefficients (Rayleigh Damping) [only if GuyanDampMod=1]" 
-typedef  ^  SD_InitType   ReKi               GuyanDampMat  {6}{6} - - "Guyan Damping Matrix, see also CBB" 
+typedef  ^  SD_InitType   IntKi              GuyanDampSize  - - -     "Size of Guyan damping matrix"
+typedef  ^  SD_InitType   ReKi               GuyanDampMat  {:}{:} - - "Guyan Damping Matrix, see also CBB" 
 typedef  ^  SD_InitType   INTEGER            Members {:}{:} - -       "Member joints connection          " 
 typedef  ^  SD_InitType   ReKi               MemberSpin {:} - -       "Member spin angle about its axis - for rectangular members " rad
 typedef  ^  SD_InitType   CHARACTER(ChanLen) SSOutList {:} - -        "List of Output Channels           " 
@@ -148,19 +152,22 @@ typedef  ^  SD_InitType   INTEGER            MemberNodes {:}{:} - -   "Member nu
 typedef  ^  SD_InitType   INTEGER            NodesConnN {:}{:} - -    "Nodes that connect to a common node   " 
 typedef  ^  SD_InitType   INTEGER            NodesConnE {:}{:} - -    "Elements that connect to a common node" 
 typedef  ^  SD_InitType   LOGICAL            SSSum - - -              "SubDyn Summary File Flag              " 
+typedef  ^  SD_InitType   R8Ki               qR0        {6} - -       "Initial rigid-body displacement (floating only)"
 
 # ============================== States ============================================================================================================================================
 typedef  ^  ContinuousStateType  R8Ki   qm    {:}   -   -   "Virtual states, Nmod elements"
 typedef  ^  ContinuousStateType  R8Ki   qmdot {:}   -   -   "Derivative of states, Nmod elements"
+typedef  ^  ContinuousStateType  R8Ki   qR    {:}   -   -   "Rigid-body displacement"
+typedef  ^  ContinuousStateType  R8Ki   qRdot {:}   -   -   "Derivative of rigid-body displacement"
+
 
 typedef  ^  DiscreteStateType    ReKi DummyDiscState   - - - "Remove this variable if you have discrete states"
-
 typedef  ^  ConstraintStateType  ReKi DummyConstrState - - - "Remove this variable if you have constraint states"
-
 typedef  ^  OtherStateType SD_ContinuousStateType  xdot       {:} -  -  "previous state derivs for m-step time integrator"
 typedef  ^          ^      IntKi                   n           -  -  -  "tracks time step for which OtherState was updated last"
 
 # ============================== Parameters ============================================================================================================================================
+typedef	 ^  ParameterType   ModVarsType    Vars          -  -  -  "Module Variables"
 typedef  ^  ParameterType   IntKi          iVarTPMesh    -  0  -  "Variable index for TPMesh"
 typedef  ^  ParameterType   IntKi          iVarLMesh     -  0  -  "Variable index for LMesh"
 typedef  ^  ParameterType   IntKi          iVarY1Mesh    -  0  -  "Variable index for Y1Mesh"
@@ -182,6 +189,7 @@ typedef  ^  ParameterType  R8Ki            FC         {:}    - -  "Initial cable
 typedef  ^  ParameterType  R8Ki            FG         {:}    - -  "Gravity force vector, not reduced"  N
 typedef  ^  ParameterType  ReKi            DP0        {:}{:} - -  "Vector from TP to a Node at t=0, used for Floating Rigid Body motion"  m
 typedef  ^  ParameterType  ReKi            rPG        {:}    - -  "Vector from TP to rigid-body CoG in the Guyan (rigid-body) frame, used for Floating Rigid Body Motion"  m
+typedef  ^  ParameterType  ReKi            rTP0       {3}{:} - -  "Vector from rigid-body reference point to transition pieces" m
 typedef  ^  ParameterType  IntKi           NodeID2JointID {:} - - "Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes)"  "-"
 typedef  ^  ParameterType  IntKi           CMassNode   {:}    - - "Node indices for concentrated masses"
 typedef  ^  ParameterType  ReKi            CMassWeight {:}    - - "Weight of concentrated masses" N
@@ -197,9 +205,11 @@ typedef  ^  ParameterType  IntKi   DOFred2Nodes      {:}{:} -  -  "nDOFRed x 3, 
 # --- Parameters - Control           
 typedef  ^  ParameterType  IntKi   CtrlElem2Channel  {:}{:} - -   "nCtrlCable x 2, for each CtrlCable, Elem index, and Channel Index"
 # --- Parameters - CB reduction
+typedef  ^  ParameterType  ReKi    RBRefPt  {3} - -  "global position of transition piece reference point (could also be defined in SubDyn itself)"
+typedef  ^  ParameterType  LOGICAL TP1IsRBRefPt -  -  -  "If the first transition-piece is a dummy one for rigid-body motion - floating only"
 typedef  ^  ParameterType  IntKi   nDOFM        -  -  -  "retained degrees of freedom (modes)"
+typedef  ^  ParameterType  IntKi   nDOFRB       -  -  -  "number of rigid-body modes"
 typedef  ^  ParameterType  IntKi   SttcSolve    -  -  -  "Solve dynamics about static equilibrium point (flag)"
-typedef  ^  ParameterType  Logical GuyanLoadCorrection  -  -  -  "Add Extra lever arm contribution to interface reaction outputs"
 typedef  ^  ParameterType  Logical Floating     -  -  -  "True if floating bottom (the 6 DOF are free at all reaction nodes)"
 typedef  ^  ParameterType  ReKi    KMMDiag  {:}    -  -  "Diagonal coefficients of Kmm (OmegaM squared)"
 typedef  ^  ParameterType  ReKi    CMMDiag  {:}    -  -  "Diagonal coefficients of Cmm (~2 Zeta OmegaM))"
@@ -223,11 +233,22 @@ typedef  ^  ParameterType  ReKi    MBM  {:}{:}     -  -  "Matrix after C-B reduc
 typedef  ^  ParameterType  ReKi    PhiL_T  {:}{:}  -  -  "Transpose of Matrix of C-B  modes"
 typedef  ^  ParameterType  ReKi    PhiLInvOmgL2  {:}{:}  -  -  "Matrix of C-B  modes times the inverse of OmegaL**2 (Phi_L*(Omg**2)^-1)"
 typedef  ^  ParameterType  ReKi    KLLm1  {:}{:}   -  -  "KLL^{-1}, inverse of matrix KLL, for static solve only"
-typedef  ^  ParameterType  ReKi    AM2Jac  {:}{:}  -  -  "Jacobian (factored) for Adams-Boulton 2nd order Integration"
-typedef  ^  ParameterType  IntKi   AM2JacPiv  {:}  -  -  "Pivot array for Jacobian factorization (for Adams-Boulton 2nd order Integration)"
 typedef  ^  ParameterType  ReKi    TI  {:}{:}      -  -  "Matrix to calculate TP reference point reaction at top of structure"
 typedef  ^  ParameterType  ReKi    TIreact  {:}{:} -  -  "Matrix to calculate single point reaction at base of structure"
+typedef  ^  ParameterType  ReKi    GMat {:}{:}     -  -  "Matrix to convert the first 6 Guyan modes to rigid-body modes"
+typedef  ^  ParameterType  R8Ki    EOM_LHS {:}{:}  -  -  "(Inverse of) the left-hand side matrix of the combined equations of motion"
+typedef  ^  ParameterType  R8Ki    EOM_LHS1 {:}{:}  -  -  "(Inverse of) the left-hand side matrix of the rigid-body equations of motion"
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_1 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_2 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_3 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_4 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_5 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS1_6 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS2_1 {:}{:}  -  -
+typedef  ^  ParameterType  R8Ki    EOM_RHS3_1 {:}{:}  -  -
 # --- Parameters - Partitioning I L C Y, R=[C I]
+typedef  ^  ParameterType  IntKi  nTP           -  -  -  "Total number of transition pieces"
+typedef  ^  ParameterType  IntKi  TPIdx  {:}       -  -  "Transition piece index associated with each interface node"
 typedef  ^  ParameterType  IntKi  nNodes        -  -  -  "Total number of nodes"
 typedef  ^  ParameterType  IntKi  nNodes_I      -  -  -  "Number of Interface nodes"
 typedef  ^  ParameterType  IntKi  nNodes_L      -  -  -  "Number of Internal nodes"
@@ -239,6 +260,7 @@ typedef  ^  ParameterType  IntKi  nDOFI__       -  -  -  "Size of IDI__"
 typedef  ^  ParameterType  IntKi  nDOFI_Rb      -  -  -  "Size of IDI_Rb"
 typedef  ^  ParameterType  IntKi  nDOFI_F       -  -  -  "Size of IDI_F"
 typedef  ^  ParameterType  IntKi  nDOFL_L       -  -  -  "Size of IDL_L"
+typedef  ^  ParameterType  IntKi  nDOFL_TP      -  -  -  "Number of transition-piece DoF"
 typedef  ^  ParameterType  IntKi  nDOFC__       -  -  -  "Size of IDC__"
 typedef  ^  ParameterType  IntKi  nDOFC_Rb      -  -  -  "Size of IDC_Rb"
 typedef  ^  ParameterType  IntKi  nDOFC_L       -  -  -  "Size of IDC_L"
@@ -252,9 +274,9 @@ typedef  ^  ParameterType  IntKi  IDI_Rb  {:}      -  -  "Index array of the int
 typedef  ^  ParameterType  IntKi  IDI_F  {:}       -  -  "Index array of the interface (nodes connect to TP) dofs that are fixed DOF"
 typedef  ^  ParameterType  IntKi  IDL_L  {:}       -  -  "Index array of the internal dofs coming from internal nodes"
 typedef  ^  ParameterType  IntKi  IDC__  {:}       -  -  "Index of all bottom DOF"
-typedef  ^  ParameterType  IntKi  IDC_Rb  {:}      -  -  "Index array of the contraint dofs that are retained/master/follower DOF"
-typedef  ^  ParameterType  IntKi  IDC_L  {:}       -  -  "Index array of the contraint dofs that are follower/internal DOF"
-typedef  ^  ParameterType  IntKi  IDC_F  {:}       -  -  "Index array of the contraint dofs that are fixd DOF"
+typedef  ^  ParameterType  IntKi  IDC_Rb  {:}      -  -  "Index array of the constraint dofs that are retained/master/follower DOF"
+typedef  ^  ParameterType  IntKi  IDC_L  {:}       -  -  "Index array of the constraint dofs that are follower/internal DOF"
+typedef  ^  ParameterType  IntKi  IDC_F  {:}       -  -  "Index array of the constraint dofs that are fixd DOF"
 typedef  ^  ParameterType  IntKi  IDR__  {:}       -  -  "Index array of the interface and restraint dofs"
 typedef  ^  ParameterType  IntKi  ID__Rb  {:}      -  -  "Index array of all the retained/leader/master dofs (from any nodes of the structure)"
 typedef  ^  ParameterType  IntKi  ID__L  {:}       -  -  "Index array of all the follower/internal dofs (from any nodes of the structure)"
@@ -280,12 +302,12 @@ typedef  ^  ParameterType  IntKi           OutAllDims    -  -  -  "Integer versi
 typedef  ^  ParameterType  IntKi           OutDec        -  -  -  "Output Decimation for Requested Channels"
 
 # ============================== Inputs ============================================================================================================================================
-typedef  ^  InputType   MeshType    TPMesh         -       -   - "Transition piece inputs on a point mesh"
+typedef  ^  InputType   MeshType    TPMesh        {:}      -   - "Transition piece inputs on a point mesh"
 typedef  ^  InputType   MeshType    LMesh          -       -   - "Point mesh for interior node inputs"
 typedef  ^  InputType   ReKi        CableDeltaL   {:}      -   - "Cable tension, control input"
 
 # ============================== Outputs ============================================================================================================================================
-typedef  ^  OutputType  MeshType    Y1Mesh         -  - - "Transition piece outputs on a point mesh"
+typedef  ^  OutputType  MeshType    Y1Mesh        {:} - - "Transition piece outputs on a point mesh"
 typedef  ^  OutputType  MeshType    Y2Mesh         -  - - "Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh"
 typedef  ^  OutputType  MeshType    Y3Mesh         -  - - "Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh"
 typedef  ^  OutputType  ReKi        WriteOutput   {:} - - "Data to be written to an output file"
@@ -298,10 +320,18 @@ typedef  ^    MiscVarType    SD_ContinuousStateType   x_perturb -   -  -  ""
 typedef  ^    MiscVarType    SD_ContinuousStateType   dxdt_lin  -   -  -  ""
 typedef  ^    MiscVarType    SD_InputType   u_perturb      -   -  -  ""
 typedef  ^    MiscVarType    SD_OutputType  y_lin          -   -  -  ""
+typedef  ^    MiscVarType    R8Ki           AM2Jac     {:}{:}  -  -  ""
+typedef  ^    MiscVarType    R8Ki           AM2xq      {:}{:}  -  -  ""
+typedef  ^    MiscVarType    R8Ki           AM2xq2     {:}{:}  -  -  ""
 typedef  ^    MiscVarType    ReKi           qmdotdot      {:}  -  -  "2nd Derivative of states, used only for output-file purposes"
-typedef  ^    MiscVarType    ReKi           u_TP           6   -  -  
-typedef  ^    MiscVarType    ReKi           udot_TP        6   -  -  
-typedef  ^    MiscVarType    ReKi           udotdot_TP     6   -  -  
+typedef  ^    MiscVarType    R8Ki           qRdotdot      {:}  -  -  "2nd derivative of rigid-body states (floating only)"
+typedef  ^    MiscVarType    ReKi           F_TP          {:}  -  -
+typedef  ^    MiscVarType    ReKi           u_TP          {:}  -  -  
+typedef  ^    MiscVarType    ReKi           udot_TP       {:}  -  -  
+typedef  ^    MiscVarType    ReKi           udotdot_TP    {:}  -  -  
+typedef  ^    MiscVarType    ReKi           Y1            {:}  -  -  
+typedef  ^    MiscVarType    ReKi           Y1_Guy_R      {:}  -  -  
+typedef  ^    MiscVarType    ReKi           Y1_Guy_L      {:}  -  -  
 typedef  ^    MiscVarType    ReKi           F_L           {:}  -  -  "Loads on internal DOF, size nL" 
 typedef  ^    MiscVarType    ReKi           F_L2          {:}  -  -  "Loads on internal DOF, size nL, used for SIM and ADM4" 
 typedef  ^    MiscVarType    ReKi           UR_bar        {:}  -  -  

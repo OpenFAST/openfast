@@ -2095,7 +2095,7 @@ class InputWriter_OpenFAST(object):
             f.write('{:<22} {:<11} {:}'.format(", ".join([f'{d:f}' for d in self.fst_vt['SubDyn']['JDampings']]), 'JDampings', '- Damping Ratios for each retained mode (% of critical) If Nmodes>0, list Nmodes structural damping ratios for each retained mode (% of critical), or a single damping ratio to be applied to all retained modes. (last entered value will be used for all remaining modes).\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['GuyanDampMod'], 'GuyanDampMod', '- Guyan damping {0=none, 1=Rayleigh Damping, 2=user specified 6x6 matrix}.\n'))
         f.write('{:<10} {:<10} {:<11} {:}'.format(self.fst_vt['SubDyn']['RayleighDamp'][0], self.fst_vt['SubDyn']['RayleighDamp'][1], 'RayleighDamp', '- Mass and stiffness proportional damping  coefficients (Rayleigh Damping) [only if GuyanDampMod=1].\n'))
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['GuyanDampSize'], 'GuyanDampSize', '- Guyan damping matrix (6x6) [only if GuyanDampMod=2].\n'))
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['GuyanDampSize'], 'GuyanDampSize', '- Guyan damping matrix (6nTPx6nTP if fixed bottom or 6(nTP-1)-by-6(nTP-1) if floating) [only if GuyanDampMod=2].\n'))
         for j in range(self.fst_vt['SubDyn']['GuyanDampSize']):
             try:
                 ln = " ".join(['{:14}'.format(i) for i in self.fst_vt['SubDyn']['GuyanDamp'][j,:]])
@@ -2104,6 +2104,18 @@ class InputWriter_OpenFAST(object):
             ln += "\n"
             f.write(ln)
         
+        f.write('------- INITIAL RIGID-BODY POSITION [used only for floating structure with more than one transition pieces] -------\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['RBSurge', 'RBSway', 'RBHeave', 'RBRoll', 'RBPitch', 'RBYaw']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(m)', '(m)', '(m)', '(deg)', '(deg)', '(deg)']])+'\n')
+        ln = []
+        ln.append('{:^11}'.format(self.fst_vt['SubDyn']['RBSurge']))
+        ln.append('{:^11}'.format(self.fst_vt['SubDyn']['RBSway']))
+        ln.append('{:^11}'.format(self.fst_vt['SubDyn']['RBHeave']))
+        ln.append('{:^11}'.format(self.fst_vt['SubDyn']['RBRoll']))
+        ln.append('{:^11}'.format(self.fst_vt['SubDyn']['RBPitch']))
+        ln.append('{:^11}'.format(self.fst_vt['SubDyn']['RBYaw']))
+        f.write(" ".join(ln) + '\n')
+
         f.write('---- STRUCTURE JOINTS: joints connect structure members (~Hydrodyn Input File)---\n')
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NJoints'], 'NJoints', '- Number of joints (-)\n'))
         f.write(" ".join(['{:^11s}'.format(i) for i in ['JointID','JointXss','JointYss','JointZss','JointType','JointDirX','JointDirY','JointDirZ','JointStiff']])+' ![Coordinates of Member joints in SS-Coordinate System][JointType={1:cantilever, 2:universal joint, 3:revolute joint, 4:spherical joint}]\n')
@@ -2137,11 +2149,12 @@ class InputWriter_OpenFAST(object):
             f.write(" ".join(ln) + '\n')
         f.write('------- INTERFACE JOINTS: 1/0 for Locked (to the TP)/Free DOF @each Interface Joint (only Locked-to-TP implemented thus far (=rigid TP)) ---------\n')
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['SubDyn']['NInterf'], 'NInterf', '- Number of interface joints locked to the Transition Piece (TP):  be sure to remove all rigid motion dofs\n'))
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['IJointID', 'ItfTDXss', 'ItfTDYss', 'ItfTDZss', 'ItfRDXss', 'ItfRDYss', 'ItfRDZss']])+'\n')
-        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(flag)', '(flag)', '(flag)', '(flag)', '(flag)', '(flag)']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['IJointID', 'TPID', 'ItfTDXss', 'ItfTDYss', 'ItfTDZss', 'ItfRDXss', 'ItfRDYss', 'ItfRDZss']])+'\n')
+        f.write(" ".join(['{:^11s}'.format(i) for i in ['(-)', '(-)', '(flag)', '(flag)', '(flag)', '(flag)', '(flag)', '(flag)']])+'\n')
         for i in range(self.fst_vt['SubDyn']['NInterf']):
             ln = []
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['IJointID'][i]))
+            ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['TPID'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['ItfTDXss'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['ItfTDYss'][i]))
             ln.append('{:^11d}'.format(self.fst_vt['SubDyn']['ItfTDZss'][i]))

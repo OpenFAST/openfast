@@ -924,7 +924,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_SD%g             = p_FAST%Gravity
       Init%InData_SD%SDInputFile   = p_FAST%SubFile
       Init%InData_SD%RootName      = p_FAST%OutFileRoot
-      Init%InData_SD%TP_RefPoint   = ED%y(iED)%PlatformPtMesh%Position(:,1)  ! "Interface point" where loads will be transferred to
+      ! TODO: Below is only a temporary patch to keep things working as before. Need to be updated to support multirotor capability.
+      Init%InData_SD%nTP           = 1
+      Allocate(Init%InData_SD%TP_RefPoint(3,Init%InData_SD%nTP), stat=ErrStat2)
+         CALL SetErrStat(ErrStat2,'Allocating TP reference points',ErrStat,ErrMsg,RoutineName)
+      Init%InData_SD%TP_RefPoint(:,iED) = ED%y(iED)%PlatformPtMesh%Position(:,1)  ! "Interface points" where loads and motion will be transferred to and from
       Init%InData_SD%SubRotateZ    = 0.0                                ! Used by driver to rotate structure around z
 
       CALL SD_Init( Init%InData_SD, SD%Input(1), SD%p,  SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR),  &
@@ -5902,8 +5906,9 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, ED, SED, BD, AD, IfW, ExtInfw, HD, SD
       !call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
       call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%LMesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_LMesh_y2Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SD%y%y2Mesh )
       call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%LMesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_LMesh_y3Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SD%y%y3Mesh )
-
-      call MeshWrVTK(p_FAST%TurbinePos, SD%y%y1Mesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_y1Mesh_TPMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SD%Input(1)%TPMesh )
+      DO j = 1,size(SD%y%y1Mesh)
+         call MeshWrVTK(p_FAST%TurbinePos, SD%y%y1Mesh(j), trim(p_FAST%VTK_OutFileRoot)//'.SD_y1Mesh_TPMesh'//trim(num2lstr(j)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SD%Input(1)%TPMesh(j) )
+      END DO
       !call MeshWrVTK(p_FAST%TurbinePos, SD%y%y3Mesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_y3Mesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
    ELSE IF ( p_FAST%CompSub == Module_ExtPtfm .and. allocated(ExtPtfm%Input)) THEN
       call MeshWrVTK(p_FAST%TurbinePos, ExtPtfm%y%PtfmMesh, trim(p_FAST%VTK_OutFileRoot)//'.ExtPtfm', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, ExtPtfm%Input(1)%PtfmMesh )
@@ -6460,7 +6465,9 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
       CALL MeshWrBin( unOut, u_ED(J_local)%TowerPtLoads,            ErrStat, ErrMsg )
       CALL MeshWrBin( unOut, u_ED(J_local)%PlatformPtMesh,          ErrStat, ErrMsg )
    end do
-   CALL MeshWrBin( unOut, u_SD%TPMesh,                  ErrStat, ErrMsg )
+   do J_local = 1,size(u_SD%TPMesh)
+      CALL MeshWrBin( unOut, u_SD%TPMesh(J_local),         ErrStat, ErrMsg )
+   end do
    CALL MeshWrBin( unOut, u_SD%LMesh,                   ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%Morison%Mesh,            ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%WAMITMesh,               ErrStat, ErrMsg )
@@ -6550,7 +6557,9 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_
       CALL MeshWrBin( unOut, y_ED(J_local)%TowerLn2Mesh,            ErrStat, ErrMsg )
       CALL MeshWrBin( unOut, y_ED(J_local)%PlatformPtMesh,          ErrStat, ErrMsg )
    end do
-   CALL MeshWrBin( unOut, u_SD%TPMesh,                  ErrStat, ErrMsg )
+   do J_local = 1,size(u_SD%TPMesh)
+      CALL MeshWrBin( unOut, u_SD%TPMesh(J_local),         ErrStat, ErrMsg )
+   end do
    CALL MeshWrBin( unOut, y_SD%y2Mesh,                  ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, y_SD%y3Mesh,                  ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%Morison%Mesh,            ErrStat, ErrMsg )

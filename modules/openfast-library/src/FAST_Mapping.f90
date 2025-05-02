@@ -1144,8 +1144,8 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    case (Module_SD)
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(SD_y_Y1Mesh), &                    ! SD%y%Y1mesh, &
-                       SrcDispDL=DatLoc(SD_u_TPMesh), &                ! SD%u%TPMesh
+                       SrcDL=DatLoc(SD_y_Y1Mesh,DstMod%Ins), &         ! SD%y%Y1mesh, &
+                       SrcDispDL=DatLoc(SD_u_TPMesh,DstMod%Ins), &     ! SD%u%TPMesh
                        DstDL=DatLoc(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
                        DstDispDL=DatLoc(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2)
@@ -1808,8 +1808,8 @@ subroutine InitMappings_SD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    case (Module_ED)
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcDL=DatLoc(ED_y_PlatformPtMesh), &          ! ED%y%PlatformPtMesh
-                         DstDL=DatLoc(SD_u_TPMesh), &                  ! SD%u%TPMesh
+                         SrcDL=DatLoc(ED_y_PlatformPtMesh), &             ! ED%y%PlatformPtMesh
+                         DstDL=DatLoc(SD_u_TPMesh, SrcMod%Ins), &         ! SD%u%TPMesh
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
    case (Module_FEAM)
