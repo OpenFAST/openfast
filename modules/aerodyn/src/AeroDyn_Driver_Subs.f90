@@ -24,6 +24,7 @@ module AeroDyn_Driver_Subs
    use AeroDyn_Inflow, only: concatOutputHeaders
    use AeroDyn_Inflow, only: Init_MeshMap_For_ADI, Set_Inputs_For_ADI
    use AeroDyn_IO,     only: AD_WrVTK_Surfaces, AD_WrVTK_LinesPoints
+   use SeaState,       only: SeaSt_Init, SeaSt_CalcOutput
    
    use AeroDyn_Driver_Types   
    use AeroDyn
@@ -90,10 +91,11 @@ contains
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
-subroutine Dvr_Init(dvr, ADI, FED, errStat, errMsg )
+subroutine Dvr_Init(dvr, ADI, FED, SeaSt, errStat, errMsg )
    type(Dvr_SimData),            intent(  out) :: dvr       !< driver data
    type(ADI_Data),               intent(  out) :: ADI       !< AeroDyn/InflowWind data
    type(FED_Data),               intent(  out) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
+   type(SeaState_Data),          intent(  out) :: SeaSt     !< SeaState data
    integer(IntKi)              , intent(  out) :: errStat   !< Status of error message
    character(*)                , intent(  out) :: errMsg    !< Error message if errStat /= ErrID_None
    ! local variables
@@ -139,13 +141,15 @@ end subroutine Dvr_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !>  
-subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
-   integer(IntKi)              , intent(in   ) :: iCase
-   type(Dvr_SimData),           intent(inout) :: dvr       !< driver data
-   type(ADI_Data),              intent(inout) :: ADI       !< AeroDyn/InflowWind data
-   type(FED_Data),              intent(inout) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
+subroutine Dvr_InitCase(iCase, dvr, ADI, FED, SeaSt, errStat, errMsg )
+   integer(IntKi)                  , intent(in   ) :: iCase
+   type(Dvr_SimData)               , intent(inout) :: dvr                  !< driver data
+   type(ADI_Data)                  , intent(inout) :: ADI                  !< AeroDyn/InflowWind data
+   type(FED_Data)                  , intent(inout) :: FED                  !< Elastic wind turbine data (Fake ElastoDyn)
+   type(SeaState_Data)             , intent(inout) :: SeaSt                !< SeaState data
+   integer(IntKi)                  , intent(  out) :: errStat              ! Status of error message
+   character(*)                    , intent(  out) :: errMsg               ! Error message if errStat /= ErrID_None
+
    ! local variables
    integer(IntKi)       :: errStat2      ! local status of error message
    character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
@@ -240,7 +244,46 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    ! Compute driver outputs at t=0 
    call Set_Mesh_Motion(0, dvr, ADI, FED, errStat2, errMsg2); if(Failed()) return
 
-   ! --- Initialze AD inputs
+   ! --- Initialize SeaState
+   if ( dvr%SS_InitInp%CompSeaSt == 1 ) then
+
+      SeaSt%InitInp%Gravity       = 9.80665_ReKi
+      SeaSt%InitInp%hasIce        = .FALSE.
+      SeaSt%InitInp%defWtrDens    = dvr%FldDens
+      SeaSt%InitInp%defWtrDpth    = dvr%WtrDpth
+      SeaSt%InitInp%defMSL2SWL    = dvr%MSL2SWL
+      SeaSt%InitInp%MHK           = dvr%MHK
+      SeaSt%InitInp%UseInputFile  = .TRUE.
+      SeaSt%InitInp%Linearize     = .FALSE.
+      SeaSt%InitInp%InputFile     = dvr%SS_InitInp%InputFile
+      SeaSt%InitInp%OutRootName   = trim(dvr%out%Root)//'.SEA'
+      SeaSt%InitInp%TMax          = dvr%TMax
+
+      IF ( dvr%MHK .NE. 0_IntKi .AND. dvr%IW_InitInp%CompInflow == 1) THEN
+         SeaSt%InitInp%hasCurrField = .TRUE.
+      ELSE
+         SeaSt%InitInp%hasCurrField = .FALSE.
+      END IF
+
+      CALL SeaSt_Init( SeaSt%InitInp, SeaSt%u, SeaSt%p, SeaSt%x, SeaSt%xd, SeaSt%z, SeaSt%OtherState, SeaSt%y, SeaSt%m, dvr%dt, SeaSt%InitOut, ErrStat, ErrMsg )
+      
+      IF ( dvr%MHK .NE. 0_IntKi .AND. dvr%IW_InitInp%CompInflow == 1 ) THEN ! MHK turbine
+         ! Simulating an MHK turbine; load dynamic current from IfW
+         SeaSt%p%WaveField%CurrField  => ADI%p%AD%FlowField
+         SeaSt%p%WaveField%hasCurrField = .TRUE.
+         ! Set AD pointers to wavefield
+         ADI%p%AD%WaveField => SeaSt%InitOut%WaveField
+      ELSE ! Wind turbine
+         SeaSt%p%WaveField%hasCurrField = .FALSE.
+      END IF
+
+      if (iCase==1) then
+         call concatOutputHeaders(dvr%out%WriteOutputHdr, dvr%out%WriteOutputUnt, SeaSt%InitOut%WriteOutputHdr, SeaSt%InitOut%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+      endif
+     
+   end if
+
+   ! --- Initialize AD inputs
    DO j = 1-numInp, 0
       call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
       call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
@@ -275,11 +318,12 @@ end subroutine Dvr_InitCase
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Perform one time step
-subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
+subroutine Dvr_TimeStep(nt, dvr, ADI, FED, SeaSt, errStat, errMsg)
    integer(IntKi)              , intent(in   ) :: nt            ! next time step (current time is nt-1)
    type(Dvr_SimData),           intent(inout) :: dvr       ! driver data
    type(ADI_Data),              intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(FED_Data),              intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
+   type(SeaState_Data)         , intent(inout) :: SeaSt         !< SeaState data
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! local variables
@@ -302,8 +346,11 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
    ! Calculate outputs at nt - 1 (current time)
    call ADI_CalcOutput(time, ADI%u(2), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2 ); if(Failed()) return
 
+   ! Call SeaSt_CalcOutput for writing to the file
+   call SeaSt_CalcOutput( time, SeaSt%u, SeaSt%p, SeaSt%x, SeaSt%xd, SeaSt%z, SeaSt%OtherState, SeaSt%y, SeaSt%m, errStat2, errMsg2 )
+
    ! Write outputs for all turbines at nt-1
-   call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y, errStat2, errMsg2); if(Failed()) return
+   call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y, SeaSt, errStat2, errMsg2); if(Failed()) return
 
    ! We store the "driver-level" outputs only now,  above, the old outputs are used
    call Dvr_CalcOutputDriver(dvr, ADI%y, FED, errStat, errMsg)
@@ -478,6 +525,9 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, needInitIW, errStat, err
       InitInp%IW_InitInp%PLExp      = dvr%IW_InitInp%PLExp
       InitInp%IW_InitInp%MHK        = dvr%MHK
       InitInp%IW_InitInp%FilePassingMethod = 0_IntKi ! read input file instead of passed file data
+      InitInp%IW_InitInp%WtrDpth    = dvr%WtrDpth
+      InitInp%IW_InitInp%MSL2SWL    = dvr%MSL2SWL
+      InitInp%IW_InitInp%RootName   = trim(dvr%out%Root)
       ! AeroDyn
       InitInp%AD%Gravity   = 9.80665_ReKi
       InitInp%AD%RootName  = dvr%out%Root
@@ -490,6 +540,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, needInitIW, errStat, err
       InitInp%AD%defPvap     = dvr%Pvap
       InitInp%AD%WtrDpth     = dvr%WtrDpth
       InitInp%AD%MSL2SWL     = dvr%MSL2SWL
+      InitInp%AD%CompSeaSt   = dvr%SS_InitInp%CompSeaSt
       ! Init data per rotor
       allocate(InitInp%AD%rotors(dvr%numTurbines), stat=errStat) 
       if (errStat/=0) then
@@ -999,8 +1050,14 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       dvr%IW_InitInp%HWindSpeed = myNaN
    endif
 
+   ! --- SeaState data
+   call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "CompSeaSt" , dvr%SS_InitInp%CompSeaSt , errStat2, errMsg2, unEc); if (Failed()) return
+   call ParseVar(FileInfo_In, CurLine, "SeaStFile" , dvr%SS_InitInp%InputFile , errStat2, errMsg2, unEc); if (Failed()) return
+
    if (PathIsRelative(dvr%AD_InputFile)) dvr%AD_InputFile = trim(PriPath)//trim(dvr%AD_InputFile)
    if (PathIsRelative(dvr%IW_InitInp%InputFile)) dvr%IW_InitInp%InputFile = trim(PriPath)//trim(dvr%IW_InitInp%InputFile)
+   if (PathIsRelative(dvr%SS_InitInp%InputFile)) dvr%SS_InitInp%InputFile = trim(PriPath)//trim(dvr%SS_InitInp%InputFile)
 
    ! --- Turbines
    call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return
@@ -1356,10 +1413,15 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", errStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
-   if (dvr%MHK /= MHK_None .and. dvr%MHK /= MHK_FixedBottom .and. dvr%MHK /= MHK_Floating) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
-   
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',errStat, errMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%IW_InitInp%compInflow) ), 'CompInflow needs to be 0 or 1')) return
+   if (Check(.not.(ANY((/0,1/) == dvr%SS_InitInp%CompSeaSt) ), 'CompSeaSt needs to be 0 or 1')) return
+   
+   if (dvr%MHK /= MHK_None .and. dvr%MHK /= MHK_FixedBottom .and. dvr%MHK /= MHK_Floating) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
+   
+   if (dvr%MHK /= MHK_None .and. dvr%SS_InitInp%CompSeaSt == 1 .and. dvr%IW_InitInp%CompInflow /= 1) call SetErrStat( ErrID_Fatal, 'InflowWind must be activated for MHK turbines when SeaState is used.', ErrStat, ErrMsg, RoutineName )
+
+   if (dvr%MHK == MHK_None .and. dvr%SS_InitInp%CompSeaSt /= 0) call SetErrStat( ErrID_Fatal, 'SeaState cannot be used with wind turbines.', ErrStat, ErrMsg, RoutineName )
 
    if (Check(.not.(ANY(idAnalysisVALID == dvr%analysisType    )), 'Analysis type not supported: '//trim(Num2LStr(dvr%analysisType)) )) return
    
@@ -1652,26 +1714,39 @@ subroutine Dvr_CalcOutputDriver(dvr, y_ADI, FED, errStat, errMsg)
 
 end subroutine Dvr_CalcOutputDriver
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, errStat, errMsg)
+subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, SeaSt, errStat, errMsg)
    integer(IntKi)         ,  intent(in   )   :: nt                   ! simulation time step
    real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
-   type(Dvr_SimData),        intent(inout)   :: dvr              ! driver data
+   type(Dvr_SimData)      ,  intent(inout)   :: dvr                  ! driver data
    type(Dvr_Outputs)      ,  intent(inout)   :: out                  ! driver uotput options
    type(ADI_OutputType)   ,  intent(in   )   :: yADI                 ! aerodyn outputs
+   type(SeaState_Data)    ,  intent(inout)   :: SeaSt                ! SeaState data
    integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
    character(*)           ,  intent(inout)   :: errMsg               ! Error message if errStat /= ErrID_None
    ! Local variables.
    character(ChanLen) :: tmpStr         ! temporary string to print the time output as text
-   integer :: nDV , nAD, nIW, iWT, k, j
+   integer :: nDV , nAD, nIW, nSS, iWT, k, j
    real(ReKi) :: rotations(3)
    integer(IntKi)  :: errStat2 ! Status of error message
    character(ErrMsgLen)    :: errMsg2  ! Error message 
    errStat = ErrID_None
    errMsg  = ''
 
+   IF ( .not. allocated( SeaSt%y%WriteOutput ) ) then 
+      call AllocAry ( SeaSt%y%WriteOutput, SeaSt%p%NumOuts, 'WriteOutputSS', errStat, errMsg )
+
+      IF ( ErrStat /= 0 )  THEN
+         ErrMsg  = ' Error allocating memory for the SeaState WriteOutput array.'
+         ErrStat = ErrID_Fatal
+         RETURN
+      END IF
+      SeaSt%y%WriteOutput = 0.0_ReKi
+   END IF
+
    ! Packing all outputs excpet time into one array
    nAD = size(yADI%AD%rotors(1)%WriteOutput)
    nIW = size(yADI%IW_WriteOutput)
+   nSS = size(SeaSt%y%WriteOutput)
    nDV = out%nDvrOutputs
    do iWT = 1, dvr%numTurbines
       if (dvr%wt(iWT)%numBlades >0 ) then ! TODO, export for tower only
@@ -1679,8 +1754,9 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, errStat, errMsg)
          out%outLine(1:nDV)         = dvr%wt(iWT)%WriteOutput(1:nDV)  ! Driver Write Outputs
          ! out%outLine(11)            = dvr%WT(iWT)%hub%azimuth       ! azimuth already stored a nt-1
 
-         out%outLine(nDV+1:nDV+nIW) = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
-         out%outLine(nDV+nIW+1:)    = yADI%AD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
+         out%outLine(nDV+1:nDV+nIW)         = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
+         out%outLine(nDV+nIW+1:nDV+nIW+nAD) = yADI%AD%rotors(iWT)%WriteOutput     ! AeroDyn WriteOutputs
+         out%outLine(nDV+nIW+nAD+1:)        = SeaSt%y%WriteOutput                 ! SeaState WriteOutputs
 
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
             ! ASCII
@@ -1693,7 +1769,7 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, yADI, errStat, errMsg)
          endif
          if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
             ! Store for binary
-            out%storage(1:nDV+nIW+nAD, nt, iWT) = out%outLine(1:nDV+nIW+nAD)
+            out%storage(1:nDV+nIW+nAD+nSS, nt, iWT) = out%outLine(1:nDV+nIW+nAD+nSS)
          endif
       endif
    enddo

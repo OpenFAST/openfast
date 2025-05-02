@@ -186,6 +186,7 @@ IMPLICIT NONE
     character(1024)  :: root      !< Output file rootname [-]
     TYPE(Dvr_Outputs)  :: out      !< data for driver output file [-]
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !<  [-]
+    TYPE(SeaSt_InitInputType)  :: SS_InitInp      !<  [-]
   END TYPE Dvr_SimData
 ! =======================
 ! =========  AllData  =======
@@ -196,6 +197,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: errStat = 0_IntKi      !<  [-]
     character(ErrMsgLen)  :: errMsg      !<  [-]
     LOGICAL  :: initialized = .false.      !<  [-]
+    TYPE(SeaState_Data)  :: SeaSt      !< SeaState data [-]
   END TYPE AllData
 ! =======================
 
@@ -1201,6 +1203,9 @@ subroutine AD_Dvr_CopyDvr_SimData(SrcDvr_SimDataData, DstDvr_SimDataData, CtrlCo
    call ADI_CopyIW_InputData(SrcDvr_SimDataData%IW_InitInp, DstDvr_SimDataData%IW_InitInp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyInitInput(SrcDvr_SimDataData%SS_InitInp, DstDvr_SimDataData%SS_InitInp, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_Dvr_DestroyDvr_SimData(Dvr_SimDataData, ErrStat, ErrMsg)
@@ -1238,6 +1243,8 @@ subroutine AD_Dvr_DestroyDvr_SimData(Dvr_SimDataData, ErrStat, ErrMsg)
    call AD_Dvr_DestroyDvr_Outputs(Dvr_SimDataData%out, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call ADI_DestroyIW_InputData(Dvr_SimDataData%IW_InitInp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInitInput(Dvr_SimDataData%SS_InitInp, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -1287,6 +1294,7 @@ subroutine AD_Dvr_PackDvr_SimData(RF, Indata)
    call RegPack(RF, InData%root)
    call AD_Dvr_PackDvr_Outputs(RF, InData%out) 
    call ADI_PackIW_InputData(RF, InData%IW_InitInp) 
+   call SeaSt_PackInitInput(RF, InData%SS_InitInp) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1346,6 +1354,7 @@ subroutine AD_Dvr_UnPackDvr_SimData(RF, OutData)
    call RegUnpack(RF, OutData%root); if (RegCheckErr(RF, RoutineName)) return
    call AD_Dvr_UnpackDvr_Outputs(RF, OutData%out) ! out 
    call ADI_UnpackIW_InputData(RF, OutData%IW_InitInp) ! IW_InitInp 
+   call SeaSt_UnpackInitInput(RF, OutData%SS_InitInp) ! SS_InitInp 
 end subroutine
 
 subroutine AD_Dvr_CopyAllData(SrcAllDataData, DstAllDataData, CtrlCode, ErrStat, ErrMsg)
@@ -1371,6 +1380,9 @@ subroutine AD_Dvr_CopyAllData(SrcAllDataData, DstAllDataData, CtrlCode, ErrStat,
    DstAllDataData%errStat = SrcAllDataData%errStat
    DstAllDataData%errMsg = SrcAllDataData%errMsg
    DstAllDataData%initialized = SrcAllDataData%initialized
+   call ADI_CopySeaState_Data(SrcAllDataData%SeaSt, DstAllDataData%SeaSt, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_Dvr_DestroyAllData(AllDataData, ErrStat, ErrMsg)
@@ -1388,6 +1400,8 @@ subroutine AD_Dvr_DestroyAllData(AllDataData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call ADI_DestroyFED_Data(AllDataData%FED, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADI_DestroySeaState_Data(AllDataData%SeaSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_Dvr_PackAllData(RF, Indata)
@@ -1401,6 +1415,7 @@ subroutine AD_Dvr_PackAllData(RF, Indata)
    call RegPack(RF, InData%errStat)
    call RegPack(RF, InData%errMsg)
    call RegPack(RF, InData%initialized)
+   call ADI_PackSeaState_Data(RF, InData%SeaSt) 
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -1415,6 +1430,7 @@ subroutine AD_Dvr_UnPackAllData(RF, OutData)
    call RegUnpack(RF, OutData%errStat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%errMsg); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%initialized); if (RegCheckErr(RF, RoutineName)) return
+   call ADI_UnpackSeaState_Data(RF, OutData%SeaSt) ! SeaSt 
 end subroutine
 
 END MODULE AeroDyn_Driver_Types

@@ -32,6 +32,7 @@
 MODULE AeroDyn_Inflow_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE AeroDyn_Types
+USE SeaState_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_Version                      = 1      !  [-]
@@ -63,6 +64,9 @@ IMPLICIT NONE
     TYPE(FileInfoType)  :: PassedFileInfo      !< If we don't use the input file, pass everything through this as a FileInfo structure [-]
     TYPE(InflowWind_InputFile)  :: PassedFileData      !< If we don't use the input file, pass everything through this as an IfW InputFile structure [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
+    Character(1024)  :: RootName      !< RootName for writing output files [-]
   END TYPE ADI_IW_InputData
 ! =======================
 ! =========  ADI_InitInputType  =======
@@ -148,6 +152,20 @@ IMPLICIT NONE
     TYPE(ADI_OutputType)  :: y      !< System outputs [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: inputTimes      !< Array of times associated with u array [-]
   END TYPE ADI_Data
+! =======================
+! =========  SeaState_Data  =======
+  TYPE, PUBLIC :: SeaState_Data
+    TYPE(SeaSt_ContinuousStateType)  :: x      !< Continuous states [-]
+    TYPE(SeaSt_DiscreteStateType)  :: xd      !< Discrete states [-]
+    TYPE(SeaSt_ConstraintStateType)  :: z      !< Constraint states [-]
+    TYPE(SeaSt_OtherStateType)  :: OtherState      !< Other states [-]
+    TYPE(SeaSt_ParameterType)  :: p      !< Parameters [-]
+    TYPE(SeaSt_InputType)  :: u      !< System inputs [-]
+    TYPE(SeaSt_OutputType)  :: y      !< System outputs [-]
+    TYPE(SeaSt_MiscVarType)  :: m      !< Misc/optimization variables [-]
+    TYPE(SeaSt_InitInputType)  :: InitInp      !< Array of inputs associated with InputTimes [-]
+    TYPE(SeaSt_InitOutputType)  :: InitOut      !< Array of outputs associated with CalcSteady Azimuths [-]
+  END TYPE SeaState_Data
 ! =======================
 ! =========  RotFED  =======
   TYPE, PUBLIC :: RotFED
@@ -339,6 +357,9 @@ subroutine ADI_CopyIW_InputData(SrcIW_InputDataData, DstIW_InputDataData, CtrlCo
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstIW_InputDataData%Linearize = SrcIW_InputDataData%Linearize
+   DstIW_InputDataData%WtrDpth = SrcIW_InputDataData%WtrDpth
+   DstIW_InputDataData%MSL2SWL = SrcIW_InputDataData%MSL2SWL
+   DstIW_InputDataData%RootName = SrcIW_InputDataData%RootName
 end subroutine
 
 subroutine ADI_DestroyIW_InputData(IW_InputDataData, ErrStat, ErrMsg)
@@ -371,6 +392,9 @@ subroutine ADI_PackIW_InputData(RF, Indata)
    call NWTC_Library_PackFileInfoType(RF, InData%PassedFileInfo) 
    call InflowWind_PackInputFile(RF, InData%PassedFileData) 
    call RegPack(RF, InData%Linearize)
+   call RegPack(RF, InData%WtrDpth)
+   call RegPack(RF, InData%MSL2SWL)
+   call RegPack(RF, InData%RootName)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -389,6 +413,9 @@ subroutine ADI_UnPackIW_InputData(RF, OutData)
    call NWTC_Library_UnpackFileInfoType(RF, OutData%PassedFileInfo) ! PassedFileInfo 
    call InflowWind_UnpackInputFile(RF, OutData%PassedFileData) ! PassedFileData 
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MSL2SWL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%RootName); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine ADI_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
@@ -1374,6 +1401,115 @@ subroutine ADI_UnPackData(RF, OutData)
    end if
    call ADI_UnpackOutput(RF, OutData%y) ! y 
    call RegUnpackAlloc(RF, OutData%inputTimes); if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine ADI_CopySeaState_Data(SrcSeaState_DataData, DstSeaState_DataData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaState_Data), intent(in) :: SrcSeaState_DataData
+   type(SeaState_Data), intent(inout) :: DstSeaState_DataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'ADI_CopySeaState_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call SeaSt_CopyContState(SrcSeaState_DataData%x, DstSeaState_DataData%x, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyDiscState(SrcSeaState_DataData%xd, DstSeaState_DataData%xd, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyConstrState(SrcSeaState_DataData%z, DstSeaState_DataData%z, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyOtherState(SrcSeaState_DataData%OtherState, DstSeaState_DataData%OtherState, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyParam(SrcSeaState_DataData%p, DstSeaState_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyInput(SrcSeaState_DataData%u, DstSeaState_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyOutput(SrcSeaState_DataData%y, DstSeaState_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyMisc(SrcSeaState_DataData%m, DstSeaState_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyInitInput(SrcSeaState_DataData%InitInp, DstSeaState_DataData%InitInp, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_CopyInitOutput(SrcSeaState_DataData%InitOut, DstSeaState_DataData%InitOut, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine ADI_DestroySeaState_Data(SeaState_DataData, ErrStat, ErrMsg)
+   type(SeaState_Data), intent(inout) :: SeaState_DataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'ADI_DestroySeaState_Data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call SeaSt_DestroyContState(SeaState_DataData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyDiscState(SeaState_DataData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyConstrState(SeaState_DataData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyOtherState(SeaState_DataData%OtherState, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyParam(SeaState_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInput(SeaState_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyOutput(SeaState_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyMisc(SeaState_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInitInput(SeaState_DataData%InitInp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInitOutput(SeaState_DataData%InitOut, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine ADI_PackSeaState_Data(RF, Indata)
+   type(RegFile), intent(inout) :: RF
+   type(SeaState_Data), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'ADI_PackSeaState_Data'
+   if (RF%ErrStat >= AbortErrLev) return
+   call SeaSt_PackContState(RF, InData%x) 
+   call SeaSt_PackDiscState(RF, InData%xd) 
+   call SeaSt_PackConstrState(RF, InData%z) 
+   call SeaSt_PackOtherState(RF, InData%OtherState) 
+   call SeaSt_PackParam(RF, InData%p) 
+   call SeaSt_PackInput(RF, InData%u) 
+   call SeaSt_PackOutput(RF, InData%y) 
+   call SeaSt_PackMisc(RF, InData%m) 
+   call SeaSt_PackInitInput(RF, InData%InitInp) 
+   call SeaSt_PackInitOutput(RF, InData%InitOut) 
+   if (RegCheckErr(RF, RoutineName)) return
+end subroutine
+
+subroutine ADI_UnPackSeaState_Data(RF, OutData)
+   type(RegFile), intent(inout)    :: RF
+   type(SeaState_Data), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'ADI_UnPackSeaState_Data'
+   if (RF%ErrStat /= ErrID_None) return
+   call SeaSt_UnpackContState(RF, OutData%x) ! x 
+   call SeaSt_UnpackDiscState(RF, OutData%xd) ! xd 
+   call SeaSt_UnpackConstrState(RF, OutData%z) ! z 
+   call SeaSt_UnpackOtherState(RF, OutData%OtherState) ! OtherState 
+   call SeaSt_UnpackParam(RF, OutData%p) ! p 
+   call SeaSt_UnpackInput(RF, OutData%u) ! u 
+   call SeaSt_UnpackOutput(RF, OutData%y) ! y 
+   call SeaSt_UnpackMisc(RF, OutData%m) ! m 
+   call SeaSt_UnpackInitInput(RF, OutData%InitInp) ! InitInp 
+   call SeaSt_UnpackInitOutput(RF, OutData%InitOut) ! InitOut 
 end subroutine
 
 subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMsg)

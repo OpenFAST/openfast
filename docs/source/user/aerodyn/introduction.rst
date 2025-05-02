@@ -14,13 +14,13 @@ However, the module equally applies to the hydrodynamics of marine hydrokinetic
 (MHK) turbines (the terms “wind turbine”, “tower”, “aerodynamics” etc.  in this
 document imply “MHK turbine”, “MHK support structure”, “hydrodynamics” etc. for
 MHK turbines).  Additional physics important for MHK turbines, not applicable to
-wind turbines, computed by AeroDyn include a cavitation check and buoyant forces
-and moments on the blades, tower, hub, and nacelle. This
-documentation pertains version of AeroDyn in the OpenFAST github repository.
-The AeroDyn version released of OpenFAST 1.0.0 is most closely related to
-AeroDyn version 15 in the legacy version numbering.  AeroDyn version 15 was a
-complete overhaul from earlier version of AeroDyn.  AeroDyn version 15 and newer
-follows the requirements of the FAST modularization framework. 
+wind turbines, computed by AeroDyn include a cavitation check, buoyant forces
+and moments on the blades, tower, hub, and nacelle, and added mass and inertia
+forces and moments on the blades and tower. This documentation pertains to the version
+of AeroDyn in the OpenFAST github repository. The AeroDyn version released with OpenFAST
+1.0.0 is most closely related to AeroDyn version 15 in the legacy version numbering.
+AeroDyn version 15 was a complete overhaul from earlier versions of AeroDyn.
+AeroDyn version 15 and newer follow the requirements of the FAST modularization framework. 
 
 AeroDyn calculates aerodynamic loads on both the blades and tower.
 Aerodynamic calculations within AeroDyn are based on the principles of
@@ -67,14 +67,15 @@ and returns them back to OpenFAST as part of the aero-elastic calculation.
 In standalone mode, the inputs to AeroDyn are prescribed by a simple
 driver code, without aero-elastic coupling.
 
-AeroDyn consists of six submodels: (1) rotor wake/induction, (2) blade
+AeroDyn consists of seven submodels: (1) rotor wake/induction, (2) blade
 airfoil aerodynamics, (3) tower influence on the fluid local to the
-blade nodes, (4) tower and nacelle drag, (5) aeroacoustics,
-and (6) buoyancy on the blades, hub, nacelle, and tower (for MHK turbines). 
-Nacelle, hub, and tail-vane fluid influence and loading (with the exception
-of nacelle and hub buoyant loads) and wake and array effects between 
-multiple turbines in a wind plant are not yet available in AeroDyn. 
-Aeroacoustics are not available for MHK turbines.
+blade nodes, (4) tower and nacelle drag, (5) aeroacoustics, (6) buoyancy
+on the blades, hub, nacelle, and tower (for MHK turbines), and (7) added
+mass and fluid inertia on the blades and tower (for MHK turbines). Nacelle, hub,
+and tail-vane fluid influence and loading (with the exception
+of nacelle drag and nacelle and hub buoyant loads) and wake and array
+effects between multiple turbines in a wind plant are not yet available
+in AeroDyn. Aeroacoustics are not available for MHK turbines.
 
 For operating wind and MHK turbine rotors, AeroDyn calculates the
 influence of the wake via induction factors based on the quasi-steady

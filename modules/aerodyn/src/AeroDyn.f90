@@ -32,7 +32,8 @@ module AeroDyn
    use FVW
    use FVW_Subs, only: FVW_AeroOuts
    use IfW_FlowField_Types
-   use IfW_FlowField, only: IfW_FlowField_GetVelAcc
+   use IfW_FlowField, only: IfW_FlowField_GetVelAcc, IfW_FlowField_CopyFlowFieldType
+   use SeaSt_WaveField, only: WaveField_GetWaveVelAcc_AD
    
    implicit none
    private
@@ -422,8 +423,18 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Calculate buoyancy parameters
       !............................................................................................
    do iR = 1, nRotors
-      if ( p%rotors(iR)%Buoyancy ) then 
+      if ( p%rotors(iR)%MHK /= MHK_None ) then 
          call SetBuoyancyParameters( InputFileData%rotors(iR), u%rotors(iR), p%rotors(iR), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      end if
+   end do
+
+      !............................................................................................
+      ! Calculate inertia and added mass parameters
+      !............................................................................................
+   do iR = 1, nRotors
+      if ( p%rotors(iR)%MHK /= MHK_None ) then 
+         call SetAddedMassInertiaParameters( InputFileData%rotors(iR), p%rotors(iR), ErrStat2, ErrMsg2 )
          if (Failed()) return;
       end if
    end do
@@ -784,7 +795,7 @@ endif
    
    if (ErrStat >= AbortErrLev) RETURN
    
-   if (p%Buoyancy) then
+   if (p%MHK /= MHK_None) then
          ! Point mesh for blade buoyant loads
       allocate(m%BladeBuoyLoadPoint(p%NumBlades), Stat = ErrStat2)
       if (ErrStat2 /= 0) then
@@ -933,9 +944,22 @@ endif
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':T_P_2_T_L')
          
          if (ErrStat >= AbortErrLev) RETURN
+         
+         call AllocAry( m%TwrFI, 3_IntKi, p%NumTwrNds, 'm%TwrFI', ErrStat2, ErrMsg2 )
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
+         call AllocAry( m%TwrFA, 3_IntKi, p%NumTwrNds, 'm%TwrFA', ErrStat2, ErrMsg2 )
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       end if
+      
+      call AllocAry( m%BlFI, 3_IntKi, p%NumBlNds, p%numBlades, 'm%BlFI', ErrStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
+      call AllocAry( m%BlFA, 3_IntKi, p%NumBlNds, p%numBlades, 'm%BlFA', ErrStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      call AllocAry( m%BlMA, 3_IntKi, p%NumBlNds, p%numBlades, 'm%BlMA', ErrStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    end if
 
    ! 
@@ -1000,7 +1024,7 @@ subroutine Init_y(y, u, p, errStat, errMsg)
    errMsg  = ""
    
          
-   if (p%NumTwrNds > 0 .and. (p%TwrAero /= TwrAero_None .or. p%Buoyancy)) then
+   if (p%NumTwrNds > 0 .and. (p%TwrAero /= TwrAero_None .or. p%MHK /= MHK_None)) then
             
       call MeshCopy ( SrcMesh  = u%TowerMotion    &
                     , DestMesh = y%TowerLoad      &
@@ -1295,6 +1319,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
       u%BladeMotion(k)%TranslationVel  = 0.0_ReKi
       u%BladeMotion(k)%RotationVel     = 0.0_ReKi
       u%BladeMotion(k)%TranslationAcc  = 0.0_ReKi
+      u%BladeMotion(k)%RotationAcc     = 0.0_ReKi
          
       if (p_AD%CompAeroMaps) then
          do j=1,InputFileData%BladeProps(k)%NumBlNds
@@ -1405,6 +1430,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
 
    p_AD%UA_Flag       = InputFileData%UA_Init%UAMod > UA_None
    p_AD%CompAeroMaps  = InitInp%CompAeroMaps
+   p_AD%CompSeaSt     = InitInp%CompSeaSt
 
    p_AD%SectAvg        = InputFileData%SectAvg
    p_AD%SA_Weighting   = InputFileData%SA_Weighting
@@ -1421,7 +1447,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%TwrShadow        = InputFileData%TwrShadow
    p%TwrAero          = InputFileData%TwrAero
    p%CavitCheck       = InputFileData%CavitCheck
-   p%Buoyancy         = InputFileData%Buoyancy
 
    p%NacelleDrag      = InputFileData%NacelleDrag
    p%NacArea          = RotData%NacArea
@@ -1438,24 +1463,26 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       p%NumBlNds         = 0
    endif
 
-   if (p%NumBlades>0 .and. p%Buoyancy) then
+   if (p%NumBlades>0 .and. p%MHK /= MHK_None) then
       call AllocAry( p%BlCenBn, p%NumBlNds, p%NumBlades, 'BlCenBn', ErrStat2, ErrMsg2 )
       call AllocAry( p%BlCenBt, p%NumBlNds, p%NumBlades, 'BlCenBt', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    endif
 
-   if (RotData%NumTwrNds > 0 .and. (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none .or. p%TwrAero /= TwrAero_none .or. p%Buoyancy)) then
+   if (RotData%NumTwrNds > 0 .and. (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none .or. p%TwrAero /= TwrAero_none .or. p%MHK /= MHK_None)) then
       p%NumTwrNds     = RotData%NumTwrNds
 
       call move_alloc( RotData%TwrDiam, p%TwrDiam )
-      call move_alloc( RotData%TwrCd,   p%TwrCd )
-      call move_alloc( RotData%TwrTI,   p%TwrTI )
-      call move_alloc( RotData%TwrCb,   p%TwrCb )
+      call move_alloc( RotData%TwrCd  , p%TwrCd   )      
+      call move_alloc( RotData%TwrTI  , p%TwrTI   )   
+      call move_alloc( RotData%TwrCb  , p%TwrCb   ) 
+      call move_alloc( RotData%TwrCp  , p%TwrCp   ) 
+      call move_alloc( RotData%TwrCa  , p%TwrCa   ) 
    else
       p%NumTwrNds = 0
    end if
 
-   if (p%Buoyancy) then
+   if (p%MHK /= MHK_None) then
       do k = 1,p%NumBlades
          p%BlCenBn(:,k) = RotData%BladeProps(k)%BlCenBn
          p%BlCenBt(:,k) = RotData%BladeProps(k)%BlCenBt
@@ -1609,6 +1636,72 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
 
 end subroutine SetBuoyancyParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets parameters for use during the inertia and added mass calculations; these variables are not changed after AD_Init.
+subroutine SetAddedMassInertiaParameters( InputFileData, p, ErrStat, ErrMsg )
+   TYPE(RotInputFile),           INTENT(IN   )  :: InputFileData    !< All the data in the AeroDyn input file
+   TYPE(RotParameterType),       INTENT(INOUT)  :: p                !< Parameters
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+
+
+      ! Local variables
+   INTEGER(IntKi)                               :: ErrStat2         !< Temporary error status of the operation
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2          !< Temporary error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                               :: k                !< Loop counter for blades
+   INTEGER(IntKi)                               :: j                !< Loop counter for nodes
+
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'SetAddedMassInertiaParameters'
+
+
+      ! Initialize variables for this routine
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   
+      ! Allocate inertia and added mass parameters
+   call AllocAry( p%BlIN, p%NumBlNds, p%NumBlades, 'BlIN', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlIT, p%NumBlNds, p%NumBlades, 'BlIT', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlAN, p%NumBlNds, p%NumBlades, 'BlAN', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlAT, p%NumBlNds, p%NumBlades, 'BlAT', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlAM, p%NumBlNds, p%NumBlades, 'BlAM', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   if ( p%NumTwrNds > 0 ) then
+      call AllocAry( p%TwrIT, p%NumTwrNds, 'TwrIT', ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call AllocAry( p%TwrAT, p%NumTwrNds, 'TwrAT', ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   end if
+
+      ! Calculate blade inertia and added mass parameters
+   do k = 1,p%NumBlades ! loop through all blades
+
+      do j = 1,p%NumBlNds ! loop through all nodes
+         p%BlIN(j,k) = (InputFileData%BladeProps(k)%BlCpn(j) + InputFileData%BladeProps(k)%BlCan(j)) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j normal-to-chord inertia factor
+         p%BlIT(j,k) = (InputFileData%BladeProps(k)%BlCpt(j) + InputFileData%BladeProps(k)%BlCat(j)) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j tangential-to-chord inertia factor
+         p%BlAN(j,k) = -InputFileData%BladeProps(k)%BlCan(j) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j normal-to-chord added mass factor
+         p%BlAT(j,k) = -InputFileData%BladeProps(k)%BlCat(j) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j tangential-to-chord added mass factor
+         p%BlAM(j,k) = -InputFileData%BladeProps(k)%BlCam(j)/12.0_ReKi * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) * (InputFileData%BladeProps(k)%BlChord(j)**2 + InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j)**2) ! node j pitch added mass factor
+      end do ! j = nodes
+
+   end do ! k = blades
+
+      ! Calculate tower inertia and added mass parameters
+   if ( p%NumTwrNds > 0 ) then
+         
+      do j = 1,p%NumTwrNds ! loop through all nodes
+         p%TwrIT(j) = (p%TwrCp(j) + p%TwrCa(j)) * p%airDens * pi * (p%TwrDiam(j)/2.0_ReKi)**2 ! node j tangential inertia factor
+         p%TwrAT(j) = -p%TwrCa(j) * p%airDens * pi * (p%TwrDiam(j)/2.0_ReKi)**2 ! node j tangential added mass factor
+      end do ! j = nodes
+
+   end if
+
+end subroutine SetAddedMassInertiaParameters
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
@@ -1717,7 +1810,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
 
    ! Set wind -- NOTE: this is inneficient since the previous input value resides at m%Inflow(2)
    do i=1,size(u)
-      call AD_CalcWind(utimes(i), u(i), p%FLowField, p, OtherState, m%Inflow(i), ErrStat2, ErrMsg2)
+      call AD_CalcWind(utimes(i), u(i), p%FLowField, p, m, OtherState, m%Inflow(i), ErrStat2, ErrMsg2)
       if (Failed()) return
    enddo
 
@@ -1736,7 +1829,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       if (Failed()) return
 
       ! Calculate wind using uInterp
-      call AD_CalcWind(utimes(i),uInterp, p%FLowField, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
+      call AD_CalcWind(utimes(i),uInterp, p%FLowField, p, m, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
       if (Failed()) return
 
       do iR = 1,size(p%rotors)
@@ -1795,11 +1888,12 @@ contains
    end function Failed
 end subroutine AD_UpdateStates
 
-subroutine AD_CalcWind(t, u, FLowField, p, o, Inflow, ErrStat, ErrMsg)
+subroutine AD_CalcWind(t, u, FLowField, p, m, o, Inflow, ErrStat, ErrMsg)
    real(DbKi),                   intent(in   )  :: t        !< Current simulation time in seconds
    type(AD_InputType),           intent(in   )  :: u        !< Inputs at Time t
    type(FlowFieldType),pointer,  intent(in   )  :: FlowField
    type(AD_ParameterType),       intent(in   )  :: p        !< Parameters
+   type(AD_MiscVarType),         intent(inout)  :: m        !< Misc/optimization variables
    type(AD_OtherStateType),      intent(in   )  :: o        !< Other states at t
    type(AD_InflowType),target,   intent(inout)  :: Inflow   !< calculated inflow
    integer(IntKi),               intent(  out)  :: ErrStat  !< Error status of the operation
@@ -1823,7 +1917,7 @@ subroutine AD_CalcWind(t, u, FLowField, p, o, Inflow, ErrStat, ErrMsg)
    StartNode = 1
 
    do iWT = 1, size(u%rotors)
-      call AD_CalcWind_Rotor(t, u%rotors(iWT), FLowField, p%rotors(iWT), Inflow%RotInflow(iWT), StartNode, ErrStat2, ErrMsg2)
+      call AD_CalcWind_Rotor(t, u%rotors(iWT), FLowField, p%rotors(iWT), p, m, Inflow%RotInflow(iWT), StartNode, ErrStat2, ErrMsg2)
       if(Failed()) return
    enddo
 
@@ -1852,11 +1946,13 @@ contains
    end function Failed
 end subroutine
 
-subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, StartNode, ErrStat, ErrMsg)
+subroutine AD_CalcWind_Rotor(t, u, FlowField, p, p_AD, m, RotInflow, StartNode, ErrStat, ErrMsg)
    real(DbKi),                   intent(in   )  :: t           !< Current simulation time in seconds
    type(RotInputType),           intent(in   )  :: u           !< Inputs at Time t
    type(FlowFieldType),pointer,  intent(in   )  :: FlowField
    type(RotParameterType),       intent(in   )  :: p           !< Parameters
+   type(AD_ParameterType),       intent(in   )  :: p_AD        !< AD parameters
+   type(AD_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
    type(RotInflowType),          intent(inout)  :: RotInflow   !< calculated inflow for rotor
    integer(IntKi),               intent(inout)  :: StartNode   !< starting node for rotor wind
    integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
@@ -1880,55 +1976,108 @@ subroutine AD_CalcWind_Rotor(t, u, FlowField, p, RotInflow, StartNode, ErrStat, 
       PosOffset = 0.0_ReKi
    end if
 
-   ! Hub
-   if (u%HubMotion%Committed) then
-      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
-         real(u%HubMotion%TranslationDisp + u%HubMotion%Position, ReKi), &
-         RotInflow%InflowOnHub, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-      if(Failed()) return 
-   else
-      RotInflow%InflowOnHub = 0.0_ReKi
-   end if
-   StartNode = StartNode + 1
-
-   ! Blade
-   do k = 1, p%NumBlades
-      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
-         real(u%BladeMotion(k)%TranslationDisp + u%BladeMotion(k)%Position, ReKi), &
-         RotInflow%Blade(k)%InflowVel, RotInflow%Blade(k)%InflowAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-      if(Failed()) return
-      StartNode = StartNode + p%NumBlNds
-   end do
-
-   ! Tower
-   if (u%TowerMotion%Nnodes > 0) then
-      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
-         real(u%TowerMotion%TranslationDisp + u%TowerMotion%Position, ReKi), &
-         RotInflow%Tower%InflowVel, RotInflow%Tower%InflowAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-      if(Failed()) return
-      StartNode = StartNode + p%NumTwrNds
-   end if
-
-   ! Nacelle
-   if (u%NacelleMotion%Committed) then   
-      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
-         real(u%NacelleMotion%TranslationDisp + u%NacelleMotion%Position, ReKi), &
-         RotInflow%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-      if(Failed()) return
+   if (p%MHK /= MHK_None .and. p_AD%CompSeaSt) then ! MHK turbines with waves
+      ! Hub
+      if (u%HubMotion%Committed) then
+         call WaveField_GetWaveVelAcc_AD(p_AD%WaveField, m%WaveField_m, StartNode, t, &
+            real(u%HubMotion%TranslationDisp + u%HubMotion%Position, ReKi), &
+            RotInflow%InflowOnHub, NoAcc, ErrStat2, ErrMsg2)
+         if(Failed()) return 
+      else
+         RotInflow%InflowOnHub = 0.0_ReKi
+      end if
       StartNode = StartNode + 1
-   else
-      RotInflow%InflowOnNacelle = 0.0_ReKi
-   end if
 
-   ! TailFin
-   if (u%TFinMotion%Committed) then
-      call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
-         real(u%TFinMotion%TranslationDisp + u%TFinMotion%Position, ReKi), &
-         RotInflow%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-      if(Failed()) return
+      ! Blade
+      do k = 1, p%NumBlades
+         call WaveField_GetWaveVelAcc_AD(p_AD%WaveField, m%WaveField_m, StartNode, t, &
+            real(u%BladeMotion(k)%TranslationDisp + u%BladeMotion(k)%Position, ReKi), &
+            RotInflow%Blade(k)%InflowVel, RotInflow%Blade(k)%InflowAcc, ErrStat2, ErrMsg2)
+         if(Failed()) return
+         StartNode = StartNode + p%NumBlNds
+      end do
+
+      ! Tower
+      if (u%TowerMotion%Nnodes > 0) then
+         call WaveField_GetWaveVelAcc_AD(p_AD%WaveField, m%WaveField_m, StartNode, t, &
+            real(u%TowerMotion%TranslationDisp + u%TowerMotion%Position, ReKi), &
+            RotInflow%Tower%InflowVel, RotInflow%Tower%InflowAcc, ErrStat2, ErrMsg2)
+         if(Failed()) return
+         StartNode = StartNode + p%NumTwrNds
+      end if
+
+      ! Nacelle
+      if (u%NacelleMotion%Committed) then   
+         call WaveField_GetWaveVelAcc_AD(p_AD%WaveField, m%WaveField_m, StartNode, t, &
+            real(u%NacelleMotion%TranslationDisp + u%NacelleMotion%Position, ReKi), &
+            RotInflow%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2)
+         if(Failed()) return
+         StartNode = StartNode + 1
+      else
+         RotInflow%InflowOnNacelle = 0.0_ReKi
+      end if
+
+      ! TailFin
+      if (u%TFinMotion%Committed) then
+         call WaveField_GetWaveVelAcc_AD(p_AD%WaveField, m%WaveField_m, StartNode, t, &
+            real(u%TFinMotion%TranslationDisp + u%TFinMotion%Position, ReKi), &
+            RotInflow%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2)
+         if(Failed()) return
+         StartNode = StartNode + 1
+      else
+         RotInflow%InflowOnTailFin = 0.0_ReKi
+      end if
+   else ! Wind turbines or MHK turbines without waves
+      ! Hub
+      if (u%HubMotion%Committed) then
+         call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+            real(u%HubMotion%TranslationDisp + u%HubMotion%Position, ReKi), &
+            RotInflow%InflowOnHub, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+         if(Failed()) return 
+      else
+         RotInflow%InflowOnHub = 0.0_ReKi
+      end if
       StartNode = StartNode + 1
-   else
-      RotInflow%InflowOnTailFin = 0.0_ReKi
+
+      ! Blade
+      do k = 1, p%NumBlades
+         call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+            real(u%BladeMotion(k)%TranslationDisp + u%BladeMotion(k)%Position, ReKi), &
+            RotInflow%Blade(k)%InflowVel, RotInflow%Blade(k)%InflowAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+         if(Failed()) return
+         StartNode = StartNode + p%NumBlNds
+      end do
+
+      ! Tower
+      if (u%TowerMotion%Nnodes > 0) then
+         call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+            real(u%TowerMotion%TranslationDisp + u%TowerMotion%Position, ReKi), &
+            RotInflow%Tower%InflowVel, RotInflow%Tower%InflowAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+         if(Failed()) return
+         StartNode = StartNode + p%NumTwrNds
+      end if
+
+      ! Nacelle
+      if (u%NacelleMotion%Committed) then   
+         call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+            real(u%NacelleMotion%TranslationDisp + u%NacelleMotion%Position, ReKi), &
+            RotInflow%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+         if(Failed()) return
+         StartNode = StartNode + 1
+      else
+         RotInflow%InflowOnNacelle = 0.0_ReKi
+      end if
+
+      ! TailFin
+      if (u%TFinMotion%Committed) then
+         call IfW_FlowField_GetVelAcc(FlowField, StartNode, t, &
+            real(u%TFinMotion%TranslationDisp + u%TFinMotion%Position, ReKi), &
+            RotInflow%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+         if(Failed()) return
+         StartNode = StartNode + 1
+      else
+         RotInflow%InflowOnTailFin = 0.0_ReKi
+      end if
    end if
 
 contains
@@ -1980,7 +2129,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    end if
 
    ! Calculate wind based on current positions
-   call AD_CalcWind(t, u, p%FlowField, p, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
+   call AD_CalcWind(t, u, p%FlowField, p, m, OtherState, m%Inflow(1), ErrStat2, ErrMsg2)
    if(Failed()) return
 
    ! SetInputs, Calc BEM Outputs and Twr Outputs 
@@ -2099,7 +2248,7 @@ subroutine RotCalcOutput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, 
    y%NacelleLoad%Moment = 0.0_ReKi
 
    ! Calculate buoyant loads
-   if (p%Buoyancy) then 
+   if ( p%MHK /= MHK_None ) then 
       call RotCalcBuoyantLoads(u, p, m, y, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if  
@@ -2109,6 +2258,12 @@ subroutine RotCalcOutput( t, u, RotInflow, p, p_AD, x, xd, z, OtherState, y, m, 
       call RotCalcNacelleDrag(u, p, m, y, RotInflow, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if 
+
+   ! Calculate added mass and fluid inertia loads
+   if ( p%MHK /= MHK_None ) then 
+      call RotCalcAddedMassInertiaLoads(u, p, m, y, RotInflow, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end if
 
    ! --- Tail Fin
    if (p%TFinAero) then
@@ -2320,7 +2475,7 @@ subroutine RotCalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    REAL(ReKi), DIMENSION(3,p%NumBlades)             :: MovmomentBR      !< Moment from moving blade root buoyant force from blade root to hub center
    REAL(ReKi), DIMENSION(3)                         :: MovvectorTT      !< Vector from nacelle reference position to center of buoyancy of tower top
    REAL(ReKi), DIMENSION(3)                         :: MovmomentTT      !< Moment from moving tower top buoyant force from tower top to nacelle reference position
-   CHARACTER(*), PARAMETER                          :: RoutineName = 'CalcBuoyantLoads'
+   CHARACTER(*), PARAMETER                          :: RoutineName = 'RotCalcBuoyantLoads'
 
 
       ! Initialize variables for this routine
@@ -2344,7 +2499,7 @@ subroutine RotCalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
 
             ! Check that blade nodes do not go beneath the seabed or pierce the free surface
          if ( u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) >= p%MSL2SWL .OR. u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) <= -p%WtrDpth ) &
-            call SetErrStat( ErrID_Fatal, 'Blades cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+            call SetErrStat( ErrID_Fatal, 'Blades cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'RotCalcBuoyantLoads' ) 
             if ( ErrStat >= AbortErrLev ) return
 
       end do ! j = nodes
@@ -2466,7 +2621,7 @@ subroutine RotCalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          ! Check that tower nodes do not go beneath the seabed or pierce the free surface
          if ( u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) >= p%MSL2SWL .OR. &
               u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) < -p%WtrDpth ) then
-            call SetErrStat( ErrID_Fatal, 'The tower cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+            call SetErrStat( ErrID_Fatal, 'The tower cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'RotCalcBuoyantLoads' ) 
             if ( ErrStat >= AbortErrLev ) return
          end if
       end do
@@ -2479,7 +2634,7 @@ subroutine RotCalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          ! If base node on fixed bottom tower is below the water depth (during Jacobian perturbations),
          ! clamp it to the water depth
          if ((j == 1) .and. (p%MHK == MHK_FixedBottom) .and. (TwrtmpPos(3) < -p%WtrDpth)) then
-            TwrtmpPos = -p%WtrDpth
+            TwrtmpPos(3) = -p%WtrDpth
          end if
          
             ! Heading and inclination angles of tower element
@@ -2563,7 +2718,7 @@ subroutine RotCalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    else
          ! Check that hub node does not go beneath the seabed or pierce the free surface
       if ( u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) >= p%MSL2SWL .OR. u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) <= -p%WtrDpth ) &
-         call SetErrStat( ErrID_Fatal, 'The hub cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+         call SetErrStat( ErrID_Fatal, 'The hub cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'RotCalcBuoyantLoads' ) 
          if ( ErrStat >= AbortErrLev ) return
 
          ! Global position of hub node
@@ -2617,7 +2772,7 @@ subroutine RotCalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    else
          ! Check that nacelle node does not go beneath the seabed or pierce the free surface
       if ( u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) >= p%MSL2SWL .OR. u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) <= -p%WtrDpth ) &
-         call SetErrStat( ErrID_Fatal, 'The nacelle cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+         call SetErrStat( ErrID_Fatal, 'The nacelle cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'RotCalcBuoyantLoads' ) 
          if ( ErrStat >= AbortErrLev ) return
 
          ! Global position of nacelle node
@@ -2662,6 +2817,121 @@ subroutine RotCalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
 
 
 end subroutine RotCalcBuoyantLoads
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates added mass and fluid inertia loads on an MHK turbine.
+subroutine RotCalcAddedMassInertiaLoads( u, p, m, y, RotInflow, ErrStat, ErrMsg )
+   TYPE(RotInputType),                             INTENT(IN   )  :: u                !< AD inputs - used for mesh node positions
+   TYPE(RotParameterType),                         INTENT(IN   )  :: p                !< Parameters
+   TYPE(RotMiscVarType),                           INTENT(INOUT)  :: m                !< Misc/optimization variables
+   TYPE(RotOutputType),                            INTENT(INOUT)  :: y                !< Outputs computed at t 
+   TYPE(RotInflowType),                            INTENT(IN   )  :: RotInflow        !< Rotor inflow 
+   INTEGER(IntKi),                                 INTENT(  OUT)  :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                                   INTENT(  OUT)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+
+
+      ! Local variables
+   INTEGER(IntKi)                                   :: k                !< Loop counter for blades
+   INTEGER(IntKi)                                   :: j                !< Loop counter for nodes
+   REAL(ReKi), DIMENSION(3)                         :: aFBTemp          !< Inflow acceleration at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: aBBTemp          !< Body translational acceleration at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: alphaBBTemp      !< Body rotational acceleration at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlFItmp          !< Inertia force at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlFAtmp          !< Added mass force at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlMAtmp          !< Added mass moment at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: aFTTemp          !< Inflow acceleration at tower node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: aBTTemp          !< Body translational acceleration at tower node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: TwrFItmp         !< Inertia force at tower node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: TwrFAtmp         !< Added mass force at tower node in local coordinates
+   CHARACTER(*), PARAMETER                          :: RoutineName = 'RotCalcAddedMassInertiaLoads'
+
+
+      ! Initialize variables for this routine
+   ErrStat     = ErrID_None
+   ErrMsg      = ""
+   aFBTemp     = 0.0_ReKi
+   aBBTemp     = 0.0_ReKi
+   alphaBBTemp = 0.0_ReKi
+   BlFItmp     = 0.0_ReKi
+   BlFAtmp     = 0.0_ReKi
+   BlMAtmp     = 0.0_ReKi
+   aFTTemp     = 0.0_ReKi
+   aBTTemp     = 0.0_ReKi
+   TwrFItmp    = 0.0_ReKi
+   TwrFAtmp    = 0.0_ReKi
+
+      ! Blades
+   do k = 1,p%NumBlades ! loop through all blades
+      do j = 1,p%NumBlNds ! loop through all nodes
+
+            ! Convert fluid acceleration at node to local blade coordinates
+         aFBTemp = matmul( u%BladeMotion(k)%Orientation(:,:,j), RotInflow%Blade(k)%InflowAcc(:,j) )
+
+            ! Calculate per-unit-length inertia forces at node
+         BlFItmp(1) = p%BlIN(j,k) * aFBTemp(1)
+         BlFItmp(2) = p%BlIT(j,k) * aFBTemp(2)
+
+            ! Convert inertia forces to global coordinates
+         m%BlFI(:,j,k) = matmul( transpose(u%BladeMotion(k)%Orientation(:,:,j)), BlFItmp )
+
+            ! Convert body acceleration at node to local blade coordinates
+         aBBTemp = matmul( u%BladeMotion(k)%Orientation(:,:,j), u%BladeMotion(k)%TranslationAcc(:,j) )
+         alphaBBTemp(3) = u%BladeMotion(k)%Orientation(3,1,j)*u%BladeMotion(k)%RotationAcc(1,j) + u%BladeMotion(k)%Orientation(3,2,j)*u%BladeMotion(k)%RotationAcc(2,j) + u%BladeMotion(k)%Orientation(3,3,j)*u%BladeMotion(k)%RotationAcc(3,j)
+
+            ! Calculate per-unit-length added mass forces at node
+         BlFAtmp(1) = p%BlAN(j,k) * aBBTemp(1)
+         BlFAtmp(2) = p%BlAT(j,k) * aBBTemp(2)
+
+            ! Calculate per-unit-length added mass pitching moment at node
+         BlMAtmp(3) = p%BlAM(j,k) * alphaBBTemp(3)
+
+            ! Convert added mass forces and moments to global coordinates
+         m%BlFA(:,j,k) = matmul( transpose(u%BladeMotion(k)%Orientation(:,:,j)), BlFAtmp )
+         m%BlMA(:,j,k) = matmul( transpose(u%BladeMotion(k)%Orientation(:,:,j)), BlMAtmp )
+         
+      end do
+   end do
+
+      ! Add added mass and inertia loads to aerodynamic loads 
+   do k = 1,p%NumBlades ! loop through all blades
+      do j = 1,p%NumBlNds ! loop through all nodes
+         y%BladeLoad(k)%Force(:,j) = y%BladeLoad(k)%Force(:,j) + m%BlFI(:,j,k) + m%BlFA(:,j,k)
+         y%BladeLoad(k)%Moment(:,j) = y%BladeLoad(k)%Moment(:,j) + m%BlMA(:,j,k)
+      end do ! j = nodes
+   end do ! k = blades
+
+      ! Tower
+   if ( p%NumTwrNds > 0 ) then
+      do j = 1,p%NumTwrNds ! loop through all nodes
+
+            ! Convert fluid acceleration at node to local tower coordinates
+         aFTTemp = matmul( u%TowerMotion%Orientation(:,:,j), RotInflow%Tower%InflowAcc(:,j) )
+
+            ! Calculate per-unit-length inertia forces at node
+         TwrFItmp(1) = p%TwrIT(j) * aFTTemp(1)
+         TwrFItmp(2) = p%TwrIT(j) * aFTTemp(2)
+
+            ! Convert inertia forces to global coordinates
+         m%TwrFI(:,j) = matmul( transpose(u%TowerMotion%Orientation(:,:,j)), TwrFItmp )
+
+            ! Convert body acceleration at node to local tower coordinates
+         aBTTemp = matmul( u%TowerMotion%Orientation(:,:,j), u%TowerMotion%TranslationAcc(:,j) )
+
+            ! Calculate per-unit-length added mass forces at node
+         TwrFAtmp(1) = p%TwrAT(j) * aBTTemp(1)
+         TwrFAtmp(2) = p%TwrAT(j) * aBTTemp(2)
+
+            ! Convert added mass forces to global coordinates
+         m%TwrFA(:,j) = matmul( transpose(u%TowerMotion%Orientation(:,:,j)), TwrFAtmp )
+
+      end do
+   end if
+
+      ! Add buoyant loads to aerodynamic loads
+   do j = 1,p%NumTwrNds ! loop through all nodes
+      y%TowerLoad%Force(:,j) = y%TowerLoad%Force(:,j) + m%TwrFI(:,j) + m%TwrFA(:,j)
+   end do ! j = nodes
+
+end subroutine RotCalcAddedMassInertiaLoads
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
 subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
@@ -3968,6 +4238,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
 
    
       ! local variables
+   real(ReKi)                               :: BlCbSum
+   real(ReKi)                               :: TwrCbSum
    integer(IntKi)                           :: k                                 ! Blade number
    integer(IntKi)                           :: j                                 ! node number
    integer(IntKi)                           :: iR                                ! rotor index
@@ -4030,7 +4302,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
    if (Failed()) return
    
    if (InitInp%MHK == MHK_None .and. InputFileData%CavitCheck) call SetErrStat ( ErrID_Fatal, 'A cavitation check can only be performed for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
-   if (InitInp%MHK == MHK_None .and. InputFileData%Buoyancy) call SetErrStat ( ErrID_Fatal, 'Buoyancy can only be calculated for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK /= MHK_None .and. InputFileData%CompAA ) call SetErrStat ( ErrID_Fatal, 'The aeroacoustics module cannot be used with an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    do iR = 1,size(NumBl)
       if (InitInp%MHK /= MHK_None .and. InputFileData%rotors(iR)%TFinAero) call SetErrStat ( ErrID_Fatal, 'A tail fin cannot be modeled for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
@@ -4130,15 +4401,36 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
          end do ! j=nodes
       end do ! k=blades
 
-      ! If the Buoyancy flag is True, check that the blade buoyancy coefficients are >= 0.
-      if ( InputFileData%Buoyancy )  then
+      ! If the MHK flag is set to 1 or 2, check that the blade buoyancy and added mass coefficients are >= 0.
+      if ( InitInp%MHK /= MHK_None )  then
          do k=1,NumBl(iR)
+            BlCbSum = 0.0_ReKi
             do j=1,InputFileData%rotors(iR)%BladeProps(k)%NumBlNds
                if ( InputFileData%rotors(iR)%BladeProps(k)%BlCb(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                  //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
+               if ( InputFileData%rotors(iR)%BladeProps(k)%t_c(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The thickness to chord ratio for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCan(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The chordwise added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCat(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The edgewise added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCam(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The pitch added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+               BlCbSum = BlCbSum + InputFileData%rotors(iR)%BladeProps(k)%BlCb(j)
             end do ! j=nodes
+            if ( BlCbSum <= 0.0_ReKi .and. InputFileData%rotors(iR)%VolHub > 0.0_ReKi .or. InputFileData%rotors(iR)%VolHub <= 0.0_ReKi .and. BlCbSum > 0.0_ReKi )  then
+               call SetErrStat( ErrID_Fatal, 'If blade buoyancy is calculated, hub buoyancy must be calculated, and vice versa.', ErrStat, ErrMsg, RoutineName )
+            endif
          end do ! k=blades
       end if
    end do ! iR rotor
@@ -4147,7 +4439,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
       ! .............................
       ! check tower mesh data:
       ! .............................
-   if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow /= TwrShadow_none .or. InputFileData%TwrAero /= TwrAero_none .or. InputFileData%Buoyancy) then
+   if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow /= TwrShadow_none .or. InputFileData%TwrAero /= TwrAero_none .or. InitInp%MHK > 0) then
       do iR = 1,size(NumBl)
          if (InputFileData%rotors(iR)%NumTwrNds <= 0) cycle !bjj: this could be removed since the loops here already take into account the number of tower nodes
       
@@ -4178,13 +4470,22 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
             end do ! j=nodes
          end if
 
-         ! If the Buoyancy flag is True, check that the tower buoyancy coefficients are >= 0.
-         if ( InputFileData%Buoyancy .and. InputFileData%rotors(iR)%NumTwrNds > 0 )  then
+         ! If the MHK flag is set to 1 or 2, check that the tower buoyancy and added mass coefficients are >= 0.
+         if ( InitInp%MHK /= MHK_None .and. InputFileData%rotors(iR)%NumTwrNds > 0 )  then
+            TwrCbSum = 0.0_ReKi
             do j=1,InputFileData%rotors(iR)%NumTwrNds
                if ( InputFileData%rotors(iR)%TwrCb(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
+
+               if ( InputFileData%rotors(iR)%TwrCa(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The added mass coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+               TwrCbSum = TwrCbSum + InputFileData%rotors(iR)%TwrCb(j)
             end do ! j=nodes
+            if ( TwrCbSum <= 0.0_ReKi .and. InputFileData%rotors(iR)%VolNac > 0.0_ReKi .or. InputFileData%rotors(iR)%VolNac <= 0.0_ReKi .and. TwrCbSum > 0.0_ReKi )  then
+               call SetErrStat( ErrID_Fatal, 'If tower buoyancy is calculated, nacelle buoyancy must be calculated, and vice versa.', ErrStat, ErrMsg, RoutineName )
+            endif
          end if
       end do ! iR rotor
    end if ! using the tower
@@ -4196,7 +4497,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
       ! .............................
       ! check hub mesh data:
       ! .............................
-   if ( InputFileData%Buoyancy )  then
+   if ( InitInp%MHK /= MHK_None )  then
 
          ! Check that the hub volume is >= 0.
       do iR = 1,size(NumBl)
@@ -4210,7 +4511,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, calcCrvAngle, ErrSt
       ! .............................
       ! check nacelle mesh data:
       ! .............................
-   if ( InputFileData%Buoyancy )  then
+   if ( InitInp%MHK /= MHK_None )  then
 
          ! Check that the nacelle volume is >= 0.
       do iR = 1,size(NumBl)
@@ -5951,7 +6252,7 @@ SUBROUTINE AD_JacobianPInput(Vars, iRotor, t, u, p, x, xd, z, OtherState, y, m, 
 
    StartNode = 1  ! ignored during linearization since cannot linearize with ExtInflow
 
-   call AD_CalcWind_Rotor(t, u%rotors(iRotor), p%FlowField, p%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), StartNode, ErrStat, ErrMsg)
+   call AD_CalcWind_Rotor(t, u%rotors(iRotor), p%FlowField, p%rotors(iRotor), p, m, m%Inflow(1)%RotInflow(iRotor), StartNode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    call Rot_JacobianPInput(Vars, iRotor, t, u%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), p%rotors(iRotor), p, x%rotors(iRotor), xd%rotors(iRotor), z%rotors(iRotor), OtherState%rotors(iRotor), y%rotors(iRotor), m%rotors(iRotor), m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
 
@@ -6073,7 +6374,7 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
             call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, 1, FF_ptr)
             StartNode = 1
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(t, p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2); if (Failed()) return
@@ -6086,7 +6387,7 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
             call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, -1, FF_ptr)
             StartNode = 1
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call SetInputs(t, p, p_AD, m%u_perturb, RotInflow_perturb, m, indx, ErrStat2, ErrMsg2); if (Failed()) return
             call UpdatePhi(m%BEMT_u(indx), p%BEMT, m%z_lin%BEMT%phi, p_AD%AFI, m%BEMT, m%OtherState_jac%BEMT%ValidPhi, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcOutput(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, m%z_lin, m%OtherState_jac, m%y_lin, m, m_AD, iRotor, ErrStat2, ErrMsg2); if (Failed()) return
@@ -6121,7 +6422,7 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
             call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, 1, FF_ptr)
             StartNode = 1
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
             call AD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_pos)
 
@@ -6130,7 +6431,7 @@ SUBROUTINE Rot_JacobianPInput(Vars, iRotor, t, u, RotInflow, p, p_AD, x, xd, z, 
             call AD_VarsUnpackInput(Vars, m%Jac%u_perturb, m%u_perturb)
             if (associated(FF_ptr, FF_perturb)) call PerturbFlowField(Vars%u(i), p_AD%FlowField, -1, FF_ptr)
             StartNode = 1
-            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
+            call AD_CalcWind_Rotor(t, m%u_perturb, FF_ptr, p, p_AD, m_AD, RotInflow_perturb, StartNode, ErrStat2, ErrMsg2); if (Failed()) return
             call RotCalcContStateDeriv(t, m%u_perturb, RotInflow_perturb, p, p_AD, m%x_init, xd, z, m%OtherState_init, m, m%dxdt_lin, ErrStat2, ErrMsg2) ; if (Failed()) return
             call AD_VarsPackContState(Vars, m%dxdt_lin, m%Jac%x_neg)
 
@@ -6220,7 +6521,7 @@ SUBROUTINE AD_JacobianPContState(Vars, iRotor, t, u, p, x, xd, z, OtherState, y,
    integer(IntKi)  :: StartNode
 
    StartNode = 1
-   call AD_CalcWind_Rotor(t, u%rotors(iRotor), p%FlowField, p%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), StartNode, ErrStat, ErrMsg)
+   call AD_CalcWind_Rotor(t, u%rotors(iRotor), p%FlowField, p%rotors(iRotor), p, m, m%Inflow(1)%RotInflow(iRotor), StartNode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    call RotJacobianPContState(Vars, iRotor, t, u%rotors(iRotor), m%Inflow(1)%RotInflow(iRotor), p%rotors(iRotor), p, x%rotors(iRotor), xd%rotors(iRotor), z%rotors(iRotor), OtherState%rotors(iRotor), y%rotors(iRotor), m%rotors(iRotor), m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
 
@@ -6453,7 +6754,7 @@ SUBROUTINE AD_JacobianPConstrState(Vars, t, u, p, x, xd, z, OtherState, y, m, Er
    endif
 
    StartNode = 1
-   call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), m%Inflow(1)%RotInflow(iR), StartNode, ErrStat, ErrMsg)
+   call AD_CalcWind_Rotor(t, u%rotors(iR), p%FlowField, p%rotors(iR), p, m, m%Inflow(1)%RotInflow(iR), StartNode, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    call RotJacobianPConstrState(t, u%rotors(iR), m%Inflow(1)%RotInflow(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, errStat, errMsg, dYdz, dXdz, dXddz, dZdz)
 

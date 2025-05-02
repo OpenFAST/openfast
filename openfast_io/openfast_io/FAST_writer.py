@@ -957,7 +957,6 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn']['TwrShadow'], 'TwrShadow', '- Calculate tower influence on wind based on downstream tower shadow (switch) {0=none, 1=Powles model, 2=Eames model}\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['TwrAero'], 'TwrAero', '- Calculate tower aerodynamic loads? (flag)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['CavitCheck'], 'CavitCheck', '- Perform cavitation check? (flag) [UA_Mod must be 0 when CavitCheck=true]\n'))
-        f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['Buoyancy'], 'Buoyancy', '- Include buoyancy effects? (flag)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['NacelleDrag'], 'NacelleDrag', '- Include Nacelle Drag effects? (flag)\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['CompAA'], 'CompAA', '- Flag to compute AeroAcoustics calculation [used only when Wake_Mod = 1 or 2]\n'))
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['AA_InputFile'], 'AA_InputFile', '- AeroAcoustics input file [used only when CompAA=true]\n'))
@@ -1021,10 +1020,10 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['AeroDyn']['ADBlFile1']+'"', 'ADBlFile(1)', '- Name of file containing distributed aerodynamic properties for Blade #1 (-)\n'))
         f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['AeroDyn']['ADBlFile2']+'"', 'ADBlFile(2)', '- Name of file containing distributed aerodynamic properties for Blade #2 (-) [unused if NumBl < 2]\n'))
         f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['AeroDyn']['ADBlFile3']+'"', 'ADBlFile(3)', '- Name of file containing distributed aerodynamic properties for Blade #3 (-) [unused if NumBl < 3]\n'))
-        f.write('======  Hub Properties ============================================================================== [used only when Buoyancy=True]\n')
+        f.write('======  Hub Properties ============================================================================== [used only when MHK=1 or 2]\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['VolHub'], 'VolHub', '- Hub volume (m^3)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['HubCenBx'], 'HubCenBx', '- Hub center of buoyancy x direction offset (m)\n'))
-        f.write('======  Nacelle Properties ========================================================================== [used only when Buoyancy=True or NacelleDrag=True]\n')
+        f.write('======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2 or when NacelleDrag=True]\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['VolNac'], 'VolNac', '- Nacelle volume (m^3)\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['AeroDyn']['NacCenB'], dtype=str)), 'NacCenB', '- Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)\n'))
         f.write('{:<22} {:<11} {:}'.format(', '.join(np.array(self.fst_vt['AeroDyn']['NacArea'], dtype=str)), 'NacArea', '- Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)\n'))
@@ -1033,12 +1032,12 @@ class InputWriter_OpenFAST(object):
         f.write('======  Tail Fin Aerodynamics ========================================================================\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['TFinAero'], 'TFinAero', '- Calculate tail fin aerodynamics model (flag)\n'))
         f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['AeroDyn']['TFinFile']+'"', 'TFinFile', '- Input file for tail fin aerodynamics [used only when TFinAero=True]\n'))
-        f.write('======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]\n')
-        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn']['NumTwrNds'], 'NumTwrNds', '- Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]\n'))
-        f.write('TwrElev        TwrDiam        TwrCd          TwrTI          TwrCb !TwrTI used only when TwrShadow=2; TwrCb used only when Buoyancy=True\n')
-        f.write('(m)              (m)           (-)            (-)            (-)\n')
-        for TwrElev, TwrDiam, TwrCd, TwrTI, TwrCb in zip(self.fst_vt['AeroDyn']['TwrElev'], self.fst_vt['AeroDyn']['TwrDiam'], self.fst_vt['AeroDyn']['TwrCd'], self.fst_vt['AeroDyn']['TwrTI'], self.fst_vt['AeroDyn']['TwrCb']):
-            f.write('{: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} \n'.format(TwrElev, TwrDiam, TwrCd, TwrTI, TwrCb))
+        f.write('======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]\n')
+        f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn']['NumTwrNds'], 'NumTwrNds', '- Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]\n'))
+        f.write('TwrElev        TwrDiam        TwrCd          TwrTI          TwrCb          TwrCp          TwrCa !TwrTI used only with TwrShadow=2, TwrCb/TwrCp/TwrCa used only with MHK=1 or 2\n')
+        f.write('(m)            (m)            (-)            (-)            (-)            (-)            (-)\n')
+        for TwrElev, TwrDiam, TwrCd, TwrTI, TwrCb, TwrCp, TwrCa in zip(self.fst_vt['AeroDyn']['TwrElev'], self.fst_vt['AeroDyn']['TwrDiam'], self.fst_vt['AeroDyn']['TwrCd'], self.fst_vt['AeroDyn']['TwrTI'], self.fst_vt['AeroDyn']['TwrCb'], self.fst_vt['AeroDyn']['TwrCp'], self.fst_vt['AeroDyn']['TwrCa']):
+            f.write('{: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} \n'.format(TwrElev, TwrDiam, TwrCd, TwrTI, TwrCb, TwrCp, TwrCa))
         f.write('======  Outputs  ====================================================================================\n')
         f.write('{!s:<22} {:<11} {:}'.format(self.fst_vt['AeroDyn']['SumPrint'], 'SumPrint', '- Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?  (flag)\n'))
         f.write('{:<22d} {:<11} {:}'.format(self.fst_vt['AeroDyn']['NBlOuts'], 'NBlOuts', '- Number of blade node outputs [0 - 9] (-)\n'))
@@ -1090,8 +1089,8 @@ class InputWriter_OpenFAST(object):
         f.write('Generated with OpenFAST_IO\n')
         f.write('======  Blade Properties =================================================================\n')
         f.write('{:<11d} {:<11} {:}'.format(adBld_dict['NumBlNds'], 'NumBlNds', '- Number of blade nodes used in the analysis (-)\n'))
-        f.write('    BlSpn        BlCrvAC        BlSwpAC        BlCrvAng       BlTwist        BlChord          BlAFID       BlCb        BlCenBn      BlCenBt\n')
-        f.write('     (m)           (m)            (m)            (deg)         (deg)           (m)              (-)        (-)         (m)             (m)\n')
+        f.write('    BlSpn        BlCrvAC        BlSwpAC        BlCrvAng       BlTwist        BlChord          BlAFID       t_c       BlCb        BlCenBn      BlCenBt       BlCpn     BlCpt     BlCan     BlCat     BlCam\n')
+        f.write('     (m)           (m)            (m)            (deg)         (deg)           (m)              (-)        (-)       (-)         (m)             (m)         (-)       (-)       (-)       (-)       (-)\n')
         BlSpn    = adBld_dict['BlSpn']
         BlCrvAC  = adBld_dict['BlCrvAC']
         BlSwpAC  = adBld_dict['BlSwpAC']
@@ -1099,11 +1098,17 @@ class InputWriter_OpenFAST(object):
         BlTwist  = adBld_dict['BlTwist']
         BlChord  = adBld_dict['BlChord']
         BlAFID   = adBld_dict['BlAFID']
+        t_c      = adBld_dict['t_c']
         BlCb     = adBld_dict['BlCb']
         BlCenBn  = adBld_dict['BlCenBn']
         BlCenBt  = adBld_dict['BlCenBt']
-        for Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, AFID, BlCb, BlCenBn, BlCenBt in zip(BlSpn, BlCrvAC, BlSwpAC, BlCrvAng, BlTwist, BlChord, BlAFID, BlCb, BlCenBn, BlCenBt):
-            f.write('{: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 8d} {: 2.15e} {: 2.15e} {: 2.15e}\n'.format(Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, int(AFID), BlCb, BlCenBn, BlCenBt))
+        BlCpn    = adBld_dict['BlCpn']
+        BlCpt    = adBld_dict['BlCpt']
+        BlCan    = adBld_dict['BlCan']
+        BlCat    = adBld_dict['BlCat']
+        BlCam    = adBld_dict['BlCam']
+        for Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, AFID, t_c, BlCb, BlCenBn, BlCenBt, BlCpn, BlCpt, BlCan, BlCat, BlCam in zip(BlSpn, BlCrvAC, BlSwpAC, BlCrvAng, BlTwist, BlChord, BlAFID, t_c, BlCb, BlCenBn, BlCenBt, BlCpn, BlCpt, BlCan, BlCat, BlCam):
+            f.write('{: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 8d} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e} {: 2.15e}\n'.format(Spn, CrvAC, SwpAC, CrvAng, Twist, Chord, int(AFID), t_c, BlCb, BlCenBn, BlCenBt, BlCpn, BlCpt, BlCan, BlCat, BlCam))
         
         f.flush()
         os.fsync(f)

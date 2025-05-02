@@ -214,3 +214,84 @@ The buoyancy calculation for the hub and nacelle is completed according to the f
 4.	Move buoyant loads from the center of buoyancy to the aerodynamic center
 5.	For the hub, correct loads to account for the joints with each blade
 6.	For the nacelle, correct loads to account for the joint with the tower
+
+.. _AD_addedmass_inertia:
+
+Added Mass and Fluid Inertia
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Added mass loads are caused by body and fluid accelerations.
+These forces can often be neglected in less dense fluids, such as air, but can be significant in denser
+fluids, such as water. To capture the effects of these forces on MHK turbines, 
+added mass and fluid inertia loads are calculated for the turbine blades and tower.
+Per-unit-length loads are estimated at each blade or tower node by calculating the added mass and fluid inertia
+forces according to the appropriate terms from Morison's equation. The resulting loads are summed with the
+previously calculated hydrodynamic and/or buoyant per-unit-length loads. 
+Loads for the blades are applied at the aerodynamic center. Loads for the tower are applied at the centerline.
+Marine growth and end effects are neglected, and members are not allowed to cross the free surface
+(i.e., members are always fully submerged). Ballast is not considered. Nodes do not need to be uniformly spaced,
+and axial loads are neglected. The tower is assumed to be axisymmetric (with the same coefficients used in both transverse directions),
+but the blade is not (with different coefficients normal and tangential to the chord, as well as an added mass coefficient for pitch).
+
+.. _AD_addedmass_inertia_Morison:
+
+Morison's Equation
+------------------
+Added mass and fluid inertia loads are calculated according to the appropriate terms from Morison's equation. The added mass force is given as
+
+.. math::
+   F_{a} = \rho C_a V (\dot{u} - \dot{v})
+
+where :math:`\rho` is the fluid density, :math:`C_a` is the added mass coefficient, :math:`V` is the element volume, :math:`\dot{u}` is the 
+fluid acceleration, and :math:`\dot{v}` is the body acceleration.
+
+The fluid inertia force is given as
+
+.. math::
+   F_{i} = \rho C_p V \dot{u}
+
+where :math:`C_p` is the dynamic pressure coefficient.
+
+The fluid density and added mass and dynamic pressure coefficients are user-specified. Added mass and fluid
+inertia loads can be turned off by setting the relevant coefficients to zero. Additional information about calculating added mass coefficients can be
+found in :numref:`AD_user_guide` ("Determination of Added Mass Coefficients for Floating Hydrokinetic Turbine Blades using Computational Fluid Dynamics").
+The body and fluid accelerations are calculated internally and passed to AeroDyn. Body accelerations are available from the structural solver (or driver),
+and fluid accelerations are calculated based on the inflow velocity time series. Added mass and fluid inertia loads are calculated as per-unit-length within
+AeroDyn. Therefore, :math:`V` is taken as the cross-sectional area at the node of interest. For the blades, the reference cross-sectional area for the normal
+and tangential terms is chord*thickness (:math:`ct`). This is expressed as :math:`(c^2)(t/c)`, where :math:`t/c` (i.e., ``t_c``) is specified
+in the AeroDyn blade input file and cannot be less than 0. For the tower, the reference cross-sectional area is :math:`\pi r^2` where :math:`r` 
+is calculated as (0.5 ``TwrDiam``). The normalization for the ``BlCpn``, ``BlCpt``, ``BlCan``, and ``BlCat`` coefficients should be :math:`\rho ct`;
+the normalization for the ``BlCam`` coefficient should be :math:`(1/12)\rho ct(c^2+t^2)`; and the normalization for the ``TwrCp`` and ``TwrCa`` coefficients should
+be :math:`\rho\pi(0.5` ``TwrDiam``) :math:`^2`.
+
+Blade Added Mass and Fluid Inertia
+----------------------------------
+Added mass and fluid inertia loads are calculated for the normal-to-chord, tangential-to-chord, and pitch directions in the blade coordinate system.
+The following coefficients are defined by the user in the AeroDyn blade input file:
+
+-  ``BlCpn`` specifies the blade normal-to-chord dynamic pressure coefficient;
+   to neglect normal-to-chord fluid inertia loads on the blade, set ``BlCpn`` to 0
+
+-  ``BlCpt`` specifies the blade tangential-to-chord dynamic pressure coefficient;
+   to neglect tangential-to-chord fluid inertia loads on the blade, set ``BlCpt`` to 0
+
+-  ``BlCan`` specifies the blade normal-to-chord added mass coefficient, cannot be less than 0;
+   to neglect normal-to-chord added mass loads on the blade, set ``BlCan`` to 0
+
+-  ``BlCat`` specifies the blade tangential-to-chord added mass coefficient, cannot be less than 0;
+   to neglect tangential-to-chord added mass loads on the blade, set ``BlCat`` to 0
+
+-  ``BlCam`` specifies the blade pitch added mass coefficient, cannot be less than 0;
+   to neglect pitch added mass loads on the blade, set ``BlCam`` to 0
+
+Tower Added Mass and Fluid Inertia
+----------------------------------
+Added mass and fluid inertia loads are calculated for the transverse direction in the tower coordinate system.
+The following coefficients are defined by the user in the AeroDyn primary input file:
+
+-  ``TwrCp`` specifies the tower transverse dynamic pressure coefficient;
+   to neglect fluid inertia loads on the tower, set ``TwrCp`` to 0
+
+-  ``TwrCa`` specifies the tower transverse added mass coefficient, cannot be less than 0;
+   to neglect added mass loads on the tower, set ``TwrCa`` to 0
+

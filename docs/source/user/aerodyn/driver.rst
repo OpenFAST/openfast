@@ -118,6 +118,21 @@ An example of inputs is given below:
 
 
 
+**SeaState data**
+
+SeaState can be called by the AeroDyn driver to define a wave field as part of the inflow information.
+For MHK turbines with waves and currents, SeaState will query InflowWind and sum the velocities and
+accelerations from the wave and current fields. If SeaState is activated, InflowWind must also be
+activated, though the current can be set to 0 if desired. An example of inputs for this section is given below:
+
+.. code::
+
+    ----- SeaState Data ---------------------------------------------------------------------
+    1                               CompSeaSt   - Compute wave velocities (switch) {0=No Waves; 1=SeaState}
+    "MHK_RM1_Floating_SeaState.dat" SeaStFile   - Name of the SeaState input file [used only when CompSeaSt=1]
+
+
+
 **Turbine data**
 
 The user specifies the number of turbines as follows:
@@ -381,19 +396,19 @@ An example is given below for two turbines:
 
 .. code::
 
-    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+    ======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
     7.0   VolHub                - Hub volume (m^3)
     0.0   HubCenBx              - Hub center of buoyancy x direction offset (m)
-    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+    ======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
     5.0   VolHub                - Hub volume (m^3)
     0.2   HubCenBx              - Hub center of buoyancy x direction offset (m)
-    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True or NacelleDrag=True]
+    ======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2 or when NacelleDrag=True]
     32.0            VolNac      - Nacelle volume (m^3)
     0.3, 0.0, 0.05  NacCenB     - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
     4.67, 20.15, 20.15 NacArea  - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
     0.5, 0.5, 0.5   NacCd       - Drag coefficient for the nacelle areas defined above (-)
     0.43, 0, 0      NacDragAC   - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
-    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True or NacelleDrag=True]
+    ======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2 or when NacelleDrag=True]
     32.0            VolNac      - Nacelle volume (m^3)
     0.3, 0.0, 0.05  NacCenB     - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
     4.67, 20.15, 20.15 NacArea  - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
@@ -412,14 +427,14 @@ An example is given below for two turbines:
 
 .. code::
 
-    ======  Turbine(1) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
-    2   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+    ======  Turbine(1) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+    2   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
     TwrElev TwrDiam  TwrCd    TwrTI   TwrCb
     (m)       (m)     (-)     (-)     (-)
      0.0      2.0     1.0    0.1      0.0
     10.0      1.0     1.0    0.1      0.0
-    ======  Turbine(2) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
-    3   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+    ======  Turbine(2) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+    3   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
     TwrElev TwrDiam  TwrCd   TwrTI   TwrCb
     (m)       (m)     (-)    (-)     (-)
      0.0      4.0     1.0    0.1     0.0
@@ -466,13 +481,16 @@ An example of an AeroDyn driver for a basic inflow, basic HAWT, and combined cas
     1.700000000000000e+03     Pvap         - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
                         0     WtrDpth      - Water depth (m)
     ----- Inflow Data -----------------------------------------------------------------------
-              0      CompInflow  - Compute inflow wind velocities (switch) {0=Steady Wind; 1=InflowWind}
-    "unused"         InflowFile  - Name of the InflowWind input file [used only when CompInflow=1]
-            9.0      HWindSpeed  - Horizontal wind speed   [used only when CompInflow=0 and AnalysisType=1] (m/s)
-            140      RefHt       - Reference height for horizontal wind speed [used only when CompInflow=0]  (m)
-           0.10      PLExp       - Power law exponent   [used only when CompInflow=0 and AnalysisType=1]                        (-)
+              0     CompInflow  - Compute inflow wind velocities (switch) {0=Steady Wind; 1=InflowWind}
+    "unused"        InflowFile  - Name of the InflowWind input file [used only when CompInflow=1]
+            9.0     HWindSpeed  - Horizontal wind speed   [used only when CompInflow=0 and AnalysisType=1] (m/s)
+            140     RefHt       - Reference height for horizontal wind speed [used only when CompInflow=0]  (m)
+           0.10     PLExp       - Power law exponent   [used only when CompInflow=0 and AnalysisType=1]                        (-)
+    ----- SeaState Data ---------------------------------------------------------------------
+              0     CompSeaSt   - Compute wave velocities (switch) {0=No Waves; 1=SeaState}
+    "unused"        SeaStFile   - Name of the SeaState input file [used only when CompSeaSt=1]
     ----- Turbine Data ----------------------------------------------------------------------
-    1               NumTurbines  - Number of turbines
+    1               NumTurbines - Number of turbines
     ----- Turbine(1) Geometry ---------------------------------------------------------------
             True    BasicHAWTFormat(1) - Flag to switch between basic or generic input format {True: next 7 lines are basic inputs, False: Base/Twr/Nac/Hub/Bld geometry and motion must follow}
            0,0,0    BaseOriginInit(1) - Coordinate of tower base in base coordinates (m)

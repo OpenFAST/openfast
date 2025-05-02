@@ -20,6 +20,9 @@ False           Echo        - Echo input parameters to "<rootname>.ech"?
          10      HWindSpeed  - Horizontal wind speed   [used only when CompInflow=0 and AnalysisType=1] (m/s)
         200      RefHt       - Reference height for horizontal wind speed [used only when CompInflow=0]     (m)
           0      PLExp       - Power law exponent   [used only when CompInflow=0 and AnalysisType=1]                           (-)
+----- SeaState Data [used only when MHK = 1 or 2] ---------------------------------------
+          0     CompSeaSt              - Compute wave velocities (switch) {0=No Waves; 1=SeaState}
+"unused"        SeaStFile              - Name of the SeaState input file [used only when CompSeaSt=1]
 ----- Turbine Data ----------------------------------------------------------------------
 2               NumTurbines - Number of turbines
 ----- Turbine(1) ------------------------------------------------------------------------

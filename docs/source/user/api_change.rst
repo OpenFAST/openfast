@@ -9,6 +9,66 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
+OpenFAST v4.0.3 to OpenFAST dev
+----------------------------------
+
+Added mass and fluid inertia loads were added to the rotor blades and tower in AeroDyn. 
+This results in new columns in the AeroDyn blade input file and new columns in the 
+"Tower Influence and Aerodynamics" section of the AeroDyn primary input file. Given the
+addition of these loads, the Buoyancy flag was also removed, and the buoyancy, added mass,
+and inertia loads can all be turned off by setting the appropriate coefficients to zero
+rather than via a separate flag for each.
+
+Superposition of wave and current velocities between InflowWind and SeaState was enabled,
+which requires a "SeaState Data" section in the AeroDyn driver input file.
+
+============================================= ======== ==================== ========================================================================================================================================================================================================
+Added in OpenFAST `dev`                             
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ========================================================================================================================================================================================================
+AeroDyn blade file                                     t_c                  0.8651      [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCpn                1.0         [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCpt                1.0         [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCan                6.8459E+00  [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCat                5.4605E-01  [additional column in *Blade Properties* table]
+AeroDyn blade file                                     BlCam                5.5180E-02  [additional column in *Blade Properties* table]
+AeroDyn driver                                23                            ----- SeaState Data [used only when MHK = 1 or 2] ---------------------------------------
+AeroDyn driver                                24       CompSeaSt            1     CompSeaSt     - Compute wave velocities (switch) {0=No Waves; 1=SeaState}
+AeroDyn driver                                25       SeaStFile            "MHK_RM1_Fixed_SeaState.dat"     SeaStFile     - Name of the SeaState input file [used only when CompSeaSt=1]
+AeroDyn                                       \*       TwrCp                1.0         [additional column in *Tower Influence and Aerodynamics* table]
+AeroDyn                                       \*       TwrCa                1.0         [additional column in *Tower Influence and Aerodynamics* table]
+============================================= ======== ==================== ========================================================================================================================================================================================================
+
+
+
+============================================= ======== ==================== ========================================================================================================================================================================================================
+Modified in OpenFAST `dev`                             
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ========================================================================================================================================================================================================
+AeroDyn blade file                            5                             BlSpn      BlCrvAC    BlSwpAC    BlCrvAng    BlTwist    BlChord    BlAFID    t_c      BlCb     BlCenBn     BlCenBt    BlCpn    BlCpt    BlCan    BlCat    BlCam
+AeroDyn blade file                            6                             (m)        (m)        (m)        (deg)       (deg)      (m)        (-)       (-)      (-)      (m)         (m)        (-)      (-)      (-)      (-)      (-)
+AeroDyn                                       \*                            ======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
+AeroDyn                                       \*                            ======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2 or when NacelleDrag=True]
+AeroDyn                                       \*                            ======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+AeroDyn                                       \*       NumTwrNds            5     NumTwrNds     - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+AeroDyn                                       \*                            TwrElev        TwrDiam        TwrCd          TwrTI          TwrCb          TwrCp          TwrCa !TwrTI used only with TwrShadow=2, TwrCb/TwrCp/TwrCa used only with MHK=1 or 2
+AeroDyn                                       \*                            (m)            (m)            (-)            (-)            (-)            (-)            (-)
+============================================= ======== ==================== ========================================================================================================================================================================================================
+
+
+
+============================================= ======== ==================== ========================================================================================================================================================================================================
+Removed in OpenFAST `dev`                             
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line     Flag Name            Example Value
+============================================= ======== ==================== ========================================================================================================================================================================================================
+AeroDyn                                       11       Buoyancy             False         Buoyancy           - Include buoyancy effects? (flag)
+============================================= ======== ==================== ========================================================================================================================================================================================================
+
+
+
 OpenFAST v4.0.3 to OpenFAST v4.1.0
 ----------------------------------
 Supercontroller module has been removed from FAST.Farm.

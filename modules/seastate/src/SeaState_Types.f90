@@ -94,6 +94,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: defWtrDens = 0.0_ReKi      !< Default water density from the driver; may be overwritten                       [(kg/m^3)]
     REAL(ReKi)  :: defWtrDpth = 0.0_ReKi      !< Default water depth from the driver; may be overwritten                         [m]
     REAL(ReKi)  :: defMSL2SWL = 0.0_ReKi      !< Default mean sea level to still water level from the driver; may be overwritten [m]
+    INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK flag [-]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     REAL(ReKi)  :: PtfmLocationX = 0.0_ReKi      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
@@ -101,6 +102,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WrWvKinMod = 0      !< 0,1, or 2 indicating whether we are going to write out kinematics files.  [ignored if WaveMod = 6, if 1 or 2 then files are written using the outrootname] [-]
     LOGICAL  :: HasIce = .false.      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    LOGICAL  :: hasCurrField = .false.      !< Flag to indicate whether to expect current field from IfW [-]
+    INTEGER(IntKi)  :: CompSeaSt = 0_IntKi      !< Flag to indicate whether SeaState module is activated [-]
     LOGICAL  :: SurfaceVis = .FALSE.      !< Turn on grid surface visualization outputs [-]
     INTEGER(IntKi)  :: SurfaceVisNx = 0      !< Number of points in X direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
     INTEGER(IntKi)  :: SurfaceVisNy = 0      !< Number of points in Y direction to output for visualization grid.  Use 0 or negative to set to SeaState resolution. [-]
@@ -473,6 +476,7 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%defWtrDens = SrcInitInputData%defWtrDens
    DstInitInputData%defWtrDpth = SrcInitInputData%defWtrDpth
    DstInitInputData%defMSL2SWL = SrcInitInputData%defMSL2SWL
+   DstInitInputData%MHK = SrcInitInputData%MHK
    DstInitInputData%TMax = SrcInitInputData%TMax
    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
@@ -480,6 +484,8 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WrWvKinMod = SrcInitInputData%WrWvKinMod
    DstInitInputData%HasIce = SrcInitInputData%HasIce
    DstInitInputData%Linearize = SrcInitInputData%Linearize
+   DstInitInputData%hasCurrField = SrcInitInputData%hasCurrField
+   DstInitInputData%CompSeaSt = SrcInitInputData%CompSeaSt
    DstInitInputData%SurfaceVis = SrcInitInputData%SurfaceVis
    DstInitInputData%SurfaceVisNx = SrcInitInputData%SurfaceVisNx
    DstInitInputData%SurfaceVisNy = SrcInitInputData%SurfaceVisNy
@@ -511,6 +517,7 @@ subroutine SeaSt_PackInitInput(RF, Indata)
    call RegPack(RF, InData%defWtrDens)
    call RegPack(RF, InData%defWtrDpth)
    call RegPack(RF, InData%defMSL2SWL)
+   call RegPack(RF, InData%MHK)
    call RegPack(RF, InData%TMax)
    call RegPack(RF, InData%WaveFieldMod)
    call RegPack(RF, InData%PtfmLocationX)
@@ -518,6 +525,8 @@ subroutine SeaSt_PackInitInput(RF, Indata)
    call RegPack(RF, InData%WrWvKinMod)
    call RegPack(RF, InData%HasIce)
    call RegPack(RF, InData%Linearize)
+   call RegPack(RF, InData%hasCurrField)
+   call RegPack(RF, InData%CompSeaSt)
    call RegPack(RF, InData%SurfaceVis)
    call RegPack(RF, InData%SurfaceVisNx)
    call RegPack(RF, InData%SurfaceVisNy)
@@ -537,6 +546,7 @@ subroutine SeaSt_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%defWtrDens); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%defWtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%defMSL2SWL); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%MHK); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WaveFieldMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmLocationX); if (RegCheckErr(RF, RoutineName)) return
@@ -544,6 +554,8 @@ subroutine SeaSt_UnPackInitInput(RF, OutData)
    call RegUnpack(RF, OutData%WrWvKinMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HasIce); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Linearize); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%hasCurrField); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%CompSeaSt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SurfaceVis); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SurfaceVisNx); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SurfaceVisNy); if (RegCheckErr(RF, RoutineName)) return

@@ -888,6 +888,11 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
 
       ! CurrMod - Current profile model switch
+   if ( InitInp%hasCurrField ) then
+      call SetErrStat( ErrID_Warn,'Expecting current field from InflowWind. Setting CurrMod to 0.',ErrStat,ErrMsg,RoutineName)
+      InputFileData%Current%CurrMod = 0
+   end if
+
 
    if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InputFileData%Current%CurrMod /= 1 ) .AND. ( InputFileData%Current%CurrMod /= 2 ) )  then
       call SetErrStat( ErrID_Fatal,'CurrMod must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
@@ -896,6 +901,11 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
    if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InputFileData%WaveMod == WaveMod_ExtFull ) )  then
       call SetErrStat( ErrID_Fatal,'CurrMod must be set to 0 when WaveMod is set to 6: user-input wave data.',ErrStat,ErrMsg,RoutineName)
+      return
+   end if
+
+   if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InitInp%MHK /= MHK_None ) ) then
+      call SetErrStat( ErrID_Fatal,'CurrMod must be set to 0 for an MHK turbine.',ErrStat,ErrMsg,RoutineName)
       return
    end if
 

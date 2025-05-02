@@ -192,6 +192,7 @@ program SeaStateDriver
          ! Clean up and exit
       call SeaSt_DvrCleanup()
    end if
+   p%WaveField%hasCurrField = .FALSE.
 
    if ( Interval /= drvrInitInp%TimeInterval) then
       call SetErrStat( ErrID_Fatal, 'The SeaState Module attempted to change timestep interval, but this is not allowed.  The SeaState Module must use the Driver Interval.', ErrStat, ErrMsg, 'Driver')
