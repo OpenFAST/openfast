@@ -1287,10 +1287,10 @@ CONTAINS
                END IF
                IF (i == 100) THEN
                   p%nzCurrent = 100
-                  CALL WrScr("WARNING: MD can handle a maximum of 100 current profile points")
                   IF (p%writeLog > 0) THEN
                      WRITE(p%UnLog, '(A)'        ) "    WARNING: MD can handle a maximum of 100 current profile points"
                   ENDIF      
+                  CALL SetErrStat(ErrID_Warn, "MD can handle a maximum of 100 current profile points", ErrStat, ErrMsg, RoutineName)
                   EXIT
                END IF
             END DO
