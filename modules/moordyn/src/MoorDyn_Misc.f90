@@ -948,7 +948,7 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      IF (p%WaterKin == 3 .AND. (.NOT. m%IC_gen)) THEN ! disable wavekin 3 during IC_gen, otherwise will never find stead state (becasue of waves)
+      IF (p%WaterKin == 3 .AND. (.NOT. m%IC_gen)) THEN ! disable wavekin 3 during IC_gen, otherwise will never find steady state (becasue of waves)
          
          ! SeaState throws warning when queried location is out of bounds from the SeaState grid, so no need to handle here
 
@@ -972,7 +972,6 @@ CONTAINS
          IF (p%WaveKin > 0) THEN      
 
             ! find time interpolation indices and coefficients
-            !CALL getInterpNums(p%tWave, t, tindex, it, ft)
             it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
             ft = (t - (it-1)*p%dtWave)/p%dtWave
             m%WaveTi = it                  
@@ -1006,7 +1005,7 @@ CONTAINS
 
          ENDIF
 
-         ! IF current kinematics enabled, add interpolated current values from profile
+         ! If current kinematics enabled, add interpolated current values from profile
          IF (p%Current > 0) THEN 
          
             CALL getInterpNumsSiKi(p%pzCurrent, REAL(z,SiKi), 1, iz0, fz)
@@ -1352,6 +1351,16 @@ CONTAINS
             RETURN
          END IF
 
+         ! Error check to make sure the wave field pointer is not null if CurrentMod = 2 or WaveKinMod = 2
+         IF (p%WaveKin == 2 .OR. p%Current == 2) THEN
+            IF (.NOT. ASSOCIATED(p%WaveField)) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files."
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files.", ErrStat, ErrMsg, RoutineName); RETURN
+            END IF
+         END IF
+
          ! set p%WaterKin, note that p%WaterKin is not used in this routine, but is necessary for getWaterKin
          IF (p%Current == p%WaveKin) THEN ! if they are the same, set WaveKin as that value
             p%WaterKin = p%WaveKin
@@ -1359,11 +1368,13 @@ CONTAINS
             p%WaterKin = p%WaveKin
          ELSEIF (p%WaveKin == 0) THEN ! if one is zero, use the other for water kin
             p%WaterKin = p%Current
+         ELSEIF (p%WaveKin == 2 .AND. p%Current == 1 .AND. p%WaveField%Current_InitInput%CurrMod == 0) THEN ! if WaveKin = 2 and SeaState has no currents, allow users to provide custom current profile. WaterKin = 2 becasue of waves
+            p%WaterKin = p%WaveKin
          ELSE
             IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKinMod and CurrentMod must be equal or one must be zero"
+               WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKinMod and CurrentMod must be equal, one must be zero, or WaveKinMod must be 2 and CurrentMod must be 1 with SeaState currents disabled."
             ENDIF
-            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN ! TODO: can we find a way to enable wave mod = 2 and current mod = 1?
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal, one must be zero, or WaveKinMod must be 2 and CurrentMod must be 1 with SeaState currents disabled',ErrStat, ErrMsg, RoutineName); RETURN ! TODO: can we find a way to enable wave mod = 2 and current mod = 1?
          ENDIF
             
          ! ------------------- start with wave kinematics -----------------------
@@ -1381,14 +1392,6 @@ CONTAINS
             END DO
             
             IF (p%WaveKin == 2) THEN ! must be using the hybrid approach
-
-               ! Error check to make sure the wave field pointer is not null
-               IF (.NOT. ASSOCIATED(p%WaveField)) THEN
-                  IF (p%writeLog > 0) THEN
-                     WRITE(p%UnLog, '(A)'        ) "   ERROR WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files."
-                  ENDIF
-                  CALL SetErrStat(ErrID_Fatal, "WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files.", ErrStat, ErrMsg, RoutineName); RETURN
-               END IF
       
                ! Warning check to make sure SeaState and MoorDyn have the same water depth
                IF (p%WaveField%WtrDpth /= p%WtrDpth) THEN
@@ -1421,7 +1424,7 @@ CONTAINS
                   ENDIF
                END IF
 
-               ! check SS only is being run w/ no wave spreading, because MoorDyn is not compatiable with those(for now)
+               ! check SS only is being run w/ no wave spreading, because MoorDyn is not compatiable with those (for now) ! TODO: get rid of this
                IF (p%WaveField%WaveMultiDir) THEN
                   IF (p%writeLog > 0) THEN
                      WRITE(p%UnLog, '(A)'        ) "   ERROR MoorDyn WaveKinMod2 does not support wave spreading. Please use WaveDirMod = 0 in SeaState."
