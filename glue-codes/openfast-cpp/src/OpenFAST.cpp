@@ -126,7 +126,7 @@ void fast::OpenFAST::findRestartFile(int iTurbLoc) {
     std::cout << "Restarting from time " << latest_time << " at time step " << tstep << " from file name " << turbineData[iTurbLoc].FASTRestartFileName << std::endl ;
 
     nc_close(ncid);
-
+    free(tmpOutFileRoot);
 }
 
 void fast::OpenFAST::prepareRestartFile(int iTurbLoc) {
