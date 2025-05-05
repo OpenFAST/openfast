@@ -948,7 +948,7 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      IF (p%WaterKin == 3 .AND. (.NOT. m%IC_gen)) THEN ! disable wavekin 3 during IC_gen, otherwise will never find stead state (becasue of waves)
+      IF (p%WaterKin == 3 .AND. (.NOT. m%IC_gen)) THEN ! disable wavekin 3 during IC_gen, otherwise will never find steady state (becasue of waves)
          
          ! SeaState throws warning when queried location is out of bounds from the SeaState grid, so no need to handle here
 
@@ -972,7 +972,6 @@ CONTAINS
          IF (p%WaveKin > 0) THEN      
 
             ! find time interpolation indices and coefficients
-            !CALL getInterpNums(p%tWave, t, tindex, it, ft)
             it = floor(t/ p%dtWave) + 1    ! add 1 because Fortran indexing starts at 1
             ft = (t - (it-1)*p%dtWave)/p%dtWave
             m%WaveTi = it                  
@@ -1006,7 +1005,7 @@ CONTAINS
 
          ENDIF
 
-         ! IF current kinematics enabled, add interpolated current values from profile
+         ! If current kinematics enabled, add interpolated current values from profile
          IF (p%Current > 0) THEN 
          
             CALL getInterpNumsSiKi(p%pzCurrent, REAL(z,SiKi), 1, iz0, fz)
@@ -1070,8 +1069,9 @@ CONTAINS
       INTEGER(IntKi)                   :: NStepWave2   ! 
       REAL(SiKi)                       :: WaveTMax     ! max wave elevation time series duration after optimizing lenght for FFT
       REAL(SiKi)                       :: WaveDOmega   ! frequency step
-      REAL(SiKi)                       :: SinWaveDir                                      ! SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
-      REAL(SiKi)                       :: CosWaveDir                                      ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
+      REAL(SiKi), ALLOCATABLE          :: SinWaveDir(:)                                      ! SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
+      REAL(SiKi), ALLOCATABLE          :: CosWaveDir(:)                                      ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
+      LOGICAL                          :: WaveMultiDir = .FALSE. ! Indicates the waves are multidirectional -- set by WaveField pointer if enabled
 
       REAL(SiKi),  ALLOCATABLE         :: TmpFFTWaveElev(:)     ! Data for the FFT calculation
       TYPE(FFT_DataType)               :: FFT_Data              ! the instance of the FFT module we're using
@@ -1083,15 +1083,16 @@ CONTAINS
       COMPLEX(SiKi), PARAMETER         :: ImagNmbr = (0.0,1.0)  ! The imaginary number, SQRT(-1.0)
       COMPLEX(SiKi)                    :: ImagOmega             ! = ImagNmbr*Omega (rad/s)
       REAL(DbKi), ALLOCATABLE          :: WaveNmbr(:)           ! wave number for frequency array
-      REAL(SiKi), ALLOCATABLE          :: WaveElevC0(:,:)        ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveElevC( :)        ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCHx(:)       ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCHy(:)       ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCV( :)        ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveDynPC( :)        ! Discrete Fourier transform of the instantaneous dynamic pressure                       of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHx(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity  in x-direction    of incident waves before applying stretching at the zi-coordinates for points (m/s)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHy(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
-      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCV( :)        ! Discrete Fourier transform of the instantaneous vertical   velocity      of incident waves before applying stretching at the zi-coordinates for points (m/s)
+      REAL(SiKi),  ALLOCATABLE         :: WaveDirArr(:)         ! Wave direction array. Each frequency has a unique direction of WaveNDir > 1 (degrees). 0's for WaveKin = 1 or if disabled in SeaState.
+      REAL(SiKi), ALLOCATABLE          :: WaveElevC0(:,:)       ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveElevC( :)         ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCHx(:)         ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCHy(:)         ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveAccCV( :)         ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveDynPC( :)         ! Discrete Fourier transform of the instantaneous dynamic pressure                       of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHx(:)         ! Discrete Fourier transform of the instantaneous horizontal velocity  in x-direction    of incident waves before applying stretching at the zi-coordinates for points (m/s)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHy(:)         ! Discrete Fourier transform of the instantaneous horizontal velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
+      COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCV( :)         ! Discrete Fourier transform of the instantaneous vertical   velocity      of incident waves before applying stretching at the zi-coordinates for points (m/s)
 !      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
 
       INTEGER(IntKi)                   :: ErrStat2
@@ -1286,10 +1287,10 @@ CONTAINS
                END IF
                IF (i == 100) THEN
                   p%nzCurrent = 100
-                  CALL WrScr("WARNING: MD can handle a maximum of 100 current profile points")
                   IF (p%writeLog > 0) THEN
                      WRITE(p%UnLog, '(A)'        ) "    WARNING: MD can handle a maximum of 100 current profile points"
                   ENDIF      
+                  CALL SetErrStat(ErrID_Warn, "MD can handle a maximum of 100 current profile points", ErrStat, ErrMsg, RoutineName)
                   EXIT
                END IF
             END DO
@@ -1352,6 +1353,16 @@ CONTAINS
             RETURN
          END IF
 
+         ! Error check to make sure the wave field pointer is not null if CurrentMod = 2 or WaveKinMod = 2
+         IF (p%WaveKin == 2 .OR. p%Current == 2) THEN
+            IF (.NOT. ASSOCIATED(p%WaveField)) THEN
+               IF (p%writeLog > 0) THEN
+                  WRITE(p%UnLog, '(A)'        ) "   ERROR WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files."
+               ENDIF
+               CALL SetErrStat(ErrID_Fatal, "WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files.", ErrStat, ErrMsg, RoutineName); RETURN
+            END IF
+         END IF
+
          ! set p%WaterKin, note that p%WaterKin is not used in this routine, but is necessary for getWaterKin
          IF (p%Current == p%WaveKin) THEN ! if they are the same, set WaveKin as that value
             p%WaterKin = p%WaveKin
@@ -1359,11 +1370,13 @@ CONTAINS
             p%WaterKin = p%WaveKin
          ELSEIF (p%WaveKin == 0) THEN ! if one is zero, use the other for water kin
             p%WaterKin = p%Current
+         ELSEIF (p%WaveKin == 2 .AND. p%Current == 1 .AND. p%WaveField%Current_InitInput%CurrMod == 0) THEN ! if WaveKin = 2 and SeaState has no currents, allow users to provide custom current profile. WaterKin = 2 becasue of waves
+            p%WaterKin = p%WaveKin
          ELSE
             IF (p%writeLog > 0) THEN
-               WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKinMod and CurrentMod must be equal or one must be zero"
+               WRITE(p%UnLog, '(A)'        ) "   ERROR WaveKinMod and CurrentMod must be equal, one must be zero, or WaveKinMod must be 2 and CurrentMod must be 1 with SeaState currents disabled."
             ENDIF
-            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal or one must be zero',ErrStat, ErrMsg, RoutineName); RETURN ! TODO: can we find a way to enable wave mod = 2 and current mod = 1?
+            CALL SetErrStat( ErrID_Fatal,'WaveKinMod and CurrentMod must be equal, one must be zero, or WaveKinMod must be 2 and CurrentMod must be 1 with SeaState currents disabled',ErrStat, ErrMsg, RoutineName); RETURN
          ENDIF
             
          ! ------------------- start with wave kinematics -----------------------
@@ -1381,14 +1394,6 @@ CONTAINS
             END DO
             
             IF (p%WaveKin == 2) THEN ! must be using the hybrid approach
-
-               ! Error check to make sure the wave field pointer is not null
-               IF (.NOT. ASSOCIATED(p%WaveField)) THEN
-                  IF (p%writeLog > 0) THEN
-                     WRITE(p%UnLog, '(A)'        ) "   ERROR WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files."
-                  ENDIF
-                  CALL SetErrStat(ErrID_Fatal, "WaveField pointer is null. Hybrid method requires SeaState to be enabled. Please check input files.", ErrStat, ErrMsg, RoutineName); RETURN
-               END IF
       
                ! Warning check to make sure SeaState and MoorDyn have the same water depth
                IF (p%WaveField%WtrDpth /= p%WtrDpth) THEN
@@ -1421,14 +1426,6 @@ CONTAINS
                   ENDIF
                END IF
 
-               ! check SS only is being run w/ no wave spreading, because MoorDyn is not compatiable with those(for now)
-               IF (p%WaveField%WaveMultiDir) THEN
-                  IF (p%writeLog > 0) THEN
-                     WRITE(p%UnLog, '(A)'        ) "   ERROR MoorDyn WaveKinMod2 does not support wave spreading. Please use WaveDirMod = 0 in SeaState."
-                  ENDIF
-                  CALL SetErrStat(ErrID_Fatal, "MoorDyn WaveKinMod2 does not support wave spreading. Please use WaveDirMod = 0 in SeaState.", ErrStat, ErrMsg, RoutineName); RETURN
-               END IF
-
                ! check SS only is being run w/ first order waves, because MoorDyn is not compatiable with those(for now)
                IF (ALLOCATED(p%WaveField%WaveElev2)) THEN 
                   IF (p%writeLog > 0) THEN
@@ -1441,11 +1438,21 @@ CONTAINS
                p%dtWave = p%WaveField%WaveTime(2)-p%WaveField%WaveTime(1) ! from Waves.f90 (line 1040),  DO I = 0,WaveField%NStepWave; WaveField%WaveTime(I) = I*REAL(InitInp%WaveDT,SiKi)
 
                ! Interpolations need the following from SeaState: WaveElevC0, NStepWave2, NStepWave, WaveDOmega. In p%WaveKin = 1, these values are extracted from the wave elevation time series
+               ! Note: allocations not needed here because they are already allocated in SeaState
                WaveElevC0 = p%WaveField%WaveElevC0
                WaveDOmega = p%WaveField%WaveDOmega
                NStepWave2 = p%WaveField%NStepWave2
                NStepWave  = p%WaveField%NStepWave
+
+               ! Pull some other things out of the WaveField pointer
+               WaveMultiDir = p%WaveField%WaveMultiDir
                p%ntWave = NStepWave ! set ntWave to NStepWave
+
+               ! Set wave spreading array if enabled in SeaState, otherwise set to zero
+               If (WaveMultiDir) THEN
+                  ! Note: allocations not needed here because they are already allocated in SeaState
+                  WaveDirArr = p%WaveField%WaveDirArr
+               ENDIF
 
             ELSEIF (p%WaveKin == 1) THEN ! must be a filepath therefore read wave elevations from timeseries
 
@@ -1647,9 +1654,18 @@ CONTAINS
             ! allocate time series grid data arrays (now that we know the number of time steps coming from the IFFTs)
             CALL allocateKinematicsArrays() 
             
-            ! Set the CosWaveDir and SinWaveDir values
-            CosWaveDir=COS(D2R*WaveDir)
-            SinWaveDir=SIN(D2R*WaveDir)
+            ! allocate the wave direction arrays
+            ALLOCATE ( CosWaveDir(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate CosWaveDir.'; IF (Failed0()) RETURN
+            ALLOCATE ( SinWaveDir(0:NStepWave2), STAT=ErrStat2); ErrMsg2 = 'Cannot allocate SinWaveDir.'; IF (Failed0()) RETURN       
+
+            ! Set the CosWaveDir and SinWaveDir values. 
+            IF (WaveMultiDir) THEN ! This is only possible with WaveKinMod = 2
+               CosWaveDir=COS(D2R*WaveDirArr)
+               SinWaveDir=SIN(D2R*WaveDirArr)
+            ELSE
+               CosWaveDir=COS(D2R*WaveDir)
+               SinWaveDir=SIN(D2R*WaveDir)
+            ENDIF
             
             ! get wave number array once
             DO I = 0, NStepWave2 
@@ -1671,14 +1687,14 @@ CONTAINS
                         Omega = i*WaveDOmega
                         ImagOmega = ImagNmbr*Omega
 
-                        WaveElevC (i) = tmpComplex(i) * EXP( -ImagNmbr*WaveNmbr(i)*( p%pxWave(ix)*CosWaveDir + p%pyWave(iy)*SinWaveDir ))             ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)                                                             
-                        WaveDynPC (i) = p%rhoW*p%g* WaveElevC(i) * COSHNumOvrCOSHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) )              ! Discrete Fourier transform of the instantaneous dynamic pressure of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
-                        WaveVelCHx(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) ) *CosWaveDir  ! Discrete Fourier transform of the instantaneous horizontal velocity     in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-                        WaveVelCHy(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) ) *SinWaveDir  ! Discrete Fourier transform of the instantaneous horizontal velocity     in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)           
-                        WaveVelCV (i) =   ImagOmega*WaveElevC(i) * SINHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) )              ! Discrete Fourier transform of the instantaneous vertical   velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
-                        WaveAccCHx(i) =   ImagOmega*WaveVelCHx(i)                                                                                     ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-                        WaveAccCHy(i) =   ImagOmega*WaveVelCHy(i)                                                                                     ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-                        WaveAccCV (i) =   ImagOmega*WaveVelCV (i)                                                                                     ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+                        WaveElevC (i) = tmpComplex(i) * EXP( -ImagNmbr*WaveNmbr(i)*( p%pxWave(ix)*CosWaveDir(i) + p%pyWave(iy)*SinWaveDir(i) ))         ! Discrete Fourier transform of the instantaneous elevation of incident waves at the ref point (meters)                                                             
+                        WaveDynPC (i) = p%rhoW*p%g* WaveElevC(i) * COSHNumOvrCOSHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) )                ! Discrete Fourier transform of the instantaneous dynamic pressure of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
+                        WaveVelCHx(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) ) *CosWaveDir(i) ! Discrete Fourier transform of the instantaneous horizontal velocity     in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+                        WaveVelCHy(i) =       Omega*WaveElevC(i) * COSHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) ) *SinWaveDir(i) ! Discrete Fourier transform of the instantaneous horizontal velocity     in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)           
+                        WaveVelCV (i) =   ImagOmega*WaveElevC(i) * SINHNumOvrSINHDen( WaveNmbr(i), p%WtrDpth, REAL(p%pzWave(iz), R8Ki) )                ! Discrete Fourier transform of the instantaneous vertical   velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
+                        WaveAccCHx(i) =   ImagOmega*WaveVelCHx(i)                                                                                       ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+                        WaveAccCHy(i) =   ImagOmega*WaveVelCHy(i)                                                                                       ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+                        WaveAccCV (i) =   ImagOmega*WaveVelCV (i)                                                                                       ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
                      END DO  ! I, frequencies
                      
                      ! now IFFT all the wave kinematics except surface elevation and save it into the grid of data
