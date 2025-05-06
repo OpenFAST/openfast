@@ -106,10 +106,13 @@ INTEGER(IntKi),   PARAMETER             :: INPUT_PRED = 1      !< Index for pred
 !------------------------------
 !  Meshes for external nodes
 !     These point meshes are merely used to simplify the mapping of motions/loads
-!     to/from MD using the library mesh mapping routines.  These meshes may contain
-!     one or multiple points.
-!        - 1 point   -- rigid floating body assumption
-!        - N points  -- flexible structure (either floating or fixed bottom)
+!     to/from MD using the library mesh mapping routines.  The input mesh into the
+!     library can only contain one point at present and is rigidly mapped to multiple
+!     MoorDyn mesh points. This means all MoorDyn coupled objects as defined in the
+!     input file will be rigidly attached to the input mesh
+!
+!     In the future, we may wish modify this interface to allow for N mesh points
+!     for coupling to N MoorDyn mesh points for modeling things likeflexible structures.
 TYPE(MeshType)                          :: MD_MotionMesh       !< mesh for motions of external nodes
 TYPE(MeshType)                          :: MD_LoadMesh         !< mesh for loads  for external nodes
 TYPE(MeshMapType)                       :: Map_Motion_2_MD     !< Mesh mapping between input motion mesh and MD
@@ -600,7 +603,7 @@ SUBROUTINE SetMotionLoadsInterfaceMeshes(ErrStat,ErrMsg)
    !     this to the input mesh.
    CALL MeshCreate(  MD_MotionMesh                       ,  &
                      IOS              = COMPONENT_INPUT  ,  &
-                     Nnodes           = 1                ,  &
+                     Nnodes           = 1                ,  &     ! Single node for now -- rigid body mapping to MD mesh points
                      ErrStat          = ErrStat          ,  &
                      ErrMess          = ErrMsg           ,  &
                      TranslationDisp  = .TRUE.,    Orientation = .TRUE., &
