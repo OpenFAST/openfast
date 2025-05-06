@@ -579,7 +579,6 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
    call WrSumInfoRcvd(120, 'Airfoil command, blade 1')
    call WrSumInfoRcvd(121, 'Airfoil command, blade 2')
    call WrSumInfoRcvd(122, 'Airfoil command, blade 3')
-   call WrSumInfoRcvd(63,'Number logging channels')
 
 
       ! Write to summary file
