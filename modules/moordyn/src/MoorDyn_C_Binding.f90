@@ -147,7 +147,7 @@ SUBROUTINE MD_C_Init(                                             &
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: PtfmInit_C(6) ! TODO: make this more flexible, can we not have 6 DOF only coupling?
    INTEGER(C_INT)                                 , INTENT(IN   )   :: InterpOrder_C
    INTEGER(C_INT)                                 , INTENT(  OUT)   :: NumChannels_C
-   CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)   ! The size of these arrays was chosen as a "big number", it isn't set by MoorDyn. Watch out, it might be bigger than this!
+   CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelNames_C(100000)
    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: OutputChannelUnits_C(100000)
    INTEGER(C_INT)                                 , INTENT(  OUT)   :: ErrStat_C
    CHARACTER(KIND=C_CHAR)                         , INTENT(  OUT)   :: ErrMsg_C(ErrMsgLen_C)
@@ -582,6 +582,7 @@ END SUBROUTINE MD_C_End
 !----------------------------------------------- MD SetWaveFieldData -------------------------------------------
 !===============================================================================================================
 !> Set the wave field data pointer from an external source such as SeaState
+!! Assumes that MD_C_Init has been run since it uses those values to check that there's a valid pointer
 SUBROUTINE MD_C_SetWaveFieldData(WaveFieldData_C) BIND (C, NAME='MD_C_SetWaveFieldData')
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: MD_C_SetWaveFieldData

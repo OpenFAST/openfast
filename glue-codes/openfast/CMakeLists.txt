@@ -42,6 +42,3 @@ if(BUILD_OPENFAST_LIB_DRIVER)
 endif()
 
 
-add_library(dummyclib SHARED
-    src/dummyc.cpp
-)
