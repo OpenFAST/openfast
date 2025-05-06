@@ -28,7 +28,7 @@ tag.
 
 
 Part of the WETO Stack
---------------------------
+----------------------
 
 OpenFAST is primarily developed with the support of the U.S. Department of Energy and is part of the `WETO Software Stack <https://nrel.github.io/WETOStack>`_. For more information and other integrated modeling software, see:
 
