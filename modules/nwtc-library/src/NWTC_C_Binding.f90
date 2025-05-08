@@ -28,7 +28,7 @@ USE NWTC_Base, ONLY: ErrMsgLen
 !     This must exactly match the value in the python-lib. If ErrMsgLen changes at
 !     some point in the nwtc-library, this should be updated, but the logic exists
 !     to correctly handle different lengths of the strings
-INTEGER(IntKi), PARAMETER   :: ErrMsgLen_C = 1025
+INTEGER(IntKi), PARAMETER   :: ErrMsgLen_C = 8197
 INTEGER(IntKi), PARAMETER   :: IntfStrLen  = 1025       ! length of other strings through the C interface
 
 CONTAINS
@@ -37,7 +37,7 @@ CONTAINS
 !! Make absolutely certain that we do not overrun the end of ErrMsg_C.  That is hard coded to 1025,
 !! but ErrMsgLen is set in the nwtc_library, and could change without updates here.  We don't want an
 !! inadvertant buffer overrun -- that can lead to bad things.
-SUBROUTINE SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
+SUBROUTINE SetErrStat_F2C(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
     INTEGER,                INTENT(IN   )  :: ErrStat                 !< aggregated error message (fortran type)
     CHARACTER(ErrMsgLen),   INTENT(IN   )  :: ErrMsg                  !< aggregated error message (fortran type)
     INTEGER(C_INT),         INTENT(  OUT)  :: ErrStat_C
@@ -49,7 +49,73 @@ SUBROUTINE SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
     else
         ErrMsg_C = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
     endif
-END SUBROUTINE SetErr
+END SUBROUTINE SetErrStat_F2C
+
+!> This subroutine incorporates the local error status and error messages into the global error
+!! status and message. It expects both local and global error messages to be null-terminated
+!! C strings.
+SUBROUTINE SetErrStat_C(ErrStatLocal, ErrMessLocal, ErrStatGlobal, ErrMessGlobal, RoutineName)
+
+    INTEGER(C_INT),                          INTENT(IN   ) :: ErrStatLocal                  ! Error status of the operation
+    CHARACTER(KIND=C_CHAR, LEN=ErrMsgLen_C), INTENT(IN   ) :: ErrMessLocal                  ! Error message if ErrStat /= ErrID_None
+    INTEGER(C_INT),                          INTENT(INOUT) :: ErrStatGlobal                 ! Error status of the operation
+    CHARACTER(KIND=C_CHAR),                  INTENT(INOUT) :: ErrMessGlobal(ErrMsgLen_C)    ! Error message if ErrStat /= ErrID_None
+    CHARACTER(*),                            INTENT(IN   ) :: RoutineName                   ! Name of the routine error occurred in
+
+    IF ( ErrStatLocal == ErrID_None ) RETURN
+
+    IF (ErrStatGlobal /= ErrID_None) THEN
+        ! print *, "in if", ErrStatGlobal, ErrID_None
+        ! ErrMessGlobal = TRIM(ErrMessGlobal)//new_line('a')
+        ! print *, "ErrMessGlobal", ErrMessGlobal
+    ENDIF
+    ! TODO: Does the line below need to remove the null char from ErrMessGlobal prior to appending to it?
+    ErrMessGlobal = TRANSFER( ErrMessGlobal//TRIM(RoutineName)//':'//TRIM(ErrMessLocal)//C_NULL_CHAR, ErrMessGlobal )
+    ! ErrMessGlobal = TRIM(ErrMessGlobal)//TRIM(RoutineName)//':'//TRIM(ErrMessLocal)
+    ErrStatGlobal = MAX(ErrStatGlobal, ErrStatLocal)
+
+END SUBROUTINE
+
+SUBROUTINE StringConvert_F2C(F_String, C_String, Length)
+    !> This was taken from https://github.com/vmagnin/gtk-fortran/blob/gtk4/src/gtk-sup.f90#L640.
+    !! The original implementation has textptr as an allocatable array, but in OpenFAST
+    !! the C string arrays will already be created in the calling code.
+
+    ! Convert a Fortran string into a null-terminated C-string
+    !
+    ! F_STRING |  F_String |  required |  The Fortran string to convert
+    ! TEXTPR |  string |  required |  A C type string, (allocatable).
+    ! LENGTH |  c_int |  optional |  The Length of the generated C string.
+    !-
+
+    character(len=*), intent(in) :: F_String
+    character(kind=c_char), dimension(:), intent(out) :: C_String   ! , allocatable
+    integer(c_int), intent(out), optional :: Length
+
+    integer :: lcstr, j
+    logical :: add_null
+
+    lcstr = len_trim(F_String)
+    if (lcstr == 0) then
+        lcstr = lcstr + 1
+        add_null = .true.
+    else if (F_String(lcstr:lcstr) /= c_null_char) then
+        lcstr = lcstr + 1
+        add_null = .true.
+    else
+        add_null = .false.
+    end if
+
+    ! allocate(C_String(lcstr))
+    if (present(Length)) Length = lcstr
+
+    do j = 1, len_trim(F_String)
+        C_String(j) = F_String(j:j)
+    end do
+
+    if (add_null) C_String(lcstr) = c_null_char
+
+END SUBROUTINE
 
 FUNCTION RemoveCStringNullChar(String_C, StringLength_C)
     INTEGER(C_INT), INTENT(IN)                              :: StringLength_C
