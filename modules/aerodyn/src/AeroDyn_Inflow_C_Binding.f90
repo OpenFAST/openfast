@@ -246,9 +246,9 @@ subroutine ADI_C_PreInit(                       &
    real(c_float),           intent(in   ) :: defSpdSound_in         !< Speed of sound in working fluid (m/s)
    real(c_float),           intent(in   ) :: defPatm_in             !< Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
    real(c_float),           intent(in   ) :: defPvap_in             !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
-   real(c_float),           intent(in   ) :: WtrDpth_in             !< Water depth (m)
-   real(c_float),           intent(in   ) :: MSL2SWL_in             !< Offset between still-water level and mean sea level (m) [positive upward]
-   integer(c_int),          intent(in   ) :: MHK_in
+   real(c_float),           intent(in   ) :: WtrDpth_in             !< Water depth (m) [used only for an MHK turbine]
+   real(c_float),           intent(in   ) :: MSL2SWL_in             !< Offset between still-water level and mean sea level (m) [positive upward, used only for an MHK turbine]
+   integer(c_int),          intent(in   ) :: MHK_in                 !< Marine hydrokinetic turbine [0: none; 1: fixed bottom MHK; 2: Floating MHK]
    integer(c_int),          intent(in   ) :: DebugLevel_in
    integer(c_int),          intent(  out) :: ErrStat_C
    character(kind=c_char),  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
