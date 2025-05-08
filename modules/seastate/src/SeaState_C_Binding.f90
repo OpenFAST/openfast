@@ -306,17 +306,4 @@ IMPLICIT NONE
     RETURN
 END FUNCTION
 
-! FUNCTION SetFlowFieldPointer_C(FlowFieldPointer) BIND (C, NAME='SetFlowFieldPointer_C')
-! IMPLICIT NONE
-! #ifndef IMPLICIT_DLLEXPORT
-! !DEC$ ATTRIBUTES DLLEXPORT :: SetFlowFieldPointer_C
-! !GCC$ ATTRIBUTES DLLEXPORT :: SetFlowFieldPointer_C
-! #endif
-!     TYPE(C_PTR), INTENT(IN) :: FlowFieldPointer
-!     SetFlowFieldPointer_C = C_LOC(p%FlowField)
-!     RETURN
-! END FUNCTION
-
-! SUBROUTINE get_wave_height(position)
-
 end module SeaState_C_Binding
