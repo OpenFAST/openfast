@@ -28,7 +28,7 @@ USE NWTC_Base, ONLY: ErrMsgLen
 !     This must exactly match the value in the python-lib. If ErrMsgLen changes at
 !     some point in the nwtc-library, this should be updated, but the logic exists
 !     to correctly handle different lengths of the strings
-INTEGER(IntKi), PARAMETER   :: ErrMsgLen_C = 8196
+INTEGER(IntKi), PARAMETER   :: ErrMsgLen_C = 8197
 INTEGER(IntKi), PARAMETER   :: IntfStrLen  = 1025       ! length of other strings through the C interface
 
 CONTAINS

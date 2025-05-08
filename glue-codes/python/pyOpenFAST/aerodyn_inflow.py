@@ -169,7 +169,7 @@ class AeroDynInflowLib(CDLL):
     # NOTE: The length of the error message in Fortran is determined by the
     #       ErrMsgLen variable in the NWTC_Base.f90 file. If ErrMsgLen is modified,
     #       the corresponding size here must also be updated to match.
-    ERROR_MESSAGE_LENGTH: int = 1025
+    ERROR_MESSAGE_LENGTH: int = 8197
     DEFAULT_STRING_LENGTH: int = 1025
     CHANNEL_NAME_LENGTH: int = 20
     MAX_CHANNELS: int = 8000
