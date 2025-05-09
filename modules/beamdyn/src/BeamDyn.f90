@@ -1751,7 +1751,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       ! create point mesh at root (cousin of rootmotion) 
       CALL MeshCopy( SrcMesh   = u%RootMotion     &
                     , DestMesh = m%LoadsAtRoot    &
-                    , CtrlCode = MESH_SIBLING     &
+                    , CtrlCode = MESH_COUSIN      &
                     , IOS      = COMPONENT_OUTPUT &
                     , Force    = .TRUE.           &
                     , Moment   = .TRUE.           &
