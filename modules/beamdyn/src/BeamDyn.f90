@@ -1759,12 +1759,16 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
                     , ErrMess  = ErrMsg2          )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat>=AbortErrLev) RETURN
+
       ! mapping of distributed loads to LoadsAtRoot
       CALL MeshMapCreate( u%DistrLoad, m%LoadsAtRoot, m%Map_u_DistrLoad_to_R, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
       ! mapping of point loads to LoadsAtRoot 
       CALL MeshMapCreate( u%PointLoad, m%LoadsAtRoot, m%Map_u_PtLoad_to_R, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      m%LoadsAtRoot%remapFlag = .false.
    endif
 
 end subroutine Init_MiscVars

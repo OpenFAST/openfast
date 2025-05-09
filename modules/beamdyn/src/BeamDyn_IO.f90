@@ -1742,6 +1742,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg, CalcWriteOutput 
    INTEGER(IntKi)                               :: j,beta,j_BldMotion
    REAL(BDKi)                                   :: temp_vec(3)
    REAL(BDKi)                                   :: temp_vec2(3)
+   REAL(ReKi)                                   :: temp_frc(3)
+   REAL(ReKi)                                   :: temp_mom(3)
    REAL(BDKi)                                   :: temp33(3,3)
    REAL(BDKi)                                   :: temp33_2(3,3)
    
@@ -2002,29 +2004,37 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg, CalcWriteOutput 
 
    ! compute mapping of all applied loads to the root location
    if (p%CompAppliedLdAtRoot) then
-!FIXME: check if should be using u2 or u
+
       ! mapping of distributed loads to LoadsAtRoot
       call Transfer_Line2_to_Point( m%u2%DistrLoad, m%LoadsAtRoot, m%Map_u_DistrLoad_to_R, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!FIXME: might need temp copy here to avoid clobbering all the forces with second transfer.
+
+      ! a second transfer will zero out the forces, and moments, so store them elsewhere
+      temp_frc = m%LoadsAtRoot%Force(:,1)
+      temp_mom = m%LoadsAtRoot%Moment(:,1)
+
       ! mapping of point loads to LoadsAtRoot 
       call Transfer_Point_to_Point( m%u2%PointLoad, m%LoadsAtRoot, m%Map_u_PtLoad_to_R, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+      ! add the distributed loads
+      temp_frc = temp_frc + m%LoadsAtRoot%Force(:,1)
+      temp_mom = temp_mom + m%LoadsAtRoot%Moment(:,1)
+
       ! Global coords
-      AllOuts( RootAppliedFxg ) = m%LoadsAtRoot%Force(1,1)
-      AllOuts( RootAppliedFyg ) = m%LoadsAtRoot%Force(2,1)
-      AllOuts( RootAppliedFzg ) = m%LoadsAtRoot%Force(3,1)
-      AllOuts( RootAppliedMxg ) = m%LoadsAtRoot%Moment(1,1)
-      AllOuts( RootAppliedMyg ) = m%LoadsAtRoot%Moment(2,1)
-      AllOuts( RootAppliedMzg ) = m%LoadsAtRoot%Moment(3,1)
+      AllOuts( RootAppliedFxg ) = temp_frc(1)
+      AllOuts( RootAppliedFyg ) = temp_frc(2)
+      AllOuts( RootAppliedFzg ) = temp_frc(3)
+      AllOuts( RootAppliedMxg ) = temp_mom(1)
+      AllOuts( RootAppliedMyg ) = temp_mom(2)
+      AllOuts( RootAppliedMzg ) = temp_mom(3)
 
       ! Root coords
-      temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),m%LoadsAtRoot%Force(:,1))
+      temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_frc)
       AllOuts( RootAppliedFxr ) = temp_vec(1)
       AllOuts( RootAppliedFyr ) = temp_vec(2)
       AllOuts( RootAppliedFzr ) = temp_vec(3)
-      temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),m%LoadsAtRoot%Moment(:,1))
+      temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_mom)
       AllOuts( RootAppliedMxr ) = temp_vec(1)
       AllOuts( RootAppliedMyr ) = temp_vec(2)
       AllOuts( RootAppliedMzr ) = temp_vec(3)
