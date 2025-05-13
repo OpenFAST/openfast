@@ -63,14 +63,14 @@ module test_NWTC_C_Binding
         integer(c_int) :: error_status_global
         character(kind=c_char) :: error_message_local(ErrMsgLen_C)
         character(kind=c_char) :: error_message_global(ErrMsgLen_C)
-        character(kind=c_char) :: routine_name(IntfStrLen)
+        character(IntfStrLen) :: routine_name
 
         character(len=ErrMsgLen) :: error_message_f
         integer :: loc_global, loc_local, loc_routine
 
         error_message_local = ""//C_NULL_CHAR
         error_message_global = ""//C_NULL_CHAR
-        CALL StringConvert_F2C("test_SetErrStat_C", routine_name)
+        routine_name = "test_SetErrStat_C"
 
         ! Check ErrStat handling
 

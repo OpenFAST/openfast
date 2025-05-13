@@ -53,23 +53,23 @@ END SUBROUTINE SetErrStat_F2C
 !> This subroutine incorporates the local error status and error messages into the global error
 !! status and message. It expects both local and global error messages to be null-terminated
 !! C strings.
-SUBROUTINE SetErrStat_C(ErrStatLocal_C, ErrMessLocal_C, ErrStatGlobal_C, ErrMessGlobal_C, RoutineName_C)
+!! The routine name must be a Fortran string with assumed length.
+SUBROUTINE SetErrStat_C(ErrStatLocal_C, ErrMessLocal_C, ErrStatGlobal_C, ErrMessGlobal_C, RoutineName_F)
 
     INTEGER(C_INT),                          INTENT(IN   ) :: ErrStatLocal_C                  ! Error status of the operation
     CHARACTER(KIND=C_CHAR),                  INTENT(IN   ) :: ErrMessLocal_C(ErrMsgLen_C)     ! Error message if ErrStat /= ErrID_None
     INTEGER(C_INT),                          INTENT(INOUT) :: ErrStatGlobal_C                 ! Error status of the operation
     CHARACTER(KIND=C_CHAR),                  INTENT(INOUT) :: ErrMessGlobal_C(ErrMsgLen_C)    ! Error message if ErrStat /= ErrID_None
-    CHARACTER(KIND=C_CHAR),                  INTENT(IN   ) :: RoutineName_C(IntfStrLen)       ! Name of the routine error occurred in
+    CHARACTER(*),                            INTENT(IN   ) :: RoutineName_F                   ! Name of the routine error occurred in
 
     INTEGER(IntKi)           :: ErrStatLocal_F, ErrStatGlobal_F
-    character(len=ErrMsgLen) :: ErrMessLocal_F, ErrMessGlobal_F, RoutineName_F
+    character(len=ErrMsgLen) :: ErrMessLocal_F, ErrMessGlobal_F
 
     ! Convert C strings to Fortran for easier processing within this subroutine
     CALL StringConvert_C2F(ErrMessLocal_C, ErrMessLocal_F)
     CALL StringConvert_C2F(ErrMessGlobal_C, ErrMessGlobal_F)
     ErrStatLocal_F = INT(ErrStatLocal_C, IntKi)
     ErrStatGlobal_F = INT(ErrStatGlobal_C, IntKi)
-    CALL StringConvert_C2F(RoutineName_C, RoutineName_F)
 
     ! Return with no-op if the local error status is None
     IF ( ErrStatLocal_F == ErrID_None ) RETURN
