@@ -111,6 +111,7 @@ use NWTC_Library
       INTEGER(IntKi)               :: NPoints                                  ! Number of points being simulated.                        
       INTEGER(IntKi)               :: NPacked                                  ! Number of entries stored in the packed version of the symmetric matrix of size NPoints by NPoints
       
+      REAL(ReKi)                   :: Ztop                                     ! The height of the highest point on the grid (before tower points are added)
       REAL(ReKi)                   :: Zbottom                                  ! The height of the lowest point on the grid (before tower points are added), equal to Z(1)
       REAL(ReKi)                   :: RotorDiameter                            ! The assumed diameter of the rotor
       
