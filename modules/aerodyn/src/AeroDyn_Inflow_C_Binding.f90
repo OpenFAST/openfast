@@ -26,7 +26,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    USE AeroDyn_Driver_Subs,   only: Dvr_InitializeOutputs, Dvr_WriteOutputs, SetVTKParameters   !, WrVTK_Surfaces, WrVTK_Lines, WrVTK_Ground
    USE IfW_FlowField, only: IfW_FlowField_GetVelAcc
    USE NWTC_Library
-   USE NWTC_C_Binding, only: ErrMsgLen_C, IntfStrLen, SetErrStat_F2C, FileNameFromCString, RemoveCStringNullChar
+   USE NWTC_C_Binding, only: ErrMsgLen_C, IntfStrLen, SetErrStat_F2C, FileNameFromCString
    USE VersionInfo
 
    IMPLICIT NONE
