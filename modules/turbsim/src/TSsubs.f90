@@ -1347,14 +1347,9 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    p_grid%GridRes_Y = p_grid%GridWidth  / REAL( p_grid%NumGrid_Y - 1, ReKi )
    p_grid%GridRes_Z = p_grid%GridHeight / REAL( p_grid%NumGrid_Z - 1, ReKi )      
 
-   p_grid%Zbottom = p_grid%HubHt - 0.5*p_grid%GridHeight ! height of the lowest grid points
-
-   IF ( p_grid%Zbottom <= 0.0_ReKi ) THEN
-      CALL SetErrStat(ErrID_Fatal,'The lowest grid point ('//TRIM(Num2LStr(p_grid%Zbottom))// ' m) must be above the ground. '//&
-                      'Adjust the appropriate values in the input file.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   ENDIF   
-   
+   p_grid%Zbottom = p_grid%HubHt + 0.5*p_grid%RotorDiameter                                ! height of the highest grid points
+   p_grid%Zbottom = p_grid%Zbottom - p_grid%GridRes_Z * REAL(p_grid%NumGrid_Z - 1, ReKi)   ! height of the lowest grid points
+   p_grid%Zbottom = MAX( Tolerance, p_grid%Zbottom) ! make sure it's above the ground
 
    ! (2) the tower points:   
    IF ( AddTower ) THEN
