@@ -300,7 +300,6 @@ IMPLICIT NONE
     TYPE(MeshMapType)  :: Map_u_DistrLoad_to_y      !< mapping of input loads to output node locations [-]
     TYPE(MeshMapType)  :: Map_y_BldMotion_to_u      !< mapping of output motions to input node locations (for load transfer) [-]
     TYPE(MeshMapType)  :: Map_u_DistrLoad_to_R      !< mapping of input loads to root location [-]
-    TYPE(MeshMapType)  :: Map_u_PtLoad_to_R      !< mapping of input loads to root location [-]
     INTEGER(IntKi)  :: Un_Sum = 0_IntKi      !< unit number of summary file [-]
     TYPE(EqMotionQP)  :: qp      !< Quadrature point calculation info [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: lin_A      !< A (dXdx) matrix used in linearization (before RotState is applied) [-]
@@ -2766,9 +2765,6 @@ subroutine BD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call NWTC_Library_CopyMeshMapType(SrcMiscData%Map_u_DistrLoad_to_R, DstMiscData%Map_u_DistrLoad_to_R, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcMiscData%Map_u_PtLoad_to_R, DstMiscData%Map_u_PtLoad_to_R, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    DstMiscData%Un_Sum = SrcMiscData%Un_Sum
    call BD_CopyEqMotionQP(SrcMiscData%qp, DstMiscData%qp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3162,8 +3158,6 @@ subroutine BD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call NWTC_Library_DestroyMeshMapType(MiscData%Map_u_DistrLoad_to_R, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(MiscData%Map_u_PtLoad_to_R, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call BD_DestroyEqMotionQP(MiscData%qp, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%lin_A)) then
@@ -3273,7 +3267,6 @@ subroutine BD_PackMisc(RF, Indata)
    call NWTC_Library_PackMeshMapType(RF, InData%Map_u_DistrLoad_to_y) 
    call NWTC_Library_PackMeshMapType(RF, InData%Map_y_BldMotion_to_u) 
    call NWTC_Library_PackMeshMapType(RF, InData%Map_u_DistrLoad_to_R) 
-   call NWTC_Library_PackMeshMapType(RF, InData%Map_u_PtLoad_to_R) 
    call RegPack(RF, InData%Un_Sum)
    call BD_PackEqMotionQP(RF, InData%qp) 
    call RegPackAlloc(RF, InData%lin_A)
@@ -3325,7 +3318,6 @@ subroutine BD_UnPackMisc(RF, OutData)
    call NWTC_Library_UnpackMeshMapType(RF, OutData%Map_u_DistrLoad_to_y) ! Map_u_DistrLoad_to_y 
    call NWTC_Library_UnpackMeshMapType(RF, OutData%Map_y_BldMotion_to_u) ! Map_y_BldMotion_to_u 
    call NWTC_Library_UnpackMeshMapType(RF, OutData%Map_u_DistrLoad_to_R) ! Map_u_DistrLoad_to_R 
-   call NWTC_Library_UnpackMeshMapType(RF, OutData%Map_u_PtLoad_to_R) ! Map_u_PtLoad_to_R 
    call RegUnpack(RF, OutData%Un_Sum); if (RegCheckErr(RF, RoutineName)) return
    call BD_UnpackEqMotionQP(RF, OutData%qp) ! qp 
    call RegUnpackAlloc(RF, OutData%lin_A); if (RegCheckErr(RF, RoutineName)) return

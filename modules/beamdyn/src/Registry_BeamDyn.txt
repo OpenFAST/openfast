@@ -335,7 +335,6 @@ typedef   ^        MiscVarType    MeshType    LoadsAtRoot          - - - "Applie
 typedef   ^        MiscVarType    MeshMapType Map_u_DistrLoad_to_y - - - "mapping of input loads to output node locations" -
 typedef   ^        MiscVarType    MeshMapType Map_y_BldMotion_to_u - - - "mapping of output motions to input node locations (for load transfer)" -
 typedef   ^        MiscVarType    MeshMapType Map_u_DistrLoad_to_R - - - "mapping of input loads to root location" -
-typedef   ^        MiscVarType    MeshMapType Map_u_PtLoad_to_R    - - - "mapping of input loads to root location" -
 typedef   ^        MiscVarType    IntKi       Un_Sum               - - - "unit number of summary file"	-
 typedef   ^        MiscVarType    EqMotionQP  qp                   - - - "Quadrature point calculation info" -
 typedef   ^        MiscVarType    R8Ki        lin_A            {:}{:}  - - "A (dXdx) matrix used in linearization (before RotState is applied)" -
