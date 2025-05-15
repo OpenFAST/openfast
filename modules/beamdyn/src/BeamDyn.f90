@@ -1746,6 +1746,27 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
    CALL BD_CopyInput(u, m%u2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+   ! compute mapping of applied distributed loads to the root location
+   ! NOTE: PtLoads are not handled at present. See comments in BeamDyn_IO.f90 for changes required.
+   if (p%CompAppliedLdAtRoot .and. p%BldMotionNodeLoc == BD_MESH_QP) then
+      ! create point mesh at root (cousin of rootmotion) 
+      CALL MeshCopy( SrcMesh   = u%RootMotion     &
+                    , DestMesh = m%LoadsAtRoot    &
+                    , CtrlCode = MESH_COUSIN      &
+                    , IOS      = COMPONENT_OUTPUT &
+                    , Force    = .TRUE.           &
+                    , Moment   = .TRUE.           &
+                    , ErrStat  = ErrStat2         &
+                    , ErrMess  = ErrMsg2          )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>=AbortErrLev) RETURN
+
+      ! mapping of distributed loads to LoadsAtRoot
+      CALL MeshMapCreate( u%DistrLoad, m%LoadsAtRoot, m%Map_u_DistrLoad_to_R, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      m%LoadsAtRoot%remapFlag = .false.
+
+   endif
 
 end subroutine Init_MiscVars
 !-----------------------------------------------------------------------------------------------------------------------------------
