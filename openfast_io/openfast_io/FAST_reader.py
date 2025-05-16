@@ -3194,7 +3194,8 @@ class InputReader_OpenFAST(object):
                     if option_name.upper() == 'WATERKIN':
                         self.fst_vt['MoorDyn']['WaterKin'] = option_value.strip('"')
                         WaterKin_file = os.path.normpath(os.path.join(os.path.dirname(moordyn_file), self.fst_vt['MoorDyn']['WaterKin']))
-                        self.read_WaterKin(WaterKin_file)
+                        if self.fst_vt['MoorDyn']['WaterKin'].upper() not in ['0','UNUSED']:
+                            self.read_WaterKin(WaterKin_file)
 
                     self.fst_vt['MoorDyn']['option_values'].append(float_read(option_value.strip('"'))) # some options values can be strings or floats
                     self.fst_vt['MoorDyn']['option_names'].append(option_name)
