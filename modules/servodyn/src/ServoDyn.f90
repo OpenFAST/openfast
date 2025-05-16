@@ -1664,7 +1664,7 @@ subroutine StC_CtrlChan_Setup(m,p,CtrlChanInitInfo,UnSum,ErrStat,ErrMsg)
    ErrMsg   = ""
 
    ! NOTE:  For now we only have the option of the StC requesting the bladed interface
-   !        at the the ServoDyn level.  If we later add a Simulink interface, the logic
+   !        at the ServoDyn level.  If we later add a Simulink interface, the logic
    !        below for checking if the DLL interface was requested will need updating.
    !        At that point it might be necessary to set an array for the p%StCCMode so
    !        it is possible to tell which channel is from Simulink and which is from
@@ -2183,7 +2183,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! Local variables
-   REAL(ReKi)                                     :: AllOuts(0:MaxOutPts)   ! All the the available output channels
+   REAL(ReKi)                                     :: AllOuts(0:MaxOutPts)   ! All the available output channels
    INTEGER(IntKi)                                 :: I                      ! Generic loop index
    INTEGER(IntKi)                                 :: K                      ! Blade index
    INTEGER(IntKi)                                 :: J                      ! Structural control instance at location
@@ -2856,7 +2856,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_u_indx(n,4)   ! this blade
@@ -2900,7 +2900,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
        ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_u_indx(n,3)   ! this instance
@@ -2944,7 +2944,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
        ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_u_indx(n,3)   ! this instance
@@ -2988,7 +2988,7 @@ contains
       integer(IntKi)                            :: i,j,k                ! Generic indices
       type(StC_InputType)                       :: u_StC                ! copy of the StC inputs  for StC_CalcOutput call
       type(StC_OutputType)                      :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
        ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_u_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_u_indx(n,3)   ! this instance
@@ -3770,7 +3770,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j,k                ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       k = p%Jac_x_indx(n,4)   ! this blade
@@ -3807,7 +3807,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_x_indx(n,3)   ! this instance
@@ -3843,7 +3843,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_x_indx(n,3)   ! this instance
@@ -3879,7 +3879,7 @@ contains
       character(ErrMsgLen),            intent(  out)  :: ErrMsg3
       integer(IntKi)                                  :: i,j                  ! Generic indices
       type(StC_OutputType)                            :: y_StC                ! copy of the StC outputs for StC_CalcOutput call
-      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the the available output channels - perturbed (ReKi since WriteOutput is ReKi)
+      real(ReKi)                                      :: AllOuts(0:MaxOutPts) ! All the available output channels - perturbed (ReKi since WriteOutput is ReKi)
       ! Since this is acting on only a single blade within a single StC instance, we can look up exactly which one
       ! from the Jac_x_indx array.  This allows us to simplify the number of calls dramatically
       j = p%Jac_x_indx(n,3)   ! this instance

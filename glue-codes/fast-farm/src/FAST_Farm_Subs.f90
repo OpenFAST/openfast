@@ -371,7 +371,7 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    HAWC_InitInput%WindFileName(3) = trim(BoxFileRoot)//trim(FileEnding(3))
 
    ! HAWC spatial grid
-   if (p%WAT == Mod_WAT_PreDef) then       ! from libary of WAT files, set the NxNyNz and DxDyDz terms
+   if (p%WAT == Mod_WAT_PreDef) then       ! from library of WAT files, set the NxNyNz and DxDyDz terms
       call MannLibDims(BoxFileRoot, p%RotorDiamRef, p%WAT_NxNyNz, p%WAT_DxDyDz, ErrStat2, ErrMsg2);  if (Failed()) return
       write(sDummy, '(3(I8,1X))') p%WAT_NxNyNz
       call WrScr('  WAT: NxNyNz set to: '//trim(sDummy)//' (inferred from filename)')

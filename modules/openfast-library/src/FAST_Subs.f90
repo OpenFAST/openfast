@@ -198,7 +198,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
    END IF
 
    ! ... Open and read input files ...
-   ! also, set applicable farm paramters and turbine reference position also for graphics output
+   ! also, set applicable farm parameters and turbine reference position also for graphics output
    p_FAST%UseSC = .FALSE.
    if (PRESENT(ExternInitData)) then
       p_FAST%FarmIntegration = ExternInitData%FarmIntegration
@@ -2479,7 +2479,7 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    !......................................................
    ! Set the number of output columns from each module
    !......................................................
-   y_FAST%numOuts = 0    ! Inintialize entire array
+   y_FAST%numOuts = 0    ! Initialize entire array
 
    IF ( ALLOCATED( Init%OutData_IfW%WriteOutputHdr  ) ) y_FAST%numOuts(Module_IfW)  = SIZE(Init%OutData_IfW%WriteOutputHdr)
    IF ( ALLOCATED( Init%OutData_ExtInfw%WriteOutputHdr ) ) y_FAST%numOuts(Module_ExtInfw) = SIZE(Init%OutData_ExtInfw%WriteOutputHdr)

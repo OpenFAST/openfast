@@ -462,7 +462,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    ! if (Failed()) return
 
    !----------------------------------------------------------------------------------------------
-   !> Read the _Mean wind profile paramters (added to HAWC-format files) [used only for WindType = 5]_ subsection
+   !> Read the _Mean wind profile parameters (added to HAWC-format files) [used only for WindType = 5]_ subsection
    !----------------------------------------------------------------------------------------------
 
    CurLine = CurLine + 1  ! Skip section break

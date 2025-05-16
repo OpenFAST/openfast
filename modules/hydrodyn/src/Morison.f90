@@ -181,7 +181,7 @@ END SUBROUTINE FindInterpFactor
 FUNCTION InterpWrappedStpInt( XValIn, XAry, YAry, Ind, AryLen )
 
 
-      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
+      ! This function returns a y-value that corresponds to an input x-value which is wrapped back
       ! into the range [1-XAry(AryLen).  It finds a x-value which corresponds to a value in the XAry where XAry(Ind-1) < MOD(XValIn, XAry(AryLen)) <= XAry(Ind)
       ! It is assumed that XAry is sorted in ascending order.
       ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
@@ -262,7 +262,7 @@ END FUNCTION InterpWrappedStpInt ! ( XVal, XAry, YAry, Ind, AryLen )
 FUNCTION InterpWrappedStpLogical( XValIn, XAry, YAry, Ind, AryLen )
 
 
-      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
+      ! This function returns a y-value that corresponds to an input x-value which is wrapped back
       ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
       ! It is assumed that XAry is sorted in ascending order.
       ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
@@ -393,7 +393,7 @@ SUBROUTINE TaperCalc(R1, R2, H, taperV, h_c)
    if ( EqualRealNos(R1, R2) ) then             ! if just a cylinder
       taperV = abs(pi*R1*R1*H)
       h_c = H/2.0
-   elseif ( EqualRealNos(R1,0.0_ReKi) ) then             ! seperate this case out because it gives a divide by zero in general formula
+   elseif ( EqualRealNos(R1,0.0_ReKi) ) then             ! separate this case out because it gives a divide by zero in general formula
       taperV = abs(1.0/3.0*pi*R2*R2*H)                                            ! cone volume
       h_c = 3.0/4.0*H                                                        ! from base           
    else
@@ -418,7 +418,7 @@ SUBROUTINE CylInertia(R1, R2, H, rho, Il, Ir)
    if ( EqualRealNos(R1, R2) ) then             ! if just a cylinder
       Ir = abs(1.0/12.0* rho*pi*R1*R1*H *(3.0*R1*R1 + 4.0*H*H)) ! radial inertia about node 1 
       Il = abs(0.5* rho*pi*R1*R1*H *R1*R1)    
-   ELSEIF ( EqualRealNos(R1,0.0_ReKi) ) then        ! seperate this case out because it gives a divide by zero in general formula
+   ELSEIF ( EqualRealNos(R1,0.0_ReKi) ) then        ! separate this case out because it gives a divide by zero in general formula
       Ir = abs(rho*pi*(1.0/20.0/m + 1.0/5.0/m**3) * R2**5)      
       Il = abs(1.0/10.0*rho*pi/m*R2**5)            
    ELSE 
@@ -1409,7 +1409,7 @@ subroutine FlipMemberNodeData( member, nodes, doSwap)
       doSwap = .TRUE.                                ! Z1 > Z2  
    END IF
          
-   ! If we swap the the nodes, we need know this later when calculating the normal vector to the ends
+   ! If we swap the nodes, we need know this later when calculating the normal vector to the ends
    member%Flipped = doSwap
    IF ( doSwap ) THEN
       member%NodeIndx(1) = j2
@@ -1772,7 +1772,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
          end if
          ! Need to enforce the modeling requirement that a partially flooded member must not be close to horizontal
          if ( (InitInp%Nodes(member%NodeIndx(N+1))%Position(3) - member%Rin(N+1)*sinPhi) < member%FillFSLoc ) then
-            call SetErrStat(ErrID_Fatal,'The modeling of partially flooded/ballested members requires the the member not be near horizontal.  This is not true for MemberID '//trim(num2lstr(member%MemberID)),ErrStat,ErrMsg,'SetMemberProperties') 
+            call SetErrStat(ErrID_Fatal,'The modeling of partially flooded/ballested members requires the member not be near horizontal.  This is not true for MemberID '//trim(num2lstr(member%MemberID)),ErrStat,ErrMsg,'SetMemberProperties') 
             return
          end if
          

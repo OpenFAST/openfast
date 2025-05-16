@@ -82,7 +82,7 @@ struct turbineDataType {
     int nBRfsiPtsTwr;
     //! The mean azimuth at which the loads are blended between AeroDyn and CFD
     double azBlendMean;
-    //! The delta azimuth over which the the loads are blended between AeroDyn and CFD
+    //! The delta azimuth over which the loads are blended between AeroDyn and CFD
     double azBlendDelta;
     //! Mean velocity at reference height
     double velMean;
@@ -729,7 +729,7 @@ private:
 
   //! Allocate memory for data structures for all turbines on this processor
   void allocateMemory_preInit();
-  //! Allocate more memory for each turbine after intialization/restart
+  //! Allocate more memory for each turbine after initialization/restart
   void allocateMemory_postInit(int iTurbLoc);
 
   //! Get the nacelle drag coefficient of local turbine number 'iTurbLoc'

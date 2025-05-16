@@ -480,7 +480,7 @@ subroutine FVW_FinalWrite(u, p, x, z, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
    if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP) then
-      call WrScr('OLAF: writting final VTK outputs')
+      call WrScr('OLAF: writing final VTK outputs')
       t=-1.0_ReKi
       if (p%WrVTK==1) then
          if (m%VTKstep<m%iStep+1) then
@@ -1529,7 +1529,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
             ! Global coordinate system, ALL VTK will be exported in global
             call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', VTKstep, 9, bladeFrame=.FALSE.)
          endif
-         m%VTKstep=VTKstep ! We save the step at which writing occured
+         m%VTKstep=VTKstep ! We save the step at which writing occurred
       endif
    endif
    ! --- Write VTK grids
@@ -1549,7 +1549,7 @@ subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             m%GridOutputs(iGrid)%tLastOutput = t
             call WrVTK_FVW_Grid(p, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', VTKstep, 9)
-            m%VTKstep=VTKstep ! We save the step at which writing occured
+            m%VTKstep=VTKstep ! We save the step at which writing occurred
          endif
       enddo
    endif

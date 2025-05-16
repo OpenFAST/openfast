@@ -736,7 +736,7 @@ class InputReader_OpenFAST(object):
         f.readline()
         f.readline()
 
-        # General Tower Paramters
+        # General Tower Parameters
         f.readline()
         self.fst_vt['ElastoDynTower']['NTwInpSt'] = int(f.readline().split()[0])
         self.fst_vt['ElastoDynTower']['TwrFADmp1'] = float_read(f.readline().split()[0])

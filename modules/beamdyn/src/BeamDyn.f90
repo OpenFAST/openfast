@@ -2282,7 +2282,7 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
 
    DO nelem = 1,p%elem_total
        DO idx_qp = 1,p%nqp
-            !> ### Calculate the the initial displacement fields in an element
+            !> ### Calculate the initial displacement fields in an element
             !! Initial displacement field \n
             !!    \f$   \underline{u_0}\left( \xi \right) =
             !!                \sum_{k=1}^{p+1} h^k\left( \xi \right) \underline{\hat{u}_0}^k
@@ -2370,7 +2370,7 @@ SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
 
-   !> ### Calculate the the displacement fields in an element
+   !> ### Calculate the displacement fields in an element
    !! Using equations (27) and (28) \n
    !!    \f$   \underline{u}\left( \xi \right) =
    !!                \sum_{i=1}^{p+1} h^i\left( \xi \right) \underline{\hat{u}}^i

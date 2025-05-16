@@ -1338,7 +1338,7 @@ where :math:`D` is a reference diameter, and :math:`\bar{U}` is the mean
 velocity taken as the filtered velocity at the turbine location normal to the
 rotor disk.  The coordinates :math:`x,y,z` and :math:`r,\theta` are taken in the
 meandering frame of reference.  The parameters :math:`k_\text{def}^\text{WAT}`
-and :math:`k_\text{grad}^\text{WAT}` are tuning paramters of the model
+and :math:`k_\text{grad}^\text{WAT}` are tuning parameters of the model
 respectively multiplying the quasi-steady wake deficit and the gradient of the
 wake deficit. These are based on an eddy-viscosity filter with five calibrated
 parameters to give a more realistic dependence on downstream position.  The

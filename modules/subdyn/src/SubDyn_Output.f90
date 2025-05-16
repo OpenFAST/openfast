@@ -54,7 +54,7 @@ CONTAINS
 SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    TYPE(SD_InitType),               INTENT( INOUT ) :: Init                 ! data needed to initialize the output module
    TYPE(SD_OutputType),             INTENT( INOUT ) :: y                    ! SubDyn module's output data
-   TYPE(SD_ParameterType), target,  INTENT( INOUT ) :: p                    ! SubDyn module paramters
+   TYPE(SD_ParameterType), target,  INTENT( INOUT ) :: p                    ! SubDyn module parameters
    TYPE(SD_MiscVarType),            INTENT( INOUT ) :: misc                 ! SubDyn misc/optimization variables
    TYPE(SD_InitOutputType ),        INTENT( INOUT ) :: InitOut              ! SubDyn module initialization output data
    REAL(ReKi),                      INTENT( IN    ) :: WtrDpth              ! water depth from initialization routine

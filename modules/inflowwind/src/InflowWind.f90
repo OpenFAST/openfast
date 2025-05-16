@@ -550,7 +550,7 @@ END SUBROUTINE InflowWind_Init
 !! these PositionXYZPrime coordinates.
 !!
 !! After the calculation by the submodule, the PositionXYZPrime coordinate array is deallocated.  The returned VelocityUVW
-!! array is then rotated by p%PropagationDir so that it now corresponds the the global coordinate UVW values for wind
+!! array is then rotated by p%PropagationDir so that it now corresponds to the global coordinate UVW values for wind
 !! with that direction.
 !----------------------------------------------------------------------------------------------------
 SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &

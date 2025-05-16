@@ -189,7 +189,7 @@ CONTAINS
 
       ! rd_in should be in global orientation frame
       ! note: it's okay if r_out and rd_out are 6-size. Only the first 3 will be written, and 4-6 will
-      !       already be correct or can be assigned seperately from r_in and rd_in (assuming orientation frames are identical)
+      !       already be correct or can be assigned separately from r_in and rd_in (assuming orientation frames are identical)
 
 
       ! locations (unrotated reference frame) about platform reference point  (2021-01-05: just transposed TransMat, it was incorrect before)
@@ -246,7 +246,7 @@ CONTAINS
 
       ! rd_in should be in global orientation frame
       ! note: it's okay if r_out and rd_out are 6-size. Only the first 3 will be written, and 4-6 will
-      !       already be correct or can be assigned seperately from r_in and rd_in (assuming orientation frames are identical)
+      !       already be correct or can be assigned separately from r_in and rd_in (assuming orientation frames are identical)
 
 
       ! locations about ref point in *unrotated* reference frame
@@ -1306,7 +1306,7 @@ CONTAINS
    
       INTEGER(IntKi)                   :: NStepWave    ! 
       INTEGER(IntKi)                   :: NStepWave2   ! 
-      REAL(SiKi)                       :: WaveTMax     ! max wave elevation time series duration after optimizing lenght for FFT
+      REAL(SiKi)                       :: WaveTMax     ! max wave elevation time series duration after optimizing length for FFT
       REAL(SiKi)                       :: WaveDOmega   
       REAL(SiKi)                       :: SinWaveDir                                      ! SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
       REAL(SiKi)                       :: CosWaveDir                                      ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
@@ -1589,11 +1589,11 @@ CONTAINS
 
          ! Initialize the FFT
          CALL InitFFT ( NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-         CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName); if(Failed()) return
+         CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.',ErrStat,ErrMsg,RoutineName); if(Failed()) return
 
          ! Apply the forward FFT to get the real and imaginary parts of the frequency information.      
          CALL    ApplyFFT_f (  TmpFFTWaveElev(:), FFT_Data, ErrStatTmp )    ! Note that the TmpFFTWaveElev now contains the real and imaginary bits.
-         CALL SetErrStat(ErrStatTmp,'Error occured while applying the forwards FFT to TmpFFTWaveElev array.',ErrStat,ErrMsg,RoutineName); if(Failed()) return
+         CALL SetErrStat(ErrStatTmp,'Error occurred while applying the forwards FFT to TmpFFTWaveElev array.',ErrStat,ErrMsg,RoutineName); if(Failed()) return
 
          ! Copy the resulting TmpFFTWaveElev(:) data over to the WaveElevC0 array
          DO I=1,NStepWave2-1
@@ -1603,7 +1603,7 @@ CONTAINS
          WaveElevC0(:,NStepWave2) = 0.0_SiKi
 
          CALL  ExitFFT(FFT_Data, ErrStatTmp)
-         CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName); if(Failed()) return
+         CALL  SetErrStat(ErrStatTmp,'Error occurred while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName); if(Failed()) return
 
 
          IF (ALLOCATED( WaveElev0      )) DEALLOCATE( WaveElev0     , STAT=ErrStatTmp)
@@ -1641,7 +1641,7 @@ CONTAINS
          
          ! set up FFTer for doing IFFTs
          CALL InitFFT ( NStepWave, FFT_Data, .TRUE., ErrStatTmp )
-         CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.', ErrStat, ErrMsg, routineName); if(Failed()) return
+         CALL SetErrStat(ErrStatTmp,'Error occurred while initializing the FFT.', ErrStat, ErrMsg, routineName); if(Failed()) return
 
          ! Loop through all points where the incident wave kinematics will be computed      
          do ix = 1,p%nxWave 
@@ -1683,7 +1683,7 @@ CONTAINS
          ! could also reproduce the wave elevation at 0,0,0 on a separate channel for verification...
          
          CALL  ExitFFT(FFT_Data, ErrStatTmp)
-         CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the IFFTs.', ErrStat,ErrMsg,RoutineName); if(Failed()) return
+         CALL  SetErrStat(ErrStatTmp,'Error occurred while cleaning up after the IFFTs.', ErrStat,ErrMsg,RoutineName); if(Failed()) return
       
       end if ! p%WaveKin == 3
 
