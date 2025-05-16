@@ -26,8 +26,8 @@ program AeroDyn_Driver
    ! Program variables
    REAL(ReKi)                       :: PrevClockTime ! Clock time at start of simulation in seconds [(s)]
    REAL(ReKi)                       :: UsrTime1      ! User CPU time for simulation initialization [(s)]
-   REAL(ReKi)                       :: UsrTime2      ! User CPU time for simulation (without intialization) [(s)]
-   INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime      ! Start time of simulation (including intialization) [-]
+   REAL(ReKi)                       :: UsrTime2      ! User CPU time for simulation (without initialization) [(s)]
+   INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime      ! Start time of simulation (including initialization) [-]
    INTEGER(IntKi) , DIMENSION(1:8)  :: SimStrtTime   ! Start time of simulation (after initialization) [-]
    REAL(DbKi)                       :: t_global         ! global-loop time marker
    REAL(DbKi)                       :: t_final         ! global-loop time marker

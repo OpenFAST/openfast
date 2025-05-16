@@ -190,7 +190,7 @@ SUBROUTINE IceFloe_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       endif
 
    ! get the simulation length from FAST
-   ! if the the length from FAST is zero read from iceFloe input file
+   ! if the length from FAST is zero read from iceFloe input file
       if (InitInp%simLength <= 0) then
          duration = InitInp%simLength
       else

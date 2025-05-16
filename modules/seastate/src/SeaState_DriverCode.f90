@@ -89,11 +89,11 @@ program SeaStateDriver
    character(1024)                                     :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    type(SeaSt_Drvr_InitInput)                          :: drvrInitInp          ! Initialization data for the driver program
    
-   integer                                             :: StrtTime (8)         ! Start time of simulation (including intialization)
+   integer                                             :: StrtTime (8)         ! Start time of simulation (including initialization)
    integer                                             :: SimStrtTime (8)      ! Start time of simulation (after initialization)
    real(ReKi)                                          :: PrevClockTime        ! Clock time at start of simulation in seconds
    real(ReKi)                                          :: UsrTime1             ! User CPU time for simulation initialization
-   real(ReKi)                                          :: UsrTime2             ! User CPU time for simulation (without intialization)
+   real(ReKi)                                          :: UsrTime2             ! User CPU time for simulation (without initialization)
    real(DbKi)                                          :: TiLstPrn             ! The simulation time of the last print
    real(DbKi)                                          :: t_global             ! Current simulation time (for global/FAST simulation)
    real(DbKi)                                          :: SttsTime             ! Amount of time between screen status messages (sec)

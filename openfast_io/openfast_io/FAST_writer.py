@@ -253,7 +253,7 @@ class InputWriter_OpenFAST(object):
             if 'option_names' in self.fst_vt['MoorDyn'] and 'WATERKIN' in self.fst_vt['MoorDyn']['option_names']:
                 self.write_WaterKin(os.path.join(self.FAST_runDirectory,self.fst_vt['MoorDyn']['WaterKin_file']))
 
-        #     # look at if the the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
+        #     # look at if the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
         #     # if its a dictionary, just write the same BeamDyn file 
 
         if isinstance(self.fst_vt['BeamDyn'], list):

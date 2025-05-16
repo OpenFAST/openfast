@@ -810,8 +810,8 @@ typedef	^	FAST_MiscVarType	DbKi	t_global	-	-	-	"Current simulation time (for glo
 typedef	^	FAST_MiscVarType	DbKi	NextJacCalcTime	-	-	-	"Time between calculating Jacobians in the HD-ED and SD-ED simulations"	(s)
 typedef	^	FAST_MiscVarType	ReKi	PrevClockTime	-	-	-	"Clock time at start of simulation in seconds"	(s)
 typedef	^	FAST_MiscVarType	ReKi	UsrTime1	-	-	-	"User CPU time for simulation initialization"	(s)
-typedef	^	FAST_MiscVarType	ReKi	UsrTime2	-	-	-	"User CPU time for simulation (without intialization)"	(s)
-typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including intialization)"
+typedef	^	FAST_MiscVarType	ReKi	UsrTime2	-	-	-	"User CPU time for simulation (without initialization)"	(s)
+typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including initialization)"
 typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation (after initialization)"
 #typedef	^	FAST_MiscVarType	IntKi	n_t_global	-	-	-	"simulation time step, loop counter for global (FAST) simulation"	(s)
 typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)

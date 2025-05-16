@@ -99,7 +99,7 @@ typedef  ^            ^                IntKi              nAttachedC     -      
 typedef  ^            ^                IntKi              nAttachedR     -       -  -   "number of attached rods"
 typedef  ^            ^                DbKi               rPointRel    {3}{30}   -  -   "relative position of point on body"
 typedef  ^            ^                DbKi               r6RodRel     {6}{30}   -  -   "relative position and orientation of rod on body"
-typedef  ^            ^                DbKi               bodyM          -       -  -   "body mass (seperate from attached objects)" "[kg]"
+typedef  ^            ^                DbKi               bodyM          -       -  -   "body mass (separate from attached objects)" "[kg]"
 typedef  ^            ^                DbKi               bodyV          -       -  -   "body volume (for buoyancy calculation)" "[m^3]"
 typedef  ^            ^                DbKi               bodyI          {3}     -  -   "body 3x3 inertia matrix diagonals" "[kg-m^2]"
 typedef  ^            ^                DbKi               bodyCdA        {6}     -  -   "product of drag force and frontal area of body" "[m^2]"

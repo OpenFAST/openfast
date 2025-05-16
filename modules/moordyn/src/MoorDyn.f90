@@ -2376,7 +2376,7 @@ CONTAINS
          ! rRef and OrMatRef or the position and orientation matrix of the
          ! coupled object relative to the platform, based on the input file.
          ! They are used to set the "reference" pose of each coupled mesh
-         ! entry before the intial offsets from PtfmInit are applied.
+         ! entry before the initial offsets from PtfmInit are applied.
          
          J = 0 ! this is the counter through the mesh points for each turbine
          
@@ -2483,7 +2483,7 @@ CONTAINS
 
       end do  ! iTurb
    
-      ! >>>>>> ensure the output mesh includes all elements from u%(Farm)CoupledKinematics, OR make a seperate array of output meshes for each turbine <<<<<<<<<
+      ! >>>>>> ensure the output mesh includes all elements from u%(Farm)CoupledKinematics, OR make a separate array of output meshes for each turbine <<<<<<<<<
       
 
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -2652,7 +2652,7 @@ CONTAINS
       !        if log file, compute and write some object properties
       ! -------------------------------------------------------------------
       if (p%writeLog > 1) then
-         write(p%UnLog, '(A)'  ) "Values after intialization before dynamic relaxation"
+         write(p%UnLog, '(A)'  ) "Values after initialization before dynamic relaxation"
          write(p%UnLog, '(A)'  ) "  Bodies:"         
          DO l = 1,p%nBodies
             write(p%UnLog, '(A)'  )         "    Body"//trim(num2lstr(l))//":"            
@@ -3946,7 +3946,7 @@ CONTAINS
    !--------------------------------------------------------------
    SUBROUTINE MD_RK2 ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
    
-      REAL(DbKi)                     , INTENT(INOUT)      :: t          ! intial time (s) for this integration step
+      REAL(DbKi)                     , INTENT(INOUT)      :: t          ! initial time (s) for this integration step
       REAL(DbKi)                     , INTENT(IN   )      :: dtM        ! single time step  size (s) for this integration step
       TYPE( MD_InputType )           , INTENT(INOUT)      :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
       TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
@@ -4311,7 +4311,7 @@ SUBROUTINE MD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          ! get central difference:
          ! we may have had an error allocating memory, so we'll check
          if(Failed()) return
-         ! get central difference (state entries are mapped the the dXdu column in routine):
+         ! get central difference (state entries are mapped to the dXdu column in routine):
          call MD_Compute_dX( p, x_p, x_m, delta_p, dXdu(:,i) )
       end do
    END IF ! dXdu

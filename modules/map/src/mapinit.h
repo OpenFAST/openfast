@@ -210,7 +210,7 @@ MAP_ERROR_CODE check_help_flag(bstring list);
  *          inner_ftol <float>
  *          </pre>
  * @param   list, a character array structure
- * @param   ftol, pointer to the FTOL paramter for minpack
+ * @param   ftol, pointer to the FTOL parameter for minpack
  * @see     set_model_options_list(), map_init()
  * @return  MAP error code
  */
@@ -230,7 +230,7 @@ MAP_ERROR_CODE check_inner_f_tol_flag(struct bstrList* list, double* ftol);
  *          inner_gtol <float>
  *          </pre>
  * @param   list, a character array structure
- * @param   gtol, pointer to the GTOL paramter for minpack
+ * @param   gtol, pointer to the GTOL parameter for minpack
  * @see     set_model_options_list(), map_init()
  * @return  MAP error code
  */
@@ -249,7 +249,7 @@ MAP_ERROR_CODE check_inner_g_tol_flag(struct bstrList* list, double* gtol);
  *          inner_xtol <float>
  *          </pre>
  * @param   list, a character array structure
- * @param   xtol, pointer to the XTOL paramter for minpack
+ * @param   xtol, pointer to the XTOL parameter for minpack
  * @see     set_model_options_list(), map_init()
  * @return  MAP error code
  */
@@ -302,7 +302,7 @@ MAP_ERROR_CODE check_outer_max_its_flag(struct bstrList* list, int* max_its);
  *          outer_tol <float>
  *          </pre>
  * @param   list, a character array structure
- * @param   outer_tol, pointer to the tolerance paramter
+ * @param   outer_tol, pointer to the tolerance parameter
  * @see     set_model_options_list(), map_init()
  * @return  MAP error code
  */

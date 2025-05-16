@@ -116,7 +116,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nAttachedR = 0_IntKi      !< number of attached rods [-]
     REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel = 0.0_R8Ki      !< relative position of point on body [-]
     REAL(DbKi) , DIMENSION(1:6,1:30)  :: r6RodRel = 0.0_R8Ki      !< relative position and orientation of rod on body [-]
-    REAL(DbKi)  :: bodyM = 0.0_R8Ki      !< body mass (seperate from attached objects) [[kg]]
+    REAL(DbKi)  :: bodyM = 0.0_R8Ki      !< body mass (separate from attached objects) [[kg]]
     REAL(DbKi)  :: bodyV = 0.0_R8Ki      !< body volume (for buoyancy calculation) [[m^3]]
     REAL(DbKi) , DIMENSION(1:3)  :: bodyI = 0.0_R8Ki      !< body 3x3 inertia matrix diagonals [[kg-m^2]]
     REAL(DbKi) , DIMENSION(1:6)  :: bodyCdA = 0.0_R8Ki      !< product of drag force and frontal area of body [[m^2]]
