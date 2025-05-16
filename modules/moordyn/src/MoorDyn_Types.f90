@@ -77,6 +77,9 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cat = 0.0_R8Ki      !< tangential added mass coefficient [-]
     REAL(DbKi)  :: Cdn = 0.0_R8Ki      !< transverse drag coefficient [-]
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !< tangential drag coefficient [-]
+    REAL(DbKi)  :: Cl = 0.0_R8Ki      !< VIV lift coefficient. If 0, VIV turned off [-]
+    REAL(DbKi)  :: dF = 0.0_R8Ki      !< +- range of VIV synchronization in non-dimensional frequency [-]
+    REAL(DbKi)  :: cF = 0.0_R8Ki      !< Center VIV synchronization in non-dimensional frequency [-]
     INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {1 basic, 2 viscoelastic, 3 viscoelastic+meanload}  [-]
     INTEGER(IntKi)  :: nEApoints = 0_IntKi      !< number of values in stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
@@ -241,7 +244,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_Line
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Line [-]
     INTEGER(IntKi)  :: PropsIdNum = 0_IntKi      !< the IdNum of the associated line properties [-]
-    INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
+    INTEGER(IntKi)  :: ElasticMod = 0_IntKi      !< Which elasticity model to use: {1 basic, 2 viscoelastic, 3 viscoelastic+meanload}  [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList = 0_IntKi      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: CtrlChan = 0_IntKi      !< index of control channel that will drive line active tensioning (0 for none) [-]
     INTEGER(IntKi)  :: FairPoint = 0_IntKi      !< IdNum of Point at fairlead [-]
@@ -263,6 +266,9 @@ IMPLICIT NONE
     REAL(DbKi)  :: Cat = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: Cdn = 0.0_R8Ki      !<  [[-]]
     REAL(DbKi)  :: Cdt = 0.0_R8Ki      !<  [[-]]
+    REAL(DbKi)  :: Cl = 0.0_R8Ki      !< VIV lift coefficient. If 0, VIV turned off [-]
+    REAL(DbKi)  :: dF = 0.0_R8Ki      !< +- range of VIV synchronization in non-dimensional frequency [-]
+    REAL(DbKi)  :: cF = 0.0_R8Ki      !< Center VIV synchronization in non-dimensional frequency [-]
     INTEGER(IntKi)  :: nEApoints = 0_IntKi      !< number of values in stress-strain lookup table (0 means using constant E) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffXs = 0.0_R8Ki      !< x array for stress-strain lookup table (up to nCoef) [-]
     REAL(DbKi) , DIMENSION(1:30)  :: stiffYs = 0.0_R8Ki      !< y array for stress-strain lookup table [-]
@@ -298,6 +304,7 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Aq      !< node added mass forcing (axial) [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< node bottom contact force [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Bs      !< node force due to bending moments [[N]]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Lf      !< node crossflow viv lift force. TODO this will have to be allocated for only internal after fix [[N]]
     REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: Fnet      !< total force on node [[N]]
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: S      !< node inverse mass matrix [[kg]]
     REAL(DbKi) , DIMENSION(:,:,:), ALLOCATABLE  :: M      !< node mass matrix [[kg]]
@@ -305,6 +312,14 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3)  :: EndMomentB = 0.0_R8Ki      !< vector of end moments due to bending at line end B [[N-m]]
     INTEGER(IntKi)  :: LineUnOut = 0_IntKi      !< unit number of line output file [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: LineWrOutput      !< one row of output data for this line [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: phi      !< phase of lift force [-]
+    LOGICAL  :: IC_gen = .FALSE.      !< boolean to indicate dynamic relaxation occuring [-]
+    REAL(DbKi)  :: n_m = 500      !< Num timesteps for rolling RMS of crossflow velocity phase [-]
+    REAL(DbKi)  :: phi_yd = 0.0_R8Ki      !< The crossflow motion phase [-]
+    REAL(DbKi)  :: t_old = 0.0_R8Ki      !< old t [s]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: yd_rms_old      !< node old cf vel rms [m/s]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: ydd_rms_old      !< node old cf accel rms [m/s^2]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: rdd_old      !< node accelerations previous iteration [m/s^2]
   END TYPE MD_Line
 ! =======================
 ! =========  MD_ExtLd  =======
@@ -410,6 +425,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WaveTi = 0_IntKi      !< current interpolation index for wave time series data []
     TYPE(MD_ContinuousStateType)  :: xTemp      !< contains temporary state vector used in integration (put here so it's only allocated once) [-]
     TYPE(MD_ContinuousStateType)  :: xdTemp      !< contains temporary state derivative vector used in integration (put here so it's only allocated once) [-]
+    TYPE(MD_ContinuousStateType)  :: kSum      !< Sum of RK4 slope estimates: k0 + 2*k1 + 2*k2 + k3 [-]
     REAL(DbKi) , DIMENSION(1:6)  :: zeros6 = 0.0_R8Ki      !< array of zeros for convenience [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: MDWrOutput      !< Data from time step to be written to a MoorDyn output file [-]
     REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Time of last writing to MD output files [-]
@@ -441,6 +457,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NConns = 0      !< number of Connect type Points - not to be confused with NPoints []
     INTEGER(IntKi)  :: NAnchs = 0      !< number of Anchor type Points []
     REAL(DbKi)  :: Tmax = 0.0_R8Ki      !< simulation duration [[s]]
+    INTEGER(IntKi)  :: tScheme = 0      !< Time integration scheme (0 = RK2, 1 = RK4). Default is RK2 [-]
     REAL(DbKi)  :: g = 9.81      !< gravitational constant (positive) [[m/s^2]]
     REAL(DbKi)  :: rhoW = 1025      !< density of seawater [[kg/m^3]]
     REAL(DbKi)  :: WtrDpth = 0.0_R8Ki      !< water depth [[m]]
@@ -468,6 +485,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: inertialF = 0      !< Indicates MoorDyn returning inertial moments for coupled 6DOF objects. 0: no, 1: yes, 2: yes with ramp to inertialF_rampT [-]
     REAL(R8Ki)  :: inertialF_rampT = 30      !< Ramp time for inertial forces [-]
     INTEGER(IntKi)  :: OutSwitch = 1      !< Switch to disable outputs when running with full OF. 0: no MD main outfile, 1: write MD main outfile [(-)]
+    INTEGER(IntKi)  :: disableOutTime = 0      !< Disables the printing of the fairtens and timestep in init to the console, useful for the MATLAB wrapper [(-)]
     INTEGER(IntKi)  :: nxWave = 0_IntKi      !< number of x wave grid points [-]
     INTEGER(IntKi)  :: nyWave = 0_IntKi      !< number of y wave grid points [-]
     INTEGER(IntKi)  :: nzWave = 0_IntKi      !< number of z wave grid points [-]
@@ -723,6 +741,9 @@ subroutine MD_CopyLineProp(SrcLinePropData, DstLinePropData, CtrlCode, ErrStat, 
    DstLinePropData%Cat = SrcLinePropData%Cat
    DstLinePropData%Cdn = SrcLinePropData%Cdn
    DstLinePropData%Cdt = SrcLinePropData%Cdt
+   DstLinePropData%Cl = SrcLinePropData%Cl
+   DstLinePropData%dF = SrcLinePropData%dF
+   DstLinePropData%cF = SrcLinePropData%cF
    DstLinePropData%ElasticMod = SrcLinePropData%ElasticMod
    DstLinePropData%nEApoints = SrcLinePropData%nEApoints
    DstLinePropData%stiffXs = SrcLinePropData%stiffXs
@@ -764,6 +785,9 @@ subroutine MD_PackLineProp(RF, Indata)
    call RegPack(RF, InData%Cat)
    call RegPack(RF, InData%Cdn)
    call RegPack(RF, InData%Cdt)
+   call RegPack(RF, InData%Cl)
+   call RegPack(RF, InData%dF)
+   call RegPack(RF, InData%cF)
    call RegPack(RF, InData%ElasticMod)
    call RegPack(RF, InData%nEApoints)
    call RegPack(RF, InData%stiffXs)
@@ -797,6 +821,9 @@ subroutine MD_UnPackLineProp(RF, OutData)
    call RegUnpack(RF, OutData%Cat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Cdn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Cdt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Cl); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%cF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ElasticMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nEApoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%stiffXs); if (RegCheckErr(RF, RoutineName)) return
@@ -1698,6 +1725,9 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
    DstLineData%Cat = SrcLineData%Cat
    DstLineData%Cdn = SrcLineData%Cdn
    DstLineData%Cdt = SrcLineData%Cdt
+   DstLineData%Cl = SrcLineData%Cl
+   DstLineData%dF = SrcLineData%dF
+   DstLineData%cF = SrcLineData%cF
    DstLineData%nEApoints = SrcLineData%nEApoints
    DstLineData%stiffXs = SrcLineData%stiffXs
    DstLineData%stiffYs = SrcLineData%stiffYs
@@ -2008,6 +2038,18 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstLineData%Bs = SrcLineData%Bs
    end if
+   if (allocated(SrcLineData%Lf)) then
+      LB(1:2) = lbound(SrcLineData%Lf)
+      UB(1:2) = ubound(SrcLineData%Lf)
+      if (.not. allocated(DstLineData%Lf)) then
+         allocate(DstLineData%Lf(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Lf.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Lf = SrcLineData%Lf
+   end if
    if (allocated(SrcLineData%Fnet)) then
       LB(1:2) = lbound(SrcLineData%Fnet)
       UB(1:2) = ubound(SrcLineData%Fnet)
@@ -2058,6 +2100,58 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%LineWrOutput = SrcLineData%LineWrOutput
+   end if
+   if (allocated(SrcLineData%phi)) then
+      LB(1:1) = lbound(SrcLineData%phi)
+      UB(1:1) = ubound(SrcLineData%phi)
+      if (.not. allocated(DstLineData%phi)) then
+         allocate(DstLineData%phi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%phi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%phi = SrcLineData%phi
+   end if
+   DstLineData%IC_gen = SrcLineData%IC_gen
+   DstLineData%n_m = SrcLineData%n_m
+   DstLineData%phi_yd = SrcLineData%phi_yd
+   DstLineData%t_old = SrcLineData%t_old
+   if (allocated(SrcLineData%yd_rms_old)) then
+      LB(1:1) = lbound(SrcLineData%yd_rms_old)
+      UB(1:1) = ubound(SrcLineData%yd_rms_old)
+      if (.not. allocated(DstLineData%yd_rms_old)) then
+         allocate(DstLineData%yd_rms_old(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%yd_rms_old.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%yd_rms_old = SrcLineData%yd_rms_old
+   end if
+   if (allocated(SrcLineData%ydd_rms_old)) then
+      LB(1:1) = lbound(SrcLineData%ydd_rms_old)
+      UB(1:1) = ubound(SrcLineData%ydd_rms_old)
+      if (.not. allocated(DstLineData%ydd_rms_old)) then
+         allocate(DstLineData%ydd_rms_old(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%ydd_rms_old.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%ydd_rms_old = SrcLineData%ydd_rms_old
+   end if
+   if (allocated(SrcLineData%rdd_old)) then
+      LB(1:2) = lbound(SrcLineData%rdd_old)
+      UB(1:2) = ubound(SrcLineData%rdd_old)
+      if (.not. allocated(DstLineData%rdd_old)) then
+         allocate(DstLineData%rdd_old(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%rdd_old.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%rdd_old = SrcLineData%rdd_old
    end if
 end subroutine
 
@@ -2143,6 +2237,9 @@ subroutine MD_DestroyLine(LineData, ErrStat, ErrMsg)
    if (allocated(LineData%Bs)) then
       deallocate(LineData%Bs)
    end if
+   if (allocated(LineData%Lf)) then
+      deallocate(LineData%Lf)
+   end if
    if (allocated(LineData%Fnet)) then
       deallocate(LineData%Fnet)
    end if
@@ -2154,6 +2251,18 @@ subroutine MD_DestroyLine(LineData, ErrStat, ErrMsg)
    end if
    if (allocated(LineData%LineWrOutput)) then
       deallocate(LineData%LineWrOutput)
+   end if
+   if (allocated(LineData%phi)) then
+      deallocate(LineData%phi)
+   end if
+   if (allocated(LineData%yd_rms_old)) then
+      deallocate(LineData%yd_rms_old)
+   end if
+   if (allocated(LineData%ydd_rms_old)) then
+      deallocate(LineData%ydd_rms_old)
+   end if
+   if (allocated(LineData%rdd_old)) then
+      deallocate(LineData%rdd_old)
    end if
 end subroutine
 
@@ -2186,6 +2295,9 @@ subroutine MD_PackLine(RF, Indata)
    call RegPack(RF, InData%Cat)
    call RegPack(RF, InData%Cdn)
    call RegPack(RF, InData%Cdt)
+   call RegPack(RF, InData%Cl)
+   call RegPack(RF, InData%dF)
+   call RegPack(RF, InData%cF)
    call RegPack(RF, InData%nEApoints)
    call RegPack(RF, InData%stiffXs)
    call RegPack(RF, InData%stiffYs)
@@ -2221,6 +2333,7 @@ subroutine MD_PackLine(RF, Indata)
    call RegPackAlloc(RF, InData%Aq)
    call RegPackAlloc(RF, InData%B)
    call RegPackAlloc(RF, InData%Bs)
+   call RegPackAlloc(RF, InData%Lf)
    call RegPackAlloc(RF, InData%Fnet)
    call RegPackAlloc(RF, InData%S)
    call RegPackAlloc(RF, InData%M)
@@ -2228,6 +2341,14 @@ subroutine MD_PackLine(RF, Indata)
    call RegPack(RF, InData%EndMomentB)
    call RegPack(RF, InData%LineUnOut)
    call RegPackAlloc(RF, InData%LineWrOutput)
+   call RegPackAlloc(RF, InData%phi)
+   call RegPack(RF, InData%IC_gen)
+   call RegPack(RF, InData%n_m)
+   call RegPack(RF, InData%phi_yd)
+   call RegPack(RF, InData%t_old)
+   call RegPackAlloc(RF, InData%yd_rms_old)
+   call RegPackAlloc(RF, InData%ydd_rms_old)
+   call RegPackAlloc(RF, InData%rdd_old)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
@@ -2263,6 +2384,9 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpack(RF, OutData%Cat); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Cdn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Cdt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%Cl); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%dF); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%cF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nEApoints); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%stiffXs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%stiffYs); if (RegCheckErr(RF, RoutineName)) return
@@ -2298,6 +2422,7 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpackAlloc(RF, OutData%Aq); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%B); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Bs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%Lf); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%Fnet); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%S); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%M); if (RegCheckErr(RF, RoutineName)) return
@@ -2305,6 +2430,14 @@ subroutine MD_UnPackLine(RF, OutData)
    call RegUnpack(RF, OutData%EndMomentB); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LineUnOut); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%LineWrOutput); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%phi); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IC_gen); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%n_m); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%phi_yd); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%t_old); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%yd_rms_old); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ydd_rms_old); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%rdd_old); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 
 subroutine MD_CopyExtLd(SrcExtLdData, DstExtLdData, CtrlCode, ErrStat, ErrMsg)
@@ -3258,6 +3391,9 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call MD_CopyContState(SrcMiscData%xdTemp, DstMiscData%xdTemp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call MD_CopyContState(SrcMiscData%kSum, DstMiscData%kSum, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    DstMiscData%zeros6 = SrcMiscData%zeros6
    if (allocated(SrcMiscData%MDWrOutput)) then
       LB(1:1) = lbound(SrcMiscData%MDWrOutput)
@@ -3454,6 +3590,8 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MD_DestroyContState(MiscData%xdTemp, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyContState(MiscData%kSum, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%MDWrOutput)) then
       deallocate(MiscData%MDWrOutput)
    end if
@@ -3570,6 +3708,7 @@ subroutine MD_PackMisc(RF, Indata)
    call RegPack(RF, InData%WaveTi)
    call MD_PackContState(RF, InData%xTemp) 
    call MD_PackContState(RF, InData%xdTemp) 
+   call MD_PackContState(RF, InData%kSum) 
    call RegPack(RF, InData%zeros6)
    call RegPackAlloc(RF, InData%MDWrOutput)
    call RegPack(RF, InData%LastOutTime)
@@ -3714,6 +3853,7 @@ subroutine MD_UnPackMisc(RF, OutData)
    call RegUnpack(RF, OutData%WaveTi); if (RegCheckErr(RF, RoutineName)) return
    call MD_UnpackContState(RF, OutData%xTemp) ! xTemp 
    call MD_UnpackContState(RF, OutData%xdTemp) ! xdTemp 
+   call MD_UnpackContState(RF, OutData%kSum) ! kSum 
    call RegUnpack(RF, OutData%zeros6); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%MDWrOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%LastOutTime); if (RegCheckErr(RF, RoutineName)) return
@@ -3789,6 +3929,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NConns = SrcParamData%NConns
    DstParamData%NAnchs = SrcParamData%NAnchs
    DstParamData%Tmax = SrcParamData%Tmax
+   DstParamData%tScheme = SrcParamData%tScheme
    DstParamData%g = SrcParamData%g
    DstParamData%rhoW = SrcParamData%rhoW
    DstParamData%WtrDpth = SrcParamData%WtrDpth
@@ -3842,6 +3983,7 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%inertialF = SrcParamData%inertialF
    DstParamData%inertialF_rampT = SrcParamData%inertialF_rampT
    DstParamData%OutSwitch = SrcParamData%OutSwitch
+   DstParamData%disableOutTime = SrcParamData%disableOutTime
    DstParamData%nxWave = SrcParamData%nxWave
    DstParamData%nyWave = SrcParamData%nyWave
    DstParamData%nzWave = SrcParamData%nzWave
@@ -4209,6 +4351,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%NConns)
    call RegPack(RF, InData%NAnchs)
    call RegPack(RF, InData%Tmax)
+   call RegPack(RF, InData%tScheme)
    call RegPack(RF, InData%g)
    call RegPack(RF, InData%rhoW)
    call RegPack(RF, InData%WtrDpth)
@@ -4244,6 +4387,7 @@ subroutine MD_PackParam(RF, Indata)
    call RegPack(RF, InData%inertialF)
    call RegPack(RF, InData%inertialF_rampT)
    call RegPack(RF, InData%OutSwitch)
+   call RegPack(RF, InData%disableOutTime)
    call RegPack(RF, InData%nxWave)
    call RegPack(RF, InData%nyWave)
    call RegPack(RF, InData%nzWave)
@@ -4312,6 +4456,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NConns); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NAnchs); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Tmax); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%tScheme); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%g); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rhoW); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
@@ -4351,6 +4496,7 @@ subroutine MD_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%inertialF); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%inertialF_rampT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OutSwitch); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%disableOutTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nxWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nyWave); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%nzWave); if (RegCheckErr(RF, RoutineName)) return

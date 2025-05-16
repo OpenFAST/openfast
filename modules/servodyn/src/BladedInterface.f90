@@ -46,18 +46,6 @@ MODULE BladedInterface
          CHARACTER(KIND=C_CHAR), INTENT(INOUT) :: avcMSG    (*)  !< MESSAGE (Message from DLL to simulation code [ErrMsg])
       END SUBROUTINE BladedDLL_Legacy_Procedure
 
-      SUBROUTINE BladedDLL_SC_Procedure ( avrSWAP, from_SCglob, from_SC, to_SC, aviFAIL, accINFILE, avcOUTNAME, avcMSG )  BIND(C)
-         USE, INTRINSIC :: ISO_C_Binding
-
-         REAL(C_FLOAT),          INTENT(INOUT) :: avrSWAP   (*)  !< DATA
-         REAL(C_FLOAT),          INTENT(IN   ) :: from_SCglob   (*)  !< DATA (global) from the supercontroller
-         REAL(C_FLOAT),          INTENT(IN   ) :: from_SC   (*)  !< DATA (turbine specific) from the supercontroller
-         REAL(C_FLOAT),          INTENT(INOUT) :: to_SC     (*)  !< DATA to the supercontroller
-         INTEGER(C_INT),         INTENT(INOUT) :: aviFAIL        !< FLAG  (Status set in DLL and returned to simulation code)
-         CHARACTER(KIND=C_CHAR), INTENT(IN)    :: accINFILE (*)  !< INFILE
-         CHARACTER(KIND=C_CHAR), INTENT(INOUT) :: avcOUTNAME(*)  !< OUTNAME (Simulation RootName)
-         CHARACTER(KIND=C_CHAR), INTENT(INOUT) :: avcMSG    (*)  !< MESSAGE (Message from DLL to simulation code [ErrMsg])
-      END SUBROUTINE BladedDLL_SC_Procedure
 
       FUNCTION BladedDLL_CONTROLLER_Procedure ( turbine_id ) BIND (C) ! from Bladed 4.8 API
          USE, INTRINSIC :: ISO_C_Binding
@@ -74,20 +62,11 @@ MODULE BladedInterface
 #ifdef STATIC_DLL_LOAD
    INTERFACE
 
-#ifdef LOAD_SUPERCONTROLLER
-      SUBROUTINE DISCON ( avrSWAP, from_SCglob, from_SC, to_SC, aviFAIL, accINFILE, avcOUTNAME, avcMSG )  BIND(C, NAME='DISCON')
-#else
       SUBROUTINE DISCON ( avrSWAP,                              aviFAIL, accINFILE, avcOUTNAME, avcMSG )  BIND(C, NAME='DISCON')
-#endif
 
          USE, INTRINSIC :: ISO_C_Binding
 
          REAL(C_FLOAT),          INTENT(INOUT) :: avrSWAP   (*)  ! DATA
-#ifdef LOAD_SUPERCONTROLLER
-         REAL(C_FLOAT),          INTENT(IN   ) :: from_SCglob   (*)  ! DATA (global) from the supercontroller
-         REAL(C_FLOAT),          INTENT(IN   ) :: from_SC   (*)  ! DATA (turbine specific) from the supercontroller
-         REAL(C_FLOAT),          INTENT(INOUT) :: to_SC     (*)  ! DATA to the supercontroller
-#endif
          INTEGER(C_INT),         INTENT(INOUT) :: aviFAIL        ! FLAG  (Status set in DLL and returned to simulation code)
          CHARACTER(KIND=C_CHAR), INTENT(IN)    :: accINFILE (*)  ! INFILE
          CHARACTER(KIND=C_CHAR), INTENT(IN)    :: avcOUTNAME(*)  ! OUTNAME (Simulation RootName)
@@ -144,9 +123,9 @@ SUBROUTINE CallBladedDLL ( u, p, dll_data, ErrStat, ErrMsg, ChannelNameUnit )
 
    if (p%UseLegacyInterface) then
       if (present(ChannelNameUnit)) then
-         call CallBladedLegacyDLL ( u, u%fromSCglob, u%fromSC, p, dll_data, ErrStat, ErrMsg, ChannelNameUnit )
+         call CallBladedLegacyDLL ( u, p, dll_data, ErrStat, ErrMsg, ChannelNameUnit )
       else
-         call CallBladedLegacyDLL ( u, u%fromSCglob, u%fromSC, p, dll_data, ErrStat, ErrMsg )
+         call CallBladedLegacyDLL ( u, p, dll_data, ErrStat, ErrMsg )
       end if
    else
 
@@ -191,12 +170,10 @@ SUBROUTINE CallBladedDLL ( u, p, dll_data, ErrStat, ErrMsg, ChannelNameUnit )
 
 END SUBROUTINE CallBladedDLL
 !==================================================================================================================================
-SUBROUTINE CallBladedLegacyDLL ( u, filt_fromSCglob, filt_fromSC, p, dll_data, ErrStat, ErrMsg, ChannelNameUnit )
+SUBROUTINE CallBladedLegacyDLL ( u, p, dll_data, ErrStat, ErrMsg, ChannelNameUnit )
      ! Passed Variables:
    TYPE(SrvD_InputType),      INTENT(IN   )  :: u              ! System inputs
    TYPE(SrvD_ParameterType),  INTENT(IN   )  :: p              ! Parameters
-   REAL(SiKi),                INTENT(IN   )  :: filt_fromSCglob (*) ! Filtered global input from Supercontroller to ServoDyn
-   REAL(SiKi),                INTENT(IN   )  :: filt_fromSC (*) ! Filtered turbine specific input from Supercontroller to ServoDyn
    TYPE(BladedDLLType),       INTENT(INOUT)  :: dll_data       ! data type containing the avrSWAP, accINFILE, and avcOUTNAME arrays
    !REAL(SiKi),                INTENT(INOUT)  :: avrSWAP   (*)  ! The swap array, used to pass data to, and receive data from, the DLL controller.
    !INTEGER(B1Ki),             INTENT(IN   )  :: accINFILE (*)  ! The address of the first record of an array of 1-byte CHARACTERs giving the name of the parameter input file, 'DISCON.IN'.
@@ -215,7 +192,6 @@ SUBROUTINE CallBladedLegacyDLL ( u, filt_fromSCglob, filt_fromSC, p, dll_data, E
    CHARACTER(KIND=C_CHAR)                    :: avcMSG(LEN(ErrMsg)+1)                ! MESSAGE (Message from DLL to simulation code [ErrMsg])
 
    PROCEDURE(BladedDLL_Legacy_Procedure), POINTER :: DLL_Legacy_Subroutine          ! The address of the (legacy DISCON) procedure in the Bladed DLL
-   PROCEDURE(BladedDLL_SC_Procedure),     POINTER :: DLL_SC_Subroutine              ! The address of the supercontroller procedure in the Bladed DLL
 
    ! initialize aviFAIL
    aviFAIL = 0                ! bjj, this won't necessarially work if aviFAIL is INTENT(OUT) in DLL_Procedure()--could be undefined???
@@ -228,28 +204,11 @@ SUBROUTINE CallBladedLegacyDLL ( u, filt_fromSCglob, filt_fromSC, p, dll_data, E
    avcMSG      = TRANSFER( C_NULL_CHAR,                            avcMSG,     LEN(ErrMsg)+1 ) !bjj this is intent(out), so we shouldn't have to do this, but, to be safe...
 
 #ifdef STATIC_DLL_LOAD
-
-      ! if we're statically loading the library (i.e., OpenFOAM), we can just call DISCON();
-      ! I'll leave some options for whether the supercontroller is being used
-#ifdef LOAD_SUPERCONTROLLER
-   CALL DISCON( dll_data%avrSWAP, filt_fromSCglob, filt_fromSC, dll_data%toSC, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
-#else
+   ! if we're statically loading the library (i.e., OpenFOAM), we can just call DISCON();
    CALL DISCON( dll_data%avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
-#endif
-
 #else
-
-   IF ( p%UseSC ) THEN
-         ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
-      CALL C_F_PROCPOINTER( p%DLL_Trgt%ProcAddr(1), DLL_SC_Subroutine)
-      CALL DLL_SC_Subroutine ( dll_data%avrSWAP, filt_fromSCglob, filt_fromSC, dll_data%toSC, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
-
-   ELSE
-         ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
-      CALL C_F_PROCPOINTER( p%DLL_Trgt%ProcAddr(1), DLL_Legacy_Subroutine)
-      CALL DLL_Legacy_Subroutine ( dll_data%avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
-   END IF
-
+   CALL C_F_PROCPOINTER( p%DLL_Trgt%ProcAddr(1), DLL_Legacy_Subroutine)
+   CALL DLL_Legacy_Subroutine ( dll_data%avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
 #endif
 
    IF ( aviFAIL /= 0 ) THEN
@@ -300,11 +259,6 @@ SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_Ctrl
 
 
    ! Define all the parameters for the Bladed Interface
-   !IF (ALLOCATED(y%toSC)) THEN
-   !   InputFileData%DLL_ProcName      = 'DISCON_SC'                  ! The name of the procedure in the DLL that will be called.
-   !ELSE
-   !   InputFileData%DLL_ProcName      = 'DISCON'                    ! The name of the procedure in the DLL that will be called.
-   !END IF
 
    ErrStat = ErrID_None
    ErrMsg= ''
@@ -388,12 +342,6 @@ SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_Ctrl
       IF ( ErrStat >= AbortErrLev ) RETURN
    m%dll_data%avrSWAP = 0.0
 
-   IF (ALLOCATED(y%toSC)) THEN
-      CALL AllocAry( m%dll_data%toSC, SIZE(y%toSC), 'm%dll_data%toSC', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-      m%dll_data%toSC = 0.0_SiKi
-   END IF
 
 
       ! Initialize dll data stored in OtherState
@@ -631,7 +579,6 @@ subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
    call WrSumInfoRcvd(120, 'Airfoil command, blade 1')
    call WrSumInfoRcvd(121, 'Airfoil command, blade 2')
    call WrSumInfoRcvd(122, 'Airfoil command, blade 3')
-   call WrSumInfoRcvd(63,'Number logging channels')
 
 
       ! Write to summary file
@@ -867,7 +814,10 @@ SUBROUTINE BladedInterface_End(u, p, m, xd, ErrStat, ErrMsg)
    INTEGER(IntKi)                                 :: ErrStat2    ! The error status code
    CHARACTER(ErrMsgLen)                           :: ErrMsg2     ! The error message, if an error occurred
 
-      ! call DLL final time, but skip if we've never called it
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! call DLL final time, but skip if we've never called it
    if (allocated(m%dll_data%avrSWAP)) then
       IF ( m%dll_data%SimStatus /= GH_DISCON_STATUS_INITIALISING ) THEN
          m%dll_data%SimStatus = GH_DISCON_STATUS_FINALISING
@@ -877,10 +827,7 @@ SUBROUTINE BladedInterface_End(u, p, m, xd, ErrStat, ErrMsg)
    end if
 
    CALL FreeDynamicLib( p%DLL_Trgt, ErrStat2, ErrMsg2 )  ! this doesn't do anything #ifdef STATIC_DLL_LOAD  because p%DLL_Trgt is 0 (NULL)
-   IF (ErrStat2 /= ErrID_None) THEN
-      ErrStat = MAX(ErrStat, ErrStat2)
-      ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
-   END IF
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'BladedInterface_End')
 
 END SUBROUTINE BladedInterface_End
 !==================================================================================================================================

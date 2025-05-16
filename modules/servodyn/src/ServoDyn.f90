@@ -134,13 +134,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    INTEGER(IntKi)                                 :: i              ! loop counter
    INTEGER(IntKi)                                 :: j              ! loop counter
    INTEGER(IntKi)                                 :: K              ! loop counter
+   INTEGER(IntKi)                                 :: nPts           ! number of linear wind-speed points
    INTEGER(IntKi)                                 :: UnSum          ! Summary file unit
    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
    
    character(*), parameter                        :: RoutineName = 'SrvD_Init'
-
-
 
       ! Initialize variables
 
@@ -188,12 +187,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL ValidatePrimaryData( InitInp, InputFileData, ErrStat2, ErrMsg2 )
       if (Failed())  return;
       
-   if ( (InitInp%NumCtrl2SC  > 0 .and. InitInp%NumCtrl2SC <= 0) .or. &
-        (InitInp%NumSC2Ctrl <= 0 .and. InitInp%NumSC2Ctrl  > 0) ) then      
-      call SetErrStat( ErrID_Fatal, "If supercontroller is used, there must be at least one supercontroller input and one supercontroller output.",ErrStat,ErrMsg,RoutineName)
-      call Cleanup()
-      return
-   end if
 
       !............................................................................................
       ! Start a summary file (if requested):
@@ -322,31 +315,25 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry( u%ExternalBlPitchCom, p%NumBl, 'ExternalBlPitchCom', ErrStat2, ErrMsg2 )
       if (Failed())  return;
         
-   IF ( (InitInp%NumSC2CtrlGlob > 0) .or. (InitInp%NumSC2Ctrl > 0) .or. (InitInp%NumCtrl2SC > 0) ) THEN
-      p%UseSC = .TRUE.
-   ElSE
-      p%UseSC = .FALSE.
-   END IF
 
-   IF (p%UseBladedInterface) THEN
-      CALL AllocAry( u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
-      if (InitInp%NumSC2Ctrl > 0 ) then
-         u%fromSC = InitInp%fromSC
-      end if
-   END IF
 
    CALL AllocAry( u%ExternalBlAirfoilCom, p%NumBl, 'ExternalBlAirfoilCom', ErrStat2, ErrMsg2 )
       if (Failed())  return;
         
-   IF (p%UseBladedInterface) THEN
-      CALL AllocAry( u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
-      if (InitInp%NumSC2CtrlGlob > 0) then
-         u%fromSCglob = InitInp%fromSCGlob
-      end if
-   END IF
 
+   nPts = InitInp%NumBeam * InitInp%NumPulseGate
+   if (nPts > 0  .and. p%UseBladedInterface) then
+      CALL AllocAry( u%LidSpeed,      nPts, 'u%LidSpeed',      ErrStat2, ErrMsg2 ); if (Failed())  return;
+      CALL AllocAry( u%MsrPositionsX, nPts, 'u%MsrPositionsX', ErrStat2, ErrMsg2 ); if (Failed())  return;
+      CALL AllocAry( u%MsrPositionsY, nPts, 'u%MsrPositionsY', ErrStat2, ErrMsg2 ); if (Failed())  return;
+      CALL AllocAry( u%MsrPositionsZ, nPts, 'u%MsrPositionsZ', ErrStat2, ErrMsg2 ); if (Failed())  return;
+      
+      u%LidSpeed = 0.0_SiKi
+      u%MsrPositionsX = 0.0_ReKi
+      u%MsrPositionsY = 0.0_ReKi
+      u%MsrPositionsZ = 0.0_ReKi
+   end if
+   
    u%BlPitch = p%BlPitchInit(1:p%NumBl)
    
    u%Yaw = p%YawNeut
@@ -387,22 +374,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    u%RotPwr = 0.
    u%HorWindV = 0.
    u%YawAngle = 0.
-   if (allocated(InitInp%LidSpeed)) then   ! Must allocate
-      allocate(u%LidSpeed(size(InitInp%LidSpeed)))
-      u%LidSpeed  = 0.
-   endif
-   if (allocated(InitInp%MsrPositionsX)) then
-      allocate(u%MsrPositionsX(size(InitInp%MsrPositionsX)))
-      u%MsrPositionsX  = 0.
-   endif
-   if (allocated(InitInp%MsrPositionsY)) then
-      allocate(u%MsrPositionsY(size(InitInp%MsrPositionsY)))
-      u%MsrPositionsY  = 0.
-   endif
-   if (allocated(InitInp%MsrPositionsZ)) then
-      allocate(u%MsrPositionsZ(size(InitInp%MsrPositionsZ)))
-      u%MsrPositionsZ  = 0.
-   endif
+
    m%dll_data%ElecPwr_prev = 0.
    m%dll_data%GenTrq_prev = 0.
 
@@ -423,11 +395,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (Failed())  return;
 
 
-   IF (InitInp%NumCtrl2SC > 0 .and. p%UseBladedInterface) THEN
-      CALL AllocAry( y%toSC, InitInp%NumCtrl2SC, 'y%SuperController', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
-      y%toSC = 0.0_SiKi
-   END IF
 
 
       !............................................................................................
@@ -504,8 +471,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%SensorType   = InitInp%SensorType
       p%NumBeam      = InitInp%NumBeam
       p%NumPulseGate = InitInp%NumPulseGate
-      p%PulseSpacing = InitInp%PulseSpacing
-      p%URefLid      = InitInp%URefLid
       
       CALL BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_CtrlChanInitInfo, UnSum, ErrStat2, ErrMsg2 )
          if (Failed())  return;
@@ -2217,9 +2182,6 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       !  (might be used for airfoil flap angles for example)
       y%BlAirfoilCom(1:p%NumBl) = m%dll_data%BlAirfoilCom(1:p%NumBl)
 
-      IF (ALLOCATED(y%toSC)) THEN
-         y%toSC = m%dll_data%toSC
-      END IF
 
    END IF
 

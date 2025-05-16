@@ -98,6 +98,8 @@ CONTAINS
       REAL(DbKi)                                      :: dtM         ! actual mooring dynamics time step
       INTEGER(IntKi)                                  :: NdtM        ! number of time steps to integrate through with RK2
 !      INTEGER(IntKi)                                  :: ntWave      ! number of time steps of wave data
+      LOGICAL                                       :: compVIV = .FALSE.     ! flag to check if simulating VIV
+      LOGICAL                                       :: compVisco = .FALSE.   ! flag to check if simulating viscoelastic line
       
       TYPE(MD_InputType)    :: u_array(1)    ! a size-one array for u to make call to TimeStep happy
       REAL(DbKi)            :: t_array(1)    ! a size-one array saying time is 0 to make call to TimeStep happy  
@@ -117,6 +119,7 @@ CONTAINS
       CHARACTER(20)                :: LineOutString        ! String to temporarially hold characters specifying line output options
       CHARACTER(20)                :: OptString            ! String to temporarially hold name of option variable
       CHARACTER(40)                :: OptValue             ! String to temporarially hold value of options variable input
+      CHARACTER(40)                :: tSchemeString = 'RK2'! String to temporarially hold value of tScheme variable input (initial string sets RK2 as default if not provided by user)
       CHARACTER(40)                :: DepthValue           ! Temporarily stores the optional WtrDpth setting for MD, which could be a number or a filename
       CHARACTER(40)                :: WaterKinValue        ! Temporarily stores the optional WaterKin setting for MD, which is typically a filename
       INTEGER(IntKi)               :: nOpts                ! number of options lines in input file
@@ -443,6 +446,8 @@ CONTAINS
                      end if
                   else if ( OptString == 'DTM') THEN
                      read (OptValue,*) p%dtM0 
+                  else if ( OptString == 'TSCHEME') THEN
+                     read (OptValue,*) tSchemeString
                   else if ( OptString == 'G') then
                      read (OptValue,*) p%g
                   else if (( OptString == 'RHOW') .or. ( OptString == 'RHO')) then
@@ -471,7 +476,7 @@ CONTAINS
                      read (OptValue,*) p%mu_kA
                   else if ( OptString == 'MC')  then
                      read (OptValue,*) p%mc
-                  else if ( OptString == 'CV')  then
+                  else if (( OptString == 'CV') .or. (OptString == 'FRICDAMP'))  then
                      read (OptValue,*) p%cv
                   else if ( OptString == 'INERTIALF')  then
                      read (OptValue,*) p%inertialF
@@ -479,6 +484,8 @@ CONTAINS
                      read (OptValue,*) p%inertialF_rampT
                   else if ( OptString == 'OUTSWITCH') then
                      read (OptValue,*) p%OutSwitch
+                  else if ( OptString == 'DISABLEOUTTIME') then
+                     read (OptValue,*) p%disableOutTime
                   else
                      CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
                   end if
@@ -491,6 +498,7 @@ CONTAINS
                if (p%writeLog > 1) then
                   write(p%UnLog, '(A)'        ) "  - Options List:"
                   write(p%UnLog, '(A17,f12.4)') "   dtm      : ", p%dtM0 
+                  write(p%UnLog, '(A17,A)'    ) "   tScheme  : ", tSchemeString
                   write(p%UnLog, '(A17,f12.4)') "   g        : ", p%g
                   write(p%UnLog, '(A17,f12.4)') "   rhoW     : ", p%rhoW
                   write(p%UnLog, '(A17,A)'    ) "   Depth    : ", DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
@@ -544,6 +552,17 @@ CONTAINS
       ! set up wave and current kinematics 
       CALL setupWaterKin(WaterKinValue, p, InitInp%Tmax, ErrStat2, ErrMsg2); if(Failed()) return
 
+      ! set up time integration method
+      CALL Conv2UC(tSchemeString)
+      IF (tSchemeString == 'RK2') THEN
+         p%tScheme = 0
+      ELSEIF (tSchemeString == 'RK4') THEN 
+         p%tScheme = 1
+      ELSE 
+         CALL SetErrStat( ErrID_Fatal, 'Unrecognized tScheme option: '//tSchemeString//' Only RK2 and RK4 supported in MD-F', ErrStat, ErrMsg, RoutineName )
+         CALL CleanUp()
+         RETURN
+      ENDIF
 
 
       ! ----------------------------- misc checks to be sorted -----------------------------
@@ -632,16 +651,34 @@ CONTAINS
                    Line = NextLine(i)
                    
                    ! check for correct number of columns in current line
-                   IF ( CountWords( Line ) /= 10 ) THEN
-                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 10 columns.', ErrStat, ErrMsg, RoutineName )
+                   IF ( CountWords( Line ) < 10 ) THEN
+                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be at least 10 columns.', ErrStat, ErrMsg, RoutineName )
                        CALL CleanUp()
                        RETURN
                    END IF
-
-                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp EI    Cd  Ca  CdAx  CaAx 
+                   
+                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp EI    Cd  Ca  CdAx  CaAx  Cl  dF  cF
+                   if (CountWords( Line ) == 10) then
                    READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
                       m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
                       m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat
+                   elseif (CountWords( Line ) == 11) then               
+                     READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
+                     m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
+                     m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat, m%LineTypeList(l)%Cl
+                     m%LineTypeList(l)%dF = 0.08 ! set to default Thorsen synchronization range if not provided
+                     m%LineTypeList(l)%cF = 0.18 ! set to default Thorsen synchronization centering if not provided
+                   elseif (CountWords( Line ) == 13) then
+                     READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
+                     m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
+                     m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat, &
+                     m%LineTypeList(l)%Cl, m%LineTypeList(l)%dF, m%LineTypeList(l)%cF
+                   else 
+                     CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must have 10, 11, or 13 columns.', ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                   endif
+
                    
                     IF ( ErrStat2 /= ErrID_None ) THEN
                       CALL SetErrStat( ErrID_Fatal, 'Failed to process line type inputs of entry '//trim(Num2LStr(l))//'. Check formatting and correct number of columns.', ErrStat, ErrMsg, RoutineName )
@@ -707,10 +744,16 @@ CONTAINS
                      write(p%UnLog, '(A12,A)'    ) " name: ", trim(m%LineTypeList(l)%name)
                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
+                     write(p%UnLog, '(A12,A)'    ) " EA  : ", tempString1
+                     write(p%UnLog, '(A12,A)'    ) " EA_D: ", tempString2
+                     write(p%UnLog, '(A12,A)'    ) " EI  : ", tempString3
                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
+                     write(p%UnLog, '(A12,f12.4)') " Cl  : ", m%LineTypeList(l)%Cl
+                     write(p%UnLog, '(A12,f12.4)') " dF  : ", m%LineTypeList(l)%dF 
+                     write(p%UnLog, '(A12,f12.4)') " cF  : ", m%LineTypeList(l)%cF 
                    end if
 
                   IF ( ErrStat2 /= ErrID_None ) THEN
@@ -1445,13 +1488,19 @@ CONTAINS
                   
                   ! account for states of line
                   m%LineStateIs1(l) = Nx + 1
+                  Nx = Nx + 6*m%LineList(l)%N - 6       ! normal case, just 6 states per internal node   
+
                   if (m%LineTypeList(m%LineList(l)%PropsIdNum)%ElasticMod > 1) then ! todo add an error check here? or change to 2 or 3?
-                     Nx = Nx + 7*m%LineList(l)%N - 6       ! if using viscoelastic model, need one more state per segment
-                     m%LineStateIsN(l) = Nx          
-                  else
-                     Nx = Nx + 6*m%LineList(l)%N - 6       ! normal case, just 6 states per internal node   
-                     m%LineStateIsN(l) = Nx          
+                     Nx = Nx + m%LineList(l)%N      ! if using viscoelastic model, need one more state per segment    
+                     compVisco = .TRUE. ! turn of flag for linearization error checking
                   end if
+                  
+                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%Cl > 0) then 
+                     Nx = Nx + m%LineList(l)%N+1      ! if using VIV model, need one more state per node (note here N is the num sgemnts, so N+1 is number of nodes).
+                     compVIV = .TRUE. ! turn of flag for linearization error checking
+                  endif
+
+                  m%LineStateIsN(l) = Nx      
                   
                   ! Process attachment identfiers and attach line ends 
                   
@@ -1545,9 +1594,10 @@ CONTAINS
                   IF ( scan( LineOutString, 'U') > 0 )  m%LineList(l)%OutFlagList(4) = 1
                   IF ( scan( LineOutString, 'D') > 0 )  m%LineList(l)%OutFlagList(5) = 1
                   IF ( scan( LineOutString, 'b') > 0 )  m%LineList(l)%OutFlagList(6) = 1   ! seabed contact forces
+                  IF ( scan( LineOutString, 'V') > 0 )  m%LineList(l)%OutFlagList(7) = 1   ! VIV forces
                   ! per node 1 component
-                  IF ( scan( LineOutString, 'W') > 0 )  m%LineList(l)%OutFlagList(7) = 1  ! node weight/buoyancy (positive up)
-                  IF ( scan( LineOutString, 'K') > 0 )  m%LineList(l)%OutFlagList(8) = 1  ! curvature at node
+                  IF ( scan( LineOutString, 'W') > 0 )  m%LineList(l)%OutFlagList(8) = 1  ! node weight/buoyancy (positive up)
+                  IF ( scan( LineOutString, 'K') > 0 )  m%LineList(l)%OutFlagList(9) = 1  ! curvature at node
                   ! per element 1 component
                   IF ( scan( LineOutString, 't') > 0 )  m%LineList(l)%OutFlagList(10) = 1  ! segment tension force (just EA)
                   IF ( scan( LineOutString, 'c') > 0 )  m%LineList(l)%OutFlagList(11) = 1  ! segment internal damping force
@@ -1569,7 +1619,7 @@ CONTAINS
                      write(p%UnLog, '(A15,f12.4)') "   Len    : ", m%LineList(l)%UnstrLen
                      write(p%UnLog, '(A15,A)'    ) "   Node A : ", " "//tempString2 
                      write(p%UnLog, '(A15,A)'    ) "   Node B : ", " "//tempString3
-                     write(p%UnLog, '(A15,I2)'   ) "   NumSegs: ", m%LineList(l)%N
+                     write(p%UnLog, '(A15,I4)'   ) "   NumSegs: ", m%LineList(l)%N
                   end if
 
                   ! check for sequential IdNums
@@ -1591,6 +1641,8 @@ CONTAINS
                      CALL CleanUp()
                      RETURN
                   END IF
+
+                  IF (wordy > 0) print *, "Set up Line", l, "of type",  m%LineList(l)%PropsIdNum
 
                END DO   ! l = 1,p%nLines
 
@@ -2230,7 +2282,7 @@ CONTAINS
       !                               prepare state vector etc.
       !------------------------------------------------------------------------------------
 
-      ! the number of states is Nx and Nxtra includes additional states for potential line failures
+      ! the number of states is Nx and Nxtra includes additional states (points) for potential line failures
       m%Nx = Nx
       m%Nxtra = m%Nx + 6*2*p%nLines
       
@@ -2238,15 +2290,22 @@ CONTAINS
 
       ! allocate state vector and temporary state vectors based on size just calculated
       ALLOCATE ( x%states(m%Nxtra), m%xTemp%states(m%Nxtra), m%xdTemp%states(m%Nxtra), STAT = ErrStat2 )
-      IF ( ErrStat2 /= ErrID_None ) THEN
-        ErrMsg  = ' Error allocating state vectors.'
-        !CALL CleanUp()
-        RETURN
-      END IF
+
       x%states        = 0.0_DbKi
       m%xTemp%states  = 0.0_DbKi
       m%xdTemp%states = 0.0_DbKi
 
+      ! Allocate kSum if using RK4 method. Not needed for RK2 becasue slopes not summed
+      IF (p%tScheme == 1_Intki) THEN 
+         ALLOCATE (m%kSum%states(m%Nxtra), STAT = ErrStat2)
+         m%kSum%states = 0.0_DbKi
+      END IF
+
+      IF ( ErrStat2 /= ErrID_None ) THEN
+         ErrMsg  = ' Error allocating state vectors.'
+         !CALL CleanUp()
+         RETURN
+      END IF
 
 
       ! ================================ initialize system ================================
@@ -2635,6 +2694,7 @@ CONTAINS
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
          DO I = 1, p%nLines
+            m%LineList(I)%IC_gen = .True. ! turn on IC_gen flag for Line VIV model
             m%LineList(I)%Cdn = m%LineList(I)%Cdn * InputFileDat%CdScaleIC
             m%LineList(I)%Cdt = m%LineList(I)%Cdt * InputFileDat%CdScaleIC 
          END DO
@@ -2677,7 +2737,7 @@ CONTAINS
          t = 0.0_DbKi     ! start time at zero
 
          ! because TimeStep wants an array...
-         call MD_CopyInput( u, u_array(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! make a size=1 array of inputs (since MD_RK2 expects an array to InterpExtrap)
+         call MD_CopyInput( u, u_array(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! make a size=1 array of inputs (since MD_RK2 and MD_RK4 expects an array to InterpExtrap)
          call MD_CopyInput( u,  u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )  ! also make an inputs object to interpExtrap to
          t_array(1) = t                                                       ! fill in the times "array" for u_array
 
@@ -2687,7 +2747,7 @@ CONTAINS
             !loop through line integration time steps
             DO J = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
 
-               CALL MD_RK2(t, dtM, u_interp, u_array, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2)
+               Call MD_Step(t, dtM, u_interp, u_array, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2) ; if(Failed()) return
                               
                ! check for NaNs - is this a good place/way to do it?
                DO K = 1, m%Nx
@@ -2731,10 +2791,12 @@ CONTAINS
 
 
             ! provide status message
-            ! bjj: putting this in a string so we get blanks to cover up previous values (if current string is shorter than previous one)
-            Message = '   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
-                           ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))) 
-            CALL WrOver( Message )
+            IF (p%disableOutTime == 0) THEN ! option to turn this off if users want (helpful for matlab)
+               ! bjj: putting this in a string so we get blanks to cover up previous values (if current string is shorter than previous one)
+               Message = '   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
+                              ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))) 
+               CALL WrOver( Message )
+            ENDIF
 
             ! check for convergence (compare current tension at each fairlead with previous 9 values)
             IF (I > 9) THEN
@@ -2792,6 +2854,7 @@ CONTAINS
 
          ! UNboost drag coefficient of each line type   <<<
          DO I = 1, p%nLines
+            m%LineList(I)%IC_gen = .False. ! turn off IC_gen flag for Line VIV model
             m%LineList(I)%Cdn = m%LineList(I)%Cdn / InputFileDat%CdScaleIC
             m%LineList(I)%Cdt = m%LineList(I)%Cdt / InputFileDat%CdScaleIC 
          END DO
@@ -2820,7 +2883,14 @@ CONTAINS
       z%dummy     = 0      
       
       if (InitInp%Linearize) then
-         call MD_Init_Jacobian(InitInp, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+         IF ((compVIV) .OR. (compVisco)) THEN
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2 = "Linearization cannot be used with the VIV or Viscoelastic model in MoorDyn"
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            RETURN
+         ELSE
+            call MD_Init_Jacobian(InitInp, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+         ENDIF
       endif
       
       CALL WrScr('   MoorDyn initialization completed.')
@@ -2925,7 +2995,7 @@ CONTAINS
             NextLine="---"       ! Set as a separator so we can escape some of the while loops
          else
             NextLine=trim(FileInfo_In%Lines(i))
-            !TODO: add comment character recognition here? (discard any characters past a #)
+            ! # is comment character handled by file loading stuff earlier on (in NWTC routine ProcessComFile)
          endif
       end function NextLine
 
@@ -3012,20 +3082,22 @@ CONTAINS
       !loop through line integration time steps
       DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
 
-         CALL MD_RK2(t2, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2)
-         
+         Call MD_Step(t2, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat2, ErrMsg2) 
+         IF ( ErrStat2 /= ErrID_None ) THEN
+            CALL CheckError(ErrStat2, ErrMsg2)
+         END IF
          
          ! check for NaNs - is this a good place/way to do it?
          DO J = 1, m%Nx
             IF (Is_NaN(x%states(J))) THEN
                ErrStat = ErrID_Fatal
-               ErrMsg = ' NaN state detected.'
+               ErrMsg = ' NaN state detected at time '//TRIM(Num2LStr(t2))
                IF (wordy > 1) THEN
                   print *, ". Here is the state vector: "
                   print *, x%states
                END IF
                CALL CheckError(ErrStat, ErrMsg)
-               EXIT
+               RETURN
             END IF
          END DO
          
@@ -3042,22 +3114,7 @@ CONTAINS
       END IF
       !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_UpdateStates')
 
-
-      ! check for NaNs - is this a good place/way to do it?
-      DO J = 1, m%Nx
-         IF (Is_NaN(x%states(J))) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' NaN state detected.'
-            IF (wordy > 1) THEN
-               print *, ". Here is the state vector: "
-               print *, x%states
-            END IF
-            CALL CheckError(ErrStat, ErrMsg)
-            EXIT
-         END IF
-      END DO
-
-      ! do we want to check failures here (at the coupling step level? Or at the dtM level?)
+      ! do we want to check failures here (at the coupling step level? Or at the dtM level?) TODO: move this to the dtM level
       ! --------------- check for line failures (detachments!) ----------------
       DO l= 1,p%nFails 
 
@@ -3855,7 +3912,37 @@ CONTAINS
  !----------------------------------------------------------------------------------------==================
 
 
-   ! RK2 integrater (part of what was in TimeStep)
+   ! Advances the state one time step using the integration scheme specified in the input file
+   SUBROUTINE MD_Step ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+   
+      REAL(DbKi)                     , INTENT(INOUT)      :: t          ! intial time (s) for this integration step
+      REAL(DbKi)                     , INTENT(IN   )      :: dtM        ! single time step  size (s) for this integration step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
+      REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
+      TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
+      TYPE( MD_ContinuousStateType ) , INTENT(INOUT)      :: x
+      TYPE( MD_DiscreteStateType )   , INTENT(IN   )      :: xd         ! INTENT(IN   )
+      TYPE( MD_ConstraintStateType ) , INTENT(IN   )      :: z          ! INTENT(IN   )
+      TYPE( MD_OtherStateType )      , INTENT(IN   )      :: other      ! INTENT(INOUT)
+      TYPE(MD_MiscVarType)           , INTENT(INOUT)      :: m          ! INTENT(INOUT)
+      INTEGER(IntKi)                 , INTENT(  OUT)      :: ErrStat
+      CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
+
+      IF (p%tScheme == 0_Intki) THEN
+         CALL MD_RK2(t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
+      ELSEIF (p%tScheme == 1_Intki) THEN
+         CALL MD_RK4(t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg)
+      ELSE
+         ErrStat = ErrID_Fatal
+         ErrMsg = ' Unrecognized tScheme option in MD_Step'
+      ENDIF
+
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+   END SUBROUTINE MD_Step
+
+   ! RK2 integrator (part of what was in TimeStep)
    !--------------------------------------------------------------
    SUBROUTINE MD_RK2 ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
    
@@ -3885,17 +3972,23 @@ CONTAINS
       ! step 1
 
       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
-   
+      if ( ErrStat >= AbortErrLev ) return
+
       CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg )
+      if ( ErrStat >= AbortErrLev ) return
+        ! k0 = m%xdTemp
       DO J = 1, m%Nx
-         m%xTemp%states(J) = x%states(J) + 0.5*dtM*m%xdTemp%states(J)                                           !x1 = x0 + dt*f0/2.0;
+         m%xTemp%states(J) = x%states(J) + 0.5_DbKi*dtM*m%xdTemp%states(J)                                           !x1 = x0 + dt*k0/2.0;
       END DO
 
       ! step 2
 
       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
-         
+      if ( ErrStat >= AbortErrLev ) return
+
       CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
+      if ( ErrStat >= AbortErrLev ) return
+         ! k1 = m%xdTemp
       DO J = 1, m%Nx
          x%states(J) = x%states(J) + dtM*m%xdTemp%states(J)
       END DO
@@ -3907,13 +4000,13 @@ CONTAINS
    END SUBROUTINE MD_RK2
    !--------------------------------------------------------------
 
-
-   !----------------------------------------------------------------------------------------================
-   ! this would do a full (coupling) time step and is no longer used
-   SUBROUTINE TimeStep ( t, dtStep, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+   ! RK4 integrator
+   !--------------------------------------------------------------
+   SUBROUTINE MD_RK4 ( t, dtM, u_interp, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
    
-      REAL(DbKi)                     , INTENT(INOUT)      :: t
-      REAL(DbKi)                     , INTENT(IN   )      :: dtStep     ! how long to advance the time for
+      REAL(DbKi)                     , INTENT(INOUT)      :: t          ! intial time (s) for this integration step
+      REAL(DbKi)                     , INTENT(IN   )      :: dtM        ! single time step  size (s) for this integration step
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
       TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
       REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
       TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
@@ -3926,99 +4019,186 @@ CONTAINS
       CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
 
 
-      TYPE(MD_ContinuousStateType)                        :: dxdt       ! time derivatives of continuous states (initialized in CalcContStateDeriv)
-      TYPE(MD_ContinuousStateType)                        :: x2         ! temporary copy of continuous states used in RK2 calculations
-      INTEGER(IntKi)                                      :: NdtM       ! the number of time steps to make with the mooring model
-      Real(DbKi)                                          :: dtM        ! the actual time step size to use
-      INTEGER(IntKi)                                      :: Nx         ! size of states vector
       INTEGER(IntKi)                                      :: I          ! counter
       INTEGER(IntKi)                                      :: J          ! counter
-      TYPE(MD_InputType)                                  :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
 
-  !    Real(DbKi)                                          :: tDbKi   ! double version because that's what MD_Input_ExtrapInterp needs.
-      
-      
-      ! allocate space for x2
-      CALL MD_CopyContState( x, x2, 0, ErrStat, ErrMsg)
-         
-      ! create space for arrays/meshes in u_interp   ... is it efficient to do this every time step???
-      CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg)
-         
+      ! -------------------------------------------------------------------------------
+      !       RK4 integrator written here, calling CalcContStateDeriv
+      !--------------------------------------------------------------------------------
 
-      Nx = size(x%states)   ! <<<< should this be the m%Nx parameter instead?
+      ! k0
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+      if ( ErrStat >= AbortErrLev ) return
 
+      CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+      if ( ErrStat >= AbortErrLev ) return
+         ! k0 = m%xdTemp 
 
-      ! round dt to integer number of time steps
-      NdtM = ceiling(dtStep/p%dtM0)                  ! get number of mooring time steps to do based on desired time step size
-      dtM = dtStep/REAL(NdtM,DbKi)                   ! adjust desired time step to satisfy dt with an integer number of time steps
-
-
-      !loop through line integration time steps
-      DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
-      
-      
-   !      tDbKi = t        ! get DbKi version of current time (why does ExtrapInterp except different time type than UpdateStates?)
-         
-      
-         ! -------------------------------------------------------------------------------
-         !       RK2 integrator written here, now calling CalcContStateDeriv
-         !--------------------------------------------------------------------------------
-
-         ! step 1
-
-         CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
-      
-         CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
-         DO J = 1, Nx
-            x2%states(J) = x%states(J) + 0.5*dtM*dxdt%states(J)                                           !x1 = x0 + dt*f0/2.0;
-         END DO
-
-         ! step 2
-   
-         CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
-            
-         CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
-         DO J = 1, Nx
-            x%states(J) = x%states(J) + dtM*dxdt%states(J)
-         END DO
-
-         t = t + dtM  ! update time
-
-         !----------------------------------------------------------------------------------
-
-   ! >>> below should no longer be necessary thanks to using ExtrapInterp of u(:) within the mooring time stepping loop.. <<<
-   !      ! update Fairlead positions by integrating velocity and last position (do this AFTER the processing of the time step rather than before)
-   !      DO J = 1, p%nCpldPoints
-   !         DO K = 1, 3
-   !          m%PointList(m%CpldPointIs(J))%r(K) = m%PointList(m%CpldPointIs(J))%r(K) + m%PointList(m%CpldPointIs(J))%rd(K)*dtM
-   !         END DO
-   !      END DO
-      
-   
-      END DO  ! I  time steps
-
-
-      ! destroy dxdt and x2, and u_interp
-      CALL MD_DestroyContState( dxdt, ErrStat, ErrMsg)
-      CALL MD_DestroyContState( x2, ErrStat, ErrMsg)
-      CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error destroying dxdt or x2.'
-      END IF
-      !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_UpdateStates')
-
-      
-      ! check for NaNs - is this a good place/way to do it?
-      DO J = 1, Nx
-         IF (Is_NaN(x%states(J))) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' NaN state detected.'
-         END IF
+      ! k1
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%xdTemp%states(J) ! k0 - In loop to avoid unecessary extra loop
+         m%xTemp%states(J) = x%states(J) + 0.5_DbKi*dtM*m%xdTemp%states(J)   !x1 = x0 + dt*k0/2.0 = m%xTemp;
       END DO
+
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+      if ( ErrStat >= AbortErrLev ) return
+
+      CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+      if ( ErrStat >= AbortErrLev ) return
+         ! k1 = m%xdTemp 
+
+      ! k2
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%kSum%states(J) + 2.0_DbKi * m%xdTemp%states(J) ! 2 * k1 - In loop to avoid unecessary extra loop
+         m%xTemp%states(J) = x%states(J) + 0.5_DbKi*dtM*m%xdTemp%states(J)   !x2 = x0 + dt*k1/2.0 = m%xTemp;
+      END DO
+
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t) TODO: is this needed, it is already called for k1
+      if ( ErrStat >= AbortErrLev ) return
+
+      CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+      if ( ErrStat >= AbortErrLev ) return
+         ! k2 = m%xdTemp 
+
+      ! k3
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%kSum%states(J) + 2.0_DbKi * m%xdTemp%states(J) ! 2 * k2 -  In loop to avoid unecessary extra loop
+         m%xTemp%states(J) = x%states(J) + dtM*m%xdTemp%states(J)   !x3 = x0 + dt*k2 = m%xTemp;
+      END DO
+
+      CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+      if ( ErrStat >= AbortErrLev ) return
+      
+      CALL MD_CalcContStateDeriv( (t + dtM), u_interp, p, m%xTemp, xd, z, other, m, m%xdTemp, ErrStat, ErrMsg ) 
+      if ( ErrStat >= AbortErrLev ) return
+         ! k3 = m%xdTemp
+
+      ! Apply
+      DO J = 1, m%Nx
+         m%kSum%states(J) = m%kSum%states(J) + m%xdTemp%states(J) ! k3 - In loop to avoid unecessary extra loop
+
+         ! x(t+dtM) =  x(t) + dtM * kSum / 6 = x(t) + dtM * (k0 + 2*k1 + 2*k2 + k3) / 6
+         x%states(J) = x%states(J) + dtM*(m%kSum%states(J)) / 6.0_DbKi
+      END DO
+
+      t = t + dtM  ! update time
+      
+      !TODO error check? <<<<
+
+   END SUBROUTINE MD_RK4
+   !--------------------------------------------------------------
+
+   ! !----------------------------------------------------------------------------------------================
+   ! ! this would do a full (coupling) time step and is no longer used
+   ! SUBROUTINE TimeStep ( t, dtStep, u, t_array, p, x, xd, z, other, m, ErrStat, ErrMsg )
+   
+   !    REAL(DbKi)                     , INTENT(INOUT)      :: t
+   !    REAL(DbKi)                     , INTENT(IN   )      :: dtStep     ! how long to advance the time for
+   !    TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
+   !    REAL(DbKi)                     , INTENT(IN   )      :: t_array(:)  ! times corresponding to elements of u(:)?
+   !    TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
+   !    TYPE( MD_ContinuousStateType ) , INTENT(INOUT)      :: x
+   !    TYPE( MD_DiscreteStateType )   , INTENT(IN   )      :: xd         ! INTENT(IN   )
+   !    TYPE( MD_ConstraintStateType ) , INTENT(IN   )      :: z          ! INTENT(IN   )
+   !    TYPE( MD_OtherStateType )      , INTENT(IN   )      :: other      ! INTENT(INOUT)
+   !    TYPE(MD_MiscVarType)           , INTENT(INOUT)      :: m          ! INTENT(INOUT)
+   !    INTEGER(IntKi)                 , INTENT(  OUT)      :: ErrStat
+   !    CHARACTER(*)                   , INTENT(  OUT)      :: ErrMsg
+
+
+   !    TYPE(MD_ContinuousStateType)                        :: dxdt       ! time derivatives of continuous states (initialized in CalcContStateDeriv)
+   !    TYPE(MD_ContinuousStateType)                        :: x2         ! temporary copy of continuous states used in RK2 calculations
+   !    INTEGER(IntKi)                                      :: NdtM       ! the number of time steps to make with the mooring model
+   !    Real(DbKi)                                          :: dtM        ! the actual time step size to use
+   !    INTEGER(IntKi)                                      :: Nx         ! size of states vector
+   !    INTEGER(IntKi)                                      :: I          ! counter
+   !    INTEGER(IntKi)                                      :: J          ! counter
+   !    TYPE(MD_InputType)                                  :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
+
+   !    ! Real(DbKi)                                          :: tDbKi   ! double version because that's what MD_Input_ExtrapInterp needs.
+      
+      
+   !    ! allocate space for x2
+   !    CALL MD_CopyContState( x, x2, 0, ErrStat, ErrMsg)
+         
+   !    ! create space for arrays/meshes in u_interp   ... is it efficient to do this every time step???
+   !    CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg)
+         
+
+   !    Nx = size(x%states)   ! <<<< should this be the m%Nx parameter instead?
+
+
+   !    ! round dt to integer number of time steps
+   !    NdtM = ceiling(dtStep/p%dtM0)                  ! get number of mooring time steps to do based on desired time step size
+   !    dtM = dtStep/REAL(NdtM,DbKi)                   ! adjust desired time step to satisfy dt with an integer number of time steps
+
+
+   !    !loop through line integration time steps
+   !    DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
+      
+      
+   !       ! tDbKi = t        ! get DbKi version of current time (why does ExtrapInterp except different time type than UpdateStates?)
+         
+      
+   !       ! -------------------------------------------------------------------------------
+   !       !       RK2 integrator written here, now calling CalcContStateDeriv
+   !       !--------------------------------------------------------------------------------
+
+   !       ! step 1
+
+   !       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+      
+   !       CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, m, dxdt, ErrStat, ErrMsg )
+   !       DO J = 1, Nx
+   !          x2%states(J) = x%states(J) + 0.5*dtM*dxdt%states(J)                                           !x1 = x0 + dt*f0/2.0;
+   !       END DO
+
+   !       ! step 2
+   
+   !       CALL MD_Input_ExtrapInterp(u, t_array, u_interp, t + 0.5_DbKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
+            
+   !       CALL MD_CalcContStateDeriv( (t + 0.5_DbKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
+   !       DO J = 1, Nx
+   !          x%states(J) = x%states(J) + dtM*dxdt%states(J)
+   !       END DO
+
+   !       t = t + dtM  ! update time
+
+   !       !----------------------------------------------------------------------------------
+
+   !       ! >>> below should no longer be necessary thanks to using ExtrapInterp of u(:) within the mooring time stepping loop.. <<<
+   !       !      ! update Fairlead positions by integrating velocity and last position (do this AFTER the processing of the time step rather than before)
+   !       !      DO J = 1, p%nCpldPoints
+   !       !         DO K = 1, 3
+   !       !          m%PointList(m%CpldPointIs(J))%r(K) = m%PointList(m%CpldPointIs(J))%r(K) + m%PointList(m%CpldPointIs(J))%rd(K)*dtM
+   !       !         END DO
+   !       !      END DO
+      
+   
+   !    END DO  ! I  time steps
+
+
+   !    ! destroy dxdt and x2, and u_interp
+   !    CALL MD_DestroyContState( dxdt, ErrStat, ErrMsg)
+   !    CALL MD_DestroyContState( x2, ErrStat, ErrMsg)
+   !    CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
+   !    IF ( ErrStat /= ErrID_None ) THEN
+   !       ErrMsg  = ' Error destroying dxdt or x2.'
+   !    END IF
+   !    !   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_UpdateStates')
+
+      
+   !    ! check for NaNs - is this a good place/way to do it?
+   !    DO J = 1, Nx
+   !       IF (Is_NaN(x%states(J))) THEN
+   !          ErrStat = ErrID_Fatal
+   !          ErrMsg = ' NaN state detected.'
+   !       END IF
+   !    END DO
  
 
-   END SUBROUTINE TimeStep
-   !--------------------------------------------------------------
+   ! END SUBROUTINE TimeStep
+   ! !--------------------------------------------------------------
 
 
 
