@@ -1949,7 +1949,7 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       do i = 1, Turbine%SrvD%p%NumBStC
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                             SrcDL=DatLoc(BD_y_BldMotion, SrcMod%Ins), &             ! BD%y(SrcMod%Ins)%BldMotion
-                            DstDL=DatLoc(SrvD_u_BStCMotionMesh, SrcMod%Ins, i), &   ! SrvD%u%BStCMotionMesh(i, j)
+                            DstDL=DatLoc(SrvD_u_BStCMotionMesh, SrcMod%Ins, i), &   ! SrvD%u%BStCMotionMesh(SrcMod%Ins,i)
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
 
