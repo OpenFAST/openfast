@@ -1717,7 +1717,10 @@ class InputReader_OpenFAST(object):
         '''
         StC_vt = {}
 
-        with open(os.path.join(self.FAST_directory, filename)) as f:
+        # Inputs should be relative to ServoDyn, like in OpenFAST
+        SvD_dir = os.path.dirname(self.fst_vt['Fst']['ServoFile'])
+
+        with open(os.path.join(self.FAST_directory, SvD_dir, filename)) as f:
 
             f.readline()
             f.readline()
@@ -3191,7 +3194,8 @@ class InputReader_OpenFAST(object):
                     if option_name.upper() == 'WATERKIN':
                         self.fst_vt['MoorDyn']['WaterKin'] = option_value.strip('"')
                         WaterKin_file = os.path.normpath(os.path.join(os.path.dirname(moordyn_file), self.fst_vt['MoorDyn']['WaterKin']))
-                        self.read_WaterKin(WaterKin_file)
+                        if self.fst_vt['MoorDyn']['WaterKin'].upper() not in ['0','UNUSED']:
+                            self.read_WaterKin(WaterKin_file)
 
                     self.fst_vt['MoorDyn']['option_values'].append(float_read(option_value.strip('"'))) # some options values can be strings or floats
                     self.fst_vt['MoorDyn']['option_names'].append(option_name)
