@@ -6,7 +6,7 @@ MODULE WaveTankTesting
     ! USE Precision
     USE MoorDyn_C
     USE SeaState_C_Binding
-    USE NWTC_C_Binding, ONLY: IntfStrLen, SetErr
+    USE NWTC_C_Binding, ONLY: IntfStrLen, SetErrStat_C
 
     IMPLICIT NONE
     SAVE
@@ -26,21 +26,7 @@ MODULE WaveTankTesting
 
 CONTAINS
 
-SUBROUTINE SetErrStat_C(ErrStatLocal, ErrMessLocal, ErrStatGlobal, ErrMessGlobal, RoutineName)
 
-INTEGER(C_INT), INTENT(IN   )               :: ErrStatLocal      ! Error status of the operation
-CHARACTER(*, KIND=C_CHAR),   INTENT(IN   )  :: ErrMessLocal      ! Error message if ErrStat /= ErrID_None
-INTEGER(C_INT), INTENT(INOUT)               :: ErrStatGlobal     ! Error status of the operation
-CHARACTER(KIND=C_CHAR),   INTENT(INOUT)     :: ErrMessGlobal     ! Error message if ErrStat /= ErrID_None
-CHARACTER(*),   INTENT(IN   )               :: RoutineName  ! Name of the routine error occurred in
-
-IF ( ErrStatLocal == ErrID_None ) RETURN
-
-IF (ErrStatGlobal /= ErrID_None) ErrMessGlobal = TRIM(ErrMessGlobal)//new_line('a')
-ErrMessGlobal = TRIM(ErrMessGlobal)//TRIM(RoutineName)//':'//TRIM(ErrMessLocal)
-ErrStatGlobal = MAX(ErrStatGlobal,ErrStatLocal)
-
-END SUBROUTINE 
 
 SUBROUTINE WaveTank_Init(   &
     MD_InputFile_c,         &

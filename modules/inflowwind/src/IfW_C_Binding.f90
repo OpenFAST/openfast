@@ -239,7 +239,7 @@ CONTAINS
       call WrSCr("")
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
-      call WrScr("   ADI_C_Init")
+      call WrScr("   IfW_C_Init")
       call WrScr("   --------------------------------------------------------")
       call WrScr("   FileInfo")
       TmpFlag="F";   if (IfWinputFilePassed==1_c_int) TmpFlag="T"
