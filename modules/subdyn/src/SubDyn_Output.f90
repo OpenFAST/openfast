@@ -22,12 +22,9 @@ MODULE SubDyn_Output
    USE SubDyn_Types
    USE SD_FEM
    USE SubDyn_Output_Params, only: MNfmKe, MNfmMe, MNTDss, MNRDe, MNTRAe, IntfSS, IntfTRss, IntfTRAss, ReactSS, OutStrLenM1
-   USE SubDyn_Output_Params, only: ParamIndxAry, ParamUnitsAry, ValidParamAry, SSqm01, SSqmd01, SSqmdd01
+   USE SubDyn_Output_Params, only: ParamIndxAry, ParamUnitsAry, ValidParamAry, SSqm01, SSqmd01, SSqmdd01, MaxOutPts
 
    IMPLICIT NONE
-
-   ! The maximum number of output channels which can be output by the code.
-   INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 21705
 
    PRIVATE
       ! ..... Public Subroutines ...................................................................................................

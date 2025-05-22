@@ -24,7 +24,6 @@ MODULE SD_FEM
 
  
   INTEGER(IntKi),   PARAMETER  :: MaxMemJnt       = 20                    ! Maximum number of members at one joint
-  INTEGER(IntKi),   PARAMETER  :: MaxOutChs       = 2000                  ! Max number of Output Channels to be read in
   INTEGER(IntKi),   PARAMETER  :: nDOFL_TP        = 6  !TODO rename me    ! 6 degrees of freedom (length of u subarray [UTP])
    
   ! values of these parameters are ordered by their place in SubDyn input file:
