@@ -292,12 +292,11 @@ subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
       ! T%SeaSt%InputTimes(1) = t_global_next
 
    case (Module_SrvD)
-
-      call SrvD_Input_ExtrapInterp(T%SrvD%Input(1:), T%SrvD%InputTimes, T%SrvD%Input(INPUT_TEMP), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      call SrvD_Input_ExtrapInterp(T%SrvD%Input(1:, ModData%Ins), T%SrvD%InputTimes(:, ModData%Ins), T%SrvD%Input(INPUT_TEMP, ModData%Ins), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
       do j = T%p_FAST%InterpOrder, 0, -1
-         call SrvD_CopyInput(T%SrvD%Input(j), T%SrvD%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+         call SrvD_CopyInput(T%SrvD%Input(j, ModData%Ins), T%SrvD%Input(j + 1, ModData%Ins), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
       end do
-      call ShiftInputTimes(T%SrvD%InputTimes)
+      call ShiftInputTimes(T%SrvD%InputTimes(:, ModData%Ins))
 
    case default
       call SetErrStat(ErrID_Fatal, "Unknown module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
@@ -398,7 +397,7 @@ subroutine FAST_InitInputStateArrays(ModAry, ThisTime, DT, T, ErrStat, ErrMsg)
          case (Module_SeaSt)
             T%SeaSt%InputTimes = InputTimes
          case (Module_SrvD)
-            T%SrvD%InputTimes = InputTimes
+            T%SrvD%InputTimes(:, ModData%Ins) = InputTimes
          case default
             call SetErrStat(ErrID_Fatal, "Unknown module "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
             return
@@ -631,10 +630,10 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
       do j_ss = 1, ModData%SubSteps
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
-         call SrvD_UpdateStates(t_module, n_t_module, T%SrvD%Input(1:), T%SrvD%InputTimes, T%SrvD%p, &
-                                T%SrvD%x(STATE_PRED), T%SrvD%xd(STATE_PRED), &
-                                T%SrvD%z(STATE_PRED), T%SrvD%OtherSt(STATE_PRED), &
-                                T%SrvD%m, ErrStat2, ErrMsg2)
+         call SrvD_UpdateStates(t_module, n_t_module, T%SrvD%Input(1:,ModData%Ins), T%SrvD%InputTimes(:,ModData%Ins), T%SrvD%p(ModData%Ins), &
+                                T%SrvD%x(ModData%Ins, STATE_PRED), T%SrvD%xd(ModData%Ins, STATE_PRED), &
+                                T%SrvD%z(ModData%Ins, STATE_PRED), T%SrvD%OtherSt(ModData%Ins, STATE_PRED), &
+                                T%SrvD%m(ModData%Ins), ErrStat2, ErrMsg2)
          if (Failed()) return
       end do
 
@@ -771,9 +770,9 @@ subroutine FAST_CalcOutput(ModData, Mappings, ThisTime, iInput, iState, T, ErrSt
                             T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2)
 
    case (Module_SrvD)
-      call SrvD_CalcOutput(ThisTime, T%SrvD%Input(iInput), T%SrvD%p, &
-                           T%SrvD%x(iState), T%SrvD%xd(iState), T%SrvD%z(iState), T%SrvD%OtherSt(iState), &
-                           T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2)
+      call SrvD_CalcOutput(ThisTime, T%SrvD%Input(iInput,ModData%Ins), T%SrvD%p(ModData%Ins), &
+                           T%SrvD%x(ModData%Ins,iState), T%SrvD%xd(ModData%Ins,iState), T%SrvD%z(ModData%Ins,iState), T%SrvD%OtherSt(ModData%Ins,iState), &
+                           T%SrvD%y(ModData%Ins), T%SrvD%m(ModData%Ins), ErrStat2, ErrMsg2)
 
    case default
       call SetErrStat(ErrID_Fatal, "Unknown module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
@@ -870,7 +869,7 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
          call SeaSt_VarsPackInput(ModData%Vars, T%SeaSt%Input(iInput), u_op)
          call SeaSt_PackExtInputAry(ModData%Vars, T%SeaSt%Input(iInput), u_op)
       case (Module_SrvD)
-         call SrvD_VarsPackInput(ModData%Vars, T%SrvD%Input(iInput), u_op)
+         call SrvD_VarsPackInput(ModData%Vars, T%SrvD%Input(iInput,ModData%Ins), u_op)
       case default
          call SetErrStat(ErrID_Fatal, "Input unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -927,7 +926,7 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
          call SeaSt_PackExtOutputAry(ModData%Vars, T%SeaSt%y, y_op)
          call SeaSt_VarsPackOutput(ModData%Vars, T%SeaSt%y, y_op)
       case (Module_SrvD)
-         call SrvD_VarsPackOutput(ModData%Vars, T%SrvD%y, y_op)
+         call SrvD_VarsPackOutput(ModData%Vars, T%SrvD%y(ModData%Ins), y_op)
       case default
          call SetErrStat(ErrID_Fatal, "Output unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -982,7 +981,7 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
       case (Module_SeaSt)
          call SeaSt_VarsPackContState(ModData%Vars, T%SeaSt%x(iState), x_op)
       case (Module_SrvD)
-         call SrvD_VarsPackContState(ModData%Vars, T%SrvD%x(iState), x_op)
+         call SrvD_VarsPackContState(ModData%Vars, T%SrvD%x(ModData%Ins, iState), x_op)
       case default
          call SetErrStat(ErrID_Fatal, "Continuous State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -1121,10 +1120,11 @@ subroutine FAST_GetOP(ModData, ThisTime, iInput, iState, T, ErrStat, ErrMsg, &
 !        call SeaSt_VarsPackContStateDeriv(ModData%Vars, T%SeaSt%x(StateIndex), dx_op)
 
       case (Module_SrvD)
-         call SrvD_CalcContStateDeriv(ThisTime, T%SrvD%Input(iInput), T%SrvD%p, T%SrvD%x(iState), &
-                                      T%SrvD%xd(iState), T%SrvD%z(iState), T%SrvD%OtherSt(iState), &
-                                      T%SrvD%m, T%SrvD%m%dxdt_lin, ErrStat2, ErrMsg2)
-         call SrvD_VarsPackContStateDeriv(ModData%Vars, T%SrvD%m%dxdt_lin, dx_op)
+         call SrvD_CalcContStateDeriv(ThisTime, T%SrvD%Input(iInput, ModData%Ins), T%SrvD%p(ModData%Ins), &
+                                      T%SrvD%x(ModData%Ins, iState), T%SrvD%xd(ModData%Ins, iState), &
+                                      T%SrvD%z(ModData%Ins, iState), T%SrvD%OtherSt(ModData%Ins, iState), &
+                                      T%SrvD%m(ModData%Ins), T%SrvD%m(ModData%Ins)%dxdt_lin, ErrStat2, ErrMsg2)
+         call SrvD_VarsPackContStateDeriv(ModData%Vars, T%SrvD%m(ModData%Ins)%dxdt_lin, dx_op)
 
       case default
          call SetErrStat(ErrID_Fatal, "Continuous State Derivatives unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
@@ -1205,7 +1205,7 @@ subroutine FAST_SetOP(ModData, iInput, iState, T, ErrStat, ErrMsg, &
       case (Module_SeaSt)
          call SeaSt_VarsUnpackInput(ModData%Vars, u_op, T%SeaSt%Input(iInput))
       case (Module_SrvD)
-         call SrvD_VarsUnpackInput(ModData%Vars, u_op, T%SrvD%Input(iInput))
+         call SrvD_VarsUnpackInput(ModData%Vars, u_op, T%SrvD%Input(iInput, ModData%Ins))
       case default
          call SetErrStat(ErrID_Fatal, "Input unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -1256,7 +1256,7 @@ subroutine FAST_SetOP(ModData, iInput, iState, T, ErrStat, ErrMsg, &
       case (Module_SeaSt)
          call SeaSt_VarsUnpackContState(ModData%Vars, x_op, T%SeaSt%x(iState))
       case (Module_SrvD)
-         call SrvD_VarsUnpackContState(ModData%Vars, x_op, T%SrvD%x(iState))
+         call SrvD_VarsUnpackContState(ModData%Vars, x_op, T%SrvD%x(ModData%Ins, iState))
       case default
          call SetErrStat(ErrID_Fatal, "Continuous State unsupported module: "//ModData%Abbr, ErrStat, ErrMsg, RoutineName)
          return
@@ -1359,8 +1359,10 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, Er
                                 dYdu=dYdu, dXdu=dXdu)
 
    case (Module_SrvD)
-      call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(iInput), T%SrvD%p, T%SrvD%x(iState), T%SrvD%xd(iState), &
-                               T%SrvD%z(iState), T%SrvD%OtherSt(iState), T%SrvD%y, T%SrvD%m, &
+      call SrvD_JacobianPInput(ThisTime, T%SrvD%Input(iInput, ModData%Ins), T%SrvD%p(ModData%Ins), &
+                               T%SrvD%x(ModData%Ins, iState), T%SrvD%xd(ModData%Ins, iState), &
+                               T%SrvD%z(ModData%Ins, iState), T%SrvD%OtherSt(ModData%Ins, iState), &
+                               T%SrvD%y(ModData%Ins), T%SrvD%m(ModData%Ins), &
                                ErrStat2, ErrMsg2, dYdu=dYdu, dXdu=dXdu)
 
    case default
@@ -1480,10 +1482,10 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat
                                     dYdx=dYdx, dXdx=dXdx)
 
    case (Module_SrvD)
-      call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(iInput), T%SrvD%p, &
-                                   T%SrvD%x(iState), T%SrvD%xd(iState), &
-                                   T%SrvD%z(iState), T%SrvD%OtherSt(iState), &
-                                   T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2, &
+      call SrvD_JacobianPContState(ThisTime, T%SrvD%Input(iInput, ModData%Ins), T%SrvD%p(ModData%Ins), &
+                                   T%SrvD%x(ModData%Ins, iState), T%SrvD%xd(ModData%Ins, iState), &
+                                   T%SrvD%z(ModData%Ins, iState), T%SrvD%OtherSt(ModData%Ins, iState), &
+                                   T%SrvD%y(ModData%Ins), T%SrvD%m(ModData%Ins), ErrStat2, ErrMsg2, &
                                    dYdx=dYdx, dXdx=dXdx)
 
    case default
@@ -1653,10 +1655,10 @@ subroutine FAST_CopyStates(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
 
    case (Module_SrvD)
 
-      call SrvD_CopyContState(T%SrvD%x(iSrc), T%SrvD%x(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
-      call SrvD_CopyDiscState(T%SrvD%xd(iSrc), T%SrvD%xd(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
-      call SrvD_CopyConstrState(T%SrvD%z(iSrc), T%SrvD%z(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
-      call SrvD_CopyOtherState(T%SrvD%OtherSt(iSrc), T%SrvD%OtherSt(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+      call SrvD_CopyContState(T%SrvD%x(ModData%Ins, iSrc), T%SrvD%x(ModData%Ins, iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+      call SrvD_CopyDiscState(T%SrvD%xd(ModData%Ins, iSrc), T%SrvD%xd(ModData%Ins, iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+      call SrvD_CopyConstrState(T%SrvD%z(ModData%Ins, iSrc), T%SrvD%z(ModData%Ins, iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+      call SrvD_CopyOtherState(T%SrvD%OtherSt(ModData%Ins, iSrc), T%SrvD%OtherSt(ModData%Ins, iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
 
    case default
       call SetErrStat(ErrID_Fatal, "Unknown module "//trim(ModData%Abbr), ErrStat, ErrMsg, RoutineName)
@@ -1757,7 +1759,7 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
       call SeaSt_CopyInput(T%SeaSt%Input(iSrc), T%SeaSt%Input(iDst), CtrlCode, ErrStat2, ErrMsg2)
 
    case (Module_SrvD)
-      call SrvD_CopyInput(T%SrvD%Input(iSrc), T%SrvD%Input(iDst), CtrlCode, ErrStat2, ErrMsg2)
+      call SrvD_CopyInput(T%SrvD%Input(iSrc, ModData%Ins), T%SrvD%Input(iDst, ModData%Ins), CtrlCode, ErrStat2, ErrMsg2)
 
    case default
       ErrStat2 = ErrID_Fatal
@@ -1916,9 +1918,9 @@ subroutine FAST_ModEnd(Mods, T, ErrStat, ErrMsg)
                            T%SeaSt%y, T%SeaSt%m, ErrStat2, ErrMsg2)
 
          case (Module_SrvD)
-            call SrvD_End(T%SrvD%Input(1), T%SrvD%p, T%SrvD%x(STATE_CURR), T%SrvD%xd(STATE_CURR), &
-                          T%SrvD%z(STATE_CURR), T%SrvD%OtherSt(STATE_CURR), &
-                          T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2)
+            call SrvD_End(T%SrvD%Input(1, ModData%Ins), T%SrvD%p(ModData%Ins), T%SrvD%x(ModData%Ins, STATE_CURR), T%SrvD%xd(ModData%Ins, STATE_CURR), &
+                          T%SrvD%z(ModData%Ins, STATE_CURR), T%SrvD%OtherSt(ModData%Ins, STATE_CURR), &
+                          T%SrvD%y(ModData%Ins), T%SrvD%m(ModData%Ins), ErrStat2, ErrMsg2)
 
          case default
             call SetErrStat(ErrID_Fatal, "Unknown module "//trim(ModData%Abbr), ErrStat, ErrMsg, RoutineName)

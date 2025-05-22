@@ -61,7 +61,7 @@ param	^	-	INTEGER	Module_ADsk	-	20	-	"AeroDisk"	-
 param	^	-	INTEGER	Module_SED 	-	21	-	"Simplified-ElastoDyn" -
 param	^	-	INTEGER	NumModules	-	21	-	"The number of modules available in FAST"	-
 # Other Constants
-param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
+param	^	-	INTEGER	MaxBladesBD	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
 # Constants for steady-state solve (indices for output channels)
 param	^	-	INTEGER	SS_Indx_Pitch	-	1	-	"pitch"	-
@@ -106,15 +106,14 @@ typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_phase     {:}{:}{:}  -  - 
 # ..... FAST_ParameterType data .......................................................................................................
 # Misc data for coupling:
 typedef	FAST	FAST_ParameterType	DbKi	DT	-	-	-	"Integration time step [global time]"	s
-typedef	^	FAST_ParameterType	DbKi	DT_module	{NumModules}	-	-	"Integration time step [global time]"	s
-typedef	^	FAST_ParameterType	IntKi	n_substeps	{NumModules}	-	-	"The number of module substeps for advancing states from t_global to t_global_next"	-
 typedef	^	FAST_ParameterType	INTEGER	n_TMax_m1	-	-	-	"The time step of TMax - dt (the end time of the simulation)"	(-)
 typedef	^	FAST_ParameterType	DbKi	TMax	-	-	-	"Total run time"	s
 typedef	^	FAST_ParameterType	IntKi	InterpOrder	-	-	-	"Interpolation order {0,1,2}"	-
 typedef	^	FAST_ParameterType	IntKi	NumCrctn	-	-	-	"Number of correction iterations"	-
 typedef	^	FAST_ParameterType	IntKi	KMax	-	-	-	"Maximum number of input-output-solve or nonlinear solve residual equation iterations (KMax >= 1) [>0]"	-
 typedef	^	FAST_ParameterType	IntKi	numIceLegs	-	-	-	"number of suport-structure legs in contact with ice (IceDyn coupling)"	-
-typedef	^	FAST_ParameterType	IntKi	nBeams	-	-	-	"number of BeamDyn instances"	-
+typedef	^	FAST_ParameterType	IntKi	NumBD	-	-	-	"number of BeamDyn instances"	-
+typedef	^	FAST_ParameterType	IntKi	BDRotMap	:	-	-	"array mapping BeamDyn instance to rotor number"	-
 typedef	^	FAST_ParameterType	LOGICAL	BD_OutputSibling	-	-	-	"flag to determine if BD input is sibling of output mesh"	-
 # Data for TC Solver:
 typedef	^	FAST_ParameterType	DbKi	RhoInf	-	-	-	"Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]"	-
@@ -126,6 +125,7 @@ typedef	^	FAST_ParameterType	Reki	UJacSclFact	-	-	-	"Scaling factor used to get 
 typedef	^	FAST_ParameterType	IntKi	SizeJac_Opt1	{9}	-	-	"(1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion;"	-
 typedef	^	FAST_ParameterType	IntKi	SolveOption	-	-	-	"Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc)"	-
 # Feature switches and flags:
+typedef	^	FAST_ParameterType	IntKi	NRotors	-	-	-	"Number of rotors in turbine"	-
 typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD; Module_SED}"	-
 typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_ExtInfw}"	-
 typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_ADsk; Module_AD}"	-
@@ -152,16 +152,16 @@ typedef ^   FAST_ParameterType  ReKi    Pvap        -   -   -   "Vapour pressure
 typedef ^   FAST_ParameterType  ReKi    WtrDpth     -   -   -   "Water depth" m
 typedef ^   FAST_ParameterType  ReKi    MSL2SWL     -   -   -   "Offset between still-water level and mean sea level" m
 # Input file names:
-typedef	^	FAST_ParameterType	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn/Simplified-ElastoDyn input file"	-
-typedef	^	FAST_ParameterType	CHARACTER(1024)	BDBldFile	{MaxNBlades}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
-typedef	^	FAST_ParameterType	CHARACTER(1024)	InflowFile	-	-	-	"Name of file containing inflow wind input parameters"	-
-typedef	^	FAST_ParameterType	CHARACTER(1024)	AeroFile	-	-	-	"Name of file containing aerodynamic input parameters"	-
-typedef	^	FAST_ParameterType	CHARACTER(1024)	ServoFile	-	-	-	"Name of file containing control and electrical-drive input parameters"	-
-typedef	^	FAST_ParameterType	CHARACTER(1024)	SeaStFile   -	-	-	"Name of file containing sea state input parameters"	-
-typedef	^	FAST_ParameterType	CHARACTER(1024)	HydroFile	-	-	-	"Name of file containing hydrodynamic input parameters"	-
-typedef	^	FAST_ParameterType	CHARACTER(1024)	SubFile	-	-	-	"Name of file containing sub-structural input parameters"	-
-typedef	^	FAST_ParameterType	CHARACTER(1024)	MooringFile	-	-	-	"Name of file containing mooring system input parameters"	-
-typedef	^	FAST_ParameterType	CHARACTER(1024)	IceFile	-	-	-	"Name of file containing ice loading input parameters"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	EDFile	:	-	-	"ElastoDyn/Simplified-ElastoDyn input file paths (NRotors)"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	BDBldFile	::	-	-	"BeamDyn input file paths for each blade (MaxBladesBD,NRotors)"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	ServoFile	:	-	-	"Turbine control and electrical-drive input file paths (NRotors)"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	InflowFile	-	-	-	"Inflow wind input file path"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	AeroFile	-	-	-	"Aerodynamic input file path"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	SeaStFile   -	-	-	"Sea state input file path"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	HydroFile	-	-	-	"Hydrodynamic input file path"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	SubFile	-	-	-	"sub-structural input file path"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	MooringFile	-	-	-	"mooring system input file path"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	IceFile	-	-	-	"ice loading input file path"	-
 #  Parameters for file/screen output
 #typedef	^	FAST_ParameterType	DbKi	SttsTime	-	-	-	"Amount of time between screen status messages"	s
 typedef	^	FAST_ParameterType	DbKi	TStart	-	-	-	"Time to begin tabular output"	s
@@ -322,15 +322,15 @@ typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 
 # ..... ServoDyn data .......................................................................................................
-typedef	FAST	ServoDyn_Data	SrvD_ContinuousStateType	x	{:}	-	-	"Continuous states"
-typedef	^	^	SrvD_DiscreteStateType	xd	{:}	-	-	"Discrete states"
-typedef	^	^	SrvD_ConstraintStateType	z	{:}	-	-	"Constraint states"
-typedef	^	^	SrvD_OtherStateType	OtherSt	{:}	-	-	"Other states"
-typedef	^	^	SrvD_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	SrvD_OutputType	y	-	-	-	"System outputs"
-typedef	^	^	SrvD_MiscVarType	m	-	-	-	"Misc (optimization) variables not associated with time"
-typedef	^	^	SrvD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
-typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
+typedef	FAST	ServoDyn_Data	SrvD_ContinuousStateType	x	{:}{:}	-	-	"Continuous states"
+typedef	^	^	SrvD_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
+typedef	^	^	SrvD_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
+typedef	^	^	SrvD_OtherStateType	OtherSt	{:}{:}	-	-	"Other states"
+typedef	^	^	SrvD_ParameterType	p	{:}	-	-	"Parameters"
+typedef	^	^	SrvD_OutputType	y	{:}	-	-	"System outputs"
+typedef	^	^	SrvD_MiscVarType	m	{:}	-	-	"Misc (optimization) variables not associated with time"
+typedef	^	^	SrvD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
 
 # ..... AeroDyn data .......................................................................................................
 typedef	FAST	AeroDyn_Data	AD_ContinuousStateType	x	{:}	-	-	"Continuous states"
@@ -499,14 +499,12 @@ typedef	^	FAST_ExternInputType	ReKi	CableDeltaLdot	{20}	-	-	"Cable control Delta
 # ..... FAST_MiscVarType data .......................................................................................................
 typedef	FAST	FAST_MiscVarType	DbKi	TiLstPrn	-	-	-	"The simulation time of the last print (to file)"	(s)
 typedef	^	FAST_MiscVarType	DbKi	t_global	-	-	-	"Current simulation time (for global/FAST simulation)"	(s)
-typedef	^	FAST_MiscVarType	DbKi	NextJacCalcTime	-	-	-	"Time between calculating Jacobians in the HD-ED and SD-ED simulations"	(s)
 typedef	^	FAST_MiscVarType	ReKi	PrevClockTime	-	-	-	"Clock time at start of simulation in seconds"	(s)
 typedef	^	FAST_MiscVarType	ReKi	UsrTime1	-	-	-	"User CPU time for simulation initialization"	(s)
 typedef	^	FAST_MiscVarType	ReKi	UsrTime2	-	-	-	"User CPU time for simulation (without intialization)"	(s)
 typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including intialization)"
 typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation (after initialization)"
 #typedef	^	FAST_MiscVarType	IntKi	n_t_global	-	-	-	"simulation time step, loop counter for global (FAST) simulation"	(s)
-typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)
 typedef	^	FAST_MiscVarType	FAST_ExternInputType	ExternInput	-	-	-	"external input values"	-
 typedef	^	FAST_MiscVarType	FAST_MiscLinType	Lin	-	-	-	"misc data for linearization analysis"	-
 
@@ -519,7 +517,7 @@ typedef   ^   FAST_InitData    SED_InitOutputType          OutData_SED      -  -
 typedef   ^   FAST_InitData    BD_InitInputType             InData_BD       -  -  -  "BD Initialization input data"
 typedef   ^   FAST_InitData    BD_InitOutputType           OutData_BD       :  -  -  "BD Initialization output data"
 typedef   ^   FAST_InitData    SrvD_InitInputType           InData_SrvD     -  -  -  "SrvD Initialization input data"
-typedef   ^   FAST_InitData    SrvD_InitOutputType         OutData_SrvD     -  -  -  "SrvD Initialization output data"
+typedef   ^   FAST_InitData    SrvD_InitOutputType         OutData_SrvD     :  -  -  "SrvD Initialization output data"
 typedef   ^   FAST_InitData    AD_InitInputType             InData_AD       -  -  -  "AD Initialization input data"
 typedef   ^   FAST_InitData    AD_InitOutputType           OutData_AD       -  -  -  "AD Initialization output data"
 typedef   ^   FAST_InitData    ADsk_InitInputType           InData_ADsk     -  -  -  "ADsk Initialization input data"

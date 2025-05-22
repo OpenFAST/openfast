@@ -124,6 +124,8 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
+    REAL(R8Ki) , DIMENSION(1:6)  :: qR0 = 0.0_R8Ki      !< Initial rigid-body displacement (floating only) [-]
+    LOGICAL  :: IsFloating = .false.      !< Flag indicating if the substructure is floating [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: CableCChanRqst      !< flag indicating control channel for active cable tensioning is requested [-]
   END TYPE SD_InitOutputType
 ! =======================
@@ -1090,6 +1092,8 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyModVarsType(SrcInitOutputData%Vars, DstInitOutputData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%qR0 = SrcInitOutputData%qR0
+   DstInitOutputData%IsFloating = SrcInitOutputData%IsFloating
    if (allocated(SrcInitOutputData%CableCChanRqst)) then
       LB(1:1) = lbound(SrcInitOutputData%CableCChanRqst)
       UB(1:1) = ubound(SrcInitOutputData%CableCChanRqst)
@@ -1137,6 +1141,8 @@ subroutine SD_PackInitOutput(RF, Indata)
    call RegPackAlloc(RF, InData%WriteOutputUnt)
    call NWTC_Library_PackProgDesc(RF, InData%Ver) 
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
+   call RegPack(RF, InData%qR0)
+   call RegPack(RF, InData%IsFloating)
    call RegPackAlloc(RF, InData%CableCChanRqst)
    if (RegCheckErr(RF, RoutineName)) return
 end subroutine
@@ -1153,6 +1159,8 @@ subroutine SD_UnPackInitOutput(RF, OutData)
    call RegUnpackAlloc(RF, OutData%WriteOutputUnt); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackProgDesc(RF, OutData%Ver) ! Ver 
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
+   call RegUnpack(RF, OutData%qR0); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%IsFloating); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%CableCChanRqst); if (RegCheckErr(RF, RoutineName)) return
 end subroutine
 

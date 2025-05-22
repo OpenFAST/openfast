@@ -304,7 +304,7 @@ subroutine FAST_AeroMapDriver(AM, m, p_FAST, m_FAST, y_FAST, T, ErrStat, ErrMsg)
       n_global = real(n_case, DbKi) ! n_global is double-precision so that we can reuse existing code.
 
       call WrOutputLine(n_global, p_FAST, y_FAST, UnusedAry, UnusedAry, T%ED%y, UnusedAry, &
-                        T%AD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
+                        T%AD%y, UnusedAry, T%SrvD%y, UnusedAry, UnusedAry, UnusedAry, UnusedAry, UnusedAry, &
                         UnusedAry, UnusedAry, UnusedAry, UnusedAry, T%IceD%y, T%BD%y, ErrStat2, ErrMsg2)
       if (Failed()) return
 
@@ -558,7 +558,7 @@ contains
             ! because loads occasionally get very large when it fails, manually set these to zero (otherwise
             ! roundoff can lead to non-zero values with the method below, which is most useful for states)
             if (p_FAST%CompElast == Module_BD) then
-               do iter = 1, p_FAST%nBeams
+               do iter = 1, p_FAST%NumBD
                   T%BD%Input(1, iter)%DistrLoad%Force = 0.0_ReKi
                   T%BD%Input(1, iter)%DistrLoad%Moment = 0.0_ReKi
                end do
@@ -942,7 +942,7 @@ subroutine SS_BD_InputSolve_OtherBlades(AM, InputIndex, T)
    integer(IntKi), intent(in)                :: InputIndex  !< Input index to transfer
    type(FAST_TurbineType), intent(INOUT)     :: T           !< Turbine type
    integer(IntKi)                            :: j, k
-   do k = 2, T%p_FAST%nBeams
+   do k = 2, T%p_FAST%NumBD
       do j = 1, T%BD%Input(InputIndex, k)%DistrLoad%NNodes
          T%BD%Input(InputIndex, k)%DistrLoad%Force(:, j) = matmul(T%BD%Input(InputIndex, 1)%DistrLoad%Force(:, j), AM%HubOrientation(:, :, k))
          T%BD%Input(InputIndex, k)%DistrLoad%Moment(:, j) = matmul(T%BD%Input(InputIndex, 1)%DistrLoad%Moment(:, j), AM%HubOrientation(:, :, k))
@@ -1046,7 +1046,7 @@ subroutine SS_CalcContStateDeriv(AM, caseData, InputIndex, dxAry, T, ErrStat, Er
       Omega_Hub = [real(caseData%RotSpeed, R8Ki), 0.0_R8Ki, 0.0_R8Ki]
 
       ! TODO: Make this work for BeamDyn
-      ! do K = 1, T%p_FAST%nBeams
+      ! do K = 1, T%p_FAST%NumBD
 
       !    call BD_CalcContStateDeriv(SS_t_global, BD%Input(InputIndex, k), BD%p(k), BD%x(k, STATE_CURR), BD%xd(k, STATE_CURR), BD%z(k, STATE_CURR), &
       !                               BD%OtherSt(k, STATE_CURR), BD%m(k), BD%x(k, STATE_PRED), ErrStat2, ErrMsg2)
@@ -1200,7 +1200,7 @@ subroutine SS_SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, ED, BD, AD)
       !CALL ED_CalcOutput( 0.0_DbKi, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), ED%y, ED%m, ErrStat2, ErrMsg2 )
       !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
 
-      do k = 1, p_FAST%nBeams
+      do k = 1, p_FAST%NumBD
          BD%Input(1, k)%RootMotion%TranslationDisp = 0.0_ReKi
 
          theta = EulerExtract(BD%Input(1, k)%RootMotion%RefOrientation(:, :, 1))
@@ -1214,7 +1214,7 @@ subroutine SS_SetPrescribedInputs(caseData, p_FAST, y_FAST, m_FAST, ED, BD, AD)
          BD%Input(1, k)%RootMotion%TranslationAcc(:, 1) = cross_product(BD%Input(1, k)%RootMotion%RotationVel(:, 1), BD%Input(1, k)%RootMotion%TranslationVel(:, 1)) ! ED%y_interp%BladeRootMotion(k)%TranslationAcc
 
          BD%Input(1, k)%RootMotion%RotationAcc = 0.0_ReKi
-      end do ! k=p_FAST%nBeams
+      end do ! k=p_FAST%NumBD
 
    end if  ! BeamDyn
    !BeamDyn's first "state" is not actually the state. So, do we need to do something with that?????

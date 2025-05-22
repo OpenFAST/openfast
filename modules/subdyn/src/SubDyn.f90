@@ -294,6 +294,10 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    endif
    if(Failed()) return
 
+   ! Copy initial platform displacement and floating flag to initialization output
+   InitOut%qR0 = Init%qR0
+   InitOut%IsFloating = p%Floating
+
    ! --------------------------------------------------------------------------------
    ! --- Manipulation of Init and parameters
    ! --------------------------------------------------------------------------------

@@ -75,7 +75,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ADsk                      = 20      ! AeroDisk [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_SED                       = 21      ! Simplified-ElastoDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules                       = 21      ! The number of modules available in FAST [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxNBlades                       = 3      ! Maximum number of blades allowed on a turbine [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxBladesBD                      = 3      ! Maximum number of blades allowed on a turbine [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs                     = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Pitch                    = 1      ! pitch [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_TSR                      = 2      ! TSR [-]
@@ -124,15 +124,14 @@ IMPLICIT NONE
 ! =========  FAST_ParameterType  =======
   TYPE, PUBLIC :: FAST_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Integration time step [global time] [s]
-    REAL(DbKi) , DIMENSION(1:NumModules)  :: DT_module = 0.0_R8Ki      !< Integration time step [global time] [s]
-    INTEGER(IntKi) , DIMENSION(1:NumModules)  :: n_substeps = 0_IntKi      !< The number of module substeps for advancing states from t_global to t_global_next [-]
     INTEGER(IntKi)  :: n_TMax_m1 = 0_IntKi      !< The time step of TMax - dt (the end time of the simulation) [(-)]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Total run time [s]
     INTEGER(IntKi)  :: InterpOrder = 0_IntKi      !< Interpolation order {0,1,2} [-]
     INTEGER(IntKi)  :: NumCrctn = 0_IntKi      !< Number of correction iterations [-]
     INTEGER(IntKi)  :: KMax = 0_IntKi      !< Maximum number of input-output-solve or nonlinear solve residual equation iterations (KMax >= 1) [>0] [-]
     INTEGER(IntKi)  :: numIceLegs = 0_IntKi      !< number of suport-structure legs in contact with ice (IceDyn coupling) [-]
-    INTEGER(IntKi)  :: nBeams = 0_IntKi      !< number of BeamDyn instances [-]
+    INTEGER(IntKi)  :: NumBD = 0_IntKi      !< number of BeamDyn instances [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BDRotMap      !< array mapping BeamDyn instance to rotor number [-]
     LOGICAL  :: BD_OutputSibling = .false.      !< flag to determine if BD input is sibling of output mesh [-]
     REAL(DbKi)  :: RhoInf = 0.0_R8Ki      !< Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0] [-]
     REAL(DbKi)  :: ConvTol = 0.0_R8Ki      !< Convergence iteration error tolerance for tight coupling generalized alpha integrator (-) [-]
@@ -141,6 +140,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: UJacSclFact = 0.0_ReKi      !< Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians [-]
     INTEGER(IntKi) , DIMENSION(1:9)  :: SizeJac_Opt1 = 0_IntKi      !< (1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion; [-]
     INTEGER(IntKi)  :: SolveOption = 0_IntKi      !< Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc) [-]
+    INTEGER(IntKi)  :: NRotors = 0_IntKi      !< Number of rotors in turbine [-]
     INTEGER(IntKi)  :: CompElast = 0_IntKi      !< Compute blade loads (switch) {Module_ED; Module_BD; Module_SED} [-]
     INTEGER(IntKi)  :: CompInflow = 0_IntKi      !< Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_ExtInfw} [-]
     INTEGER(IntKi)  :: CompAero = 0_IntKi      !< Compute aerodynamic loads (switch) {Module_None; Module_ADsk; Module_AD} [-]
@@ -165,16 +165,16 @@ IMPLICIT NONE
     REAL(ReKi)  :: Pvap = 0.0_ReKi      !< Vapour pressure of working fluid [Pa]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
-    CHARACTER(1024)  :: EDFile      !< The name of the ElastoDyn/Simplified-ElastoDyn input file [-]
-    CHARACTER(1024) , DIMENSION(1:MaxNBlades)  :: BDBldFile      !< Name of files containing BeamDyn inputs for each blade [-]
-    CHARACTER(1024)  :: InflowFile      !< Name of file containing inflow wind input parameters [-]
-    CHARACTER(1024)  :: AeroFile      !< Name of file containing aerodynamic input parameters [-]
-    CHARACTER(1024)  :: ServoFile      !< Name of file containing control and electrical-drive input parameters [-]
-    CHARACTER(1024)  :: SeaStFile      !< Name of file containing sea state input parameters [-]
-    CHARACTER(1024)  :: HydroFile      !< Name of file containing hydrodynamic input parameters [-]
-    CHARACTER(1024)  :: SubFile      !< Name of file containing sub-structural input parameters [-]
-    CHARACTER(1024)  :: MooringFile      !< Name of file containing mooring system input parameters [-]
-    CHARACTER(1024)  :: IceFile      !< Name of file containing ice loading input parameters [-]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: EDFile      !< ElastoDyn/Simplified-ElastoDyn input file paths (NRotors) [-]
+    CHARACTER(1024) , DIMENSION(:,:), ALLOCATABLE  :: BDBldFile      !< BeamDyn input file paths for each blade (MaxBladesBD,NRotors) [-]
+    CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: ServoFile      !< Turbine control and electrical-drive input file paths (NRotors) [-]
+    CHARACTER(1024)  :: InflowFile      !< Inflow wind input file path [-]
+    CHARACTER(1024)  :: AeroFile      !< Aerodynamic input file path [-]
+    CHARACTER(1024)  :: SeaStFile      !< Sea state input file path [-]
+    CHARACTER(1024)  :: HydroFile      !< Hydrodynamic input file path [-]
+    CHARACTER(1024)  :: SubFile      !< sub-structural input file path [-]
+    CHARACTER(1024)  :: MooringFile      !< mooring system input file path [-]
+    CHARACTER(1024)  :: IceFile      !< ice loading input file path [-]
     REAL(DbKi)  :: TStart = 0.0_R8Ki      !< Time to begin tabular output [s]
     REAL(DbKi)  :: DT_Out = 0.0_R8Ki      !< Time step for tabular output [s]
     LOGICAL  :: WrSttsTime = .false.      !< Whether we should write the status times to the screen [-]
@@ -331,15 +331,15 @@ IMPLICIT NONE
 ! =======================
 ! =========  ServoDyn_Data  =======
   TYPE, PUBLIC :: ServoDyn_Data
-    TYPE(SrvD_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: x      !< Continuous states [-]
-    TYPE(SrvD_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: xd      !< Discrete states [-]
-    TYPE(SrvD_ConstraintStateType) , DIMENSION(:), ALLOCATABLE  :: z      !< Constraint states [-]
-    TYPE(SrvD_OtherStateType) , DIMENSION(:), ALLOCATABLE  :: OtherSt      !< Other states [-]
-    TYPE(SrvD_ParameterType)  :: p      !< Parameters [-]
-    TYPE(SrvD_OutputType)  :: y      !< System outputs [-]
-    TYPE(SrvD_MiscVarType)  :: m      !< Misc (optimization) variables not associated with time [-]
-    TYPE(SrvD_InputType) , DIMENSION(:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
-    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
+    TYPE(SrvD_ContinuousStateType) , DIMENSION(:,:), ALLOCATABLE  :: x      !< Continuous states [-]
+    TYPE(SrvD_DiscreteStateType) , DIMENSION(:,:), ALLOCATABLE  :: xd      !< Discrete states [-]
+    TYPE(SrvD_ConstraintStateType) , DIMENSION(:,:), ALLOCATABLE  :: z      !< Constraint states [-]
+    TYPE(SrvD_OtherStateType) , DIMENSION(:,:), ALLOCATABLE  :: OtherSt      !< Other states [-]
+    TYPE(SrvD_ParameterType) , DIMENSION(:), ALLOCATABLE  :: p      !< Parameters [-]
+    TYPE(SrvD_OutputType) , DIMENSION(:), ALLOCATABLE  :: y      !< System outputs [-]
+    TYPE(SrvD_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: m      !< Misc (optimization) variables not associated with time [-]
+    TYPE(SrvD_InputType) , DIMENSION(:,:), ALLOCATABLE  :: Input      !< Array of inputs associated with InputTimes [-]
+    REAL(DbKi) , DIMENSION(:,:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
   END TYPE ServoDyn_Data
 ! =======================
 ! =========  AeroDyn_Data  =======
@@ -540,13 +540,11 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FAST_MiscVarType
     REAL(DbKi)  :: TiLstPrn = 0.0_R8Ki      !< The simulation time of the last print (to file) [(s)]
     REAL(DbKi)  :: t_global = 0.0_R8Ki      !< Current simulation time (for global/FAST simulation) [(s)]
-    REAL(DbKi)  :: NextJacCalcTime = 0.0_R8Ki      !< Time between calculating Jacobians in the HD-ED and SD-ED simulations [(s)]
     REAL(ReKi)  :: PrevClockTime = 0.0_ReKi      !< Clock time at start of simulation in seconds [(s)]
     REAL(ReKi)  :: UsrTime1 = 0.0_ReKi      !< User CPU time for simulation initialization [(s)]
     REAL(ReKi)  :: UsrTime2 = 0.0_ReKi      !< User CPU time for simulation (without intialization) [(s)]
     INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime = 0_IntKi      !< Start time of simulation (including intialization) [-]
     INTEGER(IntKi) , DIMENSION(1:8)  :: SimStrtTime = 0_IntKi      !< Start time of simulation (after initialization) [-]
-    LOGICAL  :: calcJacobian = .false.      !< Should we calculate Jacobians in Option 1? [(flag)]
     TYPE(FAST_ExternInputType)  :: ExternInput      !< external input values [-]
     TYPE(FAST_MiscLinType)  :: Lin      !< misc data for linearization analysis [-]
   END TYPE FAST_MiscVarType
@@ -560,7 +558,7 @@ IMPLICIT NONE
     TYPE(BD_InitInputType)  :: InData_BD      !< BD Initialization input data [-]
     TYPE(BD_InitOutputType) , DIMENSION(:), ALLOCATABLE  :: OutData_BD      !< BD Initialization output data [-]
     TYPE(SrvD_InitInputType)  :: InData_SrvD      !< SrvD Initialization input data [-]
-    TYPE(SrvD_InitOutputType)  :: OutData_SrvD      !< SrvD Initialization output data [-]
+    TYPE(SrvD_InitOutputType) , DIMENSION(:), ALLOCATABLE  :: OutData_SrvD      !< SrvD Initialization output data [-]
     TYPE(AD_InitInputType)  :: InData_AD      !< AD Initialization input data [-]
     TYPE(AD_InitOutputType)  :: OutData_AD      !< AD Initialization output data [-]
     TYPE(ADsk_InitInputType)  :: InData_ADsk      !< ADsk Initialization input data [-]
@@ -1069,22 +1067,32 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstParamData%DT = SrcParamData%DT
-   DstParamData%DT_module = SrcParamData%DT_module
-   DstParamData%n_substeps = SrcParamData%n_substeps
    DstParamData%n_TMax_m1 = SrcParamData%n_TMax_m1
    DstParamData%TMax = SrcParamData%TMax
    DstParamData%InterpOrder = SrcParamData%InterpOrder
    DstParamData%NumCrctn = SrcParamData%NumCrctn
    DstParamData%KMax = SrcParamData%KMax
    DstParamData%numIceLegs = SrcParamData%numIceLegs
-   DstParamData%nBeams = SrcParamData%nBeams
+   DstParamData%NumBD = SrcParamData%NumBD
+   if (allocated(SrcParamData%BDRotMap)) then
+      LB(1:1) = lbound(SrcParamData%BDRotMap)
+      UB(1:1) = ubound(SrcParamData%BDRotMap)
+      if (.not. allocated(DstParamData%BDRotMap)) then
+         allocate(DstParamData%BDRotMap(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%BDRotMap.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%BDRotMap = SrcParamData%BDRotMap
+   end if
    DstParamData%BD_OutputSibling = SrcParamData%BD_OutputSibling
    DstParamData%RhoInf = SrcParamData%RhoInf
    DstParamData%ConvTol = SrcParamData%ConvTol
@@ -1093,6 +1101,7 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%UJacSclFact = SrcParamData%UJacSclFact
    DstParamData%SizeJac_Opt1 = SrcParamData%SizeJac_Opt1
    DstParamData%SolveOption = SrcParamData%SolveOption
+   DstParamData%NRotors = SrcParamData%NRotors
    DstParamData%CompElast = SrcParamData%CompElast
    DstParamData%CompInflow = SrcParamData%CompInflow
    DstParamData%CompAero = SrcParamData%CompAero
@@ -1117,11 +1126,44 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%Pvap = SrcParamData%Pvap
    DstParamData%WtrDpth = SrcParamData%WtrDpth
    DstParamData%MSL2SWL = SrcParamData%MSL2SWL
-   DstParamData%EDFile = SrcParamData%EDFile
-   DstParamData%BDBldFile = SrcParamData%BDBldFile
+   if (allocated(SrcParamData%EDFile)) then
+      LB(1:1) = lbound(SrcParamData%EDFile)
+      UB(1:1) = ubound(SrcParamData%EDFile)
+      if (.not. allocated(DstParamData%EDFile)) then
+         allocate(DstParamData%EDFile(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%EDFile.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%EDFile = SrcParamData%EDFile
+   end if
+   if (allocated(SrcParamData%BDBldFile)) then
+      LB(1:2) = lbound(SrcParamData%BDBldFile)
+      UB(1:2) = ubound(SrcParamData%BDBldFile)
+      if (.not. allocated(DstParamData%BDBldFile)) then
+         allocate(DstParamData%BDBldFile(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%BDBldFile.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%BDBldFile = SrcParamData%BDBldFile
+   end if
+   if (allocated(SrcParamData%ServoFile)) then
+      LB(1:1) = lbound(SrcParamData%ServoFile)
+      UB(1:1) = ubound(SrcParamData%ServoFile)
+      if (.not. allocated(DstParamData%ServoFile)) then
+         allocate(DstParamData%ServoFile(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ServoFile.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ServoFile = SrcParamData%ServoFile
+   end if
    DstParamData%InflowFile = SrcParamData%InflowFile
    DstParamData%AeroFile = SrcParamData%AeroFile
-   DstParamData%ServoFile = SrcParamData%ServoFile
    DstParamData%SeaStFile = SrcParamData%SeaStFile
    DstParamData%HydroFile = SrcParamData%HydroFile
    DstParamData%SubFile = SrcParamData%SubFile
@@ -1226,6 +1268,18 @@ subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(ParamData%BDRotMap)) then
+      deallocate(ParamData%BDRotMap)
+   end if
+   if (allocated(ParamData%EDFile)) then
+      deallocate(ParamData%EDFile)
+   end if
+   if (allocated(ParamData%BDBldFile)) then
+      deallocate(ParamData%BDBldFile)
+   end if
+   if (allocated(ParamData%ServoFile)) then
+      deallocate(ParamData%ServoFile)
+   end if
    call FAST_DestroyVTK_SurfaceType(ParamData%VTK_surface, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%RotSpeed)) then
@@ -1245,15 +1299,14 @@ subroutine FAST_PackParam(RF, Indata)
    character(*), parameter         :: RoutineName = 'FAST_PackParam'
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%DT)
-   call RegPack(RF, InData%DT_module)
-   call RegPack(RF, InData%n_substeps)
    call RegPack(RF, InData%n_TMax_m1)
    call RegPack(RF, InData%TMax)
    call RegPack(RF, InData%InterpOrder)
    call RegPack(RF, InData%NumCrctn)
    call RegPack(RF, InData%KMax)
    call RegPack(RF, InData%numIceLegs)
-   call RegPack(RF, InData%nBeams)
+   call RegPack(RF, InData%NumBD)
+   call RegPackAlloc(RF, InData%BDRotMap)
    call RegPack(RF, InData%BD_OutputSibling)
    call RegPack(RF, InData%RhoInf)
    call RegPack(RF, InData%ConvTol)
@@ -1262,6 +1315,7 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%UJacSclFact)
    call RegPack(RF, InData%SizeJac_Opt1)
    call RegPack(RF, InData%SolveOption)
+   call RegPack(RF, InData%NRotors)
    call RegPack(RF, InData%CompElast)
    call RegPack(RF, InData%CompInflow)
    call RegPack(RF, InData%CompAero)
@@ -1286,11 +1340,11 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%Pvap)
    call RegPack(RF, InData%WtrDpth)
    call RegPack(RF, InData%MSL2SWL)
-   call RegPack(RF, InData%EDFile)
-   call RegPack(RF, InData%BDBldFile)
+   call RegPackAlloc(RF, InData%EDFile)
+   call RegPackAlloc(RF, InData%BDBldFile)
+   call RegPackAlloc(RF, InData%ServoFile)
    call RegPack(RF, InData%InflowFile)
    call RegPack(RF, InData%AeroFile)
-   call RegPack(RF, InData%ServoFile)
    call RegPack(RF, InData%SeaStFile)
    call RegPack(RF, InData%HydroFile)
    call RegPack(RF, InData%SubFile)
@@ -1356,20 +1410,19 @@ subroutine FAST_UnPackParam(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(FAST_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FAST_UnPackParam'
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%DT_module); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%n_substeps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%n_TMax_m1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%TMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InterpOrder); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumCrctn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%KMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%numIceLegs); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%nBeams); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NumBD); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BDRotMap); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BD_OutputSibling); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RhoInf); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvTol); if (RegCheckErr(RF, RoutineName)) return
@@ -1378,6 +1431,7 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%UJacSclFact); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SizeJac_Opt1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SolveOption); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%NRotors); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompElast); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompInflow); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%CompAero); if (RegCheckErr(RF, RoutineName)) return
@@ -1402,11 +1456,11 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%Pvap); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%WtrDpth); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%MSL2SWL); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%EDFile); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%BDBldFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%EDFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BDBldFile); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%ServoFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%InflowFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%AeroFile); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%ServoFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SeaStFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HydroFile); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SubFile); if (RegCheckErr(RF, RoutineName)) return
@@ -3634,107 +3688,156 @@ subroutine FAST_CopyServoDyn_Data(SrcServoDyn_DataData, DstServoDyn_DataData, Ct
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)                  :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)                  :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyServoDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(SrcServoDyn_DataData%x)) then
-      LB(1:1) = lbound(SrcServoDyn_DataData%x)
-      UB(1:1) = ubound(SrcServoDyn_DataData%x)
+      LB(1:2) = lbound(SrcServoDyn_DataData%x)
+      UB(1:2) = ubound(SrcServoDyn_DataData%x)
       if (.not. allocated(DstServoDyn_DataData%x)) then
-         allocate(DstServoDyn_DataData%x(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstServoDyn_DataData%x(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstServoDyn_DataData%x.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      do i1 = LB(1), UB(1)
-         call SrvD_CopyContState(SrcServoDyn_DataData%x(i1), DstServoDyn_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_CopyContState(SrcServoDyn_DataData%x(i1,i2), DstServoDyn_DataData%x(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
       end do
    end if
    if (allocated(SrcServoDyn_DataData%xd)) then
-      LB(1:1) = lbound(SrcServoDyn_DataData%xd)
-      UB(1:1) = ubound(SrcServoDyn_DataData%xd)
+      LB(1:2) = lbound(SrcServoDyn_DataData%xd)
+      UB(1:2) = ubound(SrcServoDyn_DataData%xd)
       if (.not. allocated(DstServoDyn_DataData%xd)) then
-         allocate(DstServoDyn_DataData%xd(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstServoDyn_DataData%xd(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstServoDyn_DataData%xd.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      do i1 = LB(1), UB(1)
-         call SrvD_CopyDiscState(SrcServoDyn_DataData%xd(i1), DstServoDyn_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_CopyDiscState(SrcServoDyn_DataData%xd(i1,i2), DstServoDyn_DataData%xd(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
       end do
    end if
    if (allocated(SrcServoDyn_DataData%z)) then
-      LB(1:1) = lbound(SrcServoDyn_DataData%z)
-      UB(1:1) = ubound(SrcServoDyn_DataData%z)
+      LB(1:2) = lbound(SrcServoDyn_DataData%z)
+      UB(1:2) = ubound(SrcServoDyn_DataData%z)
       if (.not. allocated(DstServoDyn_DataData%z)) then
-         allocate(DstServoDyn_DataData%z(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstServoDyn_DataData%z(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstServoDyn_DataData%z.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      do i1 = LB(1), UB(1)
-         call SrvD_CopyConstrState(SrcServoDyn_DataData%z(i1), DstServoDyn_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_CopyConstrState(SrcServoDyn_DataData%z(i1,i2), DstServoDyn_DataData%z(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
       end do
    end if
    if (allocated(SrcServoDyn_DataData%OtherSt)) then
-      LB(1:1) = lbound(SrcServoDyn_DataData%OtherSt)
-      UB(1:1) = ubound(SrcServoDyn_DataData%OtherSt)
+      LB(1:2) = lbound(SrcServoDyn_DataData%OtherSt)
+      UB(1:2) = ubound(SrcServoDyn_DataData%OtherSt)
       if (.not. allocated(DstServoDyn_DataData%OtherSt)) then
-         allocate(DstServoDyn_DataData%OtherSt(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstServoDyn_DataData%OtherSt(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstServoDyn_DataData%OtherSt.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_CopyOtherState(SrcServoDyn_DataData%OtherSt(i1,i2), DstServoDyn_DataData%OtherSt(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
+      end do
+   end if
+   if (allocated(SrcServoDyn_DataData%p)) then
+      LB(1:1) = lbound(SrcServoDyn_DataData%p)
+      UB(1:1) = ubound(SrcServoDyn_DataData%p)
+      if (.not. allocated(DstServoDyn_DataData%p)) then
+         allocate(DstServoDyn_DataData%p(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstServoDyn_DataData%p.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
       do i1 = LB(1), UB(1)
-         call SrvD_CopyOtherState(SrcServoDyn_DataData%OtherSt(i1), DstServoDyn_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SrvD_CopyParam(SrcServoDyn_DataData%p(i1), DstServoDyn_DataData%p(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   call SrvD_CopyParam(SrcServoDyn_DataData%p, DstServoDyn_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SrvD_CopyOutput(SrcServoDyn_DataData%y, DstServoDyn_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call SrvD_CopyMisc(SrcServoDyn_DataData%m, DstServoDyn_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcServoDyn_DataData%y)) then
+      LB(1:1) = lbound(SrcServoDyn_DataData%y)
+      UB(1:1) = ubound(SrcServoDyn_DataData%y)
+      if (.not. allocated(DstServoDyn_DataData%y)) then
+         allocate(DstServoDyn_DataData%y(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstServoDyn_DataData%y.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_CopyOutput(SrcServoDyn_DataData%y(i1), DstServoDyn_DataData%y(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   if (allocated(SrcServoDyn_DataData%m)) then
+      LB(1:1) = lbound(SrcServoDyn_DataData%m)
+      UB(1:1) = ubound(SrcServoDyn_DataData%m)
+      if (.not. allocated(DstServoDyn_DataData%m)) then
+         allocate(DstServoDyn_DataData%m(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstServoDyn_DataData%m.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_CopyMisc(SrcServoDyn_DataData%m(i1), DstServoDyn_DataData%m(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    if (allocated(SrcServoDyn_DataData%Input)) then
-      LB(1:1) = lbound(SrcServoDyn_DataData%Input)
-      UB(1:1) = ubound(SrcServoDyn_DataData%Input)
+      LB(1:2) = lbound(SrcServoDyn_DataData%Input)
+      UB(1:2) = ubound(SrcServoDyn_DataData%Input)
       if (.not. allocated(DstServoDyn_DataData%Input)) then
-         allocate(DstServoDyn_DataData%Input(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstServoDyn_DataData%Input(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstServoDyn_DataData%Input.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      do i1 = LB(1), UB(1)
-         call SrvD_CopyInput(SrcServoDyn_DataData%Input(i1), DstServoDyn_DataData%Input(i1), CtrlCode, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_CopyInput(SrcServoDyn_DataData%Input(i1,i2), DstServoDyn_DataData%Input(i1,i2), CtrlCode, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         end do
       end do
    end if
    if (allocated(SrcServoDyn_DataData%InputTimes)) then
-      LB(1:1) = lbound(SrcServoDyn_DataData%InputTimes)
-      UB(1:1) = ubound(SrcServoDyn_DataData%InputTimes)
+      LB(1:2) = lbound(SrcServoDyn_DataData%InputTimes)
+      UB(1:2) = ubound(SrcServoDyn_DataData%InputTimes)
       if (.not. allocated(DstServoDyn_DataData%InputTimes)) then
-         allocate(DstServoDyn_DataData%InputTimes(LB(1):UB(1)), stat=ErrStat2)
+         allocate(DstServoDyn_DataData%InputTimes(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
             call SetErrStat(ErrID_Fatal, 'Error allocating DstServoDyn_DataData%InputTimes.', ErrStat, ErrMsg, RoutineName)
             return
@@ -3748,61 +3851,92 @@ subroutine FAST_DestroyServoDyn_Data(ServoDyn_DataData, ErrStat, ErrMsg)
    type(ServoDyn_Data), intent(inout) :: ServoDyn_DataData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_DestroyServoDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
    if (allocated(ServoDyn_DataData%x)) then
-      LB(1:1) = lbound(ServoDyn_DataData%x)
-      UB(1:1) = ubound(ServoDyn_DataData%x)
-      do i1 = LB(1), UB(1)
-         call SrvD_DestroyContState(ServoDyn_DataData%x(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      LB(1:2) = lbound(ServoDyn_DataData%x)
+      UB(1:2) = ubound(ServoDyn_DataData%x)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_DestroyContState(ServoDyn_DataData%x(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ServoDyn_DataData%x)
    end if
    if (allocated(ServoDyn_DataData%xd)) then
-      LB(1:1) = lbound(ServoDyn_DataData%xd)
-      UB(1:1) = ubound(ServoDyn_DataData%xd)
-      do i1 = LB(1), UB(1)
-         call SrvD_DestroyDiscState(ServoDyn_DataData%xd(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      LB(1:2) = lbound(ServoDyn_DataData%xd)
+      UB(1:2) = ubound(ServoDyn_DataData%xd)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_DestroyDiscState(ServoDyn_DataData%xd(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ServoDyn_DataData%xd)
    end if
    if (allocated(ServoDyn_DataData%z)) then
-      LB(1:1) = lbound(ServoDyn_DataData%z)
-      UB(1:1) = ubound(ServoDyn_DataData%z)
-      do i1 = LB(1), UB(1)
-         call SrvD_DestroyConstrState(ServoDyn_DataData%z(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      LB(1:2) = lbound(ServoDyn_DataData%z)
+      UB(1:2) = ubound(ServoDyn_DataData%z)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_DestroyConstrState(ServoDyn_DataData%z(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ServoDyn_DataData%z)
    end if
    if (allocated(ServoDyn_DataData%OtherSt)) then
-      LB(1:1) = lbound(ServoDyn_DataData%OtherSt)
-      UB(1:1) = ubound(ServoDyn_DataData%OtherSt)
-      do i1 = LB(1), UB(1)
-         call SrvD_DestroyOtherState(ServoDyn_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      LB(1:2) = lbound(ServoDyn_DataData%OtherSt)
+      UB(1:2) = ubound(ServoDyn_DataData%OtherSt)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_DestroyOtherState(ServoDyn_DataData%OtherSt(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ServoDyn_DataData%OtherSt)
    end if
-   call SrvD_DestroyParam(ServoDyn_DataData%p, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SrvD_DestroyOutput(ServoDyn_DataData%y, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SrvD_DestroyMisc(ServoDyn_DataData%m, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(ServoDyn_DataData%Input)) then
-      LB(1:1) = lbound(ServoDyn_DataData%Input)
-      UB(1:1) = ubound(ServoDyn_DataData%Input)
+   if (allocated(ServoDyn_DataData%p)) then
+      LB(1:1) = lbound(ServoDyn_DataData%p)
+      UB(1:1) = ubound(ServoDyn_DataData%p)
       do i1 = LB(1), UB(1)
-         call SrvD_DestroyInput(ServoDyn_DataData%Input(i1), ErrStat2, ErrMsg2)
+         call SrvD_DestroyParam(ServoDyn_DataData%p(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ServoDyn_DataData%p)
+   end if
+   if (allocated(ServoDyn_DataData%y)) then
+      LB(1:1) = lbound(ServoDyn_DataData%y)
+      UB(1:1) = ubound(ServoDyn_DataData%y)
+      do i1 = LB(1), UB(1)
+         call SrvD_DestroyOutput(ServoDyn_DataData%y(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ServoDyn_DataData%y)
+   end if
+   if (allocated(ServoDyn_DataData%m)) then
+      LB(1:1) = lbound(ServoDyn_DataData%m)
+      UB(1:1) = ubound(ServoDyn_DataData%m)
+      do i1 = LB(1), UB(1)
+         call SrvD_DestroyMisc(ServoDyn_DataData%m(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ServoDyn_DataData%m)
+   end if
+   if (allocated(ServoDyn_DataData%Input)) then
+      LB(1:2) = lbound(ServoDyn_DataData%Input)
+      UB(1:2) = ubound(ServoDyn_DataData%Input)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_DestroyInput(ServoDyn_DataData%Input(i1,i2), ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         end do
       end do
       deallocate(ServoDyn_DataData%Input)
    end if
@@ -3815,55 +3949,89 @@ subroutine FAST_PackServoDyn_Data(RF, Indata)
    type(RegFile), intent(inout) :: RF
    type(ServoDyn_Data), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FAST_PackServoDyn_Data'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, allocated(InData%x))
    if (allocated(InData%x)) then
-      call RegPackBounds(RF, 1, lbound(InData%x), ubound(InData%x))
-      LB(1:1) = lbound(InData%x)
-      UB(1:1) = ubound(InData%x)
-      do i1 = LB(1), UB(1)
-         call SrvD_PackContState(RF, InData%x(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%x), ubound(InData%x))
+      LB(1:2) = lbound(InData%x)
+      UB(1:2) = ubound(InData%x)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_PackContState(RF, InData%x(i1,i2)) 
+         end do
       end do
    end if
    call RegPack(RF, allocated(InData%xd))
    if (allocated(InData%xd)) then
-      call RegPackBounds(RF, 1, lbound(InData%xd), ubound(InData%xd))
-      LB(1:1) = lbound(InData%xd)
-      UB(1:1) = ubound(InData%xd)
-      do i1 = LB(1), UB(1)
-         call SrvD_PackDiscState(RF, InData%xd(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%xd), ubound(InData%xd))
+      LB(1:2) = lbound(InData%xd)
+      UB(1:2) = ubound(InData%xd)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_PackDiscState(RF, InData%xd(i1,i2)) 
+         end do
       end do
    end if
    call RegPack(RF, allocated(InData%z))
    if (allocated(InData%z)) then
-      call RegPackBounds(RF, 1, lbound(InData%z), ubound(InData%z))
-      LB(1:1) = lbound(InData%z)
-      UB(1:1) = ubound(InData%z)
-      do i1 = LB(1), UB(1)
-         call SrvD_PackConstrState(RF, InData%z(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%z), ubound(InData%z))
+      LB(1:2) = lbound(InData%z)
+      UB(1:2) = ubound(InData%z)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_PackConstrState(RF, InData%z(i1,i2)) 
+         end do
       end do
    end if
    call RegPack(RF, allocated(InData%OtherSt))
    if (allocated(InData%OtherSt)) then
-      call RegPackBounds(RF, 1, lbound(InData%OtherSt), ubound(InData%OtherSt))
-      LB(1:1) = lbound(InData%OtherSt)
-      UB(1:1) = ubound(InData%OtherSt)
-      do i1 = LB(1), UB(1)
-         call SrvD_PackOtherState(RF, InData%OtherSt(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%OtherSt), ubound(InData%OtherSt))
+      LB(1:2) = lbound(InData%OtherSt)
+      UB(1:2) = ubound(InData%OtherSt)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_PackOtherState(RF, InData%OtherSt(i1,i2)) 
+         end do
       end do
    end if
-   call SrvD_PackParam(RF, InData%p) 
-   call SrvD_PackOutput(RF, InData%y) 
-   call SrvD_PackMisc(RF, InData%m) 
+   call RegPack(RF, allocated(InData%p))
+   if (allocated(InData%p)) then
+      call RegPackBounds(RF, 1, lbound(InData%p), ubound(InData%p))
+      LB(1:1) = lbound(InData%p)
+      UB(1:1) = ubound(InData%p)
+      do i1 = LB(1), UB(1)
+         call SrvD_PackParam(RF, InData%p(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%y))
+   if (allocated(InData%y)) then
+      call RegPackBounds(RF, 1, lbound(InData%y), ubound(InData%y))
+      LB(1:1) = lbound(InData%y)
+      UB(1:1) = ubound(InData%y)
+      do i1 = LB(1), UB(1)
+         call SrvD_PackOutput(RF, InData%y(i1)) 
+      end do
+   end if
+   call RegPack(RF, allocated(InData%m))
+   if (allocated(InData%m)) then
+      call RegPackBounds(RF, 1, lbound(InData%m), ubound(InData%m))
+      LB(1:1) = lbound(InData%m)
+      UB(1:1) = ubound(InData%m)
+      do i1 = LB(1), UB(1)
+         call SrvD_PackMisc(RF, InData%m(i1)) 
+      end do
+   end if
    call RegPack(RF, allocated(InData%Input))
    if (allocated(InData%Input)) then
-      call RegPackBounds(RF, 1, lbound(InData%Input), ubound(InData%Input))
-      LB(1:1) = lbound(InData%Input)
-      UB(1:1) = ubound(InData%Input)
-      do i1 = LB(1), UB(1)
-         call SrvD_PackInput(RF, InData%Input(i1)) 
+      call RegPackBounds(RF, 2, lbound(InData%Input), ubound(InData%Input))
+      LB(1:2) = lbound(InData%Input)
+      UB(1:2) = ubound(InData%Input)
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_PackInput(RF, InData%Input(i1,i2)) 
+         end do
       end do
    end if
    call RegPackAlloc(RF, InData%InputTimes)
@@ -3874,77 +4042,123 @@ subroutine FAST_UnPackServoDyn_Data(RF, OutData)
    type(RegFile), intent(inout)    :: RF
    type(ServoDyn_Data), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FAST_UnPackServoDyn_Data'
-   integer(B4Ki)   :: i1
-   integer(B4Ki)   :: LB(1), UB(1)
+   integer(B4Ki)   :: i1, i2
+   integer(B4Ki)   :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    if (allocated(OutData%x)) deallocate(OutData%x)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%x(LB(1):UB(1)),stat=stat)
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%x(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%x.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call SrvD_UnpackContState(RF, OutData%x(i1)) ! x 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_UnpackContState(RF, OutData%x(i1,i2)) ! x 
+         end do
       end do
    end if
    if (allocated(OutData%xd)) deallocate(OutData%xd)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%xd(LB(1):UB(1)),stat=stat)
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%xd(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%xd.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call SrvD_UnpackDiscState(RF, OutData%xd(i1)) ! xd 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_UnpackDiscState(RF, OutData%xd(i1,i2)) ! xd 
+         end do
       end do
    end if
    if (allocated(OutData%z)) deallocate(OutData%z)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%z(LB(1):UB(1)),stat=stat)
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%z(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%z.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call SrvD_UnpackConstrState(RF, OutData%z(i1)) ! z 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_UnpackConstrState(RF, OutData%z(i1,i2)) ! z 
+         end do
       end do
    end if
    if (allocated(OutData%OtherSt)) deallocate(OutData%OtherSt)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%OtherSt(LB(1):UB(1)),stat=stat)
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%OtherSt(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OtherSt.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call SrvD_UnpackOtherState(RF, OutData%OtherSt(i1)) ! OtherSt 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_UnpackOtherState(RF, OutData%OtherSt(i1,i2)) ! OtherSt 
+         end do
       end do
    end if
-   call SrvD_UnpackParam(RF, OutData%p) ! p 
-   call SrvD_UnpackOutput(RF, OutData%y) ! y 
-   call SrvD_UnpackMisc(RF, OutData%m) ! m 
-   if (allocated(OutData%Input)) deallocate(OutData%Input)
+   if (allocated(OutData%p)) deallocate(OutData%p)
    call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
-      allocate(OutData%Input(LB(1):UB(1)),stat=stat)
+      allocate(OutData%p(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%p.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_UnpackParam(RF, OutData%p(i1)) ! p 
+      end do
+   end if
+   if (allocated(OutData%y)) deallocate(OutData%y)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%y(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%y.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_UnpackOutput(RF, OutData%y(i1)) ! y 
+      end do
+   end if
+   if (allocated(OutData%m)) deallocate(OutData%m)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%m(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%m.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_UnpackMisc(RF, OutData%m(i1)) ! m 
+      end do
+   end if
+   if (allocated(OutData%Input)) deallocate(OutData%Input)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 2, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%Input(LB(1):UB(1),LB(2):UB(2)),stat=stat)
       if (stat /= 0) then 
          call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Input.', RF%ErrStat, RF%ErrMsg, RoutineName)
          return
       end if
-      do i1 = LB(1), UB(1)
-         call SrvD_UnpackInput(RF, OutData%Input(i1)) ! Input 
+      do i2 = LB(2), UB(2)
+         do i1 = LB(1), UB(1)
+            call SrvD_UnpackInput(RF, OutData%Input(i1,i2)) ! Input 
+         end do
       end do
    end if
    call RegUnpackAlloc(RF, OutData%InputTimes); if (RegCheckErr(RF, RoutineName)) return
@@ -8126,13 +8340,11 @@ subroutine FAST_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    ErrMsg  = ''
    DstMiscData%TiLstPrn = SrcMiscData%TiLstPrn
    DstMiscData%t_global = SrcMiscData%t_global
-   DstMiscData%NextJacCalcTime = SrcMiscData%NextJacCalcTime
    DstMiscData%PrevClockTime = SrcMiscData%PrevClockTime
    DstMiscData%UsrTime1 = SrcMiscData%UsrTime1
    DstMiscData%UsrTime2 = SrcMiscData%UsrTime2
    DstMiscData%StrtTime = SrcMiscData%StrtTime
    DstMiscData%SimStrtTime = SrcMiscData%SimStrtTime
-   DstMiscData%calcJacobian = SrcMiscData%calcJacobian
    call FAST_CopyExternInputType(SrcMiscData%ExternInput, DstMiscData%ExternInput, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -8163,13 +8375,11 @@ subroutine FAST_PackMisc(RF, Indata)
    if (RF%ErrStat >= AbortErrLev) return
    call RegPack(RF, InData%TiLstPrn)
    call RegPack(RF, InData%t_global)
-   call RegPack(RF, InData%NextJacCalcTime)
    call RegPack(RF, InData%PrevClockTime)
    call RegPack(RF, InData%UsrTime1)
    call RegPack(RF, InData%UsrTime2)
    call RegPack(RF, InData%StrtTime)
    call RegPack(RF, InData%SimStrtTime)
-   call RegPack(RF, InData%calcJacobian)
    call FAST_PackExternInputType(RF, InData%ExternInput) 
    call FAST_PackMiscLinType(RF, InData%Lin) 
    if (RegCheckErr(RF, RoutineName)) return
@@ -8182,13 +8392,11 @@ subroutine FAST_UnPackMisc(RF, OutData)
    if (RF%ErrStat /= ErrID_None) return
    call RegUnpack(RF, OutData%TiLstPrn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%t_global); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%NextJacCalcTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PrevClockTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UsrTime1); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%UsrTime2); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%StrtTime); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SimStrtTime); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%calcJacobian); if (RegCheckErr(RF, RoutineName)) return
    call FAST_UnpackExternInputType(RF, OutData%ExternInput) ! ExternInput 
    call FAST_UnpackMiscLinType(RF, OutData%Lin) ! Lin 
 end subroutine
@@ -8253,9 +8461,22 @@ subroutine FAST_CopyInitData(SrcInitDataData, DstInitDataData, CtrlCode, ErrStat
    call SrvD_CopyInitInput(SrcInitDataData%InData_SrvD, DstInitDataData%InData_SrvD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call SrvD_CopyInitOutput(SrcInitDataData%OutData_SrvD, DstInitDataData%OutData_SrvD, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcInitDataData%OutData_SrvD)) then
+      LB(1:1) = lbound(SrcInitDataData%OutData_SrvD)
+      UB(1:1) = ubound(SrcInitDataData%OutData_SrvD)
+      if (.not. allocated(DstInitDataData%OutData_SrvD)) then
+         allocate(DstInitDataData%OutData_SrvD(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitDataData%OutData_SrvD.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_CopyInitOutput(SrcInitDataData%OutData_SrvD(i1), DstInitDataData%OutData_SrvD(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
    call AD_CopyInitInput(SrcInitDataData%InData_AD, DstInitDataData%InData_AD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -8387,8 +8608,15 @@ subroutine FAST_DestroyInitData(InitDataData, ErrStat, ErrMsg)
    end if
    call SrvD_DestroyInitInput(InitDataData%InData_SrvD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call SrvD_DestroyInitOutput(InitDataData%OutData_SrvD, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(InitDataData%OutData_SrvD)) then
+      LB(1:1) = lbound(InitDataData%OutData_SrvD)
+      UB(1:1) = ubound(InitDataData%OutData_SrvD)
+      do i1 = LB(1), UB(1)
+         call SrvD_DestroyInitOutput(InitDataData%OutData_SrvD(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(InitDataData%OutData_SrvD)
+   end if
    call AD_DestroyInitInput(InitDataData%InData_AD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AD_DestroyInitOutput(InitDataData%OutData_AD, ErrStat2, ErrMsg2)
@@ -8481,7 +8709,15 @@ subroutine FAST_PackInitData(RF, Indata)
       end do
    end if
    call SrvD_PackInitInput(RF, InData%InData_SrvD) 
-   call SrvD_PackInitOutput(RF, InData%OutData_SrvD) 
+   call RegPack(RF, allocated(InData%OutData_SrvD))
+   if (allocated(InData%OutData_SrvD)) then
+      call RegPackBounds(RF, 1, lbound(InData%OutData_SrvD), ubound(InData%OutData_SrvD))
+      LB(1:1) = lbound(InData%OutData_SrvD)
+      UB(1:1) = ubound(InData%OutData_SrvD)
+      do i1 = LB(1), UB(1)
+         call SrvD_PackInitOutput(RF, InData%OutData_SrvD(i1)) 
+      end do
+   end if
    call AD_PackInitInput(RF, InData%InData_AD) 
    call AD_PackInitOutput(RF, InData%OutData_AD) 
    call ADsk_PackInitInput(RF, InData%InData_ADsk) 
@@ -8555,7 +8791,19 @@ subroutine FAST_UnPackInitData(RF, OutData)
       end do
    end if
    call SrvD_UnpackInitInput(RF, OutData%InData_SrvD) ! InData_SrvD 
-   call SrvD_UnpackInitOutput(RF, OutData%OutData_SrvD) ! OutData_SrvD 
+   if (allocated(OutData%OutData_SrvD)) deallocate(OutData%OutData_SrvD)
+   call RegUnpack(RF, IsAllocAssoc); if (RegCheckErr(RF, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(RF, 1, LB, UB); if (RegCheckErr(RF, RoutineName)) return
+      allocate(OutData%OutData_SrvD(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutData_SrvD.', RF%ErrStat, RF%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call SrvD_UnpackInitOutput(RF, OutData%OutData_SrvD(i1)) ! OutData_SrvD 
+      end do
+   end if
    call AD_UnpackInitInput(RF, OutData%InData_AD) ! InData_AD 
    call AD_UnpackInitOutput(RF, OutData%OutData_AD) ! OutData_AD 
    call ADsk_UnpackInitInput(RF, OutData%InData_ADsk) ! InData_ADsk 
