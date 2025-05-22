@@ -472,6 +472,8 @@ class InputReader_OpenFAST(object):
         self.fst_vt['ElastoDyn']['PtfmCMxt']   = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['PtfmCMyt']   = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['PtfmCMzt']   = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['PtfmRefxt']  = float_read(f.readline().split()[0])
+        self.fst_vt['ElastoDyn']['PtfmRefyt']  = float_read(f.readline().split()[0])
         self.fst_vt['ElastoDyn']['PtfmRefzt']  = float_read(f.readline().split()[0])
 
         # Mass and Inertia (mass_inertia)
