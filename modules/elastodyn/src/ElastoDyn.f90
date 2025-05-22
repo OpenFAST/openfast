@@ -103,7 +103,8 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    INTEGER(IntKi)                               :: ErrStat2                ! temporary Error status of the operation
    INTEGER(IntKi)                               :: i, K                    ! loop counters
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
-   REAL(R8Ki)                                   :: TransMat(3,3)            ! Initial rotation matrix at Platform Refz
+   REAL(R8Ki)                                   :: TransMat(3,3)           ! Initial rotation matrix at Platform Refz
+   REAL(ReKi)                                   :: TmpVec(3)
 
 
       ! Initialize variables for this routine
@@ -297,12 +298,12 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    ! Platform reference point wrt to global origin (0,0,0)
    InitOut%PlatformPos = x%QT(1:6)
-   ! CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
    TransMat = EulerConstructZYX((/x%QT(4),x%QT(5),x%QT(6)/))
+   TmpVec = MATMUL((/p%PtfmRefxt,p%PtfmRefyt,p%PtfmRefzt/),TransMat)
 
-   InitOut%PlatformPos(1) = InitOut%PlatformPos(1) - TransMat(3,1)*p%PtfmRefzt
-   InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
-   InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
+   InitOut%PlatformPos(1) = InitOut%PlatformPos(1) - TmpVec(1) + p%PtfmRefxt
+   InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TmpVec(2) + p%PtfmRefyt
+   InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TmpVec(3) + p%PtfmRefzt
 
    InitOut%HubHt            = p%HubHt
    InitOut%TwrBaseRefPos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
@@ -980,8 +981,8 @@ END IF
 
    ! p%TwrNodes+1 is the tower top:
    J = p%TwrNodes+1
-   m%AllOuts(TwrTpTDxi) =     m%RtHS%rO(1) - y%TowerLn2Mesh%Position(1,J)
-   m%AllOuts(TwrTpTDyi) = -1.*m%RtHS%rO(3) - y%TowerLn2Mesh%Position(2,J)
+   m%AllOuts(TwrTpTDxi) =     m%RtHS%rO(1) - y%TowerLn2Mesh%Position(1,J) + p%PtfmRefxt
+   m%AllOuts(TwrTpTDyi) = -1.*m%RtHS%rO(3) - y%TowerLn2Mesh%Position(2,J) + p%PtfmRefyt
    m%AllOuts(TwrTpTDzi) =     m%RtHS%rO(2) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
    m%AllOuts(YawBrTDxp) =  DOT_PRODUCT(     rOPO, m%CoordSys%b1 )
    m%AllOuts(YawBrTDyp) = -DOT_PRODUCT(     rOPO, m%CoordSys%b3 )
@@ -1032,8 +1033,8 @@ END IF
    !   m%AllOuts( TwHtRDzt(I) ) =     DOT_PRODUCT( m%RtHS%AngPosXF(:,p%TwrGagNd(I)), m%CoordSys%a2 )*R2D  !this will always be 0 in FAST, so no need to calculate
 
 
-      m%AllOuts( TwHtTPxi(I) ) =      m%RtHS%rT(1,p%TwrGagNd(I))
-      m%AllOuts( TwHtTPyi(I) ) = -1.0*m%RtHS%rT(3,p%TwrGagNd(I))
+      m%AllOuts( TwHtTPxi(I) ) =      m%RtHS%rT(1,p%TwrGagNd(I)) + p%PtfmRefxt
+      m%AllOuts( TwHtTPyi(I) ) = -1.0*m%RtHS%rT(3,p%TwrGagNd(I)) + p%PtfmRefyt
       m%AllOuts( TwHtTPzi(I) ) =      m%RtHS%rT(2,p%TwrGagNd(I)) + p%PtfmRefzt
 
       ! m%AllOuts( TwHtRPxi(I) ) =  m%RtHS%AngPosEF(1,p%TwrGagNd(I))*R2D
@@ -1482,8 +1483,8 @@ END IF
             end if
                                                                                                         
                ! Translational Displacement (first calculate absolute position)
-            y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     m%RtHS%rS (1,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-            y%BladeLn2Mesh(K)%TranslationDisp(2,NodeNum) = -1.*m%RtHS%rS (3,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+            y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     m%RtHS%rS (1,K,J2)  + p%PtfmRefxt ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+            y%BladeLn2Mesh(K)%TranslationDisp(2,NodeNum) = -1.*m%RtHS%rS (3,K,J2)  + p%PtfmRefyt ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
             y%BladeLn2Mesh(K)%TranslationDisp(3,NodeNum) =     m%RtHS%rS (2,K,J2)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
             
                ! Orientation
@@ -1532,8 +1533,8 @@ END IF
    !...........   
    
          ! Translation (absolute position - starting position):
-   y%HubPtMotion%TranslationDisp(1,1)  =     m%RtHS%rQ(1)
-   y%HubPtMotion%TranslationDisp(2,1)  = -1.*m%RtHS%rQ(3)
+   y%HubPtMotion%TranslationDisp(1,1)  =     m%RtHS%rQ(1) + p%PtfmRefxt
+   y%HubPtMotion%TranslationDisp(2,1)  = -1.*m%RtHS%rQ(3) + p%PtfmRefyt
    y%HubPtMotion%TranslationDisp(3,1)  =     m%RtHS%rQ(2) + p%PtfmRefzt
    y%HubPtMotion%TranslationDisp       = y%HubPtMotion%TranslationDisp - y%HubPtMotion%Position   ! relative position
    
@@ -1560,8 +1561,8 @@ END IF
    DO K=1,p%NumBl
          
       ! Translation displacement  ! rS at the root      
-      y%BladeRootMotion(K)%TranslationDisp(1,1) =            m%RtHS%rS (1,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-      y%BladeRootMotion(K)%TranslationDisp(2,1) =        -1.*m%RtHS%rS (3,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+      y%BladeRootMotion(K)%TranslationDisp(1,1) =            m%RtHS%rS (1,K,0)  + p%PtfmRefxt ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+      y%BladeRootMotion(K)%TranslationDisp(2,1) =        -1.*m%RtHS%rS (3,K,0)  + p%PtfmRefyt ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
       y%BladeRootMotion(K)%TranslationDisp(3,1) =            m%RtHS%rS (2,K,0)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
       y%BladeRootMotion(K)%TranslationDisp      = y%BladeRootMotion(K)%TranslationDisp - y%BladeRootMotion(K)%Position ! make it relative
       
@@ -1604,8 +1605,8 @@ END IF
    ! TailFin :
    !...........   
    ! Translation (absolute position - starting position):
-   y%TFinCMMotion%TranslationDisp(1,1) =     m%RtHS%rJ(1)
-   y%TFinCMMotion%TranslationDisp(2,1) = -1.*m%RtHS%rJ(3)
+   y%TFinCMMotion%TranslationDisp(1,1) =     m%RtHS%rJ(1) + p%PtfmRefxt
+   y%TFinCMMotion%TranslationDisp(2,1) = -1.*m%RtHS%rJ(3) + p%PtfmRefyt
    y%TFinCMMotion%TranslationDisp(3,1) =     m%RtHS%rJ(2) + p%PtfmRefzt
    y%TFinCMMotion%TranslationDisp      = y%TFinCMMotion%TranslationDisp - y%TFinCMMotion%Position
    ! Orientation:        
@@ -1633,8 +1634,8 @@ END IF
    ! Nacelle :
    !...........   
       
-   y%NacelleMotion%TranslationDisp(1,1) =     m%RtHS%rO(1)
-   y%NacelleMotion%TranslationDisp(2,1) = -1.*m%RtHS%rO(3)
+   y%NacelleMotion%TranslationDisp(1,1) =     m%RtHS%rO(1) + p%PtfmRefxt
+   y%NacelleMotion%TranslationDisp(2,1) = -1.*m%RtHS%rO(3) + p%PtfmRefyt
    y%NacelleMotion%TranslationDisp(3,1) =     m%RtHS%rO(2) + p%PtfmRefzt
                
    y%NacelleMotion%TranslationDisp      = y%NacelleMotion%TranslationDisp - y%NacelleMotion%Position   
@@ -1713,8 +1714,8 @@ END IF
    !...............................................................................................................................
       
    DO J=1,p%TwrNodes
-      y%TowerLn2Mesh%TranslationDisp(1,J) =     m%RtHS%rT( 1,J) - y%TowerLn2Mesh%Position(1,J)
-      y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*m%RtHS%rT( 3,J) - y%TowerLn2Mesh%Position(2,J)
+      y%TowerLn2Mesh%TranslationDisp(1,J) =     m%RtHS%rT( 1,J) - y%TowerLn2Mesh%Position(1,J) + p%PtfmRefxt
+      y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*m%RtHS%rT( 3,J) - y%TowerLn2Mesh%Position(2,J) + p%PtfmRefyt
       y%TowerLn2Mesh%TranslationDisp(3,J) =     m%RtHS%rT( 2,J) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
             
       y%TowerLn2Mesh%Orientation(1,1,J)   =     m%CoordSys%t1(J,1)
@@ -1749,8 +1750,8 @@ END IF
    ! p%TwrNodes+1 is the tower top:
    J = p%TwrNodes+1
    
-   y%TowerLn2Mesh%TranslationDisp(1,J) =     m%RtHS%rO(1) - y%TowerLn2Mesh%Position(1,J)
-   y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*m%RtHS%rO(3) - y%TowerLn2Mesh%Position(2,J)
+   y%TowerLn2Mesh%TranslationDisp(1,J) =     m%RtHS%rO(1) - y%TowerLn2Mesh%Position(1,J) + p%PtfmRefxt
+   y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*m%RtHS%rO(3) - y%TowerLn2Mesh%Position(2,J) + p%PtfmRefyt
    y%TowerLn2Mesh%TranslationDisp(3,J) =     m%RtHS%rO(2) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
    
    y%TowerLn2Mesh%Orientation(1,1,J)   =     m%CoordSys%b1(1)
@@ -1783,8 +1784,8 @@ END IF
    ! p%TwrNodes+2 is the tower base:
    J = p%TwrNodes+2
 
-   y%TowerLn2Mesh%TranslationDisp(1,J) =     m%RtHS%rZ(1) + m%RtHS%rZT0(1) - y%TowerLn2Mesh%Position(1,J)
-   y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*m%RtHS%rZ(3) - m%RtHS%rZT0(3) - y%TowerLn2Mesh%Position(2,J)
+   y%TowerLn2Mesh%TranslationDisp(1,J) =     m%RtHS%rZ(1) + m%RtHS%rZT0(1) - y%TowerLn2Mesh%Position(1,J) + p%PtfmRefxt
+   y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*m%RtHS%rZ(3) - m%RtHS%rZT0(3) - y%TowerLn2Mesh%Position(2,J) + p%PtfmRefyt
    y%TowerLn2Mesh%TranslationDisp(3,J) =     m%RtHS%rZ(2) + m%RtHS%rZT0(2) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
       
    y%TowerLn2Mesh%Orientation(1,1,J)   =     m%CoordSys%a1(1)
@@ -3292,6 +3293,9 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%DT        = InputFileData%DT
    p%OverHang  = InputFileData%OverHang
    p%ShftGagL  = InputFileData%ShftGagL
+
+   p%PtfmRefxt = InputFileData%PtfmRefxt
+   p%PtfmRefyt = InputFileData%PtfmRefyt
    IF ( InitInp%MHK == MHK_FixedBottom ) THEN
       p%TowerHt   = InputFileData%TowerHt - InitInp%WtrDpth
       p%TowerBsHt = InputFileData%TowerBsHt - InitInp%WtrDpth
@@ -3396,6 +3400,8 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%BldFlexL  = p%TipRad    - p%HubRad                                            ! Length of the flexible portion of the blade.
    if (p%BD4Blades) p%BldFlexL = 0.0_ReKi
    
+   p%rZYxt = InputFileData%PtfmCMxt - p%PtfmRefxt
+   p%rZYyt = InputFileData%PtfmCMyt - p%PtfmRefyt
    IF ( InitInp%MHK == MHK_FixedBottom ) THEN
       p%rZYzt     = InputFileData%PtfmCMzt - InitInp%WtrDpth - p%PtfmRefzt
    ELSE
@@ -6596,7 +6602,7 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
       !   that are not dependent on the distributed tower or blade parameters:
 
    RtHSdat%rZ    = x%QT(DOF_Sg)* CoordSys%z1 + x%QT(DOF_Hv)* CoordSys%z2 - x%QT(DOF_Sw)* CoordSys%z3                          ! Position vector from inertia frame origin to platform reference (point Z).
-   RtHSdat%rZY   = p%rZYzt*  CoordSys%a2 + p%PtfmCMxt*CoordSys%a1 - p%PtfmCMyt*CoordSys%a3                                    ! Position vector from platform reference (point Z) to platform mass center (point Y).      
+   RtHSdat%rZY   = p%rZYxt*CoordSys%a1 - p%rZYyt*CoordSys%a3 + p%rZYzt*CoordSys%a2                                            ! Position vector from platform reference (point Z) to platform mass center (point Y).
    RtHSdat%rZT0  = p%rZT0zt* CoordSys%a2                                                                                      ! Position vector from platform reference (point Z) to tower base (point T(0))
    RtHSdat%rZO   = ( x%QT(DOF_TFA1) + x%QT(DOF_TFA2)                                                        )*CoordSys%a1 &   ! Position vector from platform reference (point Z) to tower-top / base plate (point O).
                     + ( p%RefTwrHt - 0.5*(      p%AxRedTFA(1,1,p%TTopNode)*x%QT(DOF_TFA1)*x%QT(DOF_TFA1) &
@@ -8608,8 +8614,8 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
             Orientation(3,3) =     m%CoordSys%n3(K,J,2) 
             
                ! Translational Displacement 
-            position(1) =     m%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-            position(2) = -1.*m%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+            position(1) =     m%RtHS%rS (1,K,J)  + p%PtfmRefxt ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+            position(2) = -1.*m%RtHS%rS (3,K,J)  + p%PtfmRefyt ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
             position(3) =     m%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
             
             
@@ -8792,8 +8798,8 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
       
                  
                
-      position(1) =     m%RtHS%rS (1,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-      position(2) = -1.*m%RtHS%rS (3,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+      position(1) =     m%RtHS%rS (1,K,0)  + p%PtfmRefxt ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+      position(2) = -1.*m%RtHS%rS (3,K,0)  + p%PtfmRefyt ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
       position(3) =     m%RtHS%rS (2,K,0)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
       
       
@@ -9022,8 +9028,8 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
             Orientation(3,3) =     m%CoordSys%n3(K,J,2) 
             
                ! Translational Displacement 
-            position(1) =     m%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-            position(2) = -1.*m%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+            position(1) =     m%RtHS%rS (1,K,J)  + p%PtfmRefxt ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+            position(2) = -1.*m%RtHS%rS (3,K,J)  + p%PtfmRefyt ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
             position(3) =     m%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
             
             
@@ -9071,8 +9077,8 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    ! Create Point Mesh for loads input at hub point (from BeamDyn):
    !....................................................... 
    ! place single node at hub; position affects mapping/coupling with other modules      
-   Position(1)  =     m%RtHS%rQ(1)
-   Position(2)  = -1.*m%RtHS%rQ(3)
+   Position(1)  =     m%RtHS%rQ(1) + p%PtfmRefxt
+   Position(2)  = -1.*m%RtHS%rQ(3) + p%PtfmRefyt
    Position(3)  =     m%RtHS%rQ(2) + p%PtfmRefzt
    
    Orientation(1,1) =     m%CoordSys%g1(1)
@@ -9091,7 +9097,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    ! Create Point Mesh for loads input at Platform Reference Point:
    !.......................................................
-   Position = (/0.0_ReKi, 0.0_ReKi, p%PtfmRefzt /)
+   Position = (/ p%PtfmRefxt, p%PtfmRefyt, p%PtfmRefzt /)
    call Eye(Orientation, ErrStat2, errMsg2)
    call CreateInputPointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
    if (Failed()) return
@@ -9107,8 +9113,8 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    ! Create Point Mesh for loads on Rotor tailfin:
    !.......................................................
-   Position(1) =     m%RtHS%rJ(1)               ! undeflected position of the tailfin CM in the xi ( z1) direction
-   Position(2) = -1.*m%RtHS%rJ(3)               ! undeflected position of the tailfin CM in the yi (-z3) direction
+   Position(1) =     m%RtHS%rJ(1) + p%PtfmRefxt ! undeflected position of the tailfin CM in the xi ( z1) direction
+   Position(2) = -1.*m%RtHS%rJ(3) + p%PtfmRefyt ! undeflected position of the tailfin CM in the yi (-z3) direction
    Position(3) =     m%RtHS%rJ(2) + p%PtfmRefzt ! undeflected position of the tailfin CM in the zi ( z2) direction
    Orientation(1,1) =     m%CoordSys%tf1(1)
    Orientation(2,1) =     m%CoordSys%tf2(1)
