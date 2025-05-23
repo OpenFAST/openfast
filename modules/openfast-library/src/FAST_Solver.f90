@@ -886,6 +886,7 @@ subroutine FAST_SolverStep0(p, m, GlueModData, GlueModMaps, Turbine, ErrStat, Er
 
    call FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, t_initial, INPUT_CURR, STATE_CURR, Turbine, &
                                    ConvIter, ConvError, IsConverged, ErrStat2, ErrMsg2, UpdateJacobian=.true.)
+   if (Failed()) return
 
    ! Print warning if not converged
    if (.not. IsConverged) then
@@ -1491,6 +1492,9 @@ subroutine FAST_CalcOutputsAndSolveForInputs(p, m, GlueModData, GlueModMaps, Thi
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    integer(IntKi)                         :: i
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
 
    !----------------------------------------------------------------------------
    ! Initialization

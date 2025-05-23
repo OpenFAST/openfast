@@ -134,6 +134,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotMirror      !< Array of flags indicating if rotor rotation should be mirrored (true=mirror) [-]
     INTEGER(IntKi)  :: NumBD = 0_IntKi      !< number of BeamDyn instances [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BDRotMap      !< array mapping BeamDyn instance to rotor number [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BDBldMap      !< array mapping BeamDyn instance to blade number [-]
     LOGICAL  :: BD_OutputSibling = .false.      !< flag to determine if BD input is sibling of output mesh [-]
     REAL(DbKi)  :: RhoInf = 0.0_R8Ki      !< Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0] [-]
     REAL(DbKi)  :: ConvTol = 0.0_R8Ki      !< Convergence iteration error tolerance for tight coupling generalized alpha integrator (-) [-]
@@ -1119,6 +1120,18 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%BDRotMap = SrcParamData%BDRotMap
    end if
+   if (allocated(SrcParamData%BDBldMap)) then
+      LB(1:1) = lbound(SrcParamData%BDBldMap)
+      UB(1:1) = ubound(SrcParamData%BDBldMap)
+      if (.not. allocated(DstParamData%BDBldMap)) then
+         allocate(DstParamData%BDBldMap(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%BDBldMap.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%BDBldMap = SrcParamData%BDBldMap
+   end if
    DstParamData%BD_OutputSibling = SrcParamData%BD_OutputSibling
    DstParamData%RhoInf = SrcParamData%RhoInf
    DstParamData%ConvTol = SrcParamData%ConvTol
@@ -1303,6 +1316,9 @@ subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%BDRotMap)) then
       deallocate(ParamData%BDRotMap)
    end if
+   if (allocated(ParamData%BDBldMap)) then
+      deallocate(ParamData%BDBldMap)
+   end if
    if (allocated(ParamData%EDFile)) then
       deallocate(ParamData%EDFile)
    end if
@@ -1341,6 +1357,7 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPackAlloc(RF, InData%RotMirror)
    call RegPack(RF, InData%NumBD)
    call RegPackAlloc(RF, InData%BDRotMap)
+   call RegPackAlloc(RF, InData%BDBldMap)
    call RegPack(RF, InData%BD_OutputSibling)
    call RegPack(RF, InData%RhoInf)
    call RegPack(RF, InData%ConvTol)
@@ -1459,6 +1476,7 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpackAlloc(RF, OutData%RotMirror); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBD); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BDRotMap); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%BDBldMap); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BD_OutputSibling); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RhoInf); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ConvTol); if (RegCheckErr(RF, RoutineName)) return

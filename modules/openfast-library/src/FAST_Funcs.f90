@@ -684,6 +684,9 @@ subroutine FAST_CalcOutput(ModData, Mappings, ThisTime, iInput, iState, T, ErrSt
          call AD_CalcOutput(ThisTime, T%AD%Input(iInput), T%AD%p, &
                             T%AD%x(iState), T%AD%xd(iState), T%AD%z(iState), T%AD%OtherSt(iState), &
                             T%AD%y, T%AD%m, ErrStat2, ErrMsg2, CalcWriteOutput)
+      else
+         ErrStat2 = ErrID_None
+         ErrMsg2 = ''
       end if
 
    case (Module_ADsK)

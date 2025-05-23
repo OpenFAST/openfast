@@ -233,9 +233,9 @@ function FAST_InputFieldName(ModData, DL) result(Name)
    case (Module_ED)
       select case (DL%Num)
       case (1:)
-         Name = trim(ModData%Abbr)//"%"//ED_InputFieldName(DL)
+         Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//ED_InputFieldName(DL)
       case (ED_u_BlPitchComC)
-         Name = 'ED%u%BlPitchComC (Ext)'
+         Name = 'ED('//trim(Num2LStr(ModData%Ins))//')%u%BlPitchComC (Ext)'
       end select
    case (Module_SED)
       Name = trim(ModData%Abbr)//"%"//SED_InputFieldName(DL)
@@ -310,7 +310,7 @@ function FAST_OutputFieldName(ModData, DL) result(Name)
    case (Module_BD)
       Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//BD_OutputFieldName(DL)
    case (Module_ED)
-      Name = trim(ModData%Abbr)//"%"//ED_OutputFieldName(DL)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//ED_OutputFieldName(DL)
    case (Module_SED)
       Name = trim(ModData%Abbr)//"%"//SED_OutputFieldName(DL)
    case (Module_ExtInfw)
@@ -616,7 +616,7 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    character(*), parameter    :: RoutineName = 'InitMappings_AD'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: i
+   integer(IntKi)             :: i, iBld
    logical                    :: NotCompAeroMaps, CompElastED
 
    ErrStat = ErrID_None
@@ -633,11 +633,12 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
    case (Module_BD)
 
+      iBld = Turbine%p_FAST%BDBldMap(SrcMod%Ins)
       call MapMotionMesh(Turbine, Mappings, &
-                         SrcMod=SrcMod, SrcDL=DatLoc(BD_y_BldMotion), &                 ! BD%y(SrcMod%Ins)%BldMotion
-                         DstMod=DstMod, DstDL=DatLoc(AD_u_BladeMotion, SrcMod%Ins), &   ! AD%u%rotors(DstMod%Ins)%BladeMotion(SrcMod%Ins)
+                         SrcMod=SrcMod, SrcDL=DatLoc(BD_y_BldMotion), &          ! BD%y(SrcMod%Ins)%BldMotion
+                         DstMod=DstMod, DstDL=DatLoc(AD_u_BladeMotion, iBld), &  ! AD%u%rotors(DstMod%Ins)%BladeMotion(iBld)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
-                         Active=NotCompAeroMaps .or. (SrcMod%Ins == 1))
+                         Active=NotCompAeroMaps)
       if (Failed()) return
 
    case (Module_ED)
@@ -840,7 +841,7 @@ subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    character(*), parameter    :: RoutineName = 'InitMappings_BD'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: i
+   integer(IntKi)             :: i, iBld
    logical                    :: NotCompAeroMaps, CompAeroAD
 
    ErrStat = ErrID_None
@@ -852,14 +853,17 @@ subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    ! Flag is true of CompAero == Module_AD
    CompAeroAD = Turbine%p_FAST%CompAero == Module_AD
 
+   ! Get the blade number for this BeamDyn instance
+   iBld = Turbine%p_FAST%BDBldMap(DstMod%Ins)
+
    ! Select based on source module identifier
    select case (SrcMod%ID)
 
    case (Module_AD)
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                       SrcDL=DatLoc(AD_y_BladeLoad, DstMod%Ins), &          ! AD%y%rotors(SrcMod%Ins)%BladeLoad(DstMod%Ins)
-                       SrcDispDL=DatLoc(AD_u_BladeMotion, DstMod%Ins), &    ! AD%u%rotors(SrcMod%Ins)%BladeMotion(DstMod%Ins)
+                       SrcDL=DatLoc(AD_y_BladeLoad, iBld), &                ! AD%y%rotors(SrcMod%Ins)%BladeLoad(iBld)
+                       SrcDispDL=DatLoc(AD_u_BladeMotion, iBld), &          ! AD%u%rotors(SrcMod%Ins)%BladeMotion(iBld)
                        DstDL=DatLoc(BD_u_DistrLoad), &                      ! BD%u(DstMod%Ins)%DistrLoad
                        DstDispDL=DatLoc(BD_y_BldMotion), &                  ! BD%y(DstMod%Ins)%BldMotion
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
@@ -869,16 +873,16 @@ subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    case (Module_ED)
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                         SrcDL=DatLoc(ED_y_BladeRootMotion, DstMod%Ins), &   ! ED%y%BladeRootMotion(DstMod%Ins)
-                         DstDL=DatLoc(BD_u_RootMotion), &                    ! BD%u(DstMod%Ins)%RootMotion
+                         SrcDL=DatLoc(ED_y_BladeRootMotion, iBld), &             ! ED%y%BladeRootMotion(iBld)
+                         DstDL=DatLoc(BD_u_RootMotion), &                        ! BD%u(DstMod%Ins)%RootMotion
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
                          Active=NotCompAeroMaps)
       if (Failed()) return
 
       ! Hub motion not used
       ! call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-      !                    SrcDL=DatLoc(ED_y_HubPtMotion), &                   ! ED%y%HubED_y_HubPtMotion
-      !                    DstDL=DatLoc(BD_u_HubMotion), &                     ! BD%Input(1, DstMod%Ins)%HubMotion
+      !                    SrcDL=DatLoc(ED_y_HubPtMotion), &                     ! ED%y%HubED_y_HubPtMotion
+      !                    DstDL=DatLoc(BD_u_HubMotion), &                       ! BD%Input(1, DstMod%Ins)%HubMotion
       !                    ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
       !                    Active=NotCompAeroMaps)
       ! if (Failed()) return
@@ -886,8 +890,8 @@ subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    case (Module_ExtLd)
 
       call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                        SrcDL=DatLoc(ExtLd_y_BladeLoad, DstMod%Ins), &           ! ExtLd%y%BladeLoad(DstMod%Ins), &
-                        SrcDispDL=DatLoc(ExtLd_u_BladeMotion, DstMod%Ins), &     ! ExtLd%u%BladeMotion(DstMod%Ins)
+                        SrcDL=DatLoc(ExtLd_y_BladeLoad, iBld), &                 ! ExtLd%y%BladeLoad(iBld), &
+                        SrcDispDL=DatLoc(ExtLd_u_BladeMotion, iBld), &           ! ExtLd%u%BladeMotion(iBld)
                         DstDL=DatLoc(BD_u_DistrLoad), &                          ! BD%Input(1, DstMod%Ins)%DistrLoad
                         DstDispDL=DatLoc(BD_y_BldMotion), &                      ! BD%y(DstMod%Ins)%BldMotion
                         ErrStat=ErrStat2, ErrMsg=ErrMsg2)
@@ -897,10 +901,10 @@ subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
       do i = 1, Turbine%SrvD%p(SrcMod%Ins)%NumBStC
          call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                          SrcDL=DatLoc(SrvD_y_BStCLoadMesh, DstMod%Ins, i), &        ! SrvD%y%BStCLoadMesh(DstMod%Ins, i), &
-                          SrcDispDL=DatLoc(SrvD_u_BStCMotionMesh, DstMod%Ins, i), &  ! SrvD%u%BStCMotionMesh(DstMod%Ins, i)
-                          DstDL=DatLoc(BD_u_DistrLoad), &                            ! BD%Input(1, DstMod%Ins)%DistrLoad
-                          DstDispDL=DatLoc(BD_y_BldMotion), &                        ! BD%y(DstMod%Ins)%BldMotion
+                          SrcDL=DatLoc(SrvD_y_BStCLoadMesh, iBld, i), &          ! SrvD%y%BStCLoadMesh(iBld, i), &
+                          SrcDispDL=DatLoc(SrvD_u_BStCMotionMesh, iBld, i), &    ! SrvD%u%BStCMotionMesh(iBld, i)
+                          DstDL=DatLoc(BD_u_DistrLoad), &                        ! BD%Input(1, DstMod%Ins)%DistrLoad
+                          DstDispDL=DatLoc(BD_y_BldMotion), &                    ! BD%y(DstMod%Ins)%BldMotion
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2)
          if (Failed()) return
       end do
@@ -1337,7 +1341,7 @@ subroutine InitMappings_ExtLd(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg
    character(*), parameter    :: RoutineName = 'InitMappings_ExtLd'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: i, k
+   integer(IntKi)             :: i, k, iBld
    logical                    :: CompElastED
 
    ErrStat = ErrID_None
@@ -1377,9 +1381,10 @@ subroutine InitMappings_ExtLd(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg
    case (Module_BD)
 
       ! Blade motion
+      iBld = Turbine%p_FAST%BDBldMap(SrcMod%Ins)
       call MapMotionMesh(Turbine, Mappings, &
-                         SrcMod=SrcMod, SrcDL=DatLoc(BD_y_BldMotion), &                   ! BD%y(SrcMod%Ins)%BldMotion
-                         DstMod=DstMod, DstDL=DatLoc(ExtLd_u_BladeMotion, SrcMod%Ins), &  ! ExtLd%u%BladeMotion(SrcMod%Ins)
+                         SrcMod=SrcMod, SrcDL=DatLoc(BD_y_BldMotion), &             ! BD%y(SrcMod%Ins)%BldMotion
+                         DstMod=DstMod, DstDL=DatLoc(ExtLd_u_BladeMotion, iBld), &  ! ExtLd%u%BladeMotion(iBld)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if(Failed()) return
 
@@ -1943,7 +1948,7 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    character(*), parameter    :: RoutineName = 'InitMappings_SrvD'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: i, j
+   integer(IntKi)             :: i, j, iBld
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -1955,10 +1960,11 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapCustom(Mappings, Custom_BD_to_SrvD, SrcMod, DstMod)
 
       ! Blade Structural Controller
+      iBld = Turbine%p_FAST%BDBldMap(SrcMod%Ins)
       do i = 1, Turbine%SrvD%p(DstMod%Ins)%NumBStC
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                            SrcDL=DatLoc(BD_y_BldMotion, SrcMod%Ins), &             ! BD%y(SrcMod%Ins)%BldMotion
-                            DstDL=DatLoc(SrvD_u_BStCMotionMesh, SrcMod%Ins, i), &   ! SrvD%u%BStCMotionMesh(SrcMod%Ins,i)
+                            SrcDL=DatLoc(BD_y_BldMotion), &                      ! BD%y(SrcMod%Ins)%BldMotion
+                            DstDL=DatLoc(SrvD_u_BStCMotionMesh, iBld, i), &      ! SrvD%u%BStCMotionMesh(iBld,i)
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
 
@@ -3084,7 +3090,7 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
    character(*), parameter                :: RoutineName = 'Custom_InputSolve'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
-   integer(IntKi)                         :: i, j, k, iRot
+   integer(IntKi)                         :: i, j, k, iRot, iBld
    
    real(R8Ki)                             :: omega_c(3)
    real(R8Ki)                             :: r(3), r_hub(3)
@@ -3310,13 +3316,15 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_BD_to_SrvD)
 
-      T%SrvD%Input(iInput,ModDst%Ins)%RootMxc(Mapping%SrcIns) = &
-         T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y(1)%BlPitch(Mapping%SrcIns)) + &
-         T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y(1)%BlPitch(Mapping%SrcIns))
+      iBld = T%p_FAST%BDBldMap(ModSrc%Ins)
 
-      T%SrvD%Input(iInput,ModDst%Ins)%RootMyc(Mapping%SrcIns) = &
-         -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y(1)%BlPitch(Mapping%SrcIns)) + &
-         T%BD%y(Mapping%SrcIns)%RootMyr*cos(T%ED%y(1)%BlPitch(Mapping%SrcIns))
+      T%SrvD%Input(iInput,ModDst%Ins)%RootMxc(iBld) = &
+         T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y(ModDst%Ins)%BlPitch(iBld)) + &
+         T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y(ModDst%Ins)%BlPitch(iBld))
+
+      T%SrvD%Input(iInput,ModDst%Ins)%RootMyc(iBld) = &
+         -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y(ModDst%Ins)%BlPitch(iBld)) + &
+         T%BD%y(Mapping%SrcIns)%RootMyr*cos(T%ED%y(ModDst%Ins)%BlPitch(iBld))
 
    case (Custom_ED_to_SrvD)
 

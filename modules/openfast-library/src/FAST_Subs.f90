@@ -401,6 +401,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       end if
       ! Allocate array to map BeamDyn instance number to rotor number
       call AllocAry(p_FAST%BDRotMap, p_FAST%NumBD, "BDRotMap", ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(p_FAST%BDBldMap, p_FAST%NumBD, "BDBldMap", ErrStat2, ErrMsg2); if (Failed()) return
    else
       p_FAST%NumBD = 0
    end if
@@ -433,12 +434,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
 
          ! Blade number in rotor
          DO k = 1, p_FAST%RotNumBld(iRot)
-
-            ! BeamDyn instance number
-            j = j + 1
-
-            ! Set rotor number for this instance
-            p_FAST%BDRotMap(j) = iRot
+            j = j + 1                     ! BeamDyn instance number
+            p_FAST%BDRotMap(j) = iRot     ! Set this rotor number for this instance
+            p_FAST%BDBldMap(j) = k        ! Set this blade number for this instance
 
             Init%InData_BD%HubPos       = ED%y(iRot)%HubPtMotion%Position(:,1)
             Init%InData_BD%HubRot       = ED%y(iRot)%HubPtMotion%RefOrientation(:,:,1)
@@ -2368,11 +2366,18 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    end if
 
    ! AeroDyn
-   do i = 1, y_FAST%numOuts(Module_AD) !
-      y_FAST%ChannelNames(indxNext) = Init%OutData_AD%rotors(1)%WriteOutputHdr(i)
-      y_FAST%ChannelUnits(indxNext) = Init%OutData_AD%rotors(1)%WriteOutputUnt(i)
-      indxNext = indxNext + 1
-   end do
+   if (y_FAST%numOuts(Module_AD) > 0) then
+      prefix = ''
+      do iRot = 1, p_FAST%NRotors
+         if (.not. allocated(Init%OutData_AD%rotors(iRot)%WriteOutputHdr)) cycle
+         if (p_FAST%NRotors > 1) prefix = 'R'//Num2LStr(iRot)
+         do i = 1, size(Init%OutData_AD%rotors(iRot)%WriteOutputHdr)
+            y_FAST%ChannelNames(indxNext) = trim(prefix)//Init%OutData_AD%rotors(iRot)%WriteOutputHdr(i)
+            y_FAST%ChannelUnits(indxNext) = Init%OutData_AD%rotors(iRot)%WriteOutputUnt(i)
+            indxNext = indxNext + 1
+         end do
+      end do
+   end if
 
    ! AeroDisk
    do i = 1, y_FAST%numOuts(Module_ADsk) 

@@ -116,6 +116,7 @@ typedef	^	FAST_ParameterType	IntKi	RotNumBld	:	-	-	"number of blades in each rot
 typedef	^	FAST_ParameterType	logical	RotMirror	:	-	-	"Array of flags indicating if rotor rotation should be mirrored (true=mirror)"	-
 typedef	^	FAST_ParameterType	IntKi	NumBD	-	-	-	"number of BeamDyn instances"	-
 typedef	^	FAST_ParameterType	IntKi	BDRotMap	:	-	-	"array mapping BeamDyn instance to rotor number"	-
+typedef	^	FAST_ParameterType	IntKi	BDBldMap	:	-	-	"array mapping BeamDyn instance to blade number"	-
 typedef	^	FAST_ParameterType	LOGICAL	BD_OutputSibling	-	-	-	"flag to determine if BD input is sibling of output mesh"	-
 # Data for TC Solver:
 typedef	^	FAST_ParameterType	DbKi	RhoInf	-	-	-	"Numerical damping parameter for tight coupling generalized-alpha integrator (-) [0.0 to 1.0]"	-
