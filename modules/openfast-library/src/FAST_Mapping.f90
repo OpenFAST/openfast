@@ -291,7 +291,7 @@ function FAST_InputFieldName(ModData, DL) result(Name)
          Name = 'SeaSt%u%WaveElev0 (Ext)'
       end select
    case (Module_SrvD)
-      Name = trim(ModData%Abbr)//"%"//SrvD_InputFieldName(DL)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//SrvD_InputFieldName(DL)
    case default
       Name = "Unknown field "//Num2LStr(DL%Num)//" in "//ModData%Abbr
    end select
@@ -354,7 +354,7 @@ function FAST_OutputFieldName(ModData, DL) result(Name)
          Name = 'SeaSt%y%WaveElev0 (Ext)'
       end select
    case (Module_SrvD)
-      Name = trim(ModData%Abbr)//"%"//SrvD_OutputFieldName(DL)
+      Name = trim(ModData%Abbr)//"("//trim(Num2LStr(ModData%Ins))//")%"//SrvD_OutputFieldName(DL)
    case default
       Name = "Unknown field "//Num2LStr(DL%Num)//" in "//ModData%Abbr
    end select
@@ -372,7 +372,6 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
    character(ErrMsgLen)             :: ErrMsg2
    integer(IntKi)                   :: i, j, k
    integer(IntKi)                   :: iMap, ModIns, iModIn, iModSrc, iModDst
-   logical                          :: ModsInRotor
    type(MappingType), allocatable   :: MappingsTmp(:)
    integer(IntKi), parameter        :: MappingTypeOrder(*) = [Map_MotionMesh, Map_LoadMesh, Map_Variable, Map_Custom]
 
@@ -445,9 +444,10 @@ subroutine FAST_InitMappings(Mappings, Mods, Turbine, ErrStat, ErrMsg)
       ! Loop through source modules
       do iModSrc = 1, size(Mods)
 
-         ! Determine if modules are in the same rotor based on instance number  
-         ! ModsInRotor = (SrcMod%Ins == DstMod%Ins) .or. &
-         !               ((SrcMod%ID == ModuleBD) .and. ())
+         ! Skip module combinations that aren't shared across rotors or
+         ! aren't in the same rotor
+         if ((Mods(iModSrc)%iRotor /= 0) .and. (Mods(iModDst)%iRotor /= 0) .and. &
+             (Mods(iModSrc)%iRotor /= Mods(iModDst)%iRotor)) cycle
 
          ! Switch by destination module (inputs)
          select case (Mods(iModDst)%ID)
@@ -742,7 +742,7 @@ subroutine InitMappings_AD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
    case (Module_ExtInfw)
 
       call MapCustom(Mappings, Custom_ExtInfw_to_AD, SrcMod, DstMod, &
-                     Active=DstMod%Ins == 1)
+                     Active=DstMod%iRotor == 1)
 
    case (Module_IfW)
 
@@ -807,8 +807,7 @@ subroutine InitMappings_ADsk(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
-      call MapCustom(Mappings, Custom_ED_to_ADsk, SrcMod, DstMod, &
-                     Active=SrcMod%Ins == DstMod%Ins)
+      call MapCustom(Mappings, Custom_ED_to_ADsk, SrcMod, DstMod)
 
    case (Module_SED)
 
@@ -820,8 +819,7 @@ subroutine InitMappings_ADsk(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2)
       if (Failed()) return
 
-      call MapCustom(Mappings, Custom_SED_to_ADsk, SrcMod, DstMod, &
-                     Active=SrcMod%Ins == DstMod%Ins)
+      call MapCustom(Mappings, Custom_SED_to_ADsk, SrcMod, DstMod)
 
    end select
 
@@ -897,7 +895,6 @@ subroutine InitMappings_BD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
 
    case (Module_SrvD)
 
-      ! TODO: Mapping between rotor and BD instance
       do i = 1, Turbine%SrvD%p(SrcMod%Ins)%NumBStC
          call MapLoadMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                           SrcDL=DatLoc(SrvD_y_BStCLoadMesh, DstMod%Ins, i), &        ! SrvD%y%BStCLoadMesh(DstMod%Ins, i), &
@@ -1181,8 +1178,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        DstMod=DstMod, DstDL=DatLoc(ED_u_GenTrq), &
                        ErrStat=ErrStat2, ErrMsg=ErrMsg2); if (Failed()) return
 
-      call MapCustom(Mappings, Custom_SrvD_to_ED, SrcMod, DstMod, &
-                     Active=SrcMod%Ins == DstMod%Ins)
+      call MapCustom(Mappings, Custom_SrvD_to_ED, SrcMod, DstMod)
 
       ! Blade Structural Controller (if ElastoDyn is used for blades)
       do j = 1, Turbine%SrvD%p(SrcMod%Ins)%NumBStC
@@ -1192,8 +1188,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                              SrcDispDL=DatLoc(SrvD_u_BStCMotionMesh, i, j), &  ! SrvD%u%BStCMotionMesh(i, j)
                              DstDL=DatLoc(ED_u_BladePtLoads, i), &             ! ED%u%BladePtLoads(i)
                              DstDispDL=DatLoc(ED_y_BladeLn2Mesh, i), &         ! ED%y%BladeLn2Mesh(i)
-                             Active=CompElastED .and. &                        ! CompElast == ED
-                                    (SrcMod%Ins == DstMod%Ins), &              ! Source and destination are in same rotor
+                             Active=CompElastED, &
                              ErrStat=ErrStat2, ErrMsg=ErrMsg2)                  
             if (Failed()) return
          end do
@@ -1208,7 +1203,6 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                           DstMod=DstMod, &
                           DstDL=DatLoc(ED_u_NacelleLoads), &              ! ED%u%NacelleLoads
                           DstDispDL=DatLoc(ED_y_NacelleMotion), &         ! ED%y%NacelleMotion
-                          Active=SrcMod%Ins == DstMod%Ins, &              ! Source and destination are in same rotor
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2)
          if (Failed()) return
       end do
@@ -1222,8 +1216,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                           DstMod=DstMod, &
                           DstDL=DatLoc(ED_u_TowerPtLoads), &              ! ED%u%TowerLoads
                           DstDispDL=DatLoc(ED_y_TowerLn2Mesh), &          ! ED%y%TowerLn2Mesh
-                          ErrStat=ErrStat2, ErrMsg=ErrMsg2, &
-                          Active=SrcMod%Ins == DstMod%Ins)                ! Source and destination are in same rotor
+                          ErrStat=ErrStat2, ErrMsg=ErrMsg2)
          if (Failed()) return
       end do
 
@@ -1236,8 +1229,7 @@ subroutine InitMappings_ED(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                           DstMod=DstMod, &
                           DstDL=DatLoc(ED_u_PlatformPtMesh), &            ! ED%u%PlatformPtMesh
                           DstDispDL=DatLoc(ED_y_PlatformPtMesh), &        ! ED%y%PlatformPtMesh
-                          Active=CompSubSD .and. &                        ! CompSub == Module_SD
-                                 (SrcMod%Ins == DstMod%Ins), &            ! Source and destination are in same rotor
+                          Active=Turbine%p_FAST%CompSub /= Module_SD, &
                           ErrStat=ErrStat2, ErrMsg=ErrMsg2)
          if (Failed()) return
       end do
@@ -1324,8 +1316,7 @@ subroutine InitMappings_ExtInfw(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrM
    select case (SrcMod%ID)
 
    case (Module_AD)
-      call MapCustom(Mappings, Custom_AD_to_ExtInfw, SrcMod, DstMod, &
-                     Active=SrcMod%Ins == 1)
+      call MapCustom(Mappings, Custom_AD_to_ExtInfw, SrcMod, DstMod)
 
    end select
 
@@ -1968,7 +1959,6 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                             SrcDL=DatLoc(BD_y_BldMotion, SrcMod%Ins), &             ! BD%y(SrcMod%Ins)%BldMotion
                             DstDL=DatLoc(SrvD_u_BStCMotionMesh, SrcMod%Ins, i), &   ! SrvD%u%BStCMotionMesh(SrcMod%Ins,i)
-                            Active=.true., &                                        ! TODO: Blade and controller in same rotor
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
 
@@ -1996,7 +1986,6 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                             SrcDL=DatLoc(ED_y_NacelleMotion), &          ! ED%y%NacelleMotion
                             DstDL=DatLoc(SrvD_u_NStCMotionMesh, j), &    ! SrvD%u%NStCMotionMesh(j)
-                            Active=SrcMod%Ins == DstMod%Ins, &           ! ED and SrvD in same rotor
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
 
@@ -2005,7 +1994,6 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                             SrcDL=DatLoc(ED_y_TowerLn2Mesh), &           ! ED%y%TowerMotion
                             DstDL=DatLoc(SrvD_u_TStCMotionMesh, j), &    ! SrvD%u%TStCMotionMesh(j)
-                            Active=SrcMod%Ins == DstMod%Ins, &           ! ED and SrvD in same rotor
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
 
@@ -2013,10 +2001,9 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       do j = 1, Turbine%SrvD%p(DstMod%Ins)%NumBStC
          do i = 1, Turbine%ED%p(SrcMod%Ins)%NumBl
             call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                               SrcDL=DatLoc(ED_y_BladeLn2Mesh, i), &                   ! ED%y%BladeLn2Mesh(i)
-                               DstDL=DatLoc(SrvD_u_BStCMotionMesh, i, j), &            ! SrvD%u%BStCMotionMesh(i, j)
-                               Active=(Turbine%p_FAST%CompElast == Module_ED) .and. &  ! ED Blades
-                                      (SrcMod%Ins == DstMod%Ins), &                    ! ED and SrvD in same rotor
+                               SrcDL=DatLoc(ED_y_BladeLn2Mesh, i), &             ! ED%y%BladeLn2Mesh(i)
+                               DstDL=DatLoc(SrvD_u_BStCMotionMesh, i, j), &      ! SrvD%u%BStCMotionMesh(i, j)
+                               Active=(Turbine%p_FAST%CompElast == Module_ED), &
                                ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
          end do
       end do
@@ -2024,10 +2011,9 @@ subroutine InitMappings_SrvD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       ! Substructure Structural Controller (if not using SubDyn)
       do j = 1, Turbine%SrvD%p(DstMod%Ins)%NumSStC
          call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
-                            SrcDL=DatLoc(ED_y_PlatformPtMesh), &                    ! ED%y%PlatformPtMesh
-                            DstDL=DatLoc(SrvD_u_SStCMotionMesh, j), &               ! SrvD%u%SStCMotionMesh(j)
-                            Active=(Turbine%p_FAST%CompSub /= Module_SD) .and. &    ! ED Substructure
-                                   (SrcMod%Ins == DstMod%Ins), &                    ! ED and SrvD in same rotor
+                            SrcDL=DatLoc(ED_y_PlatformPtMesh), &                 ! ED%y%PlatformPtMesh
+                            DstDL=DatLoc(SrvD_u_SStCMotionMesh, j), &            ! SrvD%u%SStCMotionMesh(j)
+                            Active=(Turbine%p_FAST%CompSub /= Module_SD), &      ! ED Substructure
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
       end do
 
@@ -2116,9 +2102,7 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
    end if
 
    ! Create mapping description
-   Mapping%Desc = trim(SrcMod%Abbr)//'_'//trim(Num2LStr(SrcMod%Ins))//" "// &
-                  trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
-                  trim(DstMod%Abbr)//'_'//trim(Num2LStr(DstMod%Ins))//" "// &
+   Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
                   trim(FAST_InputFieldName(DstMod, DstDL))// &
                   " ["//trim(FAST_InputFieldName(SrcMod, SrcDispDL))// &
                   " @ "//trim(FAST_OutputFieldName(DstMod, DstDispDL))//"]"
@@ -2183,7 +2167,7 @@ subroutine MapLoadMesh(Turbine, Mappings, SrcMod, SrcDL, SrcDispDL, &
 contains
    logical function Failed()
       Failed = ErrStat2 >= AbortErrLev
-      if (Failed) call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (Failed) call SetErrStat(ErrStat2, trim(ErrMsg2)//" ("//trim(Mapping%Desc)//")", ErrStat, ErrMsg, RoutineName)
    end function
 
    ! IsSiblingMesh returns true if MeshB is a sibling of MeshA
@@ -2249,9 +2233,7 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrSta
    end if
 
    ! Create mapping description
-   Mapping%Desc = trim(SrcMod%Abbr)//'_'//trim(Num2LStr(SrcMod%Ins))//" "// &
-                  trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
-                  trim(DstMod%Abbr)//'_'//trim(Num2LStr(DstMod%Ins))//" "// &
+   Mapping%Desc = trim(FAST_OutputFieldName(SrcMod, SrcDL))//" -> "// &
                   trim(FAST_InputFieldName(DstMod, DstDL))
 
    ! Initialize mapping structure
@@ -2277,8 +2259,8 @@ subroutine MapMotionMesh(Turbine, Mappings, SrcMod, SrcDL, DstMod, DstDL, ErrSta
 
 contains
    logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
+      Failed = ErrStat2 >= AbortErrLev
+      if (Failed) call SetErrStat(ErrStat2, trim(ErrMsg2)//" ("//trim(Mapping%Desc)//")", ErrStat, ErrMsg, RoutineName)
    end function
 end subroutine
 
@@ -3102,7 +3084,7 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
    character(*), parameter                :: RoutineName = 'Custom_InputSolve'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
-   integer(IntKi)                         :: i, j, k
+   integer(IntKi)                         :: i, j, k, iRot
    
    real(R8Ki)                             :: omega_c(3)
    real(R8Ki)                             :: r(3), r_hub(3)
@@ -3127,7 +3109,7 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_SrvD_to_AD)
 
-      ! Set Conrol parameter (i.e. flaps) if using ServoDyn bem:
+      ! Set Control parameter (i.e. flaps) if using ServoDyn bem:
       ! This takes in flap deflection for each blade (only one flap deflection angle per blade),
       ! from ServoDyn (which comes from Bladed style DLL controller)
       ! Commanded Airfoil UserProp for blade (must be same units as given in AD15 airfoil tables)
@@ -3159,9 +3141,8 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
    case (Custom_BD_Blade_Damping)
 
       ! Get rotational velocity and current hub position
-      ! TODO: ED and BD in same rotor
-      omega_c = T%ED%y(ModSrc%Ins)%RotSpeed * T%ED%y(ModSrc%Ins)%HubPtMotion%Orientation(1,:,1)
-      r_hub   = T%ED%y(ModSrc%Ins)%HubPtMotion%Position(:,1) + T%ED%y(ModSrc%Ins)%HubPtMotion%TranslationDisp(:,1)
+      omega_c = T%ED%y(ModSrc%iRotor)%RotSpeed * T%ED%y(ModSrc%iRotor)%HubPtMotion%Orientation(1,:,1)
+      r_hub   = T%ED%y(ModSrc%iRotor)%HubPtMotion%Position(:,1) + T%ED%y(ModSrc%iRotor)%HubPtMotion%TranslationDisp(:,1)
 
       ! Get blade velocities at load mesh locations
       call TransferMesh(Mapping%XfrType, T%BD%y(Mapping%DstIns)%BldMotion, Mapping%TmpMotionMesh, Mapping%MeshMap, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
@@ -3294,13 +3275,15 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_SrvD_to_MD)
 
-      ! TODO: how does this work with multiple SrvD instances?
-      if (allocated(T%MD%Input(iInput)%DeltaL) .and. allocated(T%SrvD%y(ModSrc%Ins)%CableDeltaL)) then
-         T%MD%Input(iInput)%DeltaL = T%SrvD%y(ModSrc%Ins)%CableDeltaL      ! these should be sized identically during init
-      end if
+      ! Use Rotor 1 ServoDyn for MoorDyn inputs
+      if (ModSrc%iRotor == 1) then
+         if (allocated(T%MD%Input(iInput)%DeltaL) .and. allocated(T%SrvD%y(ModSrc%Ins)%CableDeltaL)) then
+            T%MD%Input(iInput)%DeltaL = T%SrvD%y(ModSrc%Ins)%CableDeltaL      ! these should be sized identically during init
+         end if
 
-      if (allocated(T%MD%Input(iInput)%DeltaLdot) .and. allocated(T%SrvD%y(ModSrc%Ins)%CableDeltaLdot)) then
-         T%MD%Input(iInput)%DeltaLdot = T%SrvD%y(ModSrc%Ins)%CableDeltaLdot   ! these should be sized identically during init
+         if (allocated(T%MD%Input(iInput)%DeltaLdot) .and. allocated(T%SrvD%y(ModSrc%Ins)%CableDeltaLdot)) then
+            T%MD%Input(iInput)%DeltaLdot = T%SrvD%y(ModSrc%Ins)%CableDeltaLdot   ! these should be sized identically during init
+         end if
       end if
 
 !-------------------------------------------------------------------------------
@@ -3309,9 +3292,11 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
 
    case (Custom_SrvD_to_SD)
 
-      ! TODO: how does this work with multiple SrvD instances?
-      if (allocated(T%SD%Input(iInput)%CableDeltaL) .and. allocated(T%SrvD%y(ModSrc%Ins)%CableDeltaL)) then
-         T%SD%Input(iInput)%CableDeltaL = T%SrvD%y(ModSrc%Ins)%CableDeltaL   ! these should be sized identically during init
+      ! Use Rotor 1 ServoDyn for SubDyn inputs
+      if (ModSrc%iRotor == 1) then
+         if (allocated(T%SD%Input(iInput)%CableDeltaL) .and. allocated(T%SrvD%y(ModSrc%Ins)%CableDeltaL)) then
+            T%SD%Input(iInput)%CableDeltaL = T%SrvD%y(ModSrc%Ins)%CableDeltaL   ! these should be sized identically during init
+         end if
       end if
 
    case (Custom_FF_to_SD)

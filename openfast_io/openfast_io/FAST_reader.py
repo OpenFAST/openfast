@@ -302,6 +302,7 @@ class InputReader_OpenFAST(object):
 
         # Feature Switches and Flags (ftr_swtchs_flgs)
         f.readline()
+        self.fst_vt['Fst']['NRotors'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompElast'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompInflow'] = int(f.readline().split()[0])
         self.fst_vt['Fst']['CompAero'] = int(f.readline().split()[0])

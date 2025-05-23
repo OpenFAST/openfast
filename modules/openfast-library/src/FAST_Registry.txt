@@ -18,7 +18,7 @@ usefrom	Registry_BeamDyn.txt
 usefrom	ServoDyn_Registry.txt
 usefrom	AeroDyn_Registry.txt
 usefrom	AeroDisk_Registry.txt
-usefrom  ExtLoads_Registry.txt
+usefrom ExtLoads_Registry.txt
 usefrom	SubDyn_Registry.txt
 usefrom	SeaState.txt
 usefrom	HydroDyn.txt
@@ -112,6 +112,8 @@ typedef	^	FAST_ParameterType	IntKi	InterpOrder	-	-	-	"Interpolation order {0,1,2
 typedef	^	FAST_ParameterType	IntKi	NumCrctn	-	-	-	"Number of correction iterations"	-
 typedef	^	FAST_ParameterType	IntKi	KMax	-	-	-	"Maximum number of input-output-solve or nonlinear solve residual equation iterations (KMax >= 1) [>0]"	-
 typedef	^	FAST_ParameterType	IntKi	numIceLegs	-	-	-	"number of suport-structure legs in contact with ice (IceDyn coupling)"	-
+typedef	^	FAST_ParameterType	IntKi	RotNumBld	:	-	-	"number of blades in each rotor"	-
+typedef	^	FAST_ParameterType	logical	RotMirror	:	-	-	"Array of flags indicating if rotor rotation should be mirrored (true=mirror)"	-
 typedef	^	FAST_ParameterType	IntKi	NumBD	-	-	-	"number of BeamDyn instances"	-
 typedef	^	FAST_ParameterType	IntKi	BDRotMap	:	-	-	"array mapping BeamDyn instance to rotor number"	-
 typedef	^	FAST_ParameterType	LOGICAL	BD_OutputSibling	-	-	-	"flag to determine if BD input is sibling of output mesh"	-

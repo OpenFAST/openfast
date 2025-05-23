@@ -349,17 +349,18 @@ contains
    end function
 end subroutine
 
-subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars, Linearize, ErrStat, ErrMsg)
-   type(ModDataType), allocatable, intent(inout)   :: ModDataAry(:)
-   integer(IntKi), intent(in)                      :: ModID
-   character(*), intent(in)                        :: ModAbbr
-   integer(IntKi), intent(in)                      :: Instance
-   real(R8Ki), intent(in)                          :: ModDT
-   real(R8Ki), intent(in)                          :: SolverDT
-   type(ModVarsType), intent(in)                   :: Vars
-   logical, intent(in)                             :: Linearize
-   integer(IntKi), intent(out)                     :: ErrStat
-   character(ErrMsgLen), intent(out)               :: ErrMsg
+subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars, Linearize, ErrStat, ErrMsg, iRotor)
+   type(ModDataType), allocatable, intent(inout)   :: ModDataAry(:)  !< Array of module data to append new module
+   integer(IntKi), intent(in)                      :: ModID          !< Module identifier
+   character(*), intent(in)                        :: ModAbbr        !< Module name abbreviation
+   integer(IntKi), intent(in)                      :: Instance       !< Instance number
+   real(R8Ki), intent(in)                          :: ModDT          !< Module time step
+   real(R8Ki), intent(in)                          :: SolverDT       !< Solver time step
+   type(ModVarsType), intent(in)                   :: Vars           !< Module variables
+   logical, intent(in)                             :: Linearize      !< Flag indicating linearization
+   integer(IntKi), intent(out)                     :: ErrStat        !< Error status
+   character(ErrMsgLen), intent(out)               :: ErrMsg         !< Error message
+   integer(IntKi), optional, intent(in)            :: iRotor         !< Rotor number (0 indicates all rotors)
 
    character(*), parameter                         :: RoutineName = 'MV_AddModule'
    integer(IntKi)                                  :: ErrStat2
@@ -382,6 +383,11 @@ subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, V
    ModData%Ins = Instance
    ModData%DT = ModDT
    call NWTC_Library_CopyModVarsType(Vars, ModData%Vars, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   if (present(iRotor)) then
+      ModData%iRotor = iRotor
+   else
+      ModData%iRotor = 0
+   end if
 
    !----------------------------------------------------------------------------
    ! Calculate Module Sub-stepping

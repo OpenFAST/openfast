@@ -130,6 +130,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumCrctn = 0_IntKi      !< Number of correction iterations [-]
     INTEGER(IntKi)  :: KMax = 0_IntKi      !< Maximum number of input-output-solve or nonlinear solve residual equation iterations (KMax >= 1) [>0] [-]
     INTEGER(IntKi)  :: numIceLegs = 0_IntKi      !< number of suport-structure legs in contact with ice (IceDyn coupling) [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: RotNumBld      !< number of blades in each rotor [-]
+    LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotMirror      !< Array of flags indicating if rotor rotation should be mirrored (true=mirror) [-]
     INTEGER(IntKi)  :: NumBD = 0_IntKi      !< number of BeamDyn instances [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BDRotMap      !< array mapping BeamDyn instance to rotor number [-]
     LOGICAL  :: BD_OutputSibling = .false.      !< flag to determine if BD input is sibling of output mesh [-]
@@ -1080,6 +1082,30 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumCrctn = SrcParamData%NumCrctn
    DstParamData%KMax = SrcParamData%KMax
    DstParamData%numIceLegs = SrcParamData%numIceLegs
+   if (allocated(SrcParamData%RotNumBld)) then
+      LB(1:1) = lbound(SrcParamData%RotNumBld)
+      UB(1:1) = ubound(SrcParamData%RotNumBld)
+      if (.not. allocated(DstParamData%RotNumBld)) then
+         allocate(DstParamData%RotNumBld(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%RotNumBld.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%RotNumBld = SrcParamData%RotNumBld
+   end if
+   if (allocated(SrcParamData%RotMirror)) then
+      LB(1:1) = lbound(SrcParamData%RotMirror)
+      UB(1:1) = ubound(SrcParamData%RotMirror)
+      if (.not. allocated(DstParamData%RotMirror)) then
+         allocate(DstParamData%RotMirror(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%RotMirror.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%RotMirror = SrcParamData%RotMirror
+   end if
    DstParamData%NumBD = SrcParamData%NumBD
    if (allocated(SrcParamData%BDRotMap)) then
       LB(1:1) = lbound(SrcParamData%BDRotMap)
@@ -1268,6 +1294,12 @@ subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(ParamData%RotNumBld)) then
+      deallocate(ParamData%RotNumBld)
+   end if
+   if (allocated(ParamData%RotMirror)) then
+      deallocate(ParamData%RotMirror)
+   end if
    if (allocated(ParamData%BDRotMap)) then
       deallocate(ParamData%BDRotMap)
    end if
@@ -1305,6 +1337,8 @@ subroutine FAST_PackParam(RF, Indata)
    call RegPack(RF, InData%NumCrctn)
    call RegPack(RF, InData%KMax)
    call RegPack(RF, InData%numIceLegs)
+   call RegPackAlloc(RF, InData%RotNumBld)
+   call RegPackAlloc(RF, InData%RotMirror)
    call RegPack(RF, InData%NumBD)
    call RegPackAlloc(RF, InData%BDRotMap)
    call RegPack(RF, InData%BD_OutputSibling)
@@ -1421,6 +1455,8 @@ subroutine FAST_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NumCrctn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%KMax); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%numIceLegs); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RotNumBld); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpackAlloc(RF, OutData%RotMirror); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%NumBD); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%BDRotMap); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%BD_OutputSibling); if (RegCheckErr(RF, RoutineName)) return
