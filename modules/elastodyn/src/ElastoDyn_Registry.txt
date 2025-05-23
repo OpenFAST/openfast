@@ -134,6 +134,8 @@ typedef	^	ED_InputFile	ReKi	TowerBsHt	-	-	-	"Height of tower base relative to gr
 typedef	^	ED_InputFile	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ED_InputFile	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ED_InputFile	ReKi	PtfmCMzt	-	-	-	"Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmRefxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"	meters
+typedef	^	ED_InputFile	ReKi	PtfmRefyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"	meters
 typedef	^	ED_InputFile	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"	meters
 typedef	^	ED_InputFile	ReKi	TipMass	{:}	-	-	"Tip-brake masses"	kg
 typedef	^	ED_InputFile	ReKi	HubMass	-	-	-	"Hub mass"	kg
@@ -580,6 +582,8 @@ typedef	^	ParameterType	ReKi	NacCMyn	-	-	-	"Lateral distance from tower-top to n
 typedef	^	ParameterType	ReKi	NacCMzn	-	-	-	"Vertical distance from tower-top to nacelle CM"
 typedef	^	ParameterType	ReKi	OverHang	-	-	-	"Distance from yaw axis to rotor apex or teeter pin"
 typedef	^	ParameterType	ReKi	ProjArea	-	-	-	"Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft)"
+typedef	^	ParameterType	ReKi	PtfmRefxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"
+typedef	^	ParameterType	ReKi	PtfmRefyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"
 typedef	^	ParameterType	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"
 typedef	^	ParameterType	ReKi	RefTwrHt	-	-	-	"Vertical distance between FAST's undisplaced tower height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt - PtfmRefzt"
 typedef	^	ParameterType	ReKi	RFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on rotor-furl axis"
@@ -599,6 +603,8 @@ typedef	^	ParameterType	ReKi	rWJxn	-	-	-	"xn-component of position vector rWJ"
 typedef	^	ParameterType	ReKi	rWJyn	-	-	-	"yn-component of position vector rWJ"
 typedef	^	ParameterType	ReKi	rWJzn	-	-	-	"zn-component of position vector rWJ"
 typedef	^	ParameterType	ReKi	rZT0zt	-	-	-	"zt-component of position vector rZT0"
+typedef	^	ParameterType	ReKi	rZYxt	-	-	-	"xt-component of position vector rZY"
+typedef	^	ParameterType	ReKi	rZYyt	-	-	-	"yt-component of position vector rZY"
 typedef	^	ParameterType	ReKi	rZYzt	-	-	-	"zt-component of position vector rZY"
 typedef	^	ParameterType	R8Ki	SinDel3	-	-	-	"Sine of the Delta-3 angle for teetering rotors"
 typedef	^	ParameterType	R8Ki	SinPreC	{:}	-	-	"Sines of the precone angles"
