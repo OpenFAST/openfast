@@ -171,12 +171,16 @@ subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
    select case (ModData%ID)
 
    case (Module_AD)
-      if (ModData%Ins /= 1) return ! Perform extrap interp for first instance only, this advances all rotors
-      call AD_Input_ExtrapInterp(T%AD%Input(1:), T%AD%InputTimes, T%AD%Input(INPUT_TEMP), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
-      do j = T%p_FAST%InterpOrder, 0, -1
-         call AD_CopyInput(T%AD%Input(j), T%AD%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
-      end do
-      call ShiftInputTimes(T%AD%InputTimes)
+      if (ModData%Ins == 1) then
+         call AD_Input_ExtrapInterp(T%AD%Input(1:), T%AD%InputTimes, T%AD%Input(INPUT_TEMP), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+         do j = T%p_FAST%InterpOrder, 0, -1
+            call AD_CopyInput(T%AD%Input(j), T%AD%Input(j + 1), MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+         end do
+         call ShiftInputTimes(T%AD%InputTimes)
+      else
+         ErrStat2 = ErrID_None
+         ErrMsg2 = ''
+      end if
 
    case (Module_ADsk)
       call ADsk_Input_ExtrapInterp(T%ADsk%Input(1:), T%ADsk%InputTimes, T%ADsk%Input(INPUT_TEMP), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
@@ -435,18 +439,23 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, T, ErrStat, ErrMsg)
    select case (ModData%ID)
 
    case (Module_AD)
-      call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
-      if (Failed()) return
-
-      do j_ss = 1, ModData%SubSteps
-         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
-         t_module = n_t_module*ModData%DT + t_initial
-         call AD_UpdateStates(t_module, n_t_module, T%AD%Input(1:), T%AD%InputTimes, &
-                              T%AD%p, T%AD%x(STATE_PRED), T%AD%xd(STATE_PRED), &
-                              T%AD%z(STATE_PRED), T%AD%OtherSt(STATE_PRED), &
-                              T%AD%m, ErrStat2, ErrMsg2)
+      if (ModData%Ins == 1) then
+         call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
          if (Failed()) return
-      end do
+
+         do j_ss = 1, ModData%SubSteps
+            n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+            t_module = n_t_module*ModData%DT + t_initial
+            call AD_UpdateStates(t_module, n_t_module, T%AD%Input(1:), T%AD%InputTimes, &
+                                 T%AD%p, T%AD%x(STATE_PRED), T%AD%xd(STATE_PRED), &
+                                 T%AD%z(STATE_PRED), T%AD%OtherSt(STATE_PRED), &
+                                 T%AD%m, ErrStat2, ErrMsg2)
+            if (Failed()) return
+         end do
+      else
+         ErrStat2 = ErrID_None
+         ErrMsg2 = ''
+      end if
 
    case (Module_ADsk)
       call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
@@ -1298,7 +1307,7 @@ subroutine FAST_JacobianPInput(ModData, ThisTime, iInput, iState, T, ErrStat, Er
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_JacobianPInput(ModData%Vars, ModData%Ins, ThisTime, T%AD%Input(iInput), T%AD%p, T%AD%x(iState), T%AD%xd(iState), &
+      call AD_JacobianPInput(ModData%Vars, ModData%iRotor, ThisTime, T%AD%Input(iInput), T%AD%p, T%AD%x(iState), T%AD%xd(iState), &
                              T%AD%z(iState), T%AD%OtherSt(iState), T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
                              dYdu=dYdu, dXdu=dXdu)
 
@@ -1408,7 +1417,7 @@ subroutine FAST_JacobianPContState(ModData, ThisTime, iInput, iState, T, ErrStat
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_JacobianPContState(ModData%Vars, ModData%Ins, ThisTime, T%AD%Input(iInput), T%AD%p, &
+      call AD_JacobianPContState(ModData%Vars, ModData%iRotor, ThisTime, T%AD%Input(iInput), T%AD%p, &
                                  T%AD%x(iState), T%AD%xd(iState), &
                                  T%AD%z(iState), T%AD%OtherSt(iState), &
                                  T%AD%y, T%AD%m, ErrStat2, ErrMsg2, &
@@ -1532,10 +1541,15 @@ subroutine FAST_CopyStates(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
 
    case (Module_AD)
 
-      call AD_CopyContState(T%AD%x(iSrc), T%AD%x(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
-      call AD_CopyDiscState(T%AD%xd(iSrc), T%AD%xd(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
-      call AD_CopyConstrState(T%AD%z(iSrc), T%AD%z(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
-      call AD_CopyOtherState(T%AD%OtherSt(iSrc), T%AD%OtherSt(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+      if (ModData%Ins == 1) then
+         call AD_CopyContState(T%AD%x(iSrc), T%AD%x(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+         call AD_CopyDiscState(T%AD%xd(iSrc), T%AD%xd(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+         call AD_CopyConstrState(T%AD%z(iSrc), T%AD%z(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+         call AD_CopyOtherState(T%AD%OtherSt(iSrc), T%AD%OtherSt(iDst), CtrlCode, ErrStat2, ErrMsg2); if (Failed()) return
+      else
+         ErrStat2 = ErrID_None
+         ErrMsg2 = ''
+      end if
 
    case (Module_ADsk)
 
@@ -1702,7 +1716,12 @@ subroutine FAST_CopyInput(ModData, T, iSrc, iDst, CtrlCode, ErrStat, ErrMsg)
    select case (ModData%ID)
 
    case (Module_AD)
-      call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input(iDst), CtrlCode, ErrStat2, ErrMsg2)
+      if (ModData%Ins == 1) then
+         call AD_CopyInput(T%AD%Input(iSrc), T%AD%Input(iDst), CtrlCode, ErrStat2, ErrMsg2)
+      else
+         ErrStat2 = ErrID_None
+         ErrMsg2 = ''
+      end if
 
    case (Module_ADsk)
       call ADsk_CopyInput(T%ADsk%Input(iSrc), T%ADsk%Input(iDst), CtrlCode, ErrStat2, ErrMsg2)
@@ -1838,6 +1857,9 @@ subroutine FAST_ModEnd(Mods, T, ErrStat, ErrMsg)
                call AD_End(T%AD%Input(1), T%AD%p, T%AD%x(STATE_CURR), &
                            T%AD%xd(STATE_CURR), T%AD%z(STATE_CURR), &
                            T%AD%OtherSt(STATE_CURR), T%AD%y, T%AD%m, ErrStat2, ErrMsg2)
+            else
+               ErrStat2 = ErrID_None
+               ErrMsg2 = ''
             end if
 
          case (Module_ADsk)
