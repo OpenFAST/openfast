@@ -157,6 +157,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmCMxt = 0.0_ReKi      !< Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
     REAL(ReKi)  :: PtfmCMyt = 0.0_ReKi      !< Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
     REAL(ReKi)  :: PtfmCMzt = 0.0_ReKi      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
+    REAL(ReKi)  :: PtfmRefxt = 0.0_ReKi      !< Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [meters]
+    REAL(ReKi)  :: PtfmRefyt = 0.0_ReKi      !< Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [meters]
     REAL(ReKi)  :: PtfmRefzt = 0.0_ReKi      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TipMass      !< Tip-brake masses [kg]
     REAL(ReKi)  :: HubMass = 0.0_ReKi      !< Hub mass [kg]
@@ -587,6 +589,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: NacCMzn = 0.0_ReKi      !< Vertical distance from tower-top to nacelle CM [-]
     REAL(ReKi)  :: OverHang = 0.0_ReKi      !< Distance from yaw axis to rotor apex or teeter pin [-]
     REAL(ReKi)  :: ProjArea = 0.0_ReKi      !< Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft) [-]
+    REAL(ReKi)  :: PtfmRefxt = 0.0_ReKi      !< Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [-]
+    REAL(ReKi)  :: PtfmRefyt = 0.0_ReKi      !< Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [-]
     REAL(ReKi)  :: PtfmRefzt = 0.0_ReKi      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [-]
     REAL(ReKi)  :: RefTwrHt = 0.0_ReKi      !< Vertical distance between FAST's undisplaced tower height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt - PtfmRefzt [-]
     REAL(ReKi) , DIMENSION(1:3)  :: RFrlPnt_n = 0.0_ReKi      !< Vector from tower-top to arbitrary point on rotor-furl axis [-]
@@ -606,6 +610,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: rWJyn = 0.0_ReKi      !< yn-component of position vector rWJ [-]
     REAL(ReKi)  :: rWJzn = 0.0_ReKi      !< zn-component of position vector rWJ [-]
     REAL(ReKi)  :: rZT0zt = 0.0_ReKi      !< zt-component of position vector rZT0 [-]
+    REAL(ReKi)  :: rZYxt = 0.0_ReKi      !< xt-component of position vector rZY [-]
+    REAL(ReKi)  :: rZYyt = 0.0_ReKi      !< yt-component of position vector rZY [-]
     REAL(ReKi)  :: rZYzt = 0.0_ReKi      !< zt-component of position vector rZY [-]
     REAL(R8Ki)  :: SinDel3 = 0.0_R8Ki      !< Sine of the Delta-3 angle for teetering rotors [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: SinPreC      !< Sines of the precone angles [-]
@@ -1549,6 +1555,8 @@ subroutine ED_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%PtfmCMxt = SrcInputFileData%PtfmCMxt
    DstInputFileData%PtfmCMyt = SrcInputFileData%PtfmCMyt
    DstInputFileData%PtfmCMzt = SrcInputFileData%PtfmCMzt
+   DstInputFileData%PtfmRefxt = SrcInputFileData%PtfmRefxt
+   DstInputFileData%PtfmRefyt = SrcInputFileData%PtfmRefyt
    DstInputFileData%PtfmRefzt = SrcInputFileData%PtfmRefzt
    if (allocated(SrcInputFileData%TipMass)) then
       LB(1:1) = lbound(SrcInputFileData%TipMass)
@@ -1949,6 +1957,8 @@ subroutine ED_PackInputFile(RF, Indata)
    call RegPack(RF, InData%PtfmCMxt)
    call RegPack(RF, InData%PtfmCMyt)
    call RegPack(RF, InData%PtfmCMzt)
+   call RegPack(RF, InData%PtfmRefxt)
+   call RegPack(RF, InData%PtfmRefyt)
    call RegPack(RF, InData%PtfmRefzt)
    call RegPackAlloc(RF, InData%TipMass)
    call RegPack(RF, InData%HubMass)
@@ -2147,6 +2157,8 @@ subroutine ED_UnPackInputFile(RF, OutData)
    call RegUnpack(RF, OutData%PtfmCMxt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmCMyt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmCMzt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefxt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefyt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmRefzt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%TipMass); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%HubMass); if (RegCheckErr(RF, RoutineName)) return
@@ -4901,6 +4913,8 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NacCMzn = SrcParamData%NacCMzn
    DstParamData%OverHang = SrcParamData%OverHang
    DstParamData%ProjArea = SrcParamData%ProjArea
+   DstParamData%PtfmRefxt = SrcParamData%PtfmRefxt
+   DstParamData%PtfmRefyt = SrcParamData%PtfmRefyt
    DstParamData%PtfmRefzt = SrcParamData%PtfmRefzt
    DstParamData%RefTwrHt = SrcParamData%RefTwrHt
    DstParamData%RFrlPnt_n = SrcParamData%RFrlPnt_n
@@ -4920,6 +4934,8 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%rWJyn = SrcParamData%rWJyn
    DstParamData%rWJzn = SrcParamData%rWJzn
    DstParamData%rZT0zt = SrcParamData%rZT0zt
+   DstParamData%rZYxt = SrcParamData%rZYxt
+   DstParamData%rZYyt = SrcParamData%rZYyt
    DstParamData%rZYzt = SrcParamData%rZYzt
    DstParamData%SinDel3 = SrcParamData%SinDel3
    if (allocated(SrcParamData%SinPreC)) then
@@ -5932,6 +5948,8 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%NacCMzn)
    call RegPack(RF, InData%OverHang)
    call RegPack(RF, InData%ProjArea)
+   call RegPack(RF, InData%PtfmRefxt)
+   call RegPack(RF, InData%PtfmRefyt)
    call RegPack(RF, InData%PtfmRefzt)
    call RegPack(RF, InData%RefTwrHt)
    call RegPack(RF, InData%RFrlPnt_n)
@@ -5951,6 +5969,8 @@ subroutine ED_PackParam(RF, Indata)
    call RegPack(RF, InData%rWJyn)
    call RegPack(RF, InData%rWJzn)
    call RegPack(RF, InData%rZT0zt)
+   call RegPack(RF, InData%rZYxt)
+   call RegPack(RF, InData%rZYyt)
    call RegPack(RF, InData%rZYzt)
    call RegPack(RF, InData%SinDel3)
    call RegPackAlloc(RF, InData%SinPreC)
@@ -6201,6 +6221,8 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%NacCMzn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%OverHang); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ProjArea); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefxt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%PtfmRefyt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%PtfmRefzt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RefTwrHt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%RFrlPnt_n); if (RegCheckErr(RF, RoutineName)) return
@@ -6220,6 +6242,8 @@ subroutine ED_UnPackParam(RF, OutData)
    call RegUnpack(RF, OutData%rWJyn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rWJzn); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rZT0zt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%rZYxt); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%rZYyt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%rZYzt); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SinDel3); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpackAlloc(RF, OutData%SinPreC); if (RegCheckErr(RF, RoutineName)) return
