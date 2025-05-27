@@ -2007,6 +2007,14 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       CALL SetErrStat( ErrID_Fatal, 'NumCrctn must be 0 or greater.', ErrStat, ErrMsg, RoutineName )
    END IF
 
+   if (p%NRotors > 1) then
+      if (p%CompSub /= Module_SD) then
+         call SetErrStat(ErrID_Fatal, 'SubDyn must be used when multiple rotors are present. Set CompSub = 1 in the FAST input file.', ErrStat, ErrMsg, RoutineName)
+      end if
+      if (p%CompAero /= Module_Unknown .and. p%CompAero /= Module_AD) then
+         call SetErrStat(ErrID_Fatal, 'AeroDyn must be used when multiple rotors are present. Set CompAero = 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName)
+      end if
+   end if
 
    if ( p%WrVTK == VTK_Unknown ) then
       call SetErrStat(ErrID_Fatal, 'WrVTK must be 0 (none), 1 (initialization only), 2 (animation), or 3 (mode shapes).', ErrStat, ErrMsg, RoutineName)
