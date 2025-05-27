@@ -360,7 +360,7 @@ subroutine MV_AddModule(ModDataAry, ModID, ModAbbr, Instance, ModDT, SolverDT, V
    logical, intent(in)                             :: Linearize      !< Flag indicating linearization
    integer(IntKi), intent(out)                     :: ErrStat        !< Error status
    character(ErrMsgLen), intent(out)               :: ErrMsg         !< Error message
-   integer(IntKi), optional, intent(in)            :: iRotor         !< Rotor number (0 indicates all rotors)
+   integer(IntKi), optional, intent(in)            :: iRotor         !< Rotor number (0 or not present indicates all rotors)
 
    character(*), parameter                         :: RoutineName = 'MV_AddModule'
    integer(IntKi)                                  :: ErrStat2

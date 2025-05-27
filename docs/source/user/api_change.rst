@@ -24,10 +24,10 @@ which requires a "SeaState Data" section in the AeroDyn driver input file.
 
 Changes to the OpenFAST input file support multiple rotors in one turbine. Line 16, NRotors,
 is required to specify the number of rotors in the turbine. Lines 50-56 specify the 
-ElastoDyn, BeamDyn, and ServoDyn input files for the second rotor. The `MirrorRotor` line
-sets a flag to reverse the direction the rotor is spinning. The first rotor always spins
-in the typical direction. These lines are specified only if NRotors is greater than 1 and
-are repeated for subsequent rotors.
+ElastoDyn, BeamDyn, and ServoDyn input files for the second rotor; all other modules use 
+the input files specified in the first section. The `MirrorRotor` line sets a flag to 
+reverse the direction the rotor is spinning. The first rotor always spins in the typical direction. 
+These lines are specified only if NRotors is greater than 1 and are repeated for subsequent rotors.
 
 ============================================= ======== ==================== ========================================================================================================================================================================================================
 Added in OpenFAST `dev`                             
