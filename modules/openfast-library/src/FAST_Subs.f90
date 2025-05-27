@@ -5962,7 +5962,8 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, ED, SED, BD, AD, IfW, ExtInfw, HD, 
       if (allocated(AD%Input(1)%rotors) .and. allocated(AD%y%rotors)) then
          do iRot = 1, p_FAST%NRotors
             do iBld = 1, p_FAST%RotNumBld(iRot)
-               call MeshWrVTK(p_FAST%TurbinePos, AD%Input(INPUT_CURR)%rotors(iRot)%BladeMotion(iBld), trim(p_FAST%VTK_OutFileRoot)//'.AD_Blade'//trim(num2lstr(k)), &
+               call MeshWrVTK(p_FAST%TurbinePos, AD%Input(INPUT_CURR)%rotors(iRot)%BladeMotion(iBld), &
+                              trim(p_FAST%VTK_OutFileRoot)//'.AD_Blade_R'//trim(num2lstr(iRot))//'B'//trim(num2lstr(iBld)), &
                               y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, Sib=AD%y%rotors(iRot)%BladeLoad(iBld) )
             end do
          end do
@@ -5972,14 +5973,16 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, ED, SED, BD, AD, IfW, ExtInfw, HD, 
       do iRot = 1, p_FAST%NRotors
          do iBld = 1, p_FAST%RotNumBld(iRot)
             j = j + 1
-            call MeshWrVTK(p_FAST%TurbinePos, BD%y(j)%BldMotion, trim(p_FAST%VTK_OutFileRoot)//'.BD_BldMotion_R'//trim(num2lstr(iRot))//"B"//trim(num2lstr(iBld)), &
+            call MeshWrVTK(p_FAST%TurbinePos, BD%y(j)%BldMotion, &
+                           trim(p_FAST%VTK_OutFileRoot)//'.BD_BldMotion_R'//trim(num2lstr(iRot))//"B"//trim(num2lstr(iBld)), &
                            y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth)
          end do
       end do
    ELSE IF ( p_FAST%CompElast == Module_ED ) THEN
       do iRot = 1, p_FAST%NRotors
          do iBld = 1, p_FAST%RotNumBld(iRot)
-            call MeshWrVTK(p_FAST%TurbinePos, ED%y(iRot)%BladeLn2Mesh(iBld), trim(p_FAST%VTK_OutFileRoot)//'.ED_BladeLn2Mesh_motion_R'//trim(num2lstr(iRot))//'B'//trim(num2lstr(iBld)), &
+            call MeshWrVTK(p_FAST%TurbinePos, ED%y(iRot)%BladeLn2Mesh(iBld), &
+                           trim(p_FAST%VTK_OutFileRoot)//'.ED_BladeLn2Mesh_motion_R'//trim(num2lstr(iRot))//'B'//trim(num2lstr(iBld)), &
                            y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth)
          end do
       end do
