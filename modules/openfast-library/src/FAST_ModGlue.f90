@@ -112,6 +112,7 @@ subroutine ModGlue_CombineModules(ModGlue, ModDataAry, Mappings, iModAry, FlagFi
          GlueModData%Ins = ModData%Ins
          GlueModData%DT = ModData%DT
          GlueModData%SubSteps = ModData%SubSteps
+         GlueModData%iRotor = ModData%iRotor
 
          ! Continuous state
          call CopyVariables(ModData%Vars%x, GlueModData%Vars%x, xNumVals); if (Failed()) return
