@@ -5714,7 +5714,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, ED, SED, BD, AD, IfW, ExtInfw, HD, SD
 
             call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1,iRot)%BladePtLoads(iBld), &
                            trim(p_FAST%VTK_OutFileRoot)//'.ED_BladePtLoads'//Suffix, &
-                           y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, ED%y(j)%BladeLn2Mesh(K))
+                           y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, ED%y(iRot)%BladeLn2Mesh(iBld))
          end do
       end do
    ELSE if (p_FAST%CompElast == Module_SED .and. allocated(SED%Input)) then
