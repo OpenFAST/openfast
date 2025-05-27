@@ -22,11 +22,26 @@ rather than via a separate flag for each.
 Superposition of wave and current velocities between InflowWind and SeaState was enabled,
 which requires a "SeaState Data" section in the AeroDyn driver input file.
 
+Changes to the OpenFAST input file support multiple rotors in one turbine. Line 16, NRotors,
+is required to specify the number of rotors in the turbine. Lines 50-56 specify the 
+ElastoDyn, BeamDyn, and ServoDyn input files for the second rotor. The `MirrorRotor` line
+sets a flag to reverse the direction the rotor is spinning. The first rotor always spins
+in the typical direction. These lines are specified only if NRotors is greater than 1 and
+are repeated for subsequent rotors.
+
 ============================================= ======== ==================== ========================================================================================================================================================================================================
 Added in OpenFAST `dev`                             
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line     Flag Name            Example Value
 ============================================= ======== ==================== ========================================================================================================================================================================================================
+OpenFAST                                      16       NRotors              2   NRotors         - Number of rotors in turbine (-)
+OpenFAST                                      50                            ---------------------- INPUT FILES Rotor 2 -------------------------------------
+OpenFAST                                      51       EDFile               "ElastoDyn.dat"   EDFile          - Name of file containing ElastoDyn input parameters (quoted string)
+OpenFAST                                      52       BDBldFile(1)         "BeamDyn.dat"     BDBldFile(1)    - Name of file containing BeamDyn input parameters for blade 1 (quoted string)
+OpenFAST                                      53       BDBldFile(2)         "BeamDyn.dat"     BDBldFile(2)    - Name of file containing BeamDyn input parameters for blade 2 (quoted string)
+OpenFAST                                      54       BDBldFile(3)         "BeamDyn.dat"     BDBldFile(3)    - Name of file containing BeamDyn input parameters for blade 3 (quoted string)
+OpenFAST                                      55       ServoFile            "ServoDyn_R2.dat" ServoFile       - Name of file containing control and electrical-drive input parameters (quoted string)
+OpenFAST                                      56       MirrorRotor          False             MirrorRotor     - Use CW rotor definition definition files for a CCW rotor (-)
 AeroDyn blade file                                     t_c                  0.8651      [additional column in *Blade Properties* table]
 AeroDyn blade file                                     BlCpn                1.0         [additional column in *Blade Properties* table]
 AeroDyn blade file                                     BlCpt                1.0         [additional column in *Blade Properties* table]
