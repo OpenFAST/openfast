@@ -3319,12 +3319,12 @@ subroutine Custom_InputSolve(Mapping, ModSrc, ModDst, iInput, T, ErrStat, ErrMsg
       iBld = T%p_FAST%BDBldMap(ModSrc%Ins)
 
       T%SrvD%Input(iInput,ModDst%Ins)%RootMxc(iBld) = &
-         T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y(ModDst%Ins)%BlPitch(iBld)) + &
-         T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y(ModDst%Ins)%BlPitch(iBld))
+         T%BD%y(Mapping%SrcIns)%RootMxr*cos(T%ED%y(ModDst%iRotor)%BlPitch(iBld)) + &
+         T%BD%y(Mapping%SrcIns)%RootMyr*sin(T%ED%y(ModDst%iRotor)%BlPitch(iBld))
 
       T%SrvD%Input(iInput,ModDst%Ins)%RootMyc(iBld) = &
-         -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y(ModDst%Ins)%BlPitch(iBld)) + &
-         T%BD%y(Mapping%SrcIns)%RootMyr*cos(T%ED%y(ModDst%Ins)%BlPitch(iBld))
+         -T%BD%y(Mapping%SrcIns)%RootMxr*sin(T%ED%y(ModDst%iRotor)%BlPitch(iBld)) + &
+         T%BD%y(Mapping%SrcIns)%RootMyr*cos(T%ED%y(ModDst%iRotor)%BlPitch(iBld))
 
    case (Custom_ED_to_SrvD)
 
