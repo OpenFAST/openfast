@@ -2924,6 +2924,13 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
    CALL ReadVar( UnIn, InputFile, p%MHK, "MHK", "MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}", ErrStat2, ErrMsg2, UnEc)
          if (Failed()) return
 
+      ! Allocate array of rotor mirror flags
+   call AllocAry(p%RotMirror, p%NRotors, "p%RotMirror", ErrStat2, ErrMsg2); if (Failed()) return
+
+      ! Read mirror flag
+   CALL ReadVar( UnIn, InputFile, p%RotMirror(1), "MirrorRotor", "Use CW rotor definition definition files for a CCW rotor (-)", ErrStat2, ErrMsg2, UnEc)
+         if (Failed()) return
+
    !---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
 
       ! Read section header
@@ -2972,10 +2979,6 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
    call AllocAry(p%EDFile, p%NRotors, "p%EDFile", ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(p%BDBldFile, MaxBladesBD, p%NRotors, "p%BDBldFile", ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(p%ServoFile, p%NRotors, "p%ServoFile", ErrStat2, ErrMsg2); if (Failed()) return
-
-      ! Allocate array of rotor mirror flags and initialize to false
-   call AllocAry(p%RotMirror, p%NRotors, "p%RotMirror", ErrStat2, ErrMsg2); if (Failed()) return
-   p%RotMirror = .false.
 
       ! Read section header
    CALL ReadCom( UnIn, InputFile, 'Section Header: Input Files', ErrStat2, ErrMsg2, UnEc )
