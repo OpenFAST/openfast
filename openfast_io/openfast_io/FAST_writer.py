@@ -307,7 +307,7 @@ class InputWriter_OpenFAST(object):
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['CompMooring'], 'CompMooring', '- Compute mooring system (switch) {0=None; 1=MAP++; 2=FEAMooring; 3=MoorDyn; 4=OrcaFlex}\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['CompIce'], 'CompIce', '- Compute ice loads (switch) {0=None; 1=IceFloe; 2=IceDyn}\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['MHK'], 'MHK', '- MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}\n'))
-        f.write('{:<22} {:<11} {:}'.format(' '.join(['%f'%i for i in np.array(self.fst_vt['Fst']['RotorDir'], dtype=float)]), 'RotorDir', '- List of rotor rotation directions [1 to NRotors] {0=CCW, 1=CW}\n'))
+        f.write('{:<22} {:<11} {:}'.format(' '.join(['%d'%i for i in np.array(self.fst_vt['Fst']['RotorDir'], dtype=int)]), 'RotorDir', '- List of rotor rotation directions [1 to NRotors] {0=CCW, 1=CW}\n'))
         f.write('---------------------- ENVIRONMENTAL CONDITIONS --------------------------------\n')
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['Gravity'], 'Gravity', '- Gravitational acceleration (m/s^2)\n'))
         f.write('{:<22} {:<11} {:}'.format(self.fst_vt['Fst']['AirDens'], 'AirDens', '- Air density (kg/m^3)\n'))
