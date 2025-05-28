@@ -170,13 +170,6 @@ typedef  ^          ^      IntKi                   n           -  -  -  "tracks 
 
 # ============================== Parameters ============================================================================================================================================
 typedef	 ^  ParameterType   ModVarsType    Vars          -  -  -  "Module Variables"
-typedef  ^  ParameterType   IntKi          iVarTPMesh    -  0  -  "Variable index for TPMesh"
-typedef  ^  ParameterType   IntKi          iVarLMesh     -  0  -  "Variable index for LMesh"
-typedef  ^  ParameterType   IntKi          iVarY0Mesh    -  0  -  "Variable index for Y0Mesh"
-typedef  ^  ParameterType   IntKi          iVarY1Mesh    -  0  -  "Variable index for Y1Mesh"
-typedef  ^  ParameterType   IntKi          iVarY2Mesh    -  0  -  "Variable index for Y2Mesh"
-typedef  ^  ParameterType   IntKi          iVarY3Mesh    -  0  -  "Variable index for Y3Mesh"
-typedef  ^  ParameterType   IntKi          iVarWriteOutput  -  0  -  "Variable index for WriteOutput"
 # --- Parameters - Algo
 typedef  ^  ParameterType   ReKi           g             -  -  -  "Gravity acceleration"  m/s^2
 typedef  ^  ParameterType   DbKi           SDDeltaT      -  -  -  "Time step (for integration of continuous states)"  seconds

@@ -225,13 +225,6 @@ IMPLICIT NONE
 ! =========  SD_ParameterType  =======
   TYPE, PUBLIC :: SD_ParameterType
     TYPE(ModVarsType)  :: Vars      !< Module Variables [-]
-    INTEGER(IntKi)  :: iVarTPMesh = 0      !< Variable index for TPMesh [-]
-    INTEGER(IntKi)  :: iVarLMesh = 0      !< Variable index for LMesh [-]
-    INTEGER(IntKi)  :: iVarY0Mesh = 0      !< Variable index for Y0Mesh [-]
-    INTEGER(IntKi)  :: iVarY1Mesh = 0      !< Variable index for Y1Mesh [-]
-    INTEGER(IntKi)  :: iVarY2Mesh = 0      !< Variable index for Y2Mesh [-]
-    INTEGER(IntKi)  :: iVarY3Mesh = 0      !< Variable index for Y3Mesh [-]
-    INTEGER(IntKi)  :: iVarWriteOutput = 0      !< Variable index for WriteOutput [-]
     REAL(ReKi)  :: g = 0.0_ReKi      !< Gravity acceleration [m/s^2]
     REAL(DbKi)  :: SDDeltaT = 0.0_R8Ki      !< Time step (for integration of continuous states) [seconds]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1/2/3)Length of y2 array [-]
@@ -2163,13 +2156,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstParamData%iVarTPMesh = SrcParamData%iVarTPMesh
-   DstParamData%iVarLMesh = SrcParamData%iVarLMesh
-   DstParamData%iVarY0Mesh = SrcParamData%iVarY0Mesh
-   DstParamData%iVarY1Mesh = SrcParamData%iVarY1Mesh
-   DstParamData%iVarY2Mesh = SrcParamData%iVarY2Mesh
-   DstParamData%iVarY3Mesh = SrcParamData%iVarY3Mesh
-   DstParamData%iVarWriteOutput = SrcParamData%iVarWriteOutput
    DstParamData%g = SrcParamData%g
    DstParamData%SDDeltaT = SrcParamData%SDDeltaT
    DstParamData%IntMethod = SrcParamData%IntMethod
@@ -3420,13 +3406,6 @@ subroutine SD_PackParam(RF, Indata)
    integer(B4Ki)   :: LB(2), UB(2)
    if (RF%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
-   call RegPack(RF, InData%iVarTPMesh)
-   call RegPack(RF, InData%iVarLMesh)
-   call RegPack(RF, InData%iVarY0Mesh)
-   call RegPack(RF, InData%iVarY1Mesh)
-   call RegPack(RF, InData%iVarY2Mesh)
-   call RegPack(RF, InData%iVarY3Mesh)
-   call RegPack(RF, InData%iVarWriteOutput)
    call RegPack(RF, InData%g)
    call RegPack(RF, InData%SDDeltaT)
    call RegPack(RF, InData%IntMethod)
@@ -3615,13 +3594,6 @@ subroutine SD_UnPackParam(RF, OutData)
    logical         :: IsAllocAssoc
    if (RF%ErrStat /= ErrID_None) return
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 
-   call RegUnpack(RF, OutData%iVarTPMesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarLMesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarY0Mesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarY1Mesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarY2Mesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarY3Mesh); if (RegCheckErr(RF, RoutineName)) return
-   call RegUnpack(RF, OutData%iVarWriteOutput); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%g); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SDDeltaT); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%IntMethod); if (RegCheckErr(RF, RoutineName)) return
