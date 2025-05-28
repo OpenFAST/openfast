@@ -4553,8 +4553,9 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, m_Glue, ErrStat, ErrMsg )
       associate (SrcMod => m_Glue%ModData(m_Glue%Mappings(i)%iModSrc), &
                  DstMod => m_Glue%ModData(m_Glue%Mappings(i)%iModDst))
          if (m_Glue%Mappings(i)%MapType == Map_Custom) then
-            write (y_FAST%UnSum, *) trim(SrcMod%Abbr)//'_'//trim(Num2LStr(SrcMod%Ins))//" -> "// &
-                                    trim(DstMod%Abbr)//'_'//trim(Num2LStr(DstMod%Ins))
+            write (y_FAST%UnSum, *) 'Custom: '//&
+                                    trim(SrcMod%Abbr)//'('//trim(Num2LStr(SrcMod%Ins))//") -> "// &
+                                    trim(DstMod%Abbr)//'('//trim(Num2LStr(DstMod%Ins))//')'
          else
             write (y_FAST%UnSum, *) trim(m_Glue%Mappings(i)%Desc)
          end if
