@@ -310,7 +310,7 @@ typedef  ^  InputType   MeshType    LMesh          -       -   - "Point mesh for
 typedef  ^  InputType   ReKi        CableDeltaL   {:}      -   - "Cable tension, control input"
 
 # ============================== Outputs ============================================================================================================================================
-typedef  ^  OutputType  MeshType    Y0Mesh         -  - - "Point motion mesh for the PRP computed from the rigid-body reference point assuming rigid-body kinematics"
+typedef  ^  OutputType  MeshType    Y0Mesh         -  - - "Motion mesh for the rigid-body reference point"
 typedef  ^  OutputType  MeshType    Y1Mesh        {:} - - "Transition piece outputs on a point mesh"
 typedef  ^  OutputType  MeshType    Y2Mesh         -  - - "Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh"
 typedef  ^  OutputType  MeshType    Y3Mesh         -  - - "Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh"

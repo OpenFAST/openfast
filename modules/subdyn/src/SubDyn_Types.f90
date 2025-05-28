@@ -362,7 +362,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_OutputType  =======
   TYPE, PUBLIC :: SD_OutputType
-    TYPE(MeshType)  :: Y0Mesh      !< Point mesh containing the PRP [-]
+    TYPE(MeshType)  :: Y0Mesh      !< Motion mesh for the rigid-body reference point [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: Y1Mesh      !< Transition piece outputs on a point mesh [-]
     TYPE(MeshType)  :: Y2Mesh      !< Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh [-]
     TYPE(MeshType)  :: Y3Mesh      !< Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh [-]
