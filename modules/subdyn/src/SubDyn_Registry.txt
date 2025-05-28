@@ -85,8 +85,9 @@ typedef  ^  InitOutputType  CHARACTER(ChanLen)     WriteOutputHdr {:}  - -   "Na
 typedef  ^  InitOutputType  CHARACTER(ChanLen)     WriteOutputUnt {:}  - -   "Units of the output-to-file channels" -
 typedef  ^  InitOutputType  ProgDesc               Ver             -   - -   "This module's name, version, and date" -
 typedef	 ^  InitOutputType  ModVarsType            Vars            -   - -   "Module Variables"
-typedef  ^  InitOutputType  R8Ki                   qR0            {6}  - -   "Initial rigid-body displacement (floating only)"
 typedef  ^  InitOutputType  logical                IsFloating      -   - -   "Flag indicating if the substructure is floating"
+typedef  ^  InitOutputType  logical                SDHasRBDoF      -   - -   "Flag indicating if SubDyn is tracking rigid-body motion internally; only true if floating with multiple transition pieces"
+typedef  ^  InitOutputType  R8Ki                   PlatformPos    {6}  - -   "Initial rigid-body displacement at the PRP (only if SDHasRBDoF=true)"
 typedef  ^  ^               LOGICAL                CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for active cable tensioning is requested"   -
 
 # ============================== Define initialization data (not from glue code) here: ============================================================================================================================================

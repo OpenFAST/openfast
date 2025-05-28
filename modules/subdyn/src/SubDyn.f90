@@ -294,10 +294,6 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    endif
    if(Failed()) return
 
-   ! Copy initial platform displacement and floating flag to initialization output
-   InitOut%qR0 = Init%qR0
-   InitOut%IsFloating = p%Floating
-
    ! --------------------------------------------------------------------------------
    ! --- Manipulation of Init and parameters
    ! --------------------------------------------------------------------------------
@@ -362,7 +358,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       x%qmdot   = 0.0_ReKi
       m%qmdotdot= 0.0_ReKi
    END IF
-   IF ( p%Floating ) THEN
+   IF ( p%TP1IsRBRefPt ) THEN
       CALL AllocAry(x%qR,       6, 'x%qR',       ErrStat2, ErrMsg2 ); if(Failed()) return
       CALL AllocAry(x%qRdot,    6, 'x%qRdot',    ErrStat2, ErrMsg2 ); if(Failed()) return
       CALL AllocAry(m%qRdotdot, 6, 'm%qRdotdot', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -387,7 +383,15 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
  
    ! Allocate miscellaneous variables, used only to avoid temporary copies of variables allocated/deallocated and sometimes recomputed each time
    CALL AllocMiscVars(p, m, ErrStat2, ErrMsg2); if(Failed()) return
-      
+
+   ! Copy initial platform displacement and floating flag to initialization output
+   InitOut%IsFloating = p%Floating
+   InitOut%SDHasRBDoF = p%TP1IsRBRefPt
+   IF ( p%TP1IsRBRefPt ) THEN
+      InitOut%PlatformPos(4:6) = Init%qR0(4:6)
+      InitOut%PlatformPos(1:3) = Init%qR0(1:3) + p%RBRefPt - matmul( p%RBRefPt, EulerConstructZYX(Init%qR0(4:6)) )
+   END IF
+
    ! --------------------------------------------------------------------------------
    ! --- Initialize Inputs and Outputs
    ! --------------------------------------------------------------------------------
