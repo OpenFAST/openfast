@@ -2617,6 +2617,7 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
 
    CHARACTER(10)                 :: AbortLevel                                ! String that indicates which error level should be used to abort the program: WARNING, SEVERE, or FATAL
    CHARACTER(30)                 :: Line                                      ! string for default entry in input file
+   INTEGER(IntKi), allocatable   :: RotorDir(:)                               ! List of rotor rotation directions [1 to NRotors] {0=CCW, 1=CW}
 
    CHARACTER(*),   PARAMETER     :: RoutineName = 'FAST_ReadPrimaryFile'
 
@@ -2926,10 +2927,16 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
 
       ! Allocate array of rotor mirror flags
    call AllocAry(p%RotMirror, p%NRotors, "p%RotMirror", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(RotorDir, p%NRotors, "RotorDir", ErrStat2, ErrMsg2); if (Failed()) return
 
-      ! Read mirror flag
-   CALL ReadVar( UnIn, InputFile, p%RotMirror(1), "MirrorRotor", "Use CW rotor definition definition files for a CCW rotor (-)", ErrStat2, ErrMsg2, UnEc)
+      ! Read rotor direction list
+   CALL ReadAry( UnIn, InputFile, RotorDir, p%NRotors, "RotorDir", "List of rotor rotation directions [1 to NRotors] {0=CCW, 1=CW}", ErrStat2, ErrMsg2, UnEc)
          if (Failed()) return
+
+      ! Convert rotor direction into flags to mirror rotor direction
+   do i = 1, p%NRotors
+      p%RotMirror(i) = RotorDir(i) == 1
+   end do
 
    !---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
 
@@ -3059,10 +3066,6 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, m_FAST, OverrideAbortErrLev, ErrS
       CALL ReadVar( UnIn, InputFile, p%ServoFile(iRot), "ServoFile", "Name of file containing control and electrical-drive input parameters for rotor "//TRIM(num2LStr(iRot))//" (-)", ErrStat2, ErrMsg2, UnEc)
       if (Failed()) return
       IF ( PathIsRelative( p%ServoFile(iRot) ) ) p%ServoFile(iRot) = TRIM(PriPath)//TRIM(p%ServoFile(iRot))
-
-         ! RotMirror - Flag to mirror rotation of rotor (switch):
-      CALL ReadVar( UnIn, InputFile, p%RotMirror(iRot), "RotMirror", "Flag to mirror rotation of rotor "//TRIM(num2LStr(iRot))//" (-)", ErrStat2, ErrMsg2, UnEc)
-      if (Failed()) return
 
    end do
 
