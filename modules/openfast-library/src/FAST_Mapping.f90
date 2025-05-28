@@ -1538,6 +1538,7 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(ED_y_PlatformPtMesh), &          ! ED%y%PlatformPtMesh
                          DstDL=DatLoc(HydroDyn_u_PRPMesh), &           ! HD%u%PRPMesh
+                         Active=Turbine%p_FAST%NRotors == 1, &
                          ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
@@ -1561,6 +1562,12 @@ subroutine InitMappings_HD(Mappings, SrcMod, DstMod, Turbine, ErrStat, ErrMsg)
                        Active=Turbine%p_FAST%Linearize); if (Failed()) return
 
    case (Module_SD)
+
+      call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
+                         SrcDL=DatLoc(SD_y_Y0Mesh), &                  ! SD%y%Y0Mesh
+                         DstDL=DatLoc(HydroDyn_u_PRPMesh), &           ! HD%u%PRPMesh
+                         Active=Turbine%p_FAST%NRotors > 1, &
+                         ErrStat=ErrStat2, ErrMsg=ErrMsg2); if(Failed()) return
 
       call MapMotionMesh(Turbine, Mappings, SrcMod=SrcMod, DstMod=DstMod, &
                          SrcDL=DatLoc(SD_y_Y2Mesh), &                  ! SD%y%Y2Mesh
