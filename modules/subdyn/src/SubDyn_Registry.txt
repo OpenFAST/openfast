@@ -172,6 +172,7 @@ typedef  ^          ^      IntKi                   n           -  -  -  "tracks 
 typedef	 ^  ParameterType   ModVarsType    Vars          -  -  -  "Module Variables"
 typedef  ^  ParameterType   IntKi          iVarTPMesh    -  0  -  "Variable index for TPMesh"
 typedef  ^  ParameterType   IntKi          iVarLMesh     -  0  -  "Variable index for LMesh"
+typedef  ^  ParameterType   IntKi          iVarY0Mesh    -  0  -  "Variable index for Y0Mesh"
 typedef  ^  ParameterType   IntKi          iVarY1Mesh    -  0  -  "Variable index for Y1Mesh"
 typedef  ^  ParameterType   IntKi          iVarY2Mesh    -  0  -  "Variable index for Y2Mesh"
 typedef  ^  ParameterType   IntKi          iVarY3Mesh    -  0  -  "Variable index for Y3Mesh"
@@ -309,6 +310,7 @@ typedef  ^  InputType   MeshType    LMesh          -       -   - "Point mesh for
 typedef  ^  InputType   ReKi        CableDeltaL   {:}      -   - "Cable tension, control input"
 
 # ============================== Outputs ============================================================================================================================================
+typedef  ^  OutputType  MeshType    Y0Mesh         -  - - "Motion mesh for the rigid-body reference point"
 typedef  ^  OutputType  MeshType    Y1Mesh        {:} - - "Transition piece outputs on a point mesh"
 typedef  ^  OutputType  MeshType    Y2Mesh         -  - - "Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh"
 typedef  ^  OutputType  MeshType    Y3Mesh         -  - - "Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh"
