@@ -346,13 +346,13 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['BDBldFiles(2)'] = [self.fst_vt['Fst']['BDBldFile(2)']]
         self.fst_vt['Fst']['BDBldFiles(3)'] = [self.fst_vt['Fst']['BDBldFile(3)']]
         self.fst_vt['Fst']['ServoFiles'] = [self.fst_vt['Fst']['ServoFile']]
-        for i in range(1, self.fst_vt['Fst']['NRotors']):
-            f.readline()
-            self.fst_vt['Fst']['EDFiles'].append(quoted_read(f.readline().split()[0]))
-            self.fst_vt['Fst']['BDBldFiles(1)'].append(quoted_read(f.readline().split()[0]))
-            self.fst_vt['Fst']['BDBldFiles(2)'].append(quoted_read(f.readline().split()[0]))
-            self.fst_vt['Fst']['BDBldFiles(3)'].append(quoted_read(f.readline().split()[0]))
-            self.fst_vt['Fst']['ServoFiles'].append(quoted_read(f.readline().split()[0]))
+        # for i in range(1, self.fst_vt['Fst']['NRotors']):
+        #     f.readline()
+        #     self.fst_vt['Fst']['EDFiles'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['BDBldFiles(1)'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['BDBldFiles(2)'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['BDBldFiles(3)'].append(quoted_read(f.readline().split()[0]))
+        #     self.fst_vt['Fst']['ServoFiles'].append(quoted_read(f.readline().split()[0]))
 
         # FAST Output Parameters (fst_output_params)
         f.readline()
