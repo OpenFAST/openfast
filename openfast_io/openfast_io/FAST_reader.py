@@ -341,11 +341,11 @@ class InputReader_OpenFAST(object):
         self.fst_vt['Fst']['SubFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['MooringFile'] = quoted_read(f.readline().split()[0])
         self.fst_vt['Fst']['IceFile'] = quoted_read(f.readline().split()[0])
-        self.fst_vt['Fst']['EDFiles'] = [self.fst_vt['Fst']['EDFile']]
-        self.fst_vt['Fst']['BDBldFiles(1)'] = [self.fst_vt['Fst']['BDBldFile(1)']]
-        self.fst_vt['Fst']['BDBldFiles(2)'] = [self.fst_vt['Fst']['BDBldFile(2)']]
-        self.fst_vt['Fst']['BDBldFiles(3)'] = [self.fst_vt['Fst']['BDBldFile(3)']]
-        self.fst_vt['Fst']['ServoFiles'] = [self.fst_vt['Fst']['ServoFile']]
+        # self.fst_vt['Fst']['EDFiles'] = [self.fst_vt['Fst']['EDFile']]
+        # self.fst_vt['Fst']['BDBldFiles(1)'] = [self.fst_vt['Fst']['BDBldFile(1)']]
+        # self.fst_vt['Fst']['BDBldFiles(2)'] = [self.fst_vt['Fst']['BDBldFile(2)']]
+        # self.fst_vt['Fst']['BDBldFiles(3)'] = [self.fst_vt['Fst']['BDBldFile(3)']]
+        # self.fst_vt['Fst']['ServoFiles'] = [self.fst_vt['Fst']['ServoFile']]
         # for i in range(1, self.fst_vt['Fst']['NRotors']):
         #     f.readline()
         #     self.fst_vt['Fst']['EDFiles'].append(quoted_read(f.readline().split()[0]))
