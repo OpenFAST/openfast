@@ -553,6 +553,8 @@ subroutine CalcVarGlobalIndices(p, ModTC, NumQ, NumJ, ErrStat, ErrMsg)
                   if (all(xVars(k)%Field /= TransFields)) cycle
                case (FieldOrientation, FieldAngularDisp, FieldAngularVel, FieldAngularAcc)
                   if (all(xVars(k)%Field /= AngularFields)) cycle
+               case (FieldScalar)
+                  if (xVars(k)%Field /= FieldScalar) cycle
                case (FieldForce, FieldMoment)
                   cycle
                end select
@@ -2137,7 +2139,7 @@ subroutine Solver_Init_Debug(p, m, GlueModData, GlueModMaps)
       write (DebugUn, *) "Var = X "//trim(m%Mod%Vars%x(j)%Name)// &
          " ("//trim(MV_FieldString(m%Mod%Vars%x(j)%Field))//")"
       write (DebugUn, '(A,*(I6))') "  X iLoc = ", m%Mod%Vars%x(j)%iLoc
-      write (DebugUn, '(A,*(I6))') "  X iq   = ", m%Mod%Vars%x(j)%iGlu
+      write (DebugUn, '(A,*(I6))') "  X iq   = ", m%Mod%Vars%x(j)%iq
    end do
    do j = 1, size(m%Mod%Vars%u)
       write (DebugUn, *) "Var = U "//trim(m%Mod%Vars%u(j)%Name)// &
