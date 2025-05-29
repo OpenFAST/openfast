@@ -197,6 +197,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iMod = 0      !< Module index in array of modules [-]
     INTEGER(IntKi)  :: ID = 0      !< Module identification number [-]
     INTEGER(IntKi)  :: Ins = 0      !< Module instance number [-]
+    INTEGER(IntKi)  :: iRotor = 0      !< Module rotor number [-]
     INTEGER(IntKi)  :: SubSteps = 0      !< Module number of substeps per solver time step [-]
     REAL(R8Ki)  :: DT = 0      !< Module time step [-]
     TYPE(ModVarsType)  :: Vars      !< Module variables type [-]
@@ -1452,6 +1453,7 @@ subroutine NWTC_Library_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, 
    DstModDataTypeData%iMod = SrcModDataTypeData%iMod
    DstModDataTypeData%ID = SrcModDataTypeData%ID
    DstModDataTypeData%Ins = SrcModDataTypeData%Ins
+   DstModDataTypeData%iRotor = SrcModDataTypeData%iRotor
    DstModDataTypeData%SubSteps = SrcModDataTypeData%SubSteps
    DstModDataTypeData%DT = SrcModDataTypeData%DT
    call NWTC_Library_CopyModVarsType(SrcModDataTypeData%Vars, DstModDataTypeData%Vars, CtrlCode, ErrStat2, ErrMsg2)
@@ -1486,6 +1488,7 @@ subroutine NWTC_Library_PackModDataType(RF, Indata)
    call RegPack(RF, InData%iMod)
    call RegPack(RF, InData%ID)
    call RegPack(RF, InData%Ins)
+   call RegPack(RF, InData%iRotor)
    call RegPack(RF, InData%SubSteps)
    call RegPack(RF, InData%DT)
    call NWTC_Library_PackModVarsType(RF, InData%Vars) 
@@ -1502,6 +1505,7 @@ subroutine NWTC_Library_UnPackModDataType(RF, OutData)
    call RegUnpack(RF, OutData%iMod); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%ID); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%Ins); if (RegCheckErr(RF, RoutineName)) return
+   call RegUnpack(RF, OutData%iRotor); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%SubSteps); if (RegCheckErr(RF, RoutineName)) return
    call RegUnpack(RF, OutData%DT); if (RegCheckErr(RF, RoutineName)) return
    call NWTC_Library_UnpackModVarsType(RF, OutData%Vars) ! Vars 

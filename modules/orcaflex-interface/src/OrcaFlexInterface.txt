@@ -54,9 +54,7 @@ typedef  ^  ^                 DbKi              LastTimeStep         -  -  -    
 
 
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^  ParameterType     IntKi             iVarPtfmMeshU        -  -  -     "Index of platform mesh input variable"
-typedef  ^  ^                 IntKi             iVarPtfmMeshY        -  -  -     "Index of platform mesh output variable"
-typedef  ^  ^                 DbKi              DT                   -  -  -     "Time step for continuous state integration & discrete state update"       seconds
+typedef  ^  ParameterType     DbKi              DT                   -  -  -     "Time step for continuous state integration & discrete state update"       seconds
 typedef  ^  ^                 DLL_Type          DLL_Orca             -  -  -     "Info for the OrcaFlex DLL"                                                -
 typedef  ^  ^                 CHARACTER(1024)   SimNamePath          -  -  -     "Path with simulation rootname with null end character for passing to C"   -
 typedef  ^  ^                 IntKi             SimNamePathLen       -  -  -     "Length of SimNamePath (including null char)"                              -

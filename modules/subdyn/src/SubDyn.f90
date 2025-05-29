@@ -358,7 +358,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       x%qmdot   = 0.0_ReKi
       m%qmdotdot= 0.0_ReKi
    END IF
-   IF ( p%Floating ) THEN
+   IF ( p%TP1IsRBRefPt ) THEN
       CALL AllocAry(x%qR,       6, 'x%qR',       ErrStat2, ErrMsg2 ); if(Failed()) return
       CALL AllocAry(x%qRdot,    6, 'x%qRdot',    ErrStat2, ErrMsg2 ); if(Failed()) return
       CALL AllocAry(m%qRdotdot, 6, 'm%qRdotdot', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -383,10 +383,35 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
  
    ! Allocate miscellaneous variables, used only to avoid temporary copies of variables allocated/deallocated and sometimes recomputed each time
    CALL AllocMiscVars(p, m, ErrStat2, ErrMsg2); if(Failed()) return
-      
+
+   ! Copy initial platform displacement and floating flag to initialization output
+   InitOut%IsFloating = p%Floating
+   InitOut%SDHasRBDoF = p%TP1IsRBRefPt
+   IF ( p%TP1IsRBRefPt ) THEN
+      InitOut%PlatformPos(4:6) = Init%qR0(4:6)
+      InitOut%PlatformPos(1:3) = Init%qR0(1:3) + p%RBRefPt - matmul( p%RBRefPt, EulerConstructZYX(Init%qR0(4:6)) )
+   END IF
+
    ! --------------------------------------------------------------------------------
    ! --- Initialize Inputs and Outputs
    ! --------------------------------------------------------------------------------
+   ! Create the rigid-body reference point mesh (Y0Mesh)
+   CALL MeshCreate( BlankMesh         = y%Y0Mesh          &
+                   ,IOS               = COMPONENT_OUTPUT  &
+                   ,Nnodes            = 1                 &
+                   ,ErrStat           = ErrStat2          &
+                   ,ErrMess           = ErrMsg2           &
+                   ,TranslationDisp   = .TRUE.            &
+                   ,Orientation       = .TRUE.            &
+                   ,TranslationVel    = .TRUE.            &
+                   ,RotationVel       = .TRUE.            &
+                   ,TranslationAcc    = .TRUE.            &
+                   ,RotationAcc       = .TRUE.            )
+   if(Failed()) return
+   CALL MeshPositionNode (y%Y0Mesh, 1, p%RBRefPt, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL MeshConstructElement(y%Y0Mesh, ELEMENT_POINT, ErrStat2, ErrMsg2, 1); if(Failed()) return
+   CALL MeshCommit( y%Y0Mesh, ErrStat2, ErrMsg2); if(Failed()) return
+
    ! Create the input and output meshes associated with Transition Piece reference point       
    if (p%TP1IsRBRefPt) then
       CALL CreateTPMeshes( p%nTP-1, Init%TP_RefPoint(:,2:p%nTP), u%TPMesh, y%Y1Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -564,6 +589,7 @@ subroutine SD_InitVars(Vars, Init, u, p, x, y, m, InitOut, Linearize, ErrStat, E
    !----------------------------------------------------------------------------
 
    ! Mesh variables
+   call MV_AddMeshVar(Vars%y, 'Y0Mesh', MotionFields, DatLoc(SD_y_Y0Mesh), Mesh=y%Y0Mesh)
    do i = 1,size(y%Y1Mesh)
       call MV_AddMeshVar(Vars%y, 'Y1Mesh'//trim(Num2Lstr(i)), LoadFields, DatLoc(SD_y_Y1Mesh,i), Mesh=y%Y1Mesh(i))
    enddo
@@ -821,10 +847,19 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------
       ! --- Output Meshes 2&3
       ! --------------------------------------------------------------------------------
+      ! Y0Mesh: Rigid-body reference point (TP1) motion
       ! Y2Mesh: rigidbody displacements            , elastic velocities and accelerations on all FEM nodes
       ! Y3Mesh: elastic   displacements without SIM, elastic velocities and accelerations on all FEM nodes
       ! --- Place displacement/velocity/acceleration into Y2 output mesh        
       if (p%Floating) then
+
+         y%Y0mesh%TranslationDisp(:,1) = m%u_TP(1:3)
+         y%Y0mesh%Orientation(:,:,1)   = Rg2b
+         y%Y0mesh%TranslationVel(:,1)  = matmul( Rb2g, m%udot_TP(1:3)    )
+         y%Y0mesh%RotationVel(:,1)     = matmul( Rb2g, m%udot_TP(4:6)    )
+         y%Y0mesh%TranslationAcc(:,1)  = matmul( Rb2g, m%udotdot_TP(1:3) )
+         y%Y0mesh%RotationAcc(:,1)     = matmul( Rb2g, m%udotdot_TP(4:6) )
+
          do iSDNode = 1,p%nNodes
             associate (DOFList => p%NodesDOF(iSDNode)%List)  ! Alias to shorten notations
             ! --- Guyan (rigid body) motion in global coordinates
@@ -2795,7 +2830,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
 
    ! Set TI, transformation matrix from interface DOFs to TP ref point (Note: TI allocated in AllocParameters)
    CALL RigidTrnsf(Init, p, Init%TP_RefPoint, p%IDI__, p%nDOFI__, p%nTP, p%TI, ErrStat2, ErrMsg2); if(Failed()) return
-   TI_transpose =  TRANSPOSE(p%TI) 
+   TI_transpose =  TRANSPOSE(p%TI)
    p%RBRefPt = Init%TP_RefPoint(:,1) ! Undisplaced position of the rigid-body reference point (1st dummy transition piece)
    if (p%TP1IsRBRefPt) then
       ! Set G, transformation matrix to reconstruct rigid-body modes to replace the first 6 Guyan modes (Note: G allocated in AllocParameters)
