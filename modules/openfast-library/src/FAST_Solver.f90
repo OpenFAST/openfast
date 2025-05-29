@@ -1094,7 +1094,8 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
    integer(IntKi)             :: n_t_global_next   ! n_t_global + 1
    integer(IntKi)             :: i, j, k
    integer(IntKi)             :: iMod
-   logical                    :: ConvUJac          ! Jacobian updated for convergence
+   integer(IntKi)             :: ConvUJac          ! Jacobian updated for convergence
+   integer(IntKi)             :: MaxConvUJac       ! Max times Jacobian can be updated for convergence
    real(R8Ki)                 :: RotDiff(3, 3)
 
    ErrStat = ErrID_None
@@ -1111,8 +1112,13 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
    ! Decrement number of time steps before updating the Jacobian
    m%UJacStepsRemain = m%UJacStepsRemain - 1
 
+   ! Maximum number of times Jacobian can be updated for convergence.
+   ! Allow more updates on first step
+   MaxConvUJac = 1
+   if (n_t_global == 0) MaxConvUJac = 3
+
    ! Set Jacobian updated for convergence flag to false
-   ConvUJac = .false.
+   ConvUJac = 0
 
    ! Init counters for number of Jacobian updates and number of convergence iterations
    NumUJac = 0
@@ -1294,7 +1300,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
          if (ConvIter >= p%MaxConvIter) then
 
             ! If Jacobian has not been updated for convergence
-            if (.not. ConvUJac) then
+            if (ConvUJac < MaxConvUJac) then
 
                ! Set counter to trigger a Jacobian update on next convergence iteration
                m%UJacIterRemain = 0
@@ -1304,7 +1310,7 @@ subroutine FAST_SolverStep(n_t_global, t_initial, p, m, GlueModData, GlueModMaps
                if (CorrIter == NumCorrections) NumCorrections = NumCorrections + 1
 
                ! Set flag indicating that the jacobian has been updated for convergence
-               ConvUJac = .true.
+               ConvUJac = ConvUJac + 1
 
             else
 
