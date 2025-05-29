@@ -978,8 +978,16 @@ SUBROUTINE FAST_InitializeAll( t_initial, m_Glue, p_FAST, y_FAST, m_FAST, ED, SE
       Init%InData_HD%Linearize     = p_FAST%Linearize
 
       ! Initial platform position; PlatformPos(1:3) is effectively the initial position of the HD origin
-      if ((p_FAST%CompSub == Module_SD) .and. Init%OutData_SD%IsFloating) then
-         Init%InData_HD%PlatformPos = Init%OutData_SD%qR0
+      if ( p_FAST%CompSub == Module_SD ) then
+         if ( Init%OutData_SD%IsFloating ) then
+            if ( Init%OutData_SD%SDHasRBDoF ) then
+               Init%InData_HD%PlatformPos = Init%OutData_SD%PlatformPos
+            else
+               Init%InData_HD%PlatformPos = Init%OutData_ED(1)%PlatformPos
+            end if
+         else
+            Init%InData_HD%PlatformPos = 0.0
+         endif
       else
          Init%InData_HD%PlatformPos = Init%OutData_ED(1)%PlatformPos
       end if
