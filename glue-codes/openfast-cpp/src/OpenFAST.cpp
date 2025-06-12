@@ -667,6 +667,7 @@ void fast::OpenFAST::init() {
                         &extld_o_t_FAST[iTurb],
                         &ErrStat,
                         ErrMsg);
+                    checkError(ErrStat, ErrMsg);
                     turbineData[iTurb].inflowType = 0;
                 }
 

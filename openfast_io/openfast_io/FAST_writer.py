@@ -65,9 +65,9 @@ def int_default_out(val, trim = False):
     """
     if type(val) is float:
         if trim:
-            return '{:d}'.format(val)
+            return '{:d}'.format(int(val))
         else:
-            return '{:<22d}'.format(val)
+            return '{:<22d}'.format(int(val))
     else:
         if trim:
             return '{:}'.format(val)
@@ -250,7 +250,7 @@ class InputWriter_OpenFAST(object):
             self.write_MAP()
         elif self.fst_vt['Fst']['CompMooring'] == 3:
             self.write_MoorDyn()
-            if 'option_names' in self.fst_vt['MoorDyn'] and 'WATERKIN' in self.fst_vt['MoorDyn']['option_names']:
+            if self.fst_vt['WaterKin']:  # will be empty if not read
                 self.write_WaterKin(os.path.join(self.FAST_runDirectory,self.fst_vt['MoorDyn']['WaterKin_file']))
 
         #     # look at if the self.fst_vt['BeamDyn'] is an array, if so, loop through the array
@@ -2634,10 +2634,14 @@ class InputWriter_OpenFAST(object):
         f.write('---------------------- SOLVER OPTIONS ---------------------------------------\n') 
         for i in range(len(self.fst_vt['MoorDyn']['option_values'])):
 
-            if 'WATERKIN' in self.fst_vt['MoorDyn']['option_names'][i]:
+            if self.fst_vt['MoorDyn']['option_names'][i].upper() == 'WATERKIN' and self.fst_vt['WaterKin']:
+                # WATERKIN needs to be a string, and should have already been read in and part of fst_vt                
                 self.fst_vt['MoorDyn']['WaterKin_file'] = self.FAST_namingOut + '_WaterKin.dat'
                 f.write('{:<22} {:<11} {:}'.format('"'+self.fst_vt['MoorDyn']['WaterKin_file']+'"', self.fst_vt['MoorDyn']['option_names'][i], self.fst_vt['MoorDyn']['option_descriptions'][i]+'\n'))
-            else: # if not waterkin handle normally
+            elif self.fst_vt['MoorDyn']['option_names'][i].upper() in ['INERTIALF','WATERKIN']:
+                # These options need to be an integer
+                f.write('{:<22} {:<11} {:}'.format(int_default_out(self.fst_vt['MoorDyn']['option_values'][i]), self.fst_vt['MoorDyn']['option_names'][i], self.fst_vt['MoorDyn']['option_descriptions'][i]+'\n'))
+            else: # if not handle normally
                 f.write('{:<22} {:<11} {:}'.format(float_default_out(self.fst_vt['MoorDyn']['option_values'][i]), self.fst_vt['MoorDyn']['option_names'][i], self.fst_vt['MoorDyn']['option_descriptions'][i]+'\n'))
 
         f.write('------------------------ OUTPUTS --------------------------------------------\n')
