@@ -3642,7 +3642,7 @@ END DO
       IF (p%WrVTK == VTK_ModeShapes) THEN
          p%n_VTKTime = 1
       ELSE IF (TmpTime > p%TMax) THEN
-         p%n_VTKTime = HUGE(p%n_VTKTime)
+         p%n_VTKTime = NINT( p%TMax  / p%DT )   ! write at init and last step only
       ELSE
          p%n_VTKTime = NINT( TmpTime / p%DT )
          ! I'll warn if p%n_VTKTime*p%DT is not TmpTime
